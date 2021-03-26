@@ -1,7 +1,11 @@
 #include "../drivers/screen.h"
+#include "../x86/gdt.h"
 
 int main(struct multiboot *mboot_ptr)
 {
+  /* init gdt */
+  init_gdt();
+
   /* clear screen */
   screen_clear();
 
