@@ -21,9 +21,9 @@ kernel.bin: boot/boot.o $(OBJ)
 
 run: kernel.bin
 	sudo losetup /dev/loop0 grub/floppy.img
-	sudo mount /dev/loop0 grub/mnt
-	sudo cp kernel.bin grub/mnt/kernel
-	sudo umount grub/mnt
+	sudo mount /dev/loop0 grub
+	sudo cp kernel.bin grub/kernel
+	sudo umount grub
 	sudo losetup -d /dev/loop0
 	$(QEMU) -fda grub/floppy.img
 
