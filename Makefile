@@ -2,7 +2,8 @@ AS		= nasm
 CC		= i386-elf-gcc
 LD		= i386-elf-ld
 C_SOURCES 	= $(wildcard *.c */*.c)
-OBJ 		= ${C_SOURCES:.c=.o}
+AS_SOURCES 	= $(wildcard *.s */*.s)
+OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.s=.o}
 CFLAGS		= -nostdlib -nostdinc -fno-builtin -fno-stack-protector
 LDFLAGS		= -Tboot/link.ld
 ASFLAGS		= -felf
@@ -16,7 +17,7 @@ all: run
 %.o: %.s
 	$(AS) $(ASFLAGS) $<
 
-kernel.bin: boot/boot.o $(OBJ)
+kernel.bin: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 run: kernel.bin
