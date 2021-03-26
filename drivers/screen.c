@@ -102,3 +102,34 @@ void screen_puts(const char *s)
   for (i = 0; s[i] != 0; i++)
     screen_putc(s[i]);
 }
+
+/*
+ * Write an integer to the screen.
+ */
+void screen_puti(int n)
+{
+  int i, j, acc;
+  char c[32];
+  char c2[32];
+
+  if (n == 0) {
+    screen_putc('0');
+    return;
+  }
+
+  i = 0;
+  acc = n;
+  while (acc > 0) {
+    c[i] = '0' + acc % 10;
+    acc /= 10;
+    i++;
+  }
+  c[i] = 0;
+
+  c2[i--] = 0;
+  j = 0;
+  while (i >= 0)
+    c2[i--] = c[j++];
+
+  screen_puts(c2);
+}
