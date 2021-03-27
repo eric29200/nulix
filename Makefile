@@ -1,6 +1,8 @@
 AS		= nasm
 CC		= i386-elf-gcc
 LD		= i386-elf-ld
+KERNEL		= kernel.bin
+ISO		= iso/
 C_SOURCES 	= $(wildcard *.c */*.c)
 AS_SOURCES 	= $(wildcard *.s */*.s)
 OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.s=.o}
@@ -17,16 +19,13 @@ all: run
 %.o: %.s
 	$(AS) $(ASFLAGS) $<
 
-kernel.bin: $(OBJS)
+$(KERNEL): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
-run: kernel.bin
-	sudo losetup /dev/loop0 grub/floppy.img
-	sudo mount /dev/loop0 grub
-	sudo cp kernel.bin grub/kernel
-	sudo umount grub
-	sudo losetup -d /dev/loop0
-	$(QEMU) -fda grub/floppy.img
+run: $(KERNEL)
+	cp $(KERNEL) $(ISO)
+	genisoimage -R -b boot/grub/stage2 -no-emul-boot -boot-load-size 4 -A os -quiet -boot-info-table -o kos.iso $(ISO)
+	$(QEMU) -m 32M -cdrom kos.iso
 
 clean:
-	rm -f *.o */*.o kernel.bin
+	rm -f *.o */*.o $(KERNEL) kos.iso
