@@ -1,4 +1,5 @@
 #include <kernel/isr.h>
+#include <kernel/io.h>
 #include <libc/stdio.h>
 
 /*
@@ -26,6 +27,17 @@ const char* exception_messages[] = {
     "Machine Check Exception (Pentium/586+)"
 };
 
+/* isr handlers */
+isr_t interrupt_handlers[256];
+
+/*
+ * Register an interrupt handler.
+ */
+void register_interrupt_handler(uint8_t n, isr_t handler)
+{
+  interrupt_handlers[n] = handler;
+}
+
 /*
  * Interrupt service routine handler.
  */
@@ -35,4 +47,21 @@ void isr_handler(struct registers_t regs)
   if (regs.int_no < 20)
     printf(", message=%s", exception_messages[regs.int_no]);
   printf("\n");
+}
+
+/*
+ * IRQ service routine handler
+ */
+void irq_handler(struct registers_t regs)
+{
+  /* send reset signal to slave PIC (if irq > 7) */
+  if (regs.int_no >= 40)
+    outb(0xA0, 0x20);
+
+  /* send reset signal to master PIC */
+  outb(0x20, 0x20);
+
+  /* handle interrupt */
+  if (interrupt_handlers[regs.int_no] != 0)
+    interrupt_handlers[regs.int_no](regs);
 }
