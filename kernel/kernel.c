@@ -1,21 +1,24 @@
 #include <kernel/screen.h>
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
+#include <kernel/timer.h>
 
 int kmain()
 {
+  /* clear screen */
+  screen_clear();
+
   /* init gdt */
   init_gdt();
 
   /* init idt */
   init_idt();
 
-  /* clear screen */
-  screen_clear();
+  /* init timer at 50 Hz */
+  init_timer(50);
 
-  /* test interruptions */
-  asm volatile("int $0x3");
-  asm volatile("int $0x5");
+  /* enable interrupts */
+  __asm__("sti");
 
   return 0;
 }
