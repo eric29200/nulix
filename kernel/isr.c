@@ -43,10 +43,19 @@ void register_interrupt_handler(uint8_t n, isr_t handler)
  */
 void isr_handler(struct registers_t regs)
 {
+  isr_t handler;
+
+  /* print a message */
   printf("[Interrupt] code=%d", regs.int_no);
   if (regs.int_no < 20)
     printf(", message=%s", exception_messages[regs.int_no]);
   printf("\n");
+
+  /* handle interrupt */
+  if (interrupt_handlers[regs.int_no] != 0) {
+    handler = interrupt_handlers[regs.int_no];
+    handler(regs);
+  }
 }
 
 /*
@@ -54,6 +63,8 @@ void isr_handler(struct registers_t regs)
  */
 void irq_handler(struct registers_t regs)
 {
+  isr_t handler;
+
   /* send reset signal to slave PIC (if irq > 7) */
   if (regs.int_no >= 40)
     outb(0xA0, 0x20);
@@ -62,6 +73,8 @@ void irq_handler(struct registers_t regs)
   outb(0x20, 0x20);
 
   /* handle interrupt */
-  if (interrupt_handlers[regs.int_no] != 0)
-    interrupt_handlers[regs.int_no](regs);
+  if (interrupt_handlers[regs.int_no] != 0) {
+    handler = interrupt_handlers[regs.int_no];
+    handler(regs);
+  }
 }
