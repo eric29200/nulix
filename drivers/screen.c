@@ -1,16 +1,17 @@
 #include <kernel/screen.h>
 #include <kernel/io.h>
+#include <libc/stddef.h>
 
-static unsigned short *video_memory = (unsigned short *) VIDEO_MEMORY;
-static unsigned char cursor_x = 0;
-static unsigned char cursor_y = 0;
+static uint16_t *video_memory = (uint16_t *) VIDEO_MEMORY;
+static uint8_t cursor_x = 0;
+static uint8_t cursor_y = 0;
 
 /*
  * Move the cursor.
  */
 static void move_cursor()
 {
-  unsigned short cursor_offset = cursor_y * NB_COLS + cursor_x;
+  uint16_t cursor_offset = cursor_y * NB_COLS + cursor_x;
 
   outb(REG_SCREEN_CTRL, 14);
   outb(REG_SCREEN_DATA, cursor_offset >> 8);
@@ -60,7 +61,7 @@ static void screen_scroll()
  */
 void screen_putc(char c)
 {
-  unsigned char *location;
+  uint8_t *location;
 
   /* handle special characters */
   if (c == BACKSPACE_KEY && cursor_x) {
@@ -73,7 +74,7 @@ void screen_putc(char c)
     cursor_x = 0;
     cursor_y++;
   } else if(c >= ' ') {
-    location = (unsigned char *) (video_memory + (cursor_y * NB_COLS + cursor_x));
+    location = (uint8_t *) (video_memory + (cursor_y * NB_COLS + cursor_x));
     location[0] = c;
     location[1] = WHITE_ON_BLACK;
     cursor_x++;

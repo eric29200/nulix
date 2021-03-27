@@ -1,8 +1,10 @@
 #ifndef _IO_H_
 #define _IO_H_
 
-void outb(unsigned short port, unsigned char value);
-unsigned char inb(unsigned short port);
-unsigned short inw(unsigned short port);
+#include <libc/stddef.h>
+
+void outb(uint16_t port, uint8_t value);
+uint8_t inb(uint16_t port);
+uint16_t inw(uint16_t port);
 
 #endif

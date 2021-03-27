@@ -1,23 +1,25 @@
 #ifndef _ISR_H_
 #define _ISR_H_
 
+#include <libc/stddef.h>
+
 struct registers_t {
-  unsigned int ds;
-  unsigned int edi;
-  unsigned int esi;
-  unsigned int ebp;
-  unsigned int esp;
-  unsigned int ebx;
-  unsigned int edx;
-  unsigned int ecx;
-  unsigned int eax;
-  unsigned int int_no;
-  unsigned int err_code;
-  unsigned int eip;
-  unsigned int cs;
-  unsigned int eflags;
-  unsigned int useresp;
-  unsigned int ss;
+  uint32_t ds;
+  uint32_t edi;
+  uint32_t esi;
+  uint32_t ebp;
+  uint32_t esp;
+  uint32_t ebx;
+  uint32_t edx;
+  uint32_t ecx;
+  uint32_t eax;
+  uint32_t int_no;
+  uint32_t err_code;
+  uint32_t eip;
+  uint32_t cs;
+  uint32_t eflags;
+  uint32_t useresp;
+  uint32_t ss;
 };
 
 #endif

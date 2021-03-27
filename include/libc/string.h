@@ -1,6 +1,8 @@
-#ifndef _MEM_H_
-#define _MEM_H_
+#ifndef _STRING_H_
+#define _STRING_H_
 
-void memset(unsigned char *dst, unsigned char c, unsigned int len);
+#include <libc/stddef.h>
+
+void memset(void *s, char c, size_t n);
 
 #endif
