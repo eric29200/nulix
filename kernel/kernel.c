@@ -2,7 +2,7 @@
 #include "../include/gdt.h"
 #include "../include/idt.h"
 
-int main(struct multiboot *mboot_ptr)
+int kmain()
 {
   /* init gdt */
   init_gdt();

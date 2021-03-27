@@ -6,7 +6,7 @@ ISO		= iso/
 C_SOURCES 	= $(wildcard *.c */*.c)
 AS_SOURCES 	= $(wildcard *.s */*.s)
 OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.s=.o}
-CFLAGS		= -nostdlib -nostdinc -fno-builtin -fno-stack-protector
+CFLAGS		= -nostdlib -nostdinc -fno-builtin -fno-stack-protector -Wall -Wextra
 LDFLAGS		= -Tlink.ld
 ASFLAGS		= -felf
 QEMU		= qemu-system-i386
