@@ -7,9 +7,9 @@ HEADER_PATH	= include
 C_SOURCES 	= $(wildcard *.c */*.c)
 AS_SOURCES 	= $(wildcard *.s */*.s)
 OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.s=.o}
-CFLAGS		= -nostdlib -nostdinc -fno-builtin -fno-stack-protector -Wall -Wextra -I$(HEADER_PATH)
+CFLAGS		= -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -I$(HEADER_PATH) -std=c11 -pedantic
 LDFLAGS		= -Tlink.ld
-ASFLAGS		= -felf
+ASFLAGS		= -felf32
 QEMU		= qemu-system-i386
 
 all: run
@@ -25,7 +25,7 @@ $(KERNEL): $(OBJS)
 
 run: $(KERNEL)
 	cp $(KERNEL) $(ISO)
-	genisoimage -R -b boot/grub/stage2 -no-emul-boot -boot-load-size 4 -A os -quiet -boot-info-table -o kos.iso $(ISO)
+	genisoimage -R -b boot/grub/stage2 -no-emul-boot -boot-load-size 4 -A os -input-charset utf8 -quiet -boot-info-table -o kos.iso $(ISO)
 	$(QEMU) -m 32M -cdrom kos.iso
 
 clean:
