@@ -1,4 +1,4 @@
-#include "../include/gdt.h"
+#include <kernel/gdt.h>
 
 extern void gdt_flush(unsigned int);
 

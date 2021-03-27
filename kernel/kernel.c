@@ -1,6 +1,6 @@
-#include "../include/screen.h"
-#include "../include/gdt.h"
-#include "../include/idt.h"
+#include <kernel/screen.h>
+#include <kernel/gdt.h>
+#include <kernel/idt.h>
 
 int kmain()
 {

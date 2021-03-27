@@ -1,5 +1,5 @@
-#include "../include/screen.h"
-#include "../include/io.h"
+#include <kernel/screen.h>
+#include <kernel/io.h>
 
 static unsigned short *video_memory = (unsigned short *) VIDEO_MEMORY;
 static unsigned char cursor_x = 0;

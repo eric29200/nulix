@@ -1,4 +1,4 @@
-#include "../include/mem.h"
+#include <libc/string.h>
 
 /*
  * Set memory.

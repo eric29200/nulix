@@ -1,5 +1,5 @@
-#include "../include/isr.h"
-#include "../include/screen.h"
+#include <kernel/isr.h>
+#include <kernel/screen.h>
 
 /*
  * Interrupt service routine handler.
