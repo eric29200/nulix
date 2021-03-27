@@ -10,6 +10,7 @@ static volatile uint32_t tick = 1;
  */
 static void timer_handler(struct registers_t regs)
 {
+  UNUSED(regs);
   printf("Tick : %d\n", ++tick);
 }
 
