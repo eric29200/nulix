@@ -1,4 +1,4 @@
-#include "io.h"
+#include "../include/io.h"
 
 /*
  * Write a byte to an io port.

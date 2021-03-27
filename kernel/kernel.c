@@ -1,6 +1,6 @@
-#include "../drivers/screen.h"
-#include "../x86/gdt.h"
-#include "../x86/idt.h"
+#include "../include/screen.h"
+#include "../include/gdt.h"
+#include "../include/idt.h"
 
 int main(struct multiboot *mboot_ptr)
 {

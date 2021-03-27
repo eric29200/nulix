@@ -1,5 +1,5 @@
-#include "idt.h"
-#include "../kernel/mem.h"
+#include "../include/idt.h"
+#include "../include/mem.h"
 
 struct idt_entry_t idt_entries[256];
 struct idt_ptr_t idt_ptr;

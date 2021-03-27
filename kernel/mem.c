@@ -1,4 +1,4 @@
-#include "mem.h"
+#include "../include/mem.h"
 
 /*
  * Set memory.
