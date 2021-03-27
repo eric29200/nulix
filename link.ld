@@ -1,27 +1,28 @@
-ENTRY(start)
-SECTIONS
-{
-  .text 0x100000 :
-  {
-    code = .; _code = .; __code = .;
-    *(.text)
-    . = ALIGN(4096);
-  }
+OUTPUT_FORMAT(elf32-i386)
+ENTRY(loader)
 
-  .data :
-  {
-    data = .; _data = .; __data = .;
-    *(.data)
-    *(.rodata)
-    . = ALIGN(4096);
-  }
+SECTIONS {
+	. = 0x00100000;
 
-  .bss :
-  {
-    bss = .; _bss = .; __bss = .;
-    *(.bss)
-    . = ALIGN(4096);
-  }
+	.__mbHeader : {
+		*(.__mbHeader)
+	}
 
-  end = .; _end = .; __end = .;
+	.text ALIGN (0x1000) :
+	{
+		*(.text)
+	}
+
+	.data ALIGN (0x1000) :
+	{
+		*(.data)
+	}
+
+	.bss ALIGN (0x1000) :
+	{
+		*(COMMON)
+		*(.bss)
+	}
+
+	kernel_end = .; _kernel_end = .; __kernel_end = .;
 }
