@@ -15,7 +15,7 @@ int kmain()
 
   /* test interruptions */
   asm volatile("int $0x3");
-  asm volatile("int $0x4");
+  asm volatile("int $0x5");
 
   return 0;
 }
