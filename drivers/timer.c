@@ -1,6 +1,6 @@
-#include <kernel/timer.h>
 #include <kernel/isr.h>
 #include <kernel/io.h>
+#include <drivers/timer.h>
 #include <libc/stdio.h>
 
 static volatile uint32_t tick = 1;
@@ -11,7 +11,7 @@ static volatile uint32_t tick = 1;
 static void timer_handler(struct registers_t regs)
 {
   UNUSED(regs);
-  printf("Tick : %d\n", ++tick);
+  tick++;
 }
 
 /*

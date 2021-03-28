@@ -1,8 +1,9 @@
-#include <kernel/screen.h>
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
-#include <kernel/timer.h>
+#include <kernel/mm_paging.h>
 #include <grub/multiboot.h>
+#include <drivers/screen.h>
+#include <drivers/timer.h>
 #include <libc/stdio.h>
 
 extern uint32_t loader;
@@ -42,7 +43,10 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   init_idt();
 
   /* init timer at 50 Hz */
-  //init_timer(50);
+  init_timer(50);
+
+  /* init paging */
+  init_paging(total_mem);
 
   /* enable interrupts */
   __asm__("sti");

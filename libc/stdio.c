@@ -1,6 +1,6 @@
 #include <libc/stdio.h>
 #include <libc/stdarg.h>
-#include <kernel/screen.h>
+#include <drivers/screen.h>
 
 static char *__buf_ptr;
 

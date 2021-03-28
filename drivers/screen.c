@@ -1,5 +1,5 @@
-#include <kernel/screen.h>
 #include <kernel/io.h>
+#include <drivers/screen.h>
 #include <libc/stddef.h>
 
 static uint16_t *video_memory = (uint16_t *) VIDEO_MEMORY;
