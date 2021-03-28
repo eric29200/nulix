@@ -45,11 +45,11 @@ static int __print_num(void (*putch)(char, int), int fd, int num, uint16_t base,
   } while (n > 0);
 
   if (is_negative)
-    buf[i] = '-';
+    buf[i++] = '-';
 
   ret = i;
   while (i >= 0)
-    putch(buf[i--], fd);
+    putch(buf[--i], fd);
 
   return ret;
 }
