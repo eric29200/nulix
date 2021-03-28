@@ -24,5 +24,5 @@ SECTIONS {
 		*(.bss)
 	}
 
-	kernel_end = .; _kernel_end = .; __kernel_end = .;
+	end = .; _end = .; __end = .;
 }

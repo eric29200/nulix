@@ -10,8 +10,6 @@ extern uint32_t loader;
 
 int kmain(unsigned long magic, multiboot_info_t *mboot)
 {
-  multiboot_memory_map_t *mmap;
-
   /* check multiboot */
   if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
     return 0xD15EA5E;
