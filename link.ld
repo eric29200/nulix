@@ -16,11 +16,11 @@ SECTIONS {
 	.data ALIGN (0x1000) :
 	{
 		*(.data)
+		*(.rodata)
 	}
 
 	.bss ALIGN (0x1000) :
 	{
-		*(COMMON)
 		*(.bss)
 	}
 
