@@ -1,5 +1,6 @@
 #include <mm/mem.h>
 #include <mm/paging.h>
+#include <mm/heap.h>
 #include <lib/string.h>
 
 extern uint32_t placement_address;
@@ -28,8 +29,12 @@ void init_mem(uint32_t start, uint32_t end)
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
   current_pgd = kernel_pgd;
 
-  /* allocate frames and pages */
+  /* allocate kernel frames and pages */
   for (i = 0; i < placement_address; i += PAGE_SIZE)
+    alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
+
+  /* allocate frames and pages of the heap */
+  for (i = KHEAP_START; i < KHEAP_START + KHEAP_INITIAL_SIZE; i += PAGE_SIZE)
     alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* register page fault handler */
@@ -37,4 +42,7 @@ void init_mem(uint32_t start, uint32_t end)
 
   /* enable paging */
   switch_page_directory(current_pgd);
+
+  /* init heap */
+  init_kheap(KHEAP_START, KHEAP_START + KHEAP_INITIAL_SIZE, KHEAP_START + end, 0, 0);
 }
