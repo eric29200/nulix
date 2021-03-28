@@ -6,6 +6,8 @@
 #include <drivers/timer.h>
 #include <lib/stdio.h>
 
+#define TIMER_HZ      50
+
 extern uint32_t loader;
 
 int kmain(unsigned long magic, multiboot_info_t *mboot)
@@ -18,18 +20,22 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   screen_clear();
 
   /* print grub informations */
-  printf("Kernel loading linear address = %x\n", loader);
+  printf("[Kernel] Loading at linear address = %x\n", loader);
 
   /* init gdt */
+  printf("[Kernel] Global Descriptor Table Init\n");
   init_gdt();
 
   /* init idt */
+  printf("[Kernel] Interrupt Descriptor Table Init\n");
   init_idt();
 
   /* init timer at 50 Hz */
-  init_timer(50);
+  printf("[Kernel] Timer Init at %dHz\n", TIMER_HZ);
+  init_timer(TIMER_HZ);
 
   /* init paging */
+  printf("[Kernel] Memory paging Init\n");
   init_mem(0x300001, 0x100000 + mboot->mem_upper * 1024);
 
   /* enable interrupts */
