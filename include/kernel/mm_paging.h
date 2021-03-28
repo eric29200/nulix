@@ -2,7 +2,7 @@
 #define _MM_PAGING_H_
 
 #include <kernel/isr.h>
-#include <libc/stddef.h>
+#include <lib/stddef.h>
 
 /*
  * Page structure.

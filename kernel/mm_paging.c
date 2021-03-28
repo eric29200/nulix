@@ -1,6 +1,6 @@
 #include <kernel/mm_paging.h>
-#include <libc/stdio.h>
-#include <libc/string.h>
+#include <lib/stdio.h>
+#include <lib/string.h>
 
 #define PAGE_SIZE       0x1000    /* 4 kB */
 

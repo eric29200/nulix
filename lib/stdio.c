@@ -1,5 +1,5 @@
-#include <libc/stdio.h>
-#include <libc/stdarg.h>
+#include <lib/stdio.h>
+#include <lib/stdarg.h>
 #include <drivers/screen.h>
 
 static char *__buf_ptr;
@@ -85,11 +85,11 @@ static int vsprintf(void (*putch)(char, int), int fd, const char *format, va_lis
         sign = 1;
       case 'u':
         count += __print_num(putch, fd, va_arg(args, int), 10, sign);
-        break;  
+        break;
       case 'l':
         sign = 1;
         count += __print_num(putch, fd, va_arg(args, long), 10, sign);
-        break;  
+        break;
       case 'x':
         putch('0', fd);
         putch('x', fd);

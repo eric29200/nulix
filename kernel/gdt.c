@@ -1,5 +1,5 @@
 #include <kernel/gdt.h>
-#include <libc/stddef.h>
+#include <lib/stddef.h>
 
 extern void gdt_flush(uint32_t);
 

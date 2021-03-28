@@ -1,6 +1,6 @@
 #include <kernel/io.h>
 #include <drivers/screen.h>
-#include <libc/stddef.h>
+#include <lib/stddef.h>
 
 static uint16_t *video_memory = (uint16_t *) VIDEO_MEMORY;
 static uint8_t cursor_x = 0;

@@ -4,7 +4,7 @@
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
-#include <libc/stdio.h>
+#include <lib/stdio.h>
 
 extern uint32_t loader;
 

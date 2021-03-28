@@ -1,5 +1,5 @@
-#include <libc/string.h>
-#include <libc/stddef.h>
+#include <lib/string.h>
+#include <lib/stddef.h>
 
 /*
  * Compute length of a string
