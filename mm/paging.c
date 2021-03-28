@@ -1,12 +1,10 @@
-#include <kernel/mm_paging.h>
+#include <mm/paging.h>
 #include <lib/stdio.h>
 #include <lib/string.h>
 
 #define PAGE_SIZE       0x1000    /* 4 kB */
 
-extern uint32_t kernel_end;
-uint32_t placement_address = (uint32_t) &kernel_end;
-
+uint32_t placement_address = 0;
 uint32_t *frames;
 uint32_t nb_frames;
 
@@ -132,12 +130,15 @@ void page_fault_handler(struct registers_t regs)
 /*
  * Init paging.
  */
-void init_paging(uint32_t total_memory)
+void init_paging(uint32_t start, uint32_t end)
 {
   uint32_t i;
 
+  /* set placement address (some memory is reserved for the heap structure) */
+  placement_address = start + 0x100;
+
   /* set frames */
-  nb_frames = total_memory / PAGE_SIZE;
+  nb_frames = end / PAGE_SIZE;
   frames = (uint32_t *) kmalloc(nb_frames / 32);
   memset(frames, 0, nb_frames / 32);
 

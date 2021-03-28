@@ -33,7 +33,7 @@ struct page_directory_t {
   uint32_t physical_addr;             /* physical address of tables_physical */
 };
 
-void init_paging(uint32_t total_memory);
+void init_paging(uint32_t start, uint32_t end);
 void switch_page_directory(struct page_directory_t *pgd);
 struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t *pgd);
 void page_fault(struct registers_t regs);
