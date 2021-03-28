@@ -1,6 +1,6 @@
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
-#include <mm/paging.h>
+#include <mm/mem.h>
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
@@ -30,7 +30,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   init_timer(50);
 
   /* init paging */
-  init_paging(0x300001, 0x100000 + mboot->mem_upper * 1024);
+  init_mem(0x300001, 0x100000 + mboot->mem_upper * 1024);
 
   /* enable interrupts */
   __asm__("sti");

@@ -1,0 +1,40 @@
+#include <mm/mem.h>
+#include <mm/paging.h>
+#include <lib/string.h>
+
+extern uint32_t placement_address;
+extern uint32_t *frames;
+extern uint32_t nb_frames;
+extern struct page_directory_t *kernel_pgd;
+extern struct page_directory_t *current_pgd;
+
+/*
+ * Init memory paging and kernel heap.
+ */
+void init_mem(uint32_t start, uint32_t end)
+{
+  uint32_t i;
+
+  /* set placement address (some memory is reserved for the heap structure) */
+  placement_address = start + 0x100;
+
+  /* set frames */
+  nb_frames = end / PAGE_SIZE;
+  frames = (uint32_t *) kmalloc(nb_frames / 32, 0, NULL);
+  memset(frames, 0, nb_frames / 32);
+
+  /* allocate kernel pgd */
+  kernel_pgd = (struct page_directory_t *) kmalloc(sizeof(struct page_directory_t), 1, NULL);
+  memset(kernel_pgd, 0, sizeof(struct page_directory_t));
+  current_pgd = kernel_pgd;
+
+  /* allocate frames and pages */
+  for (i = 0; i < placement_address; i += PAGE_SIZE)
+    alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
+
+  /* register page fault handler */
+  register_interrupt_handler(14, page_fault_handler);
+
+  /* enable paging */
+  switch_page_directory(current_pgd);
+}

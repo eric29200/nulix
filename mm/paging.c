@@ -2,19 +2,21 @@
 #include <lib/stdio.h>
 #include <lib/string.h>
 
-#define PAGE_SIZE       0x1000    /* 4 kB */
-
+/* placement address */
 uint32_t placement_address = 0;
+
+/* bit frames */
 uint32_t *frames;
 uint32_t nb_frames;
 
+/* page directories */
 struct page_directory_t *kernel_pgd = 0;
 struct page_directory_t *current_pgd = 0;
 
 /*
  * Allocate physical memory.
  */
-static uint32_t __kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
+uint32_t kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
 {
   uint32_t ret;
 
@@ -32,30 +34,6 @@ static uint32_t __kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
   ret = placement_address;
   placement_address += size;
   return ret;
-}
-
-/*
- * Allocate physical memory.
- */
-uint32_t kmalloc(uint32_t size)
-{
-  return __kmalloc(size, 0, 0);
-}
-
-/*
- * Allocate physical memory (align on PAGE boundary).
- */
-uint32_t kmalloc_aligned(uint32_t size)
-{
-  return __kmalloc(size, 1, 0);
-}
-
-/*
- * Allocate physical memory (align on PAGE boundary) at phys address.
- */
-uint32_t kmalloc_alignedp(uint32_t size, uint32_t *phys)
-{
-  return __kmalloc(size, 1, phys);
 }
 
 /*
@@ -139,11 +117,11 @@ void init_paging(uint32_t start, uint32_t end)
 
   /* set frames */
   nb_frames = end / PAGE_SIZE;
-  frames = (uint32_t *) kmalloc(nb_frames / 32);
+  frames = (uint32_t *) kmalloc(nb_frames / 32, 0, NULL);
   memset(frames, 0, nb_frames / 32);
 
   /* allocate kernel pgd */
-  kernel_pgd = (struct page_directory_t *) kmalloc_aligned(sizeof(struct page_directory_t));
+  kernel_pgd = (struct page_directory_t *) kmalloc(sizeof(struct page_directory_t), 1, NULL);
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
   current_pgd = kernel_pgd;
 
@@ -193,7 +171,7 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
 
   /* create a new page table */
   if (make) {
-    pgd->tables[table_idx] = (struct page_table_t *) kmalloc_alignedp(sizeof(struct page_table_t), &tmp);
+    pgd->tables[table_idx] = (struct page_table_t *) kmalloc(sizeof(struct page_table_t), 1, &tmp);
     memset(pgd->tables[table_idx], 0, 0x1000);
     pgd->tables_physical[table_idx] = tmp | 0x7; /* present, rw and user */
     return &pgd->tables[table_idx]->pages[address % 1024];
