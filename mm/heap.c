@@ -1,4 +1,6 @@
 #include <mm/heap.h>
+#include <mm/paging.h>
+#include <lib/stdio.h>
 #include <lib/string.h>
 
 /* kernel heap */
@@ -39,4 +41,53 @@ void init_kheap(uint32_t start_addr, uint32_t end_addr, uint32_t max_addr, uint8
   kheap->max_addr = max_addr;
   kheap->supervisor = supervisor;
   kheap->readonly = readonly;
+}
+
+/*
+ * Get size of a heap.
+ */
+static uint32_t heap_size(struct heap_t *heap)
+{
+  return (uint32_t) heap->end + sizeof(struct mm_header_t) - (uint32_t) heap->start + 1;
+}
+
+/*
+ * Expand a heap.
+ */
+static void heap_expand(struct heap_t *heap, uint32_t new_size)
+{
+  struct mm_header_t *end_header, *tmp;
+  uint32_t old_size;
+  uint32_t i;
+
+  /* no need to expand */
+  old_size = heap_size(heap);
+  if (new_size <= old_size)
+    return;
+
+  /* align new size on a boundary page */
+  if ((new_size & 0xFFFFF000) != 0) {
+    new_size &= 0xFFFFF000;
+    new_size += PAGE_SIZE;
+  }
+
+  /* heap overflow */
+  if ((uint32_t) heap->start + new_size > heap->max_addr)
+    printf("Heap expansion overflow\n");
+
+  /* allocate frames and pages */
+  for (i = old_size; i <= new_size; i += PAGE_SIZE)
+    alloc_frame(get_page((uint32_t) heap->start + i, 1, kernel_pgd), heap->supervisor ? 1 : 0, heap->readonly ? 0 : 1);
+
+  /* update blocks linked list */
+  end_header = (struct mm_header_t *) ((uint32_t) heap->start + new_size - sizeof(struct mm_header_t));
+  tmp = heap->end->prev;
+  tmp->next = end_header;
+  heap->end = end_header;
+  heap->end->next = heap->start;
+  heap->end->prev = tmp;
+  strncpy(heap->end->name, "end", sizeof(heap->end->name) - 1);
+  heap->end->size = 0;
+  heap->start->prev = heap->end;
+  heap->start->size = 0;
 }

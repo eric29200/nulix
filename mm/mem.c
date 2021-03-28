@@ -3,12 +3,6 @@
 #include <mm/heap.h>
 #include <lib/string.h>
 
-extern uint32_t placement_address;
-extern uint32_t *frames;
-extern uint32_t nb_frames;
-extern struct page_directory_t *kernel_pgd;
-extern struct page_directory_t *current_pgd;
-
 /*
  * Init memory paging and kernel heap.
  */

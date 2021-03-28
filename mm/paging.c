@@ -23,7 +23,7 @@ uint32_t kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
   /* align adress on PAGE boundary */
   if (align == 1 && (placement_address & 0xFFFFF000)) {
     placement_address &= 0xFFFFF000;
-    placement_address += 0x1000;
+    placement_address += PAGE_SIZE;
   }
 
   /* get physical memory */
@@ -79,6 +79,27 @@ void alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
   page->frame = free_frame_idx;
   page->rw = write ? 1 : 0;
   page->user = kernel ? 0 : 1;
+}
+
+/*
+ * Clear a frame.
+ */
+static void clear_frame(uint32_t frame_addr)
+{
+  uint32_t frame = frame_addr / PAGE_SIZE;
+  frames[frame / 32] &= ~(0x1 << (frame % 32));
+}
+
+/*
+ * Free a frame.
+ */
+void free_frame(struct page_t *page)
+{
+  if (!(page->frame))
+    return;
+
+  clear_frame(page->frame);
+  page->frame = 0;
 }
 
 /*

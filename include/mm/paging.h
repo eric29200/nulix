@@ -6,6 +6,13 @@
 
 #define PAGE_SIZE       0x1000    /* 4 kB */
 
+/* defined in paging.c */
+extern uint32_t placement_address;
+extern uint32_t *frames;
+extern uint32_t nb_frames;
+extern struct page_directory_t *kernel_pgd;
+extern struct page_directory_t *current_pgd;
+
 /*
  * Page structure.
  */
@@ -38,6 +45,7 @@ struct page_directory_t {
 void init_paging(uint32_t start, uint32_t end);
 struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t *pgd);
 void alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write);
+void free_frame(struct page_t *page);
 void switch_page_directory(struct page_directory_t *pgd);
 void page_fault_handler(struct registers_t regs);
 uint32_t kmalloc(uint32_t size, uint8_t align, uint32_t *phys);
