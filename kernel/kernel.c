@@ -39,18 +39,10 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   /* init paging (start at end of static kernel code and finish at end of memory) */
   printf("[Kernel] Memory Paging Init\n");
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024 - (uint32_t) &kernel_start);
+
   /* enable interrupts */
+  printf("[Kernel] Enable interruptions \n");
   __asm__("sti");
-
-  int i;
-  for (i = 0; i < 90 * 1024; i++) {
-    char *a = kmalloc(1024);
-    //if (a)
-    //  printf("ok");
-    kfree(a);
-  }
-
-  printf("ok\n");
 
   return 0;
 }

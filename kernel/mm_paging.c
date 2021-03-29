@@ -1,6 +1,7 @@
 #include <kernel/mm_paging.h>
 #include <lib/stdio.h>
 #include <lib/string.h>
+#include <lib/stderr.h>
 
 /* placement address */
 uint32_t placement_address = 0;
@@ -64,24 +65,26 @@ static void set_frame(uint32_t frame_addr)
 /*
  * Allocate a new frame.
  */
-void alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
+int32_t alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
 {
   int32_t free_frame_idx;
 
   /* frame already allocated */
   if (page->frame != 0)
-    return;
+    return 0;
 
   /* get a new frame */
   free_frame_idx = get_first_free_frame();
   if (free_frame_idx < 0)
-    panic("no free page frame");
+    return ENOMEM;
 
   set_frame(PAGE_SIZE * free_frame_idx);
   page->present = 1;
   page->frame = free_frame_idx;
   page->rw = write ? 1 : 0;
   page->user = kernel ? 0 : 1;
+
+  return 0;
 }
 
 /*

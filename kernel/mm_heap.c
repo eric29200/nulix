@@ -78,8 +78,10 @@ static int32_t expand(struct heap_t *heap, uint32_t new_size)
     return ENOMEM;
 
   /* allocate new frames */
-  for (i = heap->end_address - heap->start_address; i < new_size; i += PAGE_SIZE)
-    alloc_frame(get_page(heap->start_address + i, 1, kernel_pgd), heap->supervisor ? 1 : 0, heap->readonly ? 1 : 0);
+  for (i = heap->end_address - heap->start_address; i < new_size; i += PAGE_SIZE) {
+    if (alloc_frame(get_page(heap->start_address + i, 1, kernel_pgd), heap->supervisor ? 1 : 0, heap->readonly ? 1 : 0))
+      return ENOMEM;
+  }
 
   /* update end address */
   heap->end_address = heap->start_address + new_size;

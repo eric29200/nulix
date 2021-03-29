@@ -44,7 +44,7 @@ struct page_directory_t {
 
 void init_paging(uint32_t start, uint32_t end);
 struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t *pgd);
-void alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write);
+int32_t alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write);
 void free_frame(struct page_t *page);
 void switch_page_directory(struct page_directory_t *pgd);
 void page_fault_handler(struct registers_t regs);
