@@ -10,6 +10,7 @@
 
 extern uint32_t loader;
 extern uint32_t kernel_end;
+extern uint32_t kernel_start;
 
 int kmain(unsigned long magic, multiboot_info_t *mboot)
 {
@@ -37,16 +38,16 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
 
   /* init paging (start at end of static kernel code and finish at end of memory) */
   printf("[Kernel] Memory Paging Init\n");
-  init_mem((uint32_t) &kernel_end, 0x100000 + mboot->mem_upper * 1024);
-
+  init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024 - (uint32_t) &kernel_start);
   /* enable interrupts */
   __asm__("sti");
 
   int i;
-  for (i = 0; i < 3000 * 1024; i++) {
+  for (i = 0; i < 90 * 1024; i++) {
     char *a = kmalloc(1024);
-    //char *a = kmalloc(1024);
-    //kfree(a);
+    //if (a)
+    //  printf("ok");
+    kfree(a);
   }
 
   printf("ok\n");

@@ -2,6 +2,7 @@
 #include <kernel/mm_paging.h>
 #include <kernel/mm.h>
 #include <lib/stdio.h>
+#include <lib/stderr.h>
 #include <lib/string.h>
 
 /* kernel heap */
@@ -58,13 +59,13 @@ struct heap_t *create_heap(uint32_t start_addr, uint32_t end_addr, uint32_t max_
 /*
  * Expand a heap.
  */
-static void expand(struct heap_t *heap, uint32_t new_size)
+static int32_t expand(struct heap_t *heap, uint32_t new_size)
 {
   uint32_t i;
 
   /* no need to expand */
   if (new_size <= heap->end_address - heap->start_address)
-    return;
+    return 0;
 
   /* align on page boundary */
   if ((new_size & 0xFFFFF000) != 0) {
@@ -74,7 +75,7 @@ static void expand(struct heap_t *heap, uint32_t new_size)
 
   /* check overflow */
   if (heap->start_address + new_size > heap->max_address)
-    printf("[Kernel] Heap expansion overflow\n");
+    return ENOMEM;
 
   /* allocate new frames */
   for (i = heap->end_address - heap->start_address; i < new_size; i += PAGE_SIZE)
@@ -82,6 +83,8 @@ static void expand(struct heap_t *heap, uint32_t new_size)
 
   /* update end address */
   heap->end_address = heap->start_address + new_size;
+
+  return 0;
 }
 
 /*
@@ -134,7 +137,8 @@ void *heap_alloc(struct heap_t *heap, uint32_t size, uint8_t page_align)
     /* expand the heap */
     uint32_t old_length = heap->end_address - heap->start_address;
     uint32_t old_end_address = heap->end_address;
-    expand(heap, old_length + new_size);
+    if (expand(heap, old_length + new_size) == ENOMEM)
+      return NULL;
 
     /* find last item (in location address) */
     int32_t last_item_idx = -1;
