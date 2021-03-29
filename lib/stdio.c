@@ -160,3 +160,12 @@ int printf(const char *format, ...)
 
   return ret;
 }
+
+/*
+ * Panic.
+ */
+void panic(const char *message)
+{
+  printf("[PANIC] %s\n", message);
+  for (;;);
+}

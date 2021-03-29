@@ -11,5 +11,6 @@
 int fprintf(int fd, const char *format, ...);
 int sprintf(char *s, const char *format, ...);
 int printf(const char *format, ...);
+void panic(const char *message);
 
 #endif

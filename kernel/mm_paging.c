@@ -74,6 +74,9 @@ void alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
 
   /* get a new frame */
   free_frame_idx = get_first_free_frame();
+  if (free_frame_idx < 0)
+    panic("no free page frame");
+
   set_frame(PAGE_SIZE * free_frame_idx);
   page->present = 1;
   page->frame = free_frame_idx;
@@ -124,8 +127,7 @@ void page_fault_handler(struct registers_t regs)
   /* output message and panic */
   printf("Page fault at address=%x | present=%d read-only=%d user-mode=%d reserved=%d instruction-fetch=%d\n",
          fault_addr, present, rw, user, reserved, id);
-  printf("[Kernel] PANIC\n");
-  for (;;);
+  panic("");
 }
 
 /*
