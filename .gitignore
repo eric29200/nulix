@@ -1,0 +1,9 @@
+*~
+*.swp
+*.o
+*/*.o
+*.bin
+*/*.bin
+kernel.bin
+kos
+kos.iso

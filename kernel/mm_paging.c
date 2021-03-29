@@ -1,4 +1,4 @@
-#include <mm/paging.h>
+#include <kernel/mm_paging.h>
 #include <lib/stdio.h>
 #include <lib/string.h>
 

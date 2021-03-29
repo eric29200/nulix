@@ -1,5 +1,5 @@
-#ifndef _MM_MEM_H_
-#define _MM_MEM_H_
+#ifndef _MM_H_
+#define _MM_H_
 
 #include <lib/stddef.h>
 

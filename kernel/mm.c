@@ -1,6 +1,6 @@
-#include <mm/mem.h>
-#include <mm/paging.h>
-#include <mm/heap.h>
+#include <kernel/mm.h>
+#include <kernel/mm_paging.h>
+#include <kernel/mm_heap.h>
 #include <lib/string.h>
 
 /*
