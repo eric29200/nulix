@@ -16,7 +16,7 @@ struct page_directory_t *current_pgd = 0;
 /*
  * Allocate physical memory.
  */
-uint32_t kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
+uint32_t kmalloc_phys(uint32_t size, uint8_t align, uint32_t *phys)
 {
   uint32_t ret;
 
@@ -95,11 +95,13 @@ static void clear_frame(uint32_t frame_addr)
  */
 void free_frame(struct page_t *page)
 {
-  if (!(page->frame))
+  uint32_t frame;
+
+  if (!(frame = page->frame))
     return;
 
-  clear_frame(page->frame);
-  page->frame = 0;
+  clear_frame(frame);
+  page->frame = 0x0;
 }
 
 /*
@@ -120,41 +122,10 @@ void page_fault_handler(struct registers_t regs)
   int id = regs.err_code & 0x10;
 
   /* output message and panic */
-  printf("\nPage fault at address=%x | present=%d read-only=%d user-mode=%d reserved=%d instruction-fetch=%d",
+  printf("Page fault at address=%x | present=%d read-only=%d user-mode=%d reserved=%d instruction-fetch=%d\n",
          fault_addr, present, rw, user, reserved, id);
-  printf("PANIC\n");
+  printf("[Kernel] PANIC\n");
   for (;;);
-}
-
-/*
- * Init paging.
- */
-void init_paging(uint32_t start, uint32_t end)
-{
-  uint32_t i;
-
-  /* set placement address (some memory is reserved for the heap structure) */
-  placement_address = start + 0x100;
-
-  /* set frames */
-  nb_frames = end / PAGE_SIZE;
-  frames = (uint32_t *) kmalloc(nb_frames / 32, 0, NULL);
-  memset(frames, 0, nb_frames / 32);
-
-  /* allocate kernel pgd */
-  kernel_pgd = (struct page_directory_t *) kmalloc(sizeof(struct page_directory_t), 1, NULL);
-  memset(kernel_pgd, 0, sizeof(struct page_directory_t));
-  current_pgd = kernel_pgd;
-
-  /* allocate frames and pages */
-  for (i = 0; i < placement_address; i += PAGE_SIZE)
-    alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
-
-  /* register page fault handler */
-  register_interrupt_handler(14, page_fault_handler);
-
-  /* enable paging */
-  switch_page_directory(current_pgd);
 }
 
 /*
@@ -192,11 +163,12 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
 
   /* create a new page table */
   if (make) {
-    pgd->tables[table_idx] = (struct page_table_t *) kmalloc(sizeof(struct page_table_t), 1, &tmp);
-    memset(pgd->tables[table_idx], 0, 0x1000);
+    pgd->tables[table_idx] = (struct page_table_t *) kmalloc_phys(sizeof(struct page_table_t), 1, &tmp);
+    memset(pgd->tables[table_idx], 0, PAGE_SIZE);
     pgd->tables_physical[table_idx] = tmp | 0x7; /* present, rw and user */
     return &pgd->tables[table_idx]->pages[address % 1024];
   }
+
 
   return 0;
 }

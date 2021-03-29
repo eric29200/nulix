@@ -1,0 +1,2 @@
+- Heap : bug when allocating/freeing too much time
+- Heap : set correct end size and check overflow

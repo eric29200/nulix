@@ -17,7 +17,6 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
     return 0xD15EA5E;
 
-
   /* clear screen */
   screen_clear();
 
@@ -37,11 +36,21 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   init_timer(TIMER_HZ);
 
   /* init paging (start at end of static kernel code and finish at end of memory) */
-  printf("[Kernel] Memory paging Init\n");
+  printf("[Kernel] Memory Paging Init\n");
   init_mem((uint32_t) &kernel_end, 0x100000 + mboot->mem_upper * 1024);
 
   /* enable interrupts */
   __asm__("sti");
+
+  int i;
+  for (i = 0; i < 30; i++) {
+    char *a = kmalloc(1024 * 1024);
+    kfree(a);
+    //char *a = kmalloc(1024);
+    //kfree(a);
+  }
+
+  printf("ok\n");
 
   return 0;
 }

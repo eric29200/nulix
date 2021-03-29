@@ -48,6 +48,6 @@ void alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write);
 void free_frame(struct page_t *page);
 void switch_page_directory(struct page_directory_t *pgd);
 void page_fault_handler(struct registers_t regs);
-uint32_t kmalloc(uint32_t size, uint8_t align, uint32_t *phys);
+uint32_t kmalloc_phys(uint32_t size, uint8_t align, uint32_t *phys);
 
 #endif
