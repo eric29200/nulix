@@ -85,41 +85,6 @@ static void expand(struct heap_t *heap, uint32_t new_size)
 }
 
 /*
- * Contract a heap.
- */
-static uint32_t contract(struct heap_t *heap, uint32_t new_size)
-{
-  uint32_t i;
-
-  /* no need to contract */
-  if (new_size >= heap->end_address - heap->start_address)
-    return heap->end_address - heap->start_address;
-
-  /* align on page boundary */
-  if ((new_size & 0xFFFFF000) != 0) {
-    new_size &= 0xFFFFF000;
-    new_size += PAGE_SIZE;
-  }
-
-  /* do not contract too far */
-  if (new_size < HEAP_MIN_SIZE)
-    new_size = HEAP_MIN_SIZE;
-
-  /* no need to contract */
-  if (new_size >= heap->end_address - heap->start_address)
-    return heap->end_address - heap->start_address;
-
-  /* free frames */
-  for (i = heap->end_address - heap->start_address - PAGE_SIZE; i > new_size; i -= PAGE_SIZE)
-    free_frame(get_page(heap->start_address + i, 0, kernel_pgd));
-
-  /* update end address */
-  heap->end_address = heap->start_address + new_size;
-
-  return new_size;
-}
-
-/*
  * Find smallest hole matching size.
  */
 static int32_t find_smallest_hole(struct heap_t *heap, uint32_t size, uint8_t page_align)
@@ -289,7 +254,7 @@ void heap_free(struct heap_t *heap, void *p)
   uint32_t cache_size, i;
   char do_add = 1;
 
-  /* don't free null pointers*/
+  /* don't free null pointers */
   if (p == 0)
     return;
 
@@ -325,28 +290,6 @@ void heap_free(struct heap_t *heap, void *p)
     /* remove hole from index */
     if (i < heap->index.size)
       ordered_array_remove(&heap->index, i);
-  }
-
-  /* contract heap */
-  if ((uint32_t) footer + sizeof(struct mm_footer_t) == heap->end_address) {
-    uint32_t old_length = heap->end_address - heap->start_address;
-    uint32_t new_length = contract(heap, (uint32_t) header - heap->start_address);
-
-    if (header->size - (old_length - new_length) > 0) {
-      /* this block still exist : resize it */
-      header->size -= old_length - new_length;
-      footer = (struct mm_footer_t *) ((uint32_t) header + header->size - sizeof(struct mm_footer_t));
-      footer->magic = HEAP_MAGIC;
-      footer->header = header;
-    } else {
-      /* this block no longer exist : remove it from index */
-      for (i = 0; i < heap->index.size; i++)
-        if (heap->index.items[i] == (void *) header_right)
-          break;
-
-      if (i < heap->index.size)
-        ordered_array_remove(&heap->index, i);
-    }
   }
 
   /* add free block if needed */

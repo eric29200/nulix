@@ -43,9 +43,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   __asm__("sti");
 
   int i;
-  for (i = 0; i < 30; i++) {
-    char *a = kmalloc(1024 * 1024);
-    kfree(a);
+  for (i = 0; i < 3000 * 1024; i++) {
+    char *a = kmalloc(1024);
     //char *a = kmalloc(1024);
     //kfree(a);
   }
