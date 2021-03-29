@@ -160,7 +160,7 @@ void *heap_alloc(struct heap_t *heap, uint32_t size, uint8_t page_align)
       footer->header = header;
 
       /* add to the heap */
-      ordered_array_insert((void *) header, &heap->index);
+      ordered_array_insert(&heap->index, (void *) header);
 
       /* we should have enough space now : recall the alloc function */
       return heap_alloc(heap, size, page_align);
