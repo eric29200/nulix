@@ -23,17 +23,17 @@ static void __putc_buf(char c, int fd)
 }
 
 /*
- * Print a formatted number to a file descriptor.
+ * Print a formatted signed number to a file descriptor.
  */
-static int __print_num(void (*putch)(char, int), int fd, int num, uint16_t base, bool sign)
+static int __print_num_signed(void (*putch)(char, int), int fd, int32_t num, uint16_t base)
 {
   static char *digits = "0123456789abcdef";
   bool is_negative = FALSE;
   char buf[16];
-  int n = num;
+  int32_t n = num;
   int i, ret;
 
-  if (sign && num < 0) {
+  if (num < 0) {
     n = -n;
     is_negative = TRUE;
   }
@@ -46,6 +46,29 @@ static int __print_num(void (*putch)(char, int), int fd, int num, uint16_t base,
 
   if (is_negative)
     buf[i++] = '-';
+
+  ret = i;
+  while (i >= 0)
+    putch(buf[--i], fd);
+
+  return ret;
+}
+
+/*
+ * Print a formatted unsigned number to a file descriptor.
+ */
+static int __print_num_unsigned(void (*putch)(char, int), int fd, uint32_t num, uint16_t base)
+{
+  static char *digits = "0123456789abcdef";
+  char buf[16];
+  uint32_t n = num;
+  int i, ret;
+
+  i = 0;
+  do {
+    buf[i++] = digits[n % base];
+    n /= base;
+  } while (n > 0);
 
   ret = i;
   while (i >= 0)
@@ -82,19 +105,16 @@ static int vsprintf(void (*putch)(char, int), int fd, const char *format, va_lis
         break;
       case 'd':
       case 'i':
-        sign = 1;
-      case 'u':
-        count += __print_num(putch, fd, va_arg(args, int), 10, sign);
+        count += __print_num_signed(putch, fd, va_arg(args, int32_t), 10);
         break;
-      case 'l':
-        sign = 1;
-        count += __print_num(putch, fd, va_arg(args, long), 10, sign);
+      case 'u':
+        count += __print_num_unsigned(putch, fd, va_arg(args, int32_t), 10);
         break;
       case 'x':
         putch('0', fd);
         putch('x', fd);
         count += 2;
-        count += __print_num(putch, fd, va_arg(args, long), 16, sign);
+        count += __print_num_unsigned(putch, fd, va_arg(args, uint32_t), 16);
         break;
       case 's':
         for (substr = va_arg(args, char *); *substr != '\0'; substr++, count++)
