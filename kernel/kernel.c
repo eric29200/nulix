@@ -32,13 +32,13 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   printf("[Kernel] Interrupt Descriptor Table Init\n");
   init_idt();
 
-  /* init timer at 50 Hz */
-  printf("[Kernel] Timer Init at %dHz\n", TIMER_HZ);
-  init_timer(TIMER_HZ);
-
   /* init paging (start at end of static kernel code and finish at end of memory) */
   printf("[Kernel] Memory Paging Init\n");
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024 - (uint32_t) &kernel_start);
+
+  /* init timer at 50 Hz */
+  printf("[Kernel] Timer Init at %dHz\n", TIMER_HZ);
+  init_timer(TIMER_HZ);
 
   /* enable interrupts */
   printf("[Kernel] Enable interruptions \n");
