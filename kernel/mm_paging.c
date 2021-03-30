@@ -1,10 +1,8 @@
 #include <kernel/mm_paging.h>
+#include <kernel/mm.h>
 #include <lib/stdio.h>
 #include <lib/string.h>
 #include <lib/stderr.h>
-
-/* placement address */
-uint32_t placement_address = 0;
 
 /* bit frames */
 uint32_t *frames;
@@ -13,29 +11,6 @@ uint32_t nb_frames;
 /* page directories */
 struct page_directory_t *kernel_pgd = 0;
 struct page_directory_t *current_pgd = 0;
-
-/*
- * Allocate physical memory.
- */
-uint32_t kmalloc_phys(uint32_t size, uint8_t align, uint32_t *phys)
-{
-  uint32_t ret;
-
-  /* align adress on PAGE boundary */
-  if (align == 1 && (placement_address & 0xFFFFF000)) {
-    placement_address &= 0xFFFFF000;
-    placement_address += PAGE_SIZE;
-  }
-
-  /* get physical memory */
-  if (phys)
-    *phys = placement_address;
-
-  /* update placement_address */
-  ret = placement_address;
-  placement_address += size;
-  return ret;
-}
 
 /*
  * Get next free frame.

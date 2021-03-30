@@ -3,17 +3,52 @@
 #include <kernel/mm_heap.h>
 #include <lib/string.h>
 
+/* placement address (used before kernel heap is created) */
+uint32_t placement_address = 0;
+
+/* kernel heap */
 struct heap_t *kheap = NULL;
+
+/*
+ * Allocate memory.
+ */
+uint32_t kmalloc_phys(uint32_t size, uint8_t align, uint32_t *phys)
+{
+  struct page_t *page;
+  uint32_t ret;
+
+  /* use kernel heap */
+  if (kheap) {
+    void *addr = heap_alloc(kheap, size, align);
+    if (phys) {
+      page = get_page((uint32_t) addr, 0, kernel_pgd);
+      *phys = page->frame * PAGE_SIZE + ((uint32_t) addr & 0xFFF);
+    }
+
+    return (uint32_t) addr;
+  }
+
+  /* align adress on PAGE boundary */
+  if (align == 1 && (placement_address & 0xFFFFF000)) {
+    placement_address &= 0xFFFFF000;
+    placement_address += PAGE_SIZE;
+  }
+
+  /* get physical memory */
+  if (phys)
+    *phys = placement_address;
+
+  /* update placement_address */
+  ret = placement_address;
+  placement_address += size;
+  return ret;
+}
 
 /*
  * Allocate memory.
  */
 void *kmalloc(uint32_t size)
 {
-  /* use kernel heap */
-  if (kheap)
-    return heap_alloc(kheap, size, 0);
-
   return (void *) kmalloc_phys(size, 0, NULL);
 }
 
@@ -48,7 +83,7 @@ void init_mem(uint32_t start, uint32_t end)
   current_pgd = kernel_pgd;
 
   /* map heap pages */
-  for (i = KHEAP_START; i < KHEAP_START + end; i += PAGE_SIZE)
+  for (i = KHEAP_START; i < KHEAP_START + KHEAP_INITIAL_SIZE; i += PAGE_SIZE)
     get_page(i, 1, kernel_pgd);
 
   /* allocate kernel frames and pages (maximum size of kernel page tables has to be added) */
