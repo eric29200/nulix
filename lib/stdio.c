@@ -84,12 +84,10 @@ static int vsprintf(void (*putch)(char, int), int fd, const char *format, va_lis
 {
   char *substr;
   int i, count;
-  bool sign;
   char c;
 
   for (i = 0, count = 0; format[i] != '\0'; i++) {
     c = format[i];
-    sign = 0;
 
     if (c != '%') {
       putc(c, fd);
