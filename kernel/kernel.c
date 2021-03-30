@@ -5,6 +5,7 @@
 #include <drivers/screen.h>
 #include <drivers/timer.h>
 #include <lib/stdio.h>
+#include <lib/string.h>
 
 #define TIMER_HZ      50
 
@@ -34,7 +35,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
 
   /* init paging (start at end of static kernel code and finish at end of memory) */
   printf("[Kernel] Memory Paging Init\n");
-  init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024 - (uint32_t) &kernel_start);
+  init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
   /* init timer at 50 Hz */
   printf("[Kernel] Timer Init at %dHz\n", TIMER_HZ);
@@ -43,6 +44,17 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   /* enable interrupts */
   printf("[Kernel] Enable interruptions \n");
   __asm__("sti");
+
+  uint32_t size = 40 * 1024 * 1024;
+  char *a = (char *) kmalloc(size);
+  memset(a, 'a', size);
+
+  for (uint32_t i = 0; i < size; i++) {
+    if (a[i] != 'a') {
+      printf("%d\n", i);
+      break;
+    }
+  }
 
   return 0;
 }
