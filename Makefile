@@ -24,7 +24,6 @@ $(KERNEL): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 run: $(KERNEL)
-	cp $(KERNEL) $(ISO)
 	genisoimage -R -b boot/grub/stage2 -no-emul-boot -boot-load-size 4 -A os -input-charset utf8 -quiet -boot-info-table -o kos.iso $(ISO)
 	$(QEMU) -m 32M -cdrom kos.iso
 
