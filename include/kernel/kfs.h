@@ -43,6 +43,6 @@ struct kfs_dir_record_t {
   uint32_t d_inode_no;
 };
 
-struct kfs_superblock_t *test(uint32_t location);
+int kfs_mount(uint32_t location);
 
 #endif

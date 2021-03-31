@@ -51,10 +51,13 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   init_timer(TIMER_HZ);
 
   /* enable interrupts */
-  printf("[Kernel] Enable interruptions \n");
+  printf("[Kernel] Enable interruptions\n");
   __asm__("sti");
 
-  test(initrd_start);
+  /* mount file system */
+  printf("[Kernel] Mount root filesystem\n");
+  if (kfs_mount(initrd_start) != 0)
+    panic("Error mouting root filesystem");
 
   return 0;
 }
