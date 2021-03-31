@@ -2,7 +2,9 @@
 #ifndef _KFS_H_
 #define _KFS_H_
 
+#ifdef __KERNEL__
 #include <lib/stddef.h>
+#endif
 
 #define KFS_MAGIC                   0xA0A0A0A0
 #define KFS_BLOCK_SIZE              4096

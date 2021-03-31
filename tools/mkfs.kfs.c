@@ -6,7 +6,8 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include "mkfs.kfs.h"
+#include "../include/kernel/kfs.h"
+
 
 #define NB_ARGS                     2
 
