@@ -2,7 +2,7 @@
 #ifndef _KFS_H_
 #define _KFS_H_
 
-#include <lib/stddef.h>
+#include <stdint.h>
 
 #define KFS_MAGIC                   0xA0A0A0A0
 #define KFS_BLOCK_SIZE              4096
@@ -42,7 +42,5 @@ struct kfs_dir_record_t {
   char d_name[KFS_FILENAME_LEN];
   uint32_t d_inode_no;
 };
-
-struct kfs_superblock_t *test(uint32_t location);
 
 #endif

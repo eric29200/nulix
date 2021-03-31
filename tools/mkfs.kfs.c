@@ -4,44 +4,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
+
+#include "mkfs.kfs.h"
 
 #define NB_ARGS                     2
-#define KFS_MAGIC                   0xA0A0A0A0
-#define KFS_BLOCK_SIZE              4096
-#define KFS_FILENAME_LEN            64
-#define KFS_ROOT_INODE_NUMBER       1
-#define KFS_SUPERBLOCK_BLOCK_NUMBER 0
-#define KFS_INODESTORE_BLOCK_NUMBER 1
-#define KFS_DATA_BLOCK_NUMBER       2
-
-/*
- * Kfs super block.
- */
-struct kfs_superblock_t {
-  uint32_t s_magic;
-  uint32_t s_block_size;
-};
-
-/*
- * Kfs inode.
- */
-struct kfs_inode_t {
-  uint32_t i_mode;
-  uint32_t i_inode_no;
-  uint32_t i_block;
-  union {
-    uint32_t i_size;
-    uint32_t i_nb_children;
-  };
-};
-
-/*
- * Kfs dir record.
- */
-struct kfs_dir_record_t {
-  char d_name[KFS_FILENAME_LEN];
-  uint32_t d_inode_no;
-};
 
 /*
  * Usage.
@@ -106,6 +73,32 @@ static int write_root_inode(int fd)
 }
 
 /*
+ * Write empty data blocks.
+ */
+static int write_data_blocks(int fd)
+{
+  char empty_block[KFS_BLOCK_SIZE];
+  int i;
+
+  /* go to first data block */
+  if (lseek(fd, KFS_DATA_BLOCK_NUMBER * KFS_BLOCK_SIZE, SEEK_SET) == -1) {
+    perror("fseek");
+    return -1;
+  }
+
+  /* prepare a zero data block */
+  memset(empty_block, 0, KFS_BLOCK_SIZE);
+
+  /* write all data blocks */
+  for (i = 0; i < KFS_MAX_INODES; i++) {
+    if (write(fd, empty_block, KFS_BLOCK_SIZE) != KFS_BLOCK_SIZE) {
+      fprintf(stderr, "Error writing data blocks\n");
+      return -1;
+    }
+  }
+}
+
+/*
  * Create a kfs file system.
  */
 int main(int argc, char **argv)
@@ -133,6 +126,11 @@ int main(int argc, char **argv)
 
   /* write root inode */
   ret = write_root_inode(fd);
+  if (ret == -1)
+    goto out;
+
+  /* write data blocks */
+  ret = write_data_blocks(fd);
   if (ret == -1)
     goto out;
 
