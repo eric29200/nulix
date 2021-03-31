@@ -1,6 +1,7 @@
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
 #include <kernel/mm.h>
+#include <kernel/kfs.h>
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
@@ -10,11 +11,15 @@
 #define TIMER_HZ      50
 
 extern uint32_t loader;
-extern uint32_t kernel_end;
-extern uint32_t kernel_start;
 
+/*
+ * Main kos function.
+ */
 int kmain(unsigned long magic, multiboot_info_t *mboot)
 {
+  uint32_t initrd_start;
+  uint32_t initrd_end;
+
   /* check multiboot */
   if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
     return 0xD15EA5E;
@@ -24,6 +29,10 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
 
   /* print grub informations */
   printf("[Kernel] Loading at linear address = %x\n", loader);
+
+  /* get initrd location */
+  initrd_start = *((uint32_t *) mboot->mods_addr);
+  initrd_end = *((uint32_t *) (mboot->mods_addr + 4));
 
   /* init gdt */
   printf("[Kernel] Global Descriptor Table Init\n");
@@ -35,7 +44,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
 
   /* init memory */
   printf("[Kernel] Memory Init\n");
-  init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
+  init_mem(initrd_end, mboot->mem_upper * 1024);
 
   /* init timer at 50 Hz */
   printf("[Kernel] Timer Init at %dHz\n", TIMER_HZ);
@@ -44,6 +53,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   /* enable interrupts */
   printf("[Kernel] Enable interruptions \n");
   __asm__("sti");
+
+  test(initrd_start);
 
   return 0;
 }
