@@ -6,5 +6,8 @@
 */*.bin
 kernel.bin
 iso/kernel.bin
+initrd
+iso/initrd
 kos
 kos.iso
+tools/mkfs.kfs
