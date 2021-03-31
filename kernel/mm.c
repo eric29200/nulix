@@ -13,7 +13,7 @@ struct heap_t *kheap = NULL;
 /*
  * Allocate memory.
  */
-void *kmalloc(uint32_t size)
+void *kmalloc(size_t size)
 {
   uint32_t ret;
 

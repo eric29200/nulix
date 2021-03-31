@@ -33,7 +33,7 @@ struct heap_t *heap_create(uint32_t start_address, uint32_t end_address)
 /*
  * Find a free block.
  */
-static struct heap_block_t *heap_find_free_block(struct heap_t *heap, uint32_t size)
+static struct heap_block_t *heap_find_free_block(struct heap_t *heap, size_t size)
 {
   struct heap_block_t *block;
 

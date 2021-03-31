@@ -22,7 +22,7 @@ struct heap_t {
 };
 
 struct heap_t *heap_create(uint32_t start_address, uint32_t end_address);
-void *heap_alloc(struct heap_t *heap, uint32_t size);
+void *heap_alloc(struct heap_t *heap, size_t size);
 void heap_free(void *p);
 
 #endif
