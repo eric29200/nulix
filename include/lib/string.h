@@ -10,6 +10,8 @@ int strncmp(const char *s1, const char *s2, size_t n);
 char *strcpy(char *dest, const char *src);
 char *strncpy(char *dest, const char *src, size_t n);
 char *strchr(const char *s, char c);
+size_t strspn(const char *s, const char *accept);
+size_t strcspn(const char *s, const char *reject);
 
 void memset(void *s, char c, size_t n);
 int memcmp(const void *s1, const void *s2, size_t n);

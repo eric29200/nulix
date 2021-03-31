@@ -78,7 +78,49 @@ char *strncpy(char *dest, const char *src, size_t n)
   return memcpy(dest, src, size);
 }
 
-char *strchr(const char *s, char c);
+/*
+ * Locate a character in a string.
+ */
+char *strchr(const char *s, char c)
+{
+  for (; *s; s++)
+    if (*s == c)
+      return (char *) s;
+
+  return NULL;
+}
+
+/*
+ * Get the length of the initial segment of s which consists entirely of bytes in accept.
+ */
+size_t strspn(const char *s, const char *accept)
+{
+  size_t l = 0;
+
+  for (; *s; s++) {
+    if (strchr(accept, *s) == NULL)
+      break;
+    l++;
+  }
+
+  return l;
+}
+
+/*
+ * Get the length of the initial segment of s which consists entirely of bytes not in reject.
+ */
+size_t strcspn(const char *s, const char *reject)
+{
+  size_t l = 0;
+
+  for (; *s; s++) {
+    if (strchr(reject, *s) != NULL)
+      break;
+    l++;
+  }
+
+  return l;
+}
 
 /*
  * Fill memory with a constant byte.
