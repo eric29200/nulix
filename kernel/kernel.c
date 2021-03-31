@@ -33,8 +33,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   printf("[Kernel] Interrupt Descriptor Table Init\n");
   init_idt();
 
-  /* init paging (start at end of static kernel code and finish at end of memory) */
-  printf("[Kernel] Memory Paging Init\n");
+  /* init memory */
+  printf("[Kernel] Memory Init\n");
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
   /* init timer at 50 Hz */
@@ -44,17 +44,6 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   /* enable interrupts */
   printf("[Kernel] Enable interruptions \n");
   __asm__("sti");
-
-  uint32_t size = 40 * 1024 * 1024;
-  char *a = (char *) kmalloc(size);
-  memset(a, 'a', size);
-
-  for (uint32_t i = 0; i < size; i++) {
-    if (a[i] != 'a') {
-      printf("%d\n", i);
-      break;
-    }
-  }
 
   return 0;
 }
