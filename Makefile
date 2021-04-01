@@ -2,7 +2,6 @@ AS		= nasm
 CC		= i386-elf-gcc
 LD		= i386-elf-ld
 KERNEL		= kernel.bin
-ISO		= iso/
 HEADER_PATH	= include
 C_SOURCES 	= $(wildcard lib/*.c drivers/*.c kernel/*.c)
 AS_SOURCES 	= $(wildcard boot/*.s)
@@ -24,12 +23,7 @@ $(KERNEL): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 run: $(KERNEL)
-	# move kernel to iso
-	mv $(KERNEL) $(ISO)
-
-	# create image
-	genisoimage -R -b boot/grub/stage2 -no-emul-boot -boot-load-size 4 -A os -input-charset utf8 -quiet -boot-info-table -o kos.iso $(ISO)
-	$(QEMU) -m 32M -cdrom kos.iso
+	$(QEMU) -m 32M -kernel $(KERNEL)
 
 clean:
-	rm -f *.o */*.o $(KERNEL) kos.iso
+	rm -f *.o */*.o $(KERNEL)
