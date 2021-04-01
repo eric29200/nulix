@@ -3,4 +3,3 @@ timeout=0
 
 title Kos
 	kernel /kernel.bin
-	module /initrd
