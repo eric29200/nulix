@@ -40,8 +40,6 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   printf("[Kernel] Memory Init\n");
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
-  printf("%x\n", (uint32_t) &kernel_end);
-
   /* init timer at 50 Hz */
   printf("[Kernel] Timer Init at %dHz\n", TIMER_HZ);
   init_timer(TIMER_HZ);
