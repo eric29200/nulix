@@ -4,7 +4,10 @@
 #include <kernel/isr.h>
 #include <lib/stddef.h>
 
-#define PAGE_SIZE       0x1000    /* 4 kB */
+#define PAGE_SIZE           0x1000
+#define PAGE_MASK           (~(PAGE_SIZE - 1))
+#define IS_ALIGNED(addr)    (((addr) & PAGE_MASK) == 0)
+#define PAGE_ALIGN(addr)    (((addr) + PAGE_SIZE - 1) & PAGE_MASK)
 
 /* defined in paging.c */
 extern uint32_t placement_address;

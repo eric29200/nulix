@@ -17,10 +17,8 @@ uint32_t kmalloc_phys(uint32_t size, uint8_t align, uint32_t *phys)
   uint32_t ret;
 
   /* align adress on PAGE boundary */
-  if (align == 1 && (placement_address & 0xFFFFF000)) {
-    placement_address &= 0xFFFFF000;
-    placement_address += PAGE_SIZE;
-  }
+  if (align == 1 && !IS_ALIGNED(placement_address))
+    placement_address = PAGE_ALIGN(placement_address);
 
   /* get physical memory */
   if (phys)
