@@ -22,10 +22,13 @@ struct heap_block_t {
 struct heap_t {
   struct heap_block_t *first_block;
   struct heap_block_t *last_block;
+  uint32_t start_address;
   uint32_t end_address;
+  uint32_t max_address;
+  size_t size;
 } __attribute__((packed));
 
-struct heap_t *heap_create(uint32_t start_address, uint32_t end_address);
+struct heap_t *heap_create(uint32_t start_address, uint32_t max_address, size_t size);
 void *heap_alloc(struct heap_t *heap, size_t size);
 void heap_free(struct heap_t *heap, void *p);
 

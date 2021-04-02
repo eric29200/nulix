@@ -92,5 +92,5 @@ void init_mem(uint32_t start, uint32_t end)
   switch_page_directory(current_pgd);
 
   /* init heap */
-  kheap = heap_create(KHEAP_START, KHEAP_START + KHEAP_INIT_SIZE);
+  kheap = heap_create(KHEAP_START, KHEAP_START + end, KHEAP_INIT_SIZE);
 }

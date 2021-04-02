@@ -1,15 +1,17 @@
 #include <kernel/mm_heap.h>
+#include <kernel/mm_paging.h>
 #include <kernel/mm.h>
+#include <lib/stderr.h>
 
 /*
  * Create a heap.
  */
-struct heap_t *heap_create(uint32_t start_address, uint32_t end_address)
+struct heap_t *heap_create(uint32_t start_address, uint32_t max_address, size_t size)
 {
   struct heap_t *heap;
 
-  /* check heap size is big enough */
-  if (end_address - start_address <= sizeof(struct heap_block_t))
+  /* check heap size */
+  if (size <= sizeof(struct heap_block_t) || size > (max_address - start_address))
     return NULL;
 
   /* allocate a new heap */
@@ -17,18 +19,68 @@ struct heap_t *heap_create(uint32_t start_address, uint32_t end_address)
   if (!heap)
     return NULL;
 
-  /* set start/end address */
+  /* set start/end addresses */
   heap->first_block = (struct heap_block_t *) start_address;
-  heap->end_address = end_address;
+  heap->start_address = start_address;
+  heap->end_address = start_address + size;
+  heap->max_address = max_address;
+  heap->size = size;
 
   /* create first block */
-  heap->first_block->size = end_address - start_address - sizeof(struct heap_block_t);
+  heap->first_block->size = size - sizeof(struct heap_block_t);
   heap->first_block->free = 1;
   heap->first_block->prev = NULL;
   heap->first_block->next = NULL;
   heap->last_block = heap->first_block;
 
   return heap;
+}
+
+/*
+ * Expand a heap.
+ */
+static int heap_expand(struct heap_t *heap, size_t new_size)
+{
+  struct heap_block_t *new_last_block;
+  uint32_t i;
+
+  /* always add sizeof(heap_block) */
+  new_size += sizeof(struct heap_block_t);
+
+  /* no need to expand */
+  if (heap->size >= new_size)
+    return 0;
+
+  /* out of memory */
+  if (heap->start_address + new_size > heap->max_address)
+    return ENOMEM;
+
+  /* allocate new pages */
+  for (i = heap->end_address; i < heap->start_address + new_size; i += PAGE_SIZE)
+    alloc_frame(get_page(i, 1, current_pgd), 1, 1);
+
+  /* extend last block */
+  if (heap->last_block->free) {
+    heap->last_block->size += new_size - heap->size;
+    goto out;
+  }
+
+  /* create new last block */
+  new_last_block = (struct heap_block_t *) heap->end_address;
+  new_last_block->free = 1;
+  new_last_block->size = new_size - heap->size - sizeof(struct heap_block_t);
+  new_last_block->prev = heap->last_block;
+  new_last_block->next = NULL;
+
+  /* update heap */
+  heap->last_block->next = new_last_block;
+  heap->last_block = new_last_block;
+
+out:
+  /* update heap size */
+  heap->size = new_size;
+  heap->end_address = heap->start_address + heap->size;
+  return 0;
 }
 
 /*
@@ -54,8 +106,14 @@ void *heap_alloc(struct heap_t *heap, uint32_t size)
 
   /* find free block */
   block = heap_find_free_block(heap, size);
-  if (!block)
-    return NULL;
+  if (!block) {
+    /* try to expand the heap */
+    if (heap_expand(heap, size) != 0)
+      return NULL;
+
+    /* retry with extanded heap */
+    return heap_alloc(heap, size);
+  }
 
   /* create new free block with remaining size */
   if (block->size - size > sizeof(struct heap_block_t)) {
