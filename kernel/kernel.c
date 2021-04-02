@@ -48,20 +48,5 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   printf("[Kernel] Enable interruptions\n");
   __asm__("sti");
 
-/*struct heap_block_t {
-  uint32_t size;
-  uint8_t free;
-  struct heap_block_t *prev;
-  struct heap_block_t *next;
-};*/
-
-  uint32_t size = 0x100000 - sizeof(uint32_t) * 3 - sizeof(uint8_t) + 1;
-  printf("%d\n", size);
-  char *a = kmalloc(size);
-  if (a) {
-    memset(a, 'a', size);
-    printf("ok\n");
-  }
-
   return 0;
 }

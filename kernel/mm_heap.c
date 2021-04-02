@@ -26,6 +26,7 @@ struct heap_t *heap_create(uint32_t start_address, uint32_t end_address)
   heap->first_block->free = 1;
   heap->first_block->prev = NULL;
   heap->first_block->next = NULL;
+  heap->last_block = heap->first_block;
 
   return heap;
 }
@@ -68,6 +69,10 @@ void *heap_alloc(struct heap_t *heap, uint32_t size)
     /* update this block */
     block->size = size;
     block->next = new_free_block;
+
+    /* update heap last block if needed */
+    if (new_free_block->next == NULL)
+      heap->last_block = new_free_block;
   }
 
   /* mark this block */
@@ -79,7 +84,7 @@ void *heap_alloc(struct heap_t *heap, uint32_t size)
 /*
  * Free memory on the heap.
  */
-void heap_free(void *p)
+void heap_free(struct heap_t *heap, void *p)
 {
   struct heap_block_t *block;
 
@@ -95,8 +100,11 @@ void heap_free(void *p)
   if (block->next != NULL && block->next->free) {
     block->size += block->next->size + sizeof(struct heap_block_t);
 
-    if (block->next->next != NULL)
+    if (block->next->next == NULL)
+      heap->last_block = block;
+    else
       block->next->next->prev = block;
+
     block->next = block->next->next;
   }
 
