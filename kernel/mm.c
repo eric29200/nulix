@@ -72,6 +72,10 @@ void init_mem(uint32_t start, uint32_t end)
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
   current_pgd = kernel_pgd;
 
+  /* map heap frames */
+  for (i = KHEAP_START; i < KHEAP_START + KHEAP_INIT_SIZE; i += PAGE_SIZE)
+    get_page(i, 1, kernel_pgd);
+
   /* allocate kernel frames and pages (maximum size of kernel page tables has to be added) */
   max_size_of_page_tables =  (nb_frames / 1024) * sizeof(struct page_table_t);
   for (i = 0; i < placement_address + max_size_of_page_tables; i += PAGE_SIZE)
