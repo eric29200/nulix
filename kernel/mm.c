@@ -59,15 +59,15 @@ void init_mem(uint32_t start, uint32_t end)
   uint32_t max_size_of_page_tables;
   uint32_t i;
 
-  /* set placement address (some memory is reserved for the heap structure) */
-  placement_address = start + 0x100;
+  /* set placement address */
+  placement_address = start;
 
   /* set frames */
   nb_frames = end / PAGE_SIZE;
   frames = (uint32_t *) kmalloc_phys(nb_frames / 32, 0, 0);
   memset(frames, 0, nb_frames / 32);
 
-  /* allocate kernel pgd */
+  /* allocate kernel page directory */
   kernel_pgd = (struct page_directory_t *) kmalloc_phys(sizeof(struct page_directory_t), 1, NULL);
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
   current_pgd = kernel_pgd;
