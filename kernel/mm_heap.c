@@ -56,7 +56,7 @@ static int heap_expand(struct heap_t *heap, size_t new_size)
     return ENOMEM;
 
   /* allocate new pages */
-  for (i = heap->end_address; i < heap->start_address + new_size; i += PAGE_SIZE)
+  for (i = heap->end_address; i < heap->start_address + new_size + PAGE_SIZE; i += PAGE_SIZE)
     alloc_frame(get_page(i, 1, current_pgd), 1, 1);
 
   /* extend last block */
