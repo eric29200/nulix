@@ -15,7 +15,7 @@ struct heap_t *heap_create(uint32_t start_address, uint32_t max_address, size_t 
     return NULL;
 
   /* allocate a new heap */
-  heap = (struct heap_t *) kmalloc_phys(sizeof(struct heap_t), 0, 0);
+  heap = (struct heap_t *) kmalloc(sizeof(struct heap_t));
   if (!heap)
     return NULL;
 

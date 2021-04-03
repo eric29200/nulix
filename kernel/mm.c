@@ -38,7 +38,7 @@ void *kmalloc(uint32_t size)
   if (kheap)
     return heap_alloc(kheap, size);
 
-  return NULL;
+  return (void *) kmalloc_phys(size, 0, NULL);
 }
 
 /*
@@ -46,7 +46,8 @@ void *kmalloc(uint32_t size)
  */
 void kfree(void *p)
 {
-  heap_free(kheap, p);
+  if (kheap)
+    heap_free(kheap, p);
 }
 
 /*
@@ -62,7 +63,7 @@ void init_mem(uint32_t start, uint32_t end)
 
   /* set frames */
   nb_frames = end / PAGE_SIZE;
-  frames = (uint32_t *) kmalloc_phys(nb_frames / 32, 0, 0);
+  frames = (uint32_t *) kmalloc(nb_frames / 32);
   memset(frames, 0, nb_frames / 32);
 
   /* allocate kernel page directory */
