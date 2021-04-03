@@ -1,6 +1,7 @@
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
 #include <kernel/mm.h>
+#include <kernel/isr.h>
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
@@ -21,6 +22,9 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   /* check multiboot */
   if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
     return 0xD15EA5E;
+
+  /* disable interrupts */
+  interrupts_disable();
 
   /* clear screen */
   screen_clear();
@@ -45,8 +49,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   init_timer(TIMER_HZ);
 
   /* enable interrupts */
-  printf("[Kernel] Enable interruptions\n");
-  __asm__("sti");
+  printf("[Kernel] Enable interrupts\n");
+  interrupts_enable();
 
   return 0;
 }

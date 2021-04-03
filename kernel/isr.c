@@ -78,3 +78,19 @@ void irq_handler(struct registers_t regs)
     handler(regs);
   }
 }
+
+/*
+ * Enable interruptions.
+ */
+void interrupts_enable()
+{
+  __asm__ volatile("sti");
+}
+
+/*
+ * Disable interrupts.
+ */
+void interrupts_disable()
+{
+  __asm__ volatile("cli");
+}
