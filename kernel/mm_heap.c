@@ -3,6 +3,8 @@
 #include <kernel/mm.h>
 #include <lib/stderr.h>
 
+#define HEAP_BLOCK_DATA(block)          ((uint32_t) (block) + sizeof(struct heap_block_t))
+
 /*
  * Create a heap.
  */
@@ -121,7 +123,7 @@ void *heap_alloc(struct heap_t *heap, uint32_t size)
   /* create new free block with remaining size */
   if (block->size - size > sizeof(struct heap_block_t)) {
     /* create new free block */
-    new_free_block = (struct heap_block_t *) ((uint32_t) block + sizeof(struct heap_block_t) + size);
+    new_free_block = (struct heap_block_t *) (HEAP_BLOCK_DATA(block) + size);
     new_free_block->size = block->size - size - sizeof(struct heap_block_t);
     new_free_block->free = 1;
     new_free_block->prev = block;
@@ -139,7 +141,7 @@ void *heap_alloc(struct heap_t *heap, uint32_t size)
   /* mark this block */
   block->free = 0;
 
-  return (void *) ((uint32_t) block + sizeof(struct heap_block_t));
+  return (void *) HEAP_BLOCK_DATA(block);
 }
 
 /*
