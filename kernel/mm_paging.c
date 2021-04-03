@@ -143,7 +143,7 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
 
   /* create a new page table */
   if (make) {
-    pgd->tables[table_idx] = (struct page_table_t *) kmalloc_phys(sizeof(struct page_table_t), 1, &tmp);
+    pgd->tables[table_idx] = (struct page_table_t *) kmalloc_align_phys(sizeof(struct page_table_t), &tmp);
     memset(pgd->tables[table_idx], 0, PAGE_SIZE);
     pgd->tables_physical[table_idx] = tmp | 0x7; /* present, rw and user */
     return &pgd->tables[table_idx]->pages[address % 1024];

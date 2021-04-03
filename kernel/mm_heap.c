@@ -4,6 +4,7 @@
 #include <lib/stderr.h>
 
 #define HEAP_BLOCK_DATA(block)          ((uint32_t) (block) + sizeof(struct heap_block_t))
+#define HEAP_BLOCK_ALIGNED(block)       (PAGE_ALIGNED(HEAP_BLOCK_DATA(block)))
 
 /*
  * Create a heap.
@@ -91,13 +92,25 @@ out:
 /*
  * Find a free block.
  */
-static struct heap_block_t *heap_find_free_block(struct heap_t *heap, size_t size)
+static struct heap_block_t *heap_find_free_block(struct heap_t *heap, uint8_t page_aligned, size_t size)
 {
   struct heap_block_t *block;
+  uint32_t page_offset;
 
-  for (block = heap->first_block; block != NULL; block = block->next)
-    if (block->free && block->size >= size)
+  for (block = heap->first_block; block != NULL; block = block->next) {
+    /* skip busy blocks */
+    if (!block->free)
+      continue;
+
+    /* compute page offset */
+    page_offset = 0;
+    if (page_aligned && !HEAP_BLOCK_ALIGNED(block))
+      page_offset = PAGE_SIZE - HEAP_BLOCK_DATA(block) % PAGE_SIZE;
+
+    /* check size */
+    if (block->size >= size + page_offset)
       return block;
+  }
 
   return NULL;
 }
@@ -105,19 +118,41 @@ static struct heap_block_t *heap_find_free_block(struct heap_t *heap, size_t siz
 /*
  * Allocate memory on the heap.
  */
-void *heap_alloc(struct heap_t *heap, uint32_t size)
+void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 {
-  struct heap_block_t *block, *new_free_block;
+  struct heap_block_t *block, *aligned_block, *new_free_block;
+  uint32_t page_offset;
 
   /* find free block */
-  block = heap_find_free_block(heap, size);
+  block = heap_find_free_block(heap, page_aligned, size);
   if (!block) {
-    /* try to expand the heap */
-    if (heap_expand(heap, heap->size + size) != 0)
+    /* try to expand the heap (if page alignement is asked, add PAGE_SIZE to be sure) */
+    if (heap_expand(heap, heap->size + size + (page_aligned ? PAGE_SIZE : 0)) != 0)
       return NULL;
 
     /* retry with extanded heap */
-    return heap_alloc(heap, size);
+    return heap_alloc(heap, size, page_aligned);
+  }
+
+  /* if page alignement is asked, create a new hole in front of the page aligned block */
+  if (page_aligned && !HEAP_BLOCK_ALIGNED(block)) {
+    /* compute page offset */
+    page_offset = PAGE_SIZE - HEAP_BLOCK_DATA(block) % PAGE_SIZE;
+
+    /* create a block on page alignement */
+    aligned_block = (struct heap_block_t *) ((uint32_t) block + page_offset);
+    aligned_block->size = block->size - page_offset;
+    aligned_block->free = 1;
+    aligned_block->prev = block;
+    aligned_block->next = block->next;
+
+    /* update current block with remaining space */
+    block->size = (uint32_t) aligned_block - HEAP_BLOCK_DATA(block);
+    block->free = 1;
+    block->next = aligned_block;
+
+    /* this block = aligned block */
+    block = aligned_block;
   }
 
   /* create new free block with remaining size */
