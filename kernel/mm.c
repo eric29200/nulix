@@ -54,7 +54,7 @@ void kfree(void *p)
  */
 void init_mem(uint32_t start, uint32_t end)
 {
-  uint32_t max_size_of_page_tables;
+  uint32_t max_nb_page_tables;
   uint32_t i;
 
   /* set placement address */
@@ -75,8 +75,8 @@ void init_mem(uint32_t start, uint32_t end)
     get_page(i, 1, kernel_pgd);
 
   /* allocate kernel frames and pages (maximum size of kernel page tables has to be added) */
-  max_size_of_page_tables =  (nb_frames / 1024) * sizeof(struct page_table_t);
-  for (i = 0; i < placement_address + max_size_of_page_tables; i += PAGE_SIZE)
+  max_nb_page_tables = nb_frames / 1024;
+  for (i = 0; i <= placement_address + max_nb_page_tables * sizeof(struct page_table_t); i += PAGE_SIZE)
     alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* allocate heap frames */
