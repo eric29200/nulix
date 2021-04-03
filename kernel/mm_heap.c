@@ -108,7 +108,7 @@ void *heap_alloc(struct heap_t *heap, uint32_t size)
   block = heap_find_free_block(heap, size);
   if (!block) {
     /* try to expand the heap */
-    if (heap_expand(heap, size) != 0)
+    if (heap_expand(heap, heap->size + size) != 0)
       return NULL;
 
     /* retry with extanded heap */
