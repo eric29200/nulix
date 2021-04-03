@@ -121,13 +121,20 @@ static struct heap_block_t *heap_find_free_block(struct heap_t *heap, uint8_t pa
 void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 {
   struct heap_block_t *block, *aligned_block, *new_free_block;
-  uint32_t page_offset;
+  uint32_t page_offset, new_size;
 
   /* find free block */
   block = heap_find_free_block(heap, page_aligned, size);
   if (!block) {
-    /* try to expand the heap (if page alignement is asked, add PAGE_SIZE to be sure) */
-    if (heap_expand(heap, heap->size + size + (page_aligned ? PAGE_SIZE : 0)) != 0)
+    /* expand the heap (if page alignement is asked, add PAGE_SIZE to be sure) */
+    new_size = heap->size + size + (page_aligned ? PAGE_SIZE : 0);
+
+    /* if last block is free, remove last block size */
+    if (heap->last_block->free)
+      new_size -= heap->last_block->size;
+
+    /* try to expand */
+    if (heap_expand(heap, new_size) != 0)
       return NULL;
 
     /* retry with extanded heap */
