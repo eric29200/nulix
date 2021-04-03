@@ -6,7 +6,7 @@
 
 #define PAGE_SIZE             0x1000
 #define PAGE_MASK             (~(PAGE_SIZE - 1))
-#define IS_ALIGNED(addr)      (((addr) & PAGE_MASK) == 0)
+#define PAGE_ALIGNED(addr)    (((addr) & PAGE_MASK) == 0)
 #define PAGE_ALIGN(addr)      (((addr) + PAGE_SIZE - 1) & PAGE_MASK)
 #define ALIGN_UP(addr, size)  (((addr) + size - 1) & (~(size - 1)))
 
