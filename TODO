@@ -1,2 +1,2 @@
-- Try to find why page fault with 28M (must limit the end address with start of memory) ?
 - deallocate pages when free heap (is it really needed) ?
+- performance on heap

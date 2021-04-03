@@ -48,8 +48,11 @@ static int heap_expand(struct heap_t *heap, size_t new_size)
   new_size += sizeof(struct heap_block_t);
 
   /* no need to expand */
-  if (heap->size >= new_size)
+  if (new_size <= heap->size)
     return 0;
+
+  /* always increment heap by step of HEAP_EXPANSION (for performance) */
+  new_size = ALIGN_UP(new_size, HEAP_EXPANSION_SIZE);
 
   /* out of memory */
   if (heap->start_address + new_size > heap->max_address)
