@@ -1,7 +1,7 @@
 #include <kernel/isr.h>
 #include <kernel/io.h>
 #include <drivers/timer.h>
-#include <lib/stdio.h>
+#include <stdio.h>
 
 static volatile uint32_t jiffies = 0;
 

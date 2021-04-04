@@ -1,7 +1,7 @@
 #ifndef _MM_H_
 #define _MM_H_
 
-#include <lib/stddef.h>
+#include <stddef.h>
 
 #define PAGE_SIZE       0x1000    /* 4 kB */
 

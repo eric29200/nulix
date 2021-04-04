@@ -1,7 +1,7 @@
 #ifndef _GDT_H_
 #define _GDT_H_
 
-#include <lib/stddef.h>
+#include <stddef.h>
 
 /*
  * Global Descriptor Table entry.

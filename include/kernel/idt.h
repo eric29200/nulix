@@ -1,7 +1,7 @@
 #ifndef _IDT_H_
 #define _IDT_H_
 
-#include <lib/stddef.h>
+#include <stddef.h>
 
 /*
  * Interrupt Descriptor Table entry.

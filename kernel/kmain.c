@@ -5,8 +5,8 @@
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
-#include <lib/stdio.h>
-#include <lib/string.h>
+#include <stdio.h>
+#include <string.h>
 
 extern uint32_t loader;
 extern uint32_t kernel_end;

@@ -1,8 +1,8 @@
 #include <kernel/mm_paging.h>
 #include <kernel/mm.h>
-#include <lib/stdio.h>
-#include <lib/string.h>
-#include <lib/stderr.h>
+#include <stdio.h>
+#include <string.h>
+#include <stderr.h>
 
 /* bit frames */
 uint32_t *frames;

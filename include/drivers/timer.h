@@ -1,7 +1,7 @@
 #ifndef _TIMER_H_
 #define _TIMER_H_
 
-#include <lib/stddef.h>
+#include <stddef.h>
 
 #define HZ    100
 

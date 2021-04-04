@@ -1,8 +1,8 @@
 #ifndef _STDIO_H_
 #define _STDIO_H_
 
-#include <lib/stdarg.h>
-#include <lib/stddef.h>
+#include <stdarg.h>
+#include <stddef.h>
 
 #define stdin   0
 #define stdout  1

@@ -1,5 +1,5 @@
-#include <lib/stdio.h>
-#include <lib/stdarg.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include <drivers/screen.h>
 
 static char *__buf_ptr;

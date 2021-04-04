@@ -1,7 +1,7 @@
 #include <kernel/mm.h>
 #include <kernel/mm_paging.h>
 #include <kernel/mm_heap.h>
-#include <lib/string.h>
+#include <string.h>
 
 /* placement address (used before kernel heap is created) */
 uint32_t placement_address = 0;

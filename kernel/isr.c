@@ -1,6 +1,6 @@
 #include <kernel/isr.h>
 #include <kernel/io.h>
-#include <lib/stdio.h>
+#include <stdio.h>
 
 /*
  * x86 cpu exceptions messages

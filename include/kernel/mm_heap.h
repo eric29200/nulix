@@ -1,7 +1,7 @@
 #ifndef _MM_HEAP_H_
 #define _MM_HEAP_H_
 
-#include <lib/stddef.h>
+#include <stddef.h>
 
 #define KHEAP_START             0xC0000000
 #define KHEAP_INIT_SIZE         0x100000

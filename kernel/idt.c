@@ -1,7 +1,7 @@
 #include <kernel/idt.h>
 #include <kernel/io.h>
-#include <lib/stddef.h>
-#include <lib/string.h>
+#include <stddef.h>
+#include <string.h>
 
 struct idt_entry_t idt_entries[256];
 struct idt_ptr_t idt_ptr;
