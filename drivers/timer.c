@@ -3,7 +3,7 @@
 #include <drivers/timer.h>
 #include <lib/stdio.h>
 
-static volatile uint32_t tick = 1;
+static volatile uint32_t jiffies = 0;
 
 /*
  * Timer handler.
@@ -11,13 +11,13 @@ static volatile uint32_t tick = 1;
 static void timer_handler(struct registers_t regs)
 {
   UNUSED(regs);
-  tick++;
+  jiffies++;
 }
 
 /*
  * Init the Programmable Interval Timer.
  */
-void init_timer(uint32_t frequency)
+void init_timer()
 {
   uint32_t divisor;
   uint8_t divisor_low;
@@ -27,7 +27,7 @@ void init_timer(uint32_t frequency)
   register_interrupt_handler(IRQ0, &timer_handler);
 
   /* set frequency (PIT's clock is always at 1193180 Hz) */
-  divisor = 1193182 / frequency;
+  divisor = 1193182 / HZ;
   divisor_low = (uint8_t) (divisor & 0xFF);
   divisor_high = (uint8_t) ((divisor >> 8) & 0xFF);
 

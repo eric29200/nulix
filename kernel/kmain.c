@@ -8,10 +8,7 @@
 #include <lib/stdio.h>
 #include <lib/string.h>
 
-#define TIMER_HZ      50
-
 extern uint32_t loader;
-extern uint32_t kernel_start;
 extern uint32_t kernel_end;
 
 /*
@@ -45,8 +42,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
   /* init timer at 50 Hz */
-  printf("[Kernel] Timer Init at %dHz\n", TIMER_HZ);
-  init_timer(TIMER_HZ);
+  printf("[Kernel] Timer Init\n");
+  init_timer();
 
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");

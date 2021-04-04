@@ -3,6 +3,8 @@
 
 #include <lib/stddef.h>
 
-void init_timer(uint32_t frequency);
+#define HZ    100
+
+void init_timer();
 
 #endif
