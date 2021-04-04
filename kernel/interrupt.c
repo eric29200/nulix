@@ -30,6 +30,9 @@ const char* exception_messages[] = {
 /* isr handlers */
 isr_t interrupt_handlers[256];
 
+/* number of current cli */
+static volatile int nb_cli = 0;
+
 /*
  * Register an interrupt handler.
  */
@@ -79,18 +82,48 @@ void irq_handler(struct registers_t regs)
   }
 }
 
-/*
- * Enable interruptions.
- */
-void interrupts_enable()
-{
-  __asm__ volatile("sti");
-}
 
 /*
  * Disable interrupts.
  */
 void interrupts_disable()
 {
+	uint32_t flags;
+
+  /* check if interrupts are enabled */
+	__asm__ volatile("pushf\n\t"
+                   "pop %%eax\n\t"
+	                 "movl %%eax, %0\n\t"
+	                 : "=r"(flags)
+	                 :
+	                 : "%eax");
+
+	/* disable interrupts */
   __asm__ volatile("cli");
+
+  /* if interrupts were enable, 1st cli */
+	if (flags & (1 << 9))
+		nb_cli = 1;
+	else
+    nb_cli++;
+}
+
+/*
+ * Enable interruptions.
+ */
+void interrupts_enable()
+{
+  nb_cli = 0;
+  __asm__ volatile("sti");
+}
+
+/*
+ * Restore interrupts.
+ */
+void interrupts_restore()
+{
+	if (nb_cli <= 1)
+    interrupts_enable();
+  else
+    nb_cli--;
 }
