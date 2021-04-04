@@ -20,7 +20,6 @@
 #define RTC_MONTH           0x08
 #define RTC_YEAR            0x09
 
-#define CMOS_READ(addr)     ({outb(CMOS_ADDRESS, addr); inb(CMOS_DATA);})
 #define BCD_TO_BIN(val)     ((val) = ((val) & 15) + ((val) >> 4) * 10)
 
 void init_rtc();
