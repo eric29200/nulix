@@ -1,5 +1,5 @@
-#ifndef _ISR_H_
-#define _ISR_H_
+#ifndef _INTERRUPT_H_
+#define _INTERRUPT_H_
 
 #include <stddef.h>
 

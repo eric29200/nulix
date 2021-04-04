@@ -1,4 +1,4 @@
-#include <kernel/isr.h>
+#include <kernel/interrupt.h>
 #include <kernel/io.h>
 #include <drivers/timer.h>
 #include <stdio.h>

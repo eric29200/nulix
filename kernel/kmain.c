@@ -1,7 +1,7 @@
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
 #include <kernel/mm.h>
-#include <kernel/isr.h>
+#include <kernel/interrupt.h>
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
