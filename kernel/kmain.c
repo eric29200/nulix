@@ -5,6 +5,7 @@
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
+#include <drivers/rtc.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -41,9 +42,13 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
   printf("[Kernel] Memory Init\n");
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
-  /* init timer at 50 Hz */
+  /* init timer */
   printf("[Kernel] Timer Init\n");
   init_timer();
+
+  /* init real time clock */
+  printf("[Kernel] Real Time Clock Init\n");
+  init_rtc();
 
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");

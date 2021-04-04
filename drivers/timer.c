@@ -3,7 +3,7 @@
 #include <drivers/timer.h>
 #include <stdio.h>
 
-static volatile uint32_t jiffies = 0;
+volatile uint32_t jiffies = 0;
 
 /*
  * Timer handler.

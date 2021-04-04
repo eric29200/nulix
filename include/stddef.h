@@ -11,6 +11,7 @@ typedef char int8_t;
 typedef unsigned int size_t;
 typedef unsigned int off_t;
 typedef unsigned char bool;
+typedef unsigned int time_t;
 
 #define TRUE  1
 #define FALSE 0
