@@ -11,11 +11,12 @@
 
 extern uint32_t loader;
 extern uint32_t kernel_end;
+extern uint32_t kernel_stack;
 
 /*
  * Main kos function.
  */
-int kmain(unsigned long magic, multiboot_info_t *mboot)
+int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 {
   /* check multiboot */
   if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
@@ -29,6 +30,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot)
 
   /* print grub informations */
   printf("[Kernel] Loading at linear address = %x\n", loader);
+  kernel_stack = initial_stack;
 
   /* init gdt */
   printf("[Kernel] Global Descriptor Table Init\n");

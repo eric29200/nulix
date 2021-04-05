@@ -3,6 +3,9 @@
 #include <kernel/mm_heap.h>
 #include <string.h>
 
+/* kernel stack address */
+uint32_t kernel_stack = 0;
+
 /* placement address (used before kernel heap is created) */
 uint32_t placement_address = 0;
 
@@ -95,7 +98,7 @@ void init_mem(uint32_t start, uint32_t end)
   /* allocate kernel page directory */
   kernel_pgd = (struct page_directory_t *) kmalloc_align(sizeof(struct page_directory_t));
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
-  current_pgd = kernel_pgd;
+  kernel_pgd->physical_addr = (uint32_t) kernel_pgd->tables_physical;
 
   /* map heap frames */
   for (i = KHEAP_START; i < KHEAP_START + KHEAP_INIT_SIZE; i += PAGE_SIZE)
@@ -114,8 +117,11 @@ void init_mem(uint32_t start, uint32_t end)
   register_interrupt_handler(14, page_fault_handler);
 
   /* enable paging */
-  switch_page_directory(current_pgd);
+  switch_page_directory(kernel_pgd);
 
   /* init heap */
   kheap = heap_create(KHEAP_START, KHEAP_START + end, KHEAP_INIT_SIZE);
+
+  /* set current page table to kernel page table */
+  current_pgd = clone_page_directory(kernel_pgd);
 }

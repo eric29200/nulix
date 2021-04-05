@@ -12,6 +12,9 @@ uint32_t nb_frames;
 struct page_directory_t *kernel_pgd = 0;
 struct page_directory_t *current_pgd = 0;
 
+/* copy content of a page (defined in mm_utils.s) */
+void copy_page_physical(uint32_t src, uint32_t dst);
+
 /*
  * Get next free frame.
  */
@@ -117,7 +120,7 @@ void switch_page_directory(struct page_directory_t *pgd)
 
   /* switch */
   current_pgd = pgd;
-  __asm__ volatile("mov %0, %%cr3" :: "r" (&pgd->tables_physical));
+  __asm__ volatile("mov %0, %%cr3" :: "r" (pgd->physical_addr));
   __asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
 
   /* enable paging */
@@ -151,4 +154,84 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
 
 
   return 0;
+}
+
+/*
+ * Clone a page table.
+ */
+static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t *phys_addr)
+{
+  struct page_table_t *ret;
+  int i;
+
+  /* allocate a new page table */
+  ret = (struct page_table_t *) kmalloc_align_phys(sizeof(struct page_table_t), phys_addr);
+  if (!ret)
+    return NULL;
+
+  /* memzero page table */
+  memset(ret, 0, sizeof(struct page_table_t));
+
+  /* copy pages content */
+  for (i = 0; i < 1024; i++) {
+    /* skip empty pages */
+    if (!src->pages[i].frame)
+      continue;
+
+    /* get a new frame */
+    alloc_frame(&ret->pages[i], 0, 0);
+
+    /* clone the flags */
+    ret->pages[i].present = src->pages[i].present;
+    ret->pages[i].rw = src->pages[i].rw;
+    ret->pages[i].user = src->pages[i].user;
+    ret->pages[i].accessed = src->pages[i].accessed;
+    ret->pages[i].dirty = src->pages[i].dirty;
+
+    /* copy page content */
+    copy_page_physical(src->pages[i].frame * PAGE_SIZE, ret->pages[i].frame * PAGE_SIZE);
+  }
+
+  return ret;
+}
+
+
+/*
+ * Clone a page directory (this function disables interrupts : they must be restored after).
+ */
+struct page_directory_t *clone_page_directory(struct page_directory_t *src)
+{
+  struct page_directory_t *ret;
+  uint32_t phys, offset, phys_table;
+  int i;
+
+  /* allocate a new page directory */
+  ret = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), &phys);
+  if (!ret)
+    return NULL;
+
+  /* memzero page directory */
+  memset(ret, 0, sizeof(struct page_directory_t));
+
+  /* compute physical tables offset */
+  offset = (uint32_t) ret->tables_physical - (uint32_t) ret;
+  ret->physical_addr = phys + offset;
+
+  /* copy page tables */
+  for (i = 0; i < 1024; i++) {
+    /* skip empty tables */
+    if (!src->tables[i])
+      continue;
+
+    /* link kernel page tables and copy user page tables */
+    if (src->tables[i] == kernel_pgd->tables[i]) {
+      ret->tables[i] = src->tables[i];
+      ret->tables_physical[i] = src->tables_physical[i];
+    } else {
+      ret->tables[i] = clone_page_table(src->tables[i], &phys_table);
+      ret->tables_physical[i] = phys_table | 0x07;
+    }
+  }
+
+  return ret;
 }

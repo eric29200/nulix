@@ -1,0 +1,8 @@
+- implement clone page_directory and table (from molloy and toaruos)
+  create those functions in task.c
+
+
+
+- ok to disable interruptions inside the assembly code to copy physical page
+- but also disable interruptions with interrupts_disabled() in the beginning of the copy
+- and restore them with interrupts_restore() at the end of the function  
