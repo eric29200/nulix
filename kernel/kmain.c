@@ -13,6 +13,11 @@ extern uint32_t loader;
 extern uint32_t kernel_end;
 extern uint32_t kernel_stack;
 
+void test(void *args)
+{
+  printf("ok : %s\n", (char *) args);
+}
+
 /*
  * Main kos function.
  */
@@ -23,7 +28,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
     return 0xD15EA5E;
 
   /* disable interrupts */
-  interrupts_disable();
+  irq_disable();
 
   /* clear screen */
   screen_clear();
@@ -54,7 +59,9 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");
-  interrupts_enable();
+  irq_enable();
+
+  timer_add_event(3, test, "a");
 
   return 0;
 }

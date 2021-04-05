@@ -39,6 +39,13 @@ struct registers_t {
   uint32_t ss;
 };
 
+#define __save_flags(x)       __asm__ __volatile__("pushfl ; popl %0":"=g" (x):)
+#define __restore_flags(x) 	  __asm__ __volatile__("pushl %0 ; popfl": :"g" (x):"memory", "cc")
+#define irq_enable()          __asm__ __volatile__("sti": : :"memory")
+#define irq_disable()         __asm__ __volatile__("cli": : :"memory")
+#define irq_save(x)           do { __save_flags(x); irq_disable(); } while(0);
+#define irq_restore(x)        __restore_flags(x);
+
 /* common ISR and IRQ handlers */
 void isr_handler(struct registers_t regs);
 void irq_handler(struct registers_t regs);
@@ -47,9 +54,5 @@ void irq_handler(struct registers_t regs);
 typedef void (*isr_t)(struct registers_t);
 void register_interrupt_handler(uint8_t n, isr_t handler);
 
-/* enable/disable interrupts */
-void interrupts_enable();
-void interrupts_disable();
-void interrupts_restore();
 
 #endif
