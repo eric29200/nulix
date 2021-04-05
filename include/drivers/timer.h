@@ -2,6 +2,7 @@
 #define _TIMER_H_
 
 #include <stddef.h>
+#include <list.h>
 
 extern volatile uint32_t jiffies;
 extern uint32_t startup_time;
@@ -16,8 +17,7 @@ struct timer_event_t {
   uint32_t jiffies;
   void (*handler)(void *);
   void *handler_args;
-  struct timer_event_t *prev;
-  struct timer_event_t *next;
+  struct list_t list;
 };
 
 void init_timer();

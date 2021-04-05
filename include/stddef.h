@@ -19,4 +19,9 @@ typedef unsigned int time_t;
 #define NULL        ((void *) 0)
 #define UNUSED(x)   ((void) (x))
 
+#define offsetof(type, member)	              ((size_t) & ((type *) 0)->member)
+#define container_of(ptr, type, member)       ({                                                \
+                                               void *__mptr = (void *)(ptr);					          \
+	                                             ((type *)(__mptr - offsetof(type, member))); })
+
 #endif

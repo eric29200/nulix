@@ -9,36 +9,32 @@
 volatile uint32_t jiffies = 0;
 
 /* timer events */
-struct timer_event_t *timer_events = NULL;
+struct list_t timer_events;
 
 /*
  * Timer handler.
  */
 static void timer_handler(struct registers_t regs)
 {
-  struct timer_event_t *e;
+  struct timer_event_t *event;
+  struct list_t *elt;
 
   UNUSED(regs);
 
   /* update jiffies */
   jiffies++;
 
-  /* execute timers */
-  for (e = timer_events; e != NULL; e = e->next) {
-    if (e->jiffies <= jiffies) {
-      /* execute timer event */
-      e->handler(e->handler_args);
+  /* for each timers */
+  list_for_each(elt, &timer_events) {
+    event = list_entry(elt, struct timer_event_t, list);
 
-      /* remove timer event */
-      if (e->next)
-        e->next->prev = e->prev;
-      if (e->prev)
-        e->prev->next = e->next;
-      else
-        timer_events = e->next;
+    /* execute timer */
+    if (event->jiffies <= jiffies) {
+      event->handler(event->handler_args);
 
-      /* free memory */
-      kfree(e);
+      /* remove it from list and free memory */
+      list_del(&event->list);
+      kfree(event);
     }
   }
 }
@@ -64,6 +60,9 @@ void init_timer()
   outb(0x43, 0x36);
   outb(0x40, divisor_low);
   outb(0x40, divisor_high);
+
+  /* init timer events list */
+  list_init(&timer_events);
 }
 
 /*
@@ -71,7 +70,7 @@ void init_timer()
  */
 int timer_add_event(uint32_t sec, void (*handler)(void *), void *handler_args)
 {
-  struct timer_event_t *event, *e;
+  struct timer_event_t *event;
   uint32_t flags;
 
   /* create a new timer event */
@@ -83,18 +82,10 @@ int timer_add_event(uint32_t sec, void (*handler)(void *), void *handler_args)
   event->jiffies = jiffies + sec * HZ;
   event->handler = handler;
   event->handler_args = handler_args;
-  event->prev = NULL;
-  event->next = NULL;
 
   /* add to the list */
   irq_save(flags);
-  for (e = timer_events; e != NULL && e->next != NULL; e = e->next);
-  if (e == NULL) {
-    timer_events = event;
-  } else {
-    e->next = event;
-    event->prev =  e;
-  }
+  list_add(&event->list, &timer_events);
   irq_restore(flags);
 
   return 0;
