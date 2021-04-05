@@ -10,7 +10,7 @@ FLAGS         equ PAGE_ALIGN | MEM_INFO     	; multiboot flags i.e. ELF
 CHECKSUM      equ -(MAGIC_NUMBER + FLAGS)   	; calculate the checksum
                                             	; (magic number + checksum + flags should equal 0)
 
-KSTACK_SIZE   equ 0x8000                    	; size of stack, 32kB
+KSTACK_SIZE   equ 0x100000                    	; size of stack = 1 MB
 
 section .__mbHeader                         	; multiboot header
 align 4
