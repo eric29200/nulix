@@ -1,4 +1,5 @@
 global loader                               ; the entry symbol for ELF
+global kernel_stack			    ; export kernel stack
 
 extern kmain                                ; the entry symbol for C
 extern __mbHeader

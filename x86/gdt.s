@@ -1,6 +1,6 @@
 [GLOBAL gdt_flush]
 gdt_flush:
-	mov eax, [esp+4]	; load the gdt pointer passed as parameter on stack
+	mov eax, [esp+4]	; load the gdt pointer passed as parameter on the stack
 	lgdt [eax]
 
 	mov ax, 0x10		; load data segement offset
@@ -11,4 +11,10 @@ gdt_flush:
 	mov ss, ax
 	jmp 0x08:.flush		; jump to code segment
 .flush:
+	ret
+
+[GLOBAL tss_flush]
+tss_flush:
+	mov eax, [esp+4]	; load the tss pointer passed as parameter on the stack
+	ltr ax
 	ret

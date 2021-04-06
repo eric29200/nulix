@@ -3,9 +3,6 @@
 #include <kernel/mm_heap.h>
 #include <string.h>
 
-/* kernel stack address */
-uint32_t kernel_stack = 0;
-
 /* placement address (used before kernel heap is created) */
 uint32_t placement_address = 0;
 
