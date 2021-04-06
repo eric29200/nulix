@@ -131,5 +131,4 @@ irq_common_stub:
 
 	popa			; restore registers
 	add esp, 8
-	sti
 	iret
