@@ -1,6 +1,7 @@
 #include <kernel/interrupt.h>
 #include <kernel/io.h>
 #include <kernel/mm.h>
+#include <kernel/system.h>
 #include <drivers/timer.h>
 #include <stdio.h>
 #include <stderr.h>
