@@ -84,6 +84,9 @@ extern isr_handler
 ; common isr handler
 isr_common_stub:
 	pusha			; save registers
+	push es
+	push fs
+	push gs
 
 	mov ax, ds
 	push eax
@@ -102,7 +105,10 @@ isr_common_stub:
 	mov fs, bx
 	mov gs, bx
 
-	popa			; restore registers
+	pop gs			; restore registers
+	pop fs
+	pop es
+	popa
 	add esp, 8
 	sti
 	iret
@@ -112,6 +118,9 @@ extern irq_handler
 ; common isr handler
 irq_common_stub:
 	pusha			; save registers
+	push es
+	push fs
+	push gs
 
 	mov ax, ds
 	push eax
@@ -130,7 +139,10 @@ irq_common_stub:
 	mov fs, bx
 	mov gs, bx
 
-	popa			; restore registers
+	pop gs			; restore registers
+	pop fs
+	pop es
+	popa
 	add esp, 8
 	sti
 	iret
