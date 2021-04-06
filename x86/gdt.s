@@ -12,9 +12,3 @@ gdt_flush:
 	jmp 0x08:.flush		; jump to code segment
 .flush:
 	ret
-
-[GLOBAL tss_flush]
-tss_flush:
-	mov eax, [esp+4]	; load the tss pointer passed as parameter on the stack
-	ltr ax
-	ret

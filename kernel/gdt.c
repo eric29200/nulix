@@ -20,11 +20,9 @@
 
 extern uint32_t kernel_stack;
 extern void gdt_flush(uint32_t);
-extern void tss_flush(uint32_t);
 
 struct gdt_entry_t gdt_entries[6];
 struct gdt_ptr_t gdt_ptr;
-struct tss_entry_t tss;
 
 /*
  * Set a Global Descriptor Table.
@@ -60,8 +58,6 @@ static void gdt_set_gate(uint32_t num, uint32_t base, uint32_t limit, uint8_t dp
  */
 void init_gdt()
 {
-  uint32_t tss_addr;
-
   gdt_ptr.base = (uint32_t) &gdt_entries;
   gdt_ptr.limit = sizeof(gdt_entries) - 1;
 
@@ -72,28 +68,6 @@ void init_gdt()
   gdt_set_gate(3, 0, 0xFFFFFFFF, 3, DESC_CODEDATA, SEG_EXECUTE_READ);    /* User mode code segment = ring 3 */
   gdt_set_gate(4, 0, 0xFFFFFFFF, 3, DESC_CODEDATA, SEG_READ_WRITE);      /* User mode data segement = ring 3 */
 
-  /* create a tss */
-  tss_addr = (uint32_t ) &tss;
-  gdt_set_gate(5, tss_addr, tss_addr + sizeof(struct tss_entry_t) - 1, 3, DESC_SYSTEM, SEG_TSS);
-  gdt_entries[5].granularity = 0;
-  gdt_entries[5].opsize = 0;
-
-  /* memzero tss */
-  memset(&tss, 0, sizeof(struct tss_entry_t));
-
-  /* set tss */
-  tss.ss0  = KERNEL_DATA_SEGMENT;
-  tss.esp0 = (uint32_t) &kernel_stack;
-  tss.cs = KERNEL_CODE_SEGMENT | 3;
-  tss.ss = KERNEL_DATA_SEGMENT | 3;
-  tss.ds = KERNEL_DATA_SEGMENT | 3;
-  tss.es = KERNEL_DATA_SEGMENT | 3;
-  tss.fs = KERNEL_DATA_SEGMENT | 3;
-  tss.gs = KERNEL_DATA_SEGMENT | 3;
-
   /* flush gdt */
   gdt_flush((uint32_t) &gdt_ptr);
-
-  /* flush tss */
-  tss_flush(TSS_SEGMENT | 3);
 }

@@ -121,4 +121,5 @@ void init_mem(uint32_t start, uint32_t end)
 
   /* set current page table to kernel page table */
   current_pgd = clone_page_directory(kernel_pgd);
+  switch_page_directory(current_pgd);
 }

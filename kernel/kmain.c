@@ -2,7 +2,6 @@
 #include <kernel/idt.h>
 #include <kernel/mm.h>
 #include <kernel/interrupt.h>
-#include <kernel/process.h>
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
@@ -13,18 +12,6 @@
 extern uint32_t loader;
 extern uint32_t kernel_end;
 extern uint32_t kernel_stack;
-
-void test1()
-{
-  while (1)
-    printf("1");
-}
-
-void test2()
-{
-  while (1)
-    printf("2");
-}
 
 /*
  * Main kos function.
@@ -71,9 +58,6 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");
   irq_enable();
-
-  start_process(test1);
-  start_process(test2);
 
   return 0;
 }
