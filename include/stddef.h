@@ -12,6 +12,7 @@ typedef unsigned int size_t;
 typedef unsigned int off_t;
 typedef unsigned char bool;
 typedef unsigned int time_t;
+typedef int pid_t;
 
 #define TRUE  1
 #define FALSE 0

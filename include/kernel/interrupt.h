@@ -33,7 +33,7 @@ void isr_handler(struct registers_t regs);
 void irq_handler(struct registers_t regs);
 
 /* IRQ handler registration */
-typedef void (*isr_t)(struct registers_t);
+typedef void (*isr_t)(struct registers_t *);
 void register_interrupt_handler(uint8_t n, isr_t handler);
 
 

@@ -52,6 +52,6 @@ struct page_directory_t *clone_page_directory(struct page_directory_t *src);
 int32_t alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write);
 void free_frame(struct page_t *page);
 void switch_page_directory(struct page_directory_t *pgd);
-void page_fault_handler(struct registers_t regs);
+void page_fault_handler(struct registers_t *regs);
 
 #endif

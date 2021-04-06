@@ -91,7 +91,7 @@ void free_frame(struct page_t *page)
 /*
  * Page fault handler.
  */
-void page_fault_handler(struct registers_t regs)
+void page_fault_handler(struct registers_t *regs)
 {
   uint32_t fault_addr;
 
@@ -99,11 +99,11 @@ void page_fault_handler(struct registers_t regs)
   __asm__ volatile("mov %%cr2, %0" : "=r" (fault_addr));
 
   /* get erros informations */
-  int present = !(regs.err_code & 0x1);
-  int rw = regs.err_code & 0x2;
-  int user = regs.err_code & 0x4;
-  int reserved = regs.err_code & 0x8;
-  int id = regs.err_code & 0x10;
+  int present = !(regs->err_code & 0x1);
+  int rw = regs->err_code & 0x2;
+  int user = regs->err_code & 0x4;
+  int reserved = regs->err_code & 0x8;
+  int id = regs->err_code & 0x10;
 
   /* output message and panic */
   printf("Page fault at address=%x | present=%d read-only=%d user-mode=%d reserved=%d instruction-fetch=%d\n",

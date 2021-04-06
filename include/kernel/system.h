@@ -3,10 +3,13 @@
 
 #include <stddef.h>
 
+#define KERNEL_CODE_SEGMENT   0x08
+#define KERNEL_DATA_SEGMENT   0x10
+#define USER_CODE_SEGMENT     0x18
+#define USER_DATA_SEGMENT     0x20
+#define TSS_SEGMENT           0x28
+
 struct registers_t {
-  uint32_t gs;
-  uint32_t fs;
-  uint32_t es;
   uint32_t ds;
   uint32_t edi;
   uint32_t esi;

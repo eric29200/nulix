@@ -54,7 +54,7 @@ void isr_handler(struct registers_t regs)
   /* handle interrupt */
   if (interrupt_handlers[regs.int_no] != 0) {
     handler = interrupt_handlers[regs.int_no];
-    handler(regs);
+    handler(&regs);
   }
 }
 
@@ -75,6 +75,6 @@ void irq_handler(struct registers_t regs)
   /* handle interrupt */
   if (interrupt_handlers[regs.int_no] != 0) {
     handler = interrupt_handlers[regs.int_no];
-    handler(regs);
+    handler(&regs);
   }
 }

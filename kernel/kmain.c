@@ -2,6 +2,7 @@
 #include <kernel/idt.h>
 #include <kernel/mm.h>
 #include <kernel/interrupt.h>
+#include <kernel/process.h>
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
@@ -13,9 +14,16 @@ extern uint32_t loader;
 extern uint32_t kernel_end;
 extern uint32_t kernel_stack;
 
-void test(void *args)
+void test1()
 {
-  printf("ok : %s\n", (char *) args);
+  while (1)
+    printf("1");
+}
+
+void test2()
+{
+  while (1)
+    printf("2");
 }
 
 /*
@@ -49,6 +57,9 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Memory Init\n");
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
+  /* init processes */
+  printf("[Kernel] Processes Init");
+
   /* init timer */
   printf("[Kernel] Timer Init\n");
   init_timer();
@@ -61,7 +72,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Enable interrupts\n");
   irq_enable();
 
-  timer_add_event(3, test, "a");
+  start_process(test1);
+  start_process(test2);
 
   return 0;
 }

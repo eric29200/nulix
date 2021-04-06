@@ -1,4 +1,5 @@
 #include <kernel/gdt.h>
+#include <kernel/system.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -16,12 +17,6 @@
 #define SEG_EXECUTE_ONLY      8
 #define SEG_EXECUTE_READ      10
 #define SEG_TSS               9
-
-#define KERNEL_CODE_SEGMENT   0x08
-#define KERNEL_DATA_SEGMENT   0x10
-#define USER_CODE_SEGMENT     0x18
-#define USER_DATA_SEGMENT     0x20
-#define TSS_SEGMENT           0x28
 
 extern uint32_t kernel_stack;
 extern void gdt_flush(uint32_t);
