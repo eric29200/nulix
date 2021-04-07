@@ -1,16 +1,15 @@
 #include <kernel/task.h>
 #include <kernel/mm.h>
+#include <kernel/interrupt.h>
 #include <string.h>
 #include <stderr.h>
 
+/* threads list */
+LIST_HEAD(threads_list);
+static struct thread_t *current_thread = NULL;
+
 /* tids counter */
 static uint32_t next_tid = 0;
-
-/* threads list */
-static struct thread_t *threads = NULL;
-
-/* current thread */
-static struct thread_t *current_thread = NULL;
 
 /* switch threads (defined in scheduler.s) */
 extern void do_switch(uint32_t *current_esp, uint32_t next_esp);
@@ -22,16 +21,11 @@ void schedule()
 {
   struct thread_t *prev_thread = current_thread;
 
-  /* take next thread */
-  if (current_thread)
-    current_thread = current_thread->next;
-
-  /* or first one */
-  if (!current_thread)
-    current_thread = threads;
-
-  if (!prev_thread)
-    prev_thread = current_thread;
+  /* take next thread or first one */
+  if (current_thread && !list_is_last(&current_thread->list, &threads_list))
+    current_thread = list_next_entry(current_thread, list);
+  else if (!list_empty(&threads_list))
+    current_thread = list_first_entry(&threads_list, struct thread_t, list);
 
   /* switch threads */
   if (current_thread)
@@ -45,6 +39,7 @@ int create_thread(void (*func)(void))
 {
   struct task_registers_t *regs;
   struct thread_t *thread, *t;
+  uint32_t flags;
   void *stack;
 
   /* create thread */
@@ -54,7 +49,6 @@ int create_thread(void (*func)(void))
 
   /* set tid */
   thread->tid = next_tid++;
-  thread->next = NULL;
 
   /* allocate stack */
   stack = (void *) kmalloc(STACK_SIZE);
@@ -76,11 +70,9 @@ int create_thread(void (*func)(void))
   regs->eip = (uint32_t) func;
 
   /* add to the tail of the threads */
-  for (t = threads; t != NULL && t->next != NULL; t = t->next);
-  if (t)
-    t->next = thread;
-  else
-    threads = thread;
+  irq_save(flags);
+  list_add(&thread->list, &threads_list);
+  irq_restore(flags);
 
   return 0;
 }

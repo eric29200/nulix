@@ -2,8 +2,9 @@
 #define _TASK_H_
 
 #include <stddef.h>
+#include <list.h>
 
-#define STACK_SIZE    (1024 * 1024)
+#define STACK_SIZE    0x2000
 
 /*
  * Kernel thread structure.
@@ -12,7 +13,7 @@ struct thread_t {
   uint32_t tid;
   uint32_t esp;
   uint32_t kernel_stack;
-  struct thread_t *next;
+  struct list_head_t list;
 };
 
 /*

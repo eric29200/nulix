@@ -74,11 +74,10 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");
+  irq_enable();
 
   create_thread(test1);
   create_thread(test2);
-
-  irq_enable();
 
   return 0;
 }
