@@ -28,8 +28,7 @@ struct task_registers_t {
   uint32_t parameter3;
 };
 
-int init_task();
-int start_thread(void (*func)(void));
-void schedule();
+struct thread_t *create_thread(void (*func)(void));
+void destroy_thread(struct thread_t *thread);
 
 #endif

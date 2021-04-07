@@ -1,6 +1,6 @@
-global do_switch
+global scheduler_do_switch
 
-do_switch:
+scheduler_do_switch:
   cli
   pusha
 

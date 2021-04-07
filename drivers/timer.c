@@ -2,7 +2,7 @@
 #include <x86/io.h>
 #include <x86/system.h>
 #include <mm/mm.h>
-#include <proc/task.h>
+#include <proc/sched.h>
 #include <drivers/timer.h>
 #include <stdio.h>
 #include <stderr.h>

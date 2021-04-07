@@ -2,7 +2,7 @@
 #include <x86/idt.h>
 #include <x86/interrupt.h>
 #include <mm/mm.h>
-#include <proc/task.h>
+#include <proc/sched.h>
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
@@ -57,7 +57,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* init processes */
   printf("[Kernel] Processes Init");
-  if (init_task() != 0)
+  if (init_scheduler() != 0)
     panic("Cannot init processes\n");
 
   /* init timer */
