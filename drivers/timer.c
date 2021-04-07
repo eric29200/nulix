@@ -1,6 +1,7 @@
 #include <kernel/interrupt.h>
 #include <kernel/io.h>
 #include <kernel/mm.h>
+#include <kernel/task.h>
 #include <kernel/system.h>
 #include <drivers/timer.h>
 #include <stdio.h>
@@ -18,6 +19,9 @@ static void timer_handler(struct registers_t *regs)
 
   /* update jiffies */
   jiffies++;
+
+  /* schedule tasks */
+  schedule();
 }
 
 /*
