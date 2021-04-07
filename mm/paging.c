@@ -1,5 +1,5 @@
-#include <kernel/mm_paging.h>
-#include <kernel/mm.h>
+#include <mm/paging.h>
+#include <mm/mm.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>

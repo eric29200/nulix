@@ -1,6 +1,6 @@
-#include <kernel/mm_heap.h>
-#include <kernel/mm_paging.h>
-#include <kernel/mm.h>
+#include <mm/heap.h>
+#include <mm/paging.h>
+#include <mm/mm.h>
 #include <stderr.h>
 
 #define HEAP_BLOCK_DATA(block)          ((uint32_t) (block) + sizeof(struct heap_block_t))

@@ -1,5 +1,5 @@
-#include <kernel/task.h>
-#include <kernel/mm.h>
+#include <proc/task.h>
+#include <mm/mm.h>
 #include <kernel/interrupt.h>
 #include <string.h>
 #include <stderr.h>

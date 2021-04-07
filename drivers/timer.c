@@ -1,8 +1,8 @@
 #include <kernel/interrupt.h>
 #include <kernel/io.h>
-#include <kernel/mm.h>
-#include <kernel/task.h>
 #include <kernel/system.h>
+#include <mm/mm.h>
+#include <proc/task.h>
 #include <drivers/timer.h>
 #include <stdio.h>
 #include <stderr.h>

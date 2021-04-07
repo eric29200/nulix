@@ -1,6 +1,6 @@
-#include <kernel/mm.h>
-#include <kernel/mm_paging.h>
-#include <kernel/mm_heap.h>
+#include <mm/mm.h>
+#include <mm/paging.h>
+#include <mm/heap.h>
 #include <string.h>
 
 /* placement address (used before kernel heap is created) */

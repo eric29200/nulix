@@ -1,8 +1,8 @@
 #include <kernel/gdt.h>
 #include <kernel/idt.h>
-#include <kernel/mm.h>
 #include <kernel/interrupt.h>
-#include <kernel/task.h>
+#include <mm/mm.h>
+#include <proc/task.h>
 #include <grub/multiboot.h>
 #include <drivers/screen.h>
 #include <drivers/timer.h>
