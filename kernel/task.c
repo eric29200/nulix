@@ -35,17 +35,16 @@ void schedule()
 /*
  * Create a thread.
  */
-int create_thread(void (*func)(void))
+struct thread_t *create_thread(void (*func)(void))
 {
   struct task_registers_t *regs;
   struct thread_t *thread;
-  uint32_t flags;
   void *stack;
 
   /* create thread */
   thread = (struct thread_t *) kmalloc(sizeof(struct thread_t));
   if (!thread)
-    return ENOMEM;
+    return NULL;
 
   /* set tid */
   thread->tid = next_tid++;
@@ -55,7 +54,7 @@ int create_thread(void (*func)(void))
   stack = (void *) kmalloc(STACK_SIZE);
   if (!stack) {
     kfree(thread);
-    return ENOMEM;
+    return NULL;
   }
 
   /* set stack */
@@ -70,7 +69,23 @@ int create_thread(void (*func)(void))
   /* set eip to function */
   regs->eip = (uint32_t) func;
 
-  /* add to the tail of the threads */
+  return thread;
+}
+
+/*
+ * Start a thread.
+ */
+int start_thread(void (*func)(void))
+{
+  struct thread_t *thread;
+  uint32_t flags;
+
+  /* create a thread */
+  thread = create_thread(func);
+  if (!thread)
+    return ENOMEM;
+
+  /* add to the threads list */
   irq_save(flags);
   list_add(&thread->list, &threads_list);
   irq_restore(flags);

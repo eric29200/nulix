@@ -24,7 +24,7 @@ struct task_registers_t {
 	uint32_t eip;
 };
 
-int create_thread(void (*func)(void));
+int start_thread(void (*func)(void));
 void schedule();
 
 #endif
