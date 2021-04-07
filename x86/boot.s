@@ -33,7 +33,8 @@ call_kmain:
                                             	; it pops ebp and returns
 
 .loop:
-	jmp .loop                              	; loop forever
+	hlt					; loop forever
+	jmp .loop
 
 section .bss
 align 4                                     	; align at 4 bytes

@@ -16,18 +16,12 @@ extern uint32_t kernel_stack;
 
 void test1()
 {
-  uint32_t i = 0;
-
-  while (1)
-    printf("1 - %d\n", i++);
+  printf("1\n");
 }
 
 void test2()
 {
-  uint32_t i = 0;
-
-  while (1)
-    printf("2 - %d\n", i++);
+  printf("2\n");
 }
 
 /*
@@ -63,6 +57,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* init processes */
   printf("[Kernel] Processes Init");
+  if (init_task() != 0)
+    panic("Cannot init processes\n");
 
   /* init timer */
   printf("[Kernel] Timer Init\n");
@@ -76,6 +72,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Enable interrupts\n");
   irq_enable();
 
+  /* start 2 threads */
   start_thread(test1);
   start_thread(test2);
 

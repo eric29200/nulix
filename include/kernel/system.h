@@ -28,4 +28,12 @@ struct registers_t {
   uint32_t ss;
 };
 
+/*
+ * Halt the processor.
+ */
+static inline void halt()
+{
+  __asm__ __volatile__("hlt");
+}
+
 #endif

@@ -22,8 +22,13 @@ struct thread_t {
 struct task_registers_t {
 	uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
 	uint32_t eip;
+  uint32_t return_address;
+  uint32_t parameter1;
+  uint32_t parameter2;
+  uint32_t parameter3;
 };
 
+int init_task();
 int start_thread(void (*func)(void));
 void schedule();
 
