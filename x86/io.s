@@ -2,8 +2,6 @@ global outb
 global inb
 global inw
 
-section .text:
-
 outb:
 	mov al, [esp+8]
 	mov dx, [esp+4]

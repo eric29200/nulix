@@ -1,4 +1,5 @@
-[GLOBAL gdt_flush]
+global gdt_flush
+
 gdt_flush:
 	mov eax, [esp+4]	; load the gdt pointer passed as parameter on the stack
 	lgdt [eax]

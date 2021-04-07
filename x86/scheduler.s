@@ -1,4 +1,5 @@
-[global do_switch]
+global do_switch
+
 do_switch:
   cli
   pusha
