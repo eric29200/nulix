@@ -120,6 +120,6 @@ void init_mem(uint32_t start, uint32_t end)
   kheap = heap_create(KHEAP_START, KHEAP_START + end, KHEAP_INIT_SIZE);
 
   /* set current page table to kernel page table */
-  current_pgd = clone_page_directory(kernel_pgd);
+  current_pgd = kernel_pgd;
   switch_page_directory(current_pgd);
 }
