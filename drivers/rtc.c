@@ -1,5 +1,5 @@
 #include <drivers/rtc.h>
-#include <kernel/io.h>
+#include <x86/io.h>
 #include <time.h>
 
 uint32_t startup_time = 0;

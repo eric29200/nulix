@@ -1,7 +1,7 @@
 #ifndef _INTERRUPT_H_
 #define _INTERRUPT_H_
 
-#include <kernel/system.h>
+#include <x86/system.h>
 #include <stddef.h>
 
 #define IRQ0    32

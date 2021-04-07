@@ -1,5 +1,5 @@
-#include <kernel/interrupt.h>
-#include <kernel/io.h>
+#include <x86/interrupt.h>
+#include <x86/io.h>
 #include <stdio.h>
 
 /*

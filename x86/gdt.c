@@ -1,5 +1,5 @@
-#include <kernel/gdt.h>
-#include <kernel/system.h>
+#include <x86/gdt.h>
+#include <x86/system.h>
 #include <stddef.h>
 #include <string.h>
 

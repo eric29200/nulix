@@ -1,6 +1,6 @@
-#include <kernel/gdt.h>
-#include <kernel/idt.h>
-#include <kernel/interrupt.h>
+#include <x86/gdt.h>
+#include <x86/idt.h>
+#include <x86/interrupt.h>
 #include <mm/mm.h>
 #include <proc/task.h>
 #include <grub/multiboot.h>

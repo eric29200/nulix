@@ -1,6 +1,6 @@
-#include <kernel/interrupt.h>
-#include <kernel/io.h>
-#include <kernel/system.h>
+#include <x86/interrupt.h>
+#include <x86/io.h>
+#include <x86/system.h>
 #include <mm/mm.h>
 #include <proc/task.h>
 #include <drivers/timer.h>

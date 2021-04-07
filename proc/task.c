@@ -1,6 +1,6 @@
-#include <proc/task.h>
+#include <x86/interrupt.h>
 #include <mm/mm.h>
-#include <kernel/interrupt.h>
+#include <proc/task.h>
 #include <string.h>
 #include <stderr.h>
 

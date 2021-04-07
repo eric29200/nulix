@@ -1,4 +1,5 @@
 global gdt_flush
+global idt_flush
 
 gdt_flush:
 	mov eax, [esp+4]	; load the gdt pointer passed as parameter on the stack
@@ -12,4 +13,9 @@ gdt_flush:
 	mov ss, ax
 	jmp 0x08:.flush		; jump to code segment
 .flush:
+	ret
+
+idt_flush:
+	mov eax, [esp+4]	; load the idt pointer passed as parameter on stack
+	lidt [eax]
 	ret
