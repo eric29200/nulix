@@ -21,6 +21,15 @@ struct list_head_t {
 #define list_for_each_safe(pos, n, head)            for (pos = (head)->next, n = pos->next; pos != (head); pos = n, n = pos->next)
 
 /*
+ * Init a list head structure.
+ */
+static inline void INIT_LIST_HEAD(struct list_head_t *list)
+{
+	list->next = list;
+	list->prev = list;
+}
+
+/*
  * Insert a new entry between prev and next.
  */
 static inline void __list_add(struct list_head_t *new, struct list_head_t *prev, struct list_head_t *next)

@@ -38,7 +38,7 @@ void schedule()
 int create_thread(void (*func)(void))
 {
   struct task_registers_t *regs;
-  struct thread_t *thread, *t;
+  struct thread_t *thread;
   uint32_t flags;
   void *stack;
 
@@ -49,6 +49,7 @@ int create_thread(void (*func)(void))
 
   /* set tid */
   thread->tid = next_tid++;
+  INIT_LIST_HEAD(&thread->list);
 
   /* allocate stack */
   stack = (void *) kmalloc(STACK_SIZE);
