@@ -9,19 +9,6 @@
 static uint32_t next_tid = 0;
 
 /*
- * Destroy a thread.
- */
-static void thread_destroy(struct thread_t *thread)
-{
-  if (!thread)
-    return;
-
-  kfree((void *) (thread->kernel_stack - STACK_SIZE));
-  kfree(thread);
-}
-
-
-/*
  * Kernel thread trampoline (used to end threads properly).
  */
 static void thread_entry(struct thread_t *thread, void (*func)())
@@ -29,12 +16,9 @@ static void thread_entry(struct thread_t *thread, void (*func)())
   /* execute thread */
   func();
 
-  /* remove thread from the list and destroy it */
+  /* mark thread terminated and reschedule */
   irq_disable();
-  list_del(&thread->list);
-  thread_destroy(thread);
-
-  /* reschedule */
+  thread->state = THREAD_TERMINATED;
   schedule();
 }
 
@@ -54,6 +38,7 @@ struct thread_t *create_thread(void (*func)(void))
 
   /* set tid */
   thread->tid = next_tid++;
+  thread->state = THREAD_READY;
   INIT_LIST_HEAD(&thread->list);
 
   /* allocate stack */
@@ -79,4 +64,16 @@ struct thread_t *create_thread(void (*func)(void))
   regs->eip = (uint32_t) thread_entry;
 
   return thread;
+}
+
+/*
+ * Destroy a thread.
+ */
+void destroy_thread(struct thread_t *thread)
+{
+  if (!thread)
+    return;
+
+  kfree((void *) (thread->kernel_stack - STACK_SIZE));
+  kfree(thread);
 }

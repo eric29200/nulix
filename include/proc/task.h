@@ -7,12 +7,21 @@
 #define STACK_SIZE    0x2000
 
 /*
+ * Thread state.
+ */
+enum thread_state {
+  THREAD_READY,
+  THREAD_TERMINATED
+};
+
+/*
  * Kernel thread structure.
  */
 struct thread_t {
   uint32_t tid;
   uint32_t esp;
   uint32_t kernel_stack;
+  enum thread_state state;
   struct list_head_t list;
 };
 

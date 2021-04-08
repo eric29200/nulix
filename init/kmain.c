@@ -14,14 +14,11 @@ extern uint32_t loader;
 extern uint32_t kernel_end;
 extern uint32_t kernel_stack;
 
-void test1()
+/*
+ * Initialisation task thread.
+ */
+static void kinit()
 {
-  printf("1\n");
-}
-
-void test2()
-{
-  printf("2\n");
 }
 
 /*
@@ -55,11 +52,6 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Memory Init\n");
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
-  /* init processes */
-  printf("[Kernel] Processes Init");
-  if (init_scheduler() != 0)
-    panic("Cannot init processes\n");
-
   /* init timer */
   printf("[Kernel] Timer Init\n");
   init_timer();
@@ -68,13 +60,15 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Real Time Clock Init\n");
   init_rtc();
 
+  /* init processes */
+  printf("[Kernel] Processes Init\n");
+  if (init_scheduler(kinit) != 0)
+    panic("Cannot init processes\n");
+
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");
   irq_enable();
 
-  /* start 2 threads */
-  start_thread(test1);
-  start_thread(test2);
-
+  /* code here cannot be reached because the scheduler will always prefer the kinit thread */
   return 0;
 }

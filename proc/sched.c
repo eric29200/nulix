@@ -5,7 +5,7 @@
 #include <list.h>
 #include <stderr.h>
 
-/* threads list (idle thread is always the last thread in the list) */
+/* threads list */
 LIST_HEAD(threads_list);
 static struct thread_t *current_thread = NULL;
 static struct thread_t *idle_thread = NULL;
@@ -14,9 +14,9 @@ static struct thread_t *idle_thread = NULL;
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
 
 /*
- * Idle task.
+ * Idle task (used if no threads are ready).
  */
-static void idle_task()
+void idle_task()
 {
   for (;;)
     halt();
@@ -25,22 +25,34 @@ static void idle_task()
 /*
  * Init scheduler.
  */
-int init_scheduler()
+int init_scheduler(void (*init_func)(void))
 {
-  uint32_t flags;
+  int ret;
 
-  /* create idle thread */
+  /* create idle task */
   idle_thread = create_thread(idle_task);
   if (!idle_thread)
     return ENOMEM;
 
-  /* add it to the threads list */
-  irq_save(flags);
-  list_add(&idle_thread->list, &threads_list);
-  current_thread = idle_thread;
-  irq_restore(flags);
+  /* create init thread */
+  ret = start_thread(init_func);
+  if (ret != 0)
+    destroy_thread(idle_thread);
 
-  return 0;
+  return ret;
+}
+
+/*
+ * Pop next thread to run.
+ */
+static struct thread_t *pop_next_thread()
+{
+  struct thread_t *next_thread;
+
+  next_thread = list_first_entry(&threads_list, struct thread_t, list);
+  list_del(&next_thread->list);
+
+  return next_thread;
 }
 
 /*
@@ -50,14 +62,30 @@ void schedule()
 {
   struct thread_t *prev_thread = current_thread;
 
-  /* take first thread */
-  current_thread = list_first_entry(&threads_list, struct thread_t, list);
+  do {
+    /* no threads : break */
+    if (list_empty(&threads_list)) {
+      current_thread = NULL;
+      break;
+    }
 
-  /* put it at the end of the list (just before idle thread) */
-  if (current_thread != idle_thread) {
-    list_del(&current_thread->list);
-    list_add_tail(&current_thread->list, &idle_thread->list);
-  }
+    /* pop next thread */
+    current_thread = pop_next_thread();
+
+    /* if thread is terminated : destroy it */
+    if (current_thread->state == THREAD_TERMINATED) {
+      current_thread = NULL;
+      destroy_thread(current_thread);
+      continue;
+    }
+
+    /* put current thread at thed end of the list */
+    list_add_tail(&current_thread->list, &threads_list);
+  } while (!current_thread);
+
+  /* no running thread : use idle thread */
+  if (!current_thread)
+    current_thread = idle_thread;
 
   /* switch threads */
   if (current_thread != prev_thread)
