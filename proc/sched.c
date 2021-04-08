@@ -67,7 +67,13 @@ static struct thread_t *pop_next_thread()
  */
 void schedule()
 {
-  struct thread_t *prev_thread = current_thread;
+  struct thread_t *prev_thread;
+
+  /* disable interrupts */
+  irq_disable();
+
+  /* remember current thread */
+  prev_thread = current_thread;
 
   do {
     /* no threads : break */
@@ -127,11 +133,10 @@ void end_thread(struct thread_t *thread)
 {
   uint32_t flags;
 
-  /* lock scheduler */
-  spin_lock_irqsave(&sched_lock, flags);
-
   /* mark thread terminated and reschedule */
+  spin_lock_irqsave(&sched_lock, flags);
   thread->state = THREAD_TERMINATED;
+  spin_unlock_irqrestore(&sched_lock, flags);
 
   /* call scheduler */
   schedule();
