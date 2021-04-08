@@ -16,10 +16,8 @@ static void thread_entry(struct thread_t *thread, void (*func)())
   /* execute thread */
   func();
 
-  /* mark thread terminated and reschedule */
-  irq_disable();
-  thread->state = THREAD_TERMINATED;
-  schedule();
+  /* end properly the thread */
+  end_thread(thread);
 }
 
 /*

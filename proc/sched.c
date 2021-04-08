@@ -3,12 +3,16 @@
 #include <proc/sched.h>
 #include <proc/task.h>
 #include <list.h>
+#include <lock.h>
 #include <stderr.h>
 
 /* threads list */
 LIST_HEAD(threads_list);
 static struct thread_t *current_thread = NULL;
 static struct thread_t *idle_thread = NULL;
+
+/* scheduler lock */
+struct spinlock_t sched_lock;
 
 /* switch threads (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
@@ -28,6 +32,9 @@ void idle_task()
 int init_scheduler(void (*init_func)(void))
 {
   int ret;
+
+  /* init scheduler lock */
+  spin_lock_init(&sched_lock);
 
   /* create idle task */
   idle_thread = create_thread(idle_task);
@@ -56,7 +63,7 @@ static struct thread_t *pop_next_thread()
 }
 
 /*
- * Schedule function.
+ * Schedule function (interruptions must be disabled and will be reenabled on function return).
  */
 void schedule()
 {
@@ -106,9 +113,26 @@ int start_thread(void (*func)(void))
     return ENOMEM;
 
   /* add to the threads list */
-  irq_save(flags);
+  spin_lock_irqsave(&sched_lock, flags);
   list_add(&thread->list, &threads_list);
-  irq_restore(flags);
+  spin_unlock_irqrestore(&sched_lock, flags);
 
   return 0;
+}
+
+/*
+ * End a thread.
+ */
+void end_thread(struct thread_t *thread)
+{
+  uint32_t flags;
+
+  /* lock scheduler */
+  spin_lock_irqsave(&sched_lock, flags);
+
+  /* mark thread terminated and reschedule */
+  thread->state = THREAD_TERMINATED;
+
+  /* call scheduler */
+  schedule();
 }
