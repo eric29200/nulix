@@ -23,7 +23,7 @@ $(KERNEL): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 run: $(KERNEL)
-	$(QEMU) -m 32M -kernel $(KERNEL)
+	$(QEMU) -m 32M -kernel $(KERNEL) -serial stdio -display none
 
 clean:
 	rm -f *.o */*.o $(KERNEL)

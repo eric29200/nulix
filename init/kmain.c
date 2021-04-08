@@ -4,7 +4,7 @@
 #include <mm/mm.h>
 #include <proc/sched.h>
 #include <grub/multiboot.h>
-#include <drivers/screen.h>
+#include <drivers/serial.h>
 #include <drivers/timer.h>
 #include <drivers/rtc.h>
 #include <stdio.h>
@@ -33,8 +33,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* disable interrupts */
   irq_disable();
 
-  /* clear screen */
-  screen_clear();
+  /* init serial console */
+  init_serial();
 
   /* print grub informations */
   printf("[Kernel] Loading at linear address = %x\n", loader);

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include <drivers/screen.h>
+#include <drivers/serial.h>
 
 static char *__buf_ptr;
 
@@ -10,7 +10,8 @@ static char *__buf_ptr;
 static void putc(char c, int fd)
 {
   if (fd == stdout)
-    screen_putc(c);
+    write_serial(c);
+    //screen_putc(c);
 }
 
 /*
