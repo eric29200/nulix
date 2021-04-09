@@ -225,6 +225,18 @@ void wait(struct wait_queue_head_t *q)
 }
 
 /*
+ * Wake up a task (internal function : wait queue head lock must be held).
+ */
+static void __wake_up(struct wait_queue_t *wait)
+{
+  /* remove it from the wait queue */
+  list_del(&wait->list);
+
+  /* update task status */
+  __update_task_state(wait->task, TASK_READY);
+}
+
+/*
  * Wake up one task from the wait queue.
  */
 void wake_up(struct wait_queue_head_t *q)
@@ -236,7 +248,25 @@ void wake_up(struct wait_queue_head_t *q)
   spin_lock_irqsave(&q->lock, flags);
   if (!list_empty(&q->task_list)) {
     wait = list_first_entry(&q->task_list, struct wait_queue_t, list);
-    __update_task_state(wait->task, TASK_READY);
+    __wake_up(wait);
+  }
+  spin_unlock_irqrestore(&q->lock, flags);
+}
+
+/*
+ * Wake up all tasks from the wait queue.
+ */
+void wake_up_all(struct wait_queue_head_t *q)
+{
+  struct list_head_t *pos, *n;
+  struct wait_queue_t *wait;
+  uint32_t flags;
+
+  /* wake up each task */
+  spin_lock_irqsave(&q->lock, flags);
+  list_for_each_safe(pos, n, &q->task_list) {
+    wait = list_entry(pos, struct wait_queue_t, list);
+    __wake_up(wait);
   }
   spin_unlock_irqrestore(&q->lock, flags);
 }
