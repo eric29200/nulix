@@ -20,8 +20,10 @@ extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
 /*
  * Idle task (used if no tasks are ready).
  */
-void idle_task_func()
+void idle_task_func(void *arg)
 {
+  UNUSED(arg);
+
   for (;;)
     halt();
 }
@@ -29,7 +31,7 @@ void idle_task_func()
 /*
  * Init scheduler.
  */
-int init_scheduler(void (*init_func)(void))
+int init_scheduler(void (*init_func)(void *), void *init_arg)
 {
   struct task_t *init_task;
 
@@ -37,12 +39,12 @@ int init_scheduler(void (*init_func)(void))
   spin_lock_init(&sched_lock);
 
   /* create idle task */
-  idle_task = create_task(idle_task_func);
+  idle_task = create_task(idle_task_func, NULL);
   if (!idle_task)
     return ENOMEM;
 
   /* create init task */
-  init_task = create_task(init_func);
+  init_task = create_task(init_func, init_arg);
   if (!init_task) {
     destroy_task(idle_task);
     return ENOMEM;

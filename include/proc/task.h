@@ -33,7 +33,7 @@ struct task_registers_t {
   uint32_t parameter3;
 };
 
-struct task_t *create_task(void (*func)(void));
+struct task_t *create_task(void (*func)(void *), void *arg);
 void destroy_task(struct task_t *task);
 
 #endif

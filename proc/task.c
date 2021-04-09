@@ -11,10 +11,10 @@ static uint32_t next_tid = 0;
 /*
  * Kernel task trampoline (used to end tasks properly).
  */
-static void task_entry(struct task_t *task, void (*func)())
+static void task_entry(struct task_t *task, void (*func)(void *), void *arg)
 {
   /* execute task */
-  func();
+  func(arg);
 
   /* end properly the task */
   kill_task(task);
@@ -23,7 +23,7 @@ static void task_entry(struct task_t *task, void (*func)())
 /*
  * Create a task.
  */
-struct task_t *create_task(void (*func)(void))
+struct task_t *create_task(void (*func)(void *), void *arg)
 {
   struct task_registers_t *regs;
   struct task_t *task;
@@ -58,6 +58,7 @@ struct task_t *create_task(void (*func)(void))
   /* set eip to function */
   regs->parameter1 = (uint32_t) task;
   regs->parameter2 = (uint32_t) func;
+  regs->parameter3 = (uint32_t) arg;
   regs->return_address = 0xFFFFFFFF;
   regs->eip = (uint32_t) task_entry;
 

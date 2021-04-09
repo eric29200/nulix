@@ -17,8 +17,9 @@ extern uint32_t kernel_stack;
 /*
  * Initialisation task.
  */
-static void kinit()
+static void kinit(void *arg)
 {
+  UNUSED(arg);
 }
 
 /*
@@ -62,7 +63,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* init processes */
   printf("[Kernel] Processes Init\n");
-  if (init_scheduler(kinit) != 0)
+  if (init_scheduler(kinit, NULL) != 0)
     panic("Cannot init processes\n");
 
   /* enable interrupts */
