@@ -1,3 +1,5 @@
+- rename thread to task
+- rename timer to pit
 - implement timer
 - implement wait queue
 - implement semaphore

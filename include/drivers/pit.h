@@ -1,5 +1,5 @@
-#ifndef _TIMER_H_
-#define _TIMER_H_
+#ifndef _PIT_H_
+#define _PIT_H_
 
 #include <stddef.h>
 
@@ -9,6 +9,6 @@ extern uint32_t startup_time;
 #define HZ              100
 #define CURRENT_TIME    (startup_time + (jiffies / HZ))
 
-void init_timer();
+void init_pit();
 
 #endif

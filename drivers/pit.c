@@ -3,7 +3,7 @@
 #include <x86/system.h>
 #include <mm/mm.h>
 #include <proc/sched.h>
-#include <drivers/timer.h>
+#include <drivers/pit.h>
 #include <stdio.h>
 #include <stderr.h>
 
@@ -11,9 +11,9 @@
 volatile uint32_t jiffies = 0;
 
 /*
- * Timer handler.
+ * PIT handler.
  */
-static void timer_handler(struct registers_t *regs)
+static void pit_handler(struct registers_t *regs)
 {
   UNUSED(regs);
 
@@ -27,14 +27,14 @@ static void timer_handler(struct registers_t *regs)
 /*
  * Init the Programmable Interval Timer.
  */
-void init_timer()
+void init_pit()
 {
   uint32_t divisor;
   uint8_t divisor_low;
   uint8_t divisor_high;
 
   /* register irq */
-  register_interrupt_handler(IRQ0, &timer_handler);
+  register_interrupt_handler(IRQ0, &pit_handler);
 
   /* set frequency (PIT's clock is always at 1193180 Hz) */
   divisor = 1193182 / HZ;

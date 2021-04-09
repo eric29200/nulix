@@ -5,7 +5,7 @@
 #include <proc/sched.h>
 #include <grub/multiboot.h>
 #include <drivers/serial.h>
-#include <drivers/timer.h>
+#include <drivers/pit.h>
 #include <drivers/rtc.h>
 #include <stdio.h>
 #include <string.h>
@@ -52,9 +52,9 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Memory Init\n");
   init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
-  /* init timer */
-  printf("[Kernel] Timer Init\n");
-  init_timer();
+  /* init PIT */
+  printf("[Kernel] PIT Init\n");
+  init_pit();
 
   /* init real time clock */
   printf("[Kernel] Real Time Clock Init\n");
