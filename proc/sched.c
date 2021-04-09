@@ -207,15 +207,19 @@ void kill_task(struct task_t *task)
  */
 void wait(struct wait_queue_head_t *q)
 {
-  struct task_t *task = current_task;
   struct wait_queue_t wait;
+  uint32_t flags;
 
   /* create a wait queue entry for current task */
-  init_waitqueue_entry(&wait, task);
+  spin_lock_irqsave(&sched_lock, flags);
+  init_waitqueue_entry(&wait, current_task);
+  spin_unlock_irqrestore(&sched_lock, flags);
+
+  /* create a wait queue entry for current task */
   add_wait_queue(q, &wait);
 
   /* set current state to waiting */
-  __update_task_state(task, TASK_WAITING);
+  __update_task_state(wait.task, TASK_WAITING);
 
   /* call scheduler */
   schedule();
