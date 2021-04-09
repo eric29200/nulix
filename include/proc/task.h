@@ -6,8 +6,9 @@
 
 #define STACK_SIZE        0x2000
 
-#define TASK_READY        1
-#define TASK_TERMINATED   2
+#define TASK_NEW          1
+#define TASK_READY        2
+#define TASK_TERMINATED   3
 
 /*
  * Kernel task structure.

@@ -17,7 +17,7 @@ static void task_entry(struct task_t *task, void (*func)())
   func();
 
   /* end properly the task */
-  end_task(task);
+  kill_task(task);
 }
 
 /*
@@ -36,7 +36,7 @@ struct task_t *create_task(void (*func)(void))
 
   /* set tid */
   task->tid = next_tid++;
-  task->state = TASK_READY;
+  task->state = TASK_NEW;
   INIT_LIST_HEAD(&task->list);
 
   /* allocate stack */

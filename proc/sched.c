@@ -31,7 +31,7 @@ void idle_task_func()
  */
 int init_scheduler(void (*init_func)(void))
 {
-  int ret;
+  struct task_t *init_task;
 
   /* init scheduler lock */
   spin_lock_init(&sched_lock);
@@ -42,11 +42,14 @@ int init_scheduler(void (*init_func)(void))
     return ENOMEM;
 
   /* create init task */
-  ret = start_task(init_func);
-  if (ret != 0)
+  init_task = create_task(init_func);
+  if (!init_task) {
     destroy_task(idle_task);
+    return ENOMEM;
+  }
 
-  return ret;
+  /* run init task */
+  return run_task(init_task);
 }
 
 /*
@@ -88,11 +91,10 @@ void schedule()
     /* if task is terminated : destroy it */
     if (current_task->state == TASK_TERMINATED) {
       current_task = NULL;
-      destroy_task(current_task);
       continue;
     }
 
-    /* put current task at thed end of the list */
+    /* put current task at the end of the list */
     list_add_tail(&current_task->list, &tasks_list);
   } while (!current_task);
 
@@ -106,32 +108,43 @@ void schedule()
 }
 
 /*
- * Start a task.
+ * Run a task.
  */
-int start_task(void (*func)(void))
+int run_task(struct task_t *task)
 {
-  struct task_t *task;
   uint32_t flags;
 
-  /* create a task */
-  task = create_task(func);
   if (!task)
-    return ENOMEM;
+    return EINVAL;
 
-  /* add to the tasks list */
+
   spin_lock_irqsave(&sched_lock, flags);
-  list_add(&task->list, &tasks_list);
+
+  /* add to the task list */
+  if (task->state == TASK_NEW)
+    list_add(&task->list, &tasks_list);
+
+  /* set running state */
+  task->state = TASK_READY;
+
   spin_unlock_irqrestore(&sched_lock, flags);
+
+  /* reschedule */
+  schedule();
 
   return 0;
 }
 
 /*
- * End a task.
+ * Kill a task.
  */
-void end_task(struct task_t *task)
+void kill_task(struct task_t *task)
 {
   uint32_t flags;
+
+  /* NULL task */
+  if (!task)
+    return;
 
   /* mark task terminated and reschedule */
   spin_lock_irqsave(&sched_lock, flags);
