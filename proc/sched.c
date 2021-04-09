@@ -3,7 +3,7 @@
 #include <proc/sched.h>
 #include <proc/task.h>
 #include <proc/wait.h>
-#include <ipc/semaphore.h>
+#include <semaphore.h>
 #include <list.h>
 #include <lock.h>
 #include <stderr.h>
@@ -13,9 +13,6 @@ LIST_HEAD(tasks_ready_list);
 LIST_HEAD(tasks_waiting_list);
 static struct task_t *current_task = NULL;
 static struct task_t *idle_task = NULL;
-
-/* scheduler lock */
-spinlock_t sched_lock;
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
@@ -38,9 +35,6 @@ int init_scheduler(void (*init_func)(void *), void *init_arg)
 {
   struct task_t *init_task;
 
-  /* init scheduler lock */
-  spin_lock_init(&sched_lock);
-
   /* create idle task */
   idle_task = create_task(idle_task_func, NULL);
   if (!idle_task)
@@ -58,26 +52,13 @@ int init_scheduler(void (*init_func)(void *), void *init_arg)
 }
 
 /*
- * Pop next task to run.
- */
-static struct task_t *pop_next_task()
-{
-  struct task_t *next_task;
-
-  next_task = list_first_entry(&tasks_ready_list, struct task_t, list);
-  list_del(&next_task->list);
-
-  return next_task;
-}
-
-/*
  * Update task state.
  */
 static void __update_task_state(struct task_t *task, uint8_t state)
 {
   uint32_t flags;
 
-  spin_lock_irqsave(&sched_lock, flags);
+  irq_save(flags);
 
   /* update state */
   task->state = state;
@@ -89,7 +70,7 @@ static void __update_task_state(struct task_t *task, uint8_t state)
   else if (task->state == TASK_WAITING)
     list_add(&task->list, &tasks_waiting_list);
 
-  spin_unlock_irqrestore(&sched_lock, flags);
+  irq_restore(flags);
 }
 
 /*
@@ -126,7 +107,8 @@ void schedule()
     }
 
     /* pop next task */
-    current_task = pop_next_task();
+    current_task = list_first_entry(&tasks_ready_list, struct task_t, list);
+    list_del(&current_task->list);
 
     /* if task is terminated : destroy it */
     if (current_task->state == TASK_TERMINATED) {
@@ -155,9 +137,8 @@ void schedule()
  */
 void schedule_timeout(uint32_t timeout)
 {
-  uint32_t flags;
+  irq_disable();
 
-  spin_lock_irqsave(&sched_lock, flags);
   if (current_task) {
     /* set timeout */
     current_task->expires = timeout;
@@ -167,7 +148,6 @@ void schedule_timeout(uint32_t timeout)
     list_del(&current_task->list);
     list_add(&current_task->list, &tasks_waiting_list);
   }
-  spin_unlock_irqrestore(&sched_lock, flags);
 
   /* reschedule */
   schedule();
@@ -209,14 +189,12 @@ void kill_task(struct task_t *task)
 void wait(struct wait_queue_head_t *q)
 {
   struct wait_queue_t wait;
-  uint32_t flags;
+
+  /* disable irq */
+  irq_disable();
 
   /* create a wait queue entry for current task */
-  spin_lock_irqsave(&sched_lock, flags);
   init_waitqueue_entry(&wait, current_task);
-  spin_unlock_irqrestore(&sched_lock, flags);
-
-  /* create a wait queue entry for current task */
   add_wait_queue(q, &wait);
 
   /* set current state to waiting */
@@ -274,4 +252,53 @@ void wake_up_all(struct wait_queue_head_t *q)
     __wake_up(wait);
   }
   spin_unlock_irqrestore(&q->lock, flags);
+}
+
+/*
+ * Init a seamphore.
+ */
+void init_sem(struct semaphore_t *sem)
+{
+  sem->count = 1;
+  init_waitqueue_head(&sem->wait);
+}
+
+/*
+ * Acquire a semaphore.
+ */
+void sem_down(struct semaphore_t *sem)
+{
+  uint32_t flags;
+
+  for (;;) {
+    /* lock semaphore */
+    irq_save(flags);
+
+    /* semaphore free : return */
+    if (sem->count > 0) {
+      sem->count--;
+      irq_restore(flags);
+      return;
+    }
+
+    /* otherwise wait (no need to restore irq because wait will reschedule and reenable interupts */
+    wait(&sem->wait);
+  }
+}
+
+/*
+ * Release a semaphore.
+ */
+void sem_up(struct semaphore_t *sem)
+{
+  uint32_t flags;
+
+  /* lock semaphore */
+  irq_save(flags);
+
+  sem->count = 1;
+  wake_up(&sem->wait);
+
+  /* release semaphore */
+  irq_restore(flags);
 }
