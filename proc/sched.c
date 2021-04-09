@@ -207,14 +207,15 @@ void kill_task(struct task_t *task)
  */
 void wait(struct wait_queue_head_t *q)
 {
+  struct task_t *task = current_task;
   struct wait_queue_t wait;
 
   /* create a wait queue entry for current task */
-  init_waitqueue_entry(&wait, current_task);
+  init_waitqueue_entry(&wait, task);
   add_wait_queue(q, &wait);
 
   /* set current state to waiting */
-  __update_task_state(current_task, TASK_WAITING);
+  __update_task_state(task, TASK_WAITING);
 
   /* call scheduler */
   schedule();
