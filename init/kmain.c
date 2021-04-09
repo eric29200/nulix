@@ -8,6 +8,7 @@
 #include <drivers/serial.h>
 #include <drivers/pit.h>
 #include <drivers/rtc.h>
+#include <ipc/semaphore.h>
 #include <stdio.h>
 #include <string.h>
 #include <delay.h>

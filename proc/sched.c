@@ -3,6 +3,7 @@
 #include <proc/sched.h>
 #include <proc/task.h>
 #include <proc/wait.h>
+#include <ipc/semaphore.h>
 #include <list.h>
 #include <lock.h>
 #include <stderr.h>
