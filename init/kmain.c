@@ -10,30 +10,18 @@
 #include <drivers/rtc.h>
 #include <stdio.h>
 #include <string.h>
+#include <delay.h>
 
 extern uint32_t loader;
 extern uint32_t kernel_end;
 extern uint32_t kernel_stack;
-
-void t(void *arg)
-{
-  printf("%s\n", (char *) arg);
-}
 
 /*
  * Initialisation task.
  */
 static void kinit(void *arg)
 {
-  struct timer_t *timer1, *timer2;
-
   UNUSED(arg);
-
-  timer1 = create_timer(5, t, "5");
-  run_timer(timer1);
-
-  timer2 = create_timer(2, t, "2");
-  run_timer(timer2);
 }
 
 /*

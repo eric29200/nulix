@@ -8,12 +8,10 @@
 #include <stderr.h>
 
 /* tasks list */
-LIST_HEAD(tasks_list);
+LIST_HEAD(tasks_ready_list);
+LIST_HEAD(tasks_waiting_list);
 static struct task_t *current_task = NULL;
 static struct task_t *idle_task = NULL;
-
-/* timers list */
-LIST_HEAD(timers_list);
 
 /* scheduler lock */
 struct spinlock_t sched_lock;
@@ -65,7 +63,7 @@ static struct task_t *pop_next_task()
 {
   struct task_t *next_task;
 
-  next_task = list_first_entry(&tasks_list, struct task_t, list);
+  next_task = list_first_entry(&tasks_ready_list, struct task_t, list);
   list_del(&next_task->list);
 
   return next_task;
@@ -76,9 +74,8 @@ static struct task_t *pop_next_task()
  */
 void schedule()
 {
+  struct task_t *prev_task, *task;
   struct list_head_t *pos, *n;
-  struct task_t *prev_task;
-  struct timer_t *timer;
 
   /* disable interrupts */
   irq_disable();
@@ -86,22 +83,21 @@ void schedule()
   /* remember current task */
   prev_task = current_task;
 
-  /* update timers expires */
-  list_for_each_safe(pos, n, &timers_list) {
-    timer = list_entry(pos, struct timer_t, list);
-    timer->expires--;
+  /* update waiting tasks */
+  list_for_each_safe(pos, n, &tasks_waiting_list) {
+    task = list_entry(pos, struct task_t, list);
 
-    /* timer expires : run it */
-    if (timer->expires <= 0) {
-      run_task(timer->task);
-      list_del(&timer->list);
+    /* timer expires : remove it from waiting list and run it */
+    if (task->expires-- <= 0) {
+      list_del(&task->list);
+      run_task(task);
     }
   }
 
   /* scheduling algorithm */
   do {
     /* no tasks : break */
-    if (list_empty(&tasks_list)) {
+    if (list_empty(&tasks_ready_list)) {
       current_task = NULL;
       break;
     }
@@ -116,7 +112,7 @@ void schedule()
     }
 
     /* put current task at the end of the list */
-    list_add_tail(&current_task->list, &tasks_list);
+    list_add_tail(&current_task->list, &tasks_ready_list);
   } while (!current_task);
 
   /* no running task : use idle task */
@@ -129,6 +125,29 @@ void schedule()
 }
 
 /*
+ * Put current task in sleep mode for timeout jiffies.
+ */
+void schedule_timeout(uint32_t timeout)
+{
+  uint32_t flags;
+
+  spin_lock_irqsave(&sched_lock, flags);
+  if (current_task) {
+    /* set timeout */
+    current_task->expires = timeout;
+    current_task->state = TASK_WAITING;
+
+    /* put current task in waiting list */
+    list_del(&current_task->list);
+    list_add(&current_task->list, &tasks_waiting_list);
+  }
+  spin_unlock_irqrestore(&sched_lock, flags);
+
+  /* reschedule */
+  schedule();
+}
+
+/*
  * Run a task.
  */
 int run_task(struct task_t *task)
@@ -138,19 +157,11 @@ int run_task(struct task_t *task)
   if (!task)
     return EINVAL;
 
-  spin_lock_irqsave(&sched_lock, flags);
-
   /* add to the task list */
-  if (task->state == TASK_NEW)
-    list_add(&task->list, &tasks_list);
-
-  /* set running state */
+  spin_lock_irqsave(&sched_lock, flags);
   task->state = TASK_READY;
-
+  list_add(&task->list, &tasks_ready_list);
   spin_unlock_irqrestore(&sched_lock, flags);
-
-  /* reschedule */
-  schedule();
 
   return 0;
 }
@@ -187,7 +198,8 @@ int run_timer(struct timer_t *timer)
 
   /* add to the timer list */
   spin_lock_irqsave(&sched_lock, flags);
-  list_add(&timer->list, &timers_list);
+  timer->task->state = TASK_WAITING;
+  list_add(&timer->task->list, &tasks_waiting_list);
   spin_unlock_irqrestore(&sched_lock, flags);
 
   return 0;

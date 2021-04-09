@@ -37,6 +37,7 @@ struct task_t *create_task(void (*func)(void *), void *arg)
   /* set tid */
   task->tid = next_tid++;
   task->state = TASK_NEW;
+  task->expires = 0;
   INIT_LIST_HEAD(&task->list);
 
   /* allocate stack */
