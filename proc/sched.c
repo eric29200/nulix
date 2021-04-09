@@ -2,7 +2,6 @@
 #include <x86/interrupt.h>
 #include <proc/sched.h>
 #include <proc/task.h>
-#include <proc/timer.h>
 #include <list.h>
 #include <lock.h>
 #include <stderr.h>
@@ -184,23 +183,4 @@ void kill_task(struct task_t *task)
 
   /* call scheduler */
   schedule();
-}
-
-/*
- * Run a timer.
- */
-int run_timer(struct timer_t *timer)
-{
-  uint32_t flags;
-
-  if (!timer)
-    return EINVAL;
-
-  /* add to the timer list */
-  spin_lock_irqsave(&sched_lock, flags);
-  timer->task->state = TASK_WAITING;
-  list_add(&timer->task->list, &tasks_waiting_list);
-  spin_unlock_irqrestore(&sched_lock, flags);
-
-  return 0;
 }

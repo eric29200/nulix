@@ -3,7 +3,6 @@
 #include <x86/interrupt.h>
 #include <mm/mm.h>
 #include <proc/sched.h>
-#include <proc/timer.h>
 #include <grub/multiboot.h>
 #include <drivers/serial.h>
 #include <drivers/pit.h>
