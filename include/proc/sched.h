@@ -5,7 +5,7 @@
 
 int init_scheduler(void (*init_func)(void));
 void schedule();
-int start_thread(void (*func)(void));
-void end_thread(struct thread_t *thread);
+int start_task(void (*func)(void));
+void end_task(struct task_t *task);
 
 #endif

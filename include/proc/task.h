@@ -4,24 +4,19 @@
 #include <stddef.h>
 #include <list.h>
 
-#define STACK_SIZE    0x2000
+#define STACK_SIZE        0x2000
+
+#define TASK_READY        1
+#define TASK_TERMINATED   2
 
 /*
- * Thread state.
+ * Kernel task structure.
  */
-enum thread_state {
-  THREAD_READY,
-  THREAD_TERMINATED
-};
-
-/*
- * Kernel thread structure.
- */
-struct thread_t {
+struct task_t {
   uint32_t tid;
   uint32_t esp;
   uint32_t kernel_stack;
-  enum thread_state state;
+  uint8_t state;
   struct list_head_t list;
 };
 
@@ -37,7 +32,7 @@ struct task_registers_t {
   uint32_t parameter3;
 };
 
-struct thread_t *create_thread(void (*func)(void));
-void destroy_thread(struct thread_t *thread);
+struct task_t *create_task(void (*func)(void));
+void destroy_task(struct task_t *task);
 
 #endif

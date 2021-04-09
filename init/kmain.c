@@ -15,7 +15,7 @@ extern uint32_t kernel_end;
 extern uint32_t kernel_stack;
 
 /*
- * Initialisation task thread.
+ * Initialisation task.
  */
 static void kinit()
 {
@@ -69,6 +69,6 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Enable interrupts\n");
   irq_enable();
 
-  /* code here cannot be reached because the scheduler will always prefer a running thread */
+  /* code here cannot be reached because the scheduler will always prefer a running task */
   return 0;
 }

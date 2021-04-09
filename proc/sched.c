@@ -6,21 +6,21 @@
 #include <lock.h>
 #include <stderr.h>
 
-/* threads list */
-LIST_HEAD(threads_list);
-static struct thread_t *current_thread = NULL;
-static struct thread_t *idle_thread = NULL;
+/* tasks list */
+LIST_HEAD(tasks_list);
+static struct task_t *current_task = NULL;
+static struct task_t *idle_task = NULL;
 
 /* scheduler lock */
 struct spinlock_t sched_lock;
 
-/* switch threads (defined in scheduler.s) */
+/* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
 
 /*
- * Idle task (used if no threads are ready).
+ * Idle task (used if no tasks are ready).
  */
-void idle_task()
+void idle_task_func()
 {
   for (;;)
     halt();
@@ -37,29 +37,29 @@ int init_scheduler(void (*init_func)(void))
   spin_lock_init(&sched_lock);
 
   /* create idle task */
-  idle_thread = create_thread(idle_task);
-  if (!idle_thread)
+  idle_task = create_task(idle_task_func);
+  if (!idle_task)
     return ENOMEM;
 
-  /* create init thread */
-  ret = start_thread(init_func);
+  /* create init task */
+  ret = start_task(init_func);
   if (ret != 0)
-    destroy_thread(idle_thread);
+    destroy_task(idle_task);
 
   return ret;
 }
 
 /*
- * Pop next thread to run.
+ * Pop next task to run.
  */
-static struct thread_t *pop_next_thread()
+static struct task_t *pop_next_task()
 {
-  struct thread_t *next_thread;
+  struct task_t *next_task;
 
-  next_thread = list_first_entry(&threads_list, struct thread_t, list);
-  list_del(&next_thread->list);
+  next_task = list_first_entry(&tasks_list, struct task_t, list);
+  list_del(&next_task->list);
 
-  return next_thread;
+  return next_task;
 }
 
 /*
@@ -67,75 +67,75 @@ static struct thread_t *pop_next_thread()
  */
 void schedule()
 {
-  struct thread_t *prev_thread;
+  struct task_t *prev_task;
 
   /* disable interrupts */
   irq_disable();
 
-  /* remember current thread */
-  prev_thread = current_thread;
+  /* remember current task */
+  prev_task = current_task;
 
   do {
-    /* no threads : break */
-    if (list_empty(&threads_list)) {
-      current_thread = NULL;
+    /* no tasks : break */
+    if (list_empty(&tasks_list)) {
+      current_task = NULL;
       break;
     }
 
-    /* pop next thread */
-    current_thread = pop_next_thread();
+    /* pop next task */
+    current_task = pop_next_task();
 
-    /* if thread is terminated : destroy it */
-    if (current_thread->state == THREAD_TERMINATED) {
-      current_thread = NULL;
-      destroy_thread(current_thread);
+    /* if task is terminated : destroy it */
+    if (current_task->state == TASK_TERMINATED) {
+      current_task = NULL;
+      destroy_task(current_task);
       continue;
     }
 
-    /* put current thread at thed end of the list */
-    list_add_tail(&current_thread->list, &threads_list);
-  } while (!current_thread);
+    /* put current task at thed end of the list */
+    list_add_tail(&current_task->list, &tasks_list);
+  } while (!current_task);
 
-  /* no running thread : use idle thread */
-  if (!current_thread)
-    current_thread = idle_thread;
+  /* no running task : use idle task */
+  if (!current_task)
+    current_task = idle_task;
 
-  /* switch threads */
-  if (current_thread != prev_thread)
-    scheduler_do_switch(&prev_thread->esp, current_thread->esp);
+  /* switch tasks */
+  if (current_task != prev_task)
+    scheduler_do_switch(&prev_task->esp, current_task->esp);
 }
 
 /*
- * Start a thread.
+ * Start a task.
  */
-int start_thread(void (*func)(void))
+int start_task(void (*func)(void))
 {
-  struct thread_t *thread;
+  struct task_t *task;
   uint32_t flags;
 
-  /* create a thread */
-  thread = create_thread(func);
-  if (!thread)
+  /* create a task */
+  task = create_task(func);
+  if (!task)
     return ENOMEM;
 
-  /* add to the threads list */
+  /* add to the tasks list */
   spin_lock_irqsave(&sched_lock, flags);
-  list_add(&thread->list, &threads_list);
+  list_add(&task->list, &tasks_list);
   spin_unlock_irqrestore(&sched_lock, flags);
 
   return 0;
 }
 
 /*
- * End a thread.
+ * End a task.
  */
-void end_thread(struct thread_t *thread)
+void end_task(struct task_t *task)
 {
   uint32_t flags;
 
-  /* mark thread terminated and reschedule */
+  /* mark task terminated and reschedule */
   spin_lock_irqsave(&sched_lock, flags);
-  thread->state = THREAD_TERMINATED;
+  task->state = TASK_TERMINATED;
   spin_unlock_irqrestore(&sched_lock, flags);
 
   /* call scheduler */
