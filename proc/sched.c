@@ -2,6 +2,7 @@
 #include <x86/interrupt.h>
 #include <proc/sched.h>
 #include <proc/task.h>
+#include <proc/wait.h>
 #include <list.h>
 #include <lock.h>
 #include <stderr.h>
@@ -13,7 +14,7 @@ static struct task_t *current_task = NULL;
 static struct task_t *idle_task = NULL;
 
 /* scheduler lock */
-struct spinlock_t sched_lock;
+spinlock_t sched_lock;
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
@@ -69,6 +70,28 @@ static struct task_t *pop_next_task()
 }
 
 /*
+ * Update task state.
+ */
+static void __update_task_state(struct task_t *task, uint8_t state)
+{
+  uint32_t flags;
+
+  spin_lock_irqsave(&sched_lock, flags);
+
+  /* update state */
+  task->state = state;
+
+  /* updates tasks list */
+  list_del(&task->list);
+  if (task->state == TASK_READY)
+    list_add(&task->list, &tasks_ready_list);
+  else if (task->state == TASK_WAITING)
+    list_add(&task->list, &tasks_waiting_list);
+
+  spin_unlock_irqrestore(&sched_lock, flags);
+}
+
+/*
  * Schedule function (interruptions must be disabled and will be reenabled on function return).
  */
 void schedule()
@@ -87,7 +110,7 @@ void schedule()
     task = list_entry(pos, struct task_t, list);
 
     /* timer expires : remove it from waiting list and run it */
-    if (task->expires-- <= 0) {
+    if (--task->expires == 0) {
       list_del(&task->list);
       run_task(task);
     }
@@ -121,6 +144,9 @@ void schedule()
   /* switch tasks */
   if (current_task != prev_task)
     scheduler_do_switch(&prev_task->esp, current_task->esp);
+
+  /* restore irq */
+  irq_enable();
 }
 
 /*
@@ -151,16 +177,11 @@ void schedule_timeout(uint32_t timeout)
  */
 int run_task(struct task_t *task)
 {
-  uint32_t flags;
-
   if (!task)
     return EINVAL;
 
   /* add to the task list */
-  spin_lock_irqsave(&sched_lock, flags);
-  task->state = TASK_READY;
-  list_add(&task->list, &tasks_ready_list);
-  spin_unlock_irqrestore(&sched_lock, flags);
+  __update_task_state(task, TASK_READY);
 
   return 0;
 }
@@ -170,17 +191,51 @@ int run_task(struct task_t *task)
  */
 void kill_task(struct task_t *task)
 {
-  uint32_t flags;
-
   /* NULL task */
   if (!task)
     return;
 
   /* mark task terminated and reschedule */
-  spin_lock_irqsave(&sched_lock, flags);
-  task->state = TASK_TERMINATED;
-  spin_unlock_irqrestore(&sched_lock, flags);
+  __update_task_state(task, TASK_TERMINATED);
 
   /* call scheduler */
   schedule();
+}
+
+/*
+ * Wait on a wait queue.
+ */
+void wait(struct wait_queue_head_t *q)
+{
+  struct wait_queue_t wait;
+
+  /* create a wait queue entry for current task */
+  init_waitqueue_entry(&wait, current_task);
+  add_wait_queue(q, &wait);
+
+  /* set current state to waiting */
+  __update_task_state(current_task, TASK_WAITING);
+
+  /* call scheduler */
+  schedule();
+
+  /* remove from wait queue */
+  remove_wait_queue(q, &wait);
+}
+
+/*
+ * Wake up one task from the wait queue.
+ */
+void wake_up(struct wait_queue_head_t *q)
+{
+  struct wait_queue_t *wait;
+  uint32_t flags;
+
+  /* wake up first task */
+  spin_lock_irqsave(&q->lock, flags);
+  if (!list_empty(&q->task_list)) {
+    wait = list_first_entry(&q->task_list, struct wait_queue_t, list);
+    __update_task_state(wait->task, TASK_READY);
+  }
+  spin_unlock_irqrestore(&q->lock, flags);
 }

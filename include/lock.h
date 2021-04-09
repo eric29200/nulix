@@ -4,18 +4,60 @@
 #include <stddef.h>
 #include <x86/interrupt.h>
 
-/*
- * Spin lock structure.
- */
-struct spinlock_t {
-  volatile uint32_t lock;
-};
+#define SPIN_LOCK_UNLOCKED 0
+#define SPIN_LOCK_LOCK     1
 
-#define spin_lock_init(x)                      do { (x)->lock = 0; } while (0)
-#define spin_is_locked(x)                      (test_bit(0, (x)))
-#define spin_trylock(x)                        (!test_and_set_bit(0, (x)))
-#define spin_lock(x)                           do { (x)->lock = 1; } while (0)
-#define spin_unlock(x)                         do { (x)->lock = 0; } while (0)
+typedef unsigned char spinlock_t;
+
+#define barrier()                              __asm__ __volatile__("" : : : "memory")
+#define cpu_relax()                            __asm__ __volatile__("pause" : : : "memory")
+
+/*
+ * Atomic operation to test and set.
+ */
+static inline unsigned short xchg_8(void *ptr, unsigned char x)
+{
+	__asm__ __volatile__("xchgb %0,%1"
+						 : "=r" (x)
+						 : "m"(*(volatile unsigned char *) ptr), "0" (x)
+						 : "memory");
+
+	return x;
+}
+
+/*
+ * Lock.
+ */
+static inline void spin_lock(spinlock_t *lock)
+{
+	while (1) {
+		if (!xchg_8(lock, SPIN_LOCK_LOCK))
+			return;
+
+		while (*lock)
+			cpu_relax();
+	}
+}
+
+/*
+ * Unlock.
+ */
+static inline void spin_unlock(spinlock_t *lock)
+{
+	barrier();
+	*lock = 0;
+}
+
+/*
+ * Try to lock.
+ */
+static inline int spin_trylock(spinlock_t *lock)
+{
+	return xchg_8(lock, SPIN_LOCK_LOCK);
+}
+
+
+#define spin_lock_init(x)	                     do { *(x) = SPIN_LOCK_UNLOCKED; } while(0)
 
 #define spin_lock_irq(x)                       do { irq_disable(); spin_lock(x); } while (0)
 #define spin_lock_irqsave(x, flags)            do { irq_save(flags); spin_lock(x); } while (0);
