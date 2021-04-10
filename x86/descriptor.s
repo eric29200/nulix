@@ -1,4 +1,5 @@
 global gdt_flush
+global tss_flush
 global idt_flush
 
 gdt_flush:
@@ -14,6 +15,11 @@ gdt_flush:
 	jmp 0x08:.flush		; jump to code segment
 .flush:
 	ret
+
+tss_flush:
+   mov ax, 0x2B			; load the tss structure
+   ltr ax
+   ret
 
 idt_flush:
 	mov eax, [esp+4]	; load the idt pointer passed as parameter on stack

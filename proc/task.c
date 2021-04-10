@@ -62,6 +62,14 @@ struct task_t *create_task(void (*func)(void *), void *arg)
   regs->parameter3 = (uint32_t) arg;
   regs->return_address = 0xFFFFFFFF;
   regs->eip = (uint32_t) task_entry;
+  regs->eax = 0;
+  regs->ecx = 0;
+  regs->edx = 0;
+  regs->ebx = 0;
+  regs->esp = 0;
+  regs->ebp = 0;
+  regs->esi = 0;
+  regs->edi = 0;
 
   return task;
 }

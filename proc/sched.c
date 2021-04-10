@@ -1,5 +1,6 @@
 #include <x86/system.h>
 #include <x86/interrupt.h>
+#include <x86/tss.h>
 #include <proc/sched.h>
 #include <proc/task.h>
 #include <proc/wait.h>
@@ -125,8 +126,10 @@ void schedule()
     current_task = idle_task;
 
   /* switch tasks */
-  if (current_task != prev_task)
+  if (current_task != prev_task) {
+    tss_set_stack(0x10, current_task->kernel_stack);
     scheduler_do_switch(&prev_task->esp, current_task->esp);
+  }
 
   /* restore irq */
   irq_enable();
