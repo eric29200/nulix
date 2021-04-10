@@ -2,6 +2,9 @@ AS		= nasm
 CC		= i386-elf-gcc
 LD		= i386-elf-ld
 KERNEL		= kernel.bin
+INITRD		= initrd
+INITRD_SIZE	= 4M
+MEM_SIZE	= 32M
 HEADER_PATH	= include
 C_SOURCES 	= $(wildcard */*.c)
 AS_SOURCES 	= $(wildcard */*.s)
@@ -22,8 +25,12 @@ all: run
 $(KERNEL): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
-run: $(KERNEL)
-	$(QEMU) -m 32M -kernel $(KERNEL) -serial stdio -display none
+$(INITRD):
+	dd if=/dev/zero of=$(INITRD) bs=1 count=0 seek=$(INITRD_SIZE)
+	mkfs.minix -1 $(INITRD)
+
+run: $(KERNEL) $(INITRD)
+	$(QEMU) -m $(MEM_SIZE) -kernel $(KERNEL) -serial stdio -display none -initrd $(INITRD)
 
 clean:
-	rm -f *.o */*.o $(KERNEL)
+	rm -f *.o */*.o $(KERNEL) $(INITRD)

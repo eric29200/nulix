@@ -14,7 +14,6 @@
 #include <delay.h>
 
 extern uint32_t loader;
-extern uint32_t kernel_end;
 extern uint32_t kernel_stack;
 
 /*
@@ -30,6 +29,9 @@ static void kinit(void *arg)
  */
 int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 {
+  uint32_t initrd_start;
+  uint32_t initrd_end;
+
   /* check multiboot */
   if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
     return 0xD15EA5E;
@@ -44,6 +46,11 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Loading at linear address = %x\n", loader);
   kernel_stack = initial_stack;
 
+  /* load initrd file */
+  printf("[Kernel] Loading initrd file\n");
+  initrd_start = *((uint32_t *) mboot->mods_addr);
+  initrd_end = *((uint32_t *) (mboot->mods_addr + 4));
+
   /* init gdt */
   printf("[Kernel] Global Descriptor Table Init\n");
   init_gdt();
@@ -54,7 +61,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* init memory */
   printf("[Kernel] Memory Init\n");
-  init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
+  init_mem(initrd_end, mboot->mem_upper * 1024);
 
   /* init PIT */
   printf("[Kernel] PIT Init\n");
