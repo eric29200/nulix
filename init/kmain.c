@@ -1,6 +1,7 @@
 #include <x86/gdt.h>
 #include <x86/idt.h>
 #include <x86/interrupt.h>
+#include <x86/io.h>
 #include <mm/mm.h>
 #include <proc/sched.h>
 #include <proc/wait.h>
