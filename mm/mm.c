@@ -98,30 +98,23 @@ void init_mem(uint32_t start, uint32_t end)
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
   kernel_pgd->physical_addr = (uint32_t) kernel_pgd->tables_physical;
 
-  /* map heap frames */
-  for (i = KHEAP_START; i < KHEAP_START + KHEAP_INIT_SIZE; i += PAGE_SIZE)
-    get_page(i, 1, kernel_pgd);
-
   /* allocate kernel frames and pages (maximum size of kernel page tables has to be added) */
   max_nb_page_tables = nb_frames / 1024;
   for (i = 0; i <= placement_address + max_nb_page_tables * sizeof(struct page_table_t); i += PAGE_SIZE)
-    alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
-
-  /* allocate heap frames */
-  for (i = KHEAP_START; i < KHEAP_START + KHEAP_INIT_SIZE; i += PAGE_SIZE)
     alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* register page fault handler */
   register_interrupt_handler(14, page_fault_handler);
 
   /* enable paging */
-  switch_page_directory(kernel_pgd);
+  current_pgd = kernel_pgd;
+  switch_page_directory(current_pgd);
+
+  /* allocate heap frames */
+  for (i = KHEAP_START; i < KHEAP_START + KHEAP_INIT_SIZE; i += PAGE_SIZE)
+    alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* init heap */
   max_heap_size = end - placement_address - max_nb_page_tables * sizeof(struct page_t);
   kheap = heap_create(KHEAP_START, KHEAP_START + max_heap_size, KHEAP_INIT_SIZE);
-
-  /* set current page table to kernel page table */
-  current_pgd = kernel_pgd;
-  switch_page_directory(current_pgd);
 }
