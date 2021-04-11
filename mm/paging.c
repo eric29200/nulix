@@ -149,6 +149,5 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
     return &pgd->tables[table_idx]->pages[address % 1024];
   }
 
-
   return 0;
 }
