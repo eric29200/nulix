@@ -23,7 +23,7 @@ all: run
 $(KERNEL): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
-run: $(KERNEL) $(INITRD)
+run: $(KERNEL)
 	$(QEMU) -m $(MEM_SIZE) -kernel $(KERNEL) -serial stdio -display none
 
 clean:
