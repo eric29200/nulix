@@ -55,7 +55,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* init memory */
   printf("[Kernel] Memory Init\n");
-  init_mem((uint32_t) &kernel_end, (mboot->mem_upper + mboot->mem_lower) * 1024);
+  init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
 
   /* init PIT */
   printf("[Kernel] PIT Init\n");
