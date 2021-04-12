@@ -7,6 +7,7 @@
 
 #define KHEAP_START             0xC0000000
 #define KHEAP_INIT_SIZE         0x100000
+#define KHEAP_MAX_SIZE          0x2000000
 #define HEAP_EXPANSION_SIZE     0x100000
 
 

@@ -82,7 +82,6 @@ void kfree(void *p)
 void init_mem(uint32_t start, uint32_t end)
 {
   uint32_t max_nb_page_tables;
-  uint32_t max_heap_size;
   uint32_t i;
 
   /* set placement address */
@@ -110,13 +109,8 @@ void init_mem(uint32_t start, uint32_t end)
   current_pgd = kernel_pgd;
   switch_page_directory(current_pgd);
 
-  /* compute max heap size (all memory / 2) */
-  max_heap_size = (end - placement_address) / 2;
-  if (max_heap_size < KHEAP_INIT_SIZE)
-    max_heap_size = KHEAP_INIT_SIZE;
-
   /* map all heap frames */
-  for (i = KHEAP_START; i < KHEAP_START + max_heap_size; i += PAGE_SIZE)
+  for (i = KHEAP_START; i < KHEAP_START + KHEAP_MAX_SIZE; i += PAGE_SIZE)
     get_page(i, 1, kernel_pgd);
 
   /* allocate initial heap frames */
@@ -124,5 +118,5 @@ void init_mem(uint32_t start, uint32_t end)
     alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* init heap */
-  kheap = heap_create(KHEAP_START, KHEAP_START + max_heap_size, KHEAP_INIT_SIZE);
+  kheap = heap_create(KHEAP_START, KHEAP_START + KHEAP_MAX_SIZE, KHEAP_INIT_SIZE);
 }
