@@ -1,3 +1,4 @@
+#include <mm/mm.h>
 #include <string.h>
 #include <stddef.h>
 
@@ -76,6 +77,22 @@ char *strncpy(char *dest, const char *src, size_t n)
     memset(dest + size, '\0', n - size);
 
   return memcpy(dest, src, size);
+}
+
+/*
+ * Duplicate a string.
+ */
+char *strdup(const char *s)
+{
+  size_t len;
+  void *new;
+
+  len = strlen(s) + 1;
+  new = kmalloc(len);
+  if (!new)
+    return NULL;
+
+  return (char *) memcpy(new, s, len);
 }
 
 /*

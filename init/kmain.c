@@ -9,6 +9,7 @@
 #include <drivers/serial.h>
 #include <drivers/pit.h>
 #include <drivers/rtc.h>
+#include <drivers/ata.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,6 +25,10 @@ extern uint32_t kernel_end;
 static void kinit(void *arg)
 {
   UNUSED(arg);
+
+  /* init ata devices */
+  printf("[Kernel] ATA devices Init\n");
+  init_ata();
 }
 
 /*
