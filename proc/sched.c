@@ -9,14 +9,35 @@
 #include <lock.h>
 #include <stderr.h>
 
+/* scheduler lock */
+static spinlock_t sched_lock;
+
 /* tasks list */
 LIST_HEAD(tasks_ready_list);
 LIST_HEAD(tasks_waiting_list);
 static struct task_t *current_task = NULL;
 static struct task_t *idle_task = NULL;
 
+/* tids counter */
+static uint32_t next_tid = 0;
+
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
+
+/*
+ * Get next tid.
+ */
+uint32_t get_next_tid()
+{
+  uint32_t ret;
+  uint32_t flags;
+
+  spin_lock_irqsave(&sched_lock, flags);
+  ret = next_tid++;
+  spin_unlock_irqrestore(&sched_lock, flags);
+
+  return ret;
+}
 
 /*
  * Idle task (used if no tasks are ready).
@@ -35,6 +56,9 @@ void idle_task_func(void *arg)
 int init_scheduler(void (*init_func)(void *), void *init_arg)
 {
   struct task_t *init_task;
+
+  /* init scheduler lock */
+  spin_lock_init(&sched_lock);
 
   /* create idle task */
   idle_task = create_task(idle_task_func, NULL);
@@ -59,19 +83,17 @@ static void __update_task_state(struct task_t *task, uint8_t state)
 {
   uint32_t flags;
 
-  irq_save(flags);
-
   /* update state */
   task->state = state;
 
   /* updates tasks list */
+  spin_lock_irqsave(&sched_lock, flags);
   list_del(&task->list);
   if (task->state == TASK_READY)
     list_add(&task->list, &tasks_ready_list);
   else if (task->state == TASK_WAITING)
     list_add(&task->list, &tasks_waiting_list);
-
-  irq_restore(flags);
+  spin_unlock_irqrestore(&sched_lock, flags);
 }
 
 /*
@@ -81,12 +103,13 @@ void schedule()
 {
   struct task_t *prev_task, *task;
   struct list_head_t *pos, *n;
-
-  /* disable interrupts */
-  irq_disable();
+  uint32_t flags;
 
   /* remember current task */
   prev_task = current_task;
+
+  /* lock scheduler and disable interrupts */
+  spin_lock_irqsave(&sched_lock, flags);
 
   /* update waiting tasks */
   list_for_each_safe(pos, n, &tasks_waiting_list) {
@@ -95,7 +118,8 @@ void schedule()
     /* timer expires : remove it from waiting list and run it */
     if (--task->expires == 0) {
       list_del(&task->list);
-      run_task(task);
+      task->state = TASK_READY;
+      list_add(&task->list, &tasks_ready_list);
     }
   }
 
@@ -121,6 +145,9 @@ void schedule()
     list_add_tail(&current_task->list, &tasks_ready_list);
   } while (!current_task);
 
+  /* unlock scheduler */
+  spin_unlock(&sched_lock);
+
   /* no running task : use idle task */
   if (!current_task)
     current_task = idle_task;
@@ -140,16 +167,16 @@ void schedule()
  */
 void schedule_timeout(uint32_t timeout)
 {
-  irq_disable();
-
   if (current_task) {
     /* set timeout */
     current_task->expires = timeout;
     current_task->state = TASK_WAITING;
 
     /* put current task in waiting list */
+    spin_lock(&sched_lock);
     list_del(&current_task->list);
     list_add(&current_task->list, &tasks_waiting_list);
+    spin_unlock(&sched_lock);
   }
 
   /* reschedule */
@@ -192,9 +219,6 @@ void kill_task(struct task_t *task)
 void wait(struct wait_queue_head_t *q)
 {
   struct wait_queue_t wait;
-
-  /* disable irq */
-  irq_disable();
 
   /* create a wait queue entry for current task */
   init_waitqueue_entry(&wait, current_task);
@@ -263,6 +287,7 @@ void wake_up_all(struct wait_queue_head_t *q)
 void init_sem(struct semaphore_t *sem)
 {
   sem->count = 1;
+  spin_lock_init(&sem->lock);
   init_waitqueue_head(&sem->wait);
 }
 
@@ -275,16 +300,17 @@ void sem_down(struct semaphore_t *sem)
 
   for (;;) {
     /* lock semaphore */
-    irq_save(flags);
+    spin_lock_irqsave(&sem->lock, flags);
 
     /* semaphore free : return */
     if (sem->count > 0) {
       sem->count--;
-      irq_restore(flags);
+      spin_unlock_irqrestore(&sem->lock, flags);
       return;
     }
 
     /* otherwise wait (no need to restore irq because wait will reschedule and reenable interupts */
+    spin_unlock_irqrestore(&sem->lock, flags);
     wait(&sem->wait);
   }
 }
@@ -297,11 +323,11 @@ void sem_up(struct semaphore_t *sem)
   uint32_t flags;
 
   /* lock semaphore */
-  irq_save(flags);
+  spin_lock_irqsave(&sem->lock, flags);
 
   sem->count = 1;
   wake_up(&sem->wait);
 
   /* release semaphore */
-  irq_restore(flags);
+  spin_unlock_irqrestore(&sem->lock, flags);
 }

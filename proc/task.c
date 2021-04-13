@@ -5,9 +5,6 @@
 #include <string.h>
 #include <stderr.h>
 
-/* tids counter */
-static uint32_t next_tid = 0;
-
 /*
  * Kernel task trampoline (used to end tasks properly).
  */
@@ -35,7 +32,7 @@ struct task_t *create_task(void (*func)(void *), void *arg)
     return NULL;
 
   /* set tid */
-  task->tid = next_tid++;
+  task->tid = get_next_tid();
   task->state = TASK_NEW;
   task->expires = 0;
   INIT_LIST_HEAD(&task->list);

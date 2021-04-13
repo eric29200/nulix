@@ -10,6 +10,7 @@
  */
 struct semaphore_t {
   uint8_t count;
+  spinlock_t lock;
   struct wait_queue_head_t wait;
 };
 
