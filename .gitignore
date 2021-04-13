@@ -6,3 +6,4 @@
 */*.bin
 kernel.bin
 initrd
+disk

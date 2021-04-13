@@ -3,6 +3,8 @@ CC		= i386-elf-gcc
 LD		= i386-elf-ld
 KERNEL		= kernel.bin
 MEM_SIZE	= 256M
+DISK		= disk
+DISK_SIZE	= 32M
 HEADER_PATH	= include
 C_SOURCES 	= $(wildcard */*.c)
 AS_SOURCES 	= $(wildcard */*.s)
@@ -23,8 +25,12 @@ all: run
 $(KERNEL): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
-run: $(KERNEL)
-	$(QEMU) -m $(MEM_SIZE) -kernel $(KERNEL) -serial stdio -display none
+$(DISK):
+	dd if=/dev/zero of=$(DISK) bs=1 count=1 seek=$(DISK_SIZE)
+	mkfs.minix -1 $(DISK)
+
+run: $(KERNEL) $(DISK)
+	$(QEMU) -m $(MEM_SIZE) -kernel $(KERNEL) -serial stdio -display none -drive format=raw,file=$(DISK)
 
 clean:
-	rm -f *.o */*.o $(KERNEL)
+	rm -f *.o */*.o $(KERNEL) $(DISK)
