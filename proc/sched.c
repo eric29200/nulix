@@ -137,6 +137,7 @@ void schedule()
 
     /* if task is terminated : destroy it */
     if (current_task->state == TASK_TERMINATED) {
+      destroy_task(current_task);
       current_task = NULL;
       continue;
     }
