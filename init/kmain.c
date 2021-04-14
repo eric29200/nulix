@@ -10,6 +10,7 @@
 #include <drivers/pit.h>
 #include <drivers/rtc.h>
 #include <drivers/ata.h>
+#include <fs/minix_fs.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,6 +30,10 @@ static void kinit(void *arg)
   /* init ata devices */
   printf("[Kernel] ATA devices Init\n");
   init_ata();
+
+  /* mount root file system */
+  printf("[Kernel] Mounting root file system\n");
+  mount_root(ata_get_device(0));
 }
 
 /*

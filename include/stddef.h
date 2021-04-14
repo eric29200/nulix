@@ -25,4 +25,7 @@ typedef int pid_t;
                                                void *__mptr = (void *)(ptr);					          \
 	                                             ((type *)(__mptr - offsetof(type, member))); })
 
+#define div_floor(x, y)                       ((x) / (y))
+#define div_ceil(x, y)                        (((x) / (y)) + (((x) % (y)) > 0 ? 1 : 0))
+
 #endif

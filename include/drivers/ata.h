@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#define ATA_SECTOR_SIZE           512
+
 #define ATA_PRIMARY               0x00
 #define ATA_SECONDARY             0x01
 #define ATA_PRIMARY_IO            0x1F0
@@ -68,6 +70,7 @@ struct ata_device_t {
 };
 
 void init_ata();
+struct ata_device_t *ata_get_device(int dev_num);
 int ata_read(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, uint16_t *buffer);
 int ata_write(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, uint16_t *buffer);
 

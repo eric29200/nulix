@@ -245,6 +245,17 @@ static void ata_irq_handler(struct registers_t *regs)
 }
 
 /*
+ * Get an ata device.
+ */
+struct ata_device_t *ata_get_device(int dev_num)
+{
+  if (dev_num >= MAX_ATA_DEVICE)
+    return NULL;
+
+  return &ata_devices[dev_num];
+}
+
+/*
  * Init ata devices.
  */
 void init_ata()
