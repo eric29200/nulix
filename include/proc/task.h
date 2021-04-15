@@ -1,6 +1,7 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
+#include <fs/minix_fs.h>
 #include <stddef.h>
 #include <list.h>
 
@@ -20,6 +21,7 @@ struct task_t {
   uint32_t kernel_stack;
   uint8_t state;
   uint32_t expires;
+  struct file_t *filp[NR_OPEN];
   struct list_head_t list;
 };
 

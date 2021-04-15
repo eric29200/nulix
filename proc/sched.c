@@ -15,7 +15,7 @@ static spinlock_t sched_lock;
 /* tasks list */
 LIST_HEAD(tasks_ready_list);
 LIST_HEAD(tasks_waiting_list);
-static struct task_t *current_task = NULL;
+struct task_t *current_task = NULL;
 static struct task_t *idle_task = NULL;
 
 /* tids counter */

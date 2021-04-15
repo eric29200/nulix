@@ -25,6 +25,7 @@ struct task_t *create_task(void (*func)(void *), void *arg)
   struct task_registers_t *regs;
   struct task_t *task;
   void *stack;
+  int i;
 
   /* create task */
   task = (struct task_t *) kmalloc(sizeof(struct task_t));
@@ -36,6 +37,10 @@ struct task_t *create_task(void (*func)(void *), void *arg)
   task->state = TASK_NEW;
   task->expires = 0;
   INIT_LIST_HEAD(&task->list);
+
+  /* init open files */
+  for (i = 0; i < NR_OPEN; i++)
+    task->filp[i] = NULL;
 
   /* allocate stack */
   stack = (void *) kmalloc(STACK_SIZE);

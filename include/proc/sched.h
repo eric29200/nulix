@@ -16,4 +16,6 @@ void wait(struct wait_queue_head_t *q);
 void wake_up(struct wait_queue_head_t *q);
 void wake_up_all(struct wait_queue_head_t *q);
 
+extern struct task_t *current_task;
+
 #endif

@@ -3,14 +3,15 @@
 
 #include <stddef.h>
 #include <drivers/ata.h>
-#include <semaphore.h>
 
 #define MINIX_SUPER_MAGIC             0x138F
 #define MINIX_I_MAP_SLOTS             8
 #define MINIX_Z_MAP_SLOTS             8
 #define MINIX_FILENAME_LEN            30
 #define MINIX_INODES_PER_BLOCK        ((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
-#define MINIX_DIR_ENTRIES_PER_BLOCK   ((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t))
+#define MINIX_DIR_ENTRIES_PER_BLOCK   ((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
+
+#define NR_OPEN                       32        /* maximum number of files opened by a process */
 
 /*
  * Minix super block.
@@ -56,7 +57,17 @@ struct inode_t {
   uint8_t i_nlinks;
   uint16_t i_zone[9];
   ino_t i_ino;
-  struct semaphore_t i_sem;
+  struct minix_super_block_t *i_sb;
+  struct ata_device_t *i_dev;
+};
+
+/*
+ * Opened file.
+ */
+struct file_t {
+  uint16_t f_mode;
+  off_t f_pos;
+  struct inode_t *f_inode;
 };
 
 /*
@@ -68,5 +79,6 @@ struct minix_dir_entry_t {
 };
 
 int mount_root(struct ata_device_t *dev);
+int sys_open(const char *pathname);
 
 #endif

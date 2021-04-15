@@ -28,6 +28,10 @@ $(KERNEL): $(OBJS)
 $(DISK):
 	dd if=/dev/zero of=$(DISK) bs=1 count=1 seek=$(DISK_SIZE)
 	mkfs.minix -1 $(DISK)
+	sudo mount $(DISK) tmp/
+	sudo mkdir -p tmp/home/eric/
+	sudo touch tmp/home/eric/aa
+	sudo umount tmp/
 
 run: $(KERNEL) $(DISK)
 	$(QEMU) -m $(MEM_SIZE) -kernel $(KERNEL) -serial stdio -display none -drive format=raw,file=$(DISK)
