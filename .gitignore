@@ -8,3 +8,5 @@ kernel.bin
 initrd
 disk
 hdd.img
+tmp
+tmp/*
