@@ -16,7 +16,6 @@ static spinlock_t sched_lock;
 LIST_HEAD(tasks_ready_list);
 LIST_HEAD(tasks_waiting_list);
 struct task_t *current_task = NULL;
-static struct task_t *idle_task = NULL;
 
 /* tids counter */
 static uint32_t next_tid = 0;
@@ -53,27 +52,12 @@ void idle_task_func(void *arg)
 /*
  * Init scheduler.
  */
-int init_scheduler(void (*init_func)(void *), void *init_arg)
+int init_scheduler()
 {
-  struct task_t *init_task;
-
   /* init scheduler lock */
   spin_lock_init(&sched_lock);
 
-  /* create idle task */
-  idle_task = create_task(idle_task_func, NULL);
-  if (!idle_task)
-    return ENOMEM;
-
-  /* create init task */
-  init_task = create_task(init_func, init_arg);
-  if (!init_task) {
-    destroy_task(idle_task);
-    return ENOMEM;
-  }
-
-  /* run init task */
-  return run_task(init_task);
+  return 0;
 }
 
 /*
@@ -148,10 +132,6 @@ void schedule()
 
   /* unlock scheduler */
   spin_unlock(&sched_lock);
-
-  /* no running task : use idle task */
-  if (!current_task)
-    current_task = idle_task;
 
   /* switch tasks */
   if (current_task != prev_task) {

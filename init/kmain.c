@@ -21,22 +21,6 @@ extern uint32_t kernel_stack;
 extern uint32_t kernel_end;
 
 /*
- * Initialisation task.
- */
-static void kinit(void *arg)
-{
-  UNUSED(arg);
-
-  /* init ata devices */
-  printf("[Kernel] ATA devices Init\n");
-  init_ata();
-
-  /* mount root file system */
-  printf("[Kernel] Mounting root file system\n");
-  mount_root(ata_get_device(0));
-}
-
-/*
  * Main kos function.
  */
 int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
@@ -77,13 +61,20 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* init processes */
   printf("[Kernel] Processes Init\n");
-  if (init_scheduler(kinit, NULL) != 0)
+  if (init_scheduler() != 0)
     panic("Cannot init processes\n");
+
+  /* init ata devices */
+  printf("[Kernel] ATA devices Init\n");
+  init_ata();
+
+  /* mount root file system */
+  printf("[Kernel] Mounting root file system\n");
+  mount_root(ata_get_device(0));
 
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");
   irq_enable();
 
-  /* code here cannot be reached because the scheduler will always prefer a running task */
   return 0;
 }

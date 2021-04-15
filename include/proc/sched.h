@@ -4,7 +4,7 @@
 #include <proc/task.h>
 #include <proc/wait.h>
 
-int init_scheduler(void (*init_func)(void *), void *init_arg);
+int init_scheduler();
 void schedule();
 void schedule_timeout(uint32_t timeout);
 uint32_t get_next_tid();
