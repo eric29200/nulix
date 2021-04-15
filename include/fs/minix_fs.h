@@ -3,11 +3,14 @@
 
 #include <stddef.h>
 #include <drivers/ata.h>
+#include <semaphore.h>
 
-#define MINIX_SUPER_MAGIC         0x138F
-#define MINIX_I_MAP_SLOTS         8
-#define MINIX_Z_MAP_SLOTS         8
-#define MINIX_FILENAME_LEN        30
+#define MINIX_SUPER_MAGIC             0x138F
+#define MINIX_I_MAP_SLOTS             8
+#define MINIX_Z_MAP_SLOTS             8
+#define MINIX_FILENAME_LEN            30
+#define MINIX_INODES_PER_BLOCK        ((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
+#define MINIX_DIR_ENTRIES_PER_BLOCK   ((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t))
 
 /*
  * Minix super block.
@@ -24,7 +27,8 @@ struct minix_super_block_t {
   /* these are only in memory */
   char **s_imap;
   char **s_zmap;
-  struct ata_device_t *dev;
+  struct ata_device_t *s_dev;
+  struct inode_t *s_imount;
 };
 
 /*
@@ -38,6 +42,21 @@ struct minix_inode_t {
   uint8_t i_gid;
   uint8_t i_nlinks;
   uint16_t i_zone[9];
+};
+
+/*
+ * In memory inode.
+ */
+struct inode_t {
+  uint16_t i_mode;
+  uid_t i_uid;
+  uint32_t i_size;
+  uint32_t i_time;
+  gid_t i_gid;
+  uint8_t i_nlinks;
+  uint16_t i_zone[9];
+  ino_t i_ino;
+  struct semaphore_t i_sem;
 };
 
 /*
