@@ -200,26 +200,4 @@ void heap_free(struct heap_t *heap, void *p)
   /* mark block as free */
   block = (struct heap_block_t *) ((uint32_t) p - sizeof(struct heap_block_t));
   block->free = 1;
-
-  /* check if block can be merged on the right */
-  if (block->next != NULL && block->next->free) {
-    block->size += block->next->size + sizeof(struct heap_block_t);
-
-    if (block->next->next == NULL)
-      heap->last_block = block;
-    else
-      block->next->next->prev = block;
-
-    block->next = block->next->next;
-  }
-
-  /* check if block can be merged on the left */
-  if (block->prev != NULL && block->prev->free) {
-    block->prev->next = block->next;
-
-    if (block->next != NULL)
-      block->next->prev = block->prev;
-
-    block->prev->size += block->size + sizeof(struct heap_block_t);
-  }
 }

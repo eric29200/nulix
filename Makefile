@@ -30,7 +30,7 @@ $(DISK):
 	mkfs.minix -1 $(DISK)
 	sudo mount $(DISK) tmp/
 	sudo mkdir -p tmp/home/eric/
-	sudo touch tmp/home/eric/aa
+	sudo cp proc/sched.c tmp/home/eric/
 	sudo umount tmp/
 
 run: $(KERNEL) $(DISK)

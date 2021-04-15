@@ -81,5 +81,6 @@ struct minix_dir_entry_t {
 int mount_root(struct ata_device_t *dev);
 int sys_open(const char *pathname);
 int sys_close(int fd);
+int sys_read(int fd, char *buf, int count);
 
 #endif

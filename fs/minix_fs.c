@@ -228,6 +228,65 @@ int sys_close(int fd)
 }
 
 /*
+ * Read a file.
+ */
+static int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count)
+{
+  int pos, nb_chars, left;
+  char *block;
+
+  left = count;
+  while (left > 0) {
+    /* read block */
+    block = bread(inode->i_dev, inode->i_zone[filp->f_pos / BLOCK_SIZE]);
+
+    /* find position and number of chars to read */
+    pos = filp->f_pos % BLOCK_SIZE;
+    nb_chars = BLOCK_SIZE - pos <= left ? BLOCK_SIZE - pos : left;
+
+    /* copy into buffer */
+    memcpy(buf, block + pos, nb_chars);
+
+    /* free block */
+    kfree(block);
+
+    /* update sizes */
+    filp->f_pos += nb_chars;
+    buf += nb_chars;
+    left -= nb_chars;
+  }
+
+  return count - left;
+}
+
+/*
+ * Read system call.
+ */
+int sys_read(int fd, char *buf, int count)
+{
+  struct file_t *filp;
+
+  /* check input args */
+  if (fd >= NR_OPEN || fd < 0 || count < 0 || !current_task->filp[fd])
+    return -EINVAL;
+
+  /* no data to read */
+  if (!count)
+    return 0;
+
+  filp = current_task->filp[fd];
+
+  /* adjust size */
+  if (filp->f_pos + count > filp->f_inode->i_size)
+    count = filp->f_inode->i_size - filp->f_pos;
+  if (count <= 0)
+    return 0;
+
+  /* read file */
+  return file_read(filp->f_inode, filp, buf, count);
+}
+
+/*
  * Mount root device.
  */
 int mount_root(struct ata_device_t *dev)
