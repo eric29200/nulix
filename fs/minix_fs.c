@@ -167,7 +167,7 @@ static int open_namei(const char *pathname, struct inode_t **inode)
 }
 
 /*
- * Open routine.
+ * Open system call.
  */
 int sys_open(const char *pathname)
 {
@@ -203,6 +203,28 @@ int sys_open(const char *pathname)
   current_task->filp[fd] = file;
 
   return fd;
+}
+
+/*
+ * Close system call.
+ */
+int sys_close(int fd)
+{
+  struct file_t *filp;
+
+  if (fd < 0 || fd >= NR_OPEN)
+    return -EINVAL;
+
+  filp = current_task->filp[fd];
+  if (!filp)
+    return -ENOMEM;
+
+  current_task->filp[fd] = NULL;
+  if (filp->f_inode)
+    kfree(filp->f_inode);
+  kfree(filp);
+
+  return 0;
 }
 
 /*
