@@ -182,7 +182,7 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
     block->size = size;
     block->next = new_free_block;
 
-    /* update heap last block if needed */
+    /* update heap last block */
     heap->last_block = new_free_block;
   }
 
