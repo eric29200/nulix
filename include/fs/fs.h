@@ -81,6 +81,10 @@ struct minix_dir_entry_t {
 struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino);
 int open_namei(const char *pathname, struct inode_t **inode);
 
+int bmap(struct inode_t *inode, int block);
+
+int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count);
+
 int mount_root(struct ata_device_t *dev);
 int sys_open(const char *pathname);
 int sys_close(int fd);

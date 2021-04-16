@@ -12,13 +12,16 @@
  */
 int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count)
 {
-  int pos, nb_chars, left;
+  int pos, nb_chars, left, block_nr;
   char *block;
 
   left = count;
   while (left > 0) {
+    /* get block number */
+    block_nr = bmap(inode, filp->f_pos / BLOCK_SIZE);
+
     /* read block */
-    block = bread(inode->i_dev, inode->i_zone[filp->f_pos / BLOCK_SIZE]);
+    block = bread(inode->i_dev, block_nr);
 
     /* find position and number of chars to read */
     pos = filp->f_pos % BLOCK_SIZE;

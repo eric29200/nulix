@@ -44,3 +44,41 @@ struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
 
   return inode;
 }
+
+/*
+ * Get block number.
+ */
+int bmap(struct inode_t *inode, int block)
+{
+  uint16_t *buf;
+  int i, ret;
+
+  if (block < 0 || block >= 7 + 512 + 512 * 512)
+    return -EINVAL;
+
+  /* direct blocks */
+  if (block < 7)
+    return inode->i_zone[block];
+
+  /* first indirect block (contains address to 512 blocks) */
+  block -= 7;
+  if (block < 512) {
+    buf = (uint16_t *) bread(inode->i_dev, inode->i_zone[7]);
+    ret = buf[block];
+    kfree(buf);
+    return ret;
+  }
+
+  /* get first second indirect block */
+  block -= 512;
+  buf = (uint16_t *) bread(inode->i_dev, inode->i_zone[8]);
+  i = buf[block >> 9];
+  kfree(buf);
+
+  /* get second second indirect block */
+  buf = (uint16_t *) bread(inode->i_dev, i);
+  ret = buf[block & 511];
+  kfree(buf);
+
+  return ret;
+}
