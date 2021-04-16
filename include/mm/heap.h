@@ -2,6 +2,7 @@
 #define _MM_HEAP_H_
 
 #include <stddef.h>
+#include <lock.h>
 
 /*
  * Heap block header.
@@ -23,6 +24,7 @@ struct heap_t {
   uint32_t end_address;
   uint32_t max_address;
   size_t size;
+  spinlock_t lock;
 } __attribute__((packed));
 
 struct heap_t *heap_create(uint32_t start_address, uint32_t max_address, size_t size);
