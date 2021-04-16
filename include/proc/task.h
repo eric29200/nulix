@@ -1,7 +1,7 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
-#include <fs/minix_fs.h>
+#include <fs/fs.h>
 #include <stddef.h>
 #include <list.h>
 

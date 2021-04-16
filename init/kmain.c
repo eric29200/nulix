@@ -10,7 +10,7 @@
 #include <drivers/pit.h>
 #include <drivers/rtc.h>
 #include <drivers/ata.h>
-#include <fs/minix_fs.h>
+#include <fs/fs.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,6 +19,19 @@
 extern uint32_t loader;
 extern uint32_t kernel_stack;
 extern uint32_t kernel_end;
+
+static void ta(void *a)
+{
+  char buf[512];
+  int fd;
+
+  fd = sys_open("/home/eric/sched.c");
+  while (sys_read(fd, buf, 512) > 0) {
+    printf("%s", buf);
+    memset(buf, 0, 512);
+  }
+  sys_close(fd);
+}
 
 /*
  * Main kos function.
@@ -75,6 +88,9 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");
   irq_enable();
+
+  struct task_t *t1 = create_task(ta, NULL);
+  run_task(t1);
 
   return 0;
 }

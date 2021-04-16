@@ -1,0 +1,3 @@
+- Implement indirect blocks
+  - see bmap function from linux 0.1, which returns the read address of the block
+- Test large files
