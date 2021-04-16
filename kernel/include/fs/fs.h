@@ -78,7 +78,23 @@ struct minix_dir_entry_t {
   char name[MINIX_FILENAME_LEN];
 };
 
+/*
+ * Stats file structure.
+ */
+struct stat_t {
+  ino_t	st_ino;
+  uint16_t st_mode;
+  uint8_t st_nlinks;
+  uid_t st_uid;
+  gid_t st_gid;
+  off_t st_size;
+  time_t st_atime;
+  time_t st_mtime;
+  time_t st_ctime;
+};
+
 struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino);
+struct inode_t *namei(const char *pathname);
 int open_namei(const char *pathname, struct inode_t **inode);
 
 int bmap(struct inode_t *inode, int block);
@@ -89,5 +105,6 @@ int mount_root(struct ata_device_t *dev);
 int sys_open(const char *pathname);
 int sys_close(int fd);
 int sys_read(int fd, char *buf, int count);
+int sys_stat(char *filename, struct stat_t *statbuf);
 
 #endif

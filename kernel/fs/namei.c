@@ -102,6 +102,28 @@ err:
 }
 
 /*
+ * Get an inode.
+ */
+struct inode_t *namei(const char *pathname)
+{
+  struct inode_t *dir, *ret;
+  const char *basename;
+  size_t basename_len;
+
+  /* find directory */
+  dir = dir_namei(pathname, &basename, &basename_len);
+  if (!dir)
+    return NULL;
+
+  /* find inode */
+  ret = find_entry(dir, basename, basename_len);
+
+  /* free directory */
+  kfree(dir);
+  return ret;
+}
+
+/*
  * Open a file.
  */
 int open_namei(const char *pathname, struct inode_t **inode)
