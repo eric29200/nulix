@@ -16,7 +16,7 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
 {
   struct minix_dir_entry_t *entries = NULL;
   struct inode_t *ret = NULL;
-  uint32_t nb_entries, i;
+  uint32_t nb_entries, i, block_nr;
 
   /* check name length */
   if (name_len > MINIX_FILENAME_LEN || name_len == 0)
@@ -32,7 +32,8 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
       if (entries)
         kfree(entries);
 
-      entries = (struct minix_dir_entry_t *) bread(dir->i_dev, dir->i_zone[i / MINIX_DIR_ENTRIES_PER_BLOCK]);
+      block_nr = bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK);
+      entries = (struct minix_dir_entry_t *) bread(dir->i_dev, block_nr);
     }
 
     /* check name */

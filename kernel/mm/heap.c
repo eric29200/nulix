@@ -169,22 +169,21 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
     block = aligned_block;
   }
 
-  /* create new free block with remaining size */
-  if (block->size - size > sizeof(struct heap_block_t)) {
+  /* create new last free block with remaining size */
+  if (block == heap->last_block && block->size - size > sizeof(struct heap_block_t)) {
     /* create new free block */
     new_free_block = (struct heap_block_t *) (HEAP_BLOCK_DATA(block) + size);
     new_free_block->size = block->size - size - sizeof(struct heap_block_t);
     new_free_block->free = 1;
     new_free_block->prev = block;
-    new_free_block->next = block->next;
+    new_free_block->next = NULL;
 
     /* update this block */
     block->size = size;
     block->next = new_free_block;
 
     /* update heap last block if needed */
-    if (new_free_block->next == NULL)
-      heap->last_block = new_free_block;
+    heap->last_block = new_free_block;
   }
 
   /* mark this block */
