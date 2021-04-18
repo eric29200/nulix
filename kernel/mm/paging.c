@@ -11,7 +11,19 @@ uint32_t nb_frames;
 /* page directories */
 struct page_directory_t *kernel_pgd = 0;
 
+/* copy phsyical page (defined in x86/paging.s) */
 extern void copy_page_physical(uint32_t src, uint32_t dst);
+
+/*
+ * Free page entry.
+ */
+struct page_free_t {
+  struct page_free_t *next;
+};
+
+/* pages allocation */
+static uint32_t kernel_page_end = KPAGE_START;
+static struct page_free_t *free_pages = NULL;
 
 /*
  * Get next free frame.
@@ -150,6 +162,43 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
   }
 
   return 0;
+}
+
+/*
+ * Allocate a new page.
+ */
+void *alloc_page()
+{
+  void *page;
+
+  if (free_pages == NULL) {
+    page = (void *) kernel_page_end;
+    alloc_frame(get_page(kernel_page_end, 1, kernel_pgd), 1, 1);
+    kernel_page_end += PAGE_SIZE;
+  } else {
+    page = (void *) free_pages;
+    free_pages = free_pages->next;
+  }
+
+  /* zero page */
+  memset(page, 0, PAGE_SIZE);
+
+  return page;
+}
+
+/*
+ * Free a page.
+ */
+void free_page(void *page)
+{
+  struct page_free_t *new_free_page;
+
+  if (!page)
+    return;
+
+  new_free_page = (struct page_free_t *) page;
+  new_free_page->next = free_pages;
+  free_pages = new_free_page;
 }
 
 /*

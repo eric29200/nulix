@@ -3,6 +3,7 @@
 
 #include <x86/interrupt.h>
 #include <stddef.h>
+#include <list.h>
 
 #define PAGE_SIZE             0x1000
 #define PAGE_MASK             (~(PAGE_SIZE - 1))
