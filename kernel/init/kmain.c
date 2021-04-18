@@ -21,6 +21,13 @@ extern uint32_t kernel_stack;
 extern uint32_t kernel_end;
 
 /*
+ * Kos init (second phase).
+ */
+static void kinit()
+{
+}
+
+/*
  * Main kos function.
  */
 int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
@@ -59,11 +66,6 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   printf("[Kernel] Real Time Clock Init\n");
   init_rtc();
 
-  /* init processes */
-  printf("[Kernel] Processes Init\n");
-  if (init_scheduler() != 0)
-    panic("Cannot init processes\n");
-
   /* init ata devices */
   printf("[Kernel] ATA devices Init\n");
   init_ata();
@@ -71,6 +73,11 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* mount root file system */
   printf("[Kernel] Mounting root file system\n");
   mount_root(ata_get_device(0));
+
+  /* init processes */
+  printf("[Kernel] Processes Init\n");
+  if (init_scheduler(kinit) != 0)
+    panic("Cannot init processes\n");
 
   /* enable interrupts */
   printf("[Kernel] Enable interrupts\n");

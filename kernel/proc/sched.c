@@ -52,12 +52,19 @@ void idle_task_func(void *arg)
 /*
  * Init scheduler.
  */
-int init_scheduler()
+int init_scheduler(void (*init_func)())
 {
+  struct task_t *init_task;
+
   /* init scheduler lock */
   spin_lock_init(&sched_lock);
 
-  return 0;
+  /* create init task */
+  init_task = create_task(init_func, NULL);
+  if (!init_task)
+    return ENOMEM;
+
+  return run_task(init_task);
 }
 
 /*
