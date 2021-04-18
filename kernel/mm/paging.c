@@ -10,7 +10,6 @@ uint32_t nb_frames;
 
 /* page directories */
 struct page_directory_t *kernel_pgd = 0;
-struct page_directory_t *current_pgd = 0;
 
 extern void copy_page_physical(uint32_t src, uint32_t dst);
 
@@ -118,7 +117,6 @@ void switch_page_directory(struct page_directory_t *pgd)
   uint32_t cr0;
 
   /* switch */
-  current_pgd = pgd;
   __asm__ volatile("mov %0, %%cr3" :: "r" (pgd->physical_addr));
   __asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
 

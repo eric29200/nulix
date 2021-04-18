@@ -106,8 +106,7 @@ void init_mem(uint32_t start, uint32_t end)
   register_interrupt_handler(14, page_fault_handler);
 
   /* enable paging */
-  current_pgd = kernel_pgd;
-  switch_page_directory(current_pgd);
+  switch_page_directory(kernel_pgd);
 
   /* map all heap frames */
   for (i = KHEAP_START; i < KHEAP_START + KHEAP_MAX_SIZE; i += PAGE_SIZE)
