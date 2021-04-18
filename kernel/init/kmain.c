@@ -25,6 +25,10 @@ extern uint32_t kernel_end;
  */
 static void kinit()
 {
+  struct task_t *t;
+
+  t = create_elf_task("/init");
+  run_task(t);
 }
 
 /*
