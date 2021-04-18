@@ -42,6 +42,7 @@ struct elf_layout_t *elf_load(const char *path)
   struct elf_header_t *elf_header;
   struct elf_prog_header_t *ph;
   struct stat_t statbuf;
+  uint32_t vaddr;
   char *buf = NULL;
   int fd;
 
@@ -78,21 +79,16 @@ struct elf_layout_t *elf_load(const char *path)
   if (!elf_layout)
     goto out;
 
-  /* allocate a new page (to relocate ELF file) */
-  void *page = alloc_page();
-  if (!page) {
-    kfree(elf_layout);
-    goto out;
-  }
-
-  /* TODO : it would be better to map ELF addresses */
-
-  /* relocate ELF file */
+  /* map binary pages to memory */
   ph = (struct elf_prog_header_t *) (buf + elf_header->e_phoff);
-  memcpy(page, buf + ph->p_offset, ph->p_filesz);
+  for (vaddr = PAGE_ALIGN(ph->p_vaddr); vaddr <= ph->p_vaddr + ph->p_filesz; vaddr += PAGE_SIZE)
+    alloc_page(get_page(vaddr, 1, kernel_pgd), 1, 1);
 
-  /* set entry point */
-  elf_layout->entry = (uint32_t) page + elf_header->e_entry - ph->p_vaddr;
+  /* copy binary */
+  memcpy((void *) ph->p_vaddr, buf + ph->p_offset, ph->p_filesz);
+
+  /* set elf entry point */
+  elf_layout->entry = elf_header->e_entry;
 
 out:
   if (buf)
