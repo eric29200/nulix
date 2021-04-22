@@ -82,7 +82,7 @@ struct elf_layout_t *elf_load(const char *path)
 
   /* map binary pages to memory */
   ph = (struct elf_prog_header_t *) (buf + elf_header->e_phoff);
-  for (vaddr = PAGE_ALIGN(ph->p_vaddr); vaddr <= ph->p_vaddr + ph->p_filesz; vaddr += PAGE_SIZE)
+  for (vaddr = PAGE_ALIGN_UP(ph->p_vaddr); vaddr <= ph->p_vaddr + ph->p_filesz; vaddr += PAGE_SIZE)
     alloc_frame(get_page(vaddr, 1, current_task->pgd), 0, 0);
 
   /* copy binary */

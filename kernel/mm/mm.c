@@ -35,7 +35,7 @@ void *kmalloc_phys(uint32_t size, uint8_t align, uint32_t *phys)
 
   /* align adress on PAGE boundary */
   if (align == 1 && !PAGE_ALIGNED(placement_address))
-    placement_address = PAGE_ALIGN(placement_address);
+    placement_address = PAGE_ALIGN_UP(placement_address);
 
   /* get physical memory */
   if (phys)
