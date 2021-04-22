@@ -144,7 +144,7 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
 
   /* create a new page table */
   if (make) {
-    pgd->tables[table_idx] = (struct page_table_t *) kmalloc_align_phys(sizeof(struct page_table_t), &tmp);
+    pgd->tables[table_idx] = (struct page_table_t *) kmalloc_phys(sizeof(struct page_table_t), 1, &tmp);
     memset(pgd->tables[table_idx], 0, PAGE_SIZE);
     pgd->tables_physical[table_idx] = tmp | 0x7; /* present, rw and user */
     return &pgd->tables[table_idx]->pages[address % 1024];
@@ -162,7 +162,7 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
   int i;
 
   /* create a new page table */
-  ret = (struct page_table_t *) kmalloc_align_phys(sizeof(struct page_table_t), phys_addr);
+  ret = (struct page_table_t *) kmalloc_phys(sizeof(struct page_table_t), 1, phys_addr);
   if (!ret)
     return NULL;
 
@@ -196,7 +196,7 @@ struct page_directory_t *clone_page_directory(struct page_directory_t *src)
   int i;
 
   /* create a new page directory */
-  ret = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), &phys);
+  ret = (struct page_directory_t *) kmalloc_phys(sizeof(struct page_directory_t), 1, &phys);
   if (!ret)
     return NULL;
 

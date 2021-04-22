@@ -2,23 +2,36 @@
 #include <mm/paging.h>
 #include <mm/heap.h>
 #include <string.h>
+#include <stdio.h>
 
 /* placement address (used before kernel heap is created) */
 uint32_t placement_address = 0;
 
 /* kernel heap */
-struct heap_t *kheap = NULL;
+struct heap_t kheap;
 
 /*
- * Allocate memory (internal function).
+ * Allocate memory.
  */
-static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
+void *kmalloc(uint32_t size)
+{
+  return heap_alloc(&kheap, size, 0);
+}
+
+/*
+ * Allocate page aligned memory.
+ */
+void *kmalloc_align(uint32_t size)
+{
+  return heap_alloc(&kheap, size, 1);
+}
+
+/*
+ * Allocate memory in low memory.
+ */
+void *kmalloc_phys(uint32_t size, uint8_t align, uint32_t *phys)
 {
   void *ret;
-
-  /* use kernel heap */
-  if (kheap && !phys)
-    return heap_alloc(kheap, size, align);
 
   /* align adress on PAGE boundary */
   if (align == 1 && !PAGE_ALIGNED(placement_address))
@@ -31,31 +44,8 @@ static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
   /* update placement_address */
   ret = (void *) placement_address;
   placement_address += size;
+
   return ret;
-}
-
-/*
- * Allocate memory.
- */
-void *kmalloc(uint32_t size)
-{
-  return __kmalloc(size, 0, NULL);
-}
-
-/*
- * Allocate page aligned memory.
- */
-void *kmalloc_align(uint32_t size)
-{
-  return __kmalloc(size, 1, NULL);
-}
-
-/*
- * Allocate page aligned memory and output physical memory.
- */
-void *kmalloc_align_phys(uint32_t size, uint32_t *phys)
-{
-  return __kmalloc(size, 1, phys);
 }
 
 /*
@@ -63,8 +53,7 @@ void *kmalloc_align_phys(uint32_t size, uint32_t *phys)
  */
 void kfree(void *p)
 {
-  if (kheap)
-    heap_free(kheap, p);
+  heap_free(&kheap, p);
 }
 
 /*
@@ -80,11 +69,11 @@ void init_mem(uint32_t start, uint32_t end)
 
   /* set frames */
   nb_frames = end / PAGE_SIZE;
-  frames = (uint32_t *) kmalloc(nb_frames / 32);
+  frames = (uint32_t *) kmalloc_phys(nb_frames / 32, 0, NULL);
   memset(frames, 0, nb_frames / 32);
 
   /* allocate kernel page directory */
-  kernel_pgd = (struct page_directory_t *) kmalloc_align(sizeof(struct page_directory_t));
+  kernel_pgd = (struct page_directory_t *) kmalloc_phys(sizeof(struct page_directory_t), 1, NULL);
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
   kernel_pgd->physical_addr = (uint32_t) kernel_pgd->tables_physical;
 
@@ -104,5 +93,6 @@ void init_mem(uint32_t start, uint32_t end)
     alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* init heap */
-  kheap = heap_create(KHEAP_START, KHEAP_SIZE);
+  if (heap_init(&kheap, KHEAP_START, KHEAP_SIZE) != 0)
+    panic("Cannot create kernel heap");
 }

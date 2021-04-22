@@ -9,18 +9,11 @@
 /*
  * Create a heap.
  */
-struct heap_t *heap_create(uint32_t start_address, size_t size)
+int heap_init(struct heap_t *heap, uint32_t start_address, size_t size)
 {
-  struct heap_t *heap;
-
   /* check heap size */
   if (size <= sizeof(struct heap_block_t))
-    return NULL;
-
-  /* allocate a new heap */
-  heap = (struct heap_t *) kmalloc(sizeof(struct heap_t));
-  if (!heap)
-    return NULL;
+    return EINVAL;
 
   /* set start/end addresses */
   heap->first_block = (struct heap_block_t *) start_address;
@@ -36,7 +29,7 @@ struct heap_t *heap_create(uint32_t start_address, size_t size)
   heap->last_block = heap->first_block;
   spin_lock_init(&heap->lock);
 
-  return heap;
+  return 0;
 }
 
 /*
