@@ -18,8 +18,6 @@ static void task_entry(struct task_t *task, void (*func)(void *), void *arg)
   kill_task(task);
 }
 
-typedef void (*funcc)();
-
 /*
  * Kernel ELF task trampoline (used to end tasks properly).
  */
