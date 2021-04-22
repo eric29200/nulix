@@ -74,7 +74,6 @@ void init_mem(uint32_t start, uint32_t end)
   /* allocate kernel page directory */
   kernel_pgd = (struct page_directory_t *) kmalloc_phys(sizeof(struct page_directory_t), 1, NULL);
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
-  kernel_pgd->physical_addr = (uint32_t) kernel_pgd->tables_physical;
 
   /* allocate kernel frames/pages */
   for (i = 0; i < KMEM_SIZE; i += PAGE_SIZE)

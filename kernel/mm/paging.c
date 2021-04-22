@@ -118,7 +118,7 @@ void switch_page_directory(struct page_directory_t *pgd)
   uint32_t cr0;
 
   /* switch */
-  __asm__ volatile("mov %0, %%cr3" :: "r" (pgd->physical_addr));
+  __asm__ volatile("mov %0, %%cr3" :: "r" (pgd->tables_physical));
   __asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
 
   /* enable paging */
@@ -192,7 +192,7 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
 struct page_directory_t *clone_page_directory(struct page_directory_t *src)
 {
   struct page_directory_t *ret;
-  uint32_t phys, offset;
+  uint32_t phys;
   int i;
 
   /* create a new page directory */
@@ -202,10 +202,6 @@ struct page_directory_t *clone_page_directory(struct page_directory_t *src)
 
   /* reset page directory */
   memset(ret, 0, sizeof(struct page_directory_t));
-
-  /* set physical address */
-  offset = (uint32_t) ret->tables_physical - (uint32_t) ret;
-  ret->physical_addr = phys + offset;
 
   /* copy page tables */
   for (i = 0; i < 1024; i++) {

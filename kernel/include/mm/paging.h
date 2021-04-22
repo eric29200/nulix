@@ -43,7 +43,6 @@ struct page_table_t {
 struct page_directory_t {
   struct page_table_t *tables[1024];  /* pointers to page tables */
   uint32_t tables_physical[1024];     /* pointers to page tables (physical addresses) */
-  uint32_t physical_addr;             /* physical address of tables_physical */
 };
 
 void init_paging(uint32_t start, uint32_t end);
