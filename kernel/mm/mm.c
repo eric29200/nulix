@@ -108,14 +108,10 @@ void init_mem(uint32_t start, uint32_t end)
   /* enable paging */
   switch_page_directory(kernel_pgd);
 
-  /* map all heap frames */
-  for (i = KHEAP_START; i < KHEAP_START + KHEAP_MAX_SIZE; i += PAGE_SIZE)
-    get_page(i, 1, kernel_pgd);
-
-  /* allocate initial heap frames */
-  for (i = KHEAP_START; i < KHEAP_START + KHEAP_INIT_SIZE; i += PAGE_SIZE)
+  /* allocate heap frames */
+  for (i = KHEAP_START; i < KHEAP_START + KHEAP_SIZE; i += PAGE_SIZE)
     alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* init heap */
-  kheap = heap_create(KHEAP_START, KHEAP_START + KHEAP_MAX_SIZE, KHEAP_INIT_SIZE);
+  kheap = heap_create(KHEAP_START, KHEAP_SIZE);
 }

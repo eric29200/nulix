@@ -9,12 +9,12 @@
 /*
  * Create a heap.
  */
-struct heap_t *heap_create(uint32_t start_address, uint32_t max_address, size_t size)
+struct heap_t *heap_create(uint32_t start_address, size_t size)
 {
   struct heap_t *heap;
 
   /* check heap size */
-  if (size <= sizeof(struct heap_block_t) || size > (max_address - start_address))
+  if (size <= sizeof(struct heap_block_t))
     return NULL;
 
   /* allocate a new heap */
@@ -26,7 +26,6 @@ struct heap_t *heap_create(uint32_t start_address, uint32_t max_address, size_t 
   heap->first_block = (struct heap_block_t *) start_address;
   heap->start_address = start_address;
   heap->end_address = start_address + size;
-  heap->max_address = max_address;
   heap->size = size;
 
   /* create first block */
@@ -38,56 +37,6 @@ struct heap_t *heap_create(uint32_t start_address, uint32_t max_address, size_t 
   spin_lock_init(&heap->lock);
 
   return heap;
-}
-
-/*
- * Expand a heap.
- */
-static int heap_expand(struct heap_t *heap, size_t new_size)
-{
-  struct heap_block_t *new_last_block;
-  uint32_t i;
-
-  /* always add sizeof(heap_block) */
-  new_size += sizeof(struct heap_block_t);
-
-  /* no need to expand */
-  if (new_size <= heap->size)
-    return 0;
-
-  /* always increment heap by step of HEAP_EXPANSION (for performance) */
-  new_size = ALIGN_UP(new_size, HEAP_EXPANSION_SIZE);
-
-  /* out of memory */
-  if (heap->start_address + new_size > heap->max_address)
-    return ENOMEM;
-
-  /* allocate new pages */
-  for (i = heap->end_address; i < heap->start_address + new_size + PAGE_SIZE; i += PAGE_SIZE)
-    alloc_frame(get_page(i, 1, kernel_pgd), 1, 1);
-
-  /* extend last block */
-  if (heap->last_block->free) {
-    heap->last_block->size += new_size - heap->size;
-    goto out;
-  }
-
-  /* create new last block */
-  new_last_block = (struct heap_block_t *) heap->end_address;
-  new_last_block->free = 1;
-  new_last_block->size = new_size - heap->size - sizeof(struct heap_block_t);
-  new_last_block->prev = heap->last_block;
-  new_last_block->next = NULL;
-
-  /* update heap */
-  heap->last_block->next = new_last_block;
-  heap->last_block = new_last_block;
-
-out:
-  /* update heap size */
-  heap->size = new_size;
-  heap->end_address = heap->start_address + heap->size;
-  return 0;
 }
 
 /*
@@ -121,8 +70,8 @@ static struct heap_block_t *heap_find_free_block(struct heap_t *heap, uint8_t pa
  */
 void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 {
-  struct heap_block_t *block, *aligned_block, *new_free_block;
-  uint32_t page_offset, new_size, flags;
+  struct heap_block_t *block, *new_free_block;
+  uint32_t page_offset, flags;
 
   /* lock the heap */
   spin_lock_irqsave(&heap->lock, flags);
@@ -130,43 +79,23 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
   /* find free block */
   block = heap_find_free_block(heap, page_aligned, size);
   if (!block) {
-    /* expand the heap (if page alignement is asked, add PAGE_SIZE to be sure) */
-    new_size = heap->size + size + (page_aligned ? PAGE_SIZE : 0);
-
-    /* if last block is free, remove last block size */
-    if (heap->last_block->free)
-      new_size -= heap->last_block->size;
-
-    /* try to expand */
-    if (heap_expand(heap, new_size) != 0) {
-      spin_unlock_irqrestore(&heap->lock, flags);
-      return NULL;
-    }
-
-    /* retry with extanded heap */
     spin_unlock_irqrestore(&heap->lock, flags);
-    return heap_alloc(heap, size, page_aligned);
+    return NULL;
   }
 
-  /* if page alignement is asked, create a new hole in front of the page aligned block */
+  /* if page alignement is asked, update block and previous block */
   if (page_aligned && !HEAP_BLOCK_ALIGNED(block)) {
     /* compute page offset */
     page_offset = PAGE_SIZE - HEAP_BLOCK_DATA(block) % PAGE_SIZE;
 
-    /* create a block on page alignement */
-    aligned_block = (struct heap_block_t *) ((uint32_t) block + page_offset);
-    aligned_block->size = block->size - page_offset;
-    aligned_block->free = 1;
-    aligned_block->prev = block;
-    aligned_block->next = block->next;
+    /* move block */
+    block = (void *) block + page_offset;
 
-    /* update current block with remaining space */
-    block->size = (uint32_t) aligned_block - HEAP_BLOCK_DATA(block);
-    block->free = 1;
-    block->next = aligned_block;
-
-    /* this block = aligned block */
-    block = aligned_block;
+    /* update previous block size */
+    if (block->prev) {
+      block->prev->size += page_offset;
+      block->prev = block;
+    }
   }
 
   /* create new last free block with remaining size */
