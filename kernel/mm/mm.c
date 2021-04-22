@@ -61,7 +61,6 @@ void kfree(void *p)
  */
 void init_mem(uint32_t start, uint32_t end)
 {
-  uint32_t max_nb_page_tables;
   uint32_t i;
 
   /* set placement address */
@@ -77,9 +76,8 @@ void init_mem(uint32_t start, uint32_t end)
   memset(kernel_pgd, 0, sizeof(struct page_directory_t));
   kernel_pgd->physical_addr = (uint32_t) kernel_pgd->tables_physical;
 
-  /* allocate kernel frames/pages + kernel pages tables frames/pages */
-  max_nb_page_tables = nb_frames / 1024;
-  for (i = 0; i <= placement_address + PAGE_SIZE + max_nb_page_tables * sizeof(struct page_table_t); i += PAGE_SIZE)
+  /* allocate kernel frames/pages */
+  for (i = 0; i < KMEM_SIZE; i += PAGE_SIZE)
     alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* register page fault handler */
