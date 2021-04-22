@@ -66,6 +66,9 @@ struct task_t *create_init_task()
   task->kernel_stack = (uint32_t) stack + STACK_SIZE;
   task->esp = task->kernel_stack - sizeof(struct task_registers_t);
 
+  /* create a new page directory */
+  task->pgd = clone_page_directory(kernel_pgd);
+
   return task;
 }
 

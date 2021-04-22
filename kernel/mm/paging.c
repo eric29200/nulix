@@ -12,17 +12,6 @@ uint32_t nb_frames;
 struct page_directory_t *kernel_pgd = 0;
 
 /*
- * Free page entry.
- */
-struct page_free_t {
-  struct page_free_t *next;
-};
-
-/* pages allocation */
-static uint32_t kernel_page_end = KPAGE_START;
-static struct page_free_t *free_pages = NULL;
-
-/*
  * Get next free frame.
  */
 static int32_t get_first_free_frame()
@@ -162,38 +151,27 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
 }
 
 /*
- * Allocate a new page.
+ * Clone a page directory.
  */
-void *alloc_page()
+struct page_directory_t *clone_page_directory(struct page_directory_t *pgd)
 {
-  void *page;
+  struct page_directory_t *ret;
+  uint32_t phys, offset, i;
 
-  if (free_pages == NULL) {
-    page = (void *) kernel_page_end;
-    alloc_frame(get_page(kernel_page_end, 1, kernel_pgd), 1, 1);
-    kernel_page_end += PAGE_SIZE;
-  } else {
-    page = (void *) free_pages;
-    free_pages = free_pages->next;
+  /* allocate a new page directory */
+  ret = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), &phys);
+  if (!ret)
+    return NULL;
+
+  /* compute physical address of page tables */
+  offset = (uint32_t) ret->tables_physical - (uint32_t) ret;
+  ret->physical_addr = phys + offset;
+
+  /* link page tables */
+  for (i = 0; i < 1024; i++) {
+    ret->tables[i] = pgd->tables[i];
+    ret->tables_physical[i] = pgd->tables_physical[i];
   }
 
-  /* zero page */
-  memset(page, 0, PAGE_SIZE);
-
-  return page;
-}
-
-/*
- * Free a page.
- */
-void free_page(void *page)
-{
-  struct page_free_t *new_free_page;
-
-  if (!page)
-    return;
-
-  new_free_page = (struct page_free_t *) page;
-  new_free_page->next = free_pages;
-  free_pages = new_free_page;
+  return ret;
 }
