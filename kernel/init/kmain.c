@@ -20,30 +20,15 @@ extern uint32_t loader;
 extern uint32_t kernel_stack;
 extern uint32_t kernel_end;
 
-void test1()
-{
-  while (1)
-    printf("1");
-}
-
-void test2()
-{
-  while (1)
-    printf("2");
-}
-
 /*
  * Kos init (second phase).
  */
 static void kinit()
 {
-  struct task_t *t1 = create_task(test1, NULL);
-  struct task_t *t2 = create_task(test2, NULL);
+  struct task_t *t;
 
-  run_task(t1);
-  run_task(t2);
-
-  for (;;);
+  t = create_elf_task("/init");
+  run_task(t);
 }
 
 /*

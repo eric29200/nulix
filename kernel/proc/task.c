@@ -18,16 +18,26 @@ static void task_entry(struct task_t *task, void (*func)(void *), void *arg)
   kill_task(task);
 }
 
+typedef void (*funcc)();
+
 /*
  * Kernel ELF task trampoline (used to end tasks properly).
  */
-static void task_elf_entry(struct task_t *task, void (*func)(void))
+static void task_elf_entry(struct task_t *task, char *path)
 {
-  /* execute task */
-  func();
+  struct elf_layout_t *elf_layout;
+
+  /* load elf header */
+  elf_layout = elf_load(path);
+
+  /* execute elf file */
+  if (elf_layout)
+    elf_layout->entry();
 
   /* end properly the task */
   kill_task(task);
+  kfree(elf_layout);
+  kfree(path);
 }
 
 /*
@@ -112,7 +122,6 @@ struct task_t *create_task(void (*func)(void *), void *arg)
  */
 struct task_t *create_elf_task(const char *path)
 {
-  struct elf_layout_t *elf_layout;
   struct task_registers_t *regs;
   struct task_t *task;
 
@@ -125,16 +134,9 @@ struct task_t *create_elf_task(const char *path)
   regs = (struct task_registers_t *) task->esp;
   memset(regs, 0, sizeof(struct task_registers_t));
 
-  /* load elf header */
-  elf_layout = elf_load(path);
-  if (!elf_layout) {
-    kill_task(task);
-    return NULL;
-  }
-
   /* set eip */
   regs->parameter1 = (uint32_t) task;
-  regs->parameter2 = (uint32_t) elf_layout->entry;
+  regs->parameter2 = (uint32_t) strdup(path);
   regs->return_address = 0xFFFFFFFF;
   regs->eip = (uint32_t) task_elf_entry;
   regs->eax = 0;

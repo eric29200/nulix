@@ -14,20 +14,11 @@ struct heap_t *kheap = NULL;
  */
 static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
 {
-  struct page_t *page;
   void *ret;
 
   /* use kernel heap */
-  if (kheap) {
-    ret = heap_alloc(kheap, size, align);
-
-    if (phys) {
-      page = get_page((uint32_t) ret, 0, kernel_pgd);
-      *phys = page->frame * PAGE_SIZE + ((uint32_t) ret & 0xFFF);
-    }
-
-    return ret;
-  }
+  if (kheap && !phys)
+    return heap_alloc(kheap, size, align);
 
   /* align adress on PAGE boundary */
   if (align == 1 && !PAGE_ALIGNED(placement_address))
