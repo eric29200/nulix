@@ -16,7 +16,6 @@ extern uint32_t placement_address;
 extern uint32_t *frames;
 extern uint32_t nb_frames;
 extern struct page_directory_t *kernel_pgd;
-extern struct page_directory_t *current_pgd;
 
 /*
  * Page structure.
@@ -53,6 +52,5 @@ int32_t alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write);
 void free_frame(struct page_t *page);
 void switch_page_directory(struct page_directory_t *pgd);
 void page_fault_handler(struct registers_t *regs);
-struct page_directory_t *clone_page_directory(struct page_directory_t *src);
 
 #endif
