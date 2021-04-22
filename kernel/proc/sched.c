@@ -108,6 +108,12 @@ void schedule()
   /* lock scheduler and disable interrupts */
   spin_lock_irqsave(&sched_lock, flags);
 
+  /* if current task is terminated : destroy it */
+  if (current_task->state == TASK_TERMINATED) {
+    destroy_task(current_task);
+    current_task = prev_task = idle_task;
+  }
+
   /* update waiting tasks */
   list_for_each_safe(pos, n, &tasks_waiting_list) {
     task = list_entry(pos, struct task_t, list);
@@ -131,13 +137,6 @@ void schedule()
     /* pop next task */
     current_task = list_first_entry(&tasks_ready_list, struct task_t, list);
     list_del(&current_task->list);
-
-    /* if task is terminated : destroy it */
-    if (current_task->state == TASK_TERMINATED) {
-      destroy_task(current_task);
-      current_task = NULL;
-      continue;
-    }
 
     /* put current task at the end of the list */
     list_add_tail(&current_task->list, &tasks_ready_list);
