@@ -11,6 +11,9 @@ uint32_t nb_frames;
 /* page directories */
 struct page_directory_t *kernel_pgd = 0;
 
+/* copy phsyical page (defined in x86/paging.s) */
+extern void copy_page_physical(uint32_t src, uint32_t dst);
+
 /*
  * Get next free frame.
  */
@@ -151,26 +154,73 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
 }
 
 /*
+ * Clone a page table.
+ */
+static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t *phys_addr)
+{
+  struct page_table_t *ret;
+  int i;
+
+  /* create a new page table */
+  ret = (struct page_table_t *) kmalloc_align_phys(sizeof(struct page_table_t), phys_addr);
+  if (!ret)
+    return NULL;
+
+  /* reset page table */
+  memset(ret, 0, sizeof(struct page_table_t));
+
+  /* copy physical pages */
+  for (i = 0; i < 1024; i++) {
+    if (!src->pages[i].frame)
+      continue;
+
+    alloc_frame(&ret->pages[i], 0, 0);
+    ret->pages[i].present = src->pages[i].present;
+    ret->pages[i].rw = src->pages[i].rw;
+    ret->pages[i].user = src->pages[i].user;
+    ret->pages[i].accessed = src->pages[i].accessed;
+    ret->pages[i].dirty = src->pages[i].dirty;
+    copy_page_physical(src->pages[i].frame * PAGE_SIZE, ret->pages[i].frame * PAGE_SIZE);
+  }
+
+  return ret;
+}
+
+/*
  * Clone a page directory.
  */
-struct page_directory_t *clone_page_directory(struct page_directory_t *pgd)
+struct page_directory_t *clone_page_directory(struct page_directory_t *src)
 {
   struct page_directory_t *ret;
-  uint32_t phys, offset, i;
+  uint32_t phys, offset;
+  int i;
 
-  /* allocate a new page directory */
+  /* create a new page directory */
   ret = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), &phys);
   if (!ret)
     return NULL;
 
-  /* compute physical address of page tables */
+  /* reset page directory */
+  memset(ret, 0, sizeof(struct page_directory_t));
+
+  /* set physical address */
   offset = (uint32_t) ret->tables_physical - (uint32_t) ret;
   ret->physical_addr = phys + offset;
 
-  /* link page tables */
+  /* copy page tables */
   for (i = 0; i < 1024; i++) {
-    ret->tables[i] = pgd->tables[i];
-    ret->tables_physical[i] = pgd->tables_physical[i];
+    if (!src->tables[i])
+      continue;
+
+    /* if kernel page tables, just link */
+    if (kernel_pgd->tables[i] == src->tables[i]) {
+      ret->tables[i] = src->tables[i];
+      ret->tables_physical[i] = src->tables_physical[i];
+    } else {
+      ret->tables[i] = clone_page_table(src->tables[i], &phys);
+      if (ret->tables[i])
+        ret->tables_physical[i] = phys | 0x07;
+    }
   }
 
   return ret;

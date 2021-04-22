@@ -156,7 +156,7 @@ void schedule()
     tss_set_stack(0x10, current_task->kernel_stack);
 
     /* switch page directory */
-    //switch_page_directory(current_task->pgd);
+    switch_page_directory(current_task->pgd);
 
     /* switch */
     scheduler_do_switch(&prev_task->esp, current_task->esp);
