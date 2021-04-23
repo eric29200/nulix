@@ -83,12 +83,17 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 
     /* move block */
     block = (void *) block + page_offset;
+    block->size -= page_offset;
 
     /* update previous block size */
     if (block->prev) {
       block->prev->size += page_offset;
       block->prev = block;
     }
+
+    /* update next block */
+    if (block->next)
+      block->next->prev = block;
   }
 
   /* create new last free block with remaining size */
