@@ -19,7 +19,7 @@ struct task_t *current_task = NULL;
 struct task_t *idle_task = NULL;
 
 /* tids counter */
-static uint32_t next_tid = 0;
+static pid_t next_pid = 0;
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
@@ -27,13 +27,13 @@ extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
 /*
  * Get next tid.
  */
-uint32_t get_next_tid()
+pid_t get_next_pid()
 {
-  uint32_t ret;
   uint32_t flags;
+  pid_t ret;
 
   spin_lock_irqsave(&sched_lock, flags);
-  ret = next_tid++;
+  ret = next_pid++;
   spin_unlock_irqrestore(&sched_lock, flags);
 
   return ret;

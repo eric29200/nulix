@@ -46,7 +46,7 @@ struct task_t *create_init_task(uint8_t kernel)
     return NULL;
 
   /* set tid */
-  task->tid = get_next_tid();
+  task->pid = get_next_pid();
   task->state = TASK_NEW;
   task->expires = 0;
   task->path = NULL;

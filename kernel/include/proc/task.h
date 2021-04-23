@@ -18,7 +18,7 @@
  * Kernel task structure.
  */
 struct task_t {
-  uint32_t tid;
+  pid_t pid;
   uint32_t esp;
   uint32_t kernel_stack;
   uint8_t state;
