@@ -8,7 +8,7 @@
 
 #define KMEM_SIZE               0x600000
 
-#define KHEAP_START             0xC0000000
+#define KHEAP_START             0x400000
 #define KHEAP_SIZE              0x200000
 
 void init_mem(uint32_t start, uint32_t end);
