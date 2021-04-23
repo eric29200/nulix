@@ -10,3 +10,4 @@ disk
 hdd.img
 tmp
 tmp/*
+usr/init

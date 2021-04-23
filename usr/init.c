@@ -1,8 +1,5 @@
 int main(void)
 {
-  int i;
-
-  for (;;)
-    i++;
+  for (;;);
   return 0;
 }

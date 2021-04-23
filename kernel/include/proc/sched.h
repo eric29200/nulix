@@ -4,6 +4,8 @@
 #include <proc/task.h>
 #include <proc/wait.h>
 
+#define TASK_RETURN_ADDRESS               0xFFFFFFFF
+
 int init_scheduler(void (*init_func)());
 void schedule();
 void schedule_timeout(uint32_t timeout);

@@ -1,6 +1,7 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
+#include <proc/elf.h>
 #include <mm/paging.h>
 #include <fs/fs.h>
 #include <stddef.h>
@@ -22,6 +23,8 @@ struct task_t {
   uint32_t kernel_stack;
   uint8_t state;
   uint32_t expires;
+  char *path;
+  struct elf_layout_t *elf_layout;
   struct page_directory_t *pgd;
   struct file_t *filp[NR_OPEN];
   struct list_head_t list;

@@ -6,22 +6,15 @@
 #include <string.h>
 #include <stderr.h>
 
-/* switch to use mode (defined in x86/scheduler.s) */
-extern void enter_usermode(uint32_t esp, uint32_t eip, uint32_t failed_address);
+/* switch to user mode (defined in x86/scheduler.s) */
+extern void enter_user_mode(uint32_t esp, uint32_t eip, uint32_t return_address);
 
 /*
  * Kernel task trampoline (used to end tasks properly).
  */
-static void task_entry(struct task_t *task, void (*func)(void *), void *arg)
+static void task_entry(void (*func)(void *), void *arg)
 {
-  /* execute task */
   func(arg);
-
-  /* end properly the task */
-  kill_task(task);
-
-  /* reschedule */
-  schedule();
 }
 
 /*
@@ -29,22 +22,13 @@ static void task_entry(struct task_t *task, void (*func)(void *), void *arg)
  */
 static void task_elf_entry(struct task_t *task, char *path)
 {
-  struct elf_layout_t *elf_layout;
-
   /* load elf header */
-  elf_layout = elf_load(path);
+  task->elf_layout = elf_load(path);
+  task->path = path;
 
   /* execute elf file */
-  if (elf_layout)
-    enter_usermode(elf_layout->stack, elf_layout->entry, 0xFFFFFFFF);
-
-  /* end properly the task */
-  kill_task(task);
-  kfree(elf_layout);
-  kfree(path);
-
-  /* reschedule */
-  schedule();
+  if (task->elf_layout)
+    enter_user_mode(task->elf_layout->stack, task->elf_layout->entry, TASK_RETURN_ADDRESS);
 }
 
 /*
@@ -65,6 +49,8 @@ struct task_t *create_init_task(uint8_t kernel)
   task->tid = get_next_tid();
   task->state = TASK_NEW;
   task->expires = 0;
+  task->path = NULL;
+  task->elf_layout = NULL;
   INIT_LIST_HEAD(&task->list);
 
   /* init open files */
@@ -110,10 +96,9 @@ struct task_t *create_kernel_task(void (*func)(void *), void *arg)
   memset(regs, 0, sizeof(struct task_registers_t));
 
   /* set eip to function */
-  regs->parameter1 = (uint32_t) task;
-  regs->parameter2 = (uint32_t) func;
-  regs->parameter3 = (uint32_t) arg;
-  regs->return_address = 0xFFFFFFFF;
+  regs->parameter1 = (uint32_t) func;
+  regs->parameter2 = (uint32_t) arg;
+  regs->return_address = TASK_RETURN_ADDRESS;
   regs->eip = (uint32_t) task_entry;
   regs->eax = 0;
   regs->ecx = 0;
@@ -169,8 +154,21 @@ void destroy_task(struct task_t *task)
   if (!task)
     return;
 
+  /* free task path */
+  if (task->path)
+    kfree(task->path);
+
+  /* free ELF layout */
+  if (task->elf_layout)
+    kfree(task->elf_layout);
+
+  /* free kernel stack */
   kfree((void *) (task->kernel_stack - STACK_SIZE));
+
+  /* free page directory */
   if (task->pgd != kernel_pgd)
     free_page_directory(task->pgd);
+
+  /* free task */
   kfree(task);
 }

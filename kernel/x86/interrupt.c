@@ -45,16 +45,16 @@ void isr_handler(struct registers_t regs)
 {
   isr_t handler;
 
-  /* print a message */
-  printf("[Interrupt] code=%d", regs.int_no);
-  if (regs.int_no < 20)
-    printf(", message=%s", exception_messages[regs.int_no]);
-  printf("\n");
 
-  /* handle interrupt */
+  /* handle interrupt or print a message */
   if (interrupt_handlers[regs.int_no] != 0) {
     handler = interrupt_handlers[regs.int_no];
     handler(&regs);
+  } else {
+    printf("[Interrupt] code=%d", regs.int_no);
+    if (regs.int_no < 20)
+      printf(", message=%s", exception_messages[regs.int_no]);
+    printf("\n");
   }
 }
 

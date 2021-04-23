@@ -1,5 +1,6 @@
-#include <mm/paging.h>
 #include <mm/mm.h>
+#include <proc/sched.h>
+#include <mm/paging.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
@@ -97,7 +98,13 @@ void page_fault_handler(struct registers_t *regs)
   /* faulting address is stored in CR2 register */
   __asm__ volatile("mov %%cr2, %0" : "=r" (fault_addr));
 
-  /* get erros informations */
+  /* page fault on task end : kill current task */
+  if (fault_addr == TASK_RETURN_ADDRESS) {
+    kill_task(current_task);
+    return;
+  }
+
+  /* get errors informations */
   int present = !(regs->err_code & 0x1);
   int rw = regs->err_code & 0x2;
   int user = regs->err_code & 0x4;
