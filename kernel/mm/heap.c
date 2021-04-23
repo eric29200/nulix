@@ -9,11 +9,18 @@
 /*
  * Create a heap.
  */
-int heap_init(struct heap_t *heap, uint32_t start_address, size_t size)
+struct heap_t *heap_create(uint32_t start_address, size_t size)
 {
+  struct heap_t *heap;
+
   /* check heap size */
   if (size <= sizeof(struct heap_block_t))
-    return EINVAL;
+    return NULL;
+
+  /* allocate new heap */
+  heap = kmalloc(sizeof(struct heap_t));
+  if (!heap)
+    return NULL;
 
   /* set start/end addresses */
   heap->first_block = (struct heap_block_t *) start_address;
@@ -29,7 +36,7 @@ int heap_init(struct heap_t *heap, uint32_t start_address, size_t size)
   heap->last_block = heap->first_block;
   spin_lock_init(&heap->lock);
 
-  return 0;
+  return heap;
 }
 
 /*
@@ -76,7 +83,7 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
     return NULL;
   }
 
-  /* if page alignement is asked, update block and previous block */
+  /* if page alignement is asked, move block */
   if (page_aligned && !HEAP_BLOCK_ALIGNED(block)) {
     /* compute page offset */
     page_offset = PAGE_SIZE - HEAP_BLOCK_DATA(block) % PAGE_SIZE;

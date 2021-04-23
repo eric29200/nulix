@@ -14,7 +14,7 @@
 void init_mem(uint32_t start, uint32_t end);
 void *kmalloc(uint32_t size);
 void *kmalloc_align(uint32_t size);
-void *kmalloc_phys(uint32_t size, uint8_t align, uint32_t *phys);
+void *kmalloc_align_phys(uint32_t size, uint32_t *phys);
 void kfree(void *p);
 
 #endif
