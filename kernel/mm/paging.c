@@ -221,3 +221,40 @@ struct page_directory_t *clone_page_directory(struct page_directory_t *src)
 
   return ret;
 }
+
+/*
+ * Free a page table.
+ */
+static void free_page_table(struct page_table_t *pgt)
+{
+  int i;
+
+  for (i = 0; i < 1024; i++)
+    if (pgt->pages[i].frame)
+      free_frame(&pgt->pages[i]);
+
+  kfree(pgt);
+}
+
+/*
+ * Free a page directory.
+ */
+void free_page_directory(struct page_directory_t *pgd)
+{
+  int i;
+
+  if (!pgd)
+    return;
+
+  /* free page tables */
+  for (i = 0; i < 1024; i++) {
+    /* do not free kernel page tables */
+    if (!pgd->tables[i] || pgd->tables[i] == kernel_pgd->tables[i])
+      continue;
+
+    free_page_table(pgd->tables[i]);
+  }
+
+  /* free page directory */
+  kfree(pgd);
+}

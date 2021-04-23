@@ -167,5 +167,7 @@ void destroy_task(struct task_t *task)
     return;
 
   kfree((void *) (task->kernel_stack - STACK_SIZE));
+  if (task->pgd != kernel_pgd)
+    free_page_directory(task->pgd);
   kfree(task);
 }

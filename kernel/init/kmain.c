@@ -29,6 +29,19 @@ static void kinit()
 
   t = create_user_elf_task("/init");
   run_task(t);
+  printf("%x\n", (uint32_t) t->pgd);
+
+  msleep(2000);
+
+  t = create_user_elf_task("/init");
+  run_task(t);
+  printf("%x\n", (uint32_t) t->pgd);
+
+  msleep(2000);
+
+  t = create_user_elf_task("/init");
+  run_task(t);
+  printf("%x\n", (uint32_t) t->pgd);
 }
 
 /*
