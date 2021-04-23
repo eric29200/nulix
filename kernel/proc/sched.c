@@ -61,12 +61,12 @@ int init_scheduler(void (*init_func)())
   spin_lock_init(&sched_lock);
 
   /* create idle task */
-  idle_task = create_task(idle_func, NULL);
+  idle_task = create_kernel_task(idle_func, NULL);
   if (!idle_task)
     return ENOMEM;
 
   /* create init task */
-  init_task = create_task(init_func, NULL);
+  init_task = create_kernel_task(init_func, NULL);
   if (!init_task)
     return ENOMEM;
 

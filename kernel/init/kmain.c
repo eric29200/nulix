@@ -27,7 +27,7 @@ static void kinit()
 {
   struct task_t *t;
 
-  t = create_elf_task("/init");
+  t = create_user_elf_task("/init");
   run_task(t);
 }
 
