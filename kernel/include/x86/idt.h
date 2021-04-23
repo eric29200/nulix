@@ -57,6 +57,7 @@ extern void isr28();
 extern void isr29();
 extern void isr30();
 extern void isr31();
+extern void isr128();
 
 /* irq routines (defined in interrupt.s) */
 extern void irq0();

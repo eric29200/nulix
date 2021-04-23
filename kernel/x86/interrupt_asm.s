@@ -3,8 +3,8 @@
 	global isr%1
 	isr%1:
 		cli
-		push byte 0
-		push byte %1
+		push 0
+		push %1
 		jmp isr_common_stub
 %endmacro
 
@@ -13,7 +13,7 @@
 	global isr%1
 	isr%1:
 		cli
-		push byte %1
+		push %1
 		jmp isr_common_stub
 %endmacro
 
@@ -22,8 +22,8 @@
 	global irq%1
 	irq%1:
 		cli
-		push byte 0
-		push byte %2
+		push 0
+		push %2
 		jmp irq_common_stub
 %endmacro
 
@@ -60,6 +60,7 @@ ISR_NOERRCODE 28
 ISR_NOERRCODE 29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
+ISR_NOERRCODE 128
 
 ; generate irqs
 IRQ 0, 32

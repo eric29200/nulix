@@ -1,5 +1,5 @@
 int main(void)
 {
-  for (;;);
+  __asm__ __volatile__("int $0x80");
   return 0;
 }
