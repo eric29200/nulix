@@ -16,6 +16,9 @@ static void task_entry(struct task_t *task, void (*func)(void *), void *arg)
 
   /* end properly the task */
   kill_task(task);
+
+  /* reschedule */
+  schedule();
 }
 
 /*
@@ -36,6 +39,9 @@ static void task_elf_entry(struct task_t *task, char *path)
   kill_task(task);
   kfree(elf_layout);
   kfree(path);
+
+  /* reschedule */
+  schedule();
 }
 
 /*

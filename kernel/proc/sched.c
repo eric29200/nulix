@@ -111,7 +111,7 @@ void schedule()
   /* if current task is terminated : destroy it */
   if (current_task->state == TASK_TERMINATED) {
     destroy_task(current_task);
-    current_task = prev_task = idle_task;
+    current_task = NULL;
   }
 
   /* update waiting tasks */
