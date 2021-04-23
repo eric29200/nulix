@@ -63,7 +63,7 @@ static struct heap_block_t *heap_find_free_block(struct heap_t *heap, uint8_t pa
  */
 void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 {
-  struct heap_block_t *block, *new_free_block;
+  struct heap_block_t *block, *new_block;
   uint32_t page_offset, flags;
 
   /* lock the heap */
@@ -82,8 +82,11 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
     page_offset = PAGE_SIZE - HEAP_BLOCK_DATA(block) % PAGE_SIZE;
 
     /* move block */
-    block = (void *) block + page_offset;
-    block->size -= page_offset;
+    new_block = (void *) block + page_offset;
+    new_block->size = block->size - page_offset;
+    new_block->prev = block->prev;
+    new_block->next = block->next;
+    block = new_block;
 
     /* update previous block size */
     if (block->prev) {
@@ -99,18 +102,18 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
   /* create new last free block with remaining size */
   if (block == heap->last_block && block->size - size > sizeof(struct heap_block_t)) {
     /* create new free block */
-    new_free_block = (struct heap_block_t *) (HEAP_BLOCK_DATA(block) + size);
-    new_free_block->size = block->size - size - sizeof(struct heap_block_t);
-    new_free_block->free = 1;
-    new_free_block->prev = block;
-    new_free_block->next = NULL;
+    new_block = (struct heap_block_t *) (HEAP_BLOCK_DATA(block) + size);
+    new_block->size = block->size - size - sizeof(struct heap_block_t);
+    new_block->free = 1;
+    new_block->prev = block;
+    new_block->next = NULL;
 
     /* update this block */
     block->size = size;
-    block->next = new_free_block;
+    block->next = new_block;
 
     /* update heap last block */
-    heap->last_block = new_free_block;
+    heap->last_block = new_block;
   }
 
   /* mark this block */
