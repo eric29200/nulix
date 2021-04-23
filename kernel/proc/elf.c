@@ -43,8 +43,8 @@ struct elf_layout_t *elf_load(const char *path)
   struct elf_header_t *elf_header;
   struct elf_prog_header_t *ph;
   struct stat_t statbuf;
-  uint32_t vaddr;
   char *buf = NULL;
+  uint32_t i;
   int fd;
 
   /* get file size */
@@ -80,17 +80,22 @@ struct elf_layout_t *elf_load(const char *path)
   if (!elf_layout)
     goto out;
 
-  /* map binary pages to memory */
+  /* map binary pages to user memory */
   ph = (struct elf_prog_header_t *) (buf + elf_header->e_phoff);
-  for (vaddr = PAGE_ALIGN_UP(ph->p_vaddr); vaddr <= ph->p_vaddr + ph->p_filesz; vaddr += PAGE_SIZE)
-    alloc_frame(get_page(vaddr, 1, current_task->pgd), 0, 0);
+  for (i = 0; i < PAGE_ALIGN_UP(ph->p_filesz) / PAGE_SIZE; i++)
+    alloc_frame(get_page(UMEM_START + i * PAGE_SIZE, 1, current_task->pgd), 0, 0);
 
   /* copy binary */
-  memcpy((void *) ph->p_vaddr, buf + ph->p_offset, ph->p_filesz);
+  memcpy((void *) UMEM_START, buf + ph->p_offset, ph->p_filesz);
+
+  /* allocate a stack just after the binary */
+  elf_layout->stack = PAGE_ALIGN_UP(UMEM_START + ph->p_filesz);
+  for (i = 0; i < USTACK_SIZE / PAGE_SIZE; i++)
+    alloc_frame(get_page(elf_layout->stack + i * PAGE_SIZE, 1, current_task->pgd), 0, 1);
 
   /* set elf entry point */
-  elf_layout->entry = (void *) elf_header->e_entry;
-
+  elf_layout->entry = UMEM_START + (elf_header->e_entry - ph->p_vaddr);
+  elf_layout->stack += USTACK_SIZE;
 out:
   if (buf)
     kfree(buf);

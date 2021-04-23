@@ -85,7 +85,8 @@ struct elf_prog_header_t {
  * ELF layout.
  */
 struct elf_layout_t {
-  void (*entry)(void);
+  uint32_t stack;
+  uint32_t entry;
 };
 
 struct elf_layout_t *elf_load(const char *path);

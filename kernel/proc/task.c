@@ -6,6 +6,9 @@
 #include <string.h>
 #include <stderr.h>
 
+/* switch to use mode (defined in x86/scheduler.s) */
+extern void enter_usermode(uint32_t esp, uint32_t eip, uint32_t failed_address);
+
 /*
  * Kernel task trampoline (used to end tasks properly).
  */
@@ -33,7 +36,7 @@ static void task_elf_entry(struct task_t *task, char *path)
 
   /* execute elf file */
   if (elf_layout)
-    elf_layout->entry();
+    enter_usermode(elf_layout->stack, elf_layout->entry, 0xFFFFFFFF);
 
   /* end properly the task */
   kill_task(task);
