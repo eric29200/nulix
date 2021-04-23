@@ -11,7 +11,6 @@ static void putc(char c, int fd)
 {
   if (fd == stdout)
     write_serial(c);
-    //screen_putc(c);
 }
 
 /*
