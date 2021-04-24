@@ -24,6 +24,7 @@ struct task_t {
   uint8_t state;
   uint32_t expires;
   char *path;
+  dev_t tty;
   struct elf_layout_t *elf_layout;
   struct page_directory_t *pgd;
   struct file_t *filp[NR_OPEN];

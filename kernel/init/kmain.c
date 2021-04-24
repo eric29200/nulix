@@ -10,11 +10,13 @@
 #include <drivers/pit.h>
 #include <drivers/rtc.h>
 #include <drivers/ata.h>
+#include <drivers/tty.h>
 #include <fs/fs.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <string.h>
 #include <delay.h>
+#include <dev.h>
 
 extern uint32_t loader;
 extern uint32_t kernel_stack;
@@ -43,8 +45,9 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* disable interrupts */
   irq_disable();
 
-  /* init serial console */
+  /* init serial console and ttys */
   init_serial();
+  init_tty();
 
   /* print grub informations */
   printf("[Kernel] Loading at linear address = %x\n", loader);

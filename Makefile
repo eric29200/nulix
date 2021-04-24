@@ -16,7 +16,7 @@ run: $(DISK)
 	sudo mount $(DISK) tmp
 	sudo cp usr/init tmp/
 	sudo umount tmp
-	$(QEMU) -m $(MEM_SIZE) -kernel $(KERNEL) -serial stdio -display none -drive format=raw,file=$(DISK)
+	$(QEMU) -m $(MEM_SIZE) -kernel $(KERNEL) -serial stdio -drive format=raw,file=$(DISK)
 
 clean:
 	make clean -C kernel
