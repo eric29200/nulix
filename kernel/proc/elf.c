@@ -14,22 +14,22 @@ static int elf_check(struct elf_header_t *elf_header)
       || elf_header->e_ident[EI_MAG1] != ELFMAG1
 		  || elf_header->e_ident[EI_MAG2] != ELFMAG2
 		  || elf_header->e_ident[EI_MAG3] != ELFMAG3)
-    return ENOEXEC;
+    return -ENOEXEC;
 
 	if (elf_header->e_ident[EI_CLASS] != ELFCLASS32)
-    return ENOEXEC;
+    return -ENOEXEC;
 
 	if (elf_header->e_ident[EI_DATA] != ELFDATA2LSB)
-    return ENOEXEC;
+    return -ENOEXEC;
 
 	if (elf_header->e_ident[EI_VERSION] != EV_CURRENT)
-    return ENOEXEC;
+    return -ENOEXEC;
 
 	if (elf_header->e_machine != EM_386)
-    return ENOEXEC;
+    return -ENOEXEC;
 
 	if (elf_header->e_type != ET_EXEC)
-    return ENOEXEC;
+    return -ENOEXEC;
 
   return 0;
 }

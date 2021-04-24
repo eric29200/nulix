@@ -54,7 +54,7 @@ int32_t alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
   /* get a new frame */
   free_frame_idx = get_first_free_frame();
   if (free_frame_idx < 0)
-    return ENOMEM;
+    return -ENOMEM;
 
   set_frame(PAGE_SIZE * free_frame_idx);
   page->present = 1;

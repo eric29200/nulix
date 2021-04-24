@@ -37,7 +37,7 @@ static uint8_t ata_polling(struct ata_device_t *device)
 			return 0;
 
 		if ((status & ATA_SR_ERR) || (status & ATA_SR_DF))
-			return ENXIO;
+			return -ENXIO;
   }
 }
 
@@ -70,7 +70,7 @@ static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint1
 
   /* wait for disk to be ready */
   if (ata_polling(device) != 0)
-    return ENXIO;
+    return -ENXIO;
 
   /* write sector word by word */
   for (i = 0; i < 256; i++) {
@@ -131,7 +131,7 @@ static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16
 
   /* wait for disk to be ready */
   if (ata_polling(device) != 0)
-    return ENXIO;
+    return -ENXIO;
 
   /* read sector word by word */
   for (i = 0; i < 256; i++)
@@ -188,7 +188,7 @@ static uint8_t ata_identify(struct ata_device_t *device)
   while (1) {
     status = inb(device->io_base + ATA_REG_STATUS);
     if (!status)
-      return ENXIO;
+      return -ENXIO;
 
     if (!(status & ATA_SR_BSY))
       break;
@@ -198,7 +198,7 @@ static uint8_t ata_identify(struct ata_device_t *device)
   while (1) {
     status = inb(device->io_base + ATA_REG_STATUS);
     if (status & ATA_SR_ERR)
-      return EFAULT;
+      return -EFAULT;
 
     if (status & ATA_SR_DRQ)
       break;
@@ -219,7 +219,7 @@ static int ata_detect(int id, uint16_t bus, uint8_t drive)
   int ret;
 
   if (id > MAX_ATA_DEVICE)
-    return ENXIO;
+    return -ENXIO;
 
   /* set device */
   ata_devices[id].bus = bus;

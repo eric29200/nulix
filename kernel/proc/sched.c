@@ -63,12 +63,12 @@ int init_scheduler(void (*init_func)())
   /* create idle task */
   idle_task = create_kernel_task(idle_func, NULL);
   if (!idle_task)
-    return ENOMEM;
+    return -ENOMEM;
 
   /* create init task */
   init_task = create_kernel_task(init_func, NULL);
   if (!init_task)
-    return ENOMEM;
+    return -ENOMEM;
 
   return run_task(init_task);
 }
@@ -192,7 +192,7 @@ void schedule_timeout(uint32_t timeout)
 int run_task(struct task_t *task)
 {
   if (!task)
-    return EINVAL;
+    return -EINVAL;
 
   /* add to the task list */
   __update_task_state(task, TASK_READY);
