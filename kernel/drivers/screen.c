@@ -1,4 +1,5 @@
 #include <drivers/screen.h>
+#include <x86/io.h>
 #include <string.h>
 
 /*
@@ -54,6 +55,28 @@ void screen_write(struct screen_t *screen, const char *buf, size_t n)
 
   for (i = 0; i < n; i++)
     screen_putc(screen, buf[i]);
+}
+
+/*
+ * Update the screen.
+ */
+void screen_update(struct screen_t *screen)
+{
+  uint16_t pos = screen->pos_y * SCREEN_WIDTH + screen->pos_x;
+  uint16_t *video_buf = (uint16_t *) SCREEN_MEM;
+  size_t i;
+
+  /* copy the buffer */
+  for (i = 0; i < sizeof(screen->buf); i++)
+    video_buf[i] = MAKE_ENTRY(SCREEN_BLACK, SCREEN_LIGHT_GREY, screen->buf[i]);
+
+  /* update hardware cursor */
+  outb(0x03D4, 14);
+  outb(0x03D5, pos >> 8);
+  outb(0x03D4, 15);
+  outb(0x03D5, pos);
+
+  screen->dirty = 0;
 }
 
 /*

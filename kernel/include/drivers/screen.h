@@ -3,8 +3,15 @@
 
 #include <stddef.h>
 
-#define SCREEN_WIDTH      80
-#define SCREEN_HEIGHT     25
+#define SCREEN_MEM                0xB8000
+
+#define SCREEN_WIDTH              80
+#define SCREEN_HEIGHT             25
+
+#define SCREEN_BLACK              0
+#define SCREEN_LIGHT_GREY         7
+#define MAKE_COLOR(bg, fg)        (((bg) << 4) | (fg))
+#define MAKE_ENTRY(bg, fg, c)     ((MAKE_COLOR((bg), (fg)) << 8) | (c))
 
 /*
  * Screen struct.
