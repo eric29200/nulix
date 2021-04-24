@@ -117,4 +117,6 @@ void init_tty()
     screen_init(&tty_table[i].screen);
     spin_lock_init(&tty_table[i].lock);
   }
+
+  current_tty = DEV_CONSOLE;
 }

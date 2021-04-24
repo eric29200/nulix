@@ -1,0 +1,2 @@
+ - add a timer to update screen (in tty driver)
+ - change printf function to output to current tty
