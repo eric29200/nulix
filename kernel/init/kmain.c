@@ -27,10 +27,8 @@ extern uint32_t kernel_end;
  */
 static void kinit()
 {
-  struct task_t *t;
-
-  t = create_user_elf_task("/init");
-  run_task(t);
+  /* init ttys */
+  init_tty();
 }
 
 /*
@@ -45,9 +43,8 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* disable interrupts */
   irq_disable();
 
-  /* init serial console and ttys */
+  /* init serial console */
   init_serial();
-  init_tty();
 
   /* print grub informations */
   printf("[Kernel] Loading at linear address = %x\n", loader);

@@ -13,7 +13,7 @@ typedef unsigned int off_t;
 typedef unsigned char bool;
 typedef unsigned int time_t;
 typedef int pid_t;
-typedef unsigned int dev_t;
+typedef unsigned short dev_t;
 typedef uint32_t ino_t;
 typedef uint32_t uid_t;
 typedef uint32_t gid_t;
@@ -31,10 +31,8 @@ typedef uint32_t gid_t;
 #define div_floor(x, y)                       ((x) / (y))
 #define div_ceil(x, y)                        (((x) / (y)) + (((x) % (y)) > 0 ? 1 : 0))
 
-#define MINORBITS                             20
-#define MINORMASK                             ((1U << MINORBITS) - 1)
-#define major(dev)                            ((unsigned int) ((dev) >> MINORBITS))
-#define minor(dev)                            ((unsigned int) ((dev) & MINORMASK))
-#define mkdev(major, minor)                   (((major) << MINORBITS) | (minor))
+#define major(dev)                            ((unsigned short) ((dev) >> 8))
+#define minor(dev)                            ((unsigned short) ((dev) & 0xFF))
+#define mkdev(major, minor)                   (((major) << 8) | (minor))
 
 #endif

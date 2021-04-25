@@ -37,6 +37,10 @@ int sys_open(const char *pathname)
     return -ENOMEM;
   }
 
+  /* ttys (major = 4) */
+  if (S_ISCHR(inode->i_mode) && major(inode->i_zone[0]) == 4)
+    current_task->tty = inode->i_zone[0];
+
   /* set file */
   file->f_mode = inode->i_mode;
   file->f_inode = inode;

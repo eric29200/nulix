@@ -1,6 +1,8 @@
+#include <drivers/serial.h>
 #include <drivers/tty.h>
 #include <proc/sched.h>
 #include <stderr.h>
+#include <delay.h>
 #include <dev.h>
 
 #define TTYS_CONSOLE      4
@@ -102,10 +104,24 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
 }
 
 /*
+ * TTY update.
+ */
+static void tty_update(void *a)
+{
+  UNUSED(a);
+
+  for (;;) {
+    msleep(TTY_DELAY_UPDATE_MS);
+    screen_update(&tty_table[current_tty].screen);
+  }
+}
+
+/*
  * Init TTYs.
  */
-void init_tty()
+int init_tty()
 {
+  struct task_t *update_task;
   int i;
 
   /* init each tty */
@@ -118,5 +134,13 @@ void init_tty()
     spin_lock_init(&tty_table[i].lock);
   }
 
+  /* set current tty to console */
   current_tty = DEV_CONSOLE;
+
+  /* create update tty task */
+  update_task = create_kernel_task(tty_update, NULL);
+  if (!update_task)
+    return -ENOMEM;
+
+  return run_task(update_task);
 }
