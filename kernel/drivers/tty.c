@@ -123,6 +123,17 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
 }
 
 /*
+ * Change current tty.
+ */
+void tty_change(uint32_t n)
+{
+  if (n < TTYS_CONSOLE) {
+    current_tty = n;
+    tty_table[current_tty].screen.dirty = 1;
+  }
+}
+
+/*
  * TTY update.
  */
 static void tty_refresh(void *a)

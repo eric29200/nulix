@@ -267,6 +267,7 @@ static void keyboard_handler(struct registers_t *regs)
         if ((keyboard_status & KEYBOARD_STATUS_CTRL) != 0) {
           c = '\n';
         } else if ((keyboard_status & KEYBOARD_STATUS_ALT) != 0) {
+          tty_change(c - 0x3B);
           return;
         } else if ((((keyboard_status & KEYBOARD_STATUS_SHIFT) != 0)
                     ^ ((keyboard_status & KEYBOARD_STATUS_CAPSLOCK) != 0)) != 0) {

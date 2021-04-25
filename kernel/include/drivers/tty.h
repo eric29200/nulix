@@ -23,5 +23,6 @@ int init_tty();
 size_t tty_read(dev_t dev, void *buf, size_t n);
 size_t tty_write(dev_t dev, const void *buf, size_t n);
 void tty_update(char c);
+void tty_change(uint32_t n);
 
 #endif
