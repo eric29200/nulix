@@ -11,6 +11,7 @@
 #include <drivers/rtc.h>
 #include <drivers/ata.h>
 #include <drivers/tty.h>
+#include <drivers/keyboard.h>
 #include <fs/fs.h>
 #include <sys/syscall.h>
 #include <semaphore.h>
@@ -77,6 +78,10 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* init real time clock */
   printf("[Kernel] Real Time Clock Init\n");
   init_rtc();
+
+  /* init keyboard */
+  printf("[Kernel] Keyboard Init\n");
+  init_keyboard();
 
   /* init ata devices */
   printf("[Kernel] ATA devices Init\n");

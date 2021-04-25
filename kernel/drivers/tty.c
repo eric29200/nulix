@@ -78,6 +78,22 @@ out:
 }
 
 /*
+ * Write a chararcter to tty.
+ */
+void tty_update(char c)
+{
+  struct tty_t *tty;
+
+  /* get tty */
+  tty = &tty_table[current_tty];
+
+  /* add character */
+  spin_lock(&tty->lock);
+  screen_putc(&tty->screen, c);
+  spin_unlock(&tty->lock);
+}
+
+/*
  * Write to TTY.
  */
 size_t tty_write(dev_t dev, const void *buf, size_t n)
@@ -106,7 +122,7 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
 /*
  * TTY update.
  */
-static void tty_update(void *a)
+static void tty_refresh(void *a)
 {
   UNUSED(a);
 
@@ -138,7 +154,7 @@ int init_tty()
   current_tty = DEV_CONSOLE;
 
   /* create update tty task */
-  update_task = create_kernel_task(tty_update, NULL);
+  update_task = create_kernel_task(tty_refresh, NULL);
   if (!update_task)
     return -ENOMEM;
 
