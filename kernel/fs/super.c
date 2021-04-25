@@ -74,7 +74,7 @@ int mount_root(struct ata_device_t *dev)
   }
 
   /* read root inode */
-  sb->s_imount = read_inode(sb, 1);
+  sb->s_imount = read_inode(sb, MINIX_ROOT_INODE);
   if (!sb->s_imount) {
     ret = EINVAL;
     goto err_root_inode;

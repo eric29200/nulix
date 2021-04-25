@@ -33,7 +33,7 @@ int sys_open(const char *pathname)
   /* allocate a new file */
   file = (struct file_t *) kmalloc(sizeof(struct file_t));
   if (!file) {
-    kfree(inode);
+    iput(inode);
     return -ENOMEM;
   }
 
@@ -65,8 +65,7 @@ int sys_close(int fd)
     return -ENOMEM;
 
   current_task->filp[fd] = NULL;
-  if (filp->f_inode)
-    kfree(filp->f_inode);
+  iput(filp->f_inode);
   kfree(filp);
 
   return 0;

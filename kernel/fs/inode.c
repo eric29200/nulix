@@ -82,3 +82,12 @@ int bmap(struct inode_t *inode, int block)
 
   return ret;
 }
+
+/*
+ * Release an inode.
+ */
+void iput(struct inode_t *inode)
+{
+  if (inode && inode->i_ino != MINIX_ROOT_INODE)
+    kfree(inode);
+}

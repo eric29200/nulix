@@ -5,6 +5,7 @@
 #include <drivers/ata.h>
 
 #define MINIX_SUPER_MAGIC             0x138F
+#define MINIX_ROOT_INODE              1
 #define MINIX_I_MAP_SLOTS             8
 #define MINIX_Z_MAP_SLOTS             8
 #define MINIX_FILENAME_LEN            30
@@ -94,6 +95,8 @@ struct stat_t {
 };
 
 struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino);
+void iput(struct inode_t *inode);
+
 struct inode_t *namei(const char *pathname);
 int open_namei(const char *pathname, struct inode_t **inode);
 

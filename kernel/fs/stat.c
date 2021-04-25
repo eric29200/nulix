@@ -26,7 +26,7 @@ int sys_stat(char *filename, struct stat_t *statbuf)
   statbuf->st_ctime = inode->i_time;
 
   /* free inode */
-  kfree(inode);
+  iput(inode);
 
   return 0;
 }

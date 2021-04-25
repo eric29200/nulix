@@ -84,9 +84,8 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
     if (!next_inode)
       goto err;
 
-    /* free curent inode (except root inode) */
-    if (inode != inode->i_sb->s_imount)
-      kfree(inode);
+    /* free curent inode */
+    iput(inode);
 
     /* go to next inode */
     inode = next_inode;
@@ -96,9 +95,8 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
   *basename_len = name_len;
   return inode;
 err:
-  /* free inode (except root inode) */
-  if (inode && inode != inode->i_sb->s_imount)
-    kfree(inode);
+  /* free inode */
+  iput(inode);
   return NULL;
 }
 
@@ -120,7 +118,7 @@ struct inode_t *namei(const char *pathname)
   ret = find_entry(dir, basename, basename_len);
 
   /* free directory */
-  kfree(dir);
+  iput(dir);
   return ret;
 }
 
@@ -141,11 +139,11 @@ int open_namei(const char *pathname, struct inode_t **inode)
   /* find inode */
   *inode = find_entry(dir, basename, basename_len);
   if (!*inode) {
-    kfree(dir);
+    iput(dir);
     return -ENOENT;
   }
 
   /* free directory */
-  kfree(dir);
+  iput(dir);
   return 0;
 }
