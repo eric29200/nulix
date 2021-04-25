@@ -26,6 +26,9 @@
 #define KEY_INSERT                  0xE8
 #define KEY_DELETE                  0xE9
 
+/* keyboard status */
+static uint32_t keyboard_status = 0;
+
 /* primary meaning of scancodes */
 static const char kbd_map1[] = {
   KEY_NULL,           /* 0x00 - Null */
@@ -115,9 +118,7 @@ static const char kbd_map1[] = {
   KEY_NULL            /* 0x7f */
 };
 
-/*
- * Secondary meaning of scancodes.
- */
+/* secondary meaning of scancodes */
 static const char kbd_map2[] = {
   KEY_NULL,           /* 0x00 - Undefined */
   KEY_ESCAPE,         /* 0x01 - Escape */
@@ -229,7 +230,9 @@ static uint32_t scan_key()
  */
 static void keyboard_handler(struct registers_t *regs)
 {
-  uint32_t c, status = 0;
+  uint32_t c;
+
+  UNUSED(regs);
 
   /* get key */
   c = scan_key();
@@ -237,35 +240,36 @@ static void keyboard_handler(struct registers_t *regs)
   switch (c) {
     case 0x2A:
     case 0x36:
-      status |= KEYBOARD_STATUS_SHIFT;
+      keyboard_status |= KEYBOARD_STATUS_SHIFT;
       break;
     case 0xAA:
     case 0xB6:
-      status &= ~KEYBOARD_STATUS_SHIFT;
+      keyboard_status &= ~KEYBOARD_STATUS_SHIFT;
       break;
     case 0x1D:
-      status |= KEYBOARD_STATUS_CTRL;
+      keyboard_status |= KEYBOARD_STATUS_CTRL;
       break;
     case 0x9D:
-      status &= ~KEYBOARD_STATUS_CTRL;
+      keyboard_status &= ~KEYBOARD_STATUS_CTRL;
       break;
     case 0x38:
-      status |= KEYBOARD_STATUS_ALT;
+      keyboard_status |= KEYBOARD_STATUS_ALT;
       break;
     case 0xB8:
-      status &= ~KEYBOARD_STATUS_ALT;
+      keyboard_status &= ~KEYBOARD_STATUS_ALT;
       break;
     case 0x3A:
-      status ^= ~KEYBOARD_STATUS_CAPSLOCK;
+      keyboard_status ^= KEYBOARD_STATUS_CAPSLOCK;
       break;
     default:
       /* on key down, send char to current tty */
       if ((c & 0x80) == 0) {
-        if ((status & KEYBOARD_STATUS_CTRL) != 0) {
+        if ((keyboard_status & KEYBOARD_STATUS_CTRL) != 0) {
           c = '\n';
-        } else if ((status & KEYBOARD_STATUS_ALT) != 0) {
+        } else if ((keyboard_status & KEYBOARD_STATUS_ALT) != 0) {
           return;
-        } else if ((((status & KEYBOARD_STATUS_SHIFT) != 0) ^ ((status & KEYBOARD_STATUS_CAPSLOCK) != 0)) != 0) {
+        } else if ((((keyboard_status & KEYBOARD_STATUS_SHIFT) != 0)
+                    ^ ((keyboard_status & KEYBOARD_STATUS_CAPSLOCK) != 0)) != 0) {
           c = kbd_map2[c];
         } else {
           c = kbd_map1[c];
