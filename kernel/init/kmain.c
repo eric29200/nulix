@@ -34,7 +34,7 @@ static void kinit()
   init_tty();
 
   /* create init task */
-  task = create_user_elf_task("/init");
+  task = create_user_elf_task("/sbin/init");
   if (task)
     run_task(task);
 }
