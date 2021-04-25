@@ -12,6 +12,7 @@
 #include <drivers/ata.h>
 #include <drivers/tty.h>
 #include <fs/fs.h>
+#include <sys/syscall.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,8 +28,15 @@ extern uint32_t kernel_end;
  */
 static void kinit()
 {
+  struct task_t *task;
+
   /* init ttys */
   init_tty();
+
+  /* create init task */
+  task = create_user_elf_task("/init");
+  if (task)
+    run_task(task);
 }
 
 /*
@@ -73,6 +81,10 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* init ata devices */
   printf("[Kernel] ATA devices Init\n");
   init_ata();
+
+  /* init system calls */
+  printf("[Kernel] System calls Init\n");
+  init_syscall();
 
   /* mount root file system */
   printf("[Kernel] Mounting root file system\n");
