@@ -1,7 +1,8 @@
 CC		= i386-elf-gcc
 LD		= i386-elf-ld
+HEADER_PATH	= ../libc
 C_SOURCES 	= $(wildcard */*.c)
-CFLAGS		= -m32 -nostdlib -Wall -Wextra
+CFLAGS		= -m32 -nostdlib -Wall -Wextra -I$(HEADER_PATH)
 LDFLAGS		= -Tlink.ld
 
 all: init

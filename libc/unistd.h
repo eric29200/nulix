@@ -1,0 +1,76 @@
+#ifndef _UNISTD_H_
+#define _UNISTD_H_
+
+#include <sys/types.h>
+
+#define __NR_exit         1
+#define __NR_fork         2
+#define __NR_read         3
+#define __NR_write        4
+#define __NR_mknod        5
+#define __NR_open         6
+#define __NR_close        7
+
+/*
+ * System call with 1 argument.
+ */
+static inline int syscall1(int n, int p1)
+{
+  int ret;
+  __asm__ __volatile__("int $0x80" : "=a" (ret) : "0" (n), "b" (p1));
+  return ret;
+}
+
+/*
+ * System call with 2 arguments.
+ */
+static inline int syscall2(int n, int p1, int p2)
+{
+  int ret;
+  __asm__ __volatile__("int $0x80" : "=a" (ret) : "0" (n), "b" (p1), "c" (p2));
+  return ret;
+}
+
+/*
+ * System call with 3 arguments.
+ */
+static inline int syscall3(int n, int p1, int p2, int p3)
+{
+  int ret;
+  __asm__ __volatile__("int $0x80" : "=a" (ret) : "0" (n), "b" (p1), "c" (p2), "d" (p3));
+  return ret;
+}
+
+/*
+ * Read system call.
+ */
+static inline ssize_t read(int fd, void *buf, size_t count)
+{
+  return syscall3 (__NR_read, fd, (int) buf, count);
+}
+
+/*
+ * Write system call.
+ */
+static inline ssize_t write(int fd, void *buf, size_t count)
+{
+  return syscall3 (__NR_write, fd, (int) buf, count);
+}
+
+/*
+ * Open system call.
+ */
+static inline int open(const char *pathname)
+{
+  return syscall1(__NR_open, (int) pathname);
+}
+
+/*
+ * Close system call.
+ */
+static inline int close(int fd)
+{
+  return syscall1(__NR_close, fd);
+}
+
+#endif
