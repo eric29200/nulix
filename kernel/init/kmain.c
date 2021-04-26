@@ -29,9 +29,6 @@ static void kinit()
 {
   struct task_t *task;
 
-  /* init ttys */
-  init_tty();
-
   /* create init task */
   task = create_user_elf_task("/sbin/init");
   if (task)
@@ -92,6 +89,10 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   /* mount root file system */
   printf("[Kernel] Mounting root file system\n");
   mount_root(ata_get_device(0));
+
+  /* init ttys */
+  printf("[Kernel] Ttys Init\n");
+  init_tty();
 
   /* init processes */
   printf("[Kernel] Processes Init\n");

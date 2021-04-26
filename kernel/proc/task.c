@@ -31,7 +31,7 @@ static void task_elf_entry(struct task_t *task, char *path)
 /*
  * Create and init a task.
  */
-struct task_t *create_init_task(uint8_t kernel)
+struct task_t *create_init_task()
 {
   struct task_t *task;
   void *stack;
@@ -66,12 +66,6 @@ struct task_t *create_init_task(uint8_t kernel)
   task->kernel_stack = (uint32_t) stack + STACK_SIZE;
   task->esp = task->kernel_stack - sizeof(struct task_registers_t);
 
-  /* create a new page directory */
-  if (kernel)
-    task->pgd = kernel_pgd;
-  else
-    task->pgd = clone_page_directory(kernel_pgd);
-
   return task;
 }
 
@@ -84,9 +78,12 @@ struct task_t *create_kernel_task(void (*func)(void *), void *arg)
   struct task_t *task;
 
   /* create task */
-  task = create_init_task(1);
+  task = create_init_task();
   if (!task)
     return NULL;
+
+  /* use kernel page directory */
+  task->pgd = kernel_pgd;
 
   /* set registers */
   regs = (struct task_registers_t *) task->esp;
@@ -118,9 +115,12 @@ struct task_t *create_user_elf_task(const char *path)
   struct task_t *task;
 
   /* create task */
-  task = create_init_task(0);
+  task = create_init_task();
   if (!task)
     return NULL;
+
+  /* clone page directory */
+  task->pgd = clone_page_directory(current_task->pgd);
 
   /* set registers */
   regs = (struct task_registers_t *) task->esp;
