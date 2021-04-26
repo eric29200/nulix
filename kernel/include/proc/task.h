@@ -25,7 +25,9 @@ struct task_t {
   uint32_t expires;
   char *path;
   dev_t tty;
-  struct elf_layout_t *elf_layout;
+  uint32_t user_entry;
+  uint32_t user_stack;
+  uint32_t user_stack_size;
   struct page_directory_t *pgd;
   struct file_t *filp[NR_OPEN];
   struct list_head_t list;

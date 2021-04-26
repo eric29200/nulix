@@ -23,12 +23,9 @@ static void task_entry(void (*func)(void *), void *arg)
 static void task_elf_entry(struct task_t *task, char *path)
 {
   /* load elf header */
-  task->elf_layout = elf_load(path);
   task->path = path;
-
-  /* execute elf file */
-  if (task->elf_layout)
-    enter_user_mode(task->elf_layout->stack, task->elf_layout->entry, TASK_RETURN_ADDRESS);
+  if (elf_load(path) == 0)
+    enter_user_mode(task->user_stack, task->user_entry, TASK_RETURN_ADDRESS);
 }
 
 /*
@@ -50,7 +47,7 @@ struct task_t *create_init_task(uint8_t kernel)
   task->state = TASK_NEW;
   task->expires = 0;
   task->path = NULL;
-  task->elf_layout = NULL;
+  task->user_stack_size = 0;
   INIT_LIST_HEAD(&task->list);
 
   /* init open files */
@@ -151,6 +148,8 @@ struct task_t *create_user_elf_task(const char *path)
  */
 void destroy_task(struct task_t *task)
 {
+  char *user_stack;
+
   if (!task)
     return;
 
@@ -158,9 +157,11 @@ void destroy_task(struct task_t *task)
   if (task->path)
     kfree(task->path);
 
-  /* free ELF layout */
-  if (task->elf_layout)
-    kfree(task->elf_layout);
+  /* free user stack */
+  if (task->user_stack_size > 0) {
+    user_stack = (char *) task->user_stack - task->user_stack_size;
+    kfree(user_stack);
+  }
 
   /* free kernel stack */
   kfree((void *) (task->kernel_stack - STACK_SIZE));

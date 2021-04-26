@@ -37,32 +37,37 @@ static int elf_check(struct elf_header_t *elf_header)
 /*
  * Load an ELF file in memory.
  */
-struct elf_layout_t *elf_load(const char *path)
+int elf_load(const char *path)
 {
-  struct elf_layout_t *elf_layout = NULL;
   struct elf_header_t *elf_header;
   struct elf_prog_header_t *ph;
   struct stat_t statbuf;
   char *buf = NULL;
   uint32_t i;
-  int fd;
+  int fd, ret = 0;
 
   /* get file size */
-  if (sys_stat((char *) path, &statbuf) < 0)
-    return NULL;
+  ret = sys_stat((char *) path, &statbuf);
+  if (ret < 0)
+    return ret;
 
   /* allocate buffer */
   buf = (char *) kmalloc(statbuf.st_size);
-  if (!buf)
+  if (!buf) {
+    ret = -ENOMEM;
     goto out;
+  }
 
   /* open file */
   fd = sys_open(path);
-  if (fd < 0)
+  if (fd < 0) {
+    ret = fd;
     goto out;
+  }
 
   /* load file in memory */
   if ((uint32_t) sys_read(fd, buf, statbuf.st_size) != statbuf.st_size) {
+    ret = -EINVAL;
     sys_close(fd);
     goto out;
   }
@@ -73,11 +78,6 @@ struct elf_layout_t *elf_load(const char *path)
   /* check elf header */
   elf_header = (struct elf_header_t *) buf;
   if (elf_check(elf_header) != 0)
-    goto out;
-
-  /* create elf layout */
-  elf_layout = (struct elf_layout_t *) kmalloc(sizeof(struct elf_layout_t));
-  if (!elf_layout)
     goto out;
 
   /* copy elf in memory */
@@ -91,19 +91,20 @@ struct elf_layout_t *elf_load(const char *path)
     memcpy((void *) ph->p_vaddr, buf + ph->p_offset, ph->p_filesz);
 
     /* update stack position */
-    elf_layout->stack = ph->p_vaddr + ph->p_filesz;
+    current_task->user_stack = ph->p_vaddr + ph->p_filesz;
   }
 
   /* allocate a stack just after the binary */
-  elf_layout->stack = PAGE_ALIGN_UP(elf_layout->stack);
+  current_task->user_stack = PAGE_ALIGN_UP(current_task->user_stack);
   for (i = 0; i < USTACK_SIZE / PAGE_SIZE; i++)
-    alloc_frame(get_page(elf_layout->stack + i * PAGE_SIZE, 1, current_task->pgd), 0, 1);
+    alloc_frame(get_page(current_task->user_stack + i * PAGE_SIZE, 1, current_task->pgd), 0, 1);
 
   /* set elf entry point */
-  elf_layout->entry = elf_header->e_entry;
-  elf_layout->stack += USTACK_SIZE;
+  current_task->user_entry = elf_header->e_entry;
+  current_task->user_stack += USTACK_SIZE;
+  current_task->user_stack_size = USTACK_SIZE;
 out:
   if (buf)
     kfree(buf);
-  return elf_layout;
+  return ret;
 }
