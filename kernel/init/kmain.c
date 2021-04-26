@@ -4,7 +4,6 @@
 #include <x86/io.h>
 #include <mm/mm.h>
 #include <proc/sched.h>
-#include <proc/wait.h>
 #include <grub/multiboot.h>
 #include <drivers/serial.h>
 #include <drivers/pit.h>
@@ -14,7 +13,6 @@
 #include <drivers/keyboard.h>
 #include <fs/fs.h>
 #include <sys/syscall.h>
-#include <semaphore.h>
 #include <stdio.h>
 #include <string.h>
 #include <delay.h>
