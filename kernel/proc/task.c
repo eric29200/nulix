@@ -35,7 +35,7 @@ static void task_elf_entry(struct task_t *task, char *path)
 /*
  * Create and init a task.
  */
-struct task_t *create_init_task()
+static struct task_t *create_task()
 {
   struct task_t *task;
   void *stack;
@@ -82,7 +82,7 @@ struct task_t *create_kernel_task(void (*func)(void))
   struct task_t *task;
 
   /* create task */
-  task = create_init_task();
+  task = create_task();
   if (!task)
     return NULL;
 
@@ -118,7 +118,7 @@ static struct task_t *fork_task(struct task_t *parent)
   int i;
 
   /* create task */
-  task = create_init_task();
+  task = create_task();
   if (!task)
     return NULL;
 
@@ -192,7 +192,7 @@ struct task_t *create_user_elf_task(const char *path)
   struct task_t *task;
 
   /* create task */
-  task = create_init_task();
+  task = create_task();
   if (!task)
     return NULL;
 

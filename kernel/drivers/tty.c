@@ -5,10 +5,10 @@
 #include <delay.h>
 #include <dev.h>
 
-#define TTYS_CONSOLE      4
+#define NB_TTYS         4
 
 /* global ttys */
-static struct tty_t tty_table[TTYS_CONSOLE];
+static struct tty_t tty_table[NB_TTYS];
 static uint32_t current_tty;
 
 /*
@@ -20,18 +20,18 @@ static struct tty_t *tty_lookup(dev_t dev)
 
   /* current process tty */
   if (dev == DEV_TTY) {
-    for (i = 0; i < TTYS_CONSOLE; i++)
+    for (i = 0; i < NB_TTYS; i++)
       if (current_task->tty == tty_table[i].dev)
         return &tty_table[i];
 
     return NULL;
   }
 
-  /* system console = current tty */
-  if (minor(dev) == 0 || dev == DEV_CONSOLE)
-    return &tty_table[current_tty];
+  /* asked tty */
+  if (minor(dev) >= 0 && minor(dev) < NB_TTYS)
+    return &tty_table[minor(dev)];
 
-  return &tty_table[minor(dev) - 1];
+  return NULL;
 }
 
 /*
@@ -127,7 +127,7 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
  */
 void tty_change(uint32_t n)
 {
-  if (n < TTYS_CONSOLE) {
+  if (n < NB_TTYS) {
     current_tty = n;
     tty_table[current_tty].screen.dirty = 1;
   }
@@ -153,7 +153,7 @@ int init_tty()
   int i;
 
   /* init each tty */
-  for (i = 0; i < TTYS_CONSOLE; i++) {
+  for (i = 0; i < NB_TTYS; i++) {
     tty_table[i].dev = DEV_TTY1 + i;
     tty_table[i].r_pos = 0;
     tty_table[i].w_pos = 0;
@@ -162,8 +162,8 @@ int init_tty()
     spin_lock_init(&tty_table[i].lock);
   }
 
-  /* set current tty to console */
-  current_tty = DEV_CONSOLE;
+  /* set current tty to tty0 */
+  current_tty = 0;
 
   /* create update tty task */
   update_task = create_kernel_task(tty_refresh);

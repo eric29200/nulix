@@ -20,7 +20,5 @@ int main(void)
     close(fd);
   }
 
-  for (;;);
-
   return 0;
 }
