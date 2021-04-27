@@ -10,14 +10,6 @@
 extern void enter_user_mode(uint32_t esp, uint32_t eip, uint32_t return_address);
 
 /*
- * Kernel task trampoline (used to end tasks properly).
- */
-static void task_entry(void (*func)(void *), void *arg)
-{
-  func(arg);
-}
-
-/*
  * Kernel ELF task trampoline (used to end tasks properly).
  */
 static void task_elf_entry(struct task_t *task, char *path)
@@ -72,7 +64,7 @@ struct task_t *create_init_task()
 /*
  * Create a task.
  */
-struct task_t *create_kernel_task(void (*func)(void *), void *arg)
+struct task_t *create_kernel_task(void (*func)(void))
 {
   struct task_registers_t *regs;
   struct task_t *task;
@@ -90,10 +82,8 @@ struct task_t *create_kernel_task(void (*func)(void *), void *arg)
   memset(regs, 0, sizeof(struct task_registers_t));
 
   /* set eip to function */
-  regs->parameter1 = (uint32_t) func;
-  regs->parameter2 = (uint32_t) arg;
   regs->return_address = TASK_RETURN_ADDRESS;
-  regs->eip = (uint32_t) task_entry;
+  regs->eip = (uint32_t) func;
   regs->eax = 0;
   regs->ecx = 0;
   regs->edx = 0;

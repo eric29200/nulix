@@ -136,10 +136,8 @@ void tty_change(uint32_t n)
 /*
  * TTY update.
  */
-static void tty_refresh(void *a)
+static void tty_refresh()
 {
-  UNUSED(a);
-
   for (;;) {
     msleep(TTY_DELAY_UPDATE_MS);
     screen_update(&tty_table[current_tty].screen);
@@ -168,7 +166,7 @@ int init_tty()
   current_tty = DEV_CONSOLE;
 
   /* create update tty task */
-  update_task = create_kernel_task(tty_refresh, NULL);
+  update_task = create_kernel_task(tty_refresh);
   if (!update_task)
     return -ENOMEM;
 

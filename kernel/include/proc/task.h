@@ -45,7 +45,7 @@ struct task_registers_t {
   uint32_t parameter3;
 };
 
-struct task_t *create_kernel_task(void (*func)(void *), void *arg);
+struct task_t *create_kernel_task(void (*func)(void));
 struct task_t *create_user_elf_task(const char *path);
 void destroy_task(struct task_t *task);
 

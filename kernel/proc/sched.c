@@ -40,10 +40,8 @@ pid_t get_next_pid()
 /*
  * Idle task (used if no tasks are ready).
  */
-void idle_func(void *arg)
+void idle_func()
 {
-  UNUSED(arg);
-
   for (;;)
     halt();
 }
@@ -59,12 +57,12 @@ int init_scheduler(void (*init_func)())
   spin_lock_init(&sched_lock);
 
   /* create idle task */
-  idle_task = create_kernel_task(idle_func, NULL);
+  idle_task = create_kernel_task(idle_func);
   if (!idle_task)
     return -ENOMEM;
 
   /* create init task */
-  init_task = create_kernel_task(init_func, NULL);
+  init_task = create_kernel_task(init_func);
   if (!init_task)
     return -ENOMEM;
 
