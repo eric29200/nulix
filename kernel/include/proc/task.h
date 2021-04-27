@@ -28,6 +28,7 @@ struct task_t {
   uint32_t user_entry;
   uint32_t user_stack;
   uint32_t user_stack_size;
+  struct registers_t user_regs;
   struct page_directory_t *pgd;
   struct file_t *filp[NR_OPEN];
   struct list_head_t list;
@@ -47,6 +48,7 @@ struct task_registers_t {
 
 struct task_t *create_kernel_task(void (*func)(void));
 struct task_t *create_user_elf_task(const char *path);
+pid_t sys_fork();
 void destroy_task(struct task_t *task);
 
 #endif

@@ -1,4 +1,5 @@
 #include <x86/interrupt.h>
+#include <x86/tss.h>
 #include <mm/mm.h>
 #include <proc/task.h>
 #include <proc/sched.h>
@@ -8,6 +9,17 @@
 
 /* switch to user mode (defined in x86/scheduler.s) */
 extern void enter_user_mode(uint32_t esp, uint32_t eip, uint32_t return_address);
+extern void return_user_mode(struct registers_t *regs);
+
+/*
+ * Kernel fork trampoline.
+ */
+static void task_user_entry(struct task_t *task)
+{
+  /* return to user mode */
+  tss_set_stack(0x10, task->kernel_stack);
+  return_user_mode(&task->user_regs);
+}
 
 /*
  * Kernel ELF task trampoline (used to end tasks properly).
@@ -94,6 +106,78 @@ struct task_t *create_kernel_task(void (*func)(void))
   regs->edi = 0;
 
   return task;
+}
+
+/*
+ * Fork a task.
+ */
+static struct task_t *fork_task(struct task_t *parent)
+{
+  struct task_registers_t *regs;
+  struct task_t *task;
+  int i;
+
+  /* create task */
+  task = create_init_task();
+  if (!task)
+    return NULL;
+
+  /* duplicate page directory */
+  task->pgd = clone_page_directory(parent->pgd);
+
+  /* copy open files */
+  for (i = 0; i < NR_OPEN; i++)
+    task->filp[i] = parent->filp[i];
+
+  /* set user stack to parent */
+  task->user_stack = parent->user_stack;
+  task->user_stack_size = parent->user_stack_size;
+
+  memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers_t));
+  task->user_regs.eax = 0;
+
+  /* set registers */
+  regs = (struct task_registers_t *) task->esp;
+  memset(regs, 0, sizeof(struct task_registers_t));
+
+  /* set eip to function */
+  regs->parameter1 = (uint32_t) task;
+  regs->return_address = TASK_RETURN_ADDRESS;
+  regs->eip = (uint32_t) task_user_entry;
+  regs->eax = 0;
+  regs->ecx = 0;
+  regs->edx = 0;
+  regs->ebx = 0;
+  regs->esp = 0;
+  regs->ebp = 0;
+  regs->esi = 0;
+  regs->edi = 0;
+
+  return task;
+}
+
+/*
+ * Fork system call.
+ */
+pid_t sys_fork()
+{
+  struct task_t *child;
+  int ret;
+
+  /* create child */
+  child = fork_task(current_task);
+  if (!child)
+    return -ENOMEM;
+
+  /* run child */
+  ret = run_task(child);
+  if (ret != 0) {
+    destroy_task(child);
+    return ret;
+  }
+
+  /* return child pid */
+  return child->pid;
 }
 
 /*

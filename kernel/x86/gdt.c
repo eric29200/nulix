@@ -71,6 +71,7 @@ void init_gdt()
   tss_entry.ds = 0x13;
   tss_entry.fs = 0x13;
   tss_entry.gs = 0x13;
+  tss_entry.iomap_base = sizeof(struct tss_entry_t);
 
   /* flush gdt */
   gdt_flush((uint32_t) &gdt_ptr);

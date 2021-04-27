@@ -12,6 +12,16 @@
 #define __NR_close        7
 
 /*
+ * System call with no argument.
+ */
+static inline int syscall0(int n)
+{
+  int ret;
+  __asm__ __volatile__("int $0x80" : "=a" (ret) : "0" (n));
+  return ret;
+}
+
+/*
  * System call with 1 argument.
  */
 static inline int syscall1(int n, int p1)
@@ -42,11 +52,19 @@ static inline int syscall3(int n, int p1, int p2, int p3)
 }
 
 /*
+ * Fork system call.
+ */
+static inline pid_t fork()
+{
+  return syscall0(__NR_fork);
+}
+
+/*
  * Read system call.
  */
 static inline ssize_t read(int fd, void *buf, size_t count)
 {
-  return syscall3 (__NR_read, fd, (int) buf, count);
+  return syscall3(__NR_read, fd, (int) buf, count);
 }
 
 /*
@@ -54,7 +72,7 @@ static inline ssize_t read(int fd, void *buf, size_t count)
  */
 static inline ssize_t write(int fd, void *buf, size_t count)
 {
-  return syscall3 (__NR_write, fd, (int) buf, count);
+  return syscall3(__NR_write, fd, (int) buf, count);
 }
 
 /*

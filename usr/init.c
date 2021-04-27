@@ -6,6 +6,9 @@ int main(void)
   char *msg = "Hello";
   int fd;
 
+  /* fork */
+  fork();
+
   /* open tty 0 */
   fd = open(tty);
 
@@ -16,6 +19,8 @@ int main(void)
     /* close tty 0 */
     close(fd);
   }
+
+  for (;;);
 
   return 0;
 }

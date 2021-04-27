@@ -1,10 +1,12 @@
 #include <sys/syscall.h>
 #include <x86/interrupt.h>
+#include <proc/sched.h>
+#include <string.h>
 
 /* system calls table */
 static const void *syscalls[] = {
   [__NR_exit]       = NULL,
-  [__NR_fork]       = NULL,
+  [__NR_fork]       = sys_fork,
   [__NR_read]       = sys_read,
   [__NR_write]      = sys_write,
   [__NR_mknod]      = NULL,
@@ -17,8 +19,15 @@ static const void *syscalls[] = {
  */
 static void syscall_handler(struct registers_t *regs)
 {
-  if (regs->eax < SYSCALLS_NUM && syscalls[regs->eax] != NULL)
-    regs->eax = ((syscall_f) syscalls[regs->eax])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
+  /* system call not handled */
+  if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL)
+    return;
+
+  /* save current registers */
+  memcpy(&current_task->user_regs, regs, sizeof(struct registers_t));
+
+  /* execute system call */
+  regs->eax = ((syscall_f) syscalls[regs->eax])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
 }
 
 /*
