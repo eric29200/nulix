@@ -45,6 +45,7 @@ int sys_open(const char *pathname)
   file->f_mode = inode->i_mode;
   file->f_inode = inode;
   file->f_pos = 0;
+  file->f_ref = 1;
   current_task->filp[fd] = file;
 
   return fd;
@@ -65,8 +66,13 @@ int sys_close(int fd)
     return -ENOMEM;
 
   current_task->filp[fd] = NULL;
-  iput(filp->f_inode);
-  kfree(filp);
+
+  /* release file if not used anymore */
+  filp->f_ref--;
+  if (filp->f_ref <= 0) {
+    iput(filp->f_inode);
+    kfree(filp);
+  }
 
   return 0;
 }

@@ -6,11 +6,11 @@ int main(void)
   char *msg = "Hello";
   int fd;
 
-  /* fork */
-  fork();
-
   /* open tty 0 */
   fd = open(tty);
+
+  /* fork */
+  fork();
 
   if (fd >= 0) {
     /* write to tty0 */

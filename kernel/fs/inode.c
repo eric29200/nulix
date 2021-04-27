@@ -10,7 +10,7 @@
 /*
  * Read an inode.
  */
-struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
+static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
 {
   struct minix_inode_t *minix_inode;
   struct inode_t *inode;
@@ -36,6 +36,7 @@ struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
   for (j = 0; j < 9; j++)
     inode->i_zone[j] = minix_inode[i].i_zone[j];
   inode->i_ino = ino;
+  inode->i_ref = 0;
   inode->i_sb = sb;
   inode->i_dev = sb->s_dev;
 
@@ -84,10 +85,32 @@ int bmap(struct inode_t *inode, int block)
 }
 
 /*
+ * Get an inode.
+ */
+struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino)
+{
+  struct inode_t *inode;
+
+  /* read inode */
+  inode = read_inode(sb, ino);
+
+  /* update reference count */
+  if (inode)
+    inode->i_ref++;
+
+  return inode;
+}
+
+/*
  * Release an inode.
  */
 void iput(struct inode_t *inode)
 {
-  if (inode && inode->i_ino != MINIX_ROOT_INODE)
+  if (!inode)
+    return;
+
+  /* free inode if not used anymore */
+  inode->i_ref--;
+  if (inode->i_ref <= 0 && inode->i_ino != MINIX_ROOT_INODE)
     kfree(inode);
 }

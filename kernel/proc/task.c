@@ -126,8 +126,11 @@ static struct task_t *fork_task(struct task_t *parent)
   task->pgd = clone_page_directory(parent->pgd);
 
   /* copy open files */
-  for (i = 0; i < NR_OPEN; i++)
+  for (i = 0; i < NR_OPEN; i++) {
     task->filp[i] = parent->filp[i];
+    if (task->filp[i])
+      task->filp[i]->f_ref++;
+  }
 
   /* set user stack to parent */
   task->user_stack = parent->user_stack;

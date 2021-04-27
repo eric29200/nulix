@@ -58,6 +58,7 @@ struct inode_t {
   uint8_t i_nlinks;
   uint16_t i_zone[9];
   ino_t i_ino;
+  int i_ref;
   struct minix_super_block_t *i_sb;
   struct ata_device_t *i_dev;
 };
@@ -68,6 +69,7 @@ struct inode_t {
 struct file_t {
   uint16_t f_mode;
   off_t f_pos;
+  int f_ref;
   struct inode_t *f_inode;
 };
 
@@ -94,7 +96,7 @@ struct stat_t {
   time_t st_ctime;
 };
 
-struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino);
+struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 
 struct inode_t *namei(const char *pathname);

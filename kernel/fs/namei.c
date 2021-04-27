@@ -15,8 +15,8 @@ extern struct minix_super_block_t *root_sb;
 static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t name_len)
 {
   struct minix_dir_entry_t *entries = NULL;
-  struct inode_t *ret = NULL;
   uint32_t nb_entries, i, block_nr;
+  struct inode_t *ret = NULL;
 
   /* check name length */
   if (name_len > MINIX_FILENAME_LEN || name_len == 0)
@@ -38,7 +38,7 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
 
     /* check name */
     if (strncmp(name, entries[i % MINIX_DIR_ENTRIES_PER_BLOCK].name, name_len) == 0) {
-      ret = read_inode(dir->i_sb, entries[i % MINIX_DIR_ENTRIES_PER_BLOCK].inode);
+      ret = iget(dir->i_sb, entries[i % MINIX_DIR_ENTRIES_PER_BLOCK].inode);
       break;
     }
   }
