@@ -296,7 +296,7 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
   /* load elf binary */
   ret = elf_load(path);
   if (ret != 0)
-    return ret;
+    goto err;
 
   /* set path */
   current_task->path = strdup(path);
