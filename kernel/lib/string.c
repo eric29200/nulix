@@ -182,3 +182,18 @@ void *memcpy(void *dest, const void *src, size_t n)
 
   return dest;
 }
+
+/*
+ * Get number of entries in a pointer array.
+ */
+int array_nb_pointers(void *array)
+{
+  const uint32_t *a;
+
+  if (!array)
+    return 0;
+
+  a = (const uint32_t *) array;
+  for (; *a; a++);
+  return a - (uint32_t *) array;
+}

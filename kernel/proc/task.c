@@ -225,7 +225,62 @@ struct task_t *create_user_elf_task(const char *path)
  */
 int sys_execve(const char *path, const char *argv[], char *envp[])
 {
-  int ret;
+  char **kernel_argv = NULL, **kernel_envp = NULL;
+  int ret, i, argv_len, envp_len;
+  uint32_t stack;
+
+  /* get argv and envp size */
+  argv_len = array_nb_pointers(argv);
+  envp_len = array_nb_pointers(envp);
+
+  /* copy argv in kernel memory */
+  if (argv_len == 0) {
+    kernel_argv = NULL;
+  } else {
+    kernel_argv = (char **) kmalloc(sizeof(char *) * argv_len);
+    if (!kernel_argv) {
+      ret = -ENOMEM;
+      goto err;
+    }
+
+    for (i = 0; i < argv_len; i++)
+      kernel_argv[i] = NULL;
+
+    for (i = 0; i < argv_len; i++) {
+      if (argv[i]) {
+        kernel_argv[i] = strdup(argv[i]);
+        if (!kernel_argv[i]) {
+          ret = -ENOMEM;
+          goto err;
+        }
+      }
+    }
+  }
+
+  /* copy envp in kernel memory */
+  if (envp_len == 0) {
+    kernel_envp = NULL;
+  } else {
+    kernel_envp = (char **) kmalloc(sizeof(char *) * envp_len);
+    if (!kernel_envp) {
+      ret = -ENOMEM;
+      goto err;
+    }
+
+    for (i = 0; i < envp_len; i++)
+      kernel_envp[i] = NULL;
+
+
+    for (i = 0; i < envp_len; i++) {
+      if (envp[i]) {
+        kernel_envp[i] = strdup(envp[i]);
+        if (!kernel_envp[i]) {
+          ret = -ENOMEM;
+          goto err;
+        }
+      }
+    }
+  }
 
   /* load elf binary */
   ret = elf_load(path);
@@ -235,11 +290,37 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
   /* set path */
   current_task->path = strdup(path);
 
+  /* put argc, argv and envp in kernel stack */
+  stack = current_task->user_stack;
+  stack -= 4;
+  *((uint32_t *) stack) = (uint32_t) kernel_envp;
+  stack -= 4;
+  *((uint32_t *) stack) = (uint32_t) kernel_argv;
+  stack -= 4;
+  *((uint32_t *) stack) = argv_len;
+
   /* go to user mode */
   tss_set_stack(0x10, current_task->kernel_stack);
-  enter_user_mode(current_task->user_stack, current_task->user_entry, TASK_RETURN_ADDRESS);
+  enter_user_mode(stack, current_task->user_entry, TASK_RETURN_ADDRESS);
 
   return 0;
+err:
+  if (kernel_argv) {
+    for (i = 0; i < argv_len; i++)
+      if (kernel_argv[i])
+        kfree(kernel_argv[i]);
+
+    kfree(kernel_argv);
+  }
+
+  if (kernel_envp) {
+    for (i = 0; i < envp_len; i++)
+      if (kernel_envp[i])
+        kfree(kernel_envp[i]);
+
+    kfree(kernel_envp);
+  }
+  return ret;
 }
 
 /*

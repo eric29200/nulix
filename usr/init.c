@@ -4,11 +4,12 @@
 
 pid_t spawn_shell()
 {
+  char *args[] = {"aa", "bb"};
   pid_t pid;
 
   pid = fork();
   if (pid == 0) {
-    execve("/sbin/sh", NULL, NULL);
+    execve("/sbin/sh", args, NULL);
     return -1;
   }
 

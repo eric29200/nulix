@@ -1,9 +1,8 @@
 #include <unistd.h>
 
-int main(void)
+int main(int argc, char *argv[])
 {
   char *tty = "/dev/tty0";
-  char *msg = "Hello";
   int fd;
 
   /* open tty 0 */
@@ -11,7 +10,8 @@ int main(void)
 
   if (fd >= 0) {
     /* write to tty0 */
-    write(fd, msg, 5);
+    write(fd, argv[0], 2);
+    write(fd, argv[1], 2);
 
     /* close tty 0 */
     close(fd);
