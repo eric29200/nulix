@@ -104,6 +104,12 @@ void page_fault_handler(struct registers_t *regs)
     return;
   }
 
+  /* user page fault : allocate page */
+  if (fault_addr >= UMEM_START) {
+    alloc_frame(get_page(fault_addr, 1, current_task->pgd), 0, 1);
+    return;
+  }
+
   /* get errors informations */
   int present = !(regs->err_code & 0x1);
   int rw = regs->err_code & 0x2;

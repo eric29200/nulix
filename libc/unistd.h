@@ -15,6 +15,7 @@
 #define __NR_dup          10
 #define __NR_dup2         11
 #define __NR_execve       12
+#define __NR_sbrk         13
 
 /*
  * System call with no argument.
@@ -102,6 +103,14 @@ static inline int close(int fd)
 static inline int execve(const char *path, const char *argv[], char *envp[])
 {
   return syscall3(__NR_execve, (int) path, (int) argv, (int) envp);
+}
+
+/*
+ * Sbrk system call.
+ */
+static inline void *sbrk(size_t n)
+{
+  return (void *) syscall1(__NR_sbrk, n);
 }
 
 #endif

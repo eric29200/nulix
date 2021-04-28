@@ -3,7 +3,7 @@
 
 #include <fs/fs.h>
 
-#define SYSCALLS_NUM      (__NR_execve + 1)
+#define SYSCALLS_NUM      (__NR_sbrk + 1)
 
 #define __NR_exit         1
 #define __NR_fork         2
@@ -17,6 +17,7 @@
 #define __NR_dup          10
 #define __NR_dup2         11
 #define __NR_execve       12
+#define __NR_sbrk         13
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 

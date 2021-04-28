@@ -17,6 +17,7 @@ static const void *syscalls[] = {
   [__NR_dup]        = NULL,
   [__NR_dup2]       = NULL,
   [__NR_execve]     = sys_execve,
+  [__NR_sbrk]       = sys_sbrk,
 };
 
 /*

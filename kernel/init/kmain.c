@@ -27,12 +27,9 @@ extern uint32_t kernel_end;
  */
 static void kinit()
 {
-  struct task_t *task;
-
-  /* create init task */
-  task = create_user_elf_task("/sbin/init");
-  if (task)
-    run_task(task);
+  /* spawn init process */
+  if (spawn_init() != 0)
+    panic("Cannot spawn init process");
 }
 
 /*

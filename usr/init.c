@@ -4,7 +4,7 @@
 
 pid_t spawn_shell()
 {
-  char *args[] = {"aa", "bb"};
+  const char *args[] = {"aa", "bb"};
   pid_t pid;
 
   pid = fork();

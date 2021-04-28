@@ -52,6 +52,8 @@ static struct task_t *create_task()
   task->expires = 0;
   task->path = NULL;
   task->user_stack_size = 0;
+  task->start_brk = 0;
+  task->end_brk = 0;
   INIT_LIST_HEAD(&task->list);
 
   /* init open files */
@@ -136,6 +138,11 @@ static struct task_t *fork_task(struct task_t *parent)
   task->user_stack = parent->user_stack;
   task->user_stack_size = parent->user_stack_size;
 
+  /* set user mapped memory to parent */
+  task->start_brk = parent->start_brk;
+  task->end_brk = parent->end_brk;
+
+  /* duplicate parent registers */
   memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers_t));
   task->user_regs.eax = 0;
 
@@ -184,9 +191,9 @@ pid_t sys_fork()
 }
 
 /*
- * Create an ELF task.
+ * Spawn init process.
  */
-struct task_t *create_user_elf_task(const char *path)
+int spawn_init()
 {
   struct task_registers_t *regs;
   struct task_t *task;
@@ -194,10 +201,14 @@ struct task_t *create_user_elf_task(const char *path)
   /* create task */
   task = create_task();
   if (!task)
-    return NULL;
+    return -ENOMEM;
 
   /* clone page directory */
   task->pgd = clone_page_directory(current_task->pgd);
+
+  /* set brk to end of user stack */
+  task->start_brk = task->user_stack + PAGE_SIZE;
+  task->end_brk = task->user_stack + PAGE_SIZE;
 
   /* set registers */
   regs = (struct task_registers_t *) task->esp;
@@ -205,7 +216,7 @@ struct task_t *create_user_elf_task(const char *path)
 
   /* set eip */
   regs->parameter1 = (uint32_t) task;
-  regs->parameter2 = (uint32_t) strdup(path);
+  regs->parameter2 = (uint32_t) strdup("/sbin/init");
   regs->return_address = TASK_RETURN_ADDRESS;
   regs->eip = (uint32_t) task_elf_entry;
   regs->eax = 0;
@@ -217,7 +228,7 @@ struct task_t *create_user_elf_task(const char *path)
   regs->esi = 0;
   regs->edi = 0;
 
-  return task;
+  return run_task(task);
 }
 
 /*
@@ -226,7 +237,8 @@ struct task_t *create_user_elf_task(const char *path)
 int sys_execve(const char *path, const char *argv[], char *envp[])
 {
   char **kernel_argv = NULL, **kernel_envp = NULL;
-  int ret, i, argv_len, envp_len;
+  char **user_argv = NULL, **user_envp = NULL;
+  int ret, i, argv_len, envp_len, len;
   uint32_t stack;
 
   /* get argv and envp size */
@@ -270,7 +282,6 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
     for (i = 0; i < envp_len; i++)
       kernel_envp[i] = NULL;
 
-
     for (i = 0; i < envp_len; i++) {
       if (envp[i]) {
         kernel_envp[i] = strdup(envp[i]);
@@ -290,12 +301,48 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
   /* set path */
   current_task->path = strdup(path);
 
+  /* set brk to end of user stack */
+  current_task->start_brk = current_task->user_stack + PAGE_SIZE;
+  current_task->end_brk = current_task->user_stack + PAGE_SIZE;
+
+  /* copy back argv to user address space */
+  user_argv = (char **) sys_sbrk(argv_len + 1);
+  memset(user_argv, 0, argv_len + 1);
+  if (kernel_argv) {
+    for (i = 0; i < argv_len; i++) {
+      if (kernel_argv[i]) {
+        len = strlen(kernel_argv[i]);
+        user_argv[i] = (char *) sys_sbrk(len + 1);
+        memset(user_argv[i], '0', len + 1);
+        memcpy(user_argv[i], kernel_argv[i], len);
+        kfree(kernel_argv[i]);
+      }
+    }
+    kfree(kernel_argv);
+  }
+
+  /* copy back envp to user address space */
+  user_envp = (char **) sys_sbrk(envp_len + 1);
+  memset(user_envp, 0, envp_len + 1);
+  if (kernel_envp) {
+    for (i = 0; i < envp_len; i++) {
+      if (kernel_envp[i]) {
+        len = strlen(kernel_envp[i]);
+        user_envp[i] = (char *) sys_sbrk(len + 1);
+        memset(user_envp[i], '0', len + 1);
+        memcpy(user_envp[i], kernel_envp[i], len);
+        kfree(kernel_envp[i]);
+      }
+    }
+    kfree(kernel_envp);
+  }
+
   /* put argc, argv and envp in kernel stack */
   stack = current_task->user_stack;
   stack -= 4;
-  *((uint32_t *) stack) = (uint32_t) kernel_envp;
+  *((uint32_t *) stack) = (uint32_t) user_envp;
   stack -= 4;
-  *((uint32_t *) stack) = (uint32_t) kernel_argv;
+  *((uint32_t *) stack) = (uint32_t) user_argv;
   stack -= 4;
   *((uint32_t *) stack) = argv_len;
 
@@ -321,6 +368,16 @@ err:
     kfree(kernel_envp);
   }
   return ret;
+}
+
+/*
+ * Change data segment size.
+ */
+void *sys_sbrk(size_t n)
+{
+  void *brk = (void *) current_task->end_brk;
+  current_task->end_brk += n;
+  return brk;
 }
 
 /*

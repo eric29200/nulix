@@ -96,7 +96,7 @@ int elf_load(const char *path)
 
   /* allocate a stack just after the binary */
   current_task->user_stack = PAGE_ALIGN_UP(current_task->user_stack);
-  for (i = 0; i < USTACK_SIZE / PAGE_SIZE; i++)
+  for (i = 0; i <= USTACK_SIZE / PAGE_SIZE; i++)
     alloc_frame(get_page(current_task->user_stack + i * PAGE_SIZE, 1, current_task->pgd), 0, 1);
 
   /* set elf entry point */
