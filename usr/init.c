@@ -4,7 +4,7 @@
 
 int main(void)
 {
-  const char *args[] = {"/dev/tty0"};
+  char *args[] = {"/dev/tty0"};
   pid_t pid;
 
   /* spawn a shell on first tty */

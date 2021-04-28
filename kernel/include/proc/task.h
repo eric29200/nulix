@@ -53,7 +53,7 @@ void destroy_task(struct task_t *task);
 int spawn_init();
 
 pid_t sys_fork();
-int sys_execve(const char *path, const char *argv[], char *envp[]);
+int sys_execve(const char *path, char *const argv[], char *const envp[]);
 void *sys_sbrk(size_t n);
 
 #endif

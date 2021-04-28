@@ -100,7 +100,7 @@ static inline int close(int fd)
 /*
  * Execve system call.
  */
-static inline int execve(const char *path, const char *argv[], char *envp[])
+static inline int execve(const char *path, char *const argv[], char *const envp[])
 {
   return syscall3(__NR_execve, (int) path, (int) argv, (int) envp);
 }

@@ -234,7 +234,7 @@ int spawn_init()
 /*
  * Execve system call.
  */
-int sys_execve(const char *path, const char *argv[], char *envp[])
+int sys_execve(const char *path, char *const argv[], char *const envp[])
 {
   char **kernel_argv = NULL, **kernel_envp = NULL;
   char **user_argv = NULL, **user_envp = NULL;
@@ -242,8 +242,8 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
   uint32_t stack;
 
   /* get argv and envp size */
-  argv_len = array_nb_pointers(argv);
-  envp_len = array_nb_pointers(envp);
+  argv_len = array_nb_pointers((void *) argv);
+  envp_len = array_nb_pointers((void *) envp);
 
   /* copy argv in kernel memory */
   if (argv_len == 0) {
