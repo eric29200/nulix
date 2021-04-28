@@ -11,3 +11,4 @@ hdd.img
 tmp
 tmp/*
 usr/init
+usr/sh
