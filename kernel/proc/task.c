@@ -232,6 +232,9 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
   if (ret != 0)
     return ret;
 
+  /* set path */
+  current_task->path = strdup(path);
+
   /* go to user mode */
   tss_set_stack(0x10, current_task->kernel_stack);
   enter_user_mode(current_task->user_stack, current_task->user_entry, TASK_RETURN_ADDRESS);
