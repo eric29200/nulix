@@ -104,8 +104,8 @@ void page_fault_handler(struct registers_t *regs)
     return;
   }
 
-  /* user page fault : allocate page */
-  if (fault_addr >= UMEM_START) {
+  /* user page fault : allocate page if fault address is inside brk */
+  if (current_task && fault_addr >= current_task->start_brk && fault_addr <= current_task->end_brk) {
     alloc_frame(get_page(fault_addr, 1, current_task->pgd), 0, 1);
     return;
   }

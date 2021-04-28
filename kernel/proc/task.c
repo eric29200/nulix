@@ -306,8 +306,8 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
   current_task->end_brk = current_task->user_stack + PAGE_SIZE;
 
   /* copy back argv to user address space */
-  user_argv = (char **) sys_sbrk(argv_len + 1);
-  memset(user_argv, 0, argv_len + 1);
+  user_argv = (char **) sys_sbrk(sizeof(char *) * argv_len);
+  memset(user_argv, 0, sizeof(char *) * argv_len);
   if (kernel_argv) {
     for (i = 0; i < argv_len; i++) {
       if (kernel_argv[i]) {
@@ -322,8 +322,8 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
   }
 
   /* copy back envp to user address space */
-  user_envp = (char **) sys_sbrk(envp_len + 1);
-  memset(user_envp, 0, envp_len + 1);
+  user_envp = (char **) sys_sbrk(sizeof(char *) * envp_len);
+  memset(user_envp, 0, sizeof(char *) * envp_len);
   if (kernel_envp) {
     for (i = 0; i < envp_len; i++) {
       if (kernel_envp[i]) {
@@ -375,8 +375,12 @@ err:
  */
 void *sys_sbrk(size_t n)
 {
-  void *brk = (void *) current_task->end_brk;
+  void *brk;
+
+  /* update brk */
+  brk = (void *) current_task->end_brk;
   current_task->end_brk += n;
+
   return brk;
 }
 
@@ -385,8 +389,6 @@ void *sys_sbrk(size_t n)
  */
 void destroy_task(struct task_t *task)
 {
-  char *user_stack;
-
   if (!task)
     return;
 
