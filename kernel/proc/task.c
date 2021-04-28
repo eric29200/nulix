@@ -394,12 +394,6 @@ void destroy_task(struct task_t *task)
   if (task->path)
     kfree(task->path);
 
-  /* free user stack */
-  if (task->user_stack_size > 0) {
-    user_stack = (char *) task->user_stack - task->user_stack_size;
-    kfree(user_stack);
-  }
-
   /* free kernel stack */
   kfree((void *) (task->kernel_stack - STACK_SIZE));
 
