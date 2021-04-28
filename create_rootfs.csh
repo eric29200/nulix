@@ -13,6 +13,7 @@ sudo mount $DISK tmp
 # create init
 sudo mkdir tmp/sbin
 sudo cp usr/init tmp/sbin/
+sudo cp usr/sh tmp/sbin/
 
 # create devices nodes
 sudo mkdir tmp/dev

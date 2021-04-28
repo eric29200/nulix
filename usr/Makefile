@@ -5,7 +5,7 @@ C_SOURCES 	= $(wildcard */*.c)
 CFLAGS		= -m32 -nostdlib -Wall -Wextra -I$(HEADER_PATH)
 LDFLAGS		= -Tlink.ld
 
-all: init
+all: init sh
 
 %.o: %.c
 	${CC} ${CFLAGS} -c $< -o $@
@@ -13,5 +13,8 @@ all: init
 init: init.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
+sh: sh.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
 clean:
-	rm -f *.o init
+	rm -f *.o init sh

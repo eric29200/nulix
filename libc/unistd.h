@@ -10,6 +10,11 @@
 #define __NR_mknod        5
 #define __NR_open         6
 #define __NR_close        7
+#define __NR_waitpid      8
+#define __NR_creat        9
+#define __NR_dup          10
+#define __NR_dup2         11
+#define __NR_execve       12
 
 /*
  * System call with no argument.
@@ -89,6 +94,14 @@ static inline int open(const char *pathname)
 static inline int close(int fd)
 {
   return syscall1(__NR_close, fd);
+}
+
+/*
+ * Execve system call.
+ */
+static inline int execve(const char *path, const char *argv[], char *envp[])
+{
+  return syscall3(__NR_execve, (int) path, (int) argv, (int) envp);
 }
 
 #endif

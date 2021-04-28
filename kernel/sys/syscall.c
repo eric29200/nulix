@@ -12,6 +12,11 @@ static const void *syscalls[] = {
   [__NR_mknod]      = NULL,
   [__NR_open]       = sys_open,
   [__NR_close]      = sys_close,
+  [__NR_waitpid]    = NULL,
+  [__NR_creat]      = NULL,
+  [__NR_dup]        = NULL,
+  [__NR_dup2]       = NULL,
+  [__NR_execve]     = sys_execve,
 };
 
 /*

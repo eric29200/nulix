@@ -49,6 +49,7 @@ struct task_registers_t {
 struct task_t *create_kernel_task(void (*func)(void));
 struct task_t *create_user_elf_task(const char *path);
 pid_t sys_fork();
+int sys_execve(const char *path, const char *argv[], char *envp[]);
 void destroy_task(struct task_t *task);
 
 #endif

@@ -206,7 +206,7 @@ struct task_t *create_user_elf_task(const char *path)
   /* set eip */
   regs->parameter1 = (uint32_t) task;
   regs->parameter2 = (uint32_t) strdup(path);
-  regs->return_address = 0xFFFFFFFF;
+  regs->return_address = TASK_RETURN_ADDRESS;
   regs->eip = (uint32_t) task_elf_entry;
   regs->eax = 0;
   regs->ecx = 0;
@@ -218,6 +218,25 @@ struct task_t *create_user_elf_task(const char *path)
   regs->edi = 0;
 
   return task;
+}
+
+/*
+ * Execve system call.
+ */
+int sys_execve(const char *path, const char *argv[], char *envp[])
+{
+  int ret;
+
+  /* load elf binary */
+  ret = elf_load(path);
+  if (ret != 0)
+    return ret;
+
+  /* go to user mode */
+  tss_set_stack(0x10, current_task->kernel_stack);
+  enter_user_mode(current_task->user_stack, current_task->user_entry, TASK_RETURN_ADDRESS);
+
+  return 0;
 }
 
 /*
