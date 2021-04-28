@@ -313,7 +313,7 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
       if (kernel_argv[i]) {
         len = strlen(kernel_argv[i]);
         user_argv[i] = (char *) sys_sbrk(len + 1);
-        memset(user_argv[i], '0', len + 1);
+        memset(user_argv[i], 0, len + 1);
         memcpy(user_argv[i], kernel_argv[i], len);
         kfree(kernel_argv[i]);
       }
@@ -329,7 +329,7 @@ int sys_execve(const char *path, const char *argv[], char *envp[])
       if (kernel_envp[i]) {
         len = strlen(kernel_envp[i]);
         user_envp[i] = (char *) sys_sbrk(len + 1);
-        memset(user_envp[i], '0', len + 1);
+        memset(user_envp[i], 0, len + 1);
         memcpy(user_envp[i], kernel_envp[i], len);
         kfree(kernel_envp[i]);
       }

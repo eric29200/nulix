@@ -2,22 +2,22 @@
 
 int main(int argc, char *argv[])
 {
-  char *tty = "/dev/tty0";
+  char *prompt = "$";
   int fd;
 
-  if (argc == 2) {
-    /* open tty 0 */
-    fd = open(tty);
-    argv[0][1] = 'c';
+  /* check number of arguments */
+  if (argc != 1)
+    return -1;
 
-    if (fd >= 0) {
-      /* write to tty0 */
-      write(fd, argv[0], 2);
-      write(fd, argv[1], 2);
+  /* open tty */
+  fd = open(argv[0]);
 
-      /* close tty 0 */
-      close(fd);
-    }
+  /* write prompt to tty */
+  if (fd >= 0) {
+    write(fd, prompt, 1);
+
+    /* close tty */
+    close(fd);
   }
 
   return 0;
