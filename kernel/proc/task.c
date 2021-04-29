@@ -35,7 +35,7 @@ static void task_elf_entry(struct task_t *task, char *path)
 /*
  * Create and init a task.
  */
-static struct task_t *create_task()
+static struct task_t *create_task(struct task_t *parent)
 {
   struct task_t *task;
   void *stack;
@@ -53,7 +53,10 @@ static struct task_t *create_task()
   task->user_stack_size = 0;
   task->start_brk = 0;
   task->end_brk = 0;
+  task->parent = parent;
   INIT_LIST_HEAD(&task->list);
+  INIT_LIST_HEAD(&task->children);
+  INIT_LIST_HEAD(&task->sibling);
 
   /* init open files */
   for (i = 0; i < NR_OPEN; i++)
@@ -83,7 +86,7 @@ struct task_t *create_kernel_task(void (*func)(void))
   struct task_t *task;
 
   /* create task */
-  task = create_task();
+  task = create_task(NULL);
   if (!task)
     return NULL;
 
@@ -119,12 +122,15 @@ struct task_t *fork_task(struct task_t *parent)
   int i;
 
   /* create task */
-  task = create_task();
+  task = create_task(parent);
   if (!task)
     return NULL;
 
   /* duplicate page directory */
   task->pgd = clone_page_directory(parent->pgd);
+
+  /* add child to parent */
+  list_add(&task->sibling, &parent->children);
 
   /* copy open files */
   for (i = 0; i < NR_OPEN; i++) {
@@ -174,7 +180,7 @@ int spawn_init()
   struct task_t *task;
 
   /* create task */
-  task = create_task();
+  task = create_task(NULL);
   if (!task)
     return -ENOMEM;
 

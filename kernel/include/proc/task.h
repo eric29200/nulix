@@ -18,17 +18,20 @@
  */
 struct task_t {
   pid_t pid;
-  uint32_t esp;
-  uint32_t kernel_stack;
   uint8_t state;
   char *path;
   dev_t tty;
+  uint32_t esp;
+  int exit_code;
+  struct task_t *parent;
+  struct list_head_t children;
+  struct list_head_t sibling;
+  uint32_t kernel_stack;
   uint32_t user_entry;
   uint32_t user_stack;
   uint32_t user_stack_size;
   uint32_t start_brk;
   uint32_t end_brk;
-  int exit_code;
   struct registers_t user_regs;
   struct page_directory_t *pgd;
   struct file_t *filp[NR_OPEN];
