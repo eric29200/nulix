@@ -10,8 +10,8 @@
 #define STACK_SIZE        0x2000
 
 #define TASK_RUNNING      1
-#define TASK_WAITING      2
-#define TASK_TERMINATED   3
+#define TASK_SLEEPING     2
+#define TASK_ZOMBIE       3
 
 /*
  * Kernel task structure.

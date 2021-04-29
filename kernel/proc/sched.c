@@ -13,7 +13,6 @@ static spinlock_t sched_lock;
 
 /* tasks list */
 LIST_HEAD(tasks_ready_list);
-LIST_HEAD(tasks_waiting_list);
 
 /* first kernel task (pid = 0) */
 static struct task_t *kinit_task;
@@ -59,60 +58,21 @@ int init_scheduler(void (*kinit_func)())
 }
 
 /*
- * Update task state.
- */
-static void __update_task_state(struct task_t *task, uint8_t state)
-{
-  uint32_t flags;
-
-  /* update state */
-  task->state = state;
-
-  /* updates tasks list */
-  spin_lock_irqsave(&sched_lock, flags);
-  list_del(&task->list);
-  if (task->state == TASK_RUNNING)
-    list_add(&task->list, &tasks_ready_list);
-  else if (task->state == TASK_WAITING)
-    list_add(&task->list, &tasks_waiting_list);
-  spin_unlock_irqrestore(&sched_lock, flags);
-}
-
-/*
  * Schedule function (interruptions must be disabled and will be reenabled on function return).
  */
 void schedule()
 {
-  struct task_t *prev_task, *task;
-  struct list_head_t *pos, *n;
+  struct task_t *prev_task;
   uint32_t flags;
-
-  /* remember current task */
-  prev_task = current_task;
 
   /* lock scheduler and disable interrupts */
   spin_lock_irqsave(&sched_lock, flags);
 
-  /* if current task is terminated : destroy it */
-  if (current_task->state == TASK_TERMINATED) {
-    destroy_task(current_task);
-    current_task = NULL;
-  }
+  /* remember current task */
+  prev_task = current_task;
 
   /* update timers */
   timer_update();
-
-  /* update waiting tasks */
-  list_for_each_safe(pos, n, &tasks_waiting_list) {
-    task = list_entry(pos, struct task_t, list);
-
-    /* timer expires : remove it from waiting list and run it */
-    if (--task->expires == 0) {
-      list_del(&task->list);
-      task->state = TASK_RUNNING;
-      list_add(&task->list, &tasks_ready_list);
-    }
-  }
 
   /* scheduling algorithm */
   do {
@@ -128,9 +88,9 @@ void schedule()
 
     /* put current task at the end of the list */
     list_add_tail(&current_task->list, &tasks_ready_list);
-  } while (!current_task);
+  } while (!current_task || current_task->state != TASK_RUNNING);
 
-  /* no task : use idle task */
+  /* no task : use kinit task */
   if (!current_task)
     current_task = kinit_task;
 
@@ -153,26 +113,6 @@ void schedule()
   irq_enable();
 }
 
-/*
- * Put current task in sleep mode for timeout jiffies.
- */
-void schedule_timeout(uint32_t timeout)
-{
-  if (current_task) {
-    /* set timeout */
-    current_task->expires = timeout;
-    current_task->state = TASK_WAITING;
-
-    /* put current task in waiting list */
-    spin_lock(&sched_lock);
-    list_del(&current_task->list);
-    list_add(&current_task->list, &tasks_waiting_list);
-    spin_unlock(&sched_lock);
-  }
-
-  /* reschedule */
-  schedule();
-}
 
 /*
  * Run a task.
@@ -183,7 +123,7 @@ int run_task(struct task_t *task)
     return -EINVAL;
 
   /* add to the task list */
-  __update_task_state(task, TASK_RUNNING);
+  list_add(&task->list, &tasks_ready_list);
 
   return 0;
 }
@@ -198,7 +138,7 @@ void kill_task(struct task_t *task)
     return;
 
   /* mark task terminated and reschedule */
-  __update_task_state(task, TASK_TERMINATED);
+  task->state = TASK_ZOMBIE;
 
   /* call scheduler */
   schedule();

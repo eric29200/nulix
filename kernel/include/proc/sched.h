@@ -7,7 +7,6 @@
 
 int init_scheduler(void (*kinit_func)());
 void schedule();
-void schedule_timeout(uint32_t timeout);
 pid_t get_next_pid();
 
 int run_task(struct task_t *task);
