@@ -98,7 +98,7 @@ void page_fault_handler(struct registers_t *regs)
 
   /* page fault on task end : kill current task */
   if (fault_addr == TASK_RETURN_ADDRESS) {
-    kill_task(current_task);
+    sys_exit(0);
     return;
   }
 

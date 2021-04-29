@@ -385,6 +385,19 @@ void *sys_sbrk(size_t n)
 }
 
 /*
+ * Exit a task.
+ */
+void sys_exit(int status)
+{
+  /* mark task terminated and reschedule */
+  current_task->state = TASK_ZOMBIE;
+  current_task->exit_code = status;
+
+  /* call scheduler */
+  schedule();
+}
+
+/*
  * Destroy a task.
  */
 void destroy_task(struct task_t *task)

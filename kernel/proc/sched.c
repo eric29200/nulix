@@ -95,20 +95,3 @@ void schedule()
   switch_page_directory(current_task->pgd);
   scheduler_do_switch(&prev_task->esp, current_task->esp);
 }
-
-
-/*
- * Kill a task.
- */
-void kill_task(struct task_t *task)
-{
-  /* NULL task */
-  if (!task)
-    return;
-
-  /* mark task terminated and reschedule */
-  task->state = TASK_ZOMBIE;
-
-  /* call scheduler */
-  schedule();
-}

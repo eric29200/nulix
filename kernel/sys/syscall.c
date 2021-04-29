@@ -5,7 +5,7 @@
 
 /* system calls table */
 static const void *syscalls[] = {
-  [__NR_exit]       = NULL,
+  [__NR_exit]       = sys_exit,
   [__NR_fork]       = sys_fork,
   [__NR_read]       = sys_read,
   [__NR_write]      = sys_write,

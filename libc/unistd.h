@@ -58,6 +58,14 @@ static inline int syscall3(int n, int p1, int p2, int p3)
 }
 
 /*
+ * Exit system call.
+ */
+static inline void exit(int status)
+{
+  syscall1(__NR_exit, status);
+}
+
+/*
  * Fork system call.
  */
 static inline pid_t fork()
