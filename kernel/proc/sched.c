@@ -71,7 +71,7 @@ static void __update_task_state(struct task_t *task, uint8_t state)
   /* updates tasks list */
   spin_lock_irqsave(&sched_lock, flags);
   list_del(&task->list);
-  if (task->state == TASK_READY)
+  if (task->state == TASK_RUNNING)
     list_add(&task->list, &tasks_ready_list);
   else if (task->state == TASK_WAITING)
     list_add(&task->list, &tasks_waiting_list);
@@ -109,7 +109,7 @@ void schedule()
     /* timer expires : remove it from waiting list and run it */
     if (--task->expires == 0) {
       list_del(&task->list);
-      task->state = TASK_READY;
+      task->state = TASK_RUNNING;
       list_add(&task->list, &tasks_ready_list);
     }
   }
@@ -183,7 +183,7 @@ int run_task(struct task_t *task)
     return -EINVAL;
 
   /* add to the task list */
-  __update_task_state(task, TASK_READY);
+  __update_task_state(task, TASK_RUNNING);
 
   return 0;
 }
