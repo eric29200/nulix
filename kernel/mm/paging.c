@@ -84,7 +84,7 @@ void free_frame(struct page_t *page)
   if (!(frame = page->frame))
     return;
 
-  clear_frame(frame);
+  clear_frame(frame * PAGE_SIZE);
   page->frame = 0x0;
 }
 

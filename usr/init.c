@@ -2,17 +2,25 @@
 
 #define NULL      ((void *) 0)
 
-int main(void)
+/*
+ * Spwan a shell on tty.
+ */
+void spawn_shell(char *tty)
 {
-  char *args[] = {"/dev/tty0"};
+  char *args[] = {tty};
   pid_t pid;
 
-  /* spawn a shell on first tty */
   pid = fork();
-  if (pid == 0) {
+  if (pid == 0)
     execve("/sbin/sh", args, NULL);
-    return -1;
-  }
+}
+
+int main(void)
+{
+  spawn_shell("/dev/tty0");
+  spawn_shell("/dev/tty1");
+  spawn_shell("/dev/tty2");
+  spawn_shell("/dev/tty3");
 
   return 0;
 }
