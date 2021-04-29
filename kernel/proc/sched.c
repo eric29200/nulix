@@ -14,8 +14,12 @@ static spinlock_t sched_lock;
 /* tasks list */
 LIST_HEAD(tasks_ready_list);
 LIST_HEAD(tasks_waiting_list);
+
+/* first kernel task (pid = 0) */
+static struct task_t *kinit_task;
+
+/* current task */
 struct task_t *current_task = NULL;
-struct task_t *idle_task = NULL;
 
 /* tids counter */
 static pid_t next_pid = 0;
@@ -39,35 +43,19 @@ pid_t get_next_pid()
 }
 
 /*
- * Idle task (used if no tasks are ready).
- */
-void idle_func()
-{
-  for (;;)
-    halt();
-}
-
-/*
  * Init scheduler.
  */
-int init_scheduler(void (*init_func)())
+int init_scheduler(void (*kinit_func)())
 {
-  struct task_t *init_task;
-
   /* init scheduler lock */
   spin_lock_init(&sched_lock);
 
-  /* create idle task */
-  idle_task = create_kernel_task(idle_func);
-  if (!idle_task)
-    return -ENOMEM;
-
   /* create init task */
-  init_task = create_kernel_task(init_func);
-  if (!init_task)
+  kinit_task = create_kernel_task(kinit_func);
+  if (!kinit_task)
     return -ENOMEM;
 
-  return run_task(init_task);
+  return run_task(kinit_task);
 }
 
 /*
@@ -144,7 +132,7 @@ void schedule()
 
   /* no task : use idle task */
   if (!current_task)
-    current_task = idle_task;
+    current_task = kinit_task;
 
   /* unlock scheduler */
   spin_unlock(&sched_lock);

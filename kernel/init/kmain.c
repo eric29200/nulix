@@ -30,6 +30,8 @@ static void kinit()
   /* spawn init process */
   if (spawn_init() != 0)
     panic("Cannot spawn init process");
+
+  for (;;);
 }
 
 /*
