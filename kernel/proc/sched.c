@@ -3,6 +3,7 @@
 #include <x86/tss.h>
 #include <proc/sched.h>
 #include <proc/task.h>
+#include <proc/timer.h>
 #include <list.h>
 #include <lock.h>
 #include <stderr.h>
@@ -109,6 +110,9 @@ void schedule()
     destroy_task(current_task);
     current_task = NULL;
   }
+
+  /* update timers */
+  timer_update();
 
   /* update waiting tasks */
   list_for_each_safe(pos, n, &tasks_waiting_list) {

@@ -1,6 +1,8 @@
 #include <drivers/serial.h>
 #include <drivers/tty.h>
+#include <drivers/pit.h>
 #include <proc/sched.h>
+#include <proc/timer.h>
 #include <stderr.h>
 #include <delay.h>
 #include <dev.h>
@@ -10,6 +12,7 @@
 /* global ttys */
 static struct tty_t tty_table[NB_TTYS];
 static uint32_t current_tty;
+static struct timer_event_t refresh_tm;
 
 /*
  * Lookup for a tty.
@@ -138,10 +141,12 @@ void tty_change(uint32_t n)
  */
 static void tty_refresh()
 {
-  for (;;) {
-    msleep(TTY_DELAY_UPDATE_MS);
+  /* update current screen */
+  if (tty_table[current_tty].screen.dirty)
     screen_update(&tty_table[current_tty].screen);
-  }
+
+  /* reschedule timer */
+  timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
 }
 
 /*
@@ -149,7 +154,6 @@ static void tty_refresh()
  */
 int init_tty()
 {
-  struct task_t *update_task;
   int i;
 
   /* init each tty */
@@ -165,10 +169,9 @@ int init_tty()
   /* set current tty to tty0 */
   current_tty = 0;
 
-  /* create update tty task */
-  update_task = create_kernel_task(tty_refresh);
-  if (!update_task)
-    return -ENOMEM;
+  /* create refrsh timer */
+  timer_event_init(&refresh_tm, tty_refresh, NULL, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
+  timer_event_add(&refresh_tm);
 
-  return run_task(update_task);
+  return 0;
 }

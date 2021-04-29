@@ -7,5 +7,5 @@
  */
 void msleep(uint32_t msecs)
 {
-  schedule_timeout(msecs * HZ / 1000);
+  schedule_timeout(ms_to_jiffies(msecs));
 }
