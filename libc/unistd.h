@@ -12,6 +12,7 @@
 #define __NR_stat         7
 #define __NR_execve       8
 #define __NR_sbrk         9
+#define __NR_sleep        10
 
 /*
  * System call with no argument.
@@ -115,6 +116,14 @@ static inline int execve(const char *path, char *const argv[], char *const envp[
 static inline void *sbrk(size_t n)
 {
   return (void *) syscall1(__NR_sbrk, n);
+}
+
+/*
+ * Sleep system call.
+ */
+static inline int sleep(unsigned long sec)
+{
+  return syscall1(__NR_sleep, sec);
 }
 
 #endif

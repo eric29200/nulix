@@ -1,2 +1,4 @@
+- Implement signals
+  = Try to begin with ctrl-c
 - Write exit system call
 - Destroy zombie tasks

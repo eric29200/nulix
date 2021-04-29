@@ -14,6 +14,7 @@ static const void *syscalls[] = {
   [__NR_stat]       = sys_stat,
   [__NR_execve]     = sys_execve,
   [__NR_sbrk]       = sys_sbrk,
+  [__NR_sleep]      = sys_sleep,
 };
 
 /*
