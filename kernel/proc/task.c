@@ -7,6 +7,9 @@
 #include <string.h>
 #include <stderr.h>
 
+/* tasks list */
+extern struct list_head_t tasks_list;
+
 /* switch to user mode (defined in x86/scheduler.s) */
 extern void enter_user_mode(uint32_t esp, uint32_t eip, uint32_t return_address);
 extern void return_user_mode(struct registers_t *regs);
@@ -171,7 +174,6 @@ static struct task_t *fork_task(struct task_t *parent)
 pid_t sys_fork()
 {
   struct task_t *child;
-  int ret;
 
   /* create child */
   child = fork_task(current_task);
@@ -179,11 +181,7 @@ pid_t sys_fork()
     return -ENOMEM;
 
   /* run child */
-  ret = run_task(child);
-  if (ret != 0) {
-    destroy_task(child);
-    return ret;
-  }
+  list_add(&child->list, &tasks_list);
 
   /* return child pid */
   return child->pid;
@@ -227,7 +225,10 @@ int spawn_init()
   regs->esi = 0;
   regs->edi = 0;
 
-  return run_task(task);
+  /* add task */
+  list_add(&task->list, &tasks_list);
+
+  return 0;
 }
 
 /*

@@ -47,8 +47,9 @@ int init_scheduler(void (*kinit_func)())
 
   /* set current task to kinit */
   current_task = kinit_task;
+  list_add(&kinit_task->list, &tasks_list);
 
-  return run_task(kinit_task);
+  return 0;
 }
 
 /*
@@ -95,20 +96,6 @@ void schedule()
   scheduler_do_switch(&prev_task->esp, current_task->esp);
 }
 
-
-/*
- * Run a task.
- */
-int run_task(struct task_t *task)
-{
-  if (!task)
-    return -EINVAL;
-
-  /* add to the task list */
-  list_add(&task->list, &tasks_list);
-
-  return 0;
-}
 
 /*
  * Kill a task.
