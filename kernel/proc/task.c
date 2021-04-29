@@ -49,7 +49,6 @@ static struct task_t *create_task()
   /* set tid */
   task->pid = get_next_pid();
   task->state = TASK_RUNNING;
-  task->expires = 0;
   task->path = NULL;
   task->user_stack_size = 0;
   task->start_brk = 0;

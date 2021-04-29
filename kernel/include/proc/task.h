@@ -21,7 +21,6 @@ struct task_t {
   uint32_t esp;
   uint32_t kernel_stack;
   uint8_t state;
-  uint32_t expires;
   char *path;
   dev_t tty;
   uint32_t user_entry;
