@@ -79,12 +79,10 @@ static void clear_frame(uint32_t frame_addr)
  */
 void free_frame(struct page_t *page)
 {
-  uint32_t frame;
-
-  if (!(frame = page->frame))
+  if (!page->frame)
     return;
 
-  clear_frame(frame * PAGE_SIZE);
+  clear_frame(page->frame * PAGE_SIZE);
   page->frame = 0x0;
 }
 
