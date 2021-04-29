@@ -1,7 +1,2 @@
-- Remplacer task.expires par timer
-- Ne pas créer de idle task -> kinit passe en mode idle() une fois terminé
-
-=> si pas de taches à traiter, utiliser kinit
-
-=> kinit sera le process 0
-=> init sera le process 1
+- Write exit system call
+- Destroy zombie tasks

@@ -8,20 +8,11 @@
 #include <lock.h>
 #include <stderr.h>
 
-/* scheduler lock */
-static spinlock_t sched_lock;
-
-/* tasks list */
-LIST_HEAD(tasks_ready_list);
-
-/* first kernel task (pid = 0) */
-static struct task_t *kinit_task;
-
-/* current task */
-struct task_t *current_task = NULL;
-
-/* tids counter */
-static pid_t next_pid = 0;
+LIST_HEAD(tasks_list);                    /* active processes list */
+static spinlock_t sched_lock;             /* scheduler lock */
+static struct task_t *kinit_task;         /* kernel init task (pid = 0) */
+struct task_t *current_task = NULL;       /* current task */
+static pid_t next_pid = 0;                /* pid counter */
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
@@ -65,36 +56,34 @@ int init_scheduler(void (*kinit_func)())
  */
 void schedule()
 {
-  struct task_t *prev_task;
+  struct task_t *next_task, *prev_task, *task;
+  struct list_head_t *pos;
   uint32_t flags;
 
   /* lock scheduler and disable interrupts */
   spin_lock_irqsave(&sched_lock, flags);
 
-  /* remember current task */
-  prev_task = current_task;
-
   /* update timers */
   timer_update();
 
-  /* scheduling algorithm */
-  do {
-    /* no tasks : break */
-    if (list_empty(&tasks_ready_list)) {
-      current_task = NULL;
+  /* scheduling algorithm : just pop next task */
+  next_task = NULL;
+  list_for_each(pos, &current_task->list) {
+    if (pos == &tasks_list)
+      continue;
+
+    task = list_entry(pos, struct task_t, list);
+    if (task->state == TASK_RUNNING) {
+      next_task = task;
       break;
     }
-
-    /* pop next task */
-    current_task = list_first_entry(&tasks_ready_list, struct task_t, list);
-    list_del(&current_task->list);
-
-    /* put current task at the end of the list */
-    list_add_tail(&current_task->list, &tasks_ready_list);
-  } while (!current_task || current_task->state != TASK_RUNNING);
+  }
 
   /* no task : use kinit task */
-  if (!current_task)
+  prev_task = current_task;
+  if (next_task)
+    current_task = next_task;
+  else
     current_task = kinit_task;
 
   /* unlock scheduler */
@@ -116,7 +105,7 @@ int run_task(struct task_t *task)
     return -EINVAL;
 
   /* add to the task list */
-  list_add(&task->list, &tasks_ready_list);
+  list_add(&task->list, &tasks_list);
 
   return 0;
 }
