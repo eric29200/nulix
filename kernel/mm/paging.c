@@ -1,6 +1,7 @@
 #include <mm/mm.h>
 #include <proc/sched.h>
 #include <mm/paging.h>
+#include <sys/syscall.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>

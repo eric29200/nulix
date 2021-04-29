@@ -10,7 +10,7 @@
 /*
  * Open system call.
  */
-int sys_open(const char *pathname)
+int do_open(const char *pathname)
 {
   struct inode_t *inode;
   struct file_t *file;
@@ -54,7 +54,7 @@ int sys_open(const char *pathname)
 /*
  * Close system call.
  */
-int sys_close(int fd)
+int do_close(int fd)
 {
   struct file_t *filp;
 

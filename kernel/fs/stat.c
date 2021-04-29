@@ -5,7 +5,7 @@
 /*
  * Stats file.
  */
-int sys_stat(char *filename, struct stat_t *statbuf)
+int do_stat(char *filename, struct stat_t *statbuf)
 {
   struct inode_t *inode;
 

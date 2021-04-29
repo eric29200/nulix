@@ -47,7 +47,7 @@ int elf_load(const char *path)
   int fd, ret = 0;
 
   /* get file size */
-  ret = sys_stat((char *) path, &statbuf);
+  ret = do_stat((char *) path, &statbuf);
   if (ret < 0)
     return ret;
 
@@ -59,21 +59,21 @@ int elf_load(const char *path)
   }
 
   /* open file */
-  fd = sys_open(path);
+  fd = do_open(path);
   if (fd < 0) {
     ret = fd;
     goto out;
   }
 
   /* load file in memory */
-  if ((uint32_t) sys_read(fd, buf, statbuf.st_size) != statbuf.st_size) {
+  if ((uint32_t) do_read(fd, buf, statbuf.st_size) != statbuf.st_size) {
     ret = -EINVAL;
-    sys_close(fd);
+    do_close(fd);
     goto out;
   }
 
   /* close file */
-  sys_close(fd);
+  do_close(fd);
 
   /* check elf header */
   elf_header = (struct elf_header_t *) buf;
