@@ -26,7 +26,6 @@ void spawn_shell(int tty_num)
     dup(0);
 
     execve("/bin/sh", NULL, NULL);
-    exit(0);
   }
 }
 
@@ -40,8 +39,6 @@ int main(void)
   /* spawn a shell on each tty */
   for (i = 0; i < NTTYS; i++)
     spawn_shell(i);
-
-  for (;;);
 
   return 0;
 }

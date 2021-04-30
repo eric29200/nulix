@@ -19,12 +19,10 @@ int sys_dup(int oldfd)
     if (current_task->filp[newfd] == NULL) {
       current_task->filp[newfd] = current_task->filp[oldfd];
       current_task->filp[newfd]->f_ref++;
+      return newfd;
     }
   }
 
   /* no free slot : too many files open */
-  if (newfd == NR_OPEN)
-    newfd = -EMFILE;
-
-  return newfd;
+  return -EMFILE;
 }
