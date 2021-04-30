@@ -23,7 +23,7 @@ void msleep(uint32_t msecs)
   current_task->state = TASK_SLEEPING;
 
   /* init a timer */
-  timer_event_init(&tm, msleep_timer_handler, current_task, ms_to_jiffies(msecs));
+  timer_event_init(&tm, msleep_timer_handler, current_task, jiffies + ms_to_jiffies(msecs));
   timer_event_add(&tm);
 
   /* reschedule */

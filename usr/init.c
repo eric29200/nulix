@@ -18,10 +18,23 @@ void spawn_shell(char *tty)
 
 int main(void)
 {
-  spawn_shell("/dev/tty0");
-  spawn_shell("/dev/tty1");
-  spawn_shell("/dev/tty2");
-  spawn_shell("/dev/tty3");
+  char *msg = "aab";
+  int fd;
+
+  sleep(5);
+
+  fd = open("/dev/tty0");
+  write(fd, msg, 3);
+  close(fd);
+  sleep(10);
+  fd = open("/dev/tty0");
+  write(fd, msg, 3);
+  close(fd);
+
+  //spawn_shell("/dev/tty0");
+  //spawn_shell("/dev/tty1");
+  //spawn_shell("/dev/tty2");
+  //spawn_shell("/dev/tty3");
 
   return 0;
 }
