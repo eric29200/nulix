@@ -12,8 +12,9 @@ sudo mount $DISK tmp
 
 # create init
 sudo mkdir tmp/sbin
+sudo mkdir tmp/bin
 sudo cp usr/init tmp/sbin/
-sudo cp usr/sh tmp/sbin/
+sudo cp usr/sh tmp/bin/
 
 # create devices nodes
 sudo mkdir tmp/dev

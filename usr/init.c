@@ -1,40 +1,47 @@
 #include <unistd.h>
+#include <stdio.h>
 #include <string.h>
 
-#define NULL      ((void *) 0)
+#define NTTYS     4
 
 /*
  * Spwan a shell on tty.
  */
-void spawn_shell(char *tty)
+void spawn_shell(int tty_num)
 {
-  char *args[] = {tty};
+  char tty[32];
   pid_t pid;
 
+  /* set tty */
+  sprintf(tty, "/dev/tty%d", tty_num);
+
+  /* create a new process */
   pid = fork();
-  if (pid == 0)
-    execve("/sbin/sh", args, NULL);
+  if (pid == 0) {
+    /* open tty */
+    open(tty);
+
+    /* dup stdin to sdout and stderr */
+    dup(0);
+    dup(0);
+
+    execve("/bin/sh", NULL, NULL);
+    exit(0);
+  }
 }
 
+/*
+ * Init process.
+ */
 int main(void)
 {
-  char *msg = "aab";
-  int fd;
+  int i;
 
-  sleep(5);
+  /* spawn a shell on each tty */
+  for (i = 0; i < NTTYS; i++)
+    spawn_shell(i);
 
-  fd = open("/dev/tty0");
-  write(fd, msg, 3);
-  close(fd);
-  sleep(10);
-  fd = open("/dev/tty0");
-  write(fd, msg, 3);
-  close(fd);
-
-  //spawn_shell("/dev/tty0");
-  //spawn_shell("/dev/tty1");
-  //spawn_shell("/dev/tty2");
-  //spawn_shell("/dev/tty3");
+  for (;;);
 
   return 0;
 }

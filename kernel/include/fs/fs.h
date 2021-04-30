@@ -12,7 +12,7 @@
 #define MINIX_INODES_PER_BLOCK        ((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
 #define MINIX_DIR_ENTRIES_PER_BLOCK   ((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
 
-#define NR_OPEN                       32        /* maximum number of files opened by a process */
+#define NR_OPEN                       64        /* maximum number of files opened by a process */
 
 /*
  * Minix super block.
