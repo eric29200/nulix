@@ -13,6 +13,8 @@
 #define __NR_execve       8
 #define __NR_sbrk         9
 #define __NR_sleep        10
+#define __NR_dup          11
+#define __NR_dup2         12
 
 /*
  * System call with no argument.
@@ -124,6 +126,22 @@ static inline void *sbrk(size_t n)
 static inline int sleep(unsigned long sec)
 {
   return syscall1(__NR_sleep, sec);
+}
+
+/*
+ * Dup system call.
+ */
+static inline int dup(int oldfd)
+{
+  return syscall1(__NR_dup, oldfd);
+}
+
+/*
+ * Dup2 system call.
+ */
+static inline int dup2(int oldfd, int newfd)
+{
+  return syscall2(__NR_dup2, oldfd, newfd);
 }
 
 #endif

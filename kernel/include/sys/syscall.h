@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <fs/fs.h>
 
-#define SYSCALLS_NUM      (__NR_sleep + 1)
+#define SYSCALLS_NUM      (__NR_dup2 + 1)
 
 #define __NR_exit         1
 #define __NR_fork         2
@@ -16,6 +16,8 @@
 #define __NR_execve       8
 #define __NR_sbrk         9
 #define __NR_sleep        10
+#define __NR_dup          11
+#define __NR_dup2         12
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -31,5 +33,7 @@ void *sys_sbrk(size_t n);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);
 int sys_stat(char *filename, struct stat_t *statbuf);
 int sys_sleep(unsigned long secs);
+int sys_dup(int oldfd);
+int sys_dup2(int oldfd, int newfd);
 
 #endif

@@ -1,4 +1,18 @@
-- Implement signals
-  = Try to begin with ctrl-c
-- Write exit system call
-- Destroy zombie tasks
+- Implement dup system call
+- Implement printf (stdio.c) from xv6
+- Use ar to compile libc.a
+- Test printf functions
+
+- In init function, spawn shell
+  on each child
+  open('dev/ttyN')    // stdin
+  dup(0)              // stdout
+  dup(0)              // stderr
+
+  and then in parent : 
+  open('dev/tty0')    // stdin
+  dup(0)              // stdout
+  dup(0)              // stderr
+
+- Write exit system call (copy from xv6)
+- Destroy zombie tasks (copy from xv6)
