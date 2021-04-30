@@ -18,14 +18,14 @@ static void __putc_buf(char c)
 static int __print_num_signed(void (*putch)(char), int32_t num, uint16_t base)
 {
   static char *digits = "0123456789abcdef";
-  bool is_negative = FALSE;
+  int is_negative = 0;
   char buf[16];
   int32_t n = num;
   int i, ret;
 
   if (num < 0) {
     n = -n;
-    is_negative = TRUE;
+    is_negative = 1;
   }
 
   i = 0;
@@ -133,7 +133,7 @@ int sprintf(char *s, const char *format, ...)
   va_start(args, format);
   __buf_ptr = s;
   ret = vsprintf(__putc_buf, format, args);
-  *__buf_ptr = '\0';
+  *__buf_ptr = 0;
   va_end(args);
 
   return ret;

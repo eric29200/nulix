@@ -1,6 +1,4 @@
-- Implement dup system call
 - Implement printf (stdio.c) from xv6
-- Use ar to compile libc.a
 - Test printf functions
 
 - In init function, spawn shell

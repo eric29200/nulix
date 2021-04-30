@@ -10,16 +10,12 @@ typedef char int8_t;
 
 typedef unsigned int size_t;
 typedef unsigned int off_t;
-typedef unsigned char bool;
 typedef unsigned int time_t;
 typedef int pid_t;
 typedef unsigned short dev_t;
 typedef uint32_t ino_t;
 typedef uint32_t uid_t;
 typedef uint32_t gid_t;
-
-#define TRUE                                  1
-#define FALSE                                 0
 
 #define NULL                                  ((void *) 0)
 #define UNUSED(x)                             ((void) (x))
