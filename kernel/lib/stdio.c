@@ -5,27 +5,17 @@
 static char *__buf_ptr;
 
 /*
- * Put a character to a file descriptor.
- */
-static void putc(char c, int fd)
-{
-  if (fd == stdout)
-    write_serial(c);
-}
-
-/*
  * Put a character into the temp buffer.
  */
-static void __putc_buf(char c, int fd)
+static void __putc_buf(char c)
 {
-  UNUSED(fd);
   *__buf_ptr++ = c;
 }
 
 /*
  * Print a formatted signed number to a file descriptor.
  */
-static int __print_num_signed(void (*putch)(char, int), int fd, int32_t num, uint16_t base)
+static int __print_num_signed(void (*putch)(char), int32_t num, uint16_t base)
 {
   static char *digits = "0123456789abcdef";
   bool is_negative = FALSE;
@@ -49,7 +39,7 @@ static int __print_num_signed(void (*putch)(char, int), int fd, int32_t num, uin
 
   ret = i;
   while (i >= 0)
-    putch(buf[--i], fd);
+    putch(buf[--i]);
 
   return ret;
 }
@@ -57,7 +47,7 @@ static int __print_num_signed(void (*putch)(char, int), int fd, int32_t num, uin
 /*
  * Print a formatted unsigned number to a file descriptor.
  */
-static int __print_num_unsigned(void (*putch)(char, int), int fd, uint32_t num, uint16_t base)
+static int __print_num_unsigned(void (*putch)(char), uint32_t num, uint16_t base)
 {
   static char *digits = "0123456789abcdef";
   char buf[16];
@@ -72,7 +62,7 @@ static int __print_num_unsigned(void (*putch)(char, int), int fd, uint32_t num, 
 
   ret = i;
   while (i >= 0)
-    putch(buf[--i], fd);
+    putch(buf[--i]);
 
   return ret;
 }
@@ -80,7 +70,7 @@ static int __print_num_unsigned(void (*putch)(char, int), int fd, uint32_t num, 
 /*
  * Formatted print into a file descriptor.
  */
-static int vsprintf(void (*putch)(char, int), int fd, const char *format, va_list args)
+static int vsprintf(void (*putch)(char), const char *format, va_list args)
 {
   char *substr;
   int i, count;
@@ -90,7 +80,7 @@ static int vsprintf(void (*putch)(char, int), int fd, const char *format, va_lis
     c = format[i];
 
     if (c != '%') {
-      putc(c, fd);
+      putch(c);
       count++;
       continue;
     }
@@ -98,53 +88,38 @@ static int vsprintf(void (*putch)(char, int), int fd, const char *format, va_lis
     c = format[++i];
     switch (c) {
       case 'c':
-        putch(va_arg(args, char), fd);
+        putch(va_arg(args, char));
         count++;
         break;
       case 'd':
       case 'i':
-        count += __print_num_signed(putch, fd, va_arg(args, int32_t), 10);
+        count += __print_num_signed(putch, va_arg(args, int32_t), 10);
         break;
       case 'u':
-        count += __print_num_unsigned(putch, fd, va_arg(args, int32_t), 10);
+        count += __print_num_unsigned(putch, va_arg(args, int32_t), 10);
         break;
       case 'x':
-        putch('0', fd);
-        putch('x', fd);
+        putch('0');
+        putch('x');
         count += 2;
-        count += __print_num_unsigned(putch, fd, va_arg(args, uint32_t), 16);
+        count += __print_num_unsigned(putch, va_arg(args, uint32_t), 16);
         break;
       case 's':
         for (substr = va_arg(args, char *); *substr != '\0'; substr++, count++)
-          putch(*substr, fd);
+          putch(*substr);
         break;
       case '%':
-        putch('%', fd);
+        putch('%');
         count++;
         break;
       default:
-        putch('%', fd);
-        putch(c, fd);
+        putch('%');
+        putch(c);
         count += 2;
     }
   }
 
   return count;
-}
-
-/*
- * Formatted print into a file descriptor.
- */
-int fprintf(int fd, const char *format, ...)
-{
-  va_list args;
-  int ret;
-
-  va_start(args, format);
-  ret = vsprintf(putc, fd, format, args);
-  va_end(args);
-
-  return ret;
 }
 
 /*
@@ -157,7 +132,7 @@ int sprintf(char *s, const char *format, ...)
 
   va_start(args, format);
   __buf_ptr = s;
-  ret = vsprintf(__putc_buf, -1, format, args);
+  ret = vsprintf(__putc_buf, format, args);
   *__buf_ptr = '\0';
   va_end(args);
 
@@ -173,7 +148,7 @@ int printf(const char *format, ...)
   int ret;
 
   va_start(args, format);
-  ret = vsprintf(putc, stdout, format, args);
+  ret = vsprintf(write_serial, format, args);
   va_end(args);
 
   return ret;
