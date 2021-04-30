@@ -2,6 +2,7 @@
 *.swp
 *.o
 */*.o
+*/*/*.o
 *.bin
 */*.bin
 kernel.bin
@@ -12,3 +13,4 @@ tmp
 tmp/*
 usr/init
 usr/sh
+libc/libc.a

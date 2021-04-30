@@ -1,21 +1,18 @@
 CC		= i386-elf-gcc
 LD		= i386-elf-ld
-HEADER_PATH	= ../libc/include
+AR		= i386-elf-ar
+LIBC		= libc.a
+HEADER_PATH	= include
 C_SOURCES 	= $(wildcard */*.c)
+OBJS		= ${C_SOURCES:.c=.o}
 CFLAGS		= -m32 -nostdlib -nostdinc -nodefaultlibs -fno-builtin -Wall -Wextra -I$(HEADER_PATH)
-LDFLAGS		= -T link.ld
-LDLIBS		= ../libc/libc.a
-
-all: init sh
+ARFLAGS		= rcs
 
 %.o: %.c
 	${CC} ${CFLAGS} -c $< -o $@
 
-init: init.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
-sh: sh.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+$(LIBC): $(OBJS)
+	$(AR) $(ARFLAGS) $@ $(OBJS)
 
 clean:
-	rm -f *.o init sh
+	rm -f *.o */*.o $(LIBC)

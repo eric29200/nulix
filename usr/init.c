@@ -1,11 +1,12 @@
 #include <unistd.h>
+#include <string.h>
 
 #define NULL      ((void *) 0)
 
 /*
  * Spwan a shell on tty.
  */
-void spawn_shell(char *tty)
+/*void spawn_shell(char *tty)
 {
   char *args[] = {tty};
   pid_t pid;
@@ -13,14 +14,17 @@ void spawn_shell(char *tty)
   pid = fork();
   if (pid == 0)
     execve("/sbin/sh", args, NULL);
-}
+}*/
 
 int main(void)
 {
-  spawn_shell("/dev/tty0");
-  spawn_shell("/dev/tty1");
-  spawn_shell("/dev/tty2");
-  spawn_shell("/dev/tty3");
+  //spawn_shell("/dev/tty0");
+  //spawn_shell("/dev/tty1");
+  //spawn_shell("/dev/tty2");
+  //spawn_shell("/dev/tty3");
+
+  if (strncmp("aa", "ab", 2) == 0)
+    for (;;);
 
   return 0;
 }
