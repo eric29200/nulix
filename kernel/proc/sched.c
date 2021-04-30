@@ -46,10 +46,39 @@ int init_scheduler(void (*kinit_func)())
     return -ENOMEM;
 
   /* set current task to kinit */
-  current_task = kinit_task;
   list_add(&kinit_task->list, &tasks_list);
 
   return 0;
+}
+
+/*
+ * Get next task to run.
+ */
+static struct task_t *get_next_task()
+{
+  struct list_head_t *pos;
+  struct task_t *task;
+
+  /* first scheduler call : return kinit */
+  if (!current_task)
+    return kinit_task;
+
+  /* get next running task */
+  list_for_each(pos, &current_task->list) {
+    if (pos == &tasks_list)
+      continue;
+
+    task = list_entry(pos, struct task_t, list);
+    if (task->state == TASK_RUNNING)
+      return task;
+  }
+
+  /* no tasks found : return current if still running */
+  if (current_task->state == TASK_RUNNING)
+    return current_task;
+
+  /* else execute kinit */
+  return kinit_task;
 }
 
 /*
@@ -57,8 +86,7 @@ int init_scheduler(void (*kinit_func)())
  */
 void schedule()
 {
-  struct task_t *next_task, *prev_task, *task;
-  struct list_head_t *pos;
+  struct task_t *prev_task;
   uint32_t flags;
 
   /* lock scheduler and disable interrupts */
@@ -67,31 +95,17 @@ void schedule()
   /* update timers */
   timer_update();
 
-  /* scheduling algorithm : just pop next task */
-  next_task = NULL;
-  list_for_each(pos, &current_task->list) {
-    if (pos == &tasks_list)
-      continue;
-
-    task = list_entry(pos, struct task_t, list);
-    if (task->state == TASK_RUNNING) {
-      next_task = task;
-      break;
-    }
-  }
-
-  /* no task : use kinit task */
+  /* get next task to run */
   prev_task = current_task;
-  if (next_task)
-    current_task = next_task;
-  else
-    current_task = kinit_task;
+  current_task = get_next_task();
 
   /* unlock scheduler */
   spin_unlock(&sched_lock);
 
   /* switch tasks */
-  tss_set_stack(0x10, current_task->kernel_stack);
-  switch_page_directory(current_task->pgd);
-  scheduler_do_switch(&prev_task->esp, current_task->esp);
+  if (prev_task != current_task) {
+    tss_set_stack(0x10, current_task->kernel_stack);
+    switch_page_directory(current_task->pgd);
+    scheduler_do_switch(&prev_task->esp, current_task->esp);
+  }
 }
