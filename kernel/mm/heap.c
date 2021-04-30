@@ -34,7 +34,6 @@ struct heap_t *heap_create(uint32_t start_address, size_t size)
   heap->first_block->prev = NULL;
   heap->first_block->next = NULL;
   heap->last_block = heap->first_block;
-  spin_lock_init(&heap->lock);
 
   return heap;
 }
@@ -71,17 +70,12 @@ static struct heap_block_t *heap_find_free_block(struct heap_t *heap, uint8_t pa
 void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 {
   struct heap_block_t *block, *new_block;
-  uint32_t page_offset, flags;
-
-  /* lock the heap */
-  spin_lock_irqsave(&heap->lock, flags);
+  uint32_t page_offset;
 
   /* find free block */
   block = heap_find_free_block(heap, page_aligned, size);
-  if (!block) {
-    spin_unlock_irqrestore(&heap->lock, flags);
+  if (!block)
     return NULL;
-  }
 
   /* if page alignement is asked, move block */
   if (page_aligned && !HEAP_BLOCK_ALIGNED(block)) {
@@ -130,25 +124,21 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
   /* mark this block */
   block->free = 0;
 
-  spin_unlock_irqrestore(&heap->lock, flags);
   return (void *) HEAP_BLOCK_DATA(block);
 }
 
 /*
  * Free memory on the heap.
  */
-void heap_free(struct heap_t *heap, void *p)
+void heap_free(void *p)
 {
   struct heap_block_t *block;
-  uint32_t flags;
 
   /* do not free NULL */
   if (!p)
     return;
 
   /* mark block as free */
-  spin_lock_irqsave(&heap->lock, flags);
   block = (struct heap_block_t *) ((uint32_t) p - sizeof(struct heap_block_t));
   block->free = 1;
-  spin_unlock_irqrestore(&heap->lock, flags);
 }

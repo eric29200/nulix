@@ -2,7 +2,6 @@
 #define _TTY_H_
 
 #include <drivers/screen.h>
-#include <lock.h>
 
 #define TTY_BUF_SIZE            256
 #define TTY_DELAY_UPDATE_MS     20
@@ -16,7 +15,6 @@ struct tty_t {
   uint32_t w_pos;
   char buf[TTY_BUF_SIZE];
   struct screen_t screen;
-  spinlock_t lock;
 };
 
 int init_tty();

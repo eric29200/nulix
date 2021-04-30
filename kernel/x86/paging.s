@@ -4,8 +4,6 @@ copy_page_physical:
 	push ebx              ; save ebx and eflags
 	pushf
 
-	cli                   ; disable interrupts
-
 	mov ebx, [esp+12]     ; src address
 	mov ecx, [esp+16]     ; dst address
 

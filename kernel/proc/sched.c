@@ -5,11 +5,9 @@
 #include <proc/task.h>
 #include <proc/timer.h>
 #include <list.h>
-#include <lock.h>
 #include <stderr.h>
 
 LIST_HEAD(tasks_list);                    /* active processes list */
-static spinlock_t sched_lock;             /* scheduler lock */
 static struct task_t *kinit_task;         /* kernel init task (pid = 0) */
 struct task_t *current_task = NULL;       /* current task */
 static pid_t next_pid = 0;                /* pid counter */
@@ -22,13 +20,8 @@ extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
  */
 pid_t get_next_pid()
 {
-  uint32_t flags;
   pid_t ret;
-
-  spin_lock_irqsave(&sched_lock, flags);
   ret = next_pid++;
-  spin_unlock_irqrestore(&sched_lock, flags);
-
   return ret;
 }
 
@@ -37,9 +30,6 @@ pid_t get_next_pid()
  */
 int init_scheduler(void (*kinit_func)())
 {
-  /* init scheduler lock */
-  spin_lock_init(&sched_lock);
-
   /* create init task */
   kinit_task = create_kernel_task(kinit_func);
   if (!kinit_task)
@@ -87,10 +77,6 @@ static struct task_t *get_next_task()
 void schedule()
 {
   struct task_t *prev_task;
-  uint32_t flags;
-
-  /* lock scheduler and disable interrupts */
-  spin_lock_irqsave(&sched_lock, flags);
 
   /* update timers */
   timer_update();
@@ -98,9 +84,6 @@ void schedule()
   /* get next task to run */
   prev_task = current_task;
   current_task = get_next_task();
-
-  /* unlock scheduler */
-  spin_unlock(&sched_lock);
 
   /* switch tasks */
   if (prev_task != current_task) {

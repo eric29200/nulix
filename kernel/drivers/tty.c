@@ -44,16 +44,12 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
 {
   struct tty_t *tty;
   size_t count = 0;
-  uint32_t flags;
   int key;
 
   /* get tty */
   tty = tty_lookup(dev);
   if (!tty)
     return -EINVAL;
-
-  /* lock tty */
-  spin_lock_irqsave(&tty->lock, flags);
 
   while (count < n) {
     /* read next char */
@@ -75,9 +71,7 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
     count++;
   }
 
-  /* unlock tty */
 out:
-  spin_unlock_irqrestore(&tty->lock, flags);
   return count;
 }
 
@@ -87,15 +81,12 @@ out:
 void tty_update(char c)
 {
   struct tty_t *tty;
-  uint32_t flags;
 
   /* get tty */
   tty = &tty_table[current_tty];
 
   /* add character */
-  spin_lock_irqsave(&tty->lock, flags);
   screen_putc(&tty->screen, c);
-  spin_unlock_irqrestore(&tty->lock, flags);
 }
 
 /*
@@ -104,7 +95,6 @@ void tty_update(char c)
 size_t tty_write(dev_t dev, const void *buf, size_t n)
 {
   struct tty_t *tty;
-  uint32_t flags;
   size_t i;
 
   /* get tty */
@@ -112,15 +102,9 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
   if (!tty)
     return -EINVAL;
 
-  /* lock tty */
-  spin_lock_irqsave(&tty->lock, flags);
-
   /* put each character on the screen */
   for (i = 0; i < n; i++)
     screen_putc(&tty->screen, ((const unsigned char *) buf)[i]);
-
-  /* unlock tty */
-  spin_unlock_irqrestore(&tty->lock, flags);
 
   return i;
 }
@@ -163,7 +147,6 @@ int init_tty()
     tty_table[i].w_pos = 0;
     tty_table[i].buf[0] = 0;
     screen_init(&tty_table[i].screen);
-    spin_lock_init(&tty_table[i].lock);
   }
 
   /* set current tty to tty0 */

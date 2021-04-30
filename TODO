@@ -1,16 +1,2 @@
-- Implement printf (stdio.c) from xv6
-- Test printf functions
-
-- In init function, spawn shell
-  on each child
-  open('dev/ttyN')    // stdin
-  dup(0)              // stdout
-  dup(0)              // stderr
-
-  and then in parent : 
-  open('dev/tty0')    // stdin
-  dup(0)              // stdout
-  dup(0)              // stderr
-
-- Write exit system call (copy from xv6)
-- Destroy zombie tasks (copy from xv6)
+- Write exit system call (from xv6)
+- Destroy zombie tasks (from xv6) = write waitpid
