@@ -24,8 +24,6 @@ struct task_t {
   uint32_t esp;
   int exit_code;
   struct task_t *parent;
-  struct list_head_t children;
-  struct list_head_t sibling;
   uint32_t kernel_stack;
   uint32_t user_entry;
   uint32_t user_stack;

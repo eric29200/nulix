@@ -55,8 +55,6 @@ static struct task_t *create_task(struct task_t *parent)
   task->end_brk = 0;
   task->parent = parent;
   INIT_LIST_HEAD(&task->list);
-  INIT_LIST_HEAD(&task->children);
-  INIT_LIST_HEAD(&task->sibling);
 
   /* init open files */
   for (i = 0; i < NR_OPEN; i++)
@@ -128,9 +126,6 @@ struct task_t *fork_task(struct task_t *parent)
 
   /* duplicate page directory */
   task->pgd = clone_page_directory(parent->pgd);
-
-  /* add child to parent */
-  list_add(&task->sibling, &parent->children);
 
   /* copy open files */
   for (i = 0; i < NR_OPEN; i++) {
