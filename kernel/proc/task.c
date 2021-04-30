@@ -205,7 +205,7 @@ int spawn_init()
   regs->edi = 0;
 
   /* add task */
-  list_add(&task->list, &tasks_list);
+  list_add(&task->list, &current_task->list);
 
   return 0;
 }

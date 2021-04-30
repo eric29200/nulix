@@ -17,7 +17,7 @@ pid_t sys_fork()
     return -ENOMEM;
 
   /* run child */
-  list_add(&child->list, &tasks_list);
+  list_add(&child->list, &current_task->list);
 
   /* return child pid */
   return child->pid;

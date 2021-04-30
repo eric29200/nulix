@@ -6,7 +6,6 @@
 #define TASK_RETURN_ADDRESS               0xFFFFFFFF
 
 extern struct task_t *current_task;
-extern struct list_head_t tasks_list;
 
 int init_scheduler(void (*kinit_func)());
 void schedule();

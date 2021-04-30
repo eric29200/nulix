@@ -23,7 +23,7 @@ int main(void)
   //spawn_shell("/dev/tty2");
   //spawn_shell("/dev/tty3");
 
-  if (strncmp("aa", "ab", 2) == 0)
+  if (strncmp("aa", "ab", 1) == 0)
     for (;;);
 
   return 0;
