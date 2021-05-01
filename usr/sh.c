@@ -94,6 +94,10 @@ static int execute_cmd(struct cmd_t *cmd)
   if (cmd->argc <= 0)
     return -1;
 
+  /* exit command */
+  if (strcmp(cmd->argv[0], "exit") == 0)
+    exit(0);
+
   /* find command path */
   ret = find_cmd_path(cmd);
   if (ret != 0)

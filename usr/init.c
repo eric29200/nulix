@@ -8,7 +8,7 @@
 /*
  * Spwan a shell on tty.
  */
-void spawn_shell(int tty_num)
+pid_t spawn_shell(int tty_num)
 {
   char tty[32];
   pid_t pid;
@@ -28,6 +28,8 @@ void spawn_shell(int tty_num)
 
     execve("/bin/sh", NULL, NULL);
   }
+
+  return pid;
 }
 
 /*
@@ -35,15 +37,23 @@ void spawn_shell(int tty_num)
  */
 int main(void)
 {
+  pid_t ttys_pid[NTTYS];
+  pid_t pid;
   int i;
 
   /* spawn a shell on each tty */
   for (i = 0; i < NTTYS; i++)
-    spawn_shell(i + 1);
+    ttys_pid[i] = spawn_shell(i + 1);
 
   /* destroy zombie tasks */
-  for (;;)
-    wait();
+  for (;;) {
+    pid = wait();
+
+    /* if main shell exited, respawn it */
+    for (i = 0; i < NTTYS; i++)
+      if (pid == ttys_pid[i])
+        ttys_pid[i] = spawn_shell(i + 1);
+  }
 
   return 0;
 }
