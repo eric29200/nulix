@@ -33,15 +33,15 @@ static uint32_t keyboard_status = 0;
 static const char kbd_map1[] = {
   KEY_NULL,           /* 0x00 - Null */
   KEY_ESCAPE,         /* 0x01 - Escape  */
-  '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=',
+  '&', KEY_NULL, '"', '\'', '(', '-', KEY_NULL, '_', KEY_NULL, KEY_NULL, ')', '=',
   '\b',               /* 0x0e - Backspace */
   '\t',               /* 0x0f - Tab */
-  'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']',
+  'a', 'z', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '^', '$',
   '\n',               /* 0x1e - Enter */
   KEY_NULL,           /* 0x1d - Left Ctrl */
-  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`',
+  'q', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', KEY_NULL, '*',
   KEY_NULL,           /* 0x2a - Left Shift */
-  '\\', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/',
+  '<', 'w', 'x', 'c', 'v', 'b', 'n', ',', ';', ':', '!',
   KEY_NULL,           /* 0x36 - Right Shift */
   KEY_NULL,           /* 0x37 - Print Screen */
   KEY_NULL,           /* 0x38 - Left Alt */
@@ -122,15 +122,15 @@ static const char kbd_map1[] = {
 static const char kbd_map2[] = {
   KEY_NULL,           /* 0x00 - Undefined */
   KEY_ESCAPE,         /* 0x01 - Escape */
-  '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+',
+  '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', KEY_NULL, '+',
   '\b',               /* 0x0e - Backspace */
   '\t',               /* 0x0f - Tab */
-  'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}',
+  'A', 'Z', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', KEY_NULL, KEY_NULL,
   '\n',               /* 0x1e - Enter */
   KEY_NULL,           /* 0x1d - Left Ctrl */
-  'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~',
+  'Q', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', '%', KEY_NULL,
   KEY_NULL,           /* 0x2a - Left Shift */
-  '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?',
+  '>', 'W', 'X', 'C', 'V', 'B', 'N', '?', '.', '/', KEY_NULL,
   KEY_NULL,           /* 0x36 - Right Shift */
   KEY_NULL,           /* 0x37 - Print Screen */
   KEY_NULL,           /* 0x38 - Left Alt */
