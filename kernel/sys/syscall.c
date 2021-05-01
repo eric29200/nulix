@@ -17,6 +17,7 @@ static const void *syscalls[] = {
   [__NR_sleep]      = sys_sleep,
   [__NR_dup]        = sys_dup,
   [__NR_dup2]       = sys_dup2,
+  [__NR_wait]       = sys_wait,
 };
 
 /*

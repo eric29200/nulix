@@ -15,6 +15,7 @@
 #define __NR_sleep        10
 #define __NR_dup          11
 #define __NR_dup2         12
+#define __NR_wait         13
 
 /*
  * System call with no argument.
@@ -142,6 +143,14 @@ static inline int dup(int oldfd)
 static inline int dup2(int oldfd, int newfd)
 {
   return syscall2(__NR_dup2, oldfd, newfd);
+}
+
+/*
+ * Wait system call.
+ */
+static inline int wait()
+{
+  return syscall0(__NR_wait);
 }
 
 #endif

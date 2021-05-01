@@ -13,6 +13,7 @@ int spawn_init();
 pid_t get_next_pid();
 void schedule();
 
+void task_sleep(void *chan);
 void task_wakeup(void *chan);
 
 #endif

@@ -34,18 +34,16 @@ void spawn_shell(int tty_num)
  */
 int main(void)
 {
+  pid_t pid;
   int i;
 
   /* spawn a shell on each tty */
   for (i = 0; i < NTTYS; i++)
     spawn_shell(i + 1);
 
-  open("/dev/tty1");
-  dup(0);
-  dup(0);
-  sleep(3);
-  printf("waiting");
-  for (;;);
+  /* destroy zombie tasks */
+  for (;;)
+    wait();
 
   return 0;
 }

@@ -107,6 +107,22 @@ void schedule()
 }
 
 /*
+ * Sleep on a channel.
+ */
+void task_sleep(void *chan)
+{
+  /* sleep on channel */
+  current_task->waiting_chan = chan;
+  current_task->state = TASK_SLEEPING;
+
+  /* reschedule */
+  schedule();
+
+  /* reset waiting channel */
+  current_task->waiting_chan = NULL;
+}
+
+/*
  * Wake up all tasks sleeping on channel.
  */
 void task_wakeup(void *chan)

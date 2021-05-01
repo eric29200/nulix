@@ -191,6 +191,9 @@ void destroy_task(struct task_t *task)
   if (!task)
     return;
 
+  /* remove task */
+  list_del(&task->list);
+
   /* free kernel stack */
   kfree((void *) (task->kernel_stack - STACK_SIZE));
 
