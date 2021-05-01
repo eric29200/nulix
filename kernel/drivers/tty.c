@@ -20,8 +20,8 @@ static struct timer_event_t refresh_tm;
 static struct tty_t *tty_lookup(dev_t dev)
 {
   /* asked tty */
-  if (minor(dev) >= 0 && minor(dev) < NB_TTYS)
-    return &tty_table[minor(dev)];
+  if (minor(dev) > 0 && minor(dev) <= NB_TTYS)
+    return &tty_table[minor(dev) - 1];
 
   return NULL;
 }
@@ -138,7 +138,7 @@ int init_tty()
     screen_init(&tty_table[i].screen);
   }
 
-  /* set current tty to tty0 */
+  /* set current tty to first tty */
   current_tty = 0;
 
   /* create refrsh timer */

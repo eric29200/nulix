@@ -38,7 +38,7 @@ int main(void)
 
   /* spawn a shell on each tty */
   for (i = 0; i < NTTYS; i++)
-    spawn_shell(i);
+    spawn_shell(i + 1);
 
   return 0;
 }
