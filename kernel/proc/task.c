@@ -99,14 +99,6 @@ struct task_t *create_kernel_task(void (*func)(void))
   /* set eip to function */
   regs->return_address = TASK_RETURN_ADDRESS;
   regs->eip = (uint32_t) func;
-  regs->eax = 0;
-  regs->ecx = 0;
-  regs->edx = 0;
-  regs->ebx = 0;
-  regs->esp = 0;
-  regs->ebp = 0;
-  regs->esi = 0;
-  regs->edi = 0;
 
   return task;
 }
@@ -154,14 +146,6 @@ struct task_t *fork_task(struct task_t *parent)
   regs->parameter1 = (uint32_t) task;
   regs->return_address = TASK_RETURN_ADDRESS;
   regs->eip = (uint32_t) task_user_entry;
-  regs->eax = 0;
-  regs->ecx = 0;
-  regs->edx = 0;
-  regs->ebx = 0;
-  regs->esp = 0;
-  regs->ebp = 0;
-  regs->esi = 0;
-  regs->edi = 0;
 
   return task;
 }
@@ -195,14 +179,6 @@ int spawn_init()
   regs->parameter2 = (uint32_t) strdup("/sbin/init");
   regs->return_address = TASK_RETURN_ADDRESS;
   regs->eip = (uint32_t) task_elf_entry;
-  regs->eax = 0;
-  regs->ecx = 0;
-  regs->edx = 0;
-  regs->ebx = 0;
-  regs->esp = 0;
-  regs->ebp = 0;
-  regs->esi = 0;
-  regs->edi = 0;
 
   /* add task */
   list_add(&task->list, &current_task->list);

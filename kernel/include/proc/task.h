@@ -37,8 +37,8 @@ struct task_t {
  * Registers structure.
  */
 struct task_registers_t {
-	uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
-	uint32_t eip;
+  uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
+  uint32_t eip;
   uint32_t return_address;
   uint32_t parameter1;
   uint32_t parameter2;
