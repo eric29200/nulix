@@ -43,8 +43,8 @@ int elf_load(const char *path)
   struct elf_prog_header_t *ph;
   struct stat_t statbuf;
   char *buf = NULL;
-  uint32_t i;
   int fd, ret = 0;
+  uint32_t i;
 
   /* get file size */
   ret = do_stat((char *) path, &statbuf);
@@ -80,8 +80,11 @@ int elf_load(const char *path)
   if (elf_check(elf_header) != 0)
     goto out;
 
-  /* copy elf in memory */
+  /* set start text segment */
   ph = (struct elf_prog_header_t *) (buf + elf_header->e_phoff);
+  current_task->start_text = ph->p_vaddr;
+
+  /* copy elf in memory */
   for (; (char *) ph < (buf + elf_header->e_phoff + elf_header->e_phentsize * elf_header->e_phnum); ph++) {
     /* map page */
     alloc_frame(get_page(ph->p_vaddr, 1, current_task->pgd), 0, 0);
@@ -91,17 +94,21 @@ int elf_load(const char *path)
     memcpy((void *) ph->p_vaddr, buf + ph->p_offset, ph->p_filesz);
 
     /* update stack position */
-    current_task->user_stack = ph->p_vaddr + ph->p_filesz;
+    current_task->end_text = ph->p_vaddr + ph->p_filesz;
   }
 
-  /* allocate a stack just after the binary */
-  current_task->user_stack = PAGE_ALIGN_UP(current_task->user_stack);
+  /* set data segment */
+  current_task->start_brk = current_task->end_text;
+  current_task->end_brk = current_task->end_text;
+
+  /* allocate at the end of process memory */
+  current_task->user_stack = USTACK_START - USTACK_SIZE;
   for (i = 0; i <= USTACK_SIZE / PAGE_SIZE; i++)
     alloc_frame(get_page(current_task->user_stack + i * PAGE_SIZE, 1, current_task->pgd), 0, 1);
 
   /* set elf entry point */
   current_task->user_entry = elf_header->e_entry;
-  current_task->user_stack += USTACK_SIZE;
+  current_task->user_stack = USTACK_START;
 out:
   if (buf)
     kfree(buf);

@@ -76,10 +76,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
   if (ret != 0)
     goto err;
 
-  /* set brk to end of user stack */
-  current_task->start_brk = current_task->user_stack + PAGE_SIZE;
-  current_task->end_brk = current_task->user_stack + PAGE_SIZE;
-
   /* copy back argv to user address space */
   user_argv = (char **) sys_sbrk(sizeof(char *) * argv_len);
   memset(user_argv, 0, sizeof(char *) * argv_len);

@@ -25,6 +25,8 @@ struct task_t {
   uint32_t                    esp;                /* kernel stack pointer */
   uint32_t                    user_entry;         /* user entry point */
   uint32_t                    user_stack;         /* user stack */
+  uint32_t                    start_text;         /* user text segment start */
+  uint32_t                    end_text;           /* user text segment end */
   uint32_t                    start_brk;          /* user data segment start */
   uint32_t                    end_brk;            /* user data segment end */
   struct registers_t          user_regs;          /* saved registers at syscall entry */

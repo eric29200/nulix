@@ -131,6 +131,8 @@ struct task_t *fork_task(struct task_t *parent)
   task->user_stack = parent->user_stack;
 
   /* set user mapped memory to parent */
+  task->start_text = parent->start_text;
+  task->end_text = parent->end_text;
   task->start_brk = parent->start_brk;
   task->end_brk = parent->end_brk;
 
@@ -165,10 +167,6 @@ int spawn_init()
 
   /* clone page directory */
   task->pgd = clone_page_directory(current_task->pgd);
-
-  /* set brk to end of user stack */
-  task->start_brk = task->user_stack + PAGE_SIZE;
-  task->end_brk = task->user_stack + PAGE_SIZE;
 
   /* set registers */
   regs = (struct task_registers_t *) task->esp;

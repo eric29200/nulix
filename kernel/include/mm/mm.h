@@ -11,6 +11,7 @@
 #define KHEAP_SIZE              0x200000
 
 #define UMEM_START              0x2000000
+#define USTACK_START            0xF0000000
 #define USTACK_SIZE             0x8000
 
 void init_mem(uint32_t start, uint32_t end);
