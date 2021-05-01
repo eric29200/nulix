@@ -103,18 +103,18 @@ void page_fault_handler(struct registers_t *regs)
     return;
   }
 
-  /* user page fault : allocate page if fault address is inside brk */
-  if (current_task && fault_addr >= current_task->start_brk && fault_addr <= current_task->end_brk) {
-    alloc_frame(get_page(fault_addr, 1, current_task->pgd), 0, 1);
-    return;
-  }
-
   /* get errors informations */
   int present = !(regs->err_code & 0x1);
   int rw = regs->err_code & 0x2;
   int user = regs->err_code & 0x4;
   int reserved = regs->err_code & 0x8;
   int id = regs->err_code & 0x10;
+
+  /* user page fault : allocate page if address is user space memory */
+  if (user && fault_addr > KMEM_SIZE) {
+    alloc_frame(get_page(fault_addr, 1, current_task->pgd), 0, 1);
+    return;
+  }
 
   /* output message and panic */
   printf("Page fault at address=%x | present=%d read-only=%d user-mode=%d reserved=%d instruction-fetch=%d\n",

@@ -2,7 +2,7 @@ OUTPUT_FORMAT(elf32-i386)
 ENTRY(main)
 
 SECTIONS {
-	. = 0x002000000;
+	. = 0xA00000;
 
 	.text ALIGN (0x1000) :
 	{
