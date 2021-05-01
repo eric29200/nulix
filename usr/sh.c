@@ -4,12 +4,17 @@
 #include <unistd.h>
 
 #define MAX_CMD_SIZE    512
+#define MAX_PATH_SIZE   512
 #define MAX_ARGS        32
+
+/* path environ */
+static char *env_path[] = {"/sbin", "/usr/sbin", "/bin", "/usr/bin", NULL};
 
 /*
  * Command structure.
  */
 struct cmd_t {
+  char path[MAX_PATH_SIZE];
   int argc;
   char *argv[MAX_ARGS];
 };
@@ -22,7 +27,6 @@ static void parse_cmd(char *cmd_line, struct cmd_t *cmd)
   int i;
 
   /* parse command line */
-  cmd->argc = 0;
   for (i = 0; i < MAX_ARGS; i++) {
     cmd->argv[i] = strtok(i == 0 ? cmd_line : NULL, " ");
     if (!cmd->argv[i])
@@ -33,6 +37,49 @@ static void parse_cmd(char *cmd_line, struct cmd_t *cmd)
   /* reset last arguments */
   for (; i < MAX_ARGS; i++)
     cmd->argv[i] = NULL;
+}
+
+/*
+ * Find command path.
+ */
+static int find_cmd_path(struct cmd_t *cmd)
+{
+  int i, n, filename_len;
+
+  /* file name must be in argv[0] */
+  if (cmd->argc <= 0)
+    return -1;
+
+  /* if filename contains / do not use environ */
+  if (strchr(cmd->argv[0], '/')) {
+    strncpy(cmd->path, cmd->argv[0], MAX_PATH_SIZE);
+    return access(cmd->path);
+  }
+
+  /* check environ path */
+  filename_len = strlen(cmd->argv[0]);
+  for (i = 0; env_path[i] != NULL; i++) {
+    /* reset path */
+    memset(cmd->path, 0, MAX_PATH_SIZE);
+
+    /* check total length */
+    n = strlen(env_path[i]);
+    if (n + 1 + filename_len >= MAX_PATH_SIZE)
+      continue;
+
+    /* copy environ path */
+    memcpy(cmd->path, env_path[i], n);
+
+    /* add file name */
+    cmd->path[n++] = '/';
+    strcpy(cmd->path + n, cmd->argv[0]);
+
+    /* check if file exist */
+    if (access(cmd->path) == 0)
+      return 0;
+  }
+
+  return -1;
 }
 
 /*
@@ -47,15 +94,15 @@ static int execute_cmd(struct cmd_t *cmd)
   if (cmd->argc <= 0)
     return -1;
 
-  /* check if file exists */
-  ret = access(cmd->argv[0]);
+  /* find command path */
+  ret = find_cmd_path(cmd);
   if (ret != 0)
     return ret;
 
   /* execute command */
   pid = fork();
   if (pid == 0)
-    execve(cmd->argv[0], cmd->argv, NULL);
+    execve(cmd->path, cmd->argv, NULL);
   else
     wait();
 
