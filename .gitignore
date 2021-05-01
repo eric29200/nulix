@@ -13,4 +13,5 @@ tmp
 tmp/*
 usr/init
 usr/sh
+usr/echo
 libc/libc.a

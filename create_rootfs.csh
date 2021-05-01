@@ -15,6 +15,7 @@ sudo mkdir tmp/sbin
 sudo mkdir tmp/bin
 sudo cp usr/init tmp/sbin/
 sudo cp usr/sh tmp/bin/
+sudo cp usr/echo tmp/bin/
 
 # create devices nodes
 sudo mkdir tmp/dev

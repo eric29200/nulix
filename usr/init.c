@@ -34,7 +34,6 @@ void spawn_shell(int tty_num)
  */
 int main(void)
 {
-  pid_t pid;
   int i;
 
   /* spawn a shell on each tty */
