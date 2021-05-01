@@ -19,13 +19,12 @@ struct cmd_t {
  */
 static void parse_cmd(char *cmd_line, struct cmd_t *cmd)
 {
-  char *last;
   int i;
 
   /* parse command line */
   cmd->argc = 0;
-  for (i = 0, last = cmd_line; i < MAX_ARGS; i++) {
-    cmd->argv[i] = strtok_r(last, " ", &last);
+  for (i = 0; i < MAX_ARGS; i++) {
+    cmd->argv[i] = strtok(i == 0 ? cmd_line : NULL, " ");
     if (!cmd->argv[i])
       break;
     cmd->argc++;

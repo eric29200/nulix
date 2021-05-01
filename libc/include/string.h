@@ -13,6 +13,7 @@ char *strcpy(char *dest, const char *src);
 char *strncpy(char *dest, const char *src, size_t n);
 
 char *strchr(const char *s, char c);
+char *strtok(char *s, const char *delim);
 char *strtok_r(char *s, const char *delim, char **last);
 
 void memset(void *s, char c, size_t n);
