@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <fs/fs.h>
 
-#define SYSCALLS_NUM      (__NR_wait + 1)
+#define SYSCALLS_NUM      (__NR_access + 1)
 
 #define __NR_exit         1
 #define __NR_fork         2
@@ -19,6 +19,7 @@
 #define __NR_dup          11
 #define __NR_dup2         12
 #define __NR_wait         13
+#define __NR_access       14
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -32,10 +33,11 @@ int sys_open(const char *pathname);
 int sys_close(int fd);
 void *sys_sbrk(size_t n);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);
-int sys_stat(char *filename, struct stat_t *statbuf);
+int sys_stat(const char *filename, struct stat_t *statbuf);
 int sys_sleep(unsigned long secs);
 int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
 int sys_wait();
+int sys_access(const char *filename);
 
 #endif

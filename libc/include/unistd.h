@@ -16,6 +16,7 @@
 #define __NR_dup          11
 #define __NR_dup2         12
 #define __NR_wait         13
+#define __NR_access       14
 
 /*
  * System call with no argument.
@@ -151,6 +152,14 @@ static inline int dup2(int oldfd, int newfd)
 static inline int wait()
 {
   return syscall0(__NR_wait);
+}
+
+/*
+ * Access system call.
+ */
+static inline int access(const char *pathname)
+{
+  return syscall1(__NR_access, (int) pathname);
 }
 
 #endif

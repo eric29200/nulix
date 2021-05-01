@@ -114,6 +114,7 @@ int do_open(const char *pathname);
 int do_close(int fd);
 int do_read(int fd, char *buf, int count);
 int do_write(int fd, const char *buf, int count);
-int do_stat(char *filename, struct stat_t *statbuf);
+int do_stat(const char *filename, struct stat_t *statbuf);
+int do_access(const char *filename);
 
 #endif

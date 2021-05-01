@@ -1,4 +1,0 @@
-- Rewrite tty_write and tty_update to put character on tty buffer
-- Rewrite tty_write to wakeup processes waiting
-- Rewrite tty_read to sleep when no more characters
-- Write gets

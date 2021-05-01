@@ -5,7 +5,7 @@
 /*
  * Stats file.
  */
-int do_stat(char *filename, struct stat_t *statbuf)
+int do_stat(const char *filename, struct stat_t *statbuf)
 {
   struct inode_t *inode;
 
@@ -27,6 +27,21 @@ int do_stat(char *filename, struct stat_t *statbuf)
 
   /* free inode */
   iput(inode);
+
+  return 0;
+}
+
+/*
+ * Check access file.
+ */
+int do_access(const char *filename)
+{
+  struct inode_t *inode;
+
+  /* get inode */
+  inode = namei(filename);
+  if (!inode)
+    return -ENOENT;
 
   return 0;
 }
