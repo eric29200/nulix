@@ -123,9 +123,26 @@ void task_sleep(void *chan)
 }
 
 /*
- * Wake up all tasks sleeping on channel.
+ * Wake up one task sleeping on channel.
  */
 void task_wakeup(void *chan)
+{
+  struct list_head_t *pos;
+  struct task_t *task;
+
+  list_for_each(pos, &tasks_list) {
+    task = list_entry(pos, struct task_t, list);
+    if (task->waiting_chan == chan && task->state == TASK_SLEEPING) {
+      task->state = TASK_RUNNING;
+      break;
+    }
+  }
+}
+
+/*
+ * Wake up all tasks sleeping on channel.
+ */
+void task_wakeup_all(void *chan)
 {
   struct list_head_t *pos;
   struct task_t *task;

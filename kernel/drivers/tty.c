@@ -27,24 +27,43 @@ static struct tty_t *tty_lookup(dev_t dev)
 }
 
 /*
- * Read TTY.
+ * Read a character from a tty (block if no character available).
  */
-size_t tty_read(dev_t dev, void *buf, size_t n)
+static int tty_read_wait(dev_t dev)
 {
   struct tty_t *tty;
-  size_t count = 0;
-  int key;
+  int c = -1;
 
   /* get tty */
   tty = tty_lookup(dev);
   if (!tty)
     return -EINVAL;
 
+  /* wait for character */
+  while (tty->r_pos >= tty->w_pos) {
+    tty->r_pos = 0;
+    tty->w_pos = 0;
+    task_sleep(tty);
+  }
+
+  /* get next character */
+  if (tty->r_pos < tty->w_pos)
+    c = tty->buf[tty->r_pos++];
+
+  return c;
+}
+
+/*
+ * Read TTY.
+ */
+size_t tty_read(dev_t dev, void *buf, size_t n)
+{
+  size_t count = 0;
+  int key;
+
   while (count < n) {
     /* read next char */
-    key = -1;
-    if (tty->r_pos < tty->w_pos)
-      key = tty->buf[tty->r_pos++];
+    key = tty_read_wait(dev);
 
     if (key == 0 && count == 0) {           /* ^D */
       break;
@@ -65,7 +84,7 @@ out:
 }
 
 /*
- * Write a chararcter to tty.
+ * Write a character to tty.
  */
 void tty_update(char c)
 {
@@ -74,8 +93,20 @@ void tty_update(char c)
   /* get tty */
   tty = &tty_table[current_tty];
 
-  /* add character */
-  screen_putc(&tty->screen, c);
+  /* adjust read/write positions */
+  if (tty->w_pos >= TTY_BUF_SIZE)
+    tty->w_pos = TTY_BUF_SIZE - 1;
+  if (tty->r_pos > tty->w_pos)
+    tty->r_pos = tty->w_pos = 0;
+
+  /* store character */
+  tty->buf[tty->w_pos++] = c;
+
+  /* wake up eventual process */
+  task_wakeup(tty);
+
+  /* echo character on device */
+  tty_write(tty->dev, &c, 1);
 }
 
 /*

@@ -25,6 +25,10 @@ int do_read(int fd, char *buf, int count)
   /* get current file */
   filp = current_task->filp[fd];
 
+  /* read from character device */
+  if (S_ISCHR(filp->f_inode->i_mode))
+    return read_char(filp->f_inode->i_zone[0], buf, count);
+
   /* adjust size */
   if (filp->f_pos + count > filp->f_inode->i_size)
     count = filp->f_inode->i_size - filp->f_pos;

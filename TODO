@@ -1,3 +1,4 @@
-- Use conditionnal chanel (from xv6)
-- Write exit system call (from xv6)
-- Destroy zombie tasks (from xv6) = write waitpid
+- Rewrite tty_write and tty_update to put character on tty buffer
+- Rewrite tty_write to wakeup processes waiting
+- Rewrite tty_read to sleep when no more characters
+- Write gets
