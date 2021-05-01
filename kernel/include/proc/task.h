@@ -17,20 +17,20 @@
  * Kernel task structure.
  */
 struct task_t {
-  pid_t pid;
-  uint8_t state;
-  uint32_t esp;
-  int exit_code;
-  struct task_t *parent;
-  uint32_t kernel_stack;
-  uint32_t user_entry;
-  uint32_t user_stack;
-  uint32_t start_brk;
-  uint32_t end_brk;
-  struct registers_t user_regs;
-  struct page_directory_t *pgd;
-  struct file_t *filp[NR_OPEN];
-  struct list_head_t list;
+  pid_t                       pid;                /* process id */
+  uint8_t                     state;              /* process state */
+  int                         exit_code;          /* exit code */
+  struct task_t               *parent;            /* parent process */
+  uint32_t                    kernel_stack;       /* kernel stack */
+  uint32_t                    esp;                /* kernel stack pointer */
+  uint32_t                    user_entry;         /* user entry point */
+  uint32_t                    user_stack;         /* user stack */
+  uint32_t                    start_brk;          /* user data segment start */
+  uint32_t                    end_brk;            /* user data segment end */
+  struct registers_t          user_regs;          /* saved registers at syscall entry */
+  struct page_directory_t     *pgd;               /* page directory */
+  struct file_t               *filp[NR_OPEN];     /* opened files */
+  struct list_head_t          list;               /* next process */
 };
 
 /*
