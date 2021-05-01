@@ -19,4 +19,7 @@ int vprintf(const char *format, va_list arg);
 int vsnprintf(char *str, size_t size, const char *format, va_list args);
 int vsprintf(char *str, const char *format, va_list arg);
 
+int getc();
+char *gets(char *s, int size);
+
 #endif
