@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define MAX_CMD_SIZE    512
 #define MAX_ARGS        32
