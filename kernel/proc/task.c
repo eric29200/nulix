@@ -27,9 +27,12 @@ static void task_user_entry(struct task_t *task)
 static void task_elf_entry(struct task_t *task, char *path)
 {
   /* load elf header */
-  task->path = path;
-  if (elf_load(path) == 0)
+  if (elf_load(path) == 0) {
+    kfree(path);
     enter_user_mode(task->user_stack, task->user_entry, TASK_RETURN_ADDRESS);
+  }
+
+  kfree(path);
 }
 
 /*
@@ -49,7 +52,6 @@ static struct task_t *create_task(struct task_t *parent)
   /* set tid */
   task->pid = get_next_pid();
   task->state = TASK_RUNNING;
-  task->path = NULL;
   task->start_brk = 0;
   task->end_brk = 0;
   task->parent = parent;
@@ -215,10 +217,6 @@ void destroy_task(struct task_t *task)
 {
   if (!task)
     return;
-
-  /* free task path */
-  if (task->path)
-    kfree(task->path);
 
   /* free kernel stack */
   kfree((void *) (task->kernel_stack - STACK_SIZE));

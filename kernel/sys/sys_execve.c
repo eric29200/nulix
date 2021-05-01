@@ -76,9 +76,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
   if (ret != 0)
     goto err;
 
-  /* set path */
-  current_task->path = strdup(path);
-
   /* set brk to end of user stack */
   current_task->start_brk = current_task->user_stack + PAGE_SIZE;
   current_task->end_brk = current_task->user_stack + PAGE_SIZE;
