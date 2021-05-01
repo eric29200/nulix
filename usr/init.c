@@ -40,5 +40,12 @@ int main(void)
   for (i = 0; i < NTTYS; i++)
     spawn_shell(i + 1);
 
+  open("/dev/tty1");
+  dup(0);
+  dup(0);
+  sleep(3);
+  printf("waiting");
+  for (;;);
+
   return 0;
 }

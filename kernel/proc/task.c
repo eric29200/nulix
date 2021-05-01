@@ -77,9 +77,9 @@ static struct task_t *create_task(struct task_t *parent)
 }
 
 /*
- * Create a task.
+ * Create kernel init task.
  */
-struct task_t *create_kernel_task(void (*func)(void))
+struct task_t *create_kinit_task(void (*func)(void))
 {
   struct task_registers_t *regs;
   struct task_t *task;
@@ -151,11 +151,10 @@ struct task_t *fork_task(struct task_t *parent)
 
   return task;
 }
-
 /*
- * Spawn init process.
+ * Create init process.
  */
-int spawn_init()
+struct task_t *create_init_task()
 {
   struct task_registers_t *regs;
   struct task_t *task;
@@ -163,7 +162,7 @@ int spawn_init()
   /* create task */
   task = create_task(NULL);
   if (!task)
-    return -ENOMEM;
+    return NULL;
 
   /* clone page directory */
   task->pgd = clone_page_directory(current_task->pgd);
@@ -181,7 +180,7 @@ int spawn_init()
   /* add task */
   list_add(&task->list, &current_task->list);
 
-  return 0;
+  return task;
 }
 
 /*

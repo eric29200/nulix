@@ -29,6 +29,7 @@ struct task_t {
   uint32_t                    end_text;           /* user text segment end */
   uint32_t                    start_brk;          /* user data segment start */
   uint32_t                    end_brk;            /* user data segment end */
+  void                        *waiting_chan;      /* waiting channel */
   struct registers_t          user_regs;          /* saved registers at syscall entry */
   struct page_directory_t     *pgd;               /* page directory */
   struct file_t               *filp[NR_OPEN];     /* opened files */
@@ -47,9 +48,9 @@ struct task_registers_t {
   uint32_t parameter3;
 };
 
-struct task_t *create_kernel_task(void (*func)(void));
+struct task_t *create_kinit_task(void (*func)(void));
+struct task_t *create_init_task();
 struct task_t *fork_task(struct task_t *parent);
 void destroy_task(struct task_t *task);
-int spawn_init();
 
 #endif

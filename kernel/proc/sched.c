@@ -9,6 +9,7 @@
 
 LIST_HEAD(tasks_list);                    /* active processes list */
 static struct task_t *kinit_task;         /* kernel init task (pid = 0) */
+struct task_t *init_task;                 /* user init task (pid = 1) */
 struct task_t *current_task = NULL;       /* current task */
 static pid_t next_pid = 0;                /* pid counter */
 
@@ -31,7 +32,7 @@ pid_t get_next_pid()
 int init_scheduler(void (*kinit_func)())
 {
   /* create init task */
-  kinit_task = create_kernel_task(kinit_func);
+  kinit_task = create_kinit_task(kinit_func);
   if (!kinit_task)
     return -ENOMEM;
 
@@ -72,6 +73,18 @@ static struct task_t *get_next_task()
 }
 
 /*
+ * Spawn init process.
+ */
+int spawn_init()
+{
+  init_task = create_init_task();
+  if (!init_task)
+    return -ENOMEM;
+
+  return 0;
+}
+
+/*
  * Schedule function (interruptions must be disabled and will be reenabled on function return).
  */
 void schedule()
@@ -90,5 +103,20 @@ void schedule()
     tss_set_stack(0x10, current_task->kernel_stack);
     switch_page_directory(current_task->pgd);
     scheduler_do_switch(&prev_task->esp, current_task->esp);
+  }
+}
+
+/*
+ * Wake up all tasks sleeping on channel.
+ */
+void task_wakeup(void *chan)
+{
+  struct list_head_t *pos;
+  struct task_t *task;
+
+  list_for_each(pos, &tasks_list) {
+    task = list_entry(pos, struct task_t, list);
+    if (task->waiting_chan == chan && task->state == TASK_SLEEPING)
+      task->state = TASK_RUNNING;
   }
 }
