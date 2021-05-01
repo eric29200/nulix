@@ -5,6 +5,5 @@
 #define DEV_TTY1      0x401
 #define DEV_TTY2      0x402
 #define DEV_TTY3      0x403
-#define DEV_TTY       0x500     /* current process tty */
 
 #endif

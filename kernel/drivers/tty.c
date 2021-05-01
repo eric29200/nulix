@@ -19,17 +19,6 @@ static struct timer_event_t refresh_tm;
  */
 static struct tty_t *tty_lookup(dev_t dev)
 {
-  uint32_t i;
-
-  /* current process tty */
-  if (dev == DEV_TTY) {
-    for (i = 0; i < NB_TTYS; i++)
-      if (current_task->tty == tty_table[i].dev)
-        return &tty_table[i];
-
-    return NULL;
-  }
-
   /* asked tty */
   if (minor(dev) >= 0 && minor(dev) < NB_TTYS)
     return &tty_table[minor(dev)];

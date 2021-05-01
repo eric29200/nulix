@@ -19,7 +19,6 @@
 struct task_t {
   pid_t pid;
   uint8_t state;
-  dev_t tty;
   uint32_t esp;
   int exit_code;
   struct task_t *parent;
