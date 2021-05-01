@@ -27,7 +27,6 @@ struct task_t {
   uint32_t kernel_stack;
   uint32_t user_entry;
   uint32_t user_stack;
-  uint32_t user_stack_size;
   uint32_t start_brk;
   uint32_t end_brk;
   struct registers_t user_regs;

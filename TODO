@@ -1,2 +1,3 @@
+- Use conditionnal chanel (from xv6)
 - Write exit system call (from xv6)
 - Destroy zombie tasks (from xv6) = write waitpid

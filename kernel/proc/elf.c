@@ -102,7 +102,6 @@ int elf_load(const char *path)
   /* set elf entry point */
   current_task->user_entry = elf_header->e_entry;
   current_task->user_stack += USTACK_SIZE;
-  current_task->user_stack_size = USTACK_SIZE;
 out:
   if (buf)
     kfree(buf);

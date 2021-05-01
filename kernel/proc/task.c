@@ -50,7 +50,6 @@ static struct task_t *create_task(struct task_t *parent)
   task->pid = get_next_pid();
   task->state = TASK_RUNNING;
   task->path = NULL;
-  task->user_stack_size = 0;
   task->start_brk = 0;
   task->end_brk = 0;
   task->parent = parent;
@@ -136,7 +135,6 @@ struct task_t *fork_task(struct task_t *parent)
 
   /* set user stack to parent */
   task->user_stack = parent->user_stack;
-  task->user_stack_size = parent->user_stack_size;
 
   /* set user mapped memory to parent */
   task->start_brk = parent->start_brk;
