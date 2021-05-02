@@ -42,33 +42,6 @@ static void set_frame(uint32_t frame_addr)
 }
 
 /*
- * Map a page.
- */
-int map_page(struct page_t *page, uint8_t kernel, uint8_t write)
-{
-  int32_t frame_idx;
-
-  /* frame already allocated */
-  if (page->frame != 0) {
-      frame_idx = page->frame;
-  } else {
-    /* get a new frame */
-    frame_idx = get_first_free_frame();
-    if (frame_idx < 0)
-      return -ENOMEM;
-
-    set_frame(PAGE_SIZE * frame_idx);
-  }
-
-  page->present = 1;
-  page->frame = frame_idx;
-  page->rw = write ? 1 : 0;
-  page->user = kernel ? 0 : 1;
-
-  return 0;
-}
-
-/*
  * Clear a frame.
  */
 static void clear_frame(uint32_t frame_addr)
@@ -87,6 +60,46 @@ static void free_frame(struct page_t *page)
 
   clear_frame(page->frame * PAGE_SIZE);
   page->frame = 0x0;
+}
+
+/*
+ * Map a page.
+ */
+int map_page(struct page_t *page, uint8_t kernel, uint8_t write)
+{
+  int32_t frame_idx;
+
+  /* frame already allocated */
+  if (page->frame != 0)
+    return 0;
+
+  /* get a new frame */
+  frame_idx = get_first_free_frame();
+  if (frame_idx < 0)
+    return -ENOMEM;
+
+  set_frame(PAGE_SIZE * frame_idx);
+  page->present = 1;
+  page->frame = frame_idx;
+  page->rw = write ? 1 : 0;
+  page->user = kernel ? 0 : 1;
+
+  return 0;
+}
+
+/*
+ * Unmap a page.
+ */
+void unmap_page(uint32_t address, struct page_directory_t *pgd)
+{
+  struct page_t *page;
+
+  /* get page */
+  page = get_page(address, 0, pgd);
+
+  /* free frame */
+  if (page)
+    free_frame(page);
 }
 
 /*

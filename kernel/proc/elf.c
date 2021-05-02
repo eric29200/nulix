@@ -80,6 +80,10 @@ int elf_load(const char *path)
   if (elf_check(elf_header) != 0)
     goto out;
 
+  /* unmap current text pages */
+  for (i = current_task->start_text; i <= current_task->end_text; i += PAGE_SIZE)
+    unmap_page(i, current_task->pgd);
+
   /* set start text segment */
   ph = (struct elf_prog_header_t *) (buf + elf_header->e_phoff);
   current_task->start_text = ph->p_vaddr;
