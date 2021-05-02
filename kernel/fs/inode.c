@@ -111,6 +111,6 @@ void iput(struct inode_t *inode)
 
   /* free inode if not used anymore */
   inode->i_ref--;
-  if (inode->i_ref <= 0 && inode->i_ino != MINIX_ROOT_INODE)
+  if (inode->i_ref <= 0)
     kfree(inode);
 }

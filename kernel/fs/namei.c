@@ -65,6 +65,7 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
 
   /* set inode to root */
   inode = root_sb->s_imount;
+  root_sb->s_imount->i_ref++;
 
   while (1) {
     /* check if inode is a directory */
