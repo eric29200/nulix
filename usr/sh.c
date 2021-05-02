@@ -107,6 +107,10 @@ static int execute_cmd(struct cmd_t *cmd)
   if (ret != 0)
     return ret;
 
+  /* do not allow to execute init */
+  if (strcmp(cmd->path, "/sbin/init") == 0)
+    return -1;
+
   /* execute command */
   pid = fork();
   if (pid == 0)
