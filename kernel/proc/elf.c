@@ -92,7 +92,7 @@ int elf_load(const char *path)
   for (; (char *) ph < (buf + elf_header->e_phoff + elf_header->e_phentsize * elf_header->e_phnum); ph++) {
     /* map pages */
     for (i = ph->p_vaddr; i < PAGE_ALIGN_UP(ph->p_vaddr + ph->p_filesz); i += PAGE_SIZE)
-      map_page(i, current_task->pgd, 0, ph->p_flags | FLAG_WRITE ? 1 : 0);
+      map_page(i, current_task->pgd, 0, ph->p_flags & FLAG_WRITE ? 1 : 0);
 
     /* copy in memory */
     memset((void *) ph->p_vaddr, 0, ph->p_memsz);
@@ -103,8 +103,8 @@ int elf_load(const char *path)
   }
 
   /* set data segment */
-  current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text);
-  current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text);
+  current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text + PAGE_SIZE);
+  current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text + PAGE_SIZE);
 
   /* allocate at the end of process memory */
   current_task->user_stack = USTACK_START - USTACK_SIZE;
