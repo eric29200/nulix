@@ -141,9 +141,6 @@ void page_fault_handler(struct registers_t *regs)
   int reserved = regs->err_code & 0x8 ? 1 : 0;
   int id = regs->err_code & 0x10 ? 1 : 0;
 
-  printf("Page fault at address=%x | present=%d read-only=%d user-mode=%d reserved=%d instruction-fetch=%d\n",
-         fault_addr, present, rw, user, reserved, id);
-
   /* user page fault : try to allocate a new page if address is in user space memory */
   if (fault_addr >= UMEM_START && map_page(fault_addr, current_task->pgd, 0, 1) == 0)
       return;
