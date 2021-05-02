@@ -87,7 +87,7 @@ int elf_load(const char *path)
   /* copy elf in memory */
   for (; (char *) ph < (buf + elf_header->e_phoff + elf_header->e_phentsize * elf_header->e_phnum); ph++) {
     /* map page */
-    alloc_frame(get_page(ph->p_vaddr, 1, current_task->pgd), 0, 1);
+    map_page(get_page(ph->p_vaddr, 1, current_task->pgd), 0, 0);
 
     /* copy in memory */
     memset((void *) ph->p_vaddr, 0, ph->p_memsz);
@@ -104,7 +104,7 @@ int elf_load(const char *path)
   /* allocate at the end of process memory */
   current_task->user_stack = USTACK_START - USTACK_SIZE;
   for (i = 0; i <= USTACK_SIZE / PAGE_SIZE; i++)
-    alloc_frame(get_page(current_task->user_stack + i * PAGE_SIZE, 1, current_task->pgd), 0, 1);
+    map_page(get_page(current_task->user_stack + i * PAGE_SIZE, 1, current_task->pgd), 0, 1);
 
   /* set elf entry point */
   current_task->user_entry = elf_header->e_entry;

@@ -98,7 +98,7 @@ void init_mem(uint32_t start, uint32_t end)
 
   /* allocate kernel frames/pages */
   for (i = 0; i < KMEM_SIZE; i += PAGE_SIZE)
-    alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
+    map_page(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* register page fault handler */
   register_interrupt_handler(14, page_fault_handler);
@@ -108,7 +108,7 @@ void init_mem(uint32_t start, uint32_t end)
 
   /* allocate heap frames */
   for (i = KHEAP_START; i < KHEAP_START + KHEAP_SIZE; i += PAGE_SIZE)
-    alloc_frame(get_page(i, 1, kernel_pgd), 0, 0);
+    map_page(get_page(i, 1, kernel_pgd), 0, 0);
 
   /* init heap */
   kheap = heap_create(KHEAP_START, KHEAP_SIZE);

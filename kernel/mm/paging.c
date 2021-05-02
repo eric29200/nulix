@@ -42,24 +42,26 @@ static void set_frame(uint32_t frame_addr)
 }
 
 /*
- * Allocate a new frame.
+ * Map a page.
  */
-int32_t alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
+int map_page(struct page_t *page, uint8_t kernel, uint8_t write)
 {
-  int32_t free_frame_idx;
+  int32_t frame_idx;
 
   /* frame already allocated */
-  if (page->frame != 0)
-    return 0;
+  if (page->frame != 0) {
+      frame_idx = page->frame;
+  } else {
+    /* get a new frame */
+    frame_idx = get_first_free_frame();
+    if (frame_idx < 0)
+      return -ENOMEM;
 
-  /* get a new frame */
-  free_frame_idx = get_first_free_frame();
-  if (free_frame_idx < 0)
-    return -ENOMEM;
+    set_frame(PAGE_SIZE * frame_idx);
+  }
 
-  set_frame(PAGE_SIZE * free_frame_idx);
   page->present = 1;
-  page->frame = free_frame_idx;
+  page->frame = frame_idx;
   page->rw = write ? 1 : 0;
   page->user = kernel ? 0 : 1;
 
@@ -78,7 +80,7 @@ static void clear_frame(uint32_t frame_addr)
 /*
  * Free a frame.
  */
-void free_frame(struct page_t *page)
+static void free_frame(struct page_t *page)
 {
   if (!page->frame)
     return;
@@ -105,7 +107,7 @@ void page_fault_handler(struct registers_t *regs)
 
   /* user page fault : allocate page if address is user space memory */
   if (fault_addr >= UMEM_START) {
-    alloc_frame(get_page(fault_addr, 1, current_task->pgd), 0, 1);
+    map_page(get_page(fault_addr, 1, current_task->pgd), 0, 1);
     return;
   }
 
@@ -186,7 +188,7 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
     if (!src->pages[i].frame)
       continue;
 
-    alloc_frame(&ret->pages[i], 0, 0);
+    map_page(&ret->pages[i], 0, 0);
     ret->pages[i].present = src->pages[i].present;
     ret->pages[i].rw = src->pages[i].rw;
     ret->pages[i].user = src->pages[i].user;
