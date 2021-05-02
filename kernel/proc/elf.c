@@ -90,8 +90,9 @@ int elf_load(const char *path)
 
   /* copy elf in memory */
   for (; (char *) ph < (buf + elf_header->e_phoff + elf_header->e_phentsize * elf_header->e_phnum); ph++) {
-    /* map page */
-    map_page(ph->p_vaddr, current_task->pgd, 0, 0);
+    /* map pages */
+    for (i = ph->p_vaddr; i < PAGE_ALIGN_UP(ph->p_vaddr + ph->p_filesz); i += PAGE_SIZE)
+      map_page(i, current_task->pgd, 0, ph->p_flags | FLAG_WRITE ? 1 : 0);
 
     /* copy in memory */
     memset((void *) ph->p_vaddr, 0, ph->p_memsz);

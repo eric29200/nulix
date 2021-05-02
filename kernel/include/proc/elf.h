@@ -47,6 +47,11 @@
 #define EM_NONE       0	    /* no machine */
 #define EM_386        3	    /* intel 80386 */
 
+/* flags */
+#define FLAG_EXEC     1     /* exec flag */
+#define FLAG_WRITE    2     /* write flag */
+#define FLAG_READ     4     /* read flag */
+
 /*
  * ELF header.
  */
