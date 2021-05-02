@@ -16,7 +16,6 @@ DIR *opendir(const char *name)
   /* stat directory */
   if (stat(name, &statbuf) != 0)
     return NULL;
-
   /* check directory */
   if (!S_ISDIR(statbuf.st_mode))
     return NULL;

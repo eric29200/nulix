@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <dirent.h>
 
 #define MAX_CMD_SIZE    512
 
@@ -96,6 +97,10 @@ static int execute_cmd(struct cmd_t *cmd)
   /* exit command */
   if (strcmp(cmd->argv[0], "exit") == 0)
     exit(0);
+
+  /* cd command */
+  if (strcmp(cmd->argv[0], "cd") == 0)
+    return chdir(cmd->argv[1]);
 
   /* find command path */
   ret = find_cmd_path(cmd);

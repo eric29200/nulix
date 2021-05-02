@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
   if (argc > 1)
     dir_name = argv[1];
   else
-    dir_name = "/";
+    dir_name = ".";
 
   /* open directory */
   dirp = opendir(dir_name);
