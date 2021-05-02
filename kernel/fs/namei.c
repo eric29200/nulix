@@ -58,12 +58,6 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
   const char *name;
   size_t name_len;
 
-  /* root path */
-  if (strcmp(pathname, "/") == 0) {
-    *basename_len = 0;
-    return root_sb->s_imount;
-  }
-
   /* absolute path only */
   if (*pathname != '/')
     return NULL;
