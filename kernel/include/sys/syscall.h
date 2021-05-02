@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <fs/fs.h>
 
-#define SYSCALLS_NUM      (__NR_access + 1)
+#define SYSCALLS_NUM      (__NR_chdir + 1)
 
 #define __NR_exit         1
 #define __NR_fork         2
@@ -20,6 +20,7 @@
 #define __NR_dup2         12
 #define __NR_wait         13
 #define __NR_access       14
+#define __NR_chdir        15
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -39,5 +40,6 @@ int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
 int sys_wait();
 int sys_access(const char *filename);
+int sys_chdir(const char *path);
 
 #endif

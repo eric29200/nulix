@@ -58,14 +58,16 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
   const char *name;
   size_t name_len;
 
-  /* absolute path only */
-  if (*pathname != '/')
-    return NULL;
-  pathname++;
+  /* absolute or relative path */
+  if (*pathname == '/') {
+    inode = root_sb->s_imount;
+    pathname++;
+  } else {
+    inode = current_task->cwd;
+  }
 
-  /* set inode to root */
-  inode = root_sb->s_imount;
-  root_sb->s_imount->i_ref++;
+  /* update reference count */
+  inode->i_ref++;
 
   while (1) {
     /* check if inode is a directory */

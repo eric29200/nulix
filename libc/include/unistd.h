@@ -18,6 +18,7 @@
 #define __NR_dup2         12
 #define __NR_wait         13
 #define __NR_access       14
+#define __NR_chdir        15
 
 /*
  * System call with no argument.
@@ -169,6 +170,14 @@ static inline int wait()
 static inline int access(const char *pathname)
 {
   return syscall1(__NR_access, (int) pathname);
+}
+
+/*
+ * Change directory.
+ */
+static inline int chdir(const char *path)
+{
+  return syscall1(__NR_chdir, (int) path);
 }
 
 #endif
