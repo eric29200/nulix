@@ -98,8 +98,8 @@ int elf_load(const char *path)
   }
 
   /* set data segment */
-  current_task->start_brk = current_task->end_text;
-  current_task->end_brk = current_task->end_text;
+  current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text);
+  current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text + PAGE_SIZE);
 
   /* allocate at the end of process memory */
   current_task->user_stack = USTACK_START - USTACK_SIZE;

@@ -1,112 +1,88 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define ALIGN                 (sizeof(void *))
-#define ALIGN_UP(x)           (((x) + ((ALIGN) - 1)) & ~((ALIGN) - 1))
-#define ALIGN_DOWN(x)         ((x) & ~((ALIGN) - 1))
+// Memory allocator by Kernighan and Ritchie,
+// The C programming Language, 2nd ed.  Section 8.7.
 
-#define TO_DATA(x)            ((void *) ALIGN_UP((uint32_t) x + sizeof(struct malloc_header_t)))
-#define TO_HEAD(x)            ((struct malloc_header_t *) ALIGN_DOWN((uint32_t) x - sizeof(struct malloc_header_t)))
+typedef long Align;
 
-#define MIN_ALLOC             (1024 * (ALIGN))
-
-/*
- * Malloc header.
- */
-struct malloc_header_t {
-  struct malloc_header_t *next;
-  size_t size;
+union header {
+  struct {
+    union header *ptr;
+    uint32_t size;
+  } s;
+  Align x;
 };
 
-/* malloc base header */
-static struct malloc_header_t base;
-static struct malloc_header_t *freep = NULL;
+typedef union header Header;
 
-/*
- * Grow process data segment.
- */
-static struct malloc_header_t *morecore(size_t size)
+static Header base;
+static Header *freep;
+
+void
+free(void *ap)
 {
-  struct malloc_header_t *p;
+  Header *bp, *p;
 
-  if (size < MIN_ALLOC)
-    size = MIN_ALLOC;
+  bp = (Header*)ap - 1;
+  for(p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
+    if(p >= p->s.ptr && (bp > p || bp < p->s.ptr))
+      break;
+  if(bp + bp->s.size == p->s.ptr){
+    bp->s.size += p->s.ptr->s.size;
+    bp->s.ptr = p->s.ptr->s.ptr;
+  } else
+    bp->s.ptr = p->s.ptr;
+  if(p + p->s.size == bp){
+    p->s.size += bp->s.size;
+    p->s.ptr = bp->s.ptr;
+  } else
+    p->s.ptr = bp;
+  freep = p;
+}
 
-  p = (struct malloc_header_t *) sbrk(size);
-  if (p == (struct malloc_header_t *) - 1)
-    return NULL;
+static Header*
+morecore(uint32_t nu)
+{
+  char *p;
+  Header *hp;
 
-  p->size = size;
-  free(TO_DATA(p));
+  if(nu < 4096)
+    nu = 4096;
+  p = sbrk(nu * sizeof(Header));
+  if(p == (char*)-1)
+    return 0;
+  hp = (Header*)p;
+  hp->s.size = nu;
+  free((void*)(hp + 1));
   return freep;
 }
 
-/*
- * Allocate memory on the heap.
- */
-void *malloc(size_t size)
+void*
+malloc(uint32_t nbytes)
 {
-  struct malloc_header_t *curr, *prev;
+  Header *p, *prevp;
+  uint32_t nunits;
 
-  /* adjust size */
-  size = ALIGN_UP(size + sizeof(struct malloc_header_t));
-
-  /* first malloc */
-  prev = freep;
-  if (!prev) {
-    base.next = freep = prev = &base;
-    base.size = 0;
+  nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
+  if((prevp = freep) == 0){
+    base.s.ptr = freep = prevp = &base;
+    base.s.size = 0;
   }
-
-  /* try to find an empty block */
-  for (curr = freep->next; ; prev = curr, curr = curr->next) {
-    if (curr->size >= size) {
-      if (curr->size == size) {
-        prev->next = curr->next;
-      } else {
-        curr->size -= size;
-        curr = (struct malloc_header_t *) ((char *) curr + curr->size);
-        curr->size = size;
+  for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr){
+    if(p->s.size >= nunits){
+      if(p->s.size == nunits)
+        prevp->s.ptr = p->s.ptr;
+      else {
+        p->s.size -= nunits;
+        p += p->s.size;
+        p->s.size = nunits;
       }
-
-      freep = prev;
-      return TO_DATA(curr);
+      freep = prevp;
+      return (void*)(p + 1);
     }
-
-    /* try to grow heap */
-    if (curr == freep) {
-      curr = morecore(size);
-      if (!curr)
-        return NULL;
-    }
+    if(p == freep)
+      if((p = morecore(nunits)) == 0)
+        return 0;
   }
-}
-
-/*
- * Free memory on the heap.
- */
-void free(void *ptr)
-{
-  struct malloc_header_t *curr, *prev;
-
-  curr = TO_HEAD(ptr);
-  for (prev = freep; prev >= curr || curr >= prev->next; prev = prev->next)
-    if (prev >= prev->next && (curr > prev || curr < prev->next))
-      break;
-
-  if ((char *) curr + curr->size == (char *) prev->next) {
-    curr->size += prev->next->size;
-    curr->next = prev->next->next;
-  } else {
-    curr->next = prev->next;
-  }
-
-  if ((char *) prev + prev->size == (char *) curr) {
-    prev->size += curr->size;
-    prev->next = curr->next;
-  } else {
-    prev->next = curr;
-  }
-
-  freep = prev;
 }

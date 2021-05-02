@@ -58,6 +58,12 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
   const char *name;
   size_t name_len;
 
+  /* root path */
+  if (strcmp(pathname, "/") == 0) {
+    *basename_len = 0;
+    return root_sb->s_imount;
+  }
+
   /* absolute path only */
   if (*pathname != '/')
     return NULL;
@@ -114,6 +120,10 @@ struct inode_t *namei(const char *pathname)
   if (!dir)
     return NULL;
 
+  /* special case : '/' */
+  if (!basename_len)
+    return dir;
+
   /* find inode */
   ret = find_entry(dir, basename, basename_len);
 
@@ -135,6 +145,12 @@ int open_namei(const char *pathname, struct inode_t **inode)
   dir = dir_namei(pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
+
+  /* open a directory */
+  if (!basename_len) {
+    *inode = dir;
+    return 0;
+  }
 
   /* find inode */
   *inode = find_entry(dir, basename, basename_len);
