@@ -30,6 +30,7 @@ struct task_t {
   uint32_t                    start_brk;          /* user data segment start */
   uint32_t                    end_brk;            /* user data segment end */
   void                        *waiting_chan;      /* waiting channel */
+  struct inode_t              *cwd;               /* current working directory */
   struct registers_t          user_regs;          /* saved registers at syscall entry */
   struct page_directory_t     *pgd;               /* page directory */
   struct file_t               *filp[NR_OPEN];     /* opened files */

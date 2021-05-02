@@ -49,18 +49,6 @@ static struct task_t *create_task(struct task_t *parent)
   if (!task)
     return NULL;
 
-  /* set tid */
-  task->pid = get_next_pid();
-  task->state = TASK_RUNNING;
-  task->start_brk = 0;
-  task->end_brk = 0;
-  task->parent = parent;
-  INIT_LIST_HEAD(&task->list);
-
-  /* init open files */
-  for (i = 0; i < NR_OPEN; i++)
-    task->filp[i] = NULL;
-
   /* allocate stack */
   stack = (void *) kmalloc(STACK_SIZE);
   if (!stack) {
@@ -72,6 +60,39 @@ static struct task_t *create_task(struct task_t *parent)
   memset(stack, 0, STACK_SIZE);
   task->kernel_stack = (uint32_t) stack + STACK_SIZE;
   task->esp = task->kernel_stack - sizeof(struct task_registers_t);
+
+  /* init task */
+  task->pid = get_next_pid();
+  task->state = TASK_RUNNING;
+  task->parent = parent;
+  task->user_stack = parent ? parent->user_stack : 0;
+  task->start_text = parent ? parent->start_text : 0;
+  task->end_text = parent ? parent->end_text : 0;
+  task->start_brk = parent ? parent->start_brk : 0;
+  task->end_brk = parent ? parent->end_brk : 0;
+  task->pgd = clone_page_directory(parent ? parent->pgd : kernel_pgd);
+  INIT_LIST_HEAD(&task->list);
+
+  /* duplicate parent registers */
+  if (parent) {
+    memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers_t));
+    task->user_regs.eax = 0;
+  }
+
+  /* duplicate current working dir */
+  if (parent && parent->cwd) {
+    task->cwd = parent->cwd;
+    task->cwd->i_ref++;
+  } else {
+    task->cwd = NULL;
+  }
+
+  /* copy open files */
+  for (i = 0; i < NR_OPEN; i++) {
+    task->filp[i] = parent ? parent->filp[i] : NULL;
+    if (task->filp[i])
+      task->filp[i]->f_ref++;
+  }
 
   return task;
 }
@@ -88,9 +109,6 @@ struct task_t *create_kinit_task(void (*func)(void))
   task = create_task(NULL);
   if (!task)
     return NULL;
-
-  /* use kernel page directory */
-  task->pgd = kernel_pgd;
 
   /* set registers */
   regs = (struct task_registers_t *) task->esp;
@@ -110,35 +128,11 @@ struct task_t *fork_task(struct task_t *parent)
 {
   struct task_registers_t *regs;
   struct task_t *task;
-  int i;
 
   /* create task */
   task = create_task(parent);
   if (!task)
     return NULL;
-
-  /* duplicate page directory */
-  task->pgd = clone_page_directory(parent->pgd);
-
-  /* copy open files */
-  for (i = 0; i < NR_OPEN; i++) {
-    task->filp[i] = parent->filp[i];
-    if (task->filp[i])
-      task->filp[i]->f_ref++;
-  }
-
-  /* set user stack to parent */
-  task->user_stack = parent->user_stack;
-
-  /* set user mapped memory to parent */
-  task->start_text = parent->start_text;
-  task->end_text = parent->end_text;
-  task->start_brk = parent->start_brk;
-  task->end_brk = parent->end_brk;
-
-  /* duplicate parent registers */
-  memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers_t));
-  task->user_regs.eax = 0;
 
   /* set registers */
   regs = (struct task_registers_t *) task->esp;
@@ -163,9 +157,6 @@ struct task_t *create_init_task()
   task = create_task(NULL);
   if (!task)
     return NULL;
-
-  /* clone page directory */
-  task->pgd = clone_page_directory(current_task->pgd);
 
   /* set registers */
   regs = (struct task_registers_t *) task->esp;

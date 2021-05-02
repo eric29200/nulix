@@ -15,6 +15,9 @@ void sys_exit(int status)
     if (current_task->filp[i])
       sys_close(i);
 
+  /* release current working dir */
+  iput(current_task->cwd);
+
   /* mark task terminated and reschedule */
   current_task->state = TASK_ZOMBIE;
   current_task->exit_code = status;

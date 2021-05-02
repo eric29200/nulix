@@ -90,7 +90,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
   init_syscall();
 
   /* mount root file system */
-  printf("[Kernel] Mounting root file system\n");
+  printf("[Kernel] Root file system init\n");
   mount_root(ata_get_device(0));
 
   /* init ttys */
