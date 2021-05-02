@@ -2,10 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #define MAX_CMD_SIZE    512
-#define MAX_PATH_SIZE   512
-#define MAX_ARGS        32
 
 /* path environ */
 static char *env_path[] = {"/sbin", "/usr/sbin", "/bin", "/usr/bin", NULL};
@@ -14,9 +13,9 @@ static char *env_path[] = {"/sbin", "/usr/sbin", "/bin", "/usr/bin", NULL};
  * Command structure.
  */
 struct cmd_t {
-  char path[MAX_PATH_SIZE];
+  char path[PATH_MAX_LEN];
   int argc;
-  char *argv[MAX_ARGS];
+  char *argv[ARGS_MAX];
 };
 
 /*
@@ -27,7 +26,7 @@ static void parse_cmd(char *cmd_line, struct cmd_t *cmd)
   int i;
 
   /* parse command line */
-  for (i = 0; i < MAX_ARGS; i++) {
+  for (i = 0; i < ARGS_MAX; i++) {
     cmd->argv[i] = strtok(i == 0 ? cmd_line : NULL, " ");
     if (!cmd->argv[i])
       break;
@@ -35,7 +34,7 @@ static void parse_cmd(char *cmd_line, struct cmd_t *cmd)
   }
 
   /* reset last arguments */
-  for (; i < MAX_ARGS; i++)
+  for (; i < ARGS_MAX; i++)
     cmd->argv[i] = NULL;
 }
 
@@ -52,7 +51,7 @@ static int find_cmd_path(struct cmd_t *cmd)
 
   /* if filename contains / do not use environ */
   if (strchr(cmd->argv[0], '/')) {
-    strncpy(cmd->path, cmd->argv[0], MAX_PATH_SIZE);
+    strncpy(cmd->path, cmd->argv[0], PATH_MAX_LEN);
     return access(cmd->path);
   }
 
@@ -60,11 +59,11 @@ static int find_cmd_path(struct cmd_t *cmd)
   filename_len = strlen(cmd->argv[0]);
   for (i = 0; env_path[i] != NULL; i++) {
     /* reset path */
-    memset(cmd->path, 0, MAX_PATH_SIZE);
+    memset(cmd->path, 0, PATH_MAX_LEN);
 
     /* check total length */
     n = strlen(env_path[i]);
-    if (n + 1 + filename_len >= MAX_PATH_SIZE)
+    if (n + 1 + filename_len >= PATH_MAX_LEN)
       continue;
 
     /* copy environ path */

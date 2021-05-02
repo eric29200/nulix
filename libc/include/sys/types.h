@@ -12,6 +12,11 @@ typedef char int8_t;
 
 typedef unsigned int size_t;
 typedef int ssize_t;
+typedef unsigned int off_t;
+typedef unsigned int time_t;
 typedef int pid_t;
+typedef uint32_t ino_t;
+typedef uint32_t uid_t;
+typedef uint32_t gid_t;
 
 #endif

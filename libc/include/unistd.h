@@ -2,6 +2,7 @@
 #define _UNISTD_H_
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #define __NR_exit         1
 #define __NR_fork         2
@@ -104,6 +105,14 @@ static inline int open(const char *pathname)
 static inline int close(int fd)
 {
   return syscall1(__NR_close, fd);
+}
+
+/*
+ * Stat system call.
+ */
+static inline int stat(const char *pathname, struct stat *statbuf)
+{
+  return syscall2(__NR_stat, (int) pathname, (int) statbuf);
 }
 
 /*
