@@ -10,11 +10,20 @@
 extern struct minix_super_block_t *root_sb;
 
 /*
+ * Test if a name matches a directory entry.
+ */
+static inline int match(const char *name, size_t len, struct minix_dir_entry_t *de)
+{
+  return strncmp(name, de->name, len) == 0 && (len == MINIX_FILENAME_LEN || de->name[len] == 0);
+}
+
+/*
  * Find an inode inside a directory.
  */
 static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t name_len)
 {
   struct minix_dir_entry_t *entries = NULL;
+  struct minix_dir_entry_t *entry = NULL;
   uint32_t nb_entries, i, block_nr;
   struct inode_t *ret = NULL;
 
@@ -37,8 +46,9 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
     }
 
     /* check name */
-    if (strncmp(name, entries[i % MINIX_DIR_ENTRIES_PER_BLOCK].name, name_len) == 0) {
-      ret = iget(dir->i_sb, entries[i % MINIX_DIR_ENTRIES_PER_BLOCK].inode);
+    entry = &entries[i % MINIX_DIR_ENTRIES_PER_BLOCK];
+    if (match(name, name_len, entry)) {
+      ret = iget(dir->i_sb, entry->inode);
       break;
     }
   }
