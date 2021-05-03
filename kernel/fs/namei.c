@@ -7,6 +7,7 @@
 #include <stat.h>
 #include <string.h>
 
+/* root super block */
 extern struct minix_super_block_t *root_sb;
 
 /*

@@ -1,5 +1,5 @@
 #include <proc/timer.h>
-#include <drivers/pit.h>
+#include <proc/sched.h>
 
 /* timers list */
 static LIST_HEAD(timers_list);

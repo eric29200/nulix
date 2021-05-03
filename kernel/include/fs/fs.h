@@ -96,20 +96,25 @@ struct stat_t {
   time_t st_ctime;
 };
 
+/* file system operations */
+int mount_root(struct ata_device_t *dev);
+
+/* inode operations */
 struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
+struct inode_t *new_inode();
 
+/* name operations */
 struct inode_t *namei(const char *pathname);
 int open_namei(const char *pathname, struct inode_t **inode);
-
 int bmap(struct inode_t *inode, int block);
 
+/* read write operations */
 int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count);
-
 int read_char(dev_t dev, char *buf, int count);
 int write_char(dev_t dev, const char *buf, int count);
 
-int mount_root(struct ata_device_t *dev);
+/* system calles */
 int do_open(const char *pathname);
 int do_close(int fd);
 int do_read(int fd, char *buf, int count);
