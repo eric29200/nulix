@@ -1,45 +1,54 @@
-#include <fs/buffer.h>
+#include <fs/fs.h>
 #include <mm/mm.h>
 #include <string.h>
+#include <stderr.h>
 
 /*
  * Read a block from a device.
  */
-char *bread(struct ata_device_t *dev, uint32_t block)
+struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
 {
   uint32_t nb_sectors, sector;
-  char *buffer;
+  struct buffer_head_t *bh;
 
   /* compute nb sectors */
-  nb_sectors = div_ceil(BLOCK_SIZE, ATA_SECTOR_SIZE);
-  sector = block * div_floor(BLOCK_SIZE, ATA_SECTOR_SIZE);
+  nb_sectors = BLOCK_SIZE / ATA_SECTOR_SIZE;
+  sector = block * BLOCK_SIZE / ATA_SECTOR_SIZE;
 
   /* allocate buffer */
-  buffer = (char *) kmalloc(nb_sectors * ATA_SECTOR_SIZE);
-  if (!buffer)
+  bh = (struct buffer_head_t *) kmalloc(sizeof(struct buffer_head_t));
+  if (!bh)
     return NULL;
-  memset(buffer, 0, nb_sectors * ATA_SECTOR_SIZE);
 
-  /* read from device */
-  if (ata_read(dev, sector, nb_sectors, (uint16_t *) buffer) != 0) {
-    kfree(buffer);
+  /* allocate data */
+  bh->b_data = (char *) kmalloc(BLOCK_SIZE);
+  if (!bh->b_data) {
+    kfree(bh);
     return NULL;
   }
 
-  return buffer;
+  /* set buffer */
+  bh->b_dev = dev;
+  bh->b_blocknr = block;
+  memset(bh->b_data, 0, sizeof(struct buffer_head_t));
+
+  /* read from device */
+  if (ata_read(dev, sector, nb_sectors, (uint16_t *) bh->b_data) != 0) {
+    brelse(bh);
+    return NULL;
+  }
+
+  return bh;
 }
 
 /*
- * Write a block to a device.
+ * Release a buffer.
  */
-int bwrite(struct ata_device_t *dev, uint32_t block, const char *buffer)
+void brelse(struct buffer_head_t *bh)
 {
-  uint32_t nb_sectors, sector;
-
-  /* compute nb sectors */
-  nb_sectors = div_ceil(BLOCK_SIZE, ATA_SECTOR_SIZE);
-  sector = block * div_floor(BLOCK_SIZE, ATA_SECTOR_SIZE);
-
-  /* write to device */
-  return ata_write(dev, sector, nb_sectors, (uint16_t *) buffer);
+  if (bh) {
+    if (bh->b_data)
+      kfree(bh->b_data);
+    kfree(bh);
+  }
 }

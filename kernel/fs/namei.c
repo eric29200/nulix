@@ -1,5 +1,4 @@
 #include <fs/fs.h>
-#include <fs/buffer.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <stdio.h>
@@ -23,9 +22,9 @@ static inline int match(const char *name, size_t len, struct minix_dir_entry_t *
  */
 static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t name_len)
 {
-  struct minix_dir_entry_t *entries = NULL;
   struct minix_dir_entry_t *entry = NULL;
   uint32_t nb_entries, i, block_nr;
+  struct buffer_head_t *bh = NULL;
   struct inode_t *ret = NULL;
 
   /* check name length */
@@ -39,15 +38,15 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
   for (i = 0; i < nb_entries; i++) {
     /* read next block if needed */
     if (i % MINIX_DIR_ENTRIES_PER_BLOCK == 0) {
-      if (entries)
-        kfree(entries);
-
+      brelse(bh);
       block_nr = bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK);
-      entries = (struct minix_dir_entry_t *) bread(dir->i_dev, block_nr);
+      bh = bread(dir->i_dev, block_nr);
+      if (!bh)
+        return NULL;
     }
 
     /* check name */
-    entry = &entries[i % MINIX_DIR_ENTRIES_PER_BLOCK];
+    entry = &((struct minix_dir_entry_t *) bh->b_data)[i % MINIX_DIR_ENTRIES_PER_BLOCK];
     if (match(name, name_len, entry)) {
       ret = iget(dir->i_sb, entry->inode);
       break;
@@ -55,7 +54,7 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
   }
 
   /* free buffer */
-  kfree(entries);
+  brelse(bh);
 
   return ret;
 }

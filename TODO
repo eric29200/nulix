@@ -1,1 +1,6 @@
+- Implement sys_mkdir
+  - implement create_new_block in bitmap
+  - implent free_inode in bitmap
+  - implement free_block in bitmap
+
 - Implement pwd command

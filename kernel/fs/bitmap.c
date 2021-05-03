@@ -1,5 +1,4 @@
 #include <fs/fs.h>
-#include <fs/buffer.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <string.h>
@@ -10,13 +9,13 @@ extern struct minix_super_block_t *root_sb;
 /*
  * Get first free bit in a bitmap block (inode or block).
  */
-static int get_free_bitmap(char *map)
+static int get_free_bitmap(struct buffer_head_t *bh)
 {
   int i, j;
 
   for (i = 0; i < BLOCK_SIZE; i++)
     for (j = 0; j < 8; j++)
-      if (!(map[i] & (0x1 << j)))
+      if (!(bh->b_data[i] & (0x1 << j)))
         return i * 8 + j;
 
   return -1;
@@ -25,9 +24,9 @@ static int get_free_bitmap(char *map)
 /*
  * Set bit in a bitmap block (inode or block).
  */
-static void set_bitmap(char *map, int i)
+static void set_bitmap(struct buffer_head_t *bh, int i)
 {
-  map[i / 8] |= (0x1 << (i % 8));
+  bh->b_data[i / 8] |= (0x1 << (i % 8));
 }
 
 /*

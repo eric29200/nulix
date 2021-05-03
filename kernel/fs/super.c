@@ -1,5 +1,4 @@
 #include <fs/fs.h>
-#include <fs/buffer.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <stdio.h>
@@ -16,11 +15,17 @@ struct minix_super_block_t *root_sb = NULL;
 int mount_root(struct ata_device_t *dev)
 {
   struct minix_super_block_t *sb;
+  struct buffer_head_t *bh;
   uint32_t block;
   int i, ret;
 
   /* read super block */
-  sb = (struct minix_super_block_t *) bread(dev, 1);
+  bh = bread(dev, 1);
+  if (!bh)
+    goto bad_sb;
+
+  /* set super block */
+  sb = (struct minix_super_block_t *) bh->b_data;
   root_sb = sb;
 
   /* check magic number */
@@ -31,22 +36,6 @@ int mount_root(struct ata_device_t *dev)
 
   /* set super block device */
   sb->s_dev = dev;
-  sb->s_imap = NULL;
-  sb->s_zmap = NULL;
-
-  /* allocate imap blocks */
-  sb->s_imap = (char **) kmalloc(sizeof(char *) * sb->s_imap_blocks);
-  if (!sb->s_imap) {
-    ret = ENOMEM;
-    goto err_map;
-  }
-
-  /* allocate zmap blocks */
-  sb->s_zmap = (char **) kmalloc(sizeof(char *) * sb->s_zmap_blocks);
-  if (!sb->s_imap) {
-    ret = ENOMEM;
-    goto err_map;
-  }
 
   /* reset maps */
   for (i = 0; i < sb->s_imap_blocks; i++)
@@ -89,18 +78,18 @@ err_root_inode:
 err_map:
   printf("[Minix-fs] Can't read imap and zmap\n");
 release_map:
-  if (sb->s_imap)
-    for (i = 0; i < sb->s_imap_blocks; i++)
-      if (sb->s_imap[i])
-        kfree(sb->s_imap[i]);
-  if (sb->s_zmap)
-    for (i = 0; i < sb->s_zmap_blocks; i++)
-      if (sb->s_zmap[i])
-        kfree(sb->s_zmap[i]);
+  for (i = 0; i < sb->s_imap_blocks; i++)
+    brelse(sb->s_imap[i]);
+  for (i = 0; i < sb->s_zmap_blocks; i++)
+    brelse(sb->s_zmap[i]);
   goto release_sb;
 err_magic:
   printf("[Minix-fs] Bad magic number\n");
 release_sb:
   kfree(sb);
+  goto err;
+bad_sb:
+  printf("[Minix-fs] Can't read super block\n");
+err:
   return ret;
 }

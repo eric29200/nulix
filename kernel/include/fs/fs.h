@@ -6,13 +6,24 @@
 
 #define MINIX_SUPER_MAGIC             0x138F
 #define MINIX_ROOT_INODE              1
-#define MINIX_I_MAP_SLOTS             8
-#define MINIX_Z_MAP_SLOTS             8
+#define MINIX_IMAP_SLOTS              8
+#define MINIX_ZMAP_SLOTS              8
 #define MINIX_FILENAME_LEN            30
 #define MINIX_INODES_PER_BLOCK        ((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
 #define MINIX_DIR_ENTRIES_PER_BLOCK   ((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
 
 #define NR_OPEN                       64        /* maximum number of files opened by a process */
+
+#define BLOCK_SIZE                    1024
+
+/*
+ * Buffer structure.
+ */
+struct buffer_head_t {
+  struct ata_device_t *b_dev;
+  char *b_data;
+  uint32_t b_blocknr;
+};
 
 /*
  * Minix super block.
@@ -27,8 +38,8 @@ struct minix_super_block_t {
   uint32_t s_max_size;
   uint16_t s_magic;
   /* these are only in memory */
-  char **s_imap;
-  char **s_zmap;
+  struct buffer_head_t *s_imap[MINIX_IMAP_SLOTS];
+  struct buffer_head_t *s_zmap[MINIX_ZMAP_SLOTS];
   struct ata_device_t *s_dev;
   struct inode_t *s_imount;
 };
@@ -99,6 +110,10 @@ struct stat_t {
 /* file system operations */
 int mount_root(struct ata_device_t *dev);
 
+/* buffer operations */
+struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block);
+void brelse(struct buffer_head_t *bh);
+
 /* inode operations */
 struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
@@ -114,7 +129,7 @@ int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count);
 int read_char(dev_t dev, char *buf, int count);
 int write_char(dev_t dev, const char *buf, int count);
 
-/* system calles */
+/* system calls */
 int do_open(const char *pathname);
 int do_close(int fd);
 int do_read(int fd, char *buf, int count);
