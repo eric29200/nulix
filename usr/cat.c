@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 #define CAT_BUF_SIZE      512
 
@@ -8,7 +9,13 @@ int cat(int fd)
   char buf[CAT_BUF_SIZE];
   int n;
 
-  while ((n = read(fd, buf, CAT_BUF_SIZE)) > 0) {
+  for (;;) {
+    memset(buf, 0, CAT_BUF_SIZE);
+
+    n = read(fd, buf, CAT_BUF_SIZE);
+    if (n <= 0)
+      break;
+
     printf("%s", buf);
   }
 
