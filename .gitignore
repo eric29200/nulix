@@ -15,4 +15,5 @@ usr/init
 usr/sh
 usr/echo
 usr/ls
+usr/cat
 libc/libc.a
