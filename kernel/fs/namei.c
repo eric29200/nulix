@@ -275,8 +275,10 @@ int do_mkdir(const char *pathname)
 
   /* set inode */
   inode->i_size = sizeof(struct minix_dir_entry_t) * 2;
+  inode->i_nlinks = 2;
   inode->i_time = CURRENT_TIME;
   inode->i_dirt = 1;
+  inode->i_mode = S_IFDIR;
   inode->i_zone[0] = new_block();
   if (!inode->i_zone[0]) {
     iput(dir);
@@ -318,7 +320,8 @@ int do_mkdir(const char *pathname)
   /* set inode entry */
   de->inode = inode->i_ino;
 
-  /* mark directory directory */
+  /* update directory links and mark directory dirty */
+  dir->i_nlinks++;
   dir->i_dirt = 1;
 
   /* release inode */

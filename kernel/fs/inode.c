@@ -109,6 +109,7 @@ static int write_inode(struct inode_t *inode)
     minix_inode[i].i_zone[j] = inode->i_zone[j];
 
   /* write inode block */
+  bh->b_dirt = 1;
   brelse(bh);
 
   return 0;
@@ -252,4 +253,6 @@ void iput(struct inode_t *inode)
 
   /* update inode reference count */
   inode->i_ref--;
+  if (inode->i_ref == 0)
+    memset(inode, 0, sizeof(struct inode_t));
 }
