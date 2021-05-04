@@ -176,5 +176,70 @@ int open_namei(const char *pathname, struct inode_t **inode)
  */
 int do_mkdir(const char *pathname)
 {
+  struct inode_t *dir, *inode_ex, *inode;
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  const char *basename;
+  size_t basename_len;
+
+  /* get parent directory */
+  dir = dir_namei(pathname, &basename, &basename_len);
+  if (!dir)
+    return -ENOENT;
+
+  /* check if file exists */
+  inode_ex = find_entry(dir, basename, basename_len);
+  if (inode_ex) {
+    iput(dir);
+    iput(inode_ex);
+    return -EEXIST;
+  }
+
+  /* allocate a new inode */
+  inode = new_inode();
+  if (!inode) {
+    iput(dir);
+    return -ENOSPC;
+  }
+
+  /* set inode */
+  inode->i_size = sizeof(struct minix_dir_entry_t) * 2;
+  inode->i_time = CURRENT_TIME;
+  inode->i_dirt = 1;
+  inode->i_zone[0] = new_block();
+  if (!inode->i_zone[0]) {
+    iput(dir);
+    iput(inode);
+    return -ENOSPC;
+  }
+
+  /* read first block */
+  bh = bread(inode->i_dev, inode->i_zone[0]);
+  if (!bh) {
+    iput(dir);
+    free_block(inode->i_zone[0]);
+    iput(inode);
+  }
+
+  /* add entry '.' */
+  de = (struct minix_dir_entry_t *) bh->b_data;
+  de->inode = inode->i_ino;
+  printf("%d %d\n", de->inode, bh->b_blocknr);
+  strcpy(de->name, ".");
+
+  /* add entry '..' */
+  de++;
+  de->inode = dir->i_ino;
+  strcpy(de->name, "..");
+
+  /* release first block */
+  bh->b_dirt = 1;
+  brelse(bh);
+
+  /* TODO : add entry to parent dir */
+
+  /* release inode */
+  iput(inode);
+
   return 0;
 }

@@ -103,7 +103,6 @@ static int write_inode(struct inode_t *inode)
     minix_inode[i].i_zone[j] = inode->i_zone[j];
 
   /* write inode block */
-  ret = bwrite(bh);
   brelse(bh);
 
   return ret;
@@ -122,10 +121,9 @@ int bmap(struct inode_t *inode, int block, int create)
 
   /* direct blocks */
   if (block < 7) {
-    if (create && !inode->i_zone[block]) {
-      inode->i_zone[block] = new_block();
-      inode->i_dirt = 1;
-    }
+    if (create && !inode->i_zone[block])
+      if ((inode->i_zone[block] = new_block()))
+        inode->i_dirt = 1;
 
     return inode->i_zone[block];
   }
@@ -134,10 +132,9 @@ int bmap(struct inode_t *inode, int block, int create)
   block -= 7;
   if (block < 512) {
     /* create block if needed */
-    if (create && !inode->i_zone[7]) {
-      inode->i_zone[7] = new_block();
-      inode->i_dirt = 1;
-    }
+    if (create && !inode->i_zone[7])
+      if ((inode->i_zone[7] = new_block()))
+        inode->i_dirt = 1;
 
     if (!inode->i_zone[7])
       return 0;
@@ -150,8 +147,7 @@ int bmap(struct inode_t *inode, int block, int create)
     /* get matching block */
     i = ((uint16_t *) bh->b_data)[block];
     if (create && !i) {
-      i = new_block();
-      if (i) {
+      if ((i = new_block())) {
         ((uint16_t *) (bh->b_data))[block] = i;
         bh->b_dirt = 1;
       }
@@ -162,10 +158,9 @@ int bmap(struct inode_t *inode, int block, int create)
 
   /* second indirect block */
   block -= 512;
-  if (create && !inode->i_zone[8]) {
-    inode->i_zone[8] = new_block();
-    inode->i_dirt = 1;
-  }
+  if (create && !inode->i_zone[8])
+    if ((inode->i_zone[8] = new_block()))
+      inode->i_dirt = 1;
 
   if (!inode->i_zone[8])
     return 0;
@@ -178,8 +173,7 @@ int bmap(struct inode_t *inode, int block, int create)
 
   /* create it if needed */
   if (create && !i) {
-    i = new_block();
-    if (i) {
+    if ((i = new_block())) {
       ((uint16_t *) (bh->b_data))[block >> 9] = i;
       bh->b_dirt = 1;
     }
@@ -195,8 +189,7 @@ int bmap(struct inode_t *inode, int block, int create)
     return 0;
   i = ((uint16_t *) bh->b_data)[block & 511];
   if (create && !i) {
-    i = new_block();
-    if (i) {
+    if ((i = new_block())) {
       ((uint16_t *) (bh->b_data))[block & 511] = i;
       bh->b_dirt = 1;
     }
