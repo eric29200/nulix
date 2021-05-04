@@ -119,7 +119,11 @@ void brelse(struct buffer_head_t *bh);
 struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 struct inode_t *new_inode();
-void free_inode(struct inode_t *inode);
+int free_inode(struct inode_t *inode);
+
+/* block operations */
+uint32_t new_block();
+int free_block(uint32_t block);
 
 /* name operations */
 struct inode_t *namei(const char *pathname);

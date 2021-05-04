@@ -3,6 +3,7 @@
 #include <mm/mm.h>
 #include <string.h>
 #include <stdio.h>
+#include <stderr.h>
 
 /* root super block */
 extern struct minix_super_block_t *root_sb;
@@ -39,14 +40,76 @@ static void clear_bitmap(struct buffer_head_t *bh, int i)
 }
 
 /*
- * Free an inode.
+ * Create a new block.
  */
-void free_inode(struct inode_t *inode)
+uint32_t new_block()
+{
+  struct buffer_head_t *bh;
+  int i, j, block_nr;
+
+  /* find first free block in bitmap */
+  for (i = 0; i < root_sb->s_zmap_blocks; i++) {
+    j = get_free_bitmap(root_sb->s_zmap[i]);
+    if (j != -1)
+      break;
+  }
+
+  /* no free block */
+  if (j == -1)
+    return 0;
+
+  /* compute real block number */
+  block_nr = j + i * BLOCK_SIZE * 8 + root_sb->s_firstdatazone - 1;
+  if (block_nr >= root_sb->s_nzones)
+    return 0;
+
+  /* read new block */
+  bh = bread(root_sb->s_dev, block_nr);
+  if (!bh)
+    return 0;
+
+  /* zero new block */
+  memset(bh->b_data, 0, BLOCK_SIZE);
+  if (bwrite(bh)) {
+    brelse(bh);
+    return 0;
+  }
+
+  /* set block in bitmap and write bitmap to disk */
+  set_bitmap(root_sb->s_zmap[i], j);
+  if (bwrite(root_sb->s_zmap[i]) != 0)
+    return 0;
+
+  return block_nr;
+}
+
+/*
+ * Free a block.
+ */
+int free_block(uint32_t block)
 {
   struct buffer_head_t *bh;
 
+  /* check block number */
+  if (block < root_sb->s_firstdatazone || block >= root_sb->s_nzones)
+    return -EINVAL;
+
+  /* update/clear inode bitmap */
+  bh = root_sb->s_zmap[block / (BLOCK_SIZE * 8)];
+  clear_bitmap(bh, block & (BLOCK_SIZE * 8 - 1));
+  return bwrite(bh);
+}
+
+/*
+ * Free an inode.
+ */
+int free_inode(struct inode_t *inode)
+{
+  struct buffer_head_t *bh;
+  int ret;
+
   if (!inode)
-    return;
+    return 0;
 
   /* panic if inode is still used */
   if (inode->i_ref > 1) {
@@ -56,11 +119,12 @@ void free_inode(struct inode_t *inode)
 
   /* update/clear inode bitmap */
   bh = root_sb->s_imap[inode->i_ino >> 13];
-  clear_bitmap(bh, inode->i_ino & 8191);
-  bwrite(bh);
+  clear_bitmap(bh, inode->i_ino & (BLOCK_SIZE * 8 - 1));
+  ret = bwrite(bh);
 
   /* free inode */
-  kfree(inode);
+  iput(inode);
+  return ret;
 }
 
 /*
