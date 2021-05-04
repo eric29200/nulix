@@ -70,10 +70,7 @@ uint32_t new_block()
 
   /* zero new block */
   memset(bh->b_data, 0, BLOCK_SIZE);
-  if (bwrite(bh)) {
-    brelse(bh);
-    return 0;
-  }
+  brelse(bh);
 
   /* set block in bitmap and write bitmap to disk */
   set_bitmap(root_sb->s_zmap[i], j);

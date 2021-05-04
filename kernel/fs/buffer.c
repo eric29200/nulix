@@ -30,6 +30,7 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
   /* set buffer */
   bh->b_dev = dev;
   bh->b_blocknr = block;
+  bh->b_dirt = 0;
   memset(bh->b_data, 0, sizeof(struct buffer_head_t));
 
   /* read from device */
@@ -65,9 +66,15 @@ int bwrite(struct buffer_head_t *bh)
  */
 void brelse(struct buffer_head_t *bh)
 {
-  if (bh) {
-    if (bh->b_data)
-      kfree(bh->b_data);
-    kfree(bh);
-  }
+  if (!bh)
+    return;
+
+  /* write dirty buffer */
+  if (bh->b_dirt)
+    bwrite(bh);
+
+  /* free buffer */
+  if (bh->b_data)
+    kfree(bh->b_data);
+  kfree(bh);
 }
