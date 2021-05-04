@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <drivers/ata.h>
 
+#define NR_INODE                      256
+
 #define MINIX_SUPER_MAGIC             0x138F
 #define MINIX_ROOT_INODE              1
 #define MINIX_IMAP_SLOTS              8

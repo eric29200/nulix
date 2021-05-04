@@ -6,19 +6,32 @@
 #include <stat.h>
 #include <string.h>
 
+/* global inode table */
+static struct inode_t inode_table[NR_INODE];
+
 /*
  * Get an empty inode.
  */
 struct inode_t *get_empty_inode()
 {
   struct inode_t *inode;
+  int i;
 
-  /* allocate a new inode and zero it */
-  inode = (struct inode_t *) kmalloc(sizeof(struct inode_t));
-  if (inode) {
-    memset(inode, 0, sizeof(struct inode_t));
-    inode->i_ref = 1;
+  /* find a free inode */
+  for (i = 0; i < NR_INODE; i++) {
+    if (!inode_table[i].i_ref) {
+      inode = &inode_table[i];
+      break;
+    }
   }
+
+  /* no more inode */
+  if (!inode)
+    return NULL;
+
+  /* reset inode */
+  memset(inode, 0, sizeof(struct inode_t));
+  inode->i_ref = 1;
 
   return inode;
 }
@@ -26,21 +39,18 @@ struct inode_t *get_empty_inode()
 /*
  * Read an inode.
  */
-static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
+static struct inode_t *read_inode(struct inode_t *inode)
 {
   struct minix_inode_t *minix_inode;
   struct buffer_head_t *bh;
-  struct inode_t *inode;
   uint32_t block, i, j;
 
-  /* get an empty inode */
-  inode = get_empty_inode();
   if (!inode)
     return NULL;
 
   /* read minix inode block */
-  block = 2 + sb->s_imap_blocks + sb->s_zmap_blocks + (ino - 1) / MINIX_INODES_PER_BLOCK;
-  bh = bread(sb->s_dev, block);
+  block = 2 + inode->i_sb->s_imap_blocks + inode->i_sb->s_zmap_blocks + (inode->i_ino - 1) / MINIX_INODES_PER_BLOCK;
+  bh = bread(inode->i_sb->s_dev, block);
   if (!bh) {
     iput(inode);
     return NULL;
@@ -48,7 +58,7 @@ static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
 
   /* read minix inode */
   minix_inode = (struct minix_inode_t *) bh->b_data;
-  i = (ino - 1) % MINIX_INODES_PER_BLOCK;
+  i = (inode->i_ino - 1) % MINIX_INODES_PER_BLOCK;
 
   /* fill in memory inode */
   inode->i_mode = minix_inode[i].i_mode;
@@ -59,10 +69,6 @@ static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
   inode->i_nlinks = minix_inode[i].i_nlinks;
   for (j = 0; j < 9; j++)
     inode->i_zone[j] = minix_inode[i].i_zone[j];
-  inode->i_ino = ino;
-  inode->i_ref = 0;
-  inode->i_sb = sb;
-  inode->i_dev = sb->s_dev;
 
   /* free minix inode */
   brelse(bh);
@@ -205,13 +211,27 @@ int bmap(struct inode_t *inode, int block, int create)
 struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino)
 {
   struct inode_t *inode;
+  int i;
+
+  /* try to find inode in table */
+  for (i = 0; i < NR_INODE; i++) {
+    if (inode_table[i].i_ino == ino) {
+      inode = &inode_table[i];
+      inode->i_ref++;
+      return inode;
+    }
+  }
+
+  /* get an empty inode */
+  inode = get_empty_inode();
+  if (!inode)
+    return NULL;
 
   /* read inode */
-  inode = read_inode(sb, ino);
-
-  /* update reference count */
-  if (inode)
-    inode->i_ref++;
+  inode->i_dev = sb->s_dev;
+  inode->i_ino = ino;
+  inode->i_sb = sb;
+  inode = read_inode(inode);
 
   return inode;
 }
@@ -230,8 +250,6 @@ void iput(struct inode_t *inode)
     inode->i_dirt = 0;
   }
 
-  /* free inode if not used anymore */
+  /* update inode reference count */
   inode->i_ref--;
-  if (inode->i_ref <= 0)
-    kfree(inode);
 }
