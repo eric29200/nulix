@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-  int fd, i, ret;
+  int i;
 
   if (argc <= 1)
     return 0;

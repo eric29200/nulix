@@ -7,6 +7,23 @@
 #include <string.h>
 
 /*
+ * Get an empty inode.
+ */
+struct inode_t *get_empty_inode()
+{
+  struct inode_t *inode;
+
+  /* allocate a new inode and zero it */
+  inode = (struct inode_t *) kmalloc(sizeof(struct inode_t));
+  if (inode) {
+    memset(inode, 0, sizeof(struct inode_t));
+    inode->i_ref = 1;
+  }
+
+  return inode;
+}
+
+/*
  * Read an inode.
  */
 static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
@@ -16,8 +33,8 @@ static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
   struct inode_t *inode;
   uint32_t block, i, j;
 
-  /* allocate a new inode */
-  inode = (struct inode_t *) kmalloc(sizeof(struct inode_t));
+  /* get an empty inode */
+  inode = get_empty_inode();
   if (!inode)
     return NULL;
 
@@ -25,7 +42,7 @@ static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
   block = 2 + sb->s_imap_blocks + sb->s_zmap_blocks + (ino - 1) / MINIX_INODES_PER_BLOCK;
   bh = bread(sb->s_dev, block);
   if (!bh) {
-    kfree(inode);
+    iput(inode);
     return NULL;
   }
 
@@ -160,6 +177,10 @@ void iput(struct inode_t *inode)
 {
   if (!inode)
     return;
+
+  /* write inode if needed */
+  if (inode->i_dirt)
+    write_inode(inode);
 
   /* free inode if not used anymore */
   inode->i_ref--;

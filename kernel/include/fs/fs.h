@@ -69,8 +69,10 @@ struct inode_t {
   gid_t i_gid;
   uint8_t i_nlinks;
   uint16_t i_zone[9];
+  /* these are only in memory */
   ino_t i_ino;
   int i_ref;
+  char i_dirt;
   struct minix_super_block_t *i_sb;
   struct ata_device_t *i_dev;
 };
@@ -119,6 +121,7 @@ void brelse(struct buffer_head_t *bh);
 /* inode operations */
 struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
+struct inode_t *get_empty_inode();
 struct inode_t *new_inode();
 int free_inode(struct inode_t *inode);
 

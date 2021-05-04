@@ -132,8 +132,8 @@ struct inode_t *new_inode()
   struct inode_t *inode;
   int i, j;
 
-  /* allocate a new inode */
-  inode = (struct inode_t *) kmalloc(sizeof(struct inode_t));
+  /* get an empty new inode */
+  inode = get_empty_inode();
   if (!inode)
     return NULL;
 
@@ -146,7 +146,7 @@ struct inode_t *new_inode()
 
   /* no free inode */
   if (j == -1)
-    kfree(inode);
+    iput(inode);
 
   /* set inode */
   memset(inode, 0, sizeof(struct inode_t));
