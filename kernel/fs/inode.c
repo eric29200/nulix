@@ -54,6 +54,45 @@ static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
 }
 
 /*
+ * Write an inode on disk.
+ */
+static int write_inode(struct inode_t *inode)
+{
+  struct minix_inode_t *minix_inode;
+  uint32_t block, i, j, ret;
+  struct buffer_head_t *bh;
+
+  if (!inode)
+    return -EINVAL;
+
+  /* read minix inode block */
+  block = 2 + inode->i_sb->s_imap_blocks + inode->i_sb->s_zmap_blocks + (inode->i_ino - 1) / MINIX_INODES_PER_BLOCK;
+  bh = bread(inode->i_sb->s_dev, block);
+  if (!bh)
+    return -EIO;
+
+  /* read minix inode */
+  minix_inode = (struct minix_inode_t *) bh->b_data;
+  i = (inode->i_ino - 1) % MINIX_INODES_PER_BLOCK;
+
+  /* fill in on disk inode */
+  minix_inode[i].i_mode = inode->i_mode;
+  minix_inode[i].i_uid = inode->i_uid;
+  minix_inode[i].i_size = inode->i_size;
+  minix_inode[i].i_time = inode->i_time;
+  minix_inode[i].i_gid = inode->i_gid;
+  minix_inode[i].i_nlinks = inode->i_nlinks;
+  for (j = 0; j < 9; j++)
+    minix_inode[i].i_zone[j] = inode->i_zone[j];
+
+  /* write inode block */
+  ret = bwrite(bh);
+  brelse(bh);
+
+  return ret;
+}
+
+/*
  * Get block number.
  */
 int bmap(struct inode_t *inode, int block)
