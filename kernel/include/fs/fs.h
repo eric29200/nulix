@@ -112,12 +112,14 @@ int mount_root(struct ata_device_t *dev);
 
 /* buffer operations */
 struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block);
+int bwrite(struct buffer_head_t *bh);
 void brelse(struct buffer_head_t *bh);
 
 /* inode operations */
 struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 struct inode_t *new_inode();
+void free_inode(struct inode_t *inode);
 
 /* name operations */
 struct inode_t *namei(const char *pathname);

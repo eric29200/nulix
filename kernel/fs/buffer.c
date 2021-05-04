@@ -42,6 +42,25 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
 }
 
 /*
+ * Write a block buffer.
+ */
+int bwrite(struct buffer_head_t *bh)
+{
+
+  uint32_t nb_sectors, sector;
+
+  if (!bh || !bh->b_data)
+    return -EINVAL;
+
+  /* compute nb sectors */
+  nb_sectors = BLOCK_SIZE / ATA_SECTOR_SIZE;
+  sector = bh->b_blocknr * BLOCK_SIZE / ATA_SECTOR_SIZE;
+
+  /* write to block device */
+  return ata_write(bh->b_dev, sector, nb_sectors, (uint16_t *) bh->b_data);
+}
+
+/*
  * Release a buffer.
  */
 void brelse(struct buffer_head_t *bh)
