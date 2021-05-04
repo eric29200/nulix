@@ -16,4 +16,5 @@ usr/sh
 usr/echo
 usr/ls
 usr/cat
+usr/mkdir
 libc/libc.a
