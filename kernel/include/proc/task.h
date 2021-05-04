@@ -19,6 +19,9 @@
 struct task_t {
   pid_t                       pid;                /* process id */
   uint8_t                     state;              /* process state */
+  uint16_t                    uid;                /* user id */
+  uint8_t                     gid;                /* group id */
+  uint16_t                    umask;              /* umask */
   int                         exit_code;          /* exit code */
   struct task_t               *parent;            /* parent process */
   uint32_t                    kernel_stack;       /* kernel stack */

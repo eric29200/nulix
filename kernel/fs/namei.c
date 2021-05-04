@@ -278,7 +278,9 @@ int do_mkdir(const char *pathname)
   inode->i_nlinks = 2;
   inode->i_time = CURRENT_TIME;
   inode->i_dirt = 1;
-  inode->i_mode = S_IFDIR;
+  inode->i_mode = S_IFDIR | (0777 & ~current_task->umask);
+  inode->i_uid = current_task->uid;
+  inode->i_gid = current_task->gid;
   inode->i_zone[0] = new_block();
   if (!inode->i_zone[0]) {
     iput(dir);

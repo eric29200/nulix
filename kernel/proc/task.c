@@ -65,6 +65,9 @@ static struct task_t *create_task(struct task_t *parent)
   task->pid = get_next_pid();
   task->state = TASK_RUNNING;
   task->parent = parent;
+  task->uid = parent ? parent->uid : 0;
+  task->gid = parent ? parent->gid : 0;
+  task->umask = parent ? parent->umask : 0022;
   task->user_stack = parent ? parent->user_stack : 0;
   task->start_text = parent ? parent->start_text : 0;
   task->end_text = parent ? parent->end_text : 0;
