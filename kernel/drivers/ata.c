@@ -13,17 +13,6 @@
 static struct ata_device_t ata_devices[MAX_ATA_DEVICE];
 
 /*
- * Wait 400 ns (for disk to be ready between 2 commands).
- */
-static void ata_400ns_delay(struct ata_device_t *device)
-{
-  int i;
-
-  for (i = 0; i < 400; i++)
-  	inb(device->io_base + ATA_REG_ALTSTATUS);
-}
-
-/*
  * Polling an ata device.
  */
 static uint8_t ata_polling(struct ata_device_t *device)
@@ -54,11 +43,12 @@ static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint1
   else
     cmd = 0xF0;
 
+  /* wait for disk to be ready */
+  if (ata_polling(device) != 0)
+    return -ENXIO;
+
   /* send write command */
   outb(device->io_base + ATA_REG_HDDEVSEL, cmd | ((lba >> 24) & 0x0F));
-
-  /* wait to send another command */
-  ata_400ns_delay(device);
 
   /* set write parameters */
   outb(device->io_base + 1, 0x00);
@@ -77,9 +67,6 @@ static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint1
     outw(device->io_base, buffer[i]);
     outw(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
   }
-
-  /* wait again */
-  ata_400ns_delay(device);
 
   return 0;
 }
@@ -115,11 +102,12 @@ static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16
   else
     cmd = 0xF0;
 
+  /* wait for disk to be ready */
+  if (ata_polling(device) != 0)
+    return -ENXIO;
+
   /* send read command */
   outb(device->io_base + ATA_REG_HDDEVSEL, cmd | ((lba >> 24) & 0x0F));
-
-  /* wait to send another command */
-  ata_400ns_delay(device);
 
   /* set read parameters */
   outb(device->io_base + 1, 0x00);
@@ -136,9 +124,6 @@ static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16
   /* read sector word by word */
   for (i = 0; i < 256; i++)
     buffer[i] = inw(device->io_base + ATA_REG_DATA);
-
-  /* wait again */
-  ata_400ns_delay(device);
 
   return 0;
 }
