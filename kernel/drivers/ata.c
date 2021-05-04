@@ -19,8 +19,8 @@ static void ata_400ns_delay(struct ata_device_t *device)
 {
   int i;
 
-	for(i = 0; i < 4; i++)
-		inb(device->io_base + ATA_REG_ALTSTATUS);
+  for (i = 0; i < 400; i++)
+  	inb(device->io_base + ATA_REG_ALTSTATUS);
 }
 
 /*

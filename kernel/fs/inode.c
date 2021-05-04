@@ -76,8 +76,8 @@ static struct inode_t *read_inode(struct minix_super_block_t *sb, ino_t ino)
 static int write_inode(struct inode_t *inode)
 {
   struct minix_inode_t *minix_inode;
-  uint32_t block, i, j, ret;
   struct buffer_head_t *bh;
+  uint32_t block, i, j;
 
   if (!inode)
     return -EINVAL;
@@ -105,7 +105,7 @@ static int write_inode(struct inode_t *inode)
   /* write inode block */
   brelse(bh);
 
-  return ret;
+  return 0;
 }
 
 /*

@@ -31,7 +31,7 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
   bh->b_dev = dev;
   bh->b_blocknr = block;
   bh->b_dirt = 0;
-  memset(bh->b_data, 0, sizeof(struct buffer_head_t));
+  memset(bh->b_data, 0, BLOCK_SIZE);
 
   /* read from device */
   if (ata_read(dev, sector, nb_sectors, (uint16_t *) bh->b_data) != 0) {
@@ -47,7 +47,6 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
  */
 int bwrite(struct buffer_head_t *bh)
 {
-
   uint32_t nb_sectors, sector;
 
   if (!bh || !bh->b_data)

@@ -172,6 +172,77 @@ int open_namei(const char *pathname, struct inode_t **inode)
 }
 
 /*
+ * Add an entry to a directory.
+ */
+static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, size_t name_len,
+                                       struct minix_dir_entry_t **res_dir)
+{
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  int block, i;
+
+  /* check file name length */
+  if (!name_len || name_len > MINIX_FILENAME_LEN)
+    return NULL;
+
+  /* get first dir block */
+  block = dir->i_zone[0];
+  if (!block)
+    return NULL;
+
+  /* read first dir block */
+  bh = bread(dir->i_dev, dir->i_zone[0]);
+  if (!bh)
+    return NULL;
+
+  /* try to find first free entry */
+  i = 0;
+  de = (struct minix_dir_entry_t *) bh->b_data;
+  while (1) {
+    /* read next block */
+    if ((char *) de >= bh->b_data + BLOCK_SIZE) {
+      /* release previous block */
+      brelse(bh);
+      bh = NULL;
+
+      /* get or map next block number */
+      block = bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 1);
+      if (!block)
+        return NULL;
+
+      /* read block */
+      bh = bread(dir->i_dev, block);
+      if (!bh) {
+        i += MINIX_DIR_ENTRIES_PER_BLOCK;
+        continue;
+      }
+
+      /* update entries */
+      de = (struct minix_dir_entry_t *) bh->b_data;
+    }
+
+    /* last entry : create a new one */
+    if (i * sizeof(struct minix_dir_entry_t) >= dir->i_size) {
+      de->inode = 0;
+      dir->i_size = (i + 1) * sizeof(struct minix_dir_entry_t);
+      dir->i_dirt = 1;
+    }
+
+    /* free entry : exit */
+    if (!de->inode) {
+      bh->b_dirt = 1;
+      memset(de->name, 0, MINIX_FILENAME_LEN);
+      memcpy(de->name, name, name_len);
+      *res_dir = de;
+      return bh;
+    }
+
+    i++;
+    de++;
+  }
+}
+
+/*
  * Make dir system call.
  */
 int do_mkdir(const char *pathname)
@@ -224,7 +295,6 @@ int do_mkdir(const char *pathname)
   /* add entry '.' */
   de = (struct minix_dir_entry_t *) bh->b_data;
   de->inode = inode->i_ino;
-  printf("%d %d\n", de->inode, bh->b_blocknr);
   strcpy(de->name, ".");
 
   /* add entry '..' */
@@ -236,10 +306,25 @@ int do_mkdir(const char *pathname)
   bh->b_dirt = 1;
   brelse(bh);
 
-  /* TODO : add entry to parent dir */
+  /* add entry to parent dir */
+  bh = add_entry(dir, basename, basename_len, &de);
+  if (!bh) {
+    iput(dir);
+    free_block(inode->i_zone[0]);
+    iput(inode);
+    return -ENOSPC;
+  }
+
+  /* set inode entry */
+  de->inode = inode->i_ino;
+
+  /* mark directory directory */
+  dir->i_dirt = 1;
 
   /* release inode */
+  iput(dir);
   iput(inode);
+  brelse(bh);
 
   return 0;
 }
