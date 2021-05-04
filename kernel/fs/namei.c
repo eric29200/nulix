@@ -39,7 +39,7 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
     /* read next block if needed */
     if (i % MINIX_DIR_ENTRIES_PER_BLOCK == 0) {
       brelse(bh);
-      block_nr = bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK);
+      block_nr = bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
       bh = bread(dir->i_dev, block_nr);
       if (!bh)
         return NULL;

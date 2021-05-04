@@ -70,8 +70,10 @@ void brelse(struct buffer_head_t *bh)
     return;
 
   /* write dirty buffer */
-  if (bh->b_dirt)
+  if (bh->b_dirt) {
     bwrite(bh);
+    bh->b_dirt = 0;
+  }
 
   /* free buffer */
   if (bh->b_data)

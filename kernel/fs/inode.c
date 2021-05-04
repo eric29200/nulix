@@ -112,45 +112,98 @@ static int write_inode(struct inode_t *inode)
 /*
  * Get block number.
  */
-int bmap(struct inode_t *inode, int block)
+int bmap(struct inode_t *inode, int block, int create)
 {
   struct buffer_head_t *bh;
-  int i, ret;
+  int i;
 
   if (block < 0 || block >= 7 + 512 + 512 * 512)
     return 0;
 
   /* direct blocks */
-  if (block < 7)
+  if (block < 7) {
+    if (create && !inode->i_zone[block]) {
+      inode->i_zone[block] = new_block();
+      inode->i_dirt = 1;
+    }
+
     return inode->i_zone[block];
+  }
 
   /* first indirect block (contains address to 512 blocks) */
   block -= 7;
   if (block < 512) {
+    /* create block if needed */
+    if (create && !inode->i_zone[7]) {
+      inode->i_zone[7] = new_block();
+      inode->i_dirt = 1;
+    }
+
+    if (!inode->i_zone[7])
+      return 0;
+
+    /* read indirect block */
     bh = bread(inode->i_dev, inode->i_zone[7]);
     if (!bh)
       return 0;
-    ret = ((uint16_t *) bh->b_data)[block];
+
+    /* get matching block */
+    i = ((uint16_t *) bh->b_data)[block];
+    if (create && !i) {
+      i = new_block();
+      if (i) {
+        ((uint16_t *) (bh->b_data))[block] = i;
+        bh->b_dirt = 1;
+      }
+    }
     brelse(bh);
-    return ret;
+    return i;
   }
 
-  /* get first second indirect block */
+  /* second indirect block */
   block -= 512;
+  if (create && !inode->i_zone[8]) {
+    inode->i_zone[8] = new_block();
+    inode->i_dirt = 1;
+  }
+
+  if (!inode->i_zone[8])
+    return 0;
+
+  /* read second indirect block */
   bh = bread(inode->i_dev, inode->i_zone[8]);
   if (!bh)
     return 0;
   i = ((uint16_t *) bh->b_data)[block >> 9];
+
+  /* create it if needed */
+  if (create && !i) {
+    i = new_block();
+    if (i) {
+      ((uint16_t *) (bh->b_data))[block >> 9] = i;
+      bh->b_dirt = 1;
+    }
+  }
   brelse(bh);
+
+  if (!i)
+    return 0;
 
   /* get second second indirect block */
   bh = bread(inode->i_dev, i);
   if (!bh)
     return 0;
-  ret = ((uint16_t *) bh->b_data)[block & 511];
+  i = ((uint16_t *) bh->b_data)[block & 511];
+  if (create && !i) {
+    i = new_block();
+    if (i) {
+      ((uint16_t *) (bh->b_data))[block & 511] = i;
+      bh->b_dirt = 1;
+    }
+  }
   brelse(bh);
 
-  return ret;
+  return i;
 }
 
 /*
@@ -179,8 +232,10 @@ void iput(struct inode_t *inode)
     return;
 
   /* write inode if needed */
-  if (inode->i_dirt)
+  if (inode->i_dirt) {
     write_inode(inode);
+    inode->i_dirt = 0;
+  }
 
   /* free inode if not used anymore */
   inode->i_ref--;

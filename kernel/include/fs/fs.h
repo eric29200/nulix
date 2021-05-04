@@ -132,7 +132,7 @@ int free_block(uint32_t block);
 /* name operations */
 struct inode_t *namei(const char *pathname);
 int open_namei(const char *pathname, struct inode_t **inode);
-int bmap(struct inode_t *inode, int block);
+int bmap(struct inode_t *inode, int block, int create);
 
 /* read write operations */
 int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count);

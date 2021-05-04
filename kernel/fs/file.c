@@ -17,7 +17,7 @@ int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count)
   left = count;
   while (left > 0) {
     /* get block number */
-    block_nr = bmap(inode, filp->f_pos / BLOCK_SIZE);
+    block_nr = bmap(inode, filp->f_pos / BLOCK_SIZE, 0);
 
     /* read block */
     bh = bread(inode->i_dev, block_nr);

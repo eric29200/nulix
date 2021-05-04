@@ -1,4 +1,5 @@
 - Implement sys_mkdir
+  - Implement add_entry from linux
   - implement create_new_block in bitmap
   - implent free_inode in bitmap
   - implement free_block in bitmap
