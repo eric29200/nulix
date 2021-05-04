@@ -6,7 +6,7 @@ CFLAGS		= -m32 -nostdlib -nostdinc -nodefaultlibs -fno-builtin -Wall -Wextra -I$
 LDFLAGS		= -T link.ld
 LDLIBS		= ../libc/libc.a
 
-all: init sh echo ls cat
+all: init sh echo ls cat mkdir
 
 %.o: %.c
 	${CC} ${CFLAGS} -c $< -o $@
@@ -26,5 +26,8 @@ ls: ls.o
 cat: cat.o
 	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
+mkdir: mkdir.o
+	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
 clean:
-	rm -f *.o init sh echo ls cat
+	rm -f *.o init sh echo ls cat mkdir

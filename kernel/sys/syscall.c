@@ -20,6 +20,7 @@ static const void *syscalls[] = {
   [__NR_wait]       = sys_wait,
   [__NR_access]     = sys_access,
   [__NR_chdir]      = sys_chdir,
+  [__NR_mkdir]      = sys_mkdir,
 };
 
 /*

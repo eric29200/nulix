@@ -19,6 +19,7 @@
 #define __NR_wait         13
 #define __NR_access       14
 #define __NR_chdir        15
+#define __NR_mkdir        16
 
 /*
  * System call with no argument.
@@ -173,11 +174,19 @@ static inline int access(const char *pathname)
 }
 
 /*
- * Change directory.
+ * Change directory system call.
  */
 static inline int chdir(const char *path)
 {
   return syscall1(__NR_chdir, (int) path);
+}
+
+/*
+ * Mkdir system call.
+ */
+static inline int mkdir(const char *pathname)
+{
+  return syscall1(__NR_mkdir, (int) pathname);
 }
 
 #endif

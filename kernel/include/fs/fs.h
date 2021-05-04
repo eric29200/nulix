@@ -142,5 +142,6 @@ int do_read(int fd, char *buf, int count);
 int do_write(int fd, const char *buf, int count);
 int do_stat(const char *filename, struct stat_t *statbuf);
 int do_access(const char *filename);
+int do_mkdir(const char *pathname);
 
 #endif

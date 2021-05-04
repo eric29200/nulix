@@ -170,3 +170,11 @@ int open_namei(const char *pathname, struct inode_t **inode)
   iput(dir);
   return 0;
 }
+
+/*
+ * Make dir system call.
+ */
+int do_mkdir(const char *pathname)
+{
+  return 0;
+}
