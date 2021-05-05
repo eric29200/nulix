@@ -192,6 +192,9 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
   /* create a new page table */
   if (make) {
     pgd->tables[table_idx] = (struct page_table_t *) kmalloc_align_phys(sizeof(struct page_table_t), &tmp);
+    if (!pgd->tables[table_idx])
+      return NULL;
+
     memset(pgd->tables[table_idx], 0, PAGE_SIZE);
     pgd->tables_physical[table_idx] = tmp | 0x7; /* present, rw and user */
     return &pgd->tables[table_idx]->pages[address % 1024];
@@ -221,7 +224,13 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
     if (!src->pages[i].frame)
       continue;
 
-    alloc_frame(&ret->pages[i], 0, 0);
+    /* alloc a frame */
+    if (alloc_frame(&ret->pages[i], 0, 0) == -1) {
+      kfree(ret);
+      return NULL;
+    }
+
+    /* set page */
     ret->pages[i].present = src->pages[i].present;
     ret->pages[i].rw = src->pages[i].rw;
     ret->pages[i].user = src->pages[i].user;
@@ -261,8 +270,12 @@ struct page_directory_t *clone_page_directory(struct page_directory_t *src)
       ret->tables_physical[i] = src->tables_physical[i];
     } else {
       ret->tables[i] = clone_page_table(src->tables[i], &phys);
-      if (ret->tables[i])
-        ret->tables_physical[i] = phys | 0x07;
+      if (!ret->tables[i]) {
+        free_page_directory(ret);
+        return NULL;
+      }
+
+      ret->tables_physical[i] = phys | 0x07;
     }
   }
 

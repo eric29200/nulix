@@ -69,8 +69,15 @@ static struct task_t *create_task(struct task_t *parent)
   task->end_text = parent ? parent->end_text : 0;
   task->start_brk = parent ? parent->start_brk : 0;
   task->end_brk = parent ? parent->end_brk : 0;
-  task->pgd = clone_page_directory(parent ? parent->pgd : kernel_pgd);
   INIT_LIST_HEAD(&task->list);
+
+  /* clone page directory */
+  task->pgd = clone_page_directory(parent ? parent->pgd : kernel_pgd);
+  if (!task->pgd) {
+    kfree(stack);
+    kfree(task);
+    return NULL;
+  }
 
   /* duplicate parent registers */
   if (parent) {
