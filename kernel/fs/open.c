@@ -25,7 +25,7 @@ int do_open(const char *pathname, int flags, mode_t mode)
     return -EINVAL;
 
   /* open file */
-  ret = open_namei(pathname, &inode);
+  ret = open_namei(pathname, flags, mode, &inode);
   if (ret != 0)
     return ret;
 

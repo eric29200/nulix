@@ -6,7 +6,7 @@ CFLAGS		= -m32 -nostdlib -nostdinc -nodefaultlibs -fno-builtin -Wall -Wextra -I$
 LDFLAGS		= -T link.ld
 LDLIBS		= ../libc/libc.a
 
-all: init sh echo ls cat mkdir
+all: init sh echo ls cat mkdir touch
 
 %.o: %.c
 	${CC} ${CFLAGS} -c $< -o $@
@@ -29,5 +29,8 @@ cat: cat.o
 mkdir: mkdir.o
 	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
+touch: touch.o
+	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
 clean:
-	rm -f *.o init sh echo ls cat mkdir
+	rm -f *.o init sh echo ls cat mkdir touch

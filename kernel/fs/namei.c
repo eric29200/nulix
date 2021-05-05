@@ -140,38 +140,6 @@ struct inode_t *namei(const char *pathname)
 }
 
 /*
- * Open a file.
- */
-int open_namei(const char *pathname, struct inode_t **inode)
-{
-  struct inode_t *dir;
-  const char *basename;
-  size_t basename_len;
-
-  /* find directory */
-  dir = dir_namei(pathname, &basename, &basename_len);
-  if (!dir)
-    return -ENOENT;
-
-  /* open a directory */
-  if (!basename_len) {
-    *inode = dir;
-    return 0;
-  }
-
-  /* find inode */
-  *inode = find_entry(dir, basename, basename_len);
-  if (!*inode) {
-    iput(dir);
-    return -ENOENT;
-  }
-
-  /* free directory */
-  iput(dir);
-  return 0;
-}
-
-/*
  * Add an entry to a directory.
  */
 static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, size_t name_len,
@@ -240,6 +208,87 @@ static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, si
     i++;
     de++;
   }
+}
+
+/*
+ * Open a file.
+ */
+int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
+{
+  struct minix_dir_entry_t *de;
+  struct inode_t *dir, *inode;
+  struct buffer_head_t *bh;
+  const char *basename;
+  size_t basename_len;
+
+  /* find directory */
+  dir = dir_namei(pathname, &basename, &basename_len);
+  if (!dir)
+    return -ENOENT;
+
+  /* open a directory */
+  if (!basename_len) {
+    /* do not allow to create/truncate directories here */
+    if (!(flags & (O_ACCMODE | O_CREAT | O_TRUNC))) {
+      *res_inode = dir;
+      return 0;
+    }
+
+    iput(dir);
+    return -EISDIR;
+  }
+
+  /* set mode (needed if new file is created) */
+  mode &= ~current_task->umask & 0777;
+  mode |= S_IFREG;
+
+  /* find inode */
+  *res_inode = find_entry(dir, basename, basename_len);
+  if (!*res_inode) {
+    /* no such entry */
+    if (!(flags & O_CREAT)) {
+      iput(dir);
+      return -ENOENT;
+    }
+
+    /* create a new inode */
+    inode = new_inode();
+    if (!inode) {
+      iput(dir);
+      return -ENOSPC;
+    }
+
+    /* set inode */
+    inode->i_mode = mode;
+    inode->i_dirt = 1;
+
+    /* add new entry to current dir */
+    bh = add_entry(dir, basename, basename_len, &de);
+    if (!bh) {
+      iput(inode);
+      iput(dir);
+      return -ENOSPC;
+    }
+
+    /* set inode entry */
+    de->inode = inode->i_ino;
+
+    /* release current dir inode/block and new inode (to write them on disk) */
+    iput(dir);
+    iput(inode);
+    brelse(bh);
+
+    /* read inode from disk */
+    *res_inode = iget(dir->i_sb, de->inode);
+    if (!*res_inode)
+      return -EACCES;
+
+    return 0;
+  }
+
+  /* free directory */
+  iput(dir);
+  return 0;
 }
 
 /*

@@ -17,4 +17,5 @@ usr/echo
 usr/ls
 usr/cat
 usr/mkdir
+usr/touch
 libc/libc.a

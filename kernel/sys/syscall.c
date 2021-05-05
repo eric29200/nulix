@@ -22,6 +22,7 @@ static const void *syscalls[] = {
   [__NR_chdir]      = sys_chdir,
   [__NR_mkdir]      = sys_mkdir,
   [__NR_lseek]      = sys_lseek,
+  [__NR_creat]      = sys_creat,
 };
 
 /*

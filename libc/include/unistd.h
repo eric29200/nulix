@@ -21,6 +21,7 @@
 #define __NR_chdir        15
 #define __NR_mkdir        16
 #define __NR_lseek        17
+#define __NR_creat        18
 
 /*
  * System call with no argument.
@@ -196,6 +197,14 @@ static inline int mkdir(const char *pathname, mode_t mode)
 static inline int lseek(int fd, off_t offset, int whence)
 {
   return syscall3(__NR_lseek, fd, offset, whence);
+}
+
+/*
+ * Creat system call.
+ */
+static inline int creat(const char *pathname, mode_t mode)
+{
+  return syscall2(__NR_creat, (int) pathname, mode);
 }
 
 #endif
