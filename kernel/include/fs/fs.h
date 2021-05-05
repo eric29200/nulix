@@ -23,7 +23,7 @@
  */
 struct buffer_head_t {
   struct ata_device_t *b_dev;
-  char *b_data;
+  char b_data[BLOCK_SIZE];
   char b_dirt;
   uint32_t b_blocknr;
 };

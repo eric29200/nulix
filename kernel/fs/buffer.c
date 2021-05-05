@@ -20,13 +20,6 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
   if (!bh)
     return NULL;
 
-  /* allocate data */
-  bh->b_data = (char *) kmalloc(BLOCK_SIZE);
-  if (!bh->b_data) {
-    kfree(bh);
-    return NULL;
-  }
-
   /* set buffer */
   bh->b_dev = dev;
   bh->b_blocknr = block;
@@ -49,7 +42,7 @@ int bwrite(struct buffer_head_t *bh)
 {
   uint32_t nb_sectors, sector;
 
-  if (!bh || !bh->b_data)
+  if (!bh)
     return -EINVAL;
 
   /* compute nb sectors */
@@ -75,7 +68,5 @@ void brelse(struct buffer_head_t *bh)
   }
 
   /* free buffer */
-  if (bh->b_data)
-    kfree(bh->b_data);
   kfree(bh);
 }
