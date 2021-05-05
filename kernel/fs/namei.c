@@ -286,6 +286,10 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
     return 0;
   }
 
+  /* truncate file */
+  if (flags & O_TRUNC)
+    truncate(*res_inode);
+
   /* free directory */
   iput(dir);
   return 0;

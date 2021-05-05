@@ -126,6 +126,7 @@ void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode();
 struct inode_t *new_inode();
 int free_inode(struct inode_t *inode);
+void truncate(struct inode_t *inode);
 
 /* block operations */
 uint32_t new_block();
