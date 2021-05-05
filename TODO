@@ -1,7 +1,8 @@
-- Implement sys_mkdir
-  - Implement add_entry from linux
-  - implement create_new_block in bitmap
-  - implent free_inode in bitmap
-  - implement free_block in bitmap
+- Implement file_write and test different open modes
+- Implement open(O_CREAT) = create a file
+- Implement open(O_TRUNC) = truncate a file
+
+- Try to limit number of kmalloc
+  = limit resources (= use an array of block buffers and processes)
 
 - Implement pwd command
