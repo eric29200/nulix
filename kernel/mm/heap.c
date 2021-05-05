@@ -1,6 +1,7 @@
 #include <mm/heap.h>
 #include <mm/paging.h>
 #include <mm/mm.h>
+#include <stdio.h>
 #include <stderr.h>
 
 #define HEAP_BLOCK_DATA(block)          ((uint32_t) (block) + sizeof(struct heap_block_t))
@@ -141,4 +142,15 @@ void heap_free(void *p)
   /* mark block as free */
   block = (struct heap_block_t *) ((uint32_t) p - sizeof(struct heap_block_t));
   block->free = 1;
+}
+
+/*
+ * Dump the heap on the screen.
+ */
+void heap_dump(struct heap_t *heap)
+{
+  struct heap_block_t *block;
+
+  for (block = heap->first_block; block != NULL; block = block->next)
+    printf("%x\t%d\t%d\n", (uint32_t) block, block->size, block->free);
 }

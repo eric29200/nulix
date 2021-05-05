@@ -27,5 +27,6 @@ struct heap_t {
 struct heap_t *heap_create(uint32_t start_address, size_t size);
 void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned);
 void heap_free(void *p);
+void heap_dump(struct heap_t *heap);
 
 #endif
