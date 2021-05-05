@@ -1,8 +1,5 @@
-- Implement file_write and test different open modes
-- Implement open(O_CREAT) = create a file
-- Implement open(O_TRUNC) = truncate a file
-
 - Try to limit number of kmalloc
   = limit resources (= use an array of block buffers and processes)
 
 - Implement pwd command
+- Implement rm and remove dirs

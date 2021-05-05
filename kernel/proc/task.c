@@ -22,17 +22,13 @@ static void task_user_entry(struct task_t *task)
 }
 
 /*
- * Kernel ELF task trampoline (used to end tasks properly).
+ * Init (process 1) entry.
  */
-static void task_elf_entry(struct task_t *task, char *path)
+static void init_entry(struct task_t *task)
 {
   /* load elf header */
-  if (elf_load(path) == 0) {
-    kfree(path);
+  if (elf_load("/sbin/init") == 0)
     enter_user_mode(task->user_stack, task->user_entry, TASK_RETURN_ADDRESS);
-  }
-
-  kfree(path);
 }
 
 /*
@@ -167,9 +163,8 @@ struct task_t *create_init_task()
 
   /* set eip */
   regs->parameter1 = (uint32_t) task;
-  regs->parameter2 = (uint32_t) strdup("/sbin/init");
   regs->return_address = TASK_RETURN_ADDRESS;
-  regs->eip = (uint32_t) task_elf_entry;
+  regs->eip = (uint32_t) init_entry;
 
   /* add task */
   list_add(&task->list, &current_task->list);
