@@ -185,9 +185,9 @@ static inline int chdir(const char *path)
 /*
  * Mkdir system call.
  */
-static inline int mkdir(const char *pathname)
+static inline int mkdir(const char *pathname, mode_t mode)
 {
-  return syscall1(__NR_mkdir, (int) pathname);
+  return syscall2(__NR_mkdir, (int) pathname, mode);
 }
 
 /*

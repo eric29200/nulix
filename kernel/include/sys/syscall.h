@@ -43,7 +43,7 @@ int sys_dup2(int oldfd, int newfd);
 int sys_wait();
 int sys_access(const char *filename);
 int sys_chdir(const char *path);
-int sys_mkdir(const char *pathname);
+int sys_mkdir(const char *pathname, mode_t mode);
 off_t sys_lseek(int fd, off_t offset, int whence);
 
 #endif

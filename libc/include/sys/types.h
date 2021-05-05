@@ -15,8 +15,9 @@ typedef int ssize_t;
 typedef int off_t;
 typedef unsigned int time_t;
 typedef int pid_t;
-typedef uint16_t ino_t;
-typedef uint16_t uid_t;
-typedef uint16_t gid_t;
+typedef unsigned short mode_t;
+typedef unsigned short ino_t;
+typedef unsigned short uid_t;
+typedef unsigned short gid_t;
 
 #endif

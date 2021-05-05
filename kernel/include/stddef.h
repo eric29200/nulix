@@ -12,6 +12,7 @@ typedef unsigned int size_t;
 typedef int off_t;
 typedef unsigned int time_t;
 typedef int pid_t;
+typedef unsigned short mode_t;
 typedef unsigned short dev_t;
 typedef unsigned short ino_t;
 typedef unsigned short uid_t;

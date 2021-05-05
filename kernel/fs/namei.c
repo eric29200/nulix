@@ -245,7 +245,7 @@ static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, si
 /*
  * Make dir system call.
  */
-int do_mkdir(const char *pathname)
+int do_mkdir(const char *pathname, mode_t mode)
 {
   struct inode_t *dir, *inode_ex, *inode;
   struct minix_dir_entry_t *de;
@@ -278,7 +278,7 @@ int do_mkdir(const char *pathname)
   inode->i_nlinks = 2;
   inode->i_time = CURRENT_TIME;
   inode->i_dirt = 1;
-  inode->i_mode = S_IFDIR | (0777 & ~current_task->umask);
+  inode->i_mode = S_IFDIR | (mode & ~current_task->umask & 0777);
   inode->i_uid = current_task->uid;
   inode->i_gid = current_task->gid;
   inode->i_zone[0] = new_block();
