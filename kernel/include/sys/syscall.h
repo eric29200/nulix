@@ -32,7 +32,7 @@ void sys_exit(int status);
 pid_t sys_fork();
 int sys_read(int fd, char *buf, int count);
 int sys_write(int fd, const char *buf, int count);
-int sys_open(const char *pathname);
+int sys_open(const char *pathname, int flags, mode_t mode);
 int sys_close(int fd);
 void *sys_sbrk(size_t n);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);

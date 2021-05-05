@@ -3,7 +3,6 @@
 #include <mm/mm.h>
 #include <stdio.h>
 #include <stderr.h>
-#include <stat.h>
 #include <string.h>
 
 /* root fs super block */

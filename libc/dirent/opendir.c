@@ -1,8 +1,9 @@
+#include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
+#include <fcntl.h>
 
 /*
  * Open a directory.
@@ -22,7 +23,7 @@ DIR *opendir(const char *name)
     return NULL;
 
   /* open directory */
-  fdn = open(name);
+  fdn = open(name, O_RDONLY, 0);
   if (fdn < 0)
     return NULL;
 

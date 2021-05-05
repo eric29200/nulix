@@ -1,7 +1,7 @@
 #include <sys/syscall.h>
 #include <proc/sched.h>
 #include <fs/fs.h>
-#include <stat.h>
+#include <fcntl.h>
 #include <stderr.h>
 
 /*

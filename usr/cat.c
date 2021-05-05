@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 
 #define CAT_BUF_SIZE      512
@@ -30,7 +31,7 @@ int main(int argc, char *argv[])
     return 0;
 
   for (i = 1; i < argc; i++) {
-    fd = open(argv[i]);
+    fd = open(argv[i], O_RDONLY, 0);
     if (fd < 0) {
       return -1;
     }

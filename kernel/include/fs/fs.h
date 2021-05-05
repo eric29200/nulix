@@ -142,7 +142,7 @@ int read_char(dev_t dev, char *buf, int count);
 int write_char(dev_t dev, const char *buf, int count);
 
 /* system calls */
-int do_open(const char *pathname);
+int do_open(const char *pathname, int flags, mode_t mode);
 int do_close(int fd);
 int do_read(int fd, char *buf, int count);
 int do_write(int fd, const char *buf, int count);

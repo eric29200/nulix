@@ -3,13 +3,13 @@
 #include <mm/mm.h>
 #include <stdio.h>
 #include <stderr.h>
-#include <stat.h>
+#include <fcntl.h>
 #include <string.h>
 
 /*
  * Open system call.
  */
-int do_open(const char *pathname)
+int do_open(const char *pathname, int flags, mode_t mode)
 {
   struct inode_t *inode;
   struct file_t *file;

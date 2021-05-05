@@ -1,5 +1,5 @@
-#ifndef _STAT_H_
-#define _STAT_H_
+#ifndef _FCNTL_H_
+#define _FCNTL_H_
 
 #define S_IFMT        00170000
 #define S_IFREG       0100000
@@ -35,5 +35,14 @@
 #define SEEK_SET      0
 #define SEEK_CUR      1
 #define SEEK_END      2
+
+#define O_RDONLY      00000
+#define O_WRONLY      00001
+#define O_RDWR        00002
+#define O_ACCMODE     00003
+#define O_CREAT       01000
+#define O_TRUNC       02000
+#define O_EXCL        04000
+#define O_NOCTTY      010000
 
 #endif

@@ -97,9 +97,9 @@ static inline ssize_t write(int fd, void *buf, size_t count)
 /*
  * Open system call.
  */
-static inline int open(const char *pathname)
+static inline int open(const char *pathname, int flags, mode_t mode)
 {
-  return syscall1(__NR_open, (int) pathname);
+  return syscall3(__NR_open, (int) pathname, flags, mode);
 }
 
 /*

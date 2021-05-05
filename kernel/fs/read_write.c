@@ -2,7 +2,7 @@
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <stdio.h>
-#include <stat.h>
+#include <fcntl.h>
 #include <stderr.h>
 #include <string.h>
 

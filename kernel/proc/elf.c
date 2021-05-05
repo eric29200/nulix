@@ -2,6 +2,7 @@
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
+#include <fcntl.h>
 #include <stderr.h>
 #include <string.h>
 
@@ -59,7 +60,7 @@ int elf_load(const char *path)
   }
 
   /* open file */
-  fd = do_open(path);
+  fd = do_open(path, O_RDONLY, 0);
   if (fd < 0) {
     ret = fd;
     goto out;

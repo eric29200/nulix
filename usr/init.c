@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
 #define NTTYS     4
 
@@ -20,7 +21,7 @@ pid_t spawn_shell(int tty_num)
   pid = fork();
   if (pid == 0) {
     /* open tty */
-    open(tty);
+    open(tty, O_RDWR, 0);
 
     /* dup stdin to sdout and stderr */
     dup(0);
