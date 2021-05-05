@@ -60,7 +60,7 @@ int do_write(int fd, const char *buf, int count)
   if (S_ISCHR(filp->f_inode->i_mode))
     return write_char(filp->f_inode->i_zone[0], buf, count);
 
-  return -EINVAL;
+  return file_write(filp->f_inode, filp, buf, count);
 }
 
 /*
