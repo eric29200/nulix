@@ -66,7 +66,7 @@ int elf_load(const char *path)
   }
 
   /* load file in memory */
-  if ((uint32_t) do_read(fd, buf, statbuf.st_size) != statbuf.st_size) {
+  if ((size_t) do_read(fd, buf, statbuf.st_size) != statbuf.st_size) {
     ret = -EINVAL;
     do_close(fd);
     goto out;

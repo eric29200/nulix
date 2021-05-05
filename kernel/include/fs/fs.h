@@ -84,7 +84,7 @@ struct inode_t {
  */
 struct file_t {
   uint16_t f_mode;
-  off_t f_pos;
+  size_t f_pos;
   int f_ref;
   struct inode_t *f_inode;
 };
@@ -106,7 +106,7 @@ struct stat_t {
   uint8_t st_nlinks;
   uid_t st_uid;
   gid_t st_gid;
-  off_t st_size;
+  size_t st_size;
   time_t st_atime;
   time_t st_mtime;
   time_t st_ctime;
@@ -146,6 +146,7 @@ int do_open(const char *pathname);
 int do_close(int fd);
 int do_read(int fd, char *buf, int count);
 int do_write(int fd, const char *buf, int count);
+off_t do_lseek(int fd, off_t offset, int whence);
 int do_stat(const char *filename, struct stat_t *statbuf);
 int do_access(const char *filename);
 int do_mkdir(const char *pathname);

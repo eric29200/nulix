@@ -9,13 +9,13 @@ typedef unsigned char uint8_t;
 typedef char int8_t;
 
 typedef unsigned int size_t;
-typedef unsigned int off_t;
+typedef int off_t;
 typedef unsigned int time_t;
 typedef int pid_t;
 typedef unsigned short dev_t;
-typedef uint16_t ino_t;
-typedef uint16_t uid_t;
-typedef uint16_t gid_t;
+typedef unsigned short ino_t;
+typedef unsigned short uid_t;
+typedef unsigned short gid_t;
 
 #define NULL                                  ((void *) 0)
 #define UNUSED(x)                             ((void) (x))

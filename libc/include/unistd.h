@@ -20,6 +20,7 @@
 #define __NR_access       14
 #define __NR_chdir        15
 #define __NR_mkdir        16
+#define __NR_lseek        17
 
 /*
  * System call with no argument.
@@ -187,6 +188,14 @@ static inline int chdir(const char *path)
 static inline int mkdir(const char *pathname)
 {
   return syscall1(__NR_mkdir, (int) pathname);
+}
+
+/*
+ * Lseek system call.
+ */
+static inline int lseek(int fd, off_t offset, int whence)
+{
+  return syscall3(__NR_lseek, fd, offset, whence);
 }
 
 #endif
