@@ -60,86 +60,6 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
 }
 
 /*
- * Resolve a path name to the inode of the top most directory.
- */
-static struct inode_t *dir_namei(const char *pathname, const char **basename, size_t *basename_len)
-{
-  struct inode_t *inode, *next_inode;
-  const char *name;
-  size_t name_len;
-
-  /* absolute or relative path */
-  if (*pathname == '/') {
-    inode = root_sb->s_imount;
-    pathname++;
-  } else {
-    inode = current_task->cwd;
-  }
-
-  /* update reference count */
-  inode->i_ref++;
-
-  while (1) {
-    /* check if inode is a directory */
-    if (!S_ISDIR(inode->i_mode))
-      goto err;
-
-    /* compute next path name */
-    name = pathname;
-    for (name_len = 0; *pathname && *pathname++ != '/'; name_len++);
-
-    /* end : return current inode */
-    if (!*pathname)
-      break;
-
-    /* get matching inode */
-    next_inode = find_entry(inode, name, name_len);
-    if (!next_inode)
-      goto err;
-
-    /* free curent inode */
-    iput(inode);
-
-    /* go to next inode */
-    inode = next_inode;
-  }
-
-  *basename = name;
-  *basename_len = name_len;
-  return inode;
-err:
-  /* free inode */
-  iput(inode);
-  return NULL;
-}
-
-/*
- * Get an inode.
- */
-struct inode_t *namei(const char *pathname)
-{
-  struct inode_t *dir, *ret;
-  const char *basename;
-  size_t basename_len;
-
-  /* find directory */
-  dir = dir_namei(pathname, &basename, &basename_len);
-  if (!dir)
-    return NULL;
-
-  /* special case : '/' */
-  if (!basename_len)
-    return dir;
-
-  /* find inode */
-  ret = find_entry(dir, basename, basename_len);
-
-  /* free directory */
-  iput(dir);
-  return ret;
-}
-
-/*
  * Add an entry to a directory.
  */
 static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, size_t name_len,
@@ -211,7 +131,87 @@ static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, si
 }
 
 /*
- * Open a file.
+ * Resolve a path name to the inode of the top most directory.
+ */
+static struct inode_t *dir_namei(const char *pathname, const char **basename, size_t *basename_len)
+{
+  struct inode_t *inode, *next_inode;
+  const char *name;
+  size_t name_len;
+
+  /* absolute or relative path */
+  if (*pathname == '/') {
+    inode = root_sb->s_imount;
+    pathname++;
+  } else {
+    inode = current_task->cwd;
+  }
+
+  /* update reference count */
+  inode->i_ref++;
+
+  while (1) {
+    /* check if inode is a directory */
+    if (!S_ISDIR(inode->i_mode))
+      goto err;
+
+    /* compute next path name */
+    name = pathname;
+    for (name_len = 0; *pathname && *pathname++ != '/'; name_len++);
+
+    /* end : return current inode */
+    if (!*pathname)
+      break;
+
+    /* get matching inode */
+    next_inode = find_entry(inode, name, name_len);
+    if (!next_inode)
+      goto err;
+
+    /* free curent inode */
+    iput(inode);
+
+    /* go to next inode */
+    inode = next_inode;
+  }
+
+  *basename = name;
+  *basename_len = name_len;
+  return inode;
+err:
+  /* free inode */
+  iput(inode);
+  return NULL;
+}
+
+/*
+ * Resolve a path name to the matching inode.
+ */
+struct inode_t *namei(const char *pathname)
+{
+  struct inode_t *dir, *ret;
+  const char *basename;
+  size_t basename_len;
+
+  /* find directory */
+  dir = dir_namei(pathname, &basename, &basename_len);
+  if (!dir)
+    return NULL;
+
+  /* special case : '/' */
+  if (!basename_len)
+    return dir;
+
+  /* find inode */
+  ret = find_entry(dir, basename, basename_len);
+
+  /* free directory */
+  iput(dir);
+  return ret;
+}
+
+/*
+ * Resolve and open a path name.
  */
 int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
 {
