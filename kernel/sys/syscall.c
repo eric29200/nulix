@@ -24,6 +24,7 @@ static const void *syscalls[] = {
   [__NR_lseek]      = sys_lseek,
   [__NR_creat]      = sys_creat,
   [__NR_unlink]     = sys_unlink,
+  [__NR_rmdir]      = sys_rmdir,
 };
 
 /*

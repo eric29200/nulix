@@ -330,6 +330,67 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
 }
 
 /*
+ * Check if a directory is empty.
+ */
+static int empty_dir(struct inode_t *inode)
+{
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  int len, i, block;
+
+  /* check if inode is a directory */
+  if (!inode || S_ISREG(inode->i_mode))
+    return 0;
+
+  /* get directory length */
+  len = inode->i_size / sizeof(struct minix_dir_entry_t);
+  if (len < 2 || !inode->i_zone[0])
+    return 0;
+
+  /* get first zone */
+  bh = bread(inode->i_dev, inode->i_zone[0]);
+  if (!bh)
+    return 0;
+
+  /* skip 2 first entries (. and ..) */
+  de = (struct minix_dir_entry_t *) bh->b_data;
+  de += 2;
+  i = 2;
+
+  /* go through each entry */
+  while (i < len) {
+    /* read next block */
+    if ((void *) de >= (void *) (bh->b_data + BLOCK_SIZE)) {
+      /* release previous block buffer */
+      brelse(bh);
+
+      /* get next block buffer */
+      block = bmap(inode, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
+      bh = bread(inode->i_dev, block);
+      if (!bh)
+        return 0;
+
+      /* update entry */
+      de = (struct minix_dir_entry_t *) bh->b_data;
+    }
+
+    /* found an entry : directory is not empty */
+    if (de->inode) {
+      brelse(bh);
+      return 0;
+    }
+
+    /* go to next dir entry */
+    de++;
+    i++;
+  }
+
+  /* no entries found : directory is empty */
+  brelse(bh);
+  return 1;
+}
+
+/*
  * Make dir system call.
  */
 int do_mkdir(const char *pathname, mode_t mode)
@@ -466,7 +527,67 @@ int do_unlink(const char *pathname)
   brelse(bh);
 
   /* update inode */
-  inode->i_nlinks--;
+  inode->i_nlinks = 0;
+  inode->i_dirt = 1;
+  iput(inode);
+  iput(dir);
+  return 0;
+}
+
+/*
+ * Rmdir system call (remove a directory).
+ */
+int do_rmdir(const char *pathname)
+{
+  struct minix_dir_entry_t *de;
+  struct inode_t *dir, *inode;
+  struct buffer_head_t *bh;
+  const char *basename;
+  size_t basename_len;
+
+  /* get parent directory */
+  dir = dir_namei(pathname, &basename, &basename_len);
+  if (!dir)
+    return -ENOENT;
+
+  /* check if file exists */
+  bh = find_entry(dir, basename, basename_len, &de);
+  if (!bh) {
+    iput(dir);
+    return -ENOENT;
+  }
+
+  /* get inode */
+  inode = iget(dir->i_sb, de->inode);
+  if (!inode) {
+    iput(dir);
+    brelse(bh);
+    return -ENOENT;
+  }
+
+  /* remove directories only (and avoid to remove ".") */
+  if (inode == dir || !S_ISDIR(inode->i_mode)) {
+    iput(inode);
+    iput(dir);
+    brelse(bh);
+    return -EPERM;
+  }
+
+  /* directory must be empty */
+  if (!empty_dir(inode)) {
+    iput(inode);
+    iput(dir);
+    brelse(bh);
+    return -EPERM;
+  }
+
+  /* reset entry */
+  memset(de, 0, sizeof(struct minix_dir_entry_t));
+  bh->b_dirt = 1;
+  brelse(bh);
+
+  /* update inode */
+  inode->i_nlinks = 0;
   inode->i_dirt = 1;
   iput(inode);
   iput(dir);

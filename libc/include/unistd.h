@@ -23,6 +23,7 @@
 #define __NR_lseek        17
 #define __NR_creat        18
 #define __NR_unlink       19
+#define __NR_rmdir        20
 
 /*
  * System call with no argument.
@@ -214,6 +215,14 @@ static inline int creat(const char *pathname, mode_t mode)
 static inline int unlink(const char *pathname)
 {
   return syscall1(__NR_unlink, (int) pathname);
+}
+
+/*
+ * Rmdir system call.
+ */
+static inline int rmdir(const char *pathname)
+{
+  return syscall1(__NR_rmdir, (int) pathname);
 }
 
 #endif
