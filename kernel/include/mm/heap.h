@@ -3,15 +3,18 @@
 
 #include <stddef.h>
 
+#define HEAP_MAGIC          0xAEA0
+
 /*
  * Heap block header.
  */
 struct heap_block_t {
+  uint16_t magic;
   uint32_t size;
   uint8_t free;
   struct heap_block_t *prev;
   struct heap_block_t *next;
-} __attribute__((packed));
+};
 
 /*
  * Heap structure.
@@ -22,7 +25,7 @@ struct heap_t {
   uint32_t start_address;
   uint32_t end_address;
   size_t size;
-} __attribute__((packed));
+};
 
 struct heap_t *heap_create(uint32_t start_address, size_t size);
 void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned);

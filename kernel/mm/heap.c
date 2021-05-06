@@ -30,6 +30,7 @@ struct heap_t *heap_create(uint32_t start_address, size_t size)
   heap->size = size;
 
   /* create first block */
+  heap->first_block->magic = HEAP_MAGIC;
   heap->first_block->size = size - sizeof(struct heap_block_t);
   heap->first_block->free = 1;
   heap->first_block->prev = NULL;
@@ -85,6 +86,7 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 
     /* move block */
     new_block = (void *) block + page_offset;
+    new_block->magic = HEAP_MAGIC;
     new_block->size = block->size - page_offset;
     new_block->prev = block->prev;
     new_block->next = block->next;
@@ -109,6 +111,7 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
   if (block == heap->last_block && block->size - size > sizeof(struct heap_block_t)) {
     /* create new free block */
     new_block = (struct heap_block_t *) (HEAP_BLOCK_DATA(block) + size);
+    new_block->magic = HEAP_MAGIC;
     new_block->size = block->size - size - sizeof(struct heap_block_t);
     new_block->free = 1;
     new_block->prev = block;
@@ -141,6 +144,12 @@ void heap_free(struct heap_t *heap, void *p)
 
   /* mark block as free */
   block = (struct heap_block_t *) ((uint32_t) p - sizeof(struct heap_block_t));
+
+  /* check if it's a heap block */
+  if (block->magic != HEAP_MAGIC)
+    return;
+
+  /* mark block as free */
   block->free = 1;
 
   /* merge with right block */
