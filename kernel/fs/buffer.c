@@ -107,9 +107,6 @@ void brelse(struct buffer_head_t *bh)
     bh->b_dirt = 0;
   }
 
-  /* free buffer */
-  kfree(bh);
-
   /* update inode reference count */
   bh->b_ref--;
   if (bh->b_ref == 0)

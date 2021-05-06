@@ -76,7 +76,7 @@ void *kmalloc_align_phys(uint32_t size, uint32_t *phys)
 void kfree(void *p)
 {
   if (kheap)
-    heap_free(p);
+    heap_free(kheap, p);
 }
 
 /*

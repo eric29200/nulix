@@ -131,7 +131,7 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 /*
  * Free memory on the heap.
  */
-void heap_free(void *p)
+void heap_free(struct heap_t *heap, void *p)
 {
   struct heap_block_t *block;
 
@@ -142,6 +142,28 @@ void heap_free(void *p)
   /* mark block as free */
   block = (struct heap_block_t *) ((uint32_t) p - sizeof(struct heap_block_t));
   block->free = 1;
+
+  /* merge with right block */
+  if (block->next && block->next->free) {
+    block->size += block->next->size + sizeof(struct heap_block_t);
+    block->next = block->next->next;
+
+    if (block->next)
+      block->next->prev = block;
+    else
+      heap->last_block = block;
+  }
+
+  /* merge with left block */
+  if (block->prev && block->prev->free) {
+    block->prev->size += block->size + sizeof(struct heap_block_t);
+    block->prev->next = block->next;
+
+    if (block->next)
+      block->next->prev = block->prev;
+    else
+      heap->last_block = block->prev;
+  }
 }
 
 /*
