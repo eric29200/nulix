@@ -18,14 +18,14 @@ static inline int match(const char *name, size_t len, struct minix_dir_entry_t *
 }
 
 /*
- * Find an inode inside a directory.
+ * Find an entry inside a directory.
  */
-static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t name_len)
+static struct buffer_head_t *find_entry(struct inode_t *dir, const char *name, size_t name_len,
+                                        struct minix_dir_entry_t **res_dir)
 {
-  struct minix_dir_entry_t *entry = NULL;
-  uint32_t nb_entries, i, block_nr;
+  struct minix_dir_entry_t *entries;
   struct buffer_head_t *bh = NULL;
-  struct inode_t *ret = NULL;
+  int nb_entries, i, block_nr;
 
   /* check name length */
   if (name_len > MINIX_FILENAME_LEN || name_len == 0)
@@ -43,20 +43,21 @@ static struct inode_t *find_entry(struct inode_t *dir, const char *name, size_t 
       bh = bread(dir->i_dev, block_nr);
       if (!bh)
         return NULL;
+
+      /* get dir entries */
+      entries = (struct minix_dir_entry_t *) bh->b_data;
     }
 
     /* check name */
-    entry = &((struct minix_dir_entry_t *) bh->b_data)[i % MINIX_DIR_ENTRIES_PER_BLOCK];
-    if (match(name, name_len, entry)) {
-      ret = iget(dir->i_sb, entry->inode);
-      break;
+    if (match(name, name_len, &entries[i % MINIX_DIR_ENTRIES_PER_BLOCK])) {
+      *res_dir = &entries[i % MINIX_DIR_ENTRIES_PER_BLOCK];
+      return bh;
     }
   }
 
   /* free buffer */
   brelse(bh);
-
-  return ret;
+  return NULL;
 }
 
 /*
@@ -135,9 +136,13 @@ static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, si
  */
 static struct inode_t *dir_namei(const char *pathname, const char **basename, size_t *basename_len)
 {
-  struct inode_t *inode, *next_inode;
+  struct minix_super_block_t *sb;
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  struct inode_t *inode;
   const char *name;
   size_t name_len;
+  ino_t ino_nr;
 
   /* absolute or relative path */
   if (*pathname == '/') {
@@ -152,8 +157,10 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
 
   while (1) {
     /* check if inode is a directory */
-    if (!S_ISDIR(inode->i_mode))
-      goto err;
+    if (!S_ISDIR(inode->i_mode)) {
+      iput(inode);
+      return NULL;
+    }
 
     /* compute next path name */
     name = pathname;
@@ -163,25 +170,28 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
     if (!*pathname)
       break;
 
-    /* get matching inode */
-    next_inode = find_entry(inode, name, name_len);
-    if (!next_inode)
-      goto err;
+    /* find entry */
+    bh = find_entry(inode, name, name_len, &de);
+    if (!bh) {
+      iput(inode);
+      return NULL;
+    }
 
-    /* free curent inode */
+    /* save inode number and release block buffer*/
+    ino_nr = de->inode;
+    sb = inode->i_sb;
+    brelse(bh);
     iput(inode);
 
-    /* go to next inode */
-    inode = next_inode;
+    /* get next inode */
+    inode = iget(sb, ino_nr);
+    if (!inode)
+      return NULL;
   }
 
   *basename = name;
   *basename_len = name_len;
   return inode;
-err:
-  /* free inode */
-  iput(inode);
-  return NULL;
 }
 
 /*
@@ -189,9 +199,13 @@ err:
  */
 struct inode_t *namei(const char *pathname)
 {
-  struct inode_t *dir, *ret;
+  struct minix_super_block_t *sb;
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  struct inode_t *dir;
   const char *basename;
   size_t basename_len;
+  ino_t ino_nr;
 
   /* find directory */
   dir = dir_namei(pathname, &basename, &basename_len);
@@ -202,12 +216,21 @@ struct inode_t *namei(const char *pathname)
   if (!basename_len)
     return dir;
 
-  /* find inode */
-  ret = find_entry(dir, basename, basename_len);
+  /* find entry */
+  bh = find_entry(dir, basename, basename_len, &de);
+  if (!bh) {
+    iput(dir);
+    return NULL;
+  }
 
-  /* free directory */
+  /* save inode number and release buffer */
+  ino_nr = de->inode;
+  sb = dir->i_sb;
+  brelse(bh);
   iput(dir);
-  return ret;
+
+  /* read inode */
+  return iget(sb, ino_nr);
 }
 
 /*
@@ -215,11 +238,13 @@ struct inode_t *namei(const char *pathname)
  */
 int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
 {
+  struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
   struct inode_t *dir, *inode;
   struct buffer_head_t *bh;
   const char *basename;
   size_t basename_len;
+  ino_t ino_nr;
 
   /* find directory */
   dir = dir_namei(pathname, &basename, &basename_len);
@@ -243,8 +268,8 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
   mode |= S_IFREG;
 
   /* find inode */
-  *res_inode = find_entry(dir, basename, basename_len);
-  if (!*res_inode) {
+  bh = find_entry(dir, basename, basename_len, &de);
+  if (!bh) {
     /* no such entry */
     if (!(flags & O_CREAT)) {
       iput(dir);
@@ -286,12 +311,21 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
     return 0;
   }
 
+  /* save inode number and release block buffer */
+  ino_nr = de->inode;
+  sb = dir->i_sb;
+  brelse(bh);
+  iput(dir);
+
+  /* get inode */
+  *res_inode = iget(sb, ino_nr);
+  if (!*res_inode)
+    return -EACCES;
+
   /* truncate file */
   if (flags & O_TRUNC)
     truncate(*res_inode);
 
-  /* free directory */
-  iput(dir);
   return 0;
 }
 
@@ -300,8 +334,8 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
  */
 int do_mkdir(const char *pathname, mode_t mode)
 {
-  struct inode_t *dir, *inode_ex, *inode;
   struct minix_dir_entry_t *de;
+  struct inode_t *dir, *inode;
   struct buffer_head_t *bh;
   const char *basename;
   size_t basename_len;
@@ -312,10 +346,10 @@ int do_mkdir(const char *pathname, mode_t mode)
     return -ENOENT;
 
   /* check if file exists */
-  inode_ex = find_entry(dir, basename, basename_len);
-  if (inode_ex) {
+  bh = find_entry(dir, basename, basename_len, &de);
+  if (bh) {
+    brelse(bh);
     iput(dir);
-    iput(inode_ex);
     return -EEXIST;
   }
 
