@@ -18,4 +18,5 @@ usr/ls
 usr/cat
 usr/mkdir
 usr/touch
+usr/rm
 libc/libc.a
