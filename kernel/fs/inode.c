@@ -245,6 +245,13 @@ void iput(struct inode_t *inode)
   if (!inode)
     return;
 
+  /* removed inode : truncate and free it */
+  if (!inode->i_nlinks) {
+    truncate(inode);
+    free_inode(inode);
+    return;
+  }
+
   /* write inode if needed */
   if (inode->i_dirt) {
     write_inode(inode);

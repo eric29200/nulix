@@ -20,6 +20,7 @@ sudo cp usr/ls tmp/bin/
 sudo cp usr/cat tmp/bin/
 sudo cp usr/mkdir tmp/bin
 sudo cp usr/touch tmp/bin
+sudo cp usr/rm tmp/bin
 
 # create devices nodes
 sudo mkdir tmp/dev

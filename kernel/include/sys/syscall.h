@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <fs/fs.h>
 
-#define SYSCALLS_NUM      (__NR_creat + 1)
+#define SYSCALLS_NUM      (__NR_unlink + 1)
 
 #define __NR_exit         1
 #define __NR_fork         2
@@ -24,6 +24,7 @@
 #define __NR_mkdir        16
 #define __NR_lseek        17
 #define __NR_creat        18
+#define __NR_unlink       19
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -47,5 +48,6 @@ int sys_chdir(const char *path);
 int sys_mkdir(const char *pathname, mode_t mode);
 off_t sys_lseek(int fd, off_t offset, int whence);
 int sys_creat(const char *pathname, mode_t mode);
+int sys_unlink(const char *pathname);
 
 #endif

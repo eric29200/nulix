@@ -152,5 +152,6 @@ off_t do_lseek(int fd, off_t offset, int whence);
 int do_stat(const char *filename, struct stat_t *statbuf);
 int do_access(const char *filename);
 int do_mkdir(const char *pathname, mode_t mode);
+int do_unlink(const char *pathname);
 
 #endif

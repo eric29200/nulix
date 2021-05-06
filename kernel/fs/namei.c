@@ -28,7 +28,7 @@ static struct buffer_head_t *find_entry(struct inode_t *dir, const char *name, s
   int nb_entries, i, block_nr;
 
   /* check name length */
-  if (name_len > MINIX_FILENAME_LEN || name_len == 0)
+  if (!name_len || name_len > MINIX_FILENAME_LEN)
     return NULL;
 
   /* get number of entries */
@@ -418,5 +418,57 @@ int do_mkdir(const char *pathname, mode_t mode)
   iput(inode);
   brelse(bh);
 
+  return 0;
+}
+
+/*
+ * Unlink system call (remove a file).
+ */
+int do_unlink(const char *pathname)
+{
+  struct minix_dir_entry_t *de;
+  struct inode_t *dir, *inode;
+  struct buffer_head_t *bh;
+  const char *basename;
+  size_t basename_len;
+
+  /* get parent directory */
+  dir = dir_namei(pathname, &basename, &basename_len);
+  if (!dir)
+    return -ENOENT;
+
+  /* check if file exists */
+  bh = find_entry(dir, basename, basename_len, &de);
+  if (!bh) {
+    iput(dir);
+    return -ENOENT;
+  }
+
+  /* get inode */
+  inode = iget(dir->i_sb, de->inode);
+  if (!inode) {
+    iput(dir);
+    brelse(bh);
+    return -ENOENT;
+  }
+
+  /* remove regular files only */
+  if (!S_ISREG(inode->i_mode)) {
+    iput(inode);
+    iput(dir);
+    brelse(bh);
+    return -EPERM;
+  }
+
+  /* reset entry */
+  memset(de, 0, sizeof(struct minix_dir_entry_t));
+  bh->b_dirt = 1;
+  brelse(bh);
+
+  /* update inode */
+  inode->i_nlinks--;
+  inode->i_dirt = 1;
+  iput(inode);
+  iput(dir);
   return 0;
 }

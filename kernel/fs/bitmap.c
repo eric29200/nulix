@@ -120,7 +120,7 @@ int free_inode(struct inode_t *inode)
   ret = bwrite(bh);
 
   /* free inode */
-  iput(inode);
+  memset(inode, 0, sizeof(struct inode_t));
   return ret;
 }
 
