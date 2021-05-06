@@ -113,8 +113,8 @@ static int execute_cmd(struct cmd_t *cmd)
 
   /* execute command */
   pid = fork();
-  if (pid == 0)
-    execve(cmd->path, cmd->argv, NULL);
+  if (pid == 0 && execve(cmd->path, cmd->argv, NULL) == -1)
+    exit(1);
   else
     wait();
 

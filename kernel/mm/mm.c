@@ -21,10 +21,8 @@ static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
   /* use kernel heap */
   if (kheap) {
     ret = heap_alloc(kheap, size, align);
-    if (!ret) {
-      heap_dump(kheap);
-      panic("Kernel heap is full");
-    }
+    if (!ret)
+      return NULL;
 
     if (phys) {
       page = get_page((uint32_t) ret, 0, kernel_pgd);
