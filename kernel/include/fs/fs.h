@@ -5,6 +5,7 @@
 #include <drivers/ata.h>
 
 #define NR_INODE                      256
+#define NR_BUFFER                     256
 
 #define MINIX_SUPER_MAGIC             0x138F
 #define MINIX_ROOT_INODE              1
@@ -24,6 +25,7 @@
 struct buffer_head_t {
   struct ata_device_t *b_dev;
   char b_data[BLOCK_SIZE];
+  int b_ref;
   char b_dirt;
   uint32_t b_blocknr;
 };
