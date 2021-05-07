@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 
 #define __NR_exit         1
 #define __NR_fork         2
@@ -23,6 +24,7 @@
 #define __NR_creat        18
 #define __NR_unlink       19
 #define __NR_rmdir        20
+#define __NR_getdents     21
 
 /*
  * System call with no argument.
@@ -214,6 +216,14 @@ static inline int unlink(const char *pathname)
 static inline int rmdir(const char *pathname)
 {
   return syscall1(__NR_rmdir, (int) pathname);
+}
+
+/*
+ * Get directory entries system call.
+ */
+static inline int getdents(int fd, struct dirent *dirent, uint32_t count)
+{
+  return syscall3(__NR_getdents, fd, (int) dirent, count);
 }
 
 #endif

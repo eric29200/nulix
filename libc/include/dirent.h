@@ -8,16 +8,22 @@
  * Directory entry.
  */
 struct dirent {
-  uint16_t d_ino;
-  char d_name[FILENAME_MAX_LEN];
+  ino_t d_inode;
+  off_t d_off;
+  unsigned short d_reclen;
+  unsigned char d_type;
+  char d_name[256];
 };
 
 /*
  * Opened directory.
  */
 typedef struct DIR {
-  int fdn;
-  struct dirent dent;
+  off_t tell;
+  int fd;
+  int buf_pos;
+  int buf_end;
+  char buf[2048];
 } DIR;
 
 DIR *opendir(const char *name);

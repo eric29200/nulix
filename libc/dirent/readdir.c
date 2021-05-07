@@ -4,13 +4,22 @@
 /*
  * Read a directory.
  */
-struct dirent *readdir(DIR *dirp)
+struct dirent *readdir(DIR *dir)
 {
-  if (dirp == NULL || dirp->fdn < 0)
-    return NULL;
+  struct dirent *de;
 
-  if (read(dirp->fdn, &dirp->dent, sizeof(dirp->dent)) != sizeof(dirp->dent))
-    return NULL;
+  if (dir->buf_pos >= dir->buf_end) {
+    int len = getdents(dir->fd, (struct dirent *) dir->buf, sizeof dir->buf);
+    if (len <= 0)
+      return 0;
 
-  return &dirp->dent;
+    dir->buf_end = len;
+    dir->buf_pos = 0;
+  }
+
+  de = (void *)(dir->buf + dir->buf_pos);
+  dir->buf_pos += de->d_reclen;
+  dir->tell = de->d_off;
+
+  return de;
 }

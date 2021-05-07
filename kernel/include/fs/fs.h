@@ -99,6 +99,17 @@ struct minix_dir_entry_t {
 };
 
 /*
+ * Directory entry (used by libc and getdents system call).
+ */
+struct dirent_t {
+  ino_t d_inode;
+  off_t d_off;
+  unsigned short d_reclen;
+  unsigned char d_type;
+  char d_name[];
+};
+
+/*
  * Stats file structure.
  */
 struct stat_t {
@@ -155,5 +166,6 @@ int do_access(const char *filename);
 int do_mkdir(const char *pathname, mode_t mode);
 int do_unlink(const char *pathname);
 int do_rmdir(const char *pathname);
+int do_getdents(int fd, struct dirent_t *dirent, uint32_t count);
 
 #endif

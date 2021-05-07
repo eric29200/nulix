@@ -11,8 +11,8 @@
 DIR *opendir(const char *name)
 {
   struct stat statbuf;
-  DIR *dirp;
-  int fdn;
+  DIR *dir;
+  int fd;
 
   /* stat directory */
   if (stat(name, &statbuf) != 0)
@@ -23,18 +23,16 @@ DIR *opendir(const char *name)
     return NULL;
 
   /* open directory */
-  fdn = open(name, O_RDONLY, 0);
-  if (fdn < 0)
+  fd = open(name, O_RDONLY, 0);
+  if (fd < 0)
     return NULL;
 
-  dirp = (DIR *) malloc(sizeof(DIR));
-  if (dirp == NULL) {
-    close(fdn);
+  dir = (DIR *) malloc(sizeof(DIR));
+  if (dir == NULL) {
+    close(fd);
     return NULL;
   }
 
-  dirp->fdn = fdn;
-  memset(&dirp->dent, 0, sizeof(dirp->dent));
-
-  return dirp;
+  dir->fd = fd;
+  return dir;
 }

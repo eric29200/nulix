@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <fs/fs.h>
 
-#define SYSCALLS_NUM      (__NR_rmdir + 1)
+#define SYSCALLS_NUM      (__NR_getdents + 1)
 
 #define __NR_exit         1
 #define __NR_fork         2
@@ -25,6 +25,7 @@
 #define __NR_creat        18
 #define __NR_unlink       19
 #define __NR_rmdir        20
+#define __NR_getdents     21
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -49,5 +50,6 @@ off_t sys_lseek(int fd, off_t offset, int whence);
 int sys_creat(const char *pathname, mode_t mode);
 int sys_unlink(const char *pathname);
 int sys_rmdir(const char *pathname);
+int sys_getdents(int fd, struct dirent_t *dirent, uint32_t count);
 
 #endif

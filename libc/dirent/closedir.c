@@ -5,14 +5,9 @@
 /*
  * Close a directory.
  */
-int closedir(DIR *dirp)
+int closedir(DIR *dir)
 {
-  int ret;
-
-  if (dirp == NULL || dirp->fdn < 0)
-    return -1;
-
-  ret = close(dirp->fdn);
-  free(dirp);
+  int ret = close(dir->fd);
+  free(dir);
   return ret;
 }
