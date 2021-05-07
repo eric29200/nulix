@@ -116,7 +116,7 @@ static int execute_cmd(struct cmd_t *cmd)
   if (pid == 0 && execve(cmd->path, cmd->argv, NULL) == -1)
     exit(1);
   else
-    wait();
+    waitpid(pid, NULL, 0);
 
   return 0;
 }

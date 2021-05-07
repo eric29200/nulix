@@ -15,7 +15,7 @@
 #define __NR_sbrk         9
 #define __NR_dup          11
 #define __NR_dup2         12
-#define __NR_wait         13
+#define __NR_waitpid      13
 #define __NR_access       14
 #define __NR_chdir        15
 #define __NR_mkdir        16
@@ -155,9 +155,9 @@ static inline int dup2(int oldfd, int newfd)
 /*
  * Wait system call.
  */
-static inline int wait()
+static inline pid_t waitpid(pid_t pid, int *wstatus, int options)
 {
-  return syscall0(__NR_wait);
+  return syscall3(__NR_waitpid, pid, (int) wstatus, options);
 }
 
 /*

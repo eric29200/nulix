@@ -51,7 +51,7 @@ int main(void)
 
   /* destroy zombie tasks */
   for (;;) {
-    pid = wait();
+    pid = waitpid(-1, NULL, 0);
 
     /* if main shell exited, respawn it */
     for (i = 0; i < NTTYS; i++)

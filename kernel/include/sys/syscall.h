@@ -17,7 +17,7 @@
 #define __NR_sbrk         9
 #define __NR_dup          11
 #define __NR_dup2         12
-#define __NR_wait         13
+#define __NR_waitpid      13
 #define __NR_access       14
 #define __NR_chdir        15
 #define __NR_mkdir        16
@@ -41,7 +41,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]);
 int sys_stat(const char *filename, struct stat_t *statbuf);
 int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
-int sys_wait();
+pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
 int sys_access(const char *filename);
 int sys_chdir(const char *path);
 int sys_mkdir(const char *pathname, mode_t mode);
