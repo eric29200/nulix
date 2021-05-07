@@ -1,6 +1,6 @@
-CC		= i386-elf-gcc
-LD		= i386-elf-ld
-AR		= i386-elf-ar
+CC		= i686-linux-gnu-gcc
+LD		= i686-linux-gnu-ld
+AR		= i686-linux-gnu-ar
 LIBC		= libc.a
 HEADER_PATH	= include
 C_SOURCES 	= $(wildcard */*.c)

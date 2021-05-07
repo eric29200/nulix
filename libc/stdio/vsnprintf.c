@@ -84,7 +84,7 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args)
     c = format[++i];
     switch (c) {
       case 'c':
-        str[count++] = va_arg(args, char);
+        str[count++] = va_arg(args, int);
         break;
       case 'd':
       case 'i':

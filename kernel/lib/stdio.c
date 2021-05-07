@@ -88,7 +88,7 @@ static int vsprintf(void (*putch)(char), const char *format, va_list args)
     c = format[++i];
     switch (c) {
       case 'c':
-        putch(va_arg(args, char));
+        putch(va_arg(args, int));
         count++;
         break;
       case 'd':

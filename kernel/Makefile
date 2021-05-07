@@ -1,6 +1,6 @@
 AS		= nasm
-CC		= i386-elf-gcc
-LD		= i386-elf-ld
+CC		= i686-linux-gnu-gcc
+LD		= i686-linux-gnu-ld
 KERNEL		= kernel.bin
 HEADER_PATH	= include
 C_SOURCES 	= $(wildcard */*.c)

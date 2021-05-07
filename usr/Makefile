@@ -1,5 +1,5 @@
-CC		= i386-elf-gcc
-LD		= i386-elf-ld
+CC		= i686-linux-gnu-gcc
+LD		= i686-linux-gnu-ld
 HEADER_PATH	= ../libc/include
 C_SOURCES 	= $(wildcard */*.c)
 CFLAGS		= -m32 -nostdlib -nostdinc -nodefaultlibs -fno-builtin -Wall -Wextra -I$(HEADER_PATH)
