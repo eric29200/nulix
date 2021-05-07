@@ -64,7 +64,6 @@ int do_close(int fd)
   if (current_task->filp[fd]->f_ref <= 0) {
     iput(current_task->filp[fd]->f_inode);
     memset(current_task->filp[fd], 0, sizeof(struct file_t));
-    printf("ok\n");
   }
 
   current_task->filp[fd] = NULL;
