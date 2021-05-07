@@ -142,7 +142,7 @@ void page_fault_handler(struct registers_t *regs)
   int id = regs->err_code & 0x10 ? 1 : 0;
 
   /* user page fault : try to allocate a new page if address is in user space memory */
-  if (fault_addr >= UMEM_START && map_page(fault_addr, current_task->pgd, 0, 1) == 0)
+  if (fault_addr >= KMEM_SIZE && map_page(fault_addr, current_task->pgd, 0, 1) == 0)
       return;
 
   /* output message */
