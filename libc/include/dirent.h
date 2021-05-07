@@ -8,7 +8,7 @@
  * Directory entry.
  */
 struct dirent {
-  ino_t d_ino;
+  uint16_t d_ino;
   char d_name[FILENAME_MAX_LEN];
 };
 

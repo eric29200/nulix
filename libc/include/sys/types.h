@@ -18,7 +18,7 @@ typedef int64_t off_t;
 typedef int64_t time_t;
 typedef int32_t pid_t;
 typedef unsigned mode_t;
-typedef unsigned short ino_t;
+typedef uint64_t ino_t;
 typedef unsigned uid_t;
 typedef unsigned gid_t;
 
