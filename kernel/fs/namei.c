@@ -301,13 +301,15 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
     /* release current dir inode/block and new inode (to write them on disk) */
     iput(dir);
     iput(inode);
-    brelse(bh);
 
     /* read inode from disk */
     *res_inode = iget(dir->i_sb, de->inode);
-    if (!*res_inode)
+    if (!*res_inode) {
+      brelse(bh);
       return -EACCES;
+    }
 
+    brelse(bh);
     return 0;
   }
 
