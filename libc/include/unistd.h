@@ -11,20 +11,20 @@
 #define __NR_write        4
 #define __NR_open         5
 #define __NR_close        6
-#define __NR_stat         7
-#define __NR_execve       8
-#define __NR_sbrk         9
-#define __NR_dup          11
-#define __NR_dup2         12
-#define __NR_waitpid      13
-#define __NR_access       14
-#define __NR_chdir        15
-#define __NR_mkdir        16
-#define __NR_lseek        17
-#define __NR_creat        18
-#define __NR_unlink       19
-#define __NR_rmdir        20
-#define __NR_getdents     21
+#define __NR_waitpid      7
+#define __NR_creat        8
+#define __NR_unlink       10
+#define __NR_execve       11
+#define __NR_chdir        12
+#define __NR_lseek        19
+#define __NR_access       33
+#define __NR_mkdir        39
+#define __NR_rmdir        40
+#define __NR_dup          41
+#define __NR_sbrk         45
+#define __NR_dup2         63
+#define __NR_stat         106
+#define __NR_getdents     141
 
 /*
  * System call with no argument.
