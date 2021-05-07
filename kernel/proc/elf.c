@@ -90,13 +90,14 @@ int elf_load(const char *path)
   current_task->start_text = ph->p_vaddr;
 
   /* copy elf in memory */
-  for (j = 0; j < elf_header->e_phnum; j++, ph++) {
+  for (i = 0; i < elf_header->e_phnum; i++, ph++) {
+    /* skip non relocable segments */
     if (ph->p_type != ET_REL)
       continue;
 
     /* map pages */
-    for (i = ph->p_vaddr; i < PAGE_ALIGN_UP(ph->p_vaddr + ph->p_filesz); i += PAGE_SIZE)
-      map_page(i, current_task->pgd, 0, ph->p_flags & FLAG_WRITE ? 1 : 0);
+    for (j = ph->p_vaddr; j < PAGE_ALIGN_UP(ph->p_vaddr + ph->p_filesz); j += PAGE_SIZE)
+      map_page(j, current_task->pgd, 0, ph->p_flags & FLAG_WRITE ? 1 : 0);
 
     /* copy in memory */
     memset((void *) ph->p_vaddr, 0, ph->p_memsz);
