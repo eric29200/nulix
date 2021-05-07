@@ -45,7 +45,7 @@ int elf_load(const char *path)
   struct stat_t statbuf;
   char *buf = NULL;
   int fd, ret = 0;
-  uint32_t i;
+  uint32_t i, j;
 
   /* get file size */
   ret = do_stat((char *) path, &statbuf);
@@ -90,8 +90,8 @@ int elf_load(const char *path)
   current_task->start_text = ph->p_vaddr;
 
   /* copy elf in memory */
-  for (; (char *) ph < (buf + elf_header->e_phoff + elf_header->e_phentsize * elf_header->e_phnum); ph++) {
-    if (!ph->p_vaddr)
+  for (j = 0; j < elf_header->e_phnum; j++, ph++) {
+    if (ph->p_type != ET_REL)
       continue;
 
     /* map pages */
