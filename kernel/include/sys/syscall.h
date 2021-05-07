@@ -15,7 +15,6 @@
 #define __NR_stat         7
 #define __NR_execve       8
 #define __NR_sbrk         9
-#define __NR_sleep        10
 #define __NR_dup          11
 #define __NR_dup2         12
 #define __NR_wait         13
@@ -40,7 +39,6 @@ int sys_close(int fd);
 void *sys_sbrk(size_t n);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);
 int sys_stat(const char *filename, struct stat_t *statbuf);
-int sys_sleep(unsigned long secs);
 int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
 int sys_wait();
