@@ -6,6 +6,7 @@
 
 #define NR_INODE                      256
 #define NR_BUFFER                     256
+#define NR_FILE                       256
 
 #define MINIX_SUPER_MAGIC             0x138F
 #define MINIX_ROOT_INODE              1
@@ -14,8 +15,6 @@
 #define MINIX_FILENAME_LEN            30
 #define MINIX_INODES_PER_BLOCK        ((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
 #define MINIX_DIR_ENTRIES_PER_BLOCK   ((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
-
-#define NR_OPEN                       64        /* maximum number of files opened by a process */
 
 #define BLOCK_SIZE                    1024
 

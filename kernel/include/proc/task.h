@@ -13,6 +13,8 @@
 #define TASK_SLEEPING     2
 #define TASK_ZOMBIE       3
 
+#define NR_OPEN           32
+
 /*
  * Kernel task structure.
  */
