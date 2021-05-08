@@ -1,0 +1,15 @@
+diff -ru musl-1.2.2/arch/i386/syscall_arch.h musl-1.2.2-mine/arch/i386/syscall_arch.h
+--- musl-1.2.2/arch/i386/syscall_arch.h	2021-05-08 18:53:41.932162927 +0200
++++ musl-1.2.2-mine/arch/i386/syscall_arch.h	2021-05-08 18:54:53.156451802 +0200
+@@ -3,11 +3,7 @@
+ ((union { long long ll; long l[2]; }){ .ll = x }).l[1]
+ #define __SYSCALL_LL_O(x) __SYSCALL_LL_E((x))
+ 
+-#if SYSCALL_NO_TLS
+ #define SYSCALL_INSNS "int $128"
+-#else
+-#define SYSCALL_INSNS "call *%%gs:16"
+-#endif
+ 
+ #define SYSCALL_INSNS_12 "xchg %%ebx,%%edx ; " SYSCALL_INSNS " ; xchg %%ebx,%%edx"
+ #define SYSCALL_INSNS_34 "xchg %%ebx,%%edi ; " SYSCALL_INSNS " ; xchg %%ebx,%%edi"

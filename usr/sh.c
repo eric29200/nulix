@@ -1,11 +1,12 @@
-#include <unistd.h>
+#include <sys/wait.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <limits.h>
-#include <dirent.h>
 
 #define MAX_CMD_SIZE    512
+#define PATH_MAX_LEN    512
+#define ARGS_MAX        30
 
 /* path environ */
 static char *env_path[] = {"/sbin", "/usr/sbin", "/bin", "/usr/bin", NULL};
@@ -53,7 +54,7 @@ static int find_cmd_path(struct cmd_t *cmd)
   /* if filename contains / do not use environ */
   if (strchr(cmd->argv[0], '/')) {
     strncpy(cmd->path, cmd->argv[0], PATH_MAX_LEN);
-    return access(cmd->path);
+    return access(cmd->path, 0);
   }
 
   /* check environ path */
@@ -75,7 +76,7 @@ static int find_cmd_path(struct cmd_t *cmd)
     strcpy(cmd->path + n, cmd->argv[0]);
 
     /* check if file exist */
-    if (access(cmd->path) == 0)
+    if (access(cmd->path, 0) == 0)
       return 0;
   }
 
@@ -131,7 +132,7 @@ int main()
 
   for (;;) {
     printf("$");
-    gets(cmd_line, MAX_CMD_SIZE);
+    fgets(cmd_line, MAX_CMD_SIZE, stdin);
     parse_cmd(cmd_line, &cmd);
     if (execute_cmd(&cmd) != 0)
       printf("%s : unknown command\n", cmd_line);

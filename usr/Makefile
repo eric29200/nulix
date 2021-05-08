@@ -1,42 +1,37 @@
 CC		= i686-linux-gnu-gcc
 LD		= i686-linux-gnu-ld
-HEADER_PATH	= ../libc/include
-C_SOURCES 	= $(wildcard */*.c)
-CFLAGS		= -m32 -nostdlib -nostdinc -nodefaultlibs -fno-builtin -Wall -Wextra -I$(HEADER_PATH)
-LDFLAGS		= -T link.ld
-LDLIBS		= ../libc/libc.a
+HEADER_PATH	= ../musl/musl-1.2.2-build/include
+CFLAGS		= -Wall -Wextra -I$(HEADER_PATH)
+LDLIBS		= ../musl/musl-1.2.2-build/lib/libc.a
 
 all: init sh echo ls cat mkdir touch rm rmdir
 
-%.o: %.c
-	${CC} ${CFLAGS} -c $< -o $@
-
 init: init.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 sh: sh.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 echo: echo.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 ls: ls.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 cat: cat.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 mkdir: mkdir.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 touch: touch.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 rm: rm.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 rmdir: rmdir.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
 
 clean:
 	rm -f *.o init sh echo ls cat mkdir touch rm rmdir

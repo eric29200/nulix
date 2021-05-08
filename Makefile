@@ -8,7 +8,6 @@ all: run
 
 run:
 	make -j$(NJOBS) -C kernel
-	make -j$(NJOBS) -C libc
 	./scripts/build_musl.csh
 	make -j$(NJOBS) -C usr
 	./scripts/create_rootfs.csh
@@ -16,6 +15,5 @@ run:
 
 clean:
 	make clean -C kernel
-	make clean -C libc
 	make clean -C usr
 	rm -f $(DISK)

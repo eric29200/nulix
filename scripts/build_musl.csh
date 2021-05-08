@@ -20,6 +20,9 @@ mkdir musl-1.2.2-build
 wget https://musl.libc.org/releases/musl-1.2.2.tar.gz
 tar -xzvf musl-1.2.2.tar.gz
 
+# patch musl x86 system calls (always use int 0x80 and disable TLS)
+patch -d musl-1.2.2 -p1 < ../scripts/musl-1.2.2.patch
+
 # build musl
 cd ./musl-1.2.2/
 make clean
