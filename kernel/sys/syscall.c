@@ -25,6 +25,8 @@ static const void *syscalls[] = {
   [__NR_unlink]     = sys_unlink,
   [__NR_rmdir]      = sys_rmdir,
   [__NR_getdents]   = sys_getdents,
+  [__NR_readv]      = sys_readv,
+  [__NR_writev]     = sys_writev,
 };
 
 /*

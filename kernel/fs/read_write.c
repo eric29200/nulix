@@ -9,7 +9,7 @@
 /*
  * Read system call.
  */
-int do_read(int fd, char *buf, int count)
+ssize_t do_read(int fd, char *buf, int count)
 {
   struct file_t *filp;
 
@@ -41,7 +41,7 @@ int do_read(int fd, char *buf, int count)
 /*
  * Write system call.
  */
-int do_write(int fd, const char *buf, int count)
+ssize_t do_write(int fd, const char *buf, int count)
 {
   struct file_t *filp;
 
