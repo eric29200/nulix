@@ -9,7 +9,7 @@ ssize_t sys_readv(int fd, const struct iovec_t *iov, int iovcnt)
   int i;
 
   /* read into each buffer */
-  for (i = 0; i < iovcnt; i++) {
+  for (i = 0; i < iovcnt; i++, iov++) {
     /* read into buffer */
     n = do_read(fd, iov->iov_base, iov->iov_len);
     if (n < 0)
