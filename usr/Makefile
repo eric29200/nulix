@@ -1,7 +1,7 @@
 CC		= i686-linux-gnu-gcc
 LD		= i686-linux-gnu-ld
 HEADER_PATH	= ../musl/musl-1.2.2-build/include
-CFLAGS		= -Wall -Wextra -I$(HEADER_PATH)
+CFLAGS		= -I$(HEADER_PATH)
 LDLIBS		= ../musl/musl-1.2.2-build/lib/libc.a
 
 all: init sh echo ls cat mkdir touch rm rmdir
