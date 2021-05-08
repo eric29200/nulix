@@ -9,6 +9,7 @@ all: run
 run:
 	make -j$(NJOBS) -C kernel
 	make -j$(NJOBS) -C libc
+	./build_musl.csh
 	make -j$(NJOBS) -C usr
 	./create_rootfs.csh
 	$(QEMU) -m $(MEM_SIZE) -kernel $(KERNEL) -serial stdio -drive format=raw,file=$(DISK)

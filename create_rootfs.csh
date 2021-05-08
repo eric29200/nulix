@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/bin/csh
 
 set DISK		= hdd.img
 set DISK_SIZE		= 32M
@@ -8,6 +8,7 @@ dd if=/dev/zero of=$DISK bs=1 count=1 seek=$DISK_SIZE
 mkfs.minix -1 $DISK
 
 # mount disk
+mkdir tmp >& /dev/null
 sudo mount $DISK tmp
 
 # create init
