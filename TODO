@@ -1,7 +1,1 @@
-- Try to limit number of kmalloc
-  = limit resources (= use an array of block buffers and processes)
-
-- Remplacer brk par sbrk
-
-- Implement pwd command
-- Implement rm and remove dirs
+ii

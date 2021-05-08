@@ -29,7 +29,7 @@ static struct tty_t *tty_lookup(dev_t dev)
 /*
  * Read a character from a tty (block if no character available).
  */
-static int tty_read_wait(dev_t dev)
+static int tty_read_wait(dev_t dev, int block)
 {
   struct tty_t *tty;
   int c = -1;
@@ -40,7 +40,7 @@ static int tty_read_wait(dev_t dev)
     return -EINVAL;
 
   /* wait for character */
-  while (tty->r_pos >= tty->w_pos) {
+  while (tty->r_pos >= tty->w_pos && block) {
     tty->r_pos = 0;
     tty->w_pos = 0;
     task_sleep(tty);
@@ -63,14 +63,14 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
 
   while (count < n) {
     /* read next char */
-    key = tty_read_wait(dev);
+    key = tty_read_wait(dev, count == 0);
 
     if (key == 0 && count == 0) {           /* ^D */
       break;
     } else if (key < 0 && count == 0) {     /* nothing to read */
       count = -EAGAIN;
       goto out;
-    } else if (key < 0) {                   /* end */
+    } else if (key < 0 && count > 0) {      /* end */
       break;
     } else {
       ((unsigned char *) buf)[count] = key;
