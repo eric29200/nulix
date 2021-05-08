@@ -3,6 +3,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #define NTTYS     4
@@ -28,7 +29,9 @@ pid_t spawn_shell(int tty_num)
     dup(0);
     dup(0);
 
-    execve("/bin/sh", NULL, NULL);
+    /* exec a shell */
+    if (execve("/bin/sh", NULL, NULL) == -1)
+      exit(0);
   }
 
   return pid;

@@ -132,6 +132,7 @@ int main()
 
   for (;;) {
     printf("$");
+    fflush(stdout);
     fgets(cmd_line, MAX_CMD_SIZE, stdin);
     parse_cmd(cmd_line, &cmd);
     if (execute_cmd(&cmd) != 0)

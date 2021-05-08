@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <fs/fs.h>
 #include <uio.h>
+#include <resource.h>
 
 #define SYSCALLS_NUM      (__NR_writev + 1)
 
@@ -26,6 +27,7 @@
 #define __NR_sbrk         45
 #define __NR_dup2         63
 #define __NR_stat         106
+#define __NR_wait4        114
 #define __NR_getdents     141
 #define __NR_readv        145
 #define __NR_writev       146
@@ -46,6 +48,7 @@ int sys_stat(const char *filename, struct stat_t *statbuf);
 int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
 pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
+pid_t sys_wait4(int *wstatus, int options, struct rusage_t *rusage);
 int sys_access(const char *filename);
 int sys_chdir(const char *path);
 int sys_mkdir(const char *pathname, mode_t mode);
