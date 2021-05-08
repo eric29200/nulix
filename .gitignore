@@ -5,11 +5,7 @@
 */*/*.o
 *.bin
 */*.bin
-kernel.bin
-initrd
-disk
 hdd.img
-tmp
 tmp/*
 usr/init
 usr/sh
