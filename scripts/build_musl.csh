@@ -9,7 +9,7 @@ setenv RANLIB 		i686-linux-gnu-ranlib
 setenv NJOBS		8
 
 # create directory if needed
-mkdir >& /dev/null
+mkdir musl >& /dev/null
 cd musl
 
 # cleanup directories

@@ -6,6 +6,7 @@
 *.bin
 */*.bin
 hdd.img
+musl/*
 tmp/*
 usr/init
 usr/sh
