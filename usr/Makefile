@@ -1,37 +1,34 @@
-CC		= i686-linux-gnu-gcc
-LD		= i686-linux-gnu-ld
-HEADER_PATH	= ../musl/musl-1.2.2-build/include
-CFLAGS		= -I$(HEADER_PATH)
-LDLIBS		= ../musl/musl-1.2.2-build/lib/libc.a
+CC		= ../musl/musl-1.2.2-build/bin/musl-gcc
+CFLAGS		= -Wall
 
 all: init sh echo ls cat mkdir touch rm rmdir
 
 init: init.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 sh: sh.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 echo: echo.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 ls: ls.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 cat: cat.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 mkdir: mkdir.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 touch: touch.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 rm: rm.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 rmdir: rmdir.o
-	$(CC) $(CFLAGS) -o $@ $< -static $(LDLIBS)
+	$(CC) $(CFLAGS) -o $@ $< -static
 
 clean:
 	rm -f *.o init sh echo ls cat mkdir touch rm rmdir
