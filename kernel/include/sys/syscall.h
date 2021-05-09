@@ -24,7 +24,7 @@
 #define __NR_mkdir        39
 #define __NR_rmdir        40
 #define __NR_dup          41
-#define __NR_sbrk         45
+#define __NR_brk          45
 #define __NR_dup2         63
 #define __NR_stat         106
 #define __NR_wait4        114
@@ -42,7 +42,7 @@ int sys_read(int fd, char *buf, int count);
 int sys_write(int fd, const char *buf, int count);
 int sys_open(const char *pathname, int flags, mode_t mode);
 int sys_close(int fd);
-void *sys_sbrk(size_t n);
+void *sys_brk(void *addr);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);
 int sys_stat(const char *filename, struct stat_t *statbuf);
 int sys_dup(int oldfd);

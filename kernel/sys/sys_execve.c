@@ -46,8 +46,9 @@ static char **copy_array_from_kernel_to_user(char **src, int len)
   if (!src || len <= 0)
     return NULL;
 
-  ret = (char **) sys_sbrk(sizeof(char *) * len);
+  ret = (char **) current_task->end_brk;
   memset(ret, 0, sizeof(char *) * len);
+  current_task->end_brk += sizeof(char *) * len;
 
   for (i = 0; i < len; i++) {
     if (!src[i]) {
@@ -55,10 +56,11 @@ static char **copy_array_from_kernel_to_user(char **src, int len)
       continue;
     }
 
+    ret[i] = (char *) current_task->end_brk;
     slen = strlen(src[i]);
-    ret[i] = (char *) sys_sbrk(slen + 1);
     memset(ret[i], 0, slen + 1);
     memcpy(ret[i], src[i], slen);
+    current_task->end_brk += slen + 1;
   }
 
   return ret;
