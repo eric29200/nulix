@@ -27,6 +27,6 @@ patch -d musl-1.2.2 -p1 < ../scripts/musl-1.2.2.patch
 cd ./musl-1.2.2/
 make clean
 make distclean
-./configure --target=i386 --prefix='../musl-1.2.2-build'
+./configure --target=i386 --prefix=`pwd`'/../musl-1.2.2-build'
 make -j$NJOBS
 make install
