@@ -110,6 +110,17 @@ struct dirent_t {
 };
 
 /*
+ * Directory entry (used by libc and getdents system call).
+ */
+struct dirent64_t {
+  uint64_t d_inode;
+  int64_t d_off;
+  unsigned short d_reclen;
+  unsigned char d_type;
+  char d_name[];
+};
+
+/*
  * Stats file structure.
  */
 struct stat_t {
@@ -167,5 +178,6 @@ int do_mkdir(const char *pathname, mode_t mode);
 int do_unlink(const char *pathname);
 int do_rmdir(const char *pathname);
 int do_getdents(int fd, struct dirent_t *dirent, uint32_t count);
+int do_getdents64(int fd, void *dirp, size_t count);
 
 #endif
