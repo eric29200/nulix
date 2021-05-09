@@ -35,6 +35,8 @@ static const void *syscalls[] = {
  */
 static void syscall_handler(struct registers_t *regs)
 {
+  uint32_t ret;
+
   /* system call not handled */
   if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL)
     return;
@@ -43,7 +45,11 @@ static void syscall_handler(struct registers_t *regs)
   memcpy(&current_task->user_regs, regs, sizeof(struct registers_t));
 
   /* execute system call */
-  regs->eax = ((syscall_f) syscalls[regs->eax])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
+  ret = ((syscall_f) syscalls[regs->eax])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
+
+  /* restore registers and set return value */
+  memcpy(regs, &current_task->user_regs, sizeof(struct registers_t));
+  regs->eax = ret;
 }
 
 /*

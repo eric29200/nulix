@@ -6,9 +6,6 @@
 #include <stderr.h>
 #include <string.h>
 
-/* switch to user mode (defined in x86/scheduler.s) */
-extern void enter_user_mode(uint32_t esp, uint32_t eip, uint32_t return_address);
-
 /*
  * Copy an array from user memory to kernel memory.
  */
@@ -124,10 +121,11 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
   stack -= 4;
   *((uint32_t *) stack) = argv_len;
 
-  /* go to user mode */
-  tss_set_stack(0x10, current_task->kernel_stack);
-  enter_user_mode(stack, current_task->user_entry, TASK_RETURN_ADDRESS);
+  /* set esp and stack */
+  current_task->user_regs.eip = current_task->user_entry;
+  current_task->user_regs.useresp = stack;
 
+  return 0;
 out:
   free_array(kernel_argv, argv_len);
   free_array(kernel_envp, envp_len);
