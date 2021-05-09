@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #define MAX_CMD_SIZE    512
 #define PATH_MAX_LEN    512
@@ -21,11 +22,34 @@ struct cmd_t {
 };
 
 /*
+ * Trim a string.
+ */
+static char *trim(char *s)
+{
+  char *sp;
+
+  if (!s || !*s)
+    return s;
+
+  while (isspace(*s))
+    s++;
+
+  sp = s + strlen(s);
+  while (isspace(*--sp))
+    *sp = 0;
+
+  return s;
+}
+
+/*
  * Parse a command line.
  */
 static void parse_cmd(char *cmd_line, struct cmd_t *cmd)
 {
   int i;
+
+  /* trim command line */
+  cmd_line = trim(cmd_line);
 
   /* parse command line */
   for (i = 0; i < ARGS_MAX; i++) {
