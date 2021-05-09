@@ -95,7 +95,9 @@ isr_common_stub:
 	mov fs, ax
 	mov gs, ax
 
+	push esp		; push a pointer to is frame
 	call isr_handler	; call C generic isr
+	add esp, 4
 
 	pop ebx
 	mov ds, bx
@@ -122,7 +124,9 @@ irq_common_stub:
 	mov fs, ax
 	mov gs, ax
 
+	push esp		; push a pointer to is frame
 	call irq_handler	; call C generic irq handler
+	add esp, 4
 
 	pop ebx
 	mov ds, bx
