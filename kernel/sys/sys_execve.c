@@ -90,6 +90,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
   char **user_argv, **user_envp;
   int ret, argv_len, envp_len;
   uint32_t stack;
+  int i;
 
   /* copy argv from user memory to kernel memory */
   argv_len = array_nb_pointers((void *) argv);
@@ -106,20 +107,31 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 
   /* copy back argv and envp to user address space */
   user_argv = copy_array_from_kernel_to_user(kernel_argv, argv_len);
-  user_envp = copy_array_from_kernel_to_user(kernel_envp, argv_len);
+  user_envp = copy_array_from_kernel_to_user(kernel_envp, envp_len);
 
   /* free kernel memory */
   free_array(kernel_argv, argv_len);
   free_array(kernel_envp, envp_len);
 
-  /* put argc, argv and envp in kernel stack */
+  /* prepare user stack */
   stack = current_task->user_stack;
+
+  /* put envp in user stack */
   stack -= 4;
   *((uint32_t *) stack) = (uint32_t) user_envp;
+  for (i = envp_len - 1; i > 0; i--, stack -= 4)
+    *((uint32_t *) stack) = (uint32_t) user_envp[i];
+
+  /* put argv in user stack */
   stack -= 4;
   *((uint32_t *) stack) = (uint32_t) user_argv;
+  for (i = argv_len - 1; i > 0; i--, stack -= 4)
+    *((uint32_t *) stack) = (uint32_t) user_argv[i];
+
+  /* put argc in user stack */
   stack -= 4;
   *((uint32_t *) stack) = argv_len;
+
 
   /* set esp and stack */
   current_task->user_regs.eip = current_task->user_entry;
