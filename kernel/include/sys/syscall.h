@@ -48,7 +48,7 @@ int sys_stat(const char *filename, struct stat_t *statbuf);
 int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
 pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
-pid_t sys_wait4(int *wstatus, int options, struct rusage_t *rusage);
+pid_t sys_wait4(pid_t pid, int *wstatus, int options, struct rusage_t *rusage);
 int sys_access(const char *filename);
 int sys_chdir(const char *path);
 int sys_mkdir(const char *pathname, mode_t mode);
