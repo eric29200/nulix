@@ -1,4 +1,4 @@
-CC		= ../musl/musl-1.2.2-build/bin/musl-gcc
+CC		= ../musl/musl-1.2.0-build/bin/musl-gcc
 CFLAGS		= -Wall
 
 all: init sh echo ls cat mkdir touch rm rmdir
