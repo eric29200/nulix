@@ -124,7 +124,7 @@ struct dirent64_t {
  * Stats file structure.
  */
 struct stat_t {
-  ino_t	st_ino;
+  ino_t st_ino;
   uint16_t st_mode;
   uint8_t st_nlinks;
   uid_t st_uid;

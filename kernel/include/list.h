@@ -12,7 +12,7 @@ struct list_head_t {
 #define LIST_HEAD_INIT(name)                        { &(name), &(name) }
 #define LIST_HEAD(name)                             struct list_head_t name = LIST_HEAD_INIT(name)
 
-#define list_entry(ptr, type, member)             	container_of(ptr, type, member)
+#define list_entry(ptr, type, member)               container_of(ptr, type, member)
 #define list_first_entry(ptr, type, member)         list_entry((ptr)->next, type, member)
 #define list_next_entry(pos, member)                list_entry((pos)->member.next, typeof(*(pos)), member)
 #define list_prev_entry(pos, member)                list_entry((pos)->member.prev, typeof(*(pos)), member)
@@ -25,8 +25,8 @@ struct list_head_t {
  */
 static inline void INIT_LIST_HEAD(struct list_head_t *list)
 {
-	list->next = list;
-	list->prev = list;
+  list->next = list;
+  list->prev = list;
 }
 
 /*
@@ -88,7 +88,7 @@ static inline int list_empty(struct list_head_t *head)
  */
 static inline int list_is_last(const struct list_head_t *list, const struct list_head_t *head)
 {
-	return list->next == head;
+  return list->next == head;
 }
 
 

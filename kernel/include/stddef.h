@@ -24,9 +24,9 @@ typedef unsigned gid_t;
 #define NULL                                  ((void *) 0)
 #define UNUSED(x)                             ((void) (x))
 
-#define offsetof(type, member)	              ((size_t) & ((type *) 0)->member)
-#define container_of(ptr, type, member)       ({void *__mptr = (void *)(ptr);					          \
-	                                             ((type *)(__mptr - offsetof(type, member))); })
+#define offsetof(type, member)                ((size_t) & ((type *) 0)->member)
+#define container_of(ptr, type, member)       ({void *__mptr = (void *)(ptr);                   \
+                                              ((type *)(__mptr - offsetof(type, member))); })
 
 #define div_floor(x, y)                       ((x) / (y))
 #define div_ceil(x, y)                        (((x) / (y)) + (((x) % (y)) > 0 ? 1 : 0))

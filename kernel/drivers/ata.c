@@ -23,10 +23,10 @@ static uint8_t ata_polling(struct ata_device_t *device)
     status = inb(device->io_base + ATA_REG_STATUS);
 
     if (!(status & ATA_SR_BSY) || (status & ATA_SR_DRQ))
-			return 0;
+      return 0;
 
-		if ((status & ATA_SR_ERR) || (status & ATA_SR_DF))
-			return -ENXIO;
+    if ((status & ATA_SR_ERR) || (status & ATA_SR_DF))
+      return -ENXIO;
   }
 }
 
@@ -52,11 +52,11 @@ static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint1
 
   /* set write parameters */
   outb(device->io_base + 1, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, 1);
-	outb(device->io_base + ATA_REG_LBA0, (uint8_t) lba);
-	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (lba >> 8));
-	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (lba >> 16));
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
+  outb(device->io_base + ATA_REG_SECCOUNT0, 1);
+  outb(device->io_base + ATA_REG_LBA0, (uint8_t) lba);
+  outb(device->io_base + ATA_REG_LBA1, (uint8_t) (lba >> 8));
+  outb(device->io_base + ATA_REG_LBA2, (uint8_t) (lba >> 16));
+  outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
 
   /* wait for disk to be ready */
   if (ata_polling(device) != 0)
@@ -111,11 +111,11 @@ static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16
 
   /* set read parameters */
   outb(device->io_base + 1, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, 1);
-	outb(device->io_base + ATA_REG_LBA0, (uint8_t) lba);
-	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (lba >> 8));
-	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (lba >> 16));
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
+  outb(device->io_base + ATA_REG_SECCOUNT0, 1);
+  outb(device->io_base + ATA_REG_LBA0, (uint8_t) lba);
+  outb(device->io_base + ATA_REG_LBA1, (uint8_t) (lba >> 8));
+  outb(device->io_base + ATA_REG_LBA2, (uint8_t) (lba >> 16));
+  outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
   /* wait for disk to be ready */
   if (ata_polling(device) != 0)

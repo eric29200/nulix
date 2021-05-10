@@ -23,9 +23,9 @@
 #define ELFMAG3       'F'
 
 /* class */
-#define ELFCLASSNONE  0	    /* invalid class */
-#define ELFCLASS32    1	    /* 32-bit objects */
-#define ELFCLASS64    2	    /* 64-bit objects */
+#define ELFCLASSNONE  0    /* invalid class */
+#define ELFCLASS32    1    /* 32-bit objects */
+#define ELFCLASS64    2    /* 64-bit objects */
 
 /* byte order */
 #define ELFDATANONE   0     /* invalid data encoding */
@@ -33,24 +33,24 @@
 #define ELFDATA2MSB   2     /* big endian */
 
 /* version */
-#define EV_NONE       0	    /* invalid version */
-#define EV_CURRENT    1     /* current version */
+#define EV_NONE       0    /* invalid version */
+#define EV_CURRENT    1    /* current version */
 
 /* type */
-#define ET_NONE       0     /* unkown type */
-#define ET_REL        1     /* relocatable file */
-#define ET_EXEC       2     /* executable file */
-#define ET_DYN        3     /* share object file */
-#define ET_CORE       4     /* core file */
+#define ET_NONE       0    /* unkown type */
+#define ET_REL        1    /* relocatable file */
+#define ET_EXEC       2    /* executable file */
+#define ET_DYN        3    /* share object file */
+#define ET_CORE       4    /* core file */
 
 /* machine */
-#define EM_NONE       0	    /* no machine */
-#define EM_386        3	    /* intel 80386 */
+#define EM_NONE       0    /* no machine */
+#define EM_386        3    /* intel 80386 */
 
 /* flags */
-#define FLAG_EXEC     1     /* exec flag */
-#define FLAG_WRITE    2     /* write flag */
-#define FLAG_READ     4     /* read flag */
+#define FLAG_EXEC     1    /* exec flag */
+#define FLAG_WRITE    2    /* write flag */
+#define FLAG_READ     4    /* read flag */
 
 /*
  * ELF header.

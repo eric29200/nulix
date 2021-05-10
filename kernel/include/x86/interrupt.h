@@ -22,7 +22,7 @@
 #define IRQ15   47
 
 #define __save_flags(x)       __asm__ __volatile__("pushfl ; popl %0":"=g" (x):)
-#define __restore_flags(x) 	  __asm__ __volatile__("pushl %0 ; popfl": :"g" (x):"memory", "cc")
+#define __restore_flags(x)    __asm__ __volatile__("pushl %0 ; popfl": :"g" (x):"memory", "cc")
 #define irq_enable()          __asm__ __volatile__("sti": : :"memory")
 #define irq_disable()         __asm__ __volatile__("cli": : :"memory")
 #define irq_save(x)           do { __save_flags(x); irq_disable(); } while(0);
