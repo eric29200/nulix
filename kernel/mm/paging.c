@@ -136,7 +136,7 @@ void page_fault_handler(struct registers_t *regs)
 
   /* get errors informations */
   int present = regs->err_code & 0x1 ? 1 : 0;
-  int rw = regs->err_code & 0x2 ? 1 : 0;
+  int write = regs->err_code & 0x2 ? 1 : 0;
   int user = regs->err_code & 0x4 ? 1 : 0;
   int reserved = regs->err_code & 0x8 ? 1 : 0;
   int id = regs->err_code & 0x10 ? 1 : 0;
@@ -146,8 +146,8 @@ void page_fault_handler(struct registers_t *regs)
     return;
 
   /* output message */
-  printf("Page fault at address=%x | present=%d read-only=%d user-mode=%d reserved=%d instruction-fetch=%d\n",
-         fault_addr, present, !rw, user, reserved, id);
+  printf("Page fault at address=%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d\n",
+         fault_addr, present, write, user, reserved, id);
 
   /* user mode : exit process */
   if (user)
