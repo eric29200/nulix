@@ -143,11 +143,11 @@ void page_fault_handler(struct registers_t *regs)
 
   /* user page fault : try to allocate a new page if address is in user space memory */
   if (fault_addr >= KMEM_SIZE && map_page(fault_addr, current_task->pgd, 0, 1) == 0)
-      return;
+    return;
 
   /* output message */
   printf("Page fault at address=%x | present=%d read-only=%d user-mode=%d reserved=%d instruction-fetch=%d\n",
-         fault_addr, present, rw, user, reserved, id);
+         fault_addr, present, !rw, user, reserved, id);
 
   /* user mode : exit process */
   if (user)
