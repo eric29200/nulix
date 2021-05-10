@@ -97,7 +97,7 @@ int elf_load(const char *path)
 
     /* map pages */
     for (j = ph->p_vaddr; j < PAGE_ALIGN_UP(ph->p_vaddr + ph->p_filesz); j += PAGE_SIZE)
-      map_page(j, current_task->pgd, 0, 1);
+      map_page(j, current_task->pgd, 0, ph->p_flags & FLAG_WRITE ? 1 : 0);
 
     /* copy in memory */
     memset((void *) ph->p_vaddr, 0, ph->p_memsz);

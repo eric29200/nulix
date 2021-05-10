@@ -160,7 +160,7 @@ int main()
     fgets(cmd_line, MAX_CMD_SIZE, stdin);
     parse_cmd(cmd_line, &cmd);
     if (execute_cmd(&cmd) != 0)
-      printf("%s : unknown command\n", cmd_line);
+      printf(" unknown command\n");
   }
   return 0;
 }
