@@ -1,0 +1,6 @@
+- Implement process groups
+- Implement signals
+
+- Port bash (compile with musl-gcc)
+
+- To avoid patching musl, build a i386 toolchain with nls disabled

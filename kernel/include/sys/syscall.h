@@ -21,12 +21,14 @@
 #define __NR_execve       11
 #define __NR_chdir        12
 #define __NR_lseek        19
+#define __NR_getpid       20
 #define __NR_access       33
 #define __NR_mkdir        39
 #define __NR_rmdir        40
 #define __NR_dup          41
 #define __NR_brk          45
 #define __NR_dup2         63
+#define __NR_getppid      64
 #define __NR_stat         106
 #define __NR_wait4        114
 #define __NR_getdents     141
@@ -64,5 +66,7 @@ ssize_t sys_readv(int fd, const struct iovec_t *iov, int iovcnt);
 ssize_t sys_writev(int fd, const struct iovec_t *iov, int iovcnt);
 int sys_nanosleep(const struct timespec_t *req, struct timespec_t *rem);
 int sys_getdents64(int fd, void *dirp, size_t count);
+pid_t sys_getpid();
+pid_t sys_getppid();
 
 #endif
