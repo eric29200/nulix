@@ -36,78 +36,88 @@ static int elf_check(struct elf_header_t *elf_header)
 }
 
 /*
+ * Load an ELF segment in memory.
+ */
+static int segment_load(int fd, int off)
+{
+  struct elf_prog_header_t ph;
+  uint32_t i;
+  int ret;
+
+  /* seek to prog header */
+  ret = do_lseek(fd, off, SEEK_SET);
+  if (ret < 0)
+    return ret;
+
+  /* read prog header */
+  if (do_read(fd, (void *) &ph, sizeof(struct elf_prog_header_t)) != sizeof(struct elf_prog_header_t))
+    return -ENOSPC;
+
+  /* skip non relocable segments */
+  if (ph.p_type != ET_REL)
+    return 0;
+
+  /* set start text */
+  if (current_task->start_text == 0)
+    current_task->start_text = ph.p_vaddr;
+
+  /* map pages */
+  for (i = ph.p_vaddr; i < PAGE_ALIGN_UP(ph.p_vaddr + ph.p_filesz); i += PAGE_SIZE)
+    map_page(i, current_task->pgd, 0, ph.p_flags & FLAG_WRITE ? 1 : 0);
+
+  /* seek to elf segment */
+  ret = do_lseek(fd, ph.p_offset, SEEK_SET);
+  if (ret < 0)
+    return ret;
+
+  /* read segment in memory */
+  memset((void *) ph.p_vaddr, 0, ph.p_memsz);
+  if (do_read(fd, (void *) ph.p_vaddr, ph.p_filesz) != (int) ph.p_filesz)
+    return -ENOSPC;
+
+  /* update end text position */
+  current_task->end_text = ph.p_vaddr + ph.p_filesz;
+
+  return 0;
+}
+
+/*
  * Load an ELF file in memory.
  */
 int elf_load(const char *path)
 {
-  struct elf_header_t *elf_header;
-  struct elf_prog_header_t *ph;
-  struct stat_t statbuf;
-  char *buf = NULL;
-  int fd, ret = 0;
-  uint32_t i, j;
-
-  /* get file size */
-  ret = do_stat((char *) path, &statbuf);
-  if (ret < 0)
-    return ret;
-
-  /* allocate buffer */
-  buf = (char *) kmalloc(statbuf.st_size);
-  if (!buf) {
-    ret = -ENOMEM;
-    goto out;
-  }
+  struct elf_header_t elf_header;
+  int fd, off, ret;
+  uint32_t i;
 
   /* open file */
   fd = do_open(path, O_RDONLY, 0);
-  if (fd < 0) {
-    ret = fd;
-    goto out;
-  }
+  if (fd < 0)
+    return fd;
 
-  /* load file in memory */
-  if ((size_t) do_read(fd, buf, statbuf.st_size) != statbuf.st_size) {
-    ret = -EINVAL;
+  /* read elf header */
+  if ((size_t) do_read(fd, (void *) &elf_header, sizeof(struct elf_header_t)) != sizeof(struct elf_header_t)) {
     do_close(fd);
-    goto out;
+    return -EINVAL;
   }
-
-  /* close file */
-  do_close(fd);
 
   /* check elf header */
-  elf_header = (struct elf_header_t *) buf;
-  if (elf_check(elf_header) != 0)
+  ret = elf_check(&elf_header);
+  if (ret != 0)
     goto out;
 
   /* unmap current text pages */
   for (i = current_task->start_text; i <= current_task->end_text; i += PAGE_SIZE)
     unmap_page(i, current_task->pgd);
 
-  /* set start text segment */
-  ph = (struct elf_prog_header_t *) (buf + elf_header->e_phoff);
-  current_task->start_text = ph->p_vaddr;
-
-  /* copy elf in memory */
-  for (i = 0; i < elf_header->e_phnum; i++, ph++) {
-    /* skip non relocable segments */
-    if (ph->p_type != ET_REL)
-      continue;
-
-    /* map pages */
-    for (j = ph->p_vaddr; j < PAGE_ALIGN_UP(ph->p_vaddr + ph->p_filesz); j += PAGE_SIZE)
-      map_page(j, current_task->pgd, 0, ph->p_flags & FLAG_WRITE ? 1 : 0);
-
-    /* copy in memory */
-    memset((void *) ph->p_vaddr, 0, ph->p_memsz);
-    memcpy((void *) ph->p_vaddr, buf + ph->p_offset, ph->p_filesz);
-
-    /* update stack position */
-    current_task->end_text = ph->p_vaddr + ph->p_filesz;
+  /* read each elf segment */
+  for (i = 0, off = elf_header.e_phoff; i < elf_header.e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
+    ret = segment_load(fd, off);
+    if (ret != 0)
+      goto out;
   }
 
-  /* set data segment */
+ /* set data segment */
   current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text + PAGE_SIZE);
   current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text + PAGE_SIZE);
 
@@ -117,10 +127,11 @@ int elf_load(const char *path)
     map_page(current_task->user_stack + i * PAGE_SIZE, current_task->pgd, 0, 1);
 
   /* set elf entry point */
-  current_task->user_entry = elf_header->e_entry;
+  current_task->user_entry = elf_header.e_entry;
   current_task->user_stack = USTACK_START;
+
+  ret = 0;
 out:
-  if (buf)
-    kfree(buf);
+  do_close(fd);
   return ret;
 }
