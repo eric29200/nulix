@@ -22,117 +22,117 @@
  * Buffer structure.
  */
 struct buffer_head_t {
-  struct ata_device_t *b_dev;
-  char b_data[BLOCK_SIZE];
-  int b_ref;
-  char b_dirt;
-  uint32_t b_blocknr;
+  struct ata_device_t *   b_dev;
+  char                    b_data[BLOCK_SIZE];
+  int                     b_ref;
+  char                    b_dirt;
+  uint32_t                b_blocknr;
 };
 
 /*
  * Minix super block.
  */
 struct minix_super_block_t {
-  uint16_t s_ninodes;
-  uint16_t s_nzones;
-  uint16_t s_imap_blocks;
-  uint16_t s_zmap_blocks;
-  uint16_t s_firstdatazone;
-  uint16_t s_log_zone_size;
-  uint32_t s_max_size;
-  uint16_t s_magic;
+  uint16_t                s_ninodes;
+  uint16_t                s_nzones;
+  uint16_t                s_imap_blocks;
+  uint16_t                s_zmap_blocks;
+  uint16_t                s_firstdatazone;
+  uint16_t                s_log_zone_size;
+  uint32_t                s_max_size;
+  uint16_t                s_magic;
   /* these are only in memory */
-  struct buffer_head_t *s_imap[MINIX_IMAP_SLOTS];
-  struct buffer_head_t *s_zmap[MINIX_ZMAP_SLOTS];
-  struct ata_device_t *s_dev;
-  struct inode_t *s_imount;
+  struct buffer_head_t *  s_imap[MINIX_IMAP_SLOTS];
+  struct buffer_head_t *  s_zmap[MINIX_ZMAP_SLOTS];
+  struct ata_device_t *   s_dev;
+  struct inode_t *        s_imount;
 };
 
 /*
  * Minix inode.
  */
 struct minix_inode_t {
-  uint16_t i_mode;
-  uint16_t i_uid;
-  uint32_t i_size;
-  uint32_t i_time;
-  uint8_t i_gid;
-  uint8_t i_nlinks;
-  uint16_t i_zone[9];
+  uint16_t                i_mode;
+  uint16_t                i_uid;
+  uint32_t                i_size;
+  uint32_t                i_time;
+  uint8_t                 i_gid;
+  uint8_t                 i_nlinks;
+  uint16_t                i_zone[9];
 };
 
 /*
  * In memory inode.
  */
 struct inode_t {
-  uint16_t i_mode;
-  uid_t i_uid;
-  uint32_t i_size;
-  uint32_t i_time;
-  gid_t i_gid;
-  uint8_t i_nlinks;
-  uint16_t i_zone[9];
+  uint16_t                      i_mode;
+  uid_t                         i_uid;
+  uint32_t                      i_size;
+  uint32_t                      i_time;
+  gid_t                         i_gid;
+  uint8_t                       i_nlinks;
+  uint16_t                      i_zone[9];
   /* these are only in memory */
-  ino_t i_ino;
-  int i_ref;
-  char i_dirt;
-  struct minix_super_block_t *i_sb;
-  struct ata_device_t *i_dev;
+  ino_t                         i_ino;
+  int                           i_ref;
+  char                          i_dirt;
+  struct minix_super_block_t *  i_sb;
+  struct ata_device_t *         i_dev;
 };
 
 /*
  * Opened file.
  */
 struct file_t {
-  uint16_t f_mode;
-  size_t f_pos;
-  int f_ref;
-  struct inode_t *f_inode;
+  uint16_t          f_mode;
+  size_t            f_pos;
+  int               f_ref;
+  struct inode_t *  f_inode;
 };
 
 /*
  * Minix dir entry.
  */
 struct minix_dir_entry_t {
-  uint16_t inode;
-  char name[MINIX_FILENAME_LEN];
+  uint16_t  inode;
+  char      name[MINIX_FILENAME_LEN];
 };
 
 /*
  * Directory entry (used by libc and getdents system call).
  */
 struct dirent_t {
-  ino_t d_inode;
-  off_t d_off;
-  unsigned short d_reclen;
-  unsigned char d_type;
-  char d_name[];
+  ino_t           d_inode;
+  off_t           d_off;
+  unsigned short  d_reclen;
+  unsigned char   d_type;
+  char            d_name[];
 };
 
 /*
  * Directory entry (used by libc and getdents system call).
  */
 struct dirent64_t {
-  uint64_t d_inode;
-  int64_t d_off;
-  unsigned short d_reclen;
-  unsigned char d_type;
-  char d_name[];
+  uint64_t        d_inode;
+  int64_t         d_off;
+  unsigned short  d_reclen;
+  unsigned char   d_type;
+  char            d_name[];
 };
 
 /*
  * Stats file structure.
  */
 struct stat_t {
-  ino_t st_ino;
-  uint16_t st_mode;
-  uint8_t st_nlinks;
-  uid_t st_uid;
-  gid_t st_gid;
-  size_t st_size;
-  time_t st_atime;
-  time_t st_mtime;
-  time_t st_ctime;
+  ino_t     st_ino;
+  uint16_t  st_mode;
+  uint8_t   st_nlinks;
+  uid_t     st_uid;
+  gid_t     st_gid;
+  size_t    st_size;
+  time_t    st_atime;
+  time_t    st_mtime;
+  time_t    st_ctime;
 };
 
 /* file system operations */

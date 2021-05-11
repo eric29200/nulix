@@ -56,34 +56,34 @@
  * ELF header.
  */
 struct elf_header_t {
-    uint8_t e_ident[EI_NIDENT];   /* magic number */
-    uint16_t e_type;              /* object file type */
-    uint16_t e_machine;           /* architecture */
-    uint32_t e_version;           /* object file version */
-    uint32_t e_entry;             /* entry point virtual address */
-    uint32_t e_phoff;             /* program header table file offset */
-    uint32_t e_shoff;             /* section header table file offset */
-    uint32_t e_flags;             /* processor-specific flags */
-    uint16_t e_ehsize;            /* ELF header size in bytes */
-    uint16_t e_phentsize;         /* program header table entry size */
-    uint16_t e_phnum;             /* program header table entry count */
-    uint16_t e_shentsize;         /* section header table entry size */
-    uint16_t e_shnum;             /* section header table entry count */
-    uint16_t e_shstrndx;          /* section header strin table index */
+    uint8_t   e_ident[EI_NIDENT];   /* magic number */
+    uint16_t  e_type;              /* object file type */
+    uint16_t  e_machine;           /* architecture */
+    uint32_t  e_version;           /* object file version */
+    uint32_t  e_entry;             /* entry point virtual address */
+    uint32_t  e_phoff;             /* program header table file offset */
+    uint32_t  e_shoff;             /* section header table file offset */
+    uint32_t  e_flags;             /* processor-specific flags */
+    uint16_t  e_ehsize;            /* ELF header size in bytes */
+    uint16_t  e_phentsize;         /* program header table entry size */
+    uint16_t  e_phnum;             /* program header table entry count */
+    uint16_t  e_shentsize;         /* section header table entry size */
+    uint16_t  e_shnum;             /* section header table entry count */
+    uint16_t  e_shstrndx;          /* section header strin table index */
 };
 
 /*
  * ELF program header.
  */
 struct elf_prog_header_t {
-    uint32_t p_type;              /* segment type */
-    uint32_t p_offset;            /* segment file offset */
-    uint32_t p_vaddr;             /* segment virtual address */
-    uint32_t p_paddr;             /* segment physical address */
-    uint32_t p_filesz;            /* segment size in file */
-    uint32_t p_memsz;             /* segment size in memory */
-    uint32_t p_flags;             /* segment flags */
-    uint32_t p_align;             /* segment alignment */
+    uint32_t  p_type;              /* segment type */
+    uint32_t  p_offset;            /* segment file offset */
+    uint32_t  p_vaddr;             /* segment virtual address */
+    uint32_t  p_paddr;             /* segment physical address */
+    uint32_t  p_filesz;            /* segment size in file */
+    uint32_t  p_memsz;             /* segment size in memory */
+    uint32_t  p_flags;             /* segment flags */
+    uint32_t  p_align;             /* segment alignment */
 };
 
 int elf_load(const char *path);

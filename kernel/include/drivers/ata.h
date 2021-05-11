@@ -64,9 +64,9 @@
  * ATA device.
  */
 struct ata_device_t {
-  uint8_t bus;
-  uint8_t drive;
-  uint16_t io_base;
+  uint8_t   bus;
+  uint8_t   drive;
+  uint16_t  io_base;
 };
 
 void init_ata();

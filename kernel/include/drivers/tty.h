@@ -10,11 +10,11 @@
  * TTY structure.
  */
 struct tty_t {
-  dev_t dev;
-  uint32_t r_pos;
-  uint32_t w_pos;
-  char buf[TTY_BUF_SIZE];
-  struct screen_t screen;
+  dev_t             dev;
+  uint32_t          r_pos;
+  uint32_t          w_pos;
+  char              buf[TTY_BUF_SIZE];
+  struct screen_t   screen;
 };
 
 int init_tty();

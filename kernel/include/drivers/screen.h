@@ -17,10 +17,10 @@
  * Screen struct.
  */
 struct screen_t {
-  uint32_t pos_x;
-  uint32_t pos_y;
-  uint8_t dirty;
-  char buf[SCREEN_WIDTH * SCREEN_HEIGHT];
+  uint32_t  pos_x;
+  uint32_t  pos_y;
+  uint8_t   dirty;
+  char      buf[SCREEN_WIDTH * SCREEN_HEIGHT];
 };
 
 void screen_init(struct screen_t *screen);
