@@ -4,6 +4,7 @@
 */*.o
 */*/*.o
 *.bin
+*.iso
 */*.bin
 hdd.img
 musl/*
