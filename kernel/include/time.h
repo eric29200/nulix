@@ -35,18 +35,13 @@ static inline uint32_t ms_to_jiffies(uint32_t ms)
  */
 static inline uint32_t timespec_to_jiffies(const struct timespec_t *ts)
 {
-  uint32_t sec = (uint32_t) ts->tv_sec;
   uint32_t nsec = ts->tv_nsec;
-
-  /* check max value */
-  if (sec > (LONG_MAX / HZ))
-    return LONG_MAX;
 
   /* convert nano seconds to jiffies */
   nsec += 1000000000L / HZ - 1;
   nsec /= 1000000000L / HZ;
 
-  return sec * HZ + nsec;
+  return ts->tv_sec * HZ + nsec;
 }
 
 /*
