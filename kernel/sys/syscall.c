@@ -28,6 +28,7 @@ static const void *syscalls[] = {
   [__NR_getdents]   = sys_getdents,
   [__NR_readv]      = sys_readv,
   [__NR_writev]     = sys_writev,
+  [__NR_nanosleep]  = sys_nanosleep,
   [__NR_getdents64] = sys_getdents64,
 };
 

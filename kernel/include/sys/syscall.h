@@ -5,6 +5,7 @@
 #include <fs/fs.h>
 #include <uio.h>
 #include <resource.h>
+#include <time.h>
 
 #define SYSCALLS_NUM      (__NR_getdents64 + 1)
 
@@ -31,6 +32,7 @@
 #define __NR_getdents     141
 #define __NR_readv        145
 #define __NR_writev       146
+#define __NR_nanosleep    162
 #define __NR_getdents64   220
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
@@ -60,6 +62,7 @@ int sys_rmdir(const char *pathname);
 int sys_getdents(int fd, struct dirent_t *dirent, uint32_t count);
 ssize_t sys_readv(int fd, const struct iovec_t *iov, int iovcnt);
 ssize_t sys_writev(int fd, const struct iovec_t *iov, int iovcnt);
+int sys_nanosleep(const struct timespec_t *req, struct timespec_t *rem);
 int sys_getdents64(int fd, void *dirp, size_t count);
 
 #endif

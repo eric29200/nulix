@@ -15,7 +15,6 @@
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <string.h>
-#include <delay.h>
 #include <dev.h>
 
 extern uint32_t loader;

@@ -4,7 +4,7 @@
 #include <proc/sched.h>
 #include <proc/timer.h>
 #include <stderr.h>
-#include <delay.h>
+#include <time.h>
 #include <dev.h>
 
 #define NB_TTYS         4
