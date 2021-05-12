@@ -50,15 +50,6 @@ static struct task_t *get_next_task()
   struct list_head_t *pos;
   struct task_t *task;
 
-  /* update timeout on all tasks and wake them if needed */
-  list_for_each(pos, &tasks_list) {
-    task = list_entry(pos, struct task_t, list);
-    if (task->timeout && task->timeout < jiffies) {
-      task->timeout = 0;
-      task->state = TASK_RUNNING;
-    }
-  }
-
   /* first scheduler call : return kinit */
   if (!current_task)
     return kinit_task;
@@ -98,10 +89,20 @@ int spawn_init()
  */
 void schedule()
 {
-  struct task_t *prev_task;
+  struct task_t *prev_task, *task;
+  struct list_head_t *pos;
 
   /* update timers */
   timer_update();
+
+  /* update timeout on all tasks and wake them if needed */
+  list_for_each(pos, &tasks_list) {
+    task = list_entry(pos, struct task_t, list);
+    if (task->timeout && task->timeout < jiffies) {
+      task->timeout = 0;
+      task->state = TASK_RUNNING;
+    }
+  }
 
   /* get next task to run */
   prev_task = current_task;
