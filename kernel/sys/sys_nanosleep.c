@@ -39,6 +39,9 @@ int sys_nanosleep(const struct timespec_t *req, struct timespec_t *rem)
 
   /* task interrupted before timer end */
   if (expire > jiffies) {
+    /* remove timer */
+    timer_event_del(&tm);
+
     if (rem)
       jiffies_to_timespec(expire - jiffies - (expire > jiffies + 1), rem);
 

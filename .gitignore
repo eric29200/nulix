@@ -18,4 +18,5 @@ usr/mkdir
 usr/touch
 usr/rm
 usr/rmdir
+usr/test_signal
 libc/libc.a

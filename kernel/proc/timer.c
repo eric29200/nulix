@@ -53,7 +53,7 @@ void timer_update()
 
     /* timer expires : run and remove it */
     if (tm->expires <= jiffies) {
-      list_del(&tm->list);
+      timer_event_del(tm);
       tm->func(tm->data);
     }
   }
