@@ -23,6 +23,7 @@ sudo cp usr/mkdir tmp/bin
 sudo cp usr/touch tmp/bin
 sudo cp usr/rm tmp/bin
 sudo cp usr/rmdir tmp/bin
+sudo cp usr/test_signal tmp/bin
 
 # create devices nodes
 sudo mkdir tmp/dev

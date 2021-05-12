@@ -53,6 +53,14 @@ struct sigaction_t {
 };
 
 /*
+ * Check if a signal set is empty.
+ */
+static inline int sigisemptyset(sigset_t *set)
+{
+  return (int) *set == 0;
+}
+
+/*
  * Clear/empty a signal set.
  */
 static inline void sigemptyset(sigset_t *set)

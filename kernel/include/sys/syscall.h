@@ -40,6 +40,7 @@
 #define __NR_readv        145
 #define __NR_writev       146
 #define __NR_nanosleep    162
+#define __NR_rt_sigaction 174
 #define __NR_getdents64   220
 
 
