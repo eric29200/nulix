@@ -27,15 +27,18 @@
 #define __NR_rmdir        40
 #define __NR_dup          41
 #define __NR_brk          45
+#define __NR_setpgid      57
 #define __NR_dup2         63
 #define __NR_getppid      64
 #define __NR_stat         106
 #define __NR_wait4        114
+#define __NR_getpgid      132
 #define __NR_getdents     141
 #define __NR_readv        145
 #define __NR_writev       146
 #define __NR_nanosleep    162
 #define __NR_getdents64   220
+
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -68,5 +71,7 @@ int sys_nanosleep(const struct timespec_t *req, struct timespec_t *rem);
 int sys_getdents64(int fd, void *dirp, size_t count);
 pid_t sys_getpid();
 pid_t sys_getppid();
+pid_t sys_getpgid(pid_t pid);
+int sys_setpgid(pid_t t, pid_t pgid);
 
 #endif

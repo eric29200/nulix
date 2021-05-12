@@ -153,3 +153,20 @@ void task_wakeup_all(void *chan)
       task->state = TASK_RUNNING;
   }
 }
+
+/*
+ * Get task with a pid.
+ */
+struct task_t *get_task(pid_t pid)
+{
+  struct list_head_t *pos;
+  struct task_t *task;
+
+  list_for_each(pos, &tasks_list) {
+    task = list_entry(pos, struct task_t, list);
+    if (task->pid == pid)
+      return task;
+  }
+
+  return NULL;
+}

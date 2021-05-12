@@ -20,6 +20,7 @@
  */
 struct task_t {
   pid_t                       pid;                /* process id */
+  pid_t                       pgid;               /* process group id */
   uint8_t                     state;              /* process state */
   uint16_t                    uid;                /* user id */
   uint8_t                     gid;                /* group id */
@@ -58,5 +59,6 @@ struct task_t *create_kinit_task(void (*func)(void));
 struct task_t *create_init_task();
 struct task_t *fork_task(struct task_t *parent);
 void destroy_task(struct task_t *task);
+struct task_t *get_task(pid_t pid);
 
 #endif

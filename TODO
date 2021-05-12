@@ -1,4 +1,3 @@
-- Implement process groups
 - Implement signals
 
 - Port bash (compile with musl-gcc)

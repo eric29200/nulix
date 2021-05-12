@@ -59,6 +59,7 @@ static struct task_t *create_task(struct task_t *parent)
 
   /* init task */
   task->pid = get_next_pid();
+  task->pgid = parent ? parent->pgid : task->pid;
   task->state = TASK_RUNNING;
   task->parent = parent;
   task->uid = parent ? parent->uid : 0;
