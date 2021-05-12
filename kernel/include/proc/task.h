@@ -37,6 +37,7 @@ struct task_t {
   uint32_t                    start_brk;          /* user data segment start */
   uint32_t                    end_brk;            /* user data segment end */
   void *                      waiting_chan;       /* waiting channel */
+  uint32_t                    timeout;            /* timeout (used by sleep) */
   sigset_t                    sigpend;            /* pending signals */
   sigset_t                    sigmask;            /* masked signals */
   struct sigaction_t          signals[NSIGS];     /* signal handlers */

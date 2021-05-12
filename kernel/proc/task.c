@@ -70,6 +70,8 @@ static struct task_t *create_task(struct task_t *parent)
   task->end_text = parent ? parent->end_text : 0;
   task->start_brk = parent ? parent->start_brk : 0;
   task->end_brk = parent ? parent->end_brk : 0;
+  task->timeout = 0;
+  task->waiting_chan = NULL;
   INIT_LIST_HEAD(&task->list);
 
   /* init signals */
