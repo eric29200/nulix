@@ -8,40 +8,43 @@
 #include <resource.h>
 #include <time.h>
 
-#define SYSCALLS_NUM      (__NR_getdents64 + 1)
+#define SYSCALLS_NUM            (__NR_getdents64 + 1)
 
-#define __NR_exit         1
-#define __NR_fork         2
-#define __NR_read         3
-#define __NR_write        4
-#define __NR_open         5
-#define __NR_close        6
-#define __NR_waitpid      7
-#define __NR_creat        8
-#define __NR_unlink       10
-#define __NR_execve       11
-#define __NR_chdir        12
-#define __NR_lseek        19
-#define __NR_getpid       20
-#define __NR_access       33
-#define __NR_kill         37
-#define __NR_mkdir        39
-#define __NR_rmdir        40
-#define __NR_dup          41
-#define __NR_brk          45
-#define __NR_setpgid      57
-#define __NR_dup2         63
-#define __NR_getppid      64
-#define __NR_sigaction    67
-#define __NR_stat         106
-#define __NR_wait4        114
-#define __NR_getpgid      132
-#define __NR_getdents     141
-#define __NR_readv        145
-#define __NR_writev       146
-#define __NR_nanosleep    162
-#define __NR_rt_sigaction 174
-#define __NR_getdents64   220
+#define __NR_exit               1
+#define __NR_fork               2
+#define __NR_read               3
+#define __NR_write              4
+#define __NR_open               5
+#define __NR_close              6
+#define __NR_waitpid            7
+#define __NR_creat              8
+#define __NR_unlink             10
+#define __NR_execve             11
+#define __NR_chdir              12
+#define __NR_lseek              19
+#define __NR_getpid             20
+#define __NR_access             33
+#define __NR_kill               37
+#define __NR_mkdir              39
+#define __NR_rmdir              40
+#define __NR_dup                41
+#define __NR_brk                45
+#define __NR_setpgid            57
+#define __NR_dup2               63
+#define __NR_getppid            64
+#define __NR_sigaction          67
+#define __NR_stat               106
+#define __NR_wait4              114
+#define __NR_sigprocmask        126
+#define __NR_getpgid            132
+#define __NR_getdents           141
+#define __NR_readv              145
+#define __NR_writev             146
+#define __NR_nanosleep          162
+#define __NR_rt_sigaction       174
+#define __NR_rt_sigprocmask     175
+#define __NR_getdents64         220
+
 
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
@@ -79,5 +82,7 @@ pid_t sys_getpgid(pid_t pid);
 int sys_setpgid(pid_t t, pid_t pgid);
 int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact);
 int sys_kill(pid_t pid, int sig);
+int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
 
 #endif

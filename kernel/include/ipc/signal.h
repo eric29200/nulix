@@ -41,6 +41,10 @@
 #define SIGSYS    31
 #define SIGUNUSED SIGSYS
 
+#define SIG_BLOCK     0
+#define SIG_UNBLOCK   1
+#define SIG_SETMASK   2
+
 typedef void (*sighandler_t)(int);
 
 /*

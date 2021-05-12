@@ -184,7 +184,7 @@ static void __task_signal(struct task_t *task, int sig)
   sigaddset(&task->sigpend, sig);
 
   /* wakeup process if sleeping and sig is not masked */
-  if (sigismember(&task->sigmask, sig) && task->state == TASK_SLEEPING)
+  if (!sigismember(&task->sigmask, sig) && task->state == TASK_SLEEPING)
     task->state = TASK_RUNNING;
 }
 
