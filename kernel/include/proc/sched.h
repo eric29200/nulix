@@ -24,7 +24,7 @@ void task_wakeup(void *chan);
 void task_wakeup_all(void *chan);
 
 int task_signal(pid_t pid, int sig);
-int task_signal_group(pid_t pid, int sig);
+int task_signal_group(pid_t pgid, int sig);
 int task_signal_all(int sig);
 
 #endif

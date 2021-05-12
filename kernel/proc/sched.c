@@ -217,23 +217,16 @@ int task_signal(pid_t pid, int sig)
 }
 
 /*
- * Send a signal to all tasks in group of a process (except init process).
+ * Send a signal to all tasks in a group.
  */
-int task_signal_group(int pid, int sig)
+int task_signal_group(pid_t pgid, int sig)
 {
   struct list_head_t *pos;
   struct task_t *task;
-  pid_t pgid;
 
-  /* get task */
-  task = get_task(pid);
-  if (!task)
-    return -EINVAL;
-
-  pgid = task->pgid;
   list_for_each(pos, &tasks_list) {
     task = list_entry(pos, struct task_t, list);
-    if (task->pid > 1 && task->pgid == pgid)
+    if (task->pgid == pgid)
       __task_signal(task, sig);
   }
 

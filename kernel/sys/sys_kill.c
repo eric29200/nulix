@@ -6,7 +6,9 @@
  */
 int sys_kill(pid_t pid, int sig)
 {
-  /* check signal number (0 is ok : means check permission but do send signal) */
+  struct task_t *task;
+
+  /* check signal number (0 is ok : means check permission but do not send signal) */
   if (sig < 0 || sig >= NSIGS)
     return -EINVAL;
 
@@ -14,10 +16,19 @@ int sys_kill(pid_t pid, int sig)
   if (pid > 0)
     return task_signal(pid, sig);
 
-  /* send signal to all processes in the group */
-  if (pid == 0)
-    return task_signal_group(pid, sig);
+  /* send signal to all processes in the group of given pid */
+  if (pid == 0) {
+    task = get_task(pid);
+    if (!task)
+      return -EINVAL;
+
+    return task_signal_group(task->pgid, sig);
+  }
 
   /* send signal to all processes (except init) */
-  return task_signal_all(sig);
+  if (pid == -1)
+    task_signal_all(sig);
+
+  /* signal to all processes in the group -pid */
+  return task_signal_group(-pid, sig);
 }
