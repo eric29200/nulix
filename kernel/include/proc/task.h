@@ -4,6 +4,7 @@
 #include <proc/elf.h>
 #include <mm/paging.h>
 #include <fs/fs.h>
+#include <ipc/signal.h>
 #include <stddef.h>
 #include <list.h>
 
@@ -26,7 +27,7 @@ struct task_t {
   uint8_t                     gid;                /* group id */
   uint16_t                    umask;              /* umask */
   int                         exit_code;          /* exit code */
-  struct task_t *             parent;            /* parent process */
+  struct task_t *             parent;             /* parent process */
   uint32_t                    kernel_stack;       /* kernel stack */
   uint32_t                    esp;                /* kernel stack pointer */
   uint32_t                    user_entry;         /* user entry point */
@@ -35,11 +36,14 @@ struct task_t {
   uint32_t                    end_text;           /* user text segment end */
   uint32_t                    start_brk;          /* user data segment start */
   uint32_t                    end_brk;            /* user data segment end */
-  void *                      waiting_chan;      /* waiting channel */
-  struct inode_t *            cwd;               /* current working directory */
+  void *                      waiting_chan;       /* waiting channel */
+  sigset_t                    sigpend;            /* pending signals */
+  sigset_t                    sigmask;            /* masked signals */
+  struct sigaction_t          signals[NSIGS];     /* signal handlers */
+  struct inode_t *            cwd;                /* current working directory */
   struct registers_t          user_regs;          /* saved registers at syscall entry */
-  struct page_directory_t *   pgd;               /* page directory */
-  struct file_t *             filp[NR_OPEN];     /* opened files */
+  struct page_directory_t *   pgd;                /* page directory */
+  struct file_t *             filp[NR_OPEN];      /* opened files */
   struct list_head_t          list;               /* next process */
 };
 

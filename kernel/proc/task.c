@@ -72,6 +72,12 @@ static struct task_t *create_task(struct task_t *parent)
   task->end_brk = parent ? parent->end_brk : 0;
   INIT_LIST_HEAD(&task->list);
 
+  /* init signals */
+  sigemptyset(&task->sigpend);
+  sigemptyset(&task->sigmask);
+  if (parent)
+    memcpy(task->signals, parent->signals, sizeof(task->signals));
+
   /* clone page directory */
   task->pgd = clone_page_directory(parent ? parent->pgd : kernel_pgd);
   if (!task->pgd) {
