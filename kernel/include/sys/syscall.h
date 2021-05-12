@@ -24,6 +24,7 @@
 #define __NR_lseek        19
 #define __NR_getpid       20
 #define __NR_access       33
+#define __NR_kill         37
 #define __NR_mkdir        39
 #define __NR_rmdir        40
 #define __NR_dup          41
@@ -76,5 +77,6 @@ pid_t sys_getppid();
 pid_t sys_getpgid(pid_t pid);
 int sys_setpgid(pid_t t, pid_t pgid);
 int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact);
+int sys_kill(pid_t pid, int sig);
 
 #endif

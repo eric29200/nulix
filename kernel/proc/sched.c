@@ -170,3 +170,79 @@ struct task_t *get_task(pid_t pid)
 
   return NULL;
 }
+
+/*
+ * Send a signal to a task.
+ */
+static void __task_signal(struct task_t *task, int sig)
+{
+  /* just check permission */
+  if (sig == 0)
+    return;
+
+  /* add to pending signals */
+  sigaddset(&task->sigpend, sig);
+
+  /* wakeup process if sleeping and sig is not masked */
+  if (sigismember(&task->sigmask, sig) && task->state == TASK_SLEEPING)
+    task->state = TASK_RUNNING;
+}
+
+/*
+ * Send a signal to a task.
+ */
+int task_signal(pid_t pid, int sig)
+{
+  struct task_t *task;
+
+  /* get task */
+  task = get_task(pid);
+  if (!task)
+    return -EINVAL;
+
+  /* send signal */
+  __task_signal(task, sig);
+
+  return 0;
+}
+
+/*
+ * Send a signal to all tasks in group of a process (except init process).
+ */
+int task_signal_group(int pid, int sig)
+{
+  struct list_head_t *pos;
+  struct task_t *task;
+  pid_t pgid;
+
+  /* get task */
+  task = get_task(pid);
+  if (!task)
+    return -EINVAL;
+
+  pgid = task->pgid;
+  list_for_each(pos, &tasks_list) {
+    task = list_entry(pos, struct task_t, list);
+    if (task->pid > 1 && task->pgid == pgid)
+      __task_signal(task, sig);
+  }
+
+  return 0;
+}
+
+/*
+ * Send a signal to all tasks (except init process).
+ */
+int task_signal_all(int sig)
+{
+  struct list_head_t *pos;
+  struct task_t *task;
+
+  list_for_each(pos, &tasks_list) {
+    task = list_entry(pos, struct task_t, list);
+    if (task->pid > 1)
+      __task_signal(task, sig);
+  }
+
+  return 0;
+}
