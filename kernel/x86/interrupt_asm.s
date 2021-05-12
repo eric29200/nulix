@@ -24,7 +24,7 @@
 		cli
 		push 0
 		push %2
-		jmp irq_common_stub
+		jmp isr_common_stub
 %endmacro
 
 ; generate CPU-dedicated isr (from 0 to 31)
@@ -97,35 +97,6 @@ isr_common_stub:
 
 	push esp		; push a pointer to is frame
 	call isr_handler	; call C generic isr
-	add esp, 4
-
-	pop ebx
-	mov ds, bx
-	mov es, bx
-	mov fs, bx
-	mov gs, bx
-
-	popa			; restore registers
-	add esp, 8
-	iret
-
-extern irq_handler
-
-; common isr handler
-irq_common_stub:
-	pusha			; save registers
-
-	mov ax, ds
-	push eax
-
-	mov ax, 0x10		; load kernel data segment descriptor
-	mov ds, ax
-	mov es, ax
-	mov fs, ax
-	mov gs, ax
-
-	push esp		; push a pointer to is frame
-	call irq_handler	; call C generic irq handler
 	add esp, 4
 
 	pop ebx

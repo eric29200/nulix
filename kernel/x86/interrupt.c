@@ -45,6 +45,15 @@ void isr_handler(struct registers_t *regs)
 {
   isr_t handler;
 
+  /* IRQ : send ack to pic */
+  if (regs->int_no >= 32) {
+    /* send reset signal to slave PIC (if irq > 7) */
+    if (regs->int_no >= 40)
+      outb(0xA0, 0x20);
+
+    /* send reset signal to master PIC */
+    outb(0x20, 0x20);
+  }
 
   /* handle interrupt or print a message */
   if (interrupt_handlers[regs->int_no] != 0) {
@@ -55,26 +64,5 @@ void isr_handler(struct registers_t *regs)
     if (regs->int_no < 20)
       printf(", message=%s", exception_messages[regs->int_no]);
     printf("\n");
-  }
-}
-
-/*
- * IRQ service routine handler
- */
-void irq_handler(struct registers_t *regs)
-{
-  isr_t handler;
-
-  /* send reset signal to slave PIC (if irq > 7) */
-  if (regs->int_no >= 40)
-    outb(0xA0, 0x20);
-
-  /* send reset signal to master PIC */
-  outb(0x20, 0x20);
-
-  /* handle interrupt */
-  if (interrupt_handlers[regs->int_no] != 0) {
-    handler = interrupt_handlers[regs->int_no];
-    handler(regs);
   }
 }
