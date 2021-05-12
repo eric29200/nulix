@@ -55,9 +55,52 @@ struct sigaction_t {
 /*
  * Clear/empty a signal set.
  */
-static inline void sigemptyset(sigset_t *sigset)
+static inline void sigemptyset(sigset_t *set)
 {
-  memset(sigset, 0, sizeof(sigset_t));
+  memset(set, 0, sizeof(sigset_t));
+}
+
+/*
+ * Check if sig is a member of sigset.
+ */
+static inline int sigismember(const sigset_t *set, int sig)
+{
+  unsigned int s = sig - 1;
+
+  if (s >= NSIGS - 1)
+    return 0;
+
+  return 1 & (*set >> sig);
+}
+
+/*
+ * Add a signal to a signal set.
+ */
+static inline int sigaddset(sigset_t *set, int sig)
+{
+  unsigned int s = sig - 1;
+
+  if (s >= NSIGS - 1)
+    return -1;
+
+  *set |= (1 << sig);
+
+  return 0;
+}
+
+/*
+ * Delete a signal from a signal set.
+ */
+static inline int sigdelset(sigset_t *set, int sig)
+{
+  unsigned int s = sig - 1;
+
+  if (s >= NSIGS - 1)
+    return -1;
+
+  *set &= ~(1 << sig);
+
+  return 0;
 }
 
 #endif

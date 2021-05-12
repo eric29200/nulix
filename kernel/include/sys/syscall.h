@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <fs/fs.h>
+#include <ipc/signal.h>
 #include <uio.h>
 #include <resource.h>
 #include <time.h>
@@ -30,6 +31,7 @@
 #define __NR_setpgid      57
 #define __NR_dup2         63
 #define __NR_getppid      64
+#define __NR_sigaction    67
 #define __NR_stat         106
 #define __NR_wait4        114
 #define __NR_getpgid      132
@@ -73,5 +75,6 @@ pid_t sys_getpid();
 pid_t sys_getppid();
 pid_t sys_getpgid(pid_t pid);
 int sys_setpgid(pid_t t, pid_t pgid);
+int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact);
 
 #endif

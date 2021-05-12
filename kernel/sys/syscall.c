@@ -34,6 +34,7 @@ static const void *syscalls[] = {
   [__NR_getdents64] = sys_getdents64,
   [__NR_getpgid]    = sys_getpgid,
   [__NR_setpgid]    = sys_setpgid,
+  [__NR_sigaction]  = sys_sigaction,
 };
 
 /*
