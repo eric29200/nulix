@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #define NTTYS     4
+#define SH        "/bin/sh"
 
 /*
  * Spwan a shell on tty.
@@ -30,7 +31,7 @@ pid_t spawn_shell(int tty_num)
     dup(0);
 
     /* exec a shell */
-    if (execve("/bin/sh", NULL, NULL) == -1)
+    if (execl(SH, SH, NULL) == -1)
       exit(0);
   }
 

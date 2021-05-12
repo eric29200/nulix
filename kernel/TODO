@@ -1,0 +1,5 @@
+- In interrupt.c : if signal pending, do_signal
+- In sched.c, do_signal() :
+  - get 1st unblocked signal
+  - put current eip on stack
+  - modify current_task user eip to return on sa_handler
