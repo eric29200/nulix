@@ -62,10 +62,8 @@ static void syscall_handler(struct registers_t *regs)
   uint32_t ret;
 
   /* system call not handled */
-  if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL) {
-    printf("%d\n", regs->eax);
+  if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL)
     return;
-  }
 
   /* save current registers */
   memcpy(&current_task->user_regs, regs, sizeof(struct registers_t));
