@@ -24,6 +24,7 @@ sudo cp usr/touch tmp/bin
 sudo cp usr/rm tmp/bin
 sudo cp usr/rmdir tmp/bin
 sudo cp usr/test_signal tmp/bin
+sudo cp bash/bash-5.1-build/bin/bash tmp/bin
 
 # create devices nodes
 sudo mkdir tmp/dev
