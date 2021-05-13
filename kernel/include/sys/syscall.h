@@ -23,12 +23,18 @@
 #define __NR_chdir              12
 #define __NR_lseek              19
 #define __NR_getpid             20
+#define __NR_setuid             23
+#define __NR_getuid             24
 #define __NR_access             33
 #define __NR_kill               37
 #define __NR_mkdir              39
 #define __NR_rmdir              40
 #define __NR_dup                41
 #define __NR_brk                45
+#define __NR_setgid             46
+#define __NR_getgid             47
+#define __NR_geteuid            49
+#define __NR_getegid            50
 #define __NR_setpgid            57
 #define __NR_dup2               63
 #define __NR_getppid            64
@@ -44,9 +50,13 @@
 #define __NR_nanosleep          162
 #define __NR_rt_sigaction       174
 #define __NR_rt_sigprocmask     175
+#define __NR_getuid32           199
+#define __NR_getgid32           200
+#define __NR_geteuid32          201
+#define __NR_getegid32          202
+#define __NR_setuid32           213
+#define __NR_setgid32           214
 #define __NR_getdents64         220
-
-
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -86,5 +96,11 @@ int sys_kill(pid_t pid, int sig);
 int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
 int sys_sigreturn();
+uid_t sys_getuid();
+uid_t sys_geteuid();
+int sys_setuid(uid_t uid);
+gid_t sys_getgid();
+gid_t sys_getegid();
+int sys_setgid(gid_t gid);
 
 #endif

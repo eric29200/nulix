@@ -40,6 +40,18 @@ static const void *syscalls[] = {
   [__NR_sigprocmask]      = sys_sigprocmask,
   [__NR_rt_sigprocmask]   = sys_rt_sigprocmask,
   [__NR_sigreturn]        = sys_sigreturn,
+  [__NR_getuid]           = sys_getuid,
+  [__NR_geteuid]          = sys_geteuid,
+  [__NR_setuid]           = sys_setuid,
+  [__NR_getgid]           = sys_getgid,
+  [__NR_getegid]          = sys_getegid,
+  [__NR_setgid]           = sys_getgid,
+  [__NR_getuid32]         = sys_getuid,
+  [__NR_geteuid32]        = sys_geteuid,
+  [__NR_setuid32]         = sys_setuid,
+  [__NR_getgid32]         = sys_getgid,
+  [__NR_getegid32]        = sys_getegid,
+  [__NR_setgid32]         = sys_getgid,
 };
 
 /*
@@ -50,8 +62,10 @@ static void syscall_handler(struct registers_t *regs)
   uint32_t ret;
 
   /* system call not handled */
-  if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL)
+  if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL) {
+    printf("%d\n", regs->eax);
     return;
+  }
 
   /* save current registers */
   memcpy(&current_task->user_regs, regs, sizeof(struct registers_t));

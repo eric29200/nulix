@@ -23,8 +23,12 @@ struct task_t {
   pid_t                       pid;                /* process id */
   pid_t                       pgid;               /* process group id */
   uint8_t                     state;              /* process state */
-  uint16_t                    uid;                /* user id */
-  uint8_t                     gid;                /* group id */
+  uid_t                       uid;                /* user id */
+  uid_t                       euid;               /* effective user id */
+  uid_t                       suid;               /* saved user id */
+  gid_t                       gid;                /* group id */
+  gid_t                       egid;               /* effective group id */
+  gid_t                       sgid;               /* saved group id */
   uint16_t                    umask;              /* umask */
   int                         exit_code;          /* exit code */
   struct task_t *             parent;             /* parent process */
