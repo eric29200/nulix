@@ -35,6 +35,7 @@
 #define __NR_sigaction          67
 #define __NR_stat               106
 #define __NR_wait4              114
+#define __NR_sigreturn          119
 #define __NR_sigprocmask        126
 #define __NR_getpgid            132
 #define __NR_getdents           141
@@ -84,5 +85,6 @@ int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t 
 int sys_kill(pid_t pid, int sig);
 int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
+int sys_sigreturn();
 
 #endif

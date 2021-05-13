@@ -43,6 +43,7 @@ struct task_t {
   struct sigaction_t          signals[NSIGS];     /* signal handlers */
   struct inode_t *            cwd;                /* current working directory */
   struct registers_t          user_regs;          /* saved registers at syscall entry */
+  struct registers_t          signal_regs;        /* saved registers at signal entry */
   struct page_directory_t *   pgd;                /* page directory */
   struct file_t *             filp[NR_OPEN];      /* opened files */
   struct list_head_t          list;               /* next process */

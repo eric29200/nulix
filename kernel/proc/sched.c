@@ -252,11 +252,25 @@ int task_signal_all(int sig)
 }
 
 /*
+ * Signal return trampoline.
+ */
+static int sigreturn()
+{
+  int ret;
+
+  /* call system call register (= go in kernel mode to change interrupt register and go back in previous user code) */
+  __asm__ __volatile__("int $0x80" : "=a" (ret) : "0" (__NR_sigreturn));
+
+  return ret;
+}
+
+/*
  * Handle signal of current task.
  */
 int do_signal(struct registers_t *regs)
 {
   struct sigaction_t *act;
+  uint32_t *esp;
   int sig;
 
   /* get first unblocked signal */
@@ -287,6 +301,18 @@ int do_signal(struct registers_t *regs)
         break;
     }
   }
+
+  /* save interrupt registers, to restore it at the end of signal */
+  memcpy(&current_task->signal_regs, regs, sizeof(struct registers_t));
+
+  /* prepare a stack for signal handler */
+  esp = (uint32_t *) regs->useresp;
+  *(--esp) = sig;
+  *(--esp) = (uint32_t) sigreturn;
+
+  /* changer interrupt registers to return back in signal handler */
+  regs->useresp = (uint32_t) esp;
+  regs->eip = (uint32_t) act->sa_handler;
 
   return 0;
 }
