@@ -47,8 +47,8 @@ static char **copy_array_from_kernel_to_user(char **src, int len)
     return NULL;
 
   ret = (char **) current_task->end_brk;
-  memset(ret, 0, sizeof(char *) * len);
-  current_task->end_brk += sizeof(char *) * len;
+  memset(ret, 0, sizeof(char *) * (len + 1));
+  current_task->end_brk += sizeof(char *) * (len + 1);
 
   for (i = 0; i < len; i++) {
     if (!src[i]) {
@@ -118,22 +118,23 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
   /* prepare user stack */
   stack = current_task->user_stack;
 
-  /* put envp in user stack */
+  /* put envp in user stack (skip last NULL pointer) */
   stack -= 4;
-  *((uint32_t *) stack) = (uint32_t) user_envp;
-  for (i = envp_len - 1; i > 0; i--, stack -= 4)
+  for (i = envp_len - 1; i >= 0; i--) {
+    stack -= 4;
     *((uint32_t *) stack) = (uint32_t) user_envp[i];
+  }
 
-  /* put argv in user stack */
+  /* put argv in user stack (skip last NULL pointer) */
   stack -= 4;
-  *((uint32_t *) stack) = (uint32_t) user_argv;
-  for (i = argv_len - 1; i > 0; i--, stack -= 4)
+  for (i = argv_len - 1; i >= 0; i--) {
+    stack -= 4;
     *((uint32_t *) stack) = (uint32_t) user_argv[i];
+  }
 
   /* put argc in user stack */
   stack -= 4;
   *((uint32_t *) stack) = argv_len;
-
 
   /* set esp and stack */
   current_task->user_regs.eip = current_task->user_entry;
