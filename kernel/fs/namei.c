@@ -707,5 +707,5 @@ int do_getcwd(char *buf, size_t size)
   memcpy(buf, end, n);
   buf[n] = 0;
 
-  return (int) buf;
+  return n;
 }
