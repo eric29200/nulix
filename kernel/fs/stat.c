@@ -32,23 +32,6 @@ int do_stat(const char *filename, struct stat_t *statbuf)
 }
 
 /*
- * Statx system call.
- */
-int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
-{
-  struct inode_t *inode;
-
-  /* get inode */
-  //inode = namei(pathname);
-  //if (!inode)
-  //  return -ENOENT;
-
-  printf("%d %s\n", dirfd, pathname);
-
-  return 0;
-}
-
-/*
  * Check access file.
  */
 int do_access(const char *filename)
