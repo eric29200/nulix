@@ -8,7 +8,7 @@
 */*.bin
 hdd.img
 musl/*
-bash/*
+dash/*
 tmp/*
 usr/init
 usr/sh
