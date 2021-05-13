@@ -121,7 +121,7 @@ struct dirent64_t {
 };
 
 /*
- * Stats file structure.
+ * Stat file structure.
  */
 struct stat_t {
   ino_t     st_ino;
@@ -133,6 +133,39 @@ struct stat_t {
   time_t    st_atime;
   time_t    st_mtime;
   time_t    st_ctime;
+};
+
+/*
+ * Statx timestamp file structure.
+ */
+struct statx_timestamp_t {
+  int64_t   tv_sec;
+  uint32_t  tv_nsec;
+};
+
+/*
+ * Statx file structure.
+ */
+struct statx_t {
+  uint32_t                  stx_mask;
+  uint32_t                  stx_blksize;
+  uint64_t                  stx_attributes;
+  uint32_t                  stx_nlink;
+  uint32_t                  stx_uid;
+  uint32_t                  stx_gid;
+  uint16_t                  stx_mode;
+  uint64_t                  stx_ino;
+  uint64_t                  stx_size;
+  uint64_t                  stx_blocks;
+  uint64_t                  stx_attributes_mask;
+  struct statx_timestamp_t  stx_atime;
+  struct statx_timestamp_t  stx_btime;
+  struct statx_timestamp_t  stx_ctime;
+  struct statx_timestamp_t  stx_mtime;
+  uint32_t                  stx_rdev_major;
+  uint32_t                  stx_rdev_minor;
+  uint32_t                  stx_dev_major;
+  uint32_t                  stx_dev_minor;
 };
 
 /* file system operations */
@@ -174,6 +207,7 @@ ssize_t do_read(int fd, char *buf, int count);
 ssize_t do_write(int fd, const char *buf, int count);
 off_t do_lseek(int fd, off_t offset, int whence);
 int do_stat(const char *filename, struct stat_t *statbuf);
+int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
 int do_access(const char *filename);
 int do_mkdir(const char *pathname, mode_t mode);
 int do_unlink(const char *pathname);

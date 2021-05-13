@@ -3,7 +3,7 @@
 #include <stderr.h>
 
 /*
- * Stats file.
+ * Stat system call.
  */
 int do_stat(const char *filename, struct stat_t *statbuf)
 {
@@ -25,8 +25,25 @@ int do_stat(const char *filename, struct stat_t *statbuf)
   statbuf->st_mtime = inode->i_time;
   statbuf->st_ctime = inode->i_time;
 
-  /* free inode */
+  /* release inode */
   iput(inode);
+
+  return 0;
+}
+
+/*
+ * Statx system call.
+ */
+int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
+{
+  struct inode_t *inode;
+
+  /* get inode */
+  //inode = namei(pathname);
+  //if (!inode)
+  //  return -ENOENT;
+
+  printf("%d %s\n", dirfd, pathname);
 
   return 0;
 }

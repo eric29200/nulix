@@ -652,14 +652,14 @@ int do_getcwd(char *buf, size_t size)
   /* start with current working directory */
   inode = iget(current_task->cwd->i_sb, current_task->cwd->i_ino);
   if (!inode)
-    return -EINVAL;
+    return -ENOENT;
 
   for (n = 0, end = buf + size;;) {
     /* get parent inode */
     parent = iget_parent(inode);
     if (!parent) {
       iput(inode);
-      return -ENOSPC;
+      return -ENOENT;
     }
 
     /* same parent : break */
@@ -672,7 +672,7 @@ int do_getcwd(char *buf, size_t size)
     /* find matching entry in parent */
     bh = find_entryi(parent, inode->i_ino, &de);
     if (!bh)
-      return -ENOSPC;
+      return -ENOENT;
 
     /* check name sizes */
     len = strnlen(de->name, MINIX_FILENAME_LEN);
@@ -707,5 +707,5 @@ int do_getcwd(char *buf, size_t size)
   memcpy(buf, end, n);
   buf[n] = 0;
 
-  return 0;
+  return (int) buf;
 }
