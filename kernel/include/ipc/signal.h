@@ -45,6 +45,10 @@
 #define SIG_UNBLOCK   1
 #define SIG_SETMASK   2
 
+#define SIG_DFL       ((sighandler_t) 0)    /* default signal handler */
+#define SIG_IGN       ((sighandler_t) 1)    /* ignore signal handler */
+#define SIG_ERR       ((sighandler_t) -1)   /* error signal handler */
+
 typedef void (*sighandler_t)(int);
 
 /*

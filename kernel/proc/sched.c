@@ -4,6 +4,7 @@
 #include <proc/sched.h>
 #include <proc/task.h>
 #include <proc/timer.h>
+#include <sys/syscall.h>
 #include <list.h>
 #include <stderr.h>
 
@@ -245,6 +246,46 @@ int task_signal_all(int sig)
     task = list_entry(pos, struct task_t, list);
     if (task->pid > 1)
       __task_signal(task, sig);
+  }
+
+  return 0;
+}
+
+/*
+ * Handle signal of current task.
+ */
+int do_signal(struct registers_t *regs)
+{
+  struct sigaction_t *act;
+  int sig;
+
+  /* get first unblocked signal */
+  for (sig = 0; sig < NSIGS; sig++)
+    if (sigismember(&current_task->sigpend, sig) && !sigismember(&current_task->sigmask, sig))
+      break;
+
+  /* no signal */
+  if (sig == NSIGS)
+    return 0;
+
+  /* remove signal from current task */
+  sigdelset(&current_task->sigpend, sig);
+  act = &current_task->signals[sig - 1];
+
+  /* ignore signal handler */
+  if (act->sa_handler == SIG_IGN || act->sa_handler == NULL)
+    return 0;
+
+  /* default signal handler */
+  if (act->sa_handler == SIG_DFL) {
+    switch (sig) {
+      /* ignore those signals */
+      case SIGCONT: case SIGCHLD: case SIGWINCH:
+        return 0;
+      default:
+        sys_exit(sig);
+        break;
+    }
   }
 
   return 0;

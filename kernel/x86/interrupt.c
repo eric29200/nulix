@@ -1,5 +1,7 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
+#include <proc/sched.h>
+#include <ipc/signal.h>
 #include <stdio.h>
 
 /*
@@ -65,4 +67,8 @@ void isr_handler(struct registers_t *regs)
       printf(", message=%s", exception_messages[regs->int_no]);
     printf("\n");
   }
+
+  /* handle pending signals */
+  if (!sigisemptyset(&current_task->sigpend))
+    do_signal(regs);
 }
