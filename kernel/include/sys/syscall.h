@@ -50,6 +50,7 @@
 #define __NR_nanosleep          162
 #define __NR_rt_sigaction       174
 #define __NR_rt_sigprocmask     175
+#define __NR_getcwd             183
 #define __NR_getuid32           199
 #define __NR_getgid32           200
 #define __NR_geteuid32          201
@@ -102,5 +103,6 @@ int sys_setuid(uid_t uid);
 gid_t sys_getgid();
 gid_t sys_getegid();
 int sys_setgid(gid_t gid);
+int sys_getcwd(char *buf, size_t size);
 
 #endif

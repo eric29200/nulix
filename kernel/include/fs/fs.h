@@ -145,6 +145,7 @@ void brelse(struct buffer_head_t *bh);
 
 /* inode operations */
 struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
+struct inode_t *iget_parent(struct inode_t *dir);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode();
 struct inode_t *new_inode();
@@ -179,5 +180,6 @@ int do_unlink(const char *pathname);
 int do_rmdir(const char *pathname);
 int do_getdents(int fd, struct dirent_t *dirent, uint32_t count);
 int do_getdents64(int fd, void *dirp, size_t count);
+int do_getcwd(char *buf, size_t size);
 
 #endif

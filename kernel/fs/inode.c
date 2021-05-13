@@ -263,3 +263,34 @@ void iput(struct inode_t *inode)
   if (inode->i_ref == 0)
     memset(inode, 0, sizeof(struct inode_t));
 }
+
+/*
+ * Get parent inode.
+ */
+struct inode_t *iget_parent(struct inode_t *dir)
+{
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  struct inode_t *parent;
+
+  if (!dir || !S_ISDIR(dir->i_mode))
+    return NULL;
+
+  /* read first block */
+  bh = bread(dir->i_dev, dir->i_zone[0]);
+  if (!bh)
+    return NULL;
+
+  /* parent directory (..) is always the second entry */
+  de = (struct minix_dir_entry_t *) bh->b_data;
+  de++;
+
+  /* get inode */
+  parent = iget(dir->i_sb, de->inode);
+
+  /* release buffer */
+  brelse(bh);
+
+  return parent;
+}
+

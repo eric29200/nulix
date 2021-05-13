@@ -1,7 +1,7 @@
 CC		= ../musl/musl-1.2.0-build/bin/musl-gcc
 CFLAGS		= -Wall
 
-all: init sh echo ls cat mkdir touch rm rmdir test_signal
+all: init sh echo ls cat mkdir touch rm rmdir test_signal pwd
 
 init: init.o
 	$(CC) $(CFLAGS) -o $@ $< -static
@@ -33,5 +33,8 @@ rmdir: rmdir.o
 test_signal: test_signal.o
 	$(CC) $(CFLAGS) -o $@ $< -static
 
+pwd: pwd.o
+	$(CC) $(CFLAGS) -o $@ $< -static
+
 clean:
-	rm -f *.o init sh echo ls cat mkdir touch rm rmdir test_signal
+	rm -f *.o init sh echo ls cat mkdir touch rm rmdir test_signal pwd
