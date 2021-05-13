@@ -252,7 +252,7 @@ int task_signal_all(int sig)
 }
 
 /*
- * Signal return trampoline.
+ * Signal return trampoline (this code is executed in user mode).
  */
 static int sigreturn()
 {
