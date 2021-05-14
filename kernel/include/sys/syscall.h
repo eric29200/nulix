@@ -8,7 +8,7 @@
 #include <resource.h>
 #include <time.h>
 
-#define SYSCALLS_NUM            (__NR_getdents64 + 1)
+#define SYSCALLS_NUM            (__NR_fcntl64 + 1)
 
 #define __NR_exit               1
 #define __NR_fork               2
@@ -36,6 +36,7 @@
 #define __NR_geteuid            49
 #define __NR_getegid            50
 #define __NR_ioctl              54
+#define __NR_fcntl              55
 #define __NR_setpgid            57
 #define __NR_dup2               63
 #define __NR_getppid            64
@@ -59,6 +60,7 @@
 #define __NR_setuid32           213
 #define __NR_setgid32           214
 #define __NR_getdents64         220
+#define __NR_fcntl64            221
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -106,5 +108,6 @@ gid_t sys_getegid();
 int sys_setgid(gid_t gid);
 int sys_getcwd(char *buf, size_t size);
 int sys_ioctl(int fd, unsigned long request, void *arg);
+int sys_fcntl(int fd, int cmd, unsigned long arg);
 
 #endif

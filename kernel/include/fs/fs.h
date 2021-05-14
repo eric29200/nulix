@@ -85,6 +85,7 @@ struct inode_t {
  */
 struct file_t {
   uint16_t          f_mode;
+  int               f_flags;
   size_t            f_pos;
   int               f_ref;
   struct inode_t *  f_inode;

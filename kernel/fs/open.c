@@ -44,6 +44,7 @@ int do_open(const char *pathname, int flags, mode_t mode)
   current_task->filp[fd] = &filp_table[i];
   current_task->filp[fd]->f_mode = inode->i_mode;
   current_task->filp[fd]->f_inode = inode;
+  current_task->filp[fd]->f_flags = flags;
   current_task->filp[fd]->f_pos = 0;
   current_task->filp[fd]->f_ref++;
 
