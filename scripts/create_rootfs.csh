@@ -25,7 +25,6 @@ sudo cp usr/rm tmp/bin
 sudo cp usr/rmdir tmp/bin
 sudo cp usr/pwd tmp/bin
 sudo cp usr/test_signal tmp/bin
-sudo cp dash/dash-0.5.10.2-build/bin/dash tmp/bin
 
 # create devices nodes
 sudo mkdir tmp/dev

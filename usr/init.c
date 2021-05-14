@@ -36,7 +36,7 @@ pid_t spawn_shell(int tty_num)
     tcsetpgrp(fd, pid);
 
     /* exec a shell */
-    if (execl("/bin/dash", "dash", "-i", NULL) == -1)
+    if (execl("/bin/sh", "sh", "-i", NULL) == -1)
       exit(0);
   }
 
