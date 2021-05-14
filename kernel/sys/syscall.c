@@ -53,6 +53,7 @@ static const void *syscalls[] = {
   [__NR_getegid32]        = sys_getegid,
   [__NR_setgid32]         = sys_getgid,
   [__NR_getcwd]           = sys_getcwd,
+  [__NR_ioctl]            = sys_ioctl,
 };
 
 /*

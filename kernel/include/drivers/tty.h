@@ -2,6 +2,7 @@
 #define _TTY_H_
 
 #include <drivers/screen.h>
+#include <drivers/termios.h>
 
 #define TTY_BUF_SIZE            256
 #define TTY_DELAY_UPDATE_MS     20
@@ -14,6 +15,7 @@ struct tty_t {
   uint32_t          r_pos;
   uint32_t          w_pos;
   char              buf[TTY_BUF_SIZE];
+  struct winsize_t  winsize;
   struct screen_t   screen;
 };
 
@@ -22,5 +24,6 @@ size_t tty_read(dev_t dev, void *buf, size_t n);
 size_t tty_write(dev_t dev, const void *buf, size_t n);
 void tty_update(char c);
 void tty_change(uint32_t n);
+int tty_ioctl(dev_t dev, int request, void *arg);
 
 #endif

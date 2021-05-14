@@ -1,8 +1,10 @@
 #include <drivers/serial.h>
+#include <drivers/termios.h>
 #include <drivers/tty.h>
 #include <drivers/pit.h>
 #include <proc/sched.h>
 #include <proc/timer.h>
+#include <stdio.h>
 #include <stderr.h>
 #include <time.h>
 #include <dev.h>
@@ -154,6 +156,30 @@ static void tty_refresh()
 }
 
 /*
+ * TTY ioctl.
+ */
+int tty_ioctl(dev_t dev, int request, void *arg)
+{
+  struct tty_t *tty;
+
+  /* get tty */
+  tty = tty_lookup(dev);
+  if (!tty)
+    return -EINVAL;
+
+  switch (request) {
+    case TIOCGWINSZ:
+      memcpy(arg, &tty->winsize, sizeof(struct winsize_t));
+      break;
+    default:
+      printf("Unknown ioctl request (%x) on device %x\n", request, dev);
+      break;
+  }
+
+  return 0;
+}
+
+/*
  * Init TTYs.
  */
 int init_tty()
@@ -167,6 +193,10 @@ int init_tty()
     tty_table[i].w_pos = 0;
     tty_table[i].buf[0] = 0;
     screen_init(&tty_table[i].screen);
+    tty_table[i].winsize.ws_row = SCREEN_HEIGHT;
+    tty_table[i].winsize.ws_col = SCREEN_WIDTH;
+    tty_table[i].winsize.ws_xpixel = 0;
+    tty_table[i].winsize.ws_ypixel = 0;
   }
 
   /* set current tty to first tty */
