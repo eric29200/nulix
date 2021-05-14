@@ -7,7 +7,7 @@
 /*
  * Ioctl system call.
  */
-int sys_ioctl(int fd, unsigned long request, void *arg)
+int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 {
   struct file_t *filp;
   dev_t dev;

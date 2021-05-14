@@ -11,19 +11,21 @@
  * TTY structure.
  */
 struct tty_t {
-  dev_t             dev;
-  uint32_t          r_pos;
-  uint32_t          w_pos;
-  char              buf[TTY_BUF_SIZE];
-  struct winsize_t  winsize;
-  struct screen_t   screen;
+  dev_t             dev;                  /* dev number */
+  pid_t             pgrp;                 /* process group id */
+  uint32_t          r_pos;                /* read position */
+  uint32_t          w_pos;                /* write positions */
+  char              buf[TTY_BUF_SIZE];    /* tty buffer */
+  struct winsize_t  winsize;              /* window size */
+  struct screen_t   screen;               /* screen of the tty */
 };
 
 int init_tty();
+dev_t tty_get();
 size_t tty_read(dev_t dev, void *buf, size_t n);
 size_t tty_write(dev_t dev, const void *buf, size_t n);
 void tty_update(char c);
 void tty_change(uint32_t n);
-int tty_ioctl(dev_t dev, int request, void *arg);
+int tty_ioctl(dev_t dev, int request, unsigned long arg);
 
 #endif

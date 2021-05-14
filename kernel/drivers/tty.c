@@ -23,7 +23,7 @@ static struct tty_t *tty_lookup(dev_t dev)
 {
   /* current tty */
   if (dev == DEV_TTY)
-    return &tty_table[current_tty];
+    current_task->tty;
 
   /* asked tty */
   if (minor(dev) > 0 && minor(dev) <= NB_TTYS)
@@ -87,6 +87,23 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
 
 out:
   return count;
+}
+
+/*
+ * Get a free tty.
+ */
+dev_t tty_get()
+{
+  int i;
+
+  for (i = 0; i < NB_TTYS; i++) {
+    if (tty_table[i].pgrp == 0 || tty_table[i].pgrp == current_task->pgid) {
+      tty_table[i].pgrp = current_task->pgid;
+      return tty_table[i].dev;
+    }
+  }
+
+  return -ENOENT;
 }
 
 /*
@@ -162,7 +179,7 @@ static void tty_refresh()
 /*
  * TTY ioctl.
  */
-int tty_ioctl(dev_t dev, int request, void *arg)
+int tty_ioctl(dev_t dev, int request, unsigned long arg)
 {
   struct tty_t *tty;
 
@@ -173,7 +190,13 @@ int tty_ioctl(dev_t dev, int request, void *arg)
 
   switch (request) {
     case TIOCGWINSZ:
-      memcpy(arg, &tty->winsize, sizeof(struct winsize_t));
+      memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
+      break;
+    case TIOCGPGRP:
+      *((pid_t *) arg) = tty->pgrp;
+      break;
+    case TIOCSPGRP:
+      tty->pgrp = *((pid_t *) arg);
       break;
     default:
       printf("Unknown ioctl request (%x) on device %x\n", request, dev);
@@ -193,6 +216,7 @@ int init_tty()
   /* init each tty */
   for (i = 0; i < NB_TTYS; i++) {
     tty_table[i].dev = DEV_TTY1 + i;
+    tty_table[i].pgrp = 0;
     tty_table[i].r_pos = 0;
     tty_table[i].w_pos = 0;
     tty_table[i].buf[0] = 0;

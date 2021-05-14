@@ -107,7 +107,7 @@ gid_t sys_getgid();
 gid_t sys_getegid();
 int sys_setgid(gid_t gid);
 int sys_getcwd(char *buf, size_t size);
-int sys_ioctl(int fd, unsigned long request, void *arg);
+int sys_ioctl(int fd, unsigned long request, unsigned long arg);
 int sys_fcntl(int fd, int cmd, unsigned long arg);
 
 #endif

@@ -30,6 +30,7 @@ struct task_t {
   gid_t                       egid;               /* effective group id */
   gid_t                       sgid;               /* saved group id */
   uint16_t                    umask;              /* umask */
+  dev_t                       tty;                /* attached tty */
   int                         exit_code;          /* exit code */
   struct task_t *             parent;             /* parent process */
   uint32_t                    kernel_stack;       /* kernel stack */

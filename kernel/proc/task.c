@@ -69,6 +69,7 @@ static struct task_t *create_task(struct task_t *parent)
   task->egid = parent ? parent->egid : 0;
   task->sgid = parent ? parent->sgid : 0;
   task->umask = parent ? parent->umask : 0022;
+  task->tty = parent ? parent->tty : 0;
   task->user_stack = parent ? parent->user_stack : 0;
   task->start_text = parent ? parent->start_text : 0;
   task->end_text = parent ? parent->end_text : 0;
