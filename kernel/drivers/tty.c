@@ -110,7 +110,7 @@ dev_t tty_get()
     }
   }
 
-  return -ENOENT;
+  return (dev_t) -ENOENT;
 }
 
 /*

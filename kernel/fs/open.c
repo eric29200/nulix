@@ -21,7 +21,7 @@ int do_open(const char *pathname, int flags, mode_t mode)
   /* get a new tty */
   if (strcmp(pathname, "/dev/tty") == 0) {
     current_task->tty = tty_get();
-    if (current_task->tty < 0)
+    if ((int) current_task->tty < 0)
       return -EBUSY;
   }
 
