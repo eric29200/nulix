@@ -29,6 +29,7 @@ sudo cp dash/dash-0.5.10.2-build/bin/dash tmp/bin
 
 # create devices nodes
 sudo mkdir tmp/dev
+sudo mknod tmp/dev/tty c 4 0
 sudo mknod tmp/dev/tty1 c 4 1
 sudo mknod tmp/dev/tty2 c 4 2
 sudo mknod tmp/dev/tty3 c 4 3

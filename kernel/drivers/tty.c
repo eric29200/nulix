@@ -13,7 +13,7 @@
 
 /* global ttys */
 static struct tty_t tty_table[NB_TTYS];
-static uint32_t current_tty;
+static int current_tty;
 static struct timer_event_t refresh_tm;
 
 /*
@@ -21,6 +21,10 @@ static struct timer_event_t refresh_tm;
  */
 static struct tty_t *tty_lookup(dev_t dev)
 {
+  /* current tty */
+  if (dev == DEV_TTY)
+    return &tty_table[current_tty];
+
   /* asked tty */
   if (minor(dev) > 0 && minor(dev) <= NB_TTYS)
     return &tty_table[minor(dev) - 1];
