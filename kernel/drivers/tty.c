@@ -21,9 +21,16 @@ static struct timer_event_t refresh_tm;
  */
 static struct tty_t *tty_lookup(dev_t dev)
 {
+  int i;
+
   /* current tty */
-  if (dev == DEV_TTY)
-    current_task->tty;
+  if (dev == DEV_TTY) {
+    for (i = 0; i < NB_TTYS; i++)
+      if (current_task->tty == tty_table[i].dev)
+        return &tty_table[i];
+
+    return NULL;
+  }
 
   /* asked tty */
   if (minor(dev) > 0 && minor(dev) <= NB_TTYS)

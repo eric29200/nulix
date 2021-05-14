@@ -13,9 +13,9 @@
  */
 pid_t spawn_shell(int tty_num)
 {
-  pid_t pid, fd;
   char tty[32];
-  pid_t pgrp;
+  pid_t pid;
+  int fd;
 
   /* set tty */
   sprintf(tty, "/dev/tty%d", tty_num);
@@ -23,14 +23,14 @@ pid_t spawn_shell(int tty_num)
   /* create a new process */
   pid = fork();
   if (pid == 0) {
-    /* create a new process group (identified by current pid = leader process) */
-    pid = getpid();
-    setpgid(pid, pid);
-
-    /* open tty (stdin, stdout, stderr) */
+    /* open tty as stdin, stdout, stderr */
     fd = open(tty, O_RDWR, 0);
     dup(0);
     dup(0);
+
+    /* create a new process group (identified by current pid = leader process) */
+    pid = getpid();
+    setpgid(pid, pid);
 
     /* mark tty attached to this group */
     tcsetpgrp(fd, pid);

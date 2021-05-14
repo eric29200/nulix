@@ -1,6 +1,7 @@
 #include <fs/fs.h>
-#include <proc/sched.h>
 #include <mm/mm.h>
+#include <drivers/tty.h>
+#include <proc/sched.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -16,6 +17,13 @@ int do_open(const char *pathname, int flags, mode_t mode)
 {
   struct inode_t *inode;
   int fd, i, ret;
+
+  /* get a new tty */
+  if (strcmp(pathname, "/dev/tty") == 0) {
+    current_task->tty = tty_get();
+    if (current_task->tty < 0)
+      return -EBUSY;
+  }
 
   /* find a free slot in current process */
   for (fd = 0; fd < NR_OPEN; fd++)
