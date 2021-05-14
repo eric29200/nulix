@@ -116,7 +116,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
   stack = current_task->user_stack;
 
   /* put envp in user stack (skip last NULL pointer) */
-  stack -= 4;
   for (i = envp_len - 1; i >= 0; i--) {
     stack -= 4;
     *((uint32_t *) stack) = (uint32_t) user_envp[i];
