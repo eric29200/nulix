@@ -7,7 +7,6 @@
 #include <unistd.h>
 
 #define NTTYS     4
-#define SH        "/bin/sh"
 
 /*
  * Spwan a shell on tty.
@@ -23,15 +22,13 @@ pid_t spawn_shell(int tty_num)
   /* create a new process */
   pid = fork();
   if (pid == 0) {
-    /* open tty */
+    /* open tty (stdin, stdout, stderr) */
     open(tty, O_RDWR, 0);
-
-    /* dup stdin to sdout and stderr */
     dup(0);
     dup(0);
 
     /* exec a shell */
-    if (execl(SH, SH, NULL) == -1)
+    if (execl("/bin/dash", "dash", "-i", NULL) == -1)
       exit(0);
   }
 
