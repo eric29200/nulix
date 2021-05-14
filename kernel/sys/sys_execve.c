@@ -43,9 +43,6 @@ static char **copy_array_from_kernel_to_user(char **src, int len)
   int i, slen;
   char **ret;
 
-  if (!src || len <= 0)
-    return NULL;
-
   ret = (char **) current_task->end_brk;
   memset(ret, 0, sizeof(char *) * (len + 1));
   current_task->end_brk += sizeof(char *) * (len + 1);
@@ -126,7 +123,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
   }
 
   /* put argv in user stack (skip last NULL pointer) */
-  stack -= 4;
   for (i = argv_len - 1; i >= 0; i--) {
     stack -= 4;
     *((uint32_t *) stack) = (uint32_t) user_argv[i];
