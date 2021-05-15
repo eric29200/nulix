@@ -63,7 +63,7 @@ static int segment_load(int fd, int off)
 
   /* map pages */
   for (i = ph.p_vaddr; i < PAGE_ALIGN_UP(ph.p_vaddr + ph.p_filesz); i += PAGE_SIZE)
-    map_page(i, current_task->pgd, 0, 1);
+    map_page(i, current_task->pgd, 0, ph.p_flags & FLAG_WRITE ? 1 : 0);
 
   /* seek to elf segment */
   ret = do_lseek(fd, ph.p_offset, SEEK_SET);

@@ -1,5 +1,5 @@
 CC		= ../musl/musl-1.2.0-build/bin/musl-gcc
-CFLAGS		= -Wall
+CFLAGS		= -Wall -ffreestanding
 
 all: init sh echo ls cat mkdir touch rm rmdir test_signal pwd
 
