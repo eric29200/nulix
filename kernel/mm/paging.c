@@ -146,8 +146,8 @@ void page_fault_handler(struct registers_t *regs)
     return;
 
   /* output message */
-  printf("Page fault at address=%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d %x\n",
-         fault_addr, present, write, user, reserved, id, regs->eip);
+  printf("Page fault at address=%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d\n",
+         fault_addr, present, write, user, reserved, id);
 
   /* user mode : exit process */
   if (user)
