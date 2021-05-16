@@ -1,5 +1,5 @@
 CC		= ../musl/musl-1.2.0-build/bin/musl-gcc
-CFLAGS		= -Wall -ffreestanding
+CFLAGS		= -m32 -ffreestanding -fno-stack-protector -Wall -Wextra
 
 all: init sh echo ls cat mkdir touch rm rmdir test_signal pwd
 
