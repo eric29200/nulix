@@ -8,7 +8,7 @@ void test_handler(int signum)
   printf("signal %d received : \n", signum);
 }
 
-int main(int argc, char **argv)
+int main()
 {
   struct sigaction act;
   pid_t pid;

@@ -76,7 +76,8 @@ static int segment_load(int fd, int off)
     return -ENOSPC;
 
   /* update end text position */
-  current_task->end_text = ph.p_vaddr + ph.p_filesz;
+  if (ph.p_vaddr + ph.p_filesz > current_task->end_text)
+    current_task->end_text = ph.p_vaddr + ph.p_filesz;
 
   return 0;
 }
