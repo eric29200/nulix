@@ -9,16 +9,6 @@
 hdd.img
 musl/*
 dash/*
+coreutils/*
 tmp/*
 usr/init
-usr/sh
-usr/echo
-usr/ls
-usr/cat
-usr/mkdir
-usr/touch
-usr/rm
-usr/rmdir
-usr/pwd
-usr/test_signal
-libc/libc.a
