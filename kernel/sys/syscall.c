@@ -56,6 +56,7 @@ static const void *syscalls[] = {
   [__NR_ioctl]            = sys_ioctl,
   [__NR_fcntl]            = sys_fcntl,
   [__NR_fcntl64]          = sys_fcntl,
+  [__NR_statx]            = sys_statx,
 };
 
 /*

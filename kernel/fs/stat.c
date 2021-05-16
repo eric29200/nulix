@@ -1,6 +1,9 @@
 #include <fs/fs.h>
 #include <mm/mm.h>
 #include <stderr.h>
+#include <string.h>
+#include <fcntl.h>
+#include <stdio.h>
 
 /*
  * Stat system call.
@@ -28,6 +31,51 @@ int do_stat(const char *filename, struct stat_t *statbuf)
   /* release inode */
   iput(inode);
 
+  return 0;
+}
+
+/*
+ * Statx system call.
+ */
+int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
+{
+  struct inode_t *inode;
+
+  /* unused mask and flags */
+  UNUSED(flags);
+  UNUSED(mask);
+
+
+  /* use absolute path name or relative to cwd */
+  if (dirfd != AT_FDCWD) {
+    printf("statx (dirfd = %d, flags = %x) not implemented\n");
+    return -EINVAL;
+  }
+
+  /* get inode */
+  inode = namei(pathname);
+  if (!inode)
+    return -ENOENT;
+
+  /* reset stat buf */
+  memset(statbuf, 0, sizeof(struct statx_t));
+
+  /* fill stat */
+  statbuf->stx_mask |= STATX_BASIC_STATS;
+  statbuf->stx_blksize = BLOCK_SIZE;
+  statbuf->stx_nlink = inode->i_nlinks;
+  statbuf->stx_uid = inode->i_uid;
+  statbuf->stx_gid = inode->i_gid;
+  statbuf->stx_mode = inode->i_mode;
+  statbuf->stx_ino = inode->i_ino;
+  statbuf->stx_size = inode->i_size;
+  statbuf->stx_atime.tv_sec = inode->i_time;
+  statbuf->stx_btime.tv_sec = inode->i_time;
+  statbuf->stx_ctime.tv_sec = inode->i_time;
+  statbuf->stx_mtime.tv_sec = inode->i_time;
+
+  /* release inode */
+  iput(inode);
   return 0;
 }
 

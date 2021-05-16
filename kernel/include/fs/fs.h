@@ -1,7 +1,7 @@
 #ifndef _FS_H_
 #define _FS_H_
 
-#include <stddef.h>
+#include <fs/stat.h>
 #include <drivers/ata.h>
 
 #define NR_INODE                      256
@@ -121,21 +121,6 @@ struct dirent64_t {
   char            d_name[];
 };
 
-/*
- * Stat file structure.
- */
-struct stat_t {
-  ino_t     st_ino;
-  uint16_t  st_mode;
-  uint8_t   st_nlinks;
-  uid_t     st_uid;
-  gid_t     st_gid;
-  size_t    st_size;
-  time_t    st_atime;
-  time_t    st_mtime;
-  time_t    st_ctime;
-};
-
 /* file system operations */
 int mount_root(struct ata_device_t *dev);
 
@@ -175,6 +160,7 @@ ssize_t do_read(int fd, char *buf, int count);
 ssize_t do_write(int fd, const char *buf, int count);
 off_t do_lseek(int fd, off_t offset, int whence);
 int do_stat(const char *filename, struct stat_t *statbuf);
+int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
 int do_access(const char *filename);
 int do_mkdir(const char *pathname, mode_t mode);
 int do_unlink(const char *pathname);

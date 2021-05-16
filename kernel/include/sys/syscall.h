@@ -8,7 +8,7 @@
 #include <resource.h>
 #include <time.h>
 
-#define SYSCALLS_NUM            (__NR_fcntl64 + 1)
+#define SYSCALLS_NUM            (__NR_statx + 1)
 
 #define __NR_exit               1
 #define __NR_fork               2
@@ -61,6 +61,7 @@
 #define __NR_setgid32           214
 #define __NR_getdents64         220
 #define __NR_fcntl64            221
+#define __NR_statx              383
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -75,6 +76,7 @@ int sys_close(int fd);
 void *sys_brk(void *addr);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);
 int sys_stat(const char *filename, struct stat_t *statbuf);
+int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
 int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
 pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
