@@ -1,0 +1,46 @@
+lib/close-stream.o: lib/close-stream.c lib/config.h lib/close-stream.h \
+ lib/stdio.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdio.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdarg.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
+ lib/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h \
+ lib/sys/select.h lib/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h \
+ lib/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/errno.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/errno.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h \
+ lib/fpending.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdio_ext.h \
+ lib/unlocked-io.h
+lib/config.h:
+lib/close-stream.h:
+lib/stdio.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdio.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdarg.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
+lib/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h:
+lib/sys/select.h:
+lib/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h:
+lib/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/errno.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/errno.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h:
+lib/fpending.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdio_ext.h:
+lib/unlocked-io.h:

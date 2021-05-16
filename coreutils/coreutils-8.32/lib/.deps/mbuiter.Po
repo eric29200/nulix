@@ -1,0 +1,72 @@
+lib/mbuiter.o: lib/mbuiter.c lib/config.h lib/mbuiter.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/assert.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h \
+ lib/stdlib.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdlib.h \
+ lib/alloca.h lib/unistd.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/unistd.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/posix.h \
+ lib/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h \
+ lib/sys/select.h lib/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h \
+ lib/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h \
+ lib/getopt-cdefs.h lib/getopt-pfx-core.h lib/getopt-core.h lib/string.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/string.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/strings.h \
+ lib/stdio.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdio.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdarg.h \
+ lib/time.h /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/time.h \
+ lib/wchar.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/wchar.h \
+ lib/mbchar.h lib/wctype.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/wctype.h \
+ lib/strnlen1.h
+lib/config.h:
+lib/mbuiter.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/assert.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:
+lib/stdlib.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdlib.h:
+lib/alloca.h:
+lib/unistd.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/unistd.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/posix.h:
+lib/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h:
+lib/sys/select.h:
+lib/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h:
+lib/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h:
+lib/getopt-cdefs.h:
+lib/getopt-pfx-core.h:
+lib/getopt-core.h:
+lib/string.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/string.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/strings.h:
+lib/stdio.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdio.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdarg.h:
+lib/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/time.h:
+lib/wchar.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/wchar.h:
+lib/mbchar.h:
+lib/wctype.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/wctype.h:
+lib/strnlen1.h:

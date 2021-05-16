@@ -1,0 +1,11 @@
+lib/stripslash.o: lib/stripslash.c lib/config.h lib/dirname.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h \
+ lib/dosname.h
+lib/config.h:
+lib/dirname.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:
+lib/dosname.h:

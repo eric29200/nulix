@@ -1,0 +1,27 @@
+lib/rand-isaac.o: lib/rand-isaac.c lib/config.h lib/rand-isaac.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h \
+ lib/stdint.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdint.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/stdint.h \
+ lib/limits.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/limits.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/limits.h \
+ lib/string.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/string.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/strings.h
+lib/config.h:
+lib/rand-isaac.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:
+lib/stdint.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdint.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/stdint.h:
+lib/limits.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/limits.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/limits.h:
+lib/string.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/string.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/strings.h:

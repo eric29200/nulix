@@ -1,0 +1,90 @@
+lib/tempname.o: lib/tempname.c lib/config.h lib/tempname.h lib/stdio.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdio.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdarg.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
+ lib/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h \
+ lib/sys/select.h lib/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h \
+ lib/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h \
+ lib/randint.h lib/stdint.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdint.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/stdint.h \
+ lib/limits.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/limits.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/limits.h \
+ lib/randread.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/assert.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/errno.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/errno.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h \
+ lib/stdlib.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdlib.h \
+ lib/alloca.h lib/unistd.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/unistd.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/posix.h \
+ lib/getopt-cdefs.h lib/getopt-pfx-core.h lib/getopt-core.h lib/string.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/string.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/strings.h \
+ lib/fcntl.h lib/sys/stat.h lib/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/stat.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/stat.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/fcntl.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/fcntl.h
+lib/config.h:
+lib/tempname.h:
+lib/stdio.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdio.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdarg.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
+lib/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h:
+lib/sys/select.h:
+lib/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h:
+lib/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h:
+lib/randint.h:
+lib/stdint.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdint.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/stdint.h:
+lib/limits.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/limits.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/limits.h:
+lib/randread.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/assert.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/errno.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/errno.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h:
+lib/stdlib.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdlib.h:
+lib/alloca.h:
+lib/unistd.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/unistd.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/posix.h:
+lib/getopt-cdefs.h:
+lib/getopt-pfx-core.h:
+lib/getopt-core.h:
+lib/string.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/string.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/strings.h:
+lib/fcntl.h:
+lib/sys/stat.h:
+lib/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/stat.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/stat.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/fcntl.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/fcntl.h:

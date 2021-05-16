@@ -1,2 +1,0 @@
-- Implement fcntl/fcntl64 and F_DUPFD request
-  + print an error message if cmd is not know

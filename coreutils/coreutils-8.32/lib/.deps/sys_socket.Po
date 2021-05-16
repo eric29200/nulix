@@ -1,0 +1,38 @@
+lib/sys_socket.o: lib/sys_socket.c lib/config.h lib/sys/socket.h \
+ lib/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h \
+ lib/sys/select.h lib/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h \
+ lib/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
+ lib/sys/socket.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/socket.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/socket.h \
+ lib/sys/uio.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/uio.h
+lib/config.h:
+lib/sys/socket.h:
+lib/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h:
+lib/sys/select.h:
+lib/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h:
+lib/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
+lib/sys/socket.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/socket.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/socket.h:
+lib/sys/uio.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/uio.h:

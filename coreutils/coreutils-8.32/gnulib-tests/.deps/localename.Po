@@ -1,0 +1,86 @@
+localename.o: localename.c ../lib/config.h localename.h ../lib/limits.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/limits.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/limits.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
+ ../lib/stdlib.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdlib.h \
+ ../lib/alloca.h ../lib/unistd.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/unistd.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/posix.h \
+ ../lib/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h \
+ ../lib/sys/select.h ../lib/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h \
+ ../lib/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h \
+ ../lib/getopt-cdefs.h ../lib/getopt-pfx-core.h ../lib/getopt-core.h \
+ ../lib/locale.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/locale.h \
+ ../lib/setlocale_null.h ../lib/arg-nonnull.h ../lib/string.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/string.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/strings.h \
+ ../lib/flexmember.h ../lib/setlocale_null.h ../lib/langinfo.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/langinfo.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/nl_types.h \
+ ../lib/glthread/lock.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/errno.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/errno.h \
+ ../lib/pthread.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/pthread.h \
+ ../lib/sched.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sched.h \
+ ../lib/time.h \
+ /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/time.h
+../lib/config.h:
+localename.h:
+../lib/limits.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/limits.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/features.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/limits.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
+../lib/stdlib.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdlib.h:
+../lib/alloca.h:
+../lib/unistd.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/unistd.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/posix.h:
+../lib/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/types.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/endian.h:
+../lib/sys/select.h:
+../lib/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sys/select.h:
+../lib/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/signal.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/signal.h:
+../lib/getopt-cdefs.h:
+../lib/getopt-pfx-core.h:
+../lib/getopt-core.h:
+../lib/locale.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/locale.h:
+../lib/setlocale_null.h:
+../lib/arg-nonnull.h:
+../lib/string.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/string.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/strings.h:
+../lib/flexmember.h:
+../lib/setlocale_null.h:
+../lib/langinfo.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/langinfo.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/nl_types.h:
+../lib/glthread/lock.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/errno.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/errno.h:
+../lib/pthread.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/pthread.h:
+../lib/sched.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/sched.h:
+../lib/time.h:
+/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/time.h:
