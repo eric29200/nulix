@@ -1,5 +1,6 @@
 #include <sys/syscall.h>
 #include <proc/sched.h>
+#include <proc/wait.h>
 #include <stderr.h>
 
 /*
@@ -41,6 +42,10 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
     /* no children : return error */
     if (!has_children)
       return -ESRCH;
+
+    /* no wait : return */
+    if (options & WNOHANG)
+      return 0;
 
     /* else wait for child */
     task_sleep(current_task);
