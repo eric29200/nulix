@@ -36,16 +36,18 @@
 #define SEEK_CUR      1
 #define SEEK_END      2
 
-#define O_PATH        010000000
-#define O_SEARCH      O_PATH
+#define O_ACCMODE     0003
 #define O_RDONLY      00
 #define O_WRONLY      01
 #define O_RDWR        02
-#define O_ACCMODE     (03 | O_SEARCH)
 #define O_CREAT       0100
-#define O_TRUNC       01000
 #define O_EXCL        0200
 #define O_NOCTTY      0400
+#define O_TRUNC       01000
+#define O_APPEND      02000
+#define O_NONBLOCK    04000
+#define O_NDELAY      O_NONBLOCK
+#define O_SYNC        010000
 
 #define F_DUPFD       0       /* fcntl : dup file descriptor (with a free slot after argument) */
 #define F_GETFD       1       /* fcntl : get file mode */

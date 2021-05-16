@@ -51,13 +51,20 @@ out:
  */
 int file_write(struct inode_t *inode, struct file_t *filp, const char *buf, int count)
 {
-  int pos, nb_chars, left, block_nr;
+  uint32_t pos, nb_chars, left;
   struct buffer_head_t *bh;
+  int block_nr;
+
+  /* handle append flag */
+  if (filp->f_flags & O_APPEND)
+    pos = inode->i_size;
+  else
+    pos = filp->f_pos;
 
   left = count;
   while (left > 0) {
     /* get/create block number */
-    block_nr = bmap(inode, filp->f_pos / BLOCK_SIZE, 1);
+    block_nr = bmap(inode, pos / BLOCK_SIZE, 1);
     if (!block_nr)
       goto out;
 
@@ -67,7 +74,7 @@ int file_write(struct inode_t *inode, struct file_t *filp, const char *buf, int 
       goto out;
 
     /* find position and number of chars to read */
-    pos = filp->f_pos % BLOCK_SIZE;
+    pos = pos % BLOCK_SIZE;
     nb_chars = BLOCK_SIZE - pos <= left ? BLOCK_SIZE - pos : left;
 
     /* copy into buffer */
@@ -78,17 +85,18 @@ int file_write(struct inode_t *inode, struct file_t *filp, const char *buf, int 
     brelse(bh);
 
     /* update sizes */
-    filp->f_pos += nb_chars;
+    pos += nb_chars;
     buf += nb_chars;
     left -= nb_chars;
 
     /* end of file : grow it and mark inode dirty */
-    if (filp->f_pos > filp->f_inode->i_size) {
-      filp->f_inode->i_size = filp->f_pos;
+    if (pos > filp->f_inode->i_size) {
+      filp->f_inode->i_size = pos;
       filp->f_inode->i_dirt = 1;
     }
   }
 
 out:
+  filp->f_pos = pos;
   return count - left;
 }
