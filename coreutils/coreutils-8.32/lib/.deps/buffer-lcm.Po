@@ -1,7 +1,0 @@
-lib/buffer-lcm.o: lib/buffer-lcm.c lib/config.h lib/buffer-lcm.h \
- /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
- /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h
-lib/config.h:
-lib/buffer-lcm.h:
-/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
-/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:

@@ -1,9 +1,0 @@
-lib/strintcmp.o: lib/strintcmp.c lib/config.h lib/strnumcmp-in.h \
- lib/strnumcmp.h \
- /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h \
- /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h
-lib/config.h:
-lib/strnumcmp-in.h:
-lib/strnumcmp.h:
-/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stddef.h:
-/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:

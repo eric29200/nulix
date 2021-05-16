@@ -1,5 +1,0 @@
-lib/c-ctype.o: lib/c-ctype.c lib/config.h lib/c-ctype.h \
- /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h
-lib/config.h:
-lib/c-ctype.h:
-/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdbool.h:

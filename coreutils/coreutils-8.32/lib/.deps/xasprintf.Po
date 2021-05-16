@@ -1,7 +1,0 @@
-lib/xasprintf.o: lib/xasprintf.c lib/config.h lib/xvasprintf.h \
- /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdarg.h \
- /home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h
-lib/config.h:
-lib/xvasprintf.h:
-/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/stdarg.h:
-/home/eric/Projets/nulix/musl/musl-1.2.0-build/include/bits/alltypes.h:
