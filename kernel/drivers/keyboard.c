@@ -41,7 +41,7 @@ static const char kbd_map1[] = {
   KEY_NULL,           /* 0x1d - Left Ctrl */
   'q', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', KEY_NULL, '*',
   KEY_NULL,           /* 0x2a - Left Shift */
-  '<', 'w', 'x', 'c', 'v', 'b', 'n', ',', ';', ':', '!',
+  '*', 'w', 'x', 'c', 'v', 'b', 'n', ',', ';', ':', '!',
   KEY_NULL,           /* 0x36 - Right Shift */
   KEY_NULL,           /* 0x37 - Print Screen */
   KEY_NULL,           /* 0x38 - Left Alt */
@@ -74,7 +74,7 @@ static const char kbd_map1[] = {
   KEY_DELETE,         /* 0x53 - Delete */
   KEY_NULL,           /* 0x54 - Alt-SysRq */
   KEY_NULL,           /* 0x55 - F11/F12/PF1/FN */
-  KEY_NULL,           /* 0x56 - unlabelled key next to LAlt */
+  '<',
   KEY_NULL,           /* 0x57 - F11 */
   KEY_NULL,           /* 0x58 - F12 */
   KEY_NULL,           /* 0x59 */
@@ -130,7 +130,7 @@ static const char kbd_map2[] = {
   KEY_NULL,           /* 0x1d - Left Ctrl */
   'Q', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', '%', KEY_NULL,
   KEY_NULL,           /* 0x2a - Left Shift */
-  '>', 'W', 'X', 'C', 'V', 'B', 'N', '?', '.', '/', KEY_NULL,
+  KEY_NULL, 'W', 'X', 'C', 'V', 'B', 'N', '?', '.', '/', KEY_NULL,
   KEY_NULL,           /* 0x36 - Right Shift */
   KEY_NULL,           /* 0x37 - Print Screen */
   KEY_NULL,           /* 0x38 - Left Alt */
@@ -163,7 +163,7 @@ static const char kbd_map2[] = {
   KEY_DELETE,         /* 0x53 - Delete */
   KEY_NULL,           /* 0x54 - Alt-SysRq */
   KEY_NULL,           /* 0x55 - F11/F12/PF1/FN */
-  KEY_NULL,           /* 0x56 - unlabelled key next to LAlt */
+  '>',
   KEY_NULL,           /* 0x57 - F11 */
   KEY_NULL,           /* 0x58 - F12 */
   KEY_NULL,           /* 0x59 */
