@@ -2,6 +2,7 @@
 #include <x86/interrupt.h>
 #include <proc/sched.h>
 #include <string.h>
+#include <stdio.h>
 
 /* system calls table */
 static const void *syscalls[] = {
@@ -57,6 +58,7 @@ static const void *syscalls[] = {
   [__NR_fcntl]            = sys_fcntl,
   [__NR_fcntl64]          = sys_fcntl,
   [__NR_statx]            = sys_statx,
+  [__NR_umask]            = sys_umask,
 };
 
 /*
@@ -67,8 +69,10 @@ static void syscall_handler(struct registers_t *regs)
   uint32_t ret;
 
   /* system call not handled */
-  if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL)
+  if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL) {
+    printf("Unknown system call : %d\n", regs->eax);
     return;
+  }
 
   /* save current registers */
   memcpy(&current_task->user_regs, regs, sizeof(struct registers_t));

@@ -38,6 +38,7 @@
 #define __NR_ioctl              54
 #define __NR_fcntl              55
 #define __NR_setpgid            57
+#define __NR_umask              60
 #define __NR_dup2               63
 #define __NR_getppid            64
 #define __NR_sigaction          67
@@ -111,5 +112,6 @@ int sys_setgid(gid_t gid);
 int sys_getcwd(char *buf, size_t size);
 int sys_ioctl(int fd, unsigned long request, unsigned long arg);
 int sys_fcntl(int fd, int cmd, unsigned long arg);
+mode_t sys_umask(mode_t mask);
 
 #endif
