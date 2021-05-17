@@ -10,5 +10,13 @@ hdd.img
 musl/*
 dash/*
 coreutils/*
+usr/cat
+usr/echo
+usr/ls
+usr/mkdir
+usr/pwd
+usr/rm
+usr/rmdir
+usr/touch
 tmp/*
 usr/init
