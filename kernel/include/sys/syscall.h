@@ -18,6 +18,7 @@
 #define __NR_close              6
 #define __NR_waitpid            7
 #define __NR_creat              8
+#define __NR_link               9
 #define __NR_unlink             10
 #define __NR_execve             11
 #define __NR_chdir              12
@@ -87,6 +88,7 @@ int sys_chdir(const char *path);
 int sys_mkdir(const char *pathname, mode_t mode);
 off_t sys_lseek(int fd, off_t offset, int whence);
 int sys_creat(const char *pathname, mode_t mode);
+int sys_link(const char *oldpath, const char *newpath);
 int sys_unlink(const char *pathname);
 int sys_rmdir(const char *pathname);
 int sys_getdents(int fd, struct dirent_t *dirent, uint32_t count);

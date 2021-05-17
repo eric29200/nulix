@@ -526,6 +526,72 @@ int do_mkdir(const char *pathname, mode_t mode)
 }
 
 /*
+ * Link system call (make a new name for a file = hard link).
+ */
+int do_link(const char *oldpath, const char *newpath)
+{
+  struct inode_t *old_inode, *dir;
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  const char *basename;
+  size_t basename_len;
+
+  /* get old inode */
+  old_inode = namei(oldpath, NULL);
+  if (!old_inode)
+    return -ENOENT;
+
+  /* do not allow to rename directory */
+  if (S_ISDIR(old_inode->i_mode)) {
+    iput(old_inode);
+    return -EPERM;
+  }
+
+  /* get directory of new file */
+  dir = dir_namei(newpath, NULL, &basename, &basename_len);
+  if (!dir) {
+    iput(old_inode);
+    return -EACCES;
+  }
+
+  /* no name to new file */
+  if (!basename_len) {
+    iput(old_inode);
+    iput(dir);
+    return -EPERM;
+  }
+
+  /* check if new file already exist */
+  bh = find_entry(dir, basename, basename_len, &de);
+  if (bh) {
+    brelse(bh);
+    iput(dir);
+    iput(old_inode);
+    return -EEXIST;
+  }
+
+  /* add entry */
+  bh = add_entry(dir, basename, basename_len, &de);
+  if (!bh) {
+    iput(dir);
+    iput(old_inode);
+    return -ENOSPC;
+  }
+
+  /* update directory entry */
+  de->inode = old_inode->i_ino;
+  bh->b_dirt = 1;
+  brelse(bh);
+
+  /* update old inode */
+  old_inode->i_nlinks++;
+  old_inode->i_dirt = 1;
+  iput(old_inode);
+
+  return 0;
+}
+
+/*
  * Unlink system call (remove a file).
  */
 int do_unlink(const char *pathname)
