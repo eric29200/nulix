@@ -10,6 +10,7 @@ hdd.img
 musl/*
 dash/*
 coreutils/*
+toybox/*
 usr/cat
 usr/echo
 usr/ls
