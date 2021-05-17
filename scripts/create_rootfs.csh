@@ -24,7 +24,7 @@ sudo cp usr/rm tmp/bin
 sudo cp usr/rmdir tmp/bin
 sudo cp usr/pwd tmp/bin
 sudo cp dash/dash-0.5.10.2-build/bin/dash tmp/bin
-sudo cp toybox/toybox-0.8.4/toybox tmp/bin
+sudo cp toybox/toybox-0.8.4-build/toybox tmp/bin
 
 # create devices nodes
 sudo mkdir tmp/dev
