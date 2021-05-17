@@ -172,7 +172,8 @@ static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, si
 /*
  * Resolve a path name to the inode of the top most directory.
  */
-static struct inode_t *dir_namei(const char *pathname, const char **basename, size_t *basename_len)
+static struct inode_t *dir_namei(const char *pathname, struct inode_t *start_inode,
+                                 const char **basename, size_t *basename_len)
 {
   struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
@@ -186,6 +187,8 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
   if (*pathname == '/') {
     inode = root_sb->s_imount;
     pathname++;
+  } else if (start_inode != NULL) {
+    inode = start_inode;
   } else {
     inode = current_task->cwd;
   }
@@ -235,7 +238,7 @@ static struct inode_t *dir_namei(const char *pathname, const char **basename, si
 /*
  * Resolve a path name to the matching inode.
  */
-struct inode_t *namei(const char *pathname)
+struct inode_t *namei(const char *pathname, struct inode_t *start_inode)
 {
   struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
@@ -246,7 +249,7 @@ struct inode_t *namei(const char *pathname)
   ino_t ino_nr;
 
   /* find directory */
-  dir = dir_namei(pathname, &basename, &basename_len);
+  dir = dir_namei(pathname, start_inode, &basename, &basename_len);
   if (!dir)
     return NULL;
 
@@ -285,7 +288,7 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
   ino_t ino_nr;
 
   /* find directory */
-  dir = dir_namei(pathname, &basename, &basename_len);
+  dir = dir_namei(pathname, NULL, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -442,7 +445,7 @@ int do_mkdir(const char *pathname, mode_t mode)
   size_t basename_len;
 
   /* get parent directory */
-  dir = dir_namei(pathname, &basename, &basename_len);
+  dir = dir_namei(pathname, NULL, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -534,7 +537,7 @@ int do_unlink(const char *pathname)
   size_t basename_len;
 
   /* get parent directory */
-  dir = dir_namei(pathname, &basename, &basename_len);
+  dir = dir_namei(pathname, NULL, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -586,7 +589,7 @@ int do_rmdir(const char *pathname)
   size_t basename_len;
 
   /* get parent directory */
-  dir = dir_namei(pathname, &basename, &basename_len);
+  dir = dir_namei(pathname, NULL, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 

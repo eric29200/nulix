@@ -1,5 +1,6 @@
 #include <fs/fs.h>
 #include <mm/mm.h>
+#include <proc/sched.h>
 #include <stderr.h>
 #include <string.h>
 #include <fcntl.h>
@@ -13,7 +14,7 @@ int do_stat(const char *filename, struct stat_t *statbuf)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(filename);
+  inode = namei(filename, NULL);
   if (!inode)
     return -ENOENT;
 
@@ -40,20 +41,35 @@ int do_stat(const char *filename, struct stat_t *statbuf)
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
 {
   struct inode_t *inode;
+  struct file_t *filp;
 
   /* unused mask and flags */
   UNUSED(flags);
   UNUSED(mask);
 
+  /* get dir fd file */
+  if (dirfd >= 0 && dirfd < NR_OPEN)
+    filp = current_task->filp[dirfd];
 
-  /* use absolute path name or relative to cwd */
-  if (dirfd != AT_FDCWD) {
-    printf("statx (dirfd = %d, flags = %x) not implemented\n");
+  /*
+   * Prior (see man statx) :
+   * 1 - absolute path
+   * 2 - relative path from cwd
+   * 3 - directory (dirfd) relative path
+   * 4 - file descriptor dirfd
+   */
+  if (pathname && (*pathname == '/' || dirfd == AT_FDCWD)) {
+    inode = namei(pathname, NULL);
+  } else if (filp && S_ISDIR(filp->f_inode->i_mode)) {
+    inode = namei(pathname, filp->f_inode);
+  } else if (dirfd == AT_EMPTY_PATH && filp) {
+    inode = filp->f_inode;
+  } else {
+    printf("statx (dirfd = %d, pathname = %s, flags = %x) not implemented\n", dirfd, pathname, flags);
     return -EINVAL;
   }
 
-  /* get inode */
-  inode = namei(pathname);
+  /* check inode */
   if (!inode)
     return -ENOENT;
 
@@ -87,7 +103,7 @@ int do_access(const char *filename)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(filename);
+  inode = namei(filename, NULL);
   if (!inode)
     return -ENOENT;
 

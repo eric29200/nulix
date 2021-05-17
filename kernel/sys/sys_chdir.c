@@ -12,7 +12,7 @@ int sys_chdir(const char *path)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(path);
+  inode = namei(path, NULL);
   if (!inode)
     return -ENOENT;
 
