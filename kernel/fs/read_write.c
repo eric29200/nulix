@@ -28,14 +28,8 @@ ssize_t do_read(int fd, char *buf, int count)
   if (S_ISCHR(filp->f_inode->i_mode))
     return read_char(filp->f_inode->i_zone[0], buf, count);
 
-  /* adjust size */
-  if (filp->f_pos + count > filp->f_inode->i_size)
-    count = filp->f_inode->i_size - filp->f_pos;
-  if (count <= 0)
-    return 0;
-
   /* read file */
-  return file_read(filp->f_inode, filp, buf, count);
+  return file_read(filp, buf, count);
 }
 
 /*
@@ -60,7 +54,7 @@ ssize_t do_write(int fd, const char *buf, int count)
   if (S_ISCHR(filp->f_inode->i_mode))
     return write_char(filp->f_inode->i_zone[0], buf, count);
 
-  return file_write(filp->f_inode, filp, buf, count);
+  return file_write(filp, buf, count);
 }
 
 /*

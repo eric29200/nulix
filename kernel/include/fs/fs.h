@@ -148,8 +148,8 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
 int bmap(struct inode_t *inode, int block, int create);
 
 /* read write operations */
-int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count);
-int file_write(struct inode_t *inode, struct file_t *filp, const char *buf, int count);
+int file_read(struct file_t *filp, char *buf, int count);
+int file_write(struct file_t *filp, const char *buf, int count);
 int read_char(dev_t dev, char *buf, int count);
 int write_char(dev_t dev, const char *buf, int count);
 

@@ -9,20 +9,27 @@
 /*
  * Read a file.
  */
-int file_read(struct inode_t *inode, struct file_t *filp, char *buf, int count)
+int file_read(struct file_t *filp, char *buf, int count)
 {
   int pos, nb_chars, left, block_nr;
   struct buffer_head_t *bh;
 
+  /* adjust size */
+  if (filp->f_pos + count > filp->f_inode->i_size)
+    count = filp->f_inode->i_size - filp->f_pos;
+
+  if (count <= 0)
+    return 0;
+
   left = count;
   while (left > 0) {
     /* get block number */
-    block_nr = bmap(inode, filp->f_pos / BLOCK_SIZE, 0);
+    block_nr = bmap(filp->f_inode, filp->f_pos / BLOCK_SIZE, 0);
     if (!block_nr)
       goto out;
 
     /* read block */
-    bh = bread(inode->i_dev, block_nr);
+    bh = bread(filp->f_inode->i_dev, block_nr);
     if (!bh)
       goto out;
 
@@ -49,7 +56,7 @@ out:
 /*
  * Write to a file.
  */
-int file_write(struct inode_t *inode, struct file_t *filp, const char *buf, int count)
+int file_write(struct file_t *filp, const char *buf, int count)
 {
   uint32_t pos, nb_chars, left;
   struct buffer_head_t *bh;
@@ -57,19 +64,19 @@ int file_write(struct inode_t *inode, struct file_t *filp, const char *buf, int 
 
   /* handle append flag */
   if (filp->f_flags & O_APPEND)
-    pos = inode->i_size;
+    pos = filp->f_inode->i_size;
   else
     pos = filp->f_pos;
 
   left = count;
   while (left > 0) {
     /* get/create block number */
-    block_nr = bmap(inode, pos / BLOCK_SIZE, 1);
+    block_nr = bmap(filp->f_inode, pos / BLOCK_SIZE, 1);
     if (!block_nr)
       goto out;
 
     /* read block */
-    bh = bread(inode->i_dev, block_nr);
+    bh = bread(filp->f_inode->i_dev, block_nr);
     if (!bh)
       goto out;
 
