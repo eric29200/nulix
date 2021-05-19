@@ -72,6 +72,7 @@
 #define __NR_get_thread_area    244
 #define __NR_exit_group         252
 #define __NR_set_tid_address    258
+#define __NR_faccessat          307
 #define __NR_statx              383
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
@@ -92,7 +93,8 @@ int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
 pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
 pid_t sys_wait4(pid_t pid, int *wstatus, int options, struct rusage_t *rusage);
-int sys_access(const char *filename);
+int sys_access(const char *filename, mode_t mode);
+int sys_faccessat(int dirfd, const char *pathname, int flags);
 int sys_chdir(const char *path);
 int sys_mkdir(const char *pathname, mode_t mode);
 off_t sys_lseek(int fd, off_t offset, int whence);

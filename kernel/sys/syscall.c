@@ -69,6 +69,7 @@ static const void *syscalls[] = {
   [__NR_set_thread_area]  = sys_set_thread_area,
   [__NR_exit_group]       = sys_exit_group,
   [__NR_set_tid_address]  = sys_set_tid_address,
+  [__NR_faccessat]        = sys_faccessat,
 };
 
 /*

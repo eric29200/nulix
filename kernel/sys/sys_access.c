@@ -3,7 +3,7 @@
 /*
  * Access system call.
  */
-int sys_access(const char *filename)
+int sys_access(const char *filename, mode_t mode)
 {
-  return do_access(filename);
+  return do_access(filename, mode);
 }
