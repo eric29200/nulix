@@ -78,7 +78,7 @@ int sys_read(int fd, char *buf, int count);
 int sys_write(int fd, const char *buf, int count);
 int sys_open(const char *pathname, int flags, mode_t mode);
 int sys_close(int fd);
-void *sys_brk(void *addr);
+uint32_t sys_brk(uint32_t addr);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);
 int sys_stat(const char *filename, struct stat_t *statbuf);
 int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);

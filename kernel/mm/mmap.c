@@ -42,6 +42,12 @@ static struct vm_area_t *get_unmaped_area(int flags, size_t length)
   vm->vm_end = vm->vm_start + length;
   vm->vm_flags = flags;
 
+  /* check memory map overflow */
+  if (vm->vm_end > UMAP_END) {
+    kfree(vm);
+    return NULL;
+  }
+
   /* add it to the list */
   if (vm_prev)
     list_add(&vm->list, &vm_prev->list);
