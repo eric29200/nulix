@@ -72,6 +72,7 @@ static const void *syscalls[] = {
   [__NR_faccessat]        = sys_faccessat,
   [__NR_mkdirat]          = sys_mkdirat,
   [__NR_linkat]           = sys_linkat,
+  [__NR_unlinkat]         = sys_unlinkat,
 };
 
 /*
