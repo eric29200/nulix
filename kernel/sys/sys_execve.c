@@ -92,11 +92,11 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
   int i;
 
   /* copy argv from user memory to kernel memory */
-  argv_len = array_nb_pointers((void *) argv);
+  for (argv_len = 0; argv && argv[argv_len]; argv_len++);
   kernel_argv = copy_array_from_user_to_kernel(argv, argv_len);
 
   /* copy argv from user memory to kernel memory */
-  envp_len = array_nb_pointers((void *) envp);
+  for (envp_len = 0; envp && envp[envp_len]; envp_len++);
   kernel_envp = copy_array_from_user_to_kernel(envp, envp_len);
 
   /* load elf binary */
