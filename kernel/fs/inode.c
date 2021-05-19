@@ -245,8 +245,11 @@ void iput(struct inode_t *inode)
   if (!inode)
     return;
 
+  /* update inode reference count */
+  inode->i_ref--;
+
   /* removed inode : truncate and free it */
-  if (!inode->i_nlinks) {
+  if (!inode->i_nlinks && inode->i_ref == 0) {
     truncate(inode);
     free_inode(inode);
     return;
@@ -258,8 +261,7 @@ void iput(struct inode_t *inode)
     inode->i_dirt = 0;
   }
 
-  /* update inode reference count */
-  inode->i_ref--;
+  /* no more references : reset inode */
   if (inode->i_ref == 0)
     memset(inode, 0, sizeof(struct inode_t));
 }
