@@ -110,7 +110,7 @@ int free_inode(struct inode_t *inode)
 
   /* panic if inode is still used */
   if (inode->i_ref > 1) {
-    printf("Tring to free inode %d with count=%d\n", inode->i_ino, inode->i_ref);
+    printf("Trying to free inode %d with ref=%d\n", inode->i_ino, inode->i_ref);
     panic("");
   }
 

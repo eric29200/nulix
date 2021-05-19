@@ -72,6 +72,7 @@
 #define __NR_get_thread_area    244
 #define __NR_exit_group         252
 #define __NR_set_tid_address    258
+#define __NR_openat             295
 #define __NR_mkdirat            296
 #define __NR_unlinkat           301
 #define __NR_faccessat          307
@@ -141,5 +142,6 @@ void sys_exit_group(int status);
 int sys_mkdirat(int dirfd, const char *pathname, mode_t mode);
 int sys_linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags);
 int sys_unlinkat(int dirfd, const char *pathname, int flags);
+int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode);
 
 #endif

@@ -73,6 +73,7 @@ static const void *syscalls[] = {
   [__NR_mkdirat]          = sys_mkdirat,
   [__NR_linkat]           = sys_linkat,
   [__NR_unlinkat]         = sys_unlinkat,
+  [__NR_openat]           = sys_openat,
 };
 
 /*
