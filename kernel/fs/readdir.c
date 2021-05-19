@@ -23,6 +23,10 @@ int do_getdents(int fd, struct dirent_t *dirent, uint32_t count)
     if (file_read(filp, (char *) &de, sizeof(struct minix_dir_entry_t)) != sizeof(struct minix_dir_entry_t))
       return entries_size;
 
+    /* skip null entries */
+    if (de.inode == 0)
+      continue;
+
     /* not enough space to fill in next dir entry : break */
     name_len = strlen(de.name);
     if (count < sizeof(struct dirent_t) + name_len + 1) {
@@ -67,6 +71,10 @@ int do_getdents64(int fd, void *dirp, size_t count)
     /* read minix dir entry */
     if (file_read(filp, (char *) &de, sizeof(struct minix_dir_entry_t)) != sizeof(struct minix_dir_entry_t))
       return entries_size;
+
+    /* skip null entries */
+    if (de.inode == 0)
+      continue;
 
     /* not enough space to fill in next dir entry : break */
     name_len = strlen(de.name);
