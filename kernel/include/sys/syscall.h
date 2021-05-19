@@ -48,6 +48,7 @@
 #define __NR_stat               106
 #define __NR_wait4              114
 #define __NR_sigreturn          119
+#define __NR_modify_ldt         123
 #define __NR_sigprocmask        126
 #define __NR_getpgid            132
 #define __NR_getdents           141
@@ -66,6 +67,11 @@
 #define __NR_setgid32           214
 #define __NR_getdents64         220
 #define __NR_fcntl64            221
+#define __NR_gettid             224
+#define __NR_set_thread_area    243
+#define __NR_get_thread_area    244
+#define __NR_exit_group         252
+#define __NR_set_tid_address    258
 #define __NR_statx              383
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
@@ -121,5 +127,11 @@ mode_t sys_umask(mode_t mask);
 void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset);
 int sys_munmap(void *addr, size_t length);
+int sys_modify_ldt(int func, void *ptr, unsigned long bytecount);
+pid_t sys_gettid();
+int sys_get_thread_area(void *u_info);
+int sys_set_thread_area(void *u_info);
+pid_t sys_set_tid_address(int *tidptr);
+void sys_exit_group(int status);
 
 #endif
