@@ -172,8 +172,7 @@ static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, si
 /*
  * Resolve a path name to the inode of the top most directory.
  */
-static struct inode_t *dir_namei(const char *pathname, struct inode_t *start_inode,
-                                 const char **basename, size_t *basename_len)
+static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **basename, size_t *basename_len)
 {
   struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
@@ -187,11 +186,14 @@ static struct inode_t *dir_namei(const char *pathname, struct inode_t *start_ino
   if (*pathname == '/') {
     inode = root_sb->s_imount;
     pathname++;
-  } else if (start_inode != NULL) {
-    inode = start_inode;
-  } else {
+  } else if (dirfd == AT_FDCWD) {
     inode = current_task->cwd;
+  } else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->filp[dirfd]) {
+    inode = current_task->filp[dirfd]->f_inode;
   }
+
+  if (!inode)
+    return NULL;
 
   /* update reference count */
   inode->i_ref++;
@@ -238,7 +240,7 @@ static struct inode_t *dir_namei(const char *pathname, struct inode_t *start_ino
 /*
  * Resolve a path name to the matching inode.
  */
-struct inode_t *namei(const char *pathname, struct inode_t *start_inode)
+struct inode_t *namei(int dirfd, const char *pathname)
 {
   struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
@@ -249,7 +251,7 @@ struct inode_t *namei(const char *pathname, struct inode_t *start_inode)
   ino_t ino_nr;
 
   /* find directory */
-  dir = dir_namei(pathname, start_inode, &basename, &basename_len);
+  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
   if (!dir)
     return NULL;
 
@@ -277,7 +279,7 @@ struct inode_t *namei(const char *pathname, struct inode_t *start_inode)
 /*
  * Resolve and open a path name.
  */
-int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
+int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
 {
   struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
@@ -288,7 +290,7 @@ int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **re
   ino_t ino_nr;
 
   /* find directory */
-  dir = dir_namei(pathname, NULL, &basename, &basename_len);
+  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -436,7 +438,7 @@ static int empty_dir(struct inode_t *inode)
 /*
  * Make dir system call.
  */
-int do_mkdir(const char *pathname, mode_t mode)
+int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 {
   struct minix_dir_entry_t *de;
   struct inode_t *dir, *inode;
@@ -445,7 +447,7 @@ int do_mkdir(const char *pathname, mode_t mode)
   size_t basename_len;
 
   /* get parent directory */
-  dir = dir_namei(pathname, NULL, &basename, &basename_len);
+  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -528,7 +530,7 @@ int do_mkdir(const char *pathname, mode_t mode)
 /*
  * Link system call (make a new name for a file = hard link).
  */
-int do_link(const char *oldpath, const char *newpath)
+int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
 {
   struct inode_t *old_inode, *dir;
   struct minix_dir_entry_t *de;
@@ -537,7 +539,7 @@ int do_link(const char *oldpath, const char *newpath)
   size_t basename_len;
 
   /* get old inode */
-  old_inode = namei(oldpath, NULL);
+  old_inode = namei(olddirfd, oldpath);
   if (!old_inode)
     return -ENOENT;
 
@@ -548,7 +550,7 @@ int do_link(const char *oldpath, const char *newpath)
   }
 
   /* get directory of new file */
-  dir = dir_namei(newpath, NULL, &basename, &basename_len);
+  dir = dir_namei(newdirfd, newpath, &basename, &basename_len);
   if (!dir) {
     iput(old_inode);
     return -EACCES;
@@ -594,7 +596,7 @@ int do_link(const char *oldpath, const char *newpath)
 /*
  * Unlink system call (remove a file).
  */
-int do_unlink(const char *pathname)
+int do_unlink(int dirfd, const char *pathname)
 {
   struct minix_dir_entry_t *de;
   struct inode_t *dir, *inode;
@@ -603,7 +605,7 @@ int do_unlink(const char *pathname)
   size_t basename_len;
 
   /* get parent directory */
-  dir = dir_namei(pathname, NULL, &basename, &basename_len);
+  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -646,7 +648,7 @@ int do_unlink(const char *pathname)
 /*
  * Rmdir system call (remove a directory).
  */
-int do_rmdir(const char *pathname)
+int do_rmdir(int dirfd, const char *pathname)
 {
   struct minix_dir_entry_t *de;
   struct inode_t *dir, *inode;
@@ -655,7 +657,7 @@ int do_rmdir(const char *pathname)
   size_t basename_len;
 
   /* get parent directory */
-  dir = dir_namei(pathname, NULL, &basename, &basename_len);
+  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 

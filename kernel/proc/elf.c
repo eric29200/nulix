@@ -92,7 +92,7 @@ int elf_load(const char *path)
   uint32_t i;
 
   /* open file */
-  fd = do_open(path, O_RDONLY, 0);
+  fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
   if (fd < 0)
     return fd;
 

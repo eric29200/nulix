@@ -70,6 +70,8 @@ static const void *syscalls[] = {
   [__NR_exit_group]       = sys_exit_group,
   [__NR_set_tid_address]  = sys_set_tid_address,
   [__NR_faccessat]        = sys_faccessat,
+  [__NR_mkdirat]          = sys_mkdirat,
+  [__NR_linkat]           = sys_linkat,
 };
 
 /*

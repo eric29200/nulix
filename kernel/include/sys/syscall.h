@@ -72,7 +72,9 @@
 #define __NR_get_thread_area    244
 #define __NR_exit_group         252
 #define __NR_set_tid_address    258
+#define __NR_mkdirat            296
 #define __NR_faccessat          307
+#define __NR_linkat             303
 #define __NR_statx              383
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
@@ -135,5 +137,7 @@ int sys_get_thread_area(void *u_info);
 int sys_set_thread_area(void *u_info);
 pid_t sys_set_tid_address(int *tidptr);
 void sys_exit_group(int status);
+int sys_linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags);
+int sys_mkdirat(int dirfd, const char *pathname, mode_t mode);
 
 #endif

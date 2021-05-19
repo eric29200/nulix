@@ -13,7 +13,7 @@ static struct file_t filp_table[NR_FILE];
 /*
  * Open system call.
  */
-int do_open(const char *pathname, int flags, mode_t mode)
+int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
   struct inode_t *inode;
   int fd, i, ret;
@@ -44,7 +44,7 @@ int do_open(const char *pathname, int flags, mode_t mode)
     return -EINVAL;
 
   /* open file */
-  ret = open_namei(pathname, flags, mode, &inode);
+  ret = open_namei(dirfd, pathname, flags, mode, &inode);
   if (ret != 0)
     return ret;
 

@@ -143,8 +143,8 @@ uint32_t new_block();
 int free_block(uint32_t block);
 
 /* name operations */
-struct inode_t *namei(const char *pathname, struct inode_t *start_inode);
-int open_namei(const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
+struct inode_t *namei(int dirfd, const char *pathname);
+int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
 int bmap(struct inode_t *inode, int block, int create);
 
 /* read write operations */
@@ -154,18 +154,18 @@ int read_char(dev_t dev, char *buf, int count);
 int write_char(dev_t dev, const char *buf, int count);
 
 /* system calls */
-int do_open(const char *pathname, int flags, mode_t mode);
+int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(int fd);
 ssize_t do_read(int fd, char *buf, int count);
 ssize_t do_write(int fd, const char *buf, int count);
 off_t do_lseek(int fd, off_t offset, int whence);
-int do_stat(const char *filename, struct stat_t *statbuf);
+int do_stat(int dirfd, const char *filename, struct stat_t *statbuf);
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
 int do_faccessat(int dirfd, const char *pathname, int flags);
-int do_mkdir(const char *pathname, mode_t mode);
-int do_link(const char *oldpath, const char *newpath);
-int do_unlink(const char *pathname);
-int do_rmdir(const char *pathname);
+int do_mkdir(int dirfd, const char *pathname, mode_t mode);
+int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+int do_unlink(int dirfd, const char *pathname);
+int do_rmdir(int dirfd, const char *pathname);
 int do_getdents(int fd, struct dirent_t *dirent, uint32_t count);
 int do_getdents64(int fd, void *dirp, size_t count);
 int do_getcwd(char *buf, size_t size);
