@@ -15,15 +15,8 @@ sudo mount $DISK tmp
 sudo mkdir tmp/sbin
 sudo mkdir tmp/bin
 sudo cp usr/init tmp/sbin/
-sudo cp usr/echo tmp/bin/
-sudo cp usr/ls tmp/bin/
-sudo cp usr/cat tmp/bin/
-sudo cp usr/mkdir tmp/bin
-sudo cp usr/touch tmp/bin
-sudo cp usr/rm tmp/bin
-sudo cp usr/rmdir tmp/bin
-sudo cp usr/pwd tmp/bin
 sudo cp dash/dash-0.5.10.2-build/bin/dash tmp/bin
+sudo cp toybox/toybox-0.8.4-build/* tmp/bin
 
 # create devices nodes
 sudo mkdir tmp/dev
