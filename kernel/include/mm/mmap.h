@@ -19,7 +19,7 @@ struct vm_area_t {
   struct list_head_t list;
 };
 
-void *do_mmap(void *addr, size_t length, int prot, int flags);
-int do_munmap(void *addr, size_t length);
+void *do_mmap(uint32_t addr, size_t length, int flags);
+int do_munmap(uint32_t addr, size_t length);
 
 #endif
