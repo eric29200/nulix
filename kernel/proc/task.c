@@ -36,6 +36,8 @@ static void init_entry(struct task_t *task)
  */
 static struct task_t *create_task(struct task_t *parent)
 {
+  struct vm_area_t *vm_parent, *vm_child;
+  struct list_head_t *pos;
   struct task_t *task;
   void *stack;
   int i;
@@ -78,6 +80,7 @@ static struct task_t *create_task(struct task_t *parent)
   task->timeout = 0;
   task->waiting_chan = NULL;
   INIT_LIST_HEAD(&task->list);
+  INIT_LIST_HEAD(&task->vm_list);
 
   /* init signals */
   sigemptyset(&task->sigpend);
@@ -97,6 +100,23 @@ static struct task_t *create_task(struct task_t *parent)
   if (parent) {
     memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers_t));
     task->user_regs.eax = 0;
+  }
+
+  /* copy virtual memory areas */
+  if (parent) {
+    list_for_each(pos, &parent->vm_list) {
+      vm_parent = list_entry(pos, struct vm_area_t, list);
+      vm_child = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
+      if (!vm_child) {
+        destroy_task(task);
+        return NULL;
+      }
+
+      vm_child->vm_start = vm_parent->vm_start;
+      vm_child->vm_end = vm_parent->vm_end;
+      vm_child->vm_flags = vm_parent->vm_start;
+      list_add(&vm_child->list, &task->list);
+    }
   }
 
   /* duplicate current working dir */
@@ -198,6 +218,9 @@ struct task_t *create_init_task()
  */
 void destroy_task(struct task_t *task)
 {
+  struct vm_area_t *vm_area;
+  struct list_head_t *pos;
+
   if (!task)
     return;
 
@@ -206,6 +229,13 @@ void destroy_task(struct task_t *task)
 
   /* free kernel stack */
   kfree((void *) (task->kernel_stack - STACK_SIZE));
+
+  /* free memory regions */
+  list_for_each(pos, &task->vm_list) {
+    vm_area = list_entry(pos, struct vm_area_t, list);
+    if (vm_area)
+      kfree(vm_area);
+  }
 
   /* free page directory */
   if (task->pgd != kernel_pgd)

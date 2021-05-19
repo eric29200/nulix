@@ -1,7 +1,7 @@
 #!/bin/csh
 
 # setup environement
-setenv CC		`pwd`"/musl/musl-1.2.0-build/bin/musl-gcc"
+setenv CC		`pwd`"/musl/musl-1.2.2-build/bin/musl-gcc"
 setenv NJOBS		8
 setenv CFLAGS		-ffreestanding
 

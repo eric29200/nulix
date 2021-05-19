@@ -43,6 +43,8 @@
 #define __NR_dup2               63
 #define __NR_getppid            64
 #define __NR_sigaction          67
+#define __NR_mmap               90
+#define __NR_munmap             91
 #define __NR_stat               106
 #define __NR_wait4              114
 #define __NR_sigreturn          119
@@ -55,6 +57,7 @@
 #define __NR_rt_sigaction       174
 #define __NR_rt_sigprocmask     175
 #define __NR_getcwd             183
+#define __NR_mmap2              192
 #define __NR_getuid32           199
 #define __NR_getgid32           200
 #define __NR_geteuid32          201
@@ -115,5 +118,8 @@ int sys_getcwd(char *buf, size_t size);
 int sys_ioctl(int fd, unsigned long request, unsigned long arg);
 int sys_fcntl(int fd, int cmd, unsigned long arg);
 mode_t sys_umask(mode_t mask);
+void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset);
+int sys_munmap(void *addr, size_t length);
 
 #endif

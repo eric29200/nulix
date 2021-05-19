@@ -3,6 +3,7 @@
 
 #include <proc/elf.h>
 #include <mm/paging.h>
+#include <mm/mmap.h>
 #include <fs/fs.h>
 #include <ipc/signal.h>
 #include <stddef.h>
@@ -41,6 +42,7 @@ struct task_t {
   uint32_t                    end_text;           /* user text segment end */
   uint32_t                    start_brk;          /* user data segment start */
   uint32_t                    end_brk;            /* user data segment end */
+  struct list_head_t          vm_list;            /* virtual memory areas */
   void *                      waiting_chan;       /* waiting channel */
   uint32_t                    timeout;            /* timeout (used by sleep) */
   sigset_t                    sigpend;            /* pending signals */

@@ -16,17 +16,17 @@ mkdir musl >& /dev/null
 cd musl
 
 # cleanup directories
-rm -rf musl-1.2.0 musl-1.2.0-build musl-1.2.0.tar.gz
-mkdir musl-1.2.0-build
+rm -rf *
+mkdir musl-1.2.2-build
 
 # download musl sources
-wget https://musl.libc.org/releases/musl-1.2.0.tar.gz
-tar -xzvf musl-1.2.0.tar.gz
+wget https://musl.libc.org/releases/musl-1.2.2.tar.gz
+tar -xzvf musl-1.2.2.tar.gz
 
 # build musl
-cd ./musl-1.2.0/
+cd ./musl-1.2.2/
 make clean
 make distclean
-./configure --target=$TARGET --prefix=`pwd`'/../musl-1.2.0-build'
+./configure --target=$TARGET --prefix=`pwd`'/../musl-1.2.2-build'
 make -j$NJOBS
 make install
