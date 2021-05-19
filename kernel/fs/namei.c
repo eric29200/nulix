@@ -638,7 +638,7 @@ int do_unlink(int dirfd, const char *pathname)
   brelse(bh);
 
   /* update inode */
-  inode->i_nlinks = 0;
+  inode->i_nlinks--;
   inode->i_dirt = 1;
   iput(inode);
   iput(dir);
@@ -697,9 +697,15 @@ int do_rmdir(int dirfd, const char *pathname)
   bh->b_dirt = 1;
   brelse(bh);
 
+  /* update dir */
+  dir->i_nlinks--;
+  dir->i_dirt = 1;
+
   /* update inode */
   inode->i_nlinks = 0;
   inode->i_dirt = 1;
+
+  /* release dir and inode */
   iput(inode);
   iput(dir);
   return 0;
