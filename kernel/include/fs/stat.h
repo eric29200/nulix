@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#define STATX_BASIC_STATS	  0x000007FFU
+#define STATX_BASIC_STATS   0x000007FFU
 
 /*
  * Stat file structure.
