@@ -170,6 +170,34 @@ static struct buffer_head_t *add_entry(struct inode_t *dir, const char *name, si
 }
 
 /*
+ * Resolve a symbolic link.
+ */
+static struct inode_t *follow_link(struct inode_t *inode)
+{
+  struct buffer_head_t *bh;
+
+  if (!inode || !S_ISLNK(inode->i_mode))
+    return inode;
+
+  /* read first link block */
+  bh = bread(inode->i_dev, inode->i_zone[0]);
+  if (!bh) {
+    iput(inode);
+    return NULL;
+  }
+
+  /* release link inode */
+  iput(inode);
+
+  /* resolve target inode */
+  inode = namei(AT_FDCWD, bh->b_data);
+
+  /* release link buffer */
+  brelse(bh);
+  return inode;
+}
+
+/*
  * Resolve a path name to the inode of the top most directory.
  */
 static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **basename, size_t *basename_len)
@@ -220,7 +248,7 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
       return NULL;
     }
 
-    /* save inode number and release block buffer*/
+    /* save inode number and release block buffer */
     ino_nr = de->inode;
     sb = inode->i_sb;
     brelse(bh);
@@ -228,6 +256,11 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
 
     /* get next inode */
     inode = iget(sb, ino_nr);
+    if (!inode)
+      return NULL;
+
+    /* follow symbolic links */
+    inode = follow_link(inode);
     if (!inode)
       return NULL;
   }
@@ -244,8 +277,8 @@ struct inode_t *namei(int dirfd, const char *pathname)
 {
   struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
+  struct inode_t *dir, *inode;
   struct buffer_head_t *bh;
-  struct inode_t *dir;
   const char *basename;
   size_t basename_len;
   ino_t ino_nr;
@@ -273,7 +306,12 @@ struct inode_t *namei(int dirfd, const char *pathname)
   iput(dir);
 
   /* read inode */
-  return iget(sb, ino_nr);
+  inode = iget(sb, ino_nr);
+
+  /* follow symbolic link */
+  inode = follow_link(inode);
+
+  return inode;
 }
 
 /*
@@ -364,6 +402,11 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
 
   /* get inode */
   *res_inode = iget(sb, ino_nr);
+  if (!*res_inode)
+    return -EACCES;
+
+  /* follow symbolic link */
+  *res_inode = follow_link(*res_inode);
   if (!*res_inode)
     return -EACCES;
 
@@ -713,7 +756,7 @@ int do_unlink(int dirfd, const char *pathname)
   }
 
   /* remove regular files only */
-  if (!S_ISREG(inode->i_mode)) {
+  if (S_ISDIR(inode->i_mode)) {
     iput(inode);
     iput(dir);
     brelse(bh);
