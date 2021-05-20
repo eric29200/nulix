@@ -164,6 +164,8 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
 int do_faccessat(int dirfd, const char *pathname, int flags);
 int do_mkdir(int dirfd, const char *pathname, mode_t mode);
 int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize);
+int do_symlink(const char *target, int newdirfd, const char *linkpath);
 int do_unlink(int dirfd, const char *pathname);
 int do_rmdir(int dirfd, const char *pathname);
 int do_getdents(int fd, struct dirent_t *dirent, uint32_t count);

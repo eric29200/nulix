@@ -74,6 +74,10 @@ static const void *syscalls[] = {
   [__NR_linkat]           = sys_linkat,
   [__NR_unlinkat]         = sys_unlinkat,
   [__NR_openat]           = sys_openat,
+  [__NR_symlink]          = sys_symlink,
+  [__NR_symlinkat]        = sys_symlinkat,
+  [__NR_readlink]         = sys_readlink,
+  [__NR_readlinkat]       = sys_readlinkat,
 };
 
 /*

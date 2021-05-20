@@ -72,3 +72,46 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
   iput(inode);
   return 0;
 }
+
+/*
+ * Read value of a symbolic link.
+ */
+ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
+{
+  struct buffer_head_t *bh;
+  struct inode_t *inode;
+  size_t len;
+
+  /* limit buffer size to block size */
+  if (bufsize > BLOCK_SIZE - 1)
+    bufsize = BLOCK_SIZE - 1;
+
+  /* get inode */
+  inode = namei(dirfd, pathname);
+  if (!inode)
+    return -ENOENT;
+
+  /* check 1st block */
+  if (!inode->i_zone[0]) {
+    iput(inode);
+    return 0;
+  }
+
+  /* read 1st block */
+  bh = bread(inode->i_dev, inode->i_zone[0]);
+  if (!bh) {
+    iput(inode);
+    return 0;
+  }
+
+  /* release inode */
+  iput(inode);
+
+  /* copy target name to user buffer */
+  for (len = 0; len < bufsize; len++)
+    buf[len] = bh->b_data[len];
+
+  /* release buffer */
+  brelse(bh);
+  return len;
+}

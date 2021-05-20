@@ -43,6 +43,8 @@
 #define __NR_dup2               63
 #define __NR_getppid            64
 #define __NR_sigaction          67
+#define __NR_symlink            83
+#define __NR_readlink           85
 #define __NR_mmap               90
 #define __NR_munmap             91
 #define __NR_stat               106
@@ -77,6 +79,8 @@
 #define __NR_unlinkat           301
 #define __NR_faccessat          307
 #define __NR_linkat             303
+#define __NR_symlinkat          304
+#define __NR_readlinkat         305
 #define __NR_statx              383
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
@@ -143,5 +147,9 @@ int sys_mkdirat(int dirfd, const char *pathname, mode_t mode);
 int sys_linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags);
 int sys_unlinkat(int dirfd, const char *pathname, int flags);
 int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode);
+int sys_symlink(const char *target, const char *linkpath);
+int sys_symlinkat(const char *target, int newdirfd, const char *linkpath);
+ssize_t sys_readlink(const char *pathname, char *buf, size_t bufsize);
+ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsize);
 
 #endif

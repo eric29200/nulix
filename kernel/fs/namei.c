@@ -594,6 +594,94 @@ int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath
 }
 
 /*
+ * Symbolic link system call.
+ */
+int do_symlink(const char *target, int newdirfd, const char *linkpath)
+{
+  struct inode_t *dir, *inode;
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  const char *basename;
+  size_t basename_len;
+  int i;
+
+  /* get new parent directory */
+  dir = dir_namei(newdirfd, linkpath, &basename, &basename_len);
+  if (!dir || !basename_len)
+    return -ENOENT;
+
+  /* allocate a new inode */
+  inode = new_inode();
+  if (!inode) {
+    iput(dir);
+    return -ENOSPC;
+  }
+
+  /* set new inode */
+  inode->i_mode = S_IFLNK | (0777 & ~current_task->umask);
+  inode->i_dirt = 1;
+
+  /* create first block */
+  inode->i_zone[0] = new_block();
+  if (!inode->i_zone[0]) {
+    iput(dir);
+    inode->i_nlinks--;
+    iput(inode);
+    return -ENOSPC;
+  }
+
+  /* read first block */
+  bh = bread(inode->i_dev, inode->i_zone[0]);
+  if (!bh) {
+    iput(dir);
+    inode->i_nlinks--;
+    iput(inode);
+    return -ENOSPC;
+  }
+
+  /* write file name on first block */
+  for (i = 0; target[i] && i < BLOCK_SIZE - 1; i++)
+    bh->b_data[i] = target[i];
+  bh->b_data[i] = 0;
+  bh->b_dirt = 1;
+  brelse(bh);
+
+  /* update inode size */
+  inode->i_size = i;
+  inode->i_dirt = 1;
+
+  /* check if file exists */
+  bh = find_entry(dir, basename, basename_len, &de);
+  if (bh) {
+    inode->i_nlinks--;
+    iput(inode);
+    brelse(bh);
+    iput(dir);
+    return -EEXIST;
+  }
+
+  /* add entry */
+  bh = add_entry(dir, basename, basename_len, &de);
+  if (!bh) {
+    inode->i_nlinks--;
+    iput(inode);
+    iput(dir);
+    return -ENOSPC;
+  }
+
+  /* set inode entry */
+  de->inode = inode->i_ino;
+  bh->b_dirt = 1;
+
+  /* release inode */
+  brelse(bh);
+  iput(dir);
+  iput(inode);
+
+  return 0;
+}
+
+/*
  * Unlink system call (remove a file).
  */
 int do_unlink(int dirfd, const char *pathname)
