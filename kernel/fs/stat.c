@@ -42,12 +42,11 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
 {
   struct inode_t *inode;
 
-  /* unused mask and flags */
-  UNUSED(flags);
+  /* unused mask */
   UNUSED(mask);
 
   /* get inode */
-  inode = namei(dirfd, pathname, 0);
+  inode = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
   if (!inode)
     return -ENOENT;
 

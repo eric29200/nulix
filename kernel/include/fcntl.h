@@ -64,8 +64,9 @@
 #define F_SETSIG      10
 #define F_GETSIG      11
 
-#define AT_FDCWD        -100    /* openat should use the current working dir */
-#define AT_EMPTY_PATH   0x1000  /* allow empty relative pathname */
-#define AT_REMOVEDIR    0x200
+#define AT_FDCWD              -100    /* openat should use the current working dir */
+#define AT_EMPTY_PATH         0x1000  /* allow empty relative pathname */
+#define AT_SYMLINK_NO_FOLLOW  0x100   /* do not follow last symbolic link */
+#define AT_REMOVEDIR          0x200   /* remove a directory */
 
 #endif
