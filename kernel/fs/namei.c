@@ -190,7 +190,7 @@ static struct inode_t *follow_link(struct inode_t *inode)
   iput(inode);
 
   /* resolve target inode */
-  inode = namei(AT_FDCWD, bh->b_data);
+  inode = namei(AT_FDCWD, bh->b_data, 0);
 
   /* release link buffer */
   brelse(bh);
@@ -273,7 +273,7 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
 /*
  * Resolve a path name to the matching inode.
  */
-struct inode_t *namei(int dirfd, const char *pathname)
+struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
 {
   struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
@@ -309,7 +309,8 @@ struct inode_t *namei(int dirfd, const char *pathname)
   inode = iget(sb, ino_nr);
 
   /* follow symbolic link */
-  inode = follow_link(inode);
+  if (follow_links)
+    inode = follow_link(inode);
 
   return inode;
 }
@@ -582,7 +583,7 @@ int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath
   size_t basename_len;
 
   /* get old inode */
-  old_inode = namei(olddirfd, oldpath);
+  old_inode = namei(olddirfd, oldpath, 1);
   if (!old_inode)
     return -ENOENT;
 

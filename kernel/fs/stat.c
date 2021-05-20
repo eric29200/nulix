@@ -14,7 +14,7 @@ int do_stat(int dirfd, const char *filename, struct stat_t *statbuf)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(dirfd, filename);
+  inode = namei(dirfd, filename, 0);
   if (!inode)
     return -ENOENT;
 
@@ -47,7 +47,7 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
   UNUSED(mask);
 
   /* get inode */
-  inode = namei(dirfd, pathname);
+  inode = namei(dirfd, pathname, 0);
   if (!inode)
     return -ENOENT;
 
@@ -87,7 +87,7 @@ ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
     bufsize = BLOCK_SIZE - 1;
 
   /* get inode */
-  inode = namei(dirfd, pathname);
+  inode = namei(dirfd, pathname, 0);
   if (!inode)
     return -ENOENT;
 
