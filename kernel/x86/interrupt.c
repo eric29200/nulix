@@ -1,5 +1,6 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
+#include <sys/syscall.h>
 #include <proc/sched.h>
 #include <ipc/signal.h>
 #include <stdio.h>
@@ -66,6 +67,8 @@ void isr_handler(struct registers_t *regs)
     if (regs->int_no < 20)
       printf(", message=%s", exception_messages[regs->int_no]);
     printf("\n");
+
+    sys_exit(1);
   }
 
   /* handle pending signals */
