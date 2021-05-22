@@ -218,8 +218,8 @@ struct task_t *create_init_task()
  */
 void destroy_task(struct task_t *task)
 {
+  struct list_head_t *pos, *n;
   struct vm_area_t *vm_area;
-  struct list_head_t *pos;
 
   if (!task)
     return;
@@ -231,10 +231,13 @@ void destroy_task(struct task_t *task)
   kfree((void *) (task->kernel_stack - STACK_SIZE));
 
   /* free memory regions */
-  list_for_each(pos, &task->vm_list) {
+  list_for_each_safe(pos, n, &task->vm_list) {
     vm_area = list_entry(pos, struct vm_area_t, list);
-    if (vm_area)
+    if (vm_area) {
+      unmap_pages(vm_area->vm_start, vm_area->vm_end, task->pgd);
+      list_del(&vm_area->list);
       kfree(vm_area);
+    }
   }
 
   /* free page directory */
