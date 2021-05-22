@@ -25,12 +25,14 @@ static struct vm_area_t *find_vma(uint32_t addr)
  */
 static struct vm_area_t *get_unmaped_area(int flags, size_t length)
 {
-  struct vm_area_t *vm_prev = NULL, *vm;
+  struct vm_area_t *vm_prev, *vm;
   struct list_head_t *pos;
 
   /* find last memory region */
-  list_for_each(pos, &current_task->vm_list)
-    vm_prev = list_entry(pos, struct vm_area_t, list);
+  if (list_empty(&current_task->vm_list))
+    vm_prev = NULL;
+  else
+    vm_prev = list_last_entry(&current_task->vm_list, struct vm_area_t, list);
 
   /* create new memory region */
   vm = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
@@ -49,10 +51,7 @@ static struct vm_area_t *get_unmaped_area(int flags, size_t length)
   }
 
   /* add it to the list */
-  if (vm_prev)
-    list_add(&vm->list, &vm_prev->list);
-  else
-    list_add(&vm->list, &current_task->vm_list);
+  list_add_tail(&vm->list, &current_task->vm_list);
 
   return vm;
 }
