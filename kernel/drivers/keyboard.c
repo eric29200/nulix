@@ -2,6 +2,8 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <drivers/tty.h>
+#include <ipc/signal.h>
+#include <dev.h>
 
 #define KEYBOARD_PORT               0x60
 #define KEYBOARD_ACK                0x61
@@ -265,6 +267,11 @@ static void keyboard_handler(struct registers_t *regs)
       /* on key down, send char to current tty */
       if ((c & 0x80) == 0) {
         if ((keyboard_status & KEYBOARD_STATUS_CTRL) != 0) {
+          c = kbd_map1[c];
+
+          if (c == 'c')
+            tty_signal_group(DEV_TTY, SIGINT);
+
           c = '\n';
         } else if ((keyboard_status & KEYBOARD_STATUS_ALT) != 0) {
           tty_change(c - 0x3B);

@@ -27,5 +27,6 @@ size_t tty_write(dev_t dev, const void *buf, size_t n);
 void tty_update(char c);
 void tty_change(uint32_t n);
 int tty_ioctl(dev_t dev, int request, unsigned long arg);
+void tty_signal_group(dev_t dev, int sig);
 
 #endif
