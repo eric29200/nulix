@@ -287,7 +287,7 @@ int do_signal(struct registers_t *regs)
   act = &current_task->signals[sig - 1];
 
   /* ignore signal handler */
-  if (act->sa_handler == SIG_IGN || act->sa_handler == NULL)
+  if (act->sa_handler == SIG_IGN)
     return 0;
 
   /* default signal handler */
