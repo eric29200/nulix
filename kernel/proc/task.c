@@ -230,6 +230,11 @@ void destroy_task(struct task_t *task)
   /* free kernel stack */
   kfree((void *) (task->kernel_stack - STACK_SIZE));
 
+  /* unmap text, brk and stack sections */
+  unmap_pages(task->start_text, task->end_text, task->pgd);
+  unmap_pages(task->start_brk, task->end_brk, task->pgd);
+  unmap_pages(USTACK_START, USTACK_START + USTACK_SIZE, task->pgd);
+
   /* free memory regions */
   list_for_each_safe(pos, n, &task->vm_list) {
     vm_area = list_entry(pos, struct vm_area_t, list);
