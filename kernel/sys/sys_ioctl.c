@@ -23,7 +23,7 @@ int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 
   /* actually on tty only */
   dev = filp->f_inode->i_zone[0];
-  if (major(dev) == major(DEV_TTY1))
+  if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
     return tty_ioctl(dev, request, arg);
 
   return -EINVAL;

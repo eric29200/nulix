@@ -9,7 +9,7 @@
 int read_char(dev_t dev, char *buf, int count)
 {
   /* TTY devices */
-  if (major(dev) == major(DEV_TTY1))
+  if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
     return tty_read(dev, buf, count);
 
   return -EINVAL;
@@ -21,7 +21,7 @@ int read_char(dev_t dev, char *buf, int count)
 int write_char(dev_t dev, const char *buf, int count)
 {
   /* TTY devices */
-  if (major(dev) == major(DEV_TTY1))
+  if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
     return tty_write(dev, buf, count);
 
   return -EINVAL;

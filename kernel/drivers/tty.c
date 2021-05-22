@@ -24,7 +24,7 @@ static struct tty_t *tty_lookup(dev_t dev)
 {
   int i;
 
-  /* current tty */
+  /* current task tty */
   if (dev == DEV_TTY) {
     for (i = 0; i < NB_TTYS; i++)
       if (current_task->tty == tty_table[i].dev)
@@ -32,6 +32,10 @@ static struct tty_t *tty_lookup(dev_t dev)
 
     return NULL;
   }
+
+  /* current active tty */
+  if (dev == DEV_TTY0)
+    return &tty_table[current_tty];
 
   /* asked tty */
   if (minor(dev) > 0 && minor(dev) <= NB_TTYS)
@@ -98,18 +102,15 @@ out:
 }
 
 /*
- * Get a free tty.
+ * Get current task tty.
  */
 dev_t tty_get()
 {
   int i;
 
-  for (i = 0; i < NB_TTYS; i++) {
-    if (tty_table[i].pgrp == 0 || tty_table[i].pgrp == current_task->pgid) {
-      tty_table[i].pgrp = current_task->pgid;
+  for (i = 0; i < NB_TTYS; i++)
+    if (tty_table[i].pgrp == current_task->pgid)
       return tty_table[i].dev;
-    }
-  }
 
   return (dev_t) -ENOENT;
 }

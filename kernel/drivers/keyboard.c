@@ -270,7 +270,7 @@ static void keyboard_handler(struct registers_t *regs)
           c = kbd_map1[c];
 
           if (c == 'c')
-            tty_signal_group(DEV_TTY, SIGINT);
+            tty_signal_group(DEV_TTY0, SIGINT);
 
           c = '\n';
         } else if ((keyboard_status & KEYBOARD_STATUS_ALT) != 0) {
