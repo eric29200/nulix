@@ -17,6 +17,14 @@ struct page_directory_t *kernel_pgd = 0;
 extern void copy_page_physical(uint32_t src, uint32_t dst);
 
 /*
+ * Flush a Translation Lookaside Buffer entry.
+ */
+static inline void flush_tlb(uint32_t address)
+{
+  __asm__ __volatile__("invlpg (%0)" :: "r" (address) : "memory");
+}
+
+/*
  * Get next free frame.
  */
 static int32_t get_first_free_frame()
@@ -116,6 +124,25 @@ void unmap_page(uint32_t address, struct page_directory_t *pgd)
   /* free frame */
   if (page)
     free_frame(page);
+
+  /* flush tlb */
+  flush_tlb(address);
+}
+
+/*
+ * Unmap pages.
+ */
+void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd)
+{
+  uint32_t address;
+
+  /* align addresses */
+  start_address = PAGE_ALIGN_DOWN(start_address);
+  end_address = PAGE_ALIGN_UP(end_address);
+
+  /* unmap all pages */
+  for (address = start_address; address < end_address; address += PAGE_SIZE)
+    unmap_page(address, pgd);
 }
 
 /*
@@ -307,13 +334,9 @@ void free_page_directory(struct page_directory_t *pgd)
     return;
 
   /* free page tables */
-  for (i = 0; i < 1024; i++) {
-    /* do not free kernel page tables */
-    if (!pgd->tables[i] || pgd->tables[i] == kernel_pgd->tables[i])
-      continue;
-
-    free_page_table(pgd->tables[i]);
-  }
+  for (i = 0; i < 1024; i++)
+    if (pgd->tables[i] && pgd->tables[i] != kernel_pgd->tables[i])
+      free_page_table(pgd->tables[i]);
 
   /* free page directory */
   kfree(pgd);

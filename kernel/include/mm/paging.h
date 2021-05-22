@@ -8,6 +8,7 @@
 #define PAGE_SIZE             0x1000
 #define PAGE_MASK             (~(PAGE_SIZE - 1))
 #define PAGE_ALIGNED(addr)    (((addr) & PAGE_MASK) == 0)
+#define PAGE_ALIGN_DOWN(addr) ((addr) & PAGE_MASK)
 #define PAGE_ALIGN_UP(addr)   (((addr) + PAGE_SIZE - 1) & PAGE_MASK)
 #define ALIGN_UP(addr, size)  (((addr) + size - 1) & (~(size - 1)))
 
@@ -49,6 +50,7 @@ void init_paging(uint32_t start, uint32_t end);
 struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t *pgd);
 int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write);
 void unmap_page(uint32_t address, struct page_directory_t *pgd);
+void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd);
 void switch_page_directory(struct page_directory_t *pgd);
 void page_fault_handler(struct registers_t *regs);
 struct page_directory_t *clone_page_directory(struct page_directory_t *pgd);

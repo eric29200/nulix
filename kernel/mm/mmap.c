@@ -26,7 +26,6 @@ static struct vm_area_t *find_vma(uint32_t addr)
 static struct vm_area_t *get_unmaped_area(int flags, size_t length)
 {
   struct vm_area_t *vm_prev, *vm;
-  struct list_head_t *pos;
 
   /* find last memory region */
   if (list_empty(&current_task->vm_list))
