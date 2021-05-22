@@ -70,7 +70,7 @@ static int segment_load(int fd, int off)
   if (ret < 0)
     return ret;
 
-  /* read segment in memory */
+  /* load segment in memory */
   memset((void *) ph.p_vaddr, 0, ph.p_memsz);
   if (do_read(fd, (void *) ph.p_vaddr, ph.p_filesz) != (int) ph.p_filesz)
     return -ENOSPC;
