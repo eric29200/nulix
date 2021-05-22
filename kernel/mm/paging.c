@@ -205,16 +205,15 @@ void switch_page_directory(struct page_directory_t *pgd)
  */
 struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t *pgd)
 {
-  uint32_t table_idx;
-  uint32_t tmp;
+  uint32_t page_nr, table_idx, tmp;
 
   /* get page table */
-  address /= PAGE_SIZE;
-  table_idx = address / 1024;
+  page_nr = address / PAGE_SIZE;
+  table_idx = page_nr / 1024;
 
   /* table already assigned */
   if (pgd->tables[table_idx])
-    return &pgd->tables[table_idx]->pages[address % 1024];
+    return &pgd->tables[table_idx]->pages[page_nr % 1024];
 
   /* create a new page table */
   if (make) {
@@ -222,9 +221,14 @@ struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t 
     if (!pgd->tables[table_idx])
       return NULL;
 
+    /* set page table entry */
     memset(pgd->tables[table_idx], 0, PAGE_SIZE);
-    pgd->tables_physical[table_idx] = tmp | 0x7; /* present, rw and user */
-    return &pgd->tables[table_idx]->pages[address % 1024];
+    pgd->tables_physical[table_idx] = tmp | 0x7;
+
+    /* flush tlb */
+    flush_tlb(address);
+
+    return &pgd->tables[table_idx]->pages[page_nr % 1024];
   }
 
   return 0;
