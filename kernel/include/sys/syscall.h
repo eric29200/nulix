@@ -6,6 +6,7 @@
 #include <ipc/signal.h>
 #include <uio.h>
 #include <resource.h>
+#include <sys/utsname.h>
 #include <time.h>
 
 #define SYSCALLS_NUM            (__NR_statx + 1)
@@ -50,6 +51,7 @@
 #define __NR_stat               106
 #define __NR_wait4              114
 #define __NR_sigreturn          119
+#define __NR_uname              122
 #define __NR_modify_ldt         123
 #define __NR_sigprocmask        126
 #define __NR_getpgid            132
@@ -151,5 +153,6 @@ int sys_symlink(const char *target, const char *linkpath);
 int sys_symlinkat(const char *target, int newdirfd, const char *linkpath);
 ssize_t sys_readlink(const char *pathname, char *buf, size_t bufsize);
 ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsize);
+int sys_uname(struct utsname_t *buf);
 
 #endif
