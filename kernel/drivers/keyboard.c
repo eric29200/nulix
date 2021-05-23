@@ -271,6 +271,8 @@ static void keyboard_handler(struct registers_t *regs)
 
           if (c == 'c')
             tty_signal_group(DEV_TTY0, SIGINT);
+          else if (c == 'z')
+            tty_signal_group(DEV_TTY0, SIGSTOP);
 
           c = '\n';
         } else if ((keyboard_status & KEYBOARD_STATUS_ALT) != 0) {

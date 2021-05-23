@@ -296,6 +296,12 @@ int do_signal(struct registers_t *regs)
       /* ignore those signals */
       case SIGCONT: case SIGCHLD: case SIGWINCH:
         return 0;
+      case SIGSTOP: case SIGTSTP:
+        current_task->state = TASK_STOPPED;
+        current_task->exit_code = sig;
+        task_wakeup_all(current_task->parent);
+        schedule();
+        return 0;
       default:
         sys_exit(sig);
         break;

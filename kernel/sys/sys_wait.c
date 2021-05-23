@@ -36,6 +36,15 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 
       has_children = 1;
 
+      /* return first stopped task pid (mark exit code to 0 to report this task just once) */
+      if (task->state == TASK_STOPPED && task->exit_code) {
+        if (wstatus != NULL)
+          *wstatus = (task->exit_code << 8) | 0x7F;
+
+        task->exit_code = 0;
+        return task->pid;
+      }
+
       /* destroy first zombie task */
       if (task->state == TASK_ZOMBIE) {
         if (wstatus != NULL)

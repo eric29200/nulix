@@ -13,7 +13,8 @@
 
 #define TASK_RUNNING      1
 #define TASK_SLEEPING     2
-#define TASK_ZOMBIE       3
+#define TASK_STOPPED      3
+#define TASK_ZOMBIE       4
 
 #define NR_OPEN           32
 
