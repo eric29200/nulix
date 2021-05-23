@@ -11,7 +11,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
   struct list_head_t *pos;
   struct task_t *task;
   int has_children;
-  int child_pid;
+  pid_t child_pid;
 
   /* unused options flags */
   UNUSED(options);
@@ -23,7 +23,15 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
     /* search zombie child */
     list_for_each(pos, &current_task->list) {
       task = list_entry(pos, struct task_t, list);
-      if (task->parent != current_task || (pid != -1 && task->pid != pid))
+
+      /* check task (see man waitpid) */
+      if (pid > 0 && task->pid != pid)
+        continue;
+      else if (pid == 0 && task->pgid != current_task->pgid)
+        continue;
+      else if (pid != -1 && task->pgid != -pid)
+        continue;
+      else if (task->parent != current_task)
         continue;
 
       has_children = 1;
