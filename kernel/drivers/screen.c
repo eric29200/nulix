@@ -37,7 +37,7 @@ void screen_putc(struct screen_t *screen, char c)
       screen->buf[i] = screen->buf[i + SCREEN_WIDTH];
 
     /* clear last line */
-    memset(&screen->buf[i], ' ', SCREEN_WIDTH * SCREEN_HEIGHT);
+    memset(&screen->buf[i], ' ', SCREEN_WIDTH);
 
     screen->pos_y = SCREEN_HEIGHT - 1;
   }
