@@ -1,19 +1,20 @@
-global loader                               	; the entry symbol for ELF
-global kernel_stack			    	; export kernel stack
-extern kmain                                	; the entry symbol for C
+global loader
+global kernel_stack
+extern kmain
 
-MAGIC_NUMBER  equ 0x1BADB002                	; define multi boot constants
-PAGE_ALIGN    equ 1<<0
-MEM_INFO      equ 1<<1
-FLAGS         equ PAGE_ALIGN | MEM_INFO
-CHECKSUM      equ -(MAGIC_NUMBER + FLAGS)
 KSTACK_SIZE   equ 0x100000                    	; size of kernel stack = 1 MB
 
-section .__mbHeader                         	; multiboot header
+section .multiboot				; multiboot2 section
 align 4
-	dd MAGIC_NUMBER
-	dd FLAGS
-	dd CHECKSUM
+header_start:
+	dd 0xe85250d6
+	dd 0
+	dd header_end - header_start
+	dd -(0xe85250d6 + 0 + (header_end - header_start))
+	dw 0
+	dw 0
+	dd 8
+header_end:
 
 section .bss					; kernel stack
 align 4
@@ -22,8 +23,7 @@ kernel_stack:
 
 section .text
 align 4
-loader:                                     	; the loader label (defined as entry point in linker script)
-setup_kstack:
+loader:
 	mov esp, kernel_stack + KSTACK_SIZE     ; point esp to the start of the stack (end of memory area)
 
 call_kmain:

@@ -4,7 +4,7 @@
 #include <x86/io.h>
 #include <mm/mm.h>
 #include <proc/sched.h>
-#include <grub/multiboot.h>
+#include <grub/multiboot2.h>
 #include <drivers/serial.h>
 #include <drivers/pit.h>
 #include <drivers/rtc.h>
@@ -15,11 +15,63 @@
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <string.h>
+#include <stderr.h>
 #include <dev.h>
 
 extern uint32_t loader;
 extern uint32_t kernel_stack;
 extern uint32_t kernel_end;
+
+/*
+ * Parse multiboot header.
+ */
+static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_upper)
+{
+  struct multiboot_tag *tag;
+  uint32_t size;
+
+  /* check magic number */
+  if (magic != MULTIBOOT2_BOOTLOADER_MAGIC)
+    return -EINVAL;
+
+  /* check alignement */
+  if (addr & 7)
+    return -EINVAL;
+
+  /* parse all multi boot tags */
+  for (tag = (struct multiboot_tag *) (addr + 8);
+       tag->type != MULTIBOOT_TAG_TYPE_END;
+       tag = (struct multiboot_tag *) ((multiboot_uint8_t *) tag + ((tag->size + 7) & ~7))) {
+    switch (tag->type) {
+      case MULTIBOOT_TAG_TYPE_CMDLINE:
+        printf("Command line = %s\n", ((struct multiboot_tag_string *) tag)->string);
+        break;
+      case MULTIBOOT_TAG_TYPE_BOOT_LOADER_NAME:
+        printf("Boot loader name = %s\n", ((struct multiboot_tag_string *) tag)->string);
+        break;
+      case MULTIBOOT_TAG_TYPE_MODULE:
+        printf("Module at %x-%x. Command line %s\n",
+               ((struct multiboot_tag_module *) tag)->mod_start,
+               ((struct multiboot_tag_module *) tag)->mod_end,
+               ((struct multiboot_tag_module *) tag)->cmdline);
+        break;
+      case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
+        printf ("mem_lower = %uKB, mem_upper = %uKB\n",
+                ((struct multiboot_tag_basic_meminfo *) tag)->mem_lower,
+                ((struct multiboot_tag_basic_meminfo *) tag)->mem_upper);
+        *mem_upper = ((struct multiboot_tag_basic_meminfo *) tag)->mem_upper * 1024;
+        break;
+      case MULTIBOOT_TAG_TYPE_BOOTDEV:
+        printf ("Boot device 0x%x,%u,%u\n",
+                ((struct multiboot_tag_bootdev *) tag)->biosdev,
+                ((struct multiboot_tag_bootdev *) tag)->slice,
+                ((struct multiboot_tag_bootdev *) tag)->part);
+        break;
+    }
+  }
+
+  return 0;
+}
 
 /*
  * Kos init (second phase).
@@ -40,17 +92,21 @@ static void kinit()
 /*
  * Main kos function.
  */
-int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
+int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 {
-  /* check multiboot */
-  if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
-    return 0xD15EA5E;
+  uint32_t mem_upper;
+  int ret;
 
   /* disable interrupts */
   irq_disable();
 
   /* init serial console */
   init_serial();
+
+  /* parse multiboot header*/
+  ret = parse_mboot(magic, addr, &mem_upper);
+  if (ret)
+    return ret;
 
   /* print grub informations */
   printf("[Kernel] Loading at linear address = %x\n", loader);
@@ -66,7 +122,7 @@ int kmain(unsigned long magic, multiboot_info_t *mboot, uint32_t initial_stack)
 
   /* init memory */
   printf("[Kernel] Memory Init\n");
-  init_mem((uint32_t) &kernel_end, mboot->mem_upper * 1024);
+  init_mem((uint32_t) &kernel_end, mem_upper);
 
   /* init PIT */
   printf("[Kernel] PIT Init\n");
