@@ -155,8 +155,9 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
   mount_root(ata_get_device(0));
 
   /* init framebuffer */
-  printf("[Kernel] Framebuffer Init");
-  init_framebuffer(tag_fb);
+  printf("[Kernel] Framebuffer Init\n");
+  if (init_framebuffer(tag_fb) != 0)
+    panic("Cannot init framebuffer\n");
 
   /* init ttys */
   printf("[Kernel] Ttys Init\n");
