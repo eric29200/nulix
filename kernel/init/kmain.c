@@ -11,6 +11,7 @@
 #include <drivers/ata.h>
 #include <drivers/tty.h>
 #include <drivers/keyboard.h>
+#include <drivers/framebuffer.h>
 #include <fs/fs.h>
 #include <sys/syscall.h>
 #include <stdio.h>
@@ -21,6 +22,9 @@
 extern uint32_t loader;
 extern uint32_t kernel_stack;
 extern uint32_t kernel_end;
+
+/* grub framebuffer */
+static struct multiboot_tag_framebuffer *tag_fb;
 
 /*
  * Parse multiboot header.
@@ -65,6 +69,9 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
                 ((struct multiboot_tag_bootdev *) tag)->biosdev,
                 ((struct multiboot_tag_bootdev *) tag)->slice,
                 ((struct multiboot_tag_bootdev *) tag)->part);
+        break;
+      case MULTIBOOT_TAG_TYPE_FRAMEBUFFER:
+        tag_fb = (struct multiboot_tag_framebuffer *) tag;
         break;
     }
   }
@@ -146,6 +153,10 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
   /* mount root file system */
   printf("[Kernel] Root file system init\n");
   mount_root(ata_get_device(0));
+
+  /* init framebuffer */
+  printf("[Kernel] Framebuffer Init");
+  init_framebuffer(tag_fb);
 
   /* init ttys */
   printf("[Kernel] Ttys Init\n");
