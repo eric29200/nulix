@@ -46,7 +46,8 @@ static int32_t get_first_free_frame()
 static void set_frame(uint32_t frame_addr)
 {
   uint32_t frame = frame_addr / PAGE_SIZE;
-  frames[frame / 32] |= (0x1 << (frame % 32));
+  if (frame < nb_frames)
+    frames[frame / 32] |= (0x1 << (frame % 32));
 }
 
 /*
@@ -55,7 +56,8 @@ static void set_frame(uint32_t frame_addr)
 static void clear_frame(uint32_t frame_addr)
 {
   uint32_t frame = frame_addr / PAGE_SIZE;
-  frames[frame / 32] &= ~(0x1 << (frame % 32));
+  if (frame < nb_frames)
+    frames[frame / 32] &= ~(0x1 << (frame % 32));
 }
 
 /*
@@ -109,6 +111,32 @@ int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uin
 
   /* alloc frame */
   return alloc_frame(page, kernel, write);
+}
+
+/*
+ * Map a page to a physical address.
+ */
+int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
+{
+  struct page_t *page;
+  uint32_t frame_idx;
+
+  /* get page */
+  page = get_page(address, 1, pgd);
+  if (!page)
+    return -ENOMEM;
+
+  /* compute frame index */
+  frame_idx = phys / PAGE_SIZE;
+
+  /* set page */
+  set_frame(frame_idx * PAGE_SIZE);
+  page->present = 1;
+  page->frame = frame_idx;
+  page->rw = write ? 1 : 0;
+  page->user = kernel ? 0 : 1;
+
+  return 0;
 }
 
 /*

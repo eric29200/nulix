@@ -49,6 +49,7 @@ struct page_directory_t {
 void init_paging(uint32_t start, uint32_t end);
 struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t *pgd);
 int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write);
+int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, uint8_t kernel, uint8_t write);
 void unmap_page(uint32_t address, struct page_directory_t *pgd);
 void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd);
 void switch_page_directory(struct page_directory_t *pgd);
