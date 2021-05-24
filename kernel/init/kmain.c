@@ -28,7 +28,6 @@ extern uint32_t kernel_end;
 static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_upper)
 {
   struct multiboot_tag *tag;
-  uint32_t size;
 
   /* check magic number */
   if (magic != MULTIBOOT2_BOOTLOADER_MAGIC)
