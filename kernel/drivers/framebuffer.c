@@ -49,6 +49,14 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 }
 
 /*
+ * Clear the frame buffer.
+ */
+static inline void fb_clear(struct framebuffer_t *fb)
+{
+  memset((void *) fb->addr, 0, fb->height * fb->pitch);
+}
+
+/*
  * Put a pixel on the screen.
  */
 static void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint8_t red, uint8_t green, uint8_t blue)
@@ -121,30 +129,6 @@ static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph)
 }
 
 /*
- * Clear the frame buffer (text mode).
- */
-static void fb_text_clear(struct framebuffer_t *fb)
-{
-  memset((void *) fb->addr, 0, fb->width * fb->height * 2);
-}
-
-/*
- * Clear the frame buffer (font mode).
- */
-static void fb_font_clear(struct framebuffer_t *fb)
-{
-  uint32_t h, y;
-  uint8_t *p;
-
-  for (y = 0; y < fb->height - fb->font->height; y++) {
-    for (h = 0; h < fb->font->height; h++) {
-      p = (uint8_t *) (fb->addr + (y + h) * fb->pitch);
-      memset(p, 0, fb->width);
-    }
-  }
-}
-
-/*
  * Print a unicode character on the frame buffer.
  */
 static void fb_glyph_putc(struct framebuffer_t *fb, uint8_t c)
@@ -179,7 +163,7 @@ static void fb_glyph_putc(struct framebuffer_t *fb, uint8_t c)
 
   /* end of frame buffer : blank screen */
   if (fb->y + fb->font->height > fb->height) {
-    fb_font_clear(fb);
+    fb_clear(fb);
     fb->y = 0;
   }
 }
@@ -212,7 +196,7 @@ static void fb_text_putc(struct framebuffer_t *fb, uint8_t c)
 
   /* end of frame buffer : blank screen */
   if (fb->y >= fb->height) {
-    fb_text_clear(fb);
+    fb_clear(fb);
     fb->y = 0;
   }
 }
