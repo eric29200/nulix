@@ -220,10 +220,12 @@ static void fb_text_putc(struct framebuffer_t *fb, uint8_t c)
 /*
  * Write a string to the frame buffer.
  */
-void fb_write(struct framebuffer_t *fb, const char *buf, size_t n)
+size_t fb_write(struct framebuffer_t *fb, const char *buf, size_t n)
 {
   size_t i;
 
   for (i = 0; i < n; i++)
     fb->putc(fb, buf[i]);
+
+  return n;
 }

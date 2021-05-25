@@ -156,7 +156,7 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 
   /* init ttys */
   printf("[Kernel] Ttys Init\n");
-  init_tty();
+  init_tty(tag_fb);
 
   /* init processes */
   printf("[Kernel] Processes Init\n");

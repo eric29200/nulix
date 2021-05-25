@@ -15,7 +15,6 @@
 /* global ttys */
 static struct tty_t tty_table[NB_TTYS];
 static int current_tty;
-static struct timer_event_t refresh_tm;
 
 /*
  * Lookup for a tty.
@@ -149,18 +148,14 @@ void tty_update(char c)
 size_t tty_write(dev_t dev, const void *buf, size_t n)
 {
   struct tty_t *tty;
-  size_t i;
 
   /* get tty */
   tty = tty_lookup(dev);
   if (!tty)
     return -EINVAL;
 
-  /* put each character on the screen */
-  for (i = 0; i < n; i++)
-    screen_putc(&tty->screen, ((const unsigned char *) buf)[i]);
-
-  return i;
+  /* write to frame buffer */
+  return fb_write(&tty->fb, buf, n);
 }
 
 /*
@@ -168,23 +163,8 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
  */
 void tty_change(uint32_t n)
 {
-  if (n < NB_TTYS) {
+  if (n < NB_TTYS)
     current_tty = n;
-    tty_table[current_tty].screen.dirty = 1;
-  }
-}
-
-/*
- * TTY update.
- */
-static void tty_refresh()
-{
-  /* update current screen */
-  if (tty_table[current_tty].screen.dirty)
-    screen_update(&tty_table[current_tty].screen);
-
-  /* reschedule timer */
-  timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
 }
 
 /*
@@ -236,7 +216,7 @@ void tty_signal_group(dev_t dev, int sig)
 /*
  * Init TTYs.
  */
-int init_tty()
+int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 {
   int i;
 
@@ -247,19 +227,15 @@ int init_tty()
     tty_table[i].r_pos = 0;
     tty_table[i].w_pos = 0;
     tty_table[i].buf[0] = 0;
-    screen_init(&tty_table[i].screen);
-    tty_table[i].winsize.ws_row = SCREEN_HEIGHT;
-    tty_table[i].winsize.ws_col = SCREEN_WIDTH;
+    init_framebuffer(&tty_table[i].fb, tag_fb);
+    tty_table[i].winsize.ws_row = tty_table[i].fb.height;
+    tty_table[i].winsize.ws_col = tty_table[i].fb.width;
     tty_table[i].winsize.ws_xpixel = 0;
     tty_table[i].winsize.ws_ypixel = 0;
   }
 
   /* set current tty to first tty */
   current_tty = 0;
-
-  /* create refrsh timer */
-  timer_event_init(&refresh_tm, tty_refresh, NULL, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
-  timer_event_add(&refresh_tm);
 
   return 0;
 }
