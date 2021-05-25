@@ -19,6 +19,8 @@ struct framebuffer_t {
   uint32_t        pitch;
   uint32_t        width;
   uint32_t        height;
+  uint32_t        width_glyph;
+  uint32_t        height_glyph;
   uint8_t         bpp;
   struct font_t * font;
   uint32_t        x;
@@ -27,7 +29,6 @@ struct framebuffer_t {
   uint8_t         green;
   uint8_t         blue;
   char *          buf;
-  size_t          buf_size;
   char            dirty;
   void            (*update)(struct framebuffer_t *);
 };

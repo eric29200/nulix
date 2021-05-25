@@ -36,12 +36,14 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
       fb->font = get_default_font();
       if (!fb->font)
         return -ENOSPC;
-      fb->buf_size = fb->width * fb->height / (fb->font->width * fb->font->height);
+      fb->width_glyph = fb->width / fb->font->width;
+      fb->height_glyph = fb->height / fb->font->height;
       fb->update = fb_update_rgb;
       break;
     case MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT:
       fb->font = NULL;
-      fb->buf_size = fb->width * fb->height;
+      fb->width_glyph = fb->width;
+      fb->height_glyph = fb->height;
       fb->update = fb_update_text;
       break;
     default:
@@ -49,7 +51,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
   }
 
   /* allocate buffer */
-  fb->buf = (char *) kmalloc(fb->buf_size);
+  fb->buf = (char *) kmalloc(fb->width_glyph * fb->height_glyph);
   if (!fb->buf)
     return -ENOMEM;
 
@@ -83,7 +85,7 @@ static void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint8
 /*
  * Print a blanck character on the frame buffer.
  */
-static void fb_putblank(struct framebuffer_t *fb)
+static void fb_putblank(struct framebuffer_t *fb, uint32_t pos_x, uint32_t pos_y)
 {
   uint32_t x, y;
 
@@ -91,18 +93,15 @@ static void fb_putblank(struct framebuffer_t *fb)
   for (y = 0; y < fb->font->height; y++)
     for (x = 0; x < fb->font->width; x++)
       if (x == 1 || x == fb->font->width - 2 || y == 1 || y == fb->font->height - 2)
-        fb_put_pixel(fb, fb->x + x, fb->y + y, fb->red, fb->green, fb->blue);
+        fb_put_pixel(fb, pos_x + x, pos_y + y, fb->red, fb->green, fb->blue);
       else
-        fb_put_pixel(fb, fb->x + x, fb->y + y, 0, 0, 0);
-
-  /* update cursor */
-  fb->x += fb->font->width;
+        fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
 }
 
 /*
  * Print a glyph on the frame buffer.
  */
-static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph)
+static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph, uint32_t pos_x, uint32_t pos_y)
 {
   uint32_t x, y;
   uint8_t bit;
@@ -110,7 +109,7 @@ static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph)
 
   /* invalid glyph */
   if (glyph >= fb->font->char_count) {
-    fb_putblank(fb);
+    fb_putblank(fb, pos_x, pos_y);
     return;
   }
 
@@ -123,9 +122,9 @@ static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph)
     for (x = 0; x < fb->font->width; x++) {
       if (x < fb->font->width) {
         if ((*font) & bit)
-          fb_put_pixel(fb, fb->x + x, fb->y + y, fb->red, fb->green, fb->blue);
+          fb_put_pixel(fb, pos_x + x, pos_y + y, fb->red, fb->green, fb->blue);
         else
-          fb_put_pixel(fb, fb->x + x, fb->y + y, 0, 0, 0);
+          fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
       }
 
       /* go to next glyph */
@@ -135,49 +134,6 @@ static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph)
         font++;
       }
     }
-  }
-
-  /* update cursor */
-  fb->x += fb->font->width;
-}
-
-/*
- * Print a unicode character on the frame buffer.
- */
-static void fb_glyph_putc(struct framebuffer_t *fb, uint8_t c)
-{
-  int glyph;
-
-  /* handle new character */
-  switch (c) {
-    case '\r':
-      fb->x = 0;
-      break;
-    case '\n':
-      fb->x = 0;
-      fb->y += fb->font->height;
-      break;
-    default:
-      glyph = get_glyph(fb->font, c);
-
-      if (glyph < 0)
-        fb_putblank(fb);
-      else
-        fb_putglyph(fb, glyph);
-
-      break;
-  }
-
-  /* go to next line */
-  if (fb->x + fb->font->width > fb->width) {
-    fb->x = 0;
-    fb->y += fb->font->height;
-  }
-
-  /* end of frame buffer : blank screen */
-  if (fb->y + fb->font->height > fb->height) {
-    fb_clear(fb);
-    fb->y = 0;
   }
 }
 
@@ -190,7 +146,7 @@ static void fb_putc(struct framebuffer_t *fb, uint8_t c)
 
   /* handle character */
   if (c >= ' ' && c <= '~') {
-    fb->buf[fb->y * fb->width + fb->x] = c;
+    fb->buf[fb->y * fb->width_glyph + fb->x] = c;
     fb->x++;
   } else if (c == '\b' && fb->x != 0) {
     fb->x--;
@@ -204,21 +160,21 @@ static void fb_putc(struct framebuffer_t *fb, uint8_t c)
   }
 
   /* go to next line */
-  if (fb->x >= fb->width) {
+  if (fb->x >= fb->width_glyph) {
     fb->x = 0;
     fb->y++;
   }
 
   /* scroll */
-  if (fb->y >= fb->height) {
+  if (fb->y >= fb->height_glyph) {
     /* move each line up */
-    for (i = 0; i < fb->width * (fb->height - 1); i++)
-      fb->buf[i] = fb->buf[i + fb->width];
+    for (i = 0; i < fb->width_glyph * (fb->height_glyph - 1); i++)
+      fb->buf[i] = fb->buf[i + fb->width_glyph];
 
     /* clear last line */
-    memset(&fb->buf[i], 0, fb->width);
+    memset(&fb->buf[i], 0, fb->width_glyph);
 
-    fb->y = fb->height - 1;
+    fb->y = fb->height_glyph - 1;
   }
 
   /* mark frame buffer dirty */
@@ -248,7 +204,7 @@ static void fb_update_text(struct framebuffer_t *fb)
   size_t i;
 
   /* copy the buffer */
-  for (i = 0; i < fb->width * fb->height; i++)
+  for (i = 0; i < fb->width_glyph * fb->height_glyph; i++)
     video_buf[i] = TEXT_ENTRY(TEXT_BLACK, TEXT_LIGHT_GREY, fb->buf[i]);
 
   /* update hardware cursor */
@@ -265,5 +221,21 @@ static void fb_update_text(struct framebuffer_t *fb)
  */
 static void fb_update_rgb(struct framebuffer_t *fb)
 {
+  uint32_t x, y;
+  int glyph;
+
+  for (y = 0; y < fb->height_glyph; y++) {
+    for (x = 0; x < fb->width_glyph; x++) {
+      /* get glyph */
+      glyph = get_glyph(fb->font, fb->buf[y * fb->width_glyph + x]);
+
+      /* print glyph */
+      if (glyph < 0)
+        fb_putblank(fb, x * fb->font->width, y * fb->font->height);
+      else
+        fb_putglyph(fb, glyph, x * fb->font->width, y * fb->font->height);
+    }
+  }
+
   fb->dirty = 0;
 }
