@@ -2,10 +2,11 @@
 #include <string.h>
 #include <mm/mm.h>
 #include <font.h>
+#include <stderr.h>
 
-/* default font */
-extern char _binary_fonts_ter_powerline_v16n_psf_start;
-extern char _binary_fonts_ter_powerline_v16n_psf_end;
+/* put char functions */
+static void fb_glyph_putc(struct framebuffer_t *fb, uint8_t c);
+static void fb_text_putc(struct framebuffer_t *fb, uint8_t c);
 
 /*
  * Init the framebuffer.
@@ -13,9 +14,10 @@ extern char _binary_fonts_ter_powerline_v16n_psf_end;
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb)
 {
   uint32_t fb_nb_pages, i;
-  int ret;
 
+  /* set frame buffer */
   fb->addr = tag_fb->common.framebuffer_addr;
+  fb->type = tag_fb->common.framebuffer_type;
   fb->pitch = tag_fb->common.framebuffer_pitch;
   fb->width = tag_fb->common.framebuffer_width;
   fb->height = tag_fb->common.framebuffer_height;
@@ -26,10 +28,17 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
   fb->green = 0xFF;
   fb->blue = 0xFF;
 
-  /* load font */
-  ret = load_font(&fb->font, &_binary_fonts_ter_powerline_v16n_psf_start, &_binary_fonts_ter_powerline_v16n_psf_end);
-  if (ret != 0)
-    return ret;
+  /* if rgb frame buffer, use default font */
+  if (fb->type == MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
+    fb->font = get_default_font();
+    if (!fb->font)
+      return -ENOSPC;
+    fb->putc = fb_glyph_putc;
+  }
+  else {
+    fb->font = NULL;
+    fb->putc = fb_text_putc;
+  }
 
   /* identity map frame buffer */
   fb_nb_pages = div_ceil(fb->height * fb->pitch, PAGE_SIZE);
@@ -58,15 +67,15 @@ static void fb_putblank(struct framebuffer_t *fb)
   uint32_t x, y;
 
   /* print glyph */
-  for (y = 0; y < fb->font.height; y++)
-    for (x = 0; x < fb->font.width; x++)
-      if (x == 1 || x == fb->font.width - 2 || y == 1 || y == fb->font.height - 2)
+  for (y = 0; y < fb->font->height; y++)
+    for (x = 0; x < fb->font->width; x++)
+      if (x == 1 || x == fb->font->width - 2 || y == 1 || y == fb->font->height - 2)
         fb_put_pixel(fb, fb->x + x, fb->y + y, fb->red, fb->green, fb->blue);
       else
         fb_put_pixel(fb, fb->x + x, fb->y + y, 0, 0, 0);
 
   /* update cursor */
-  fb->x += fb->font.width;
+  fb->x += fb->font->width;
 }
 
 /*
@@ -79,19 +88,19 @@ static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph)
   uint8_t *font;
 
   /* invalid glyph */
-  if (glyph >= fb->font.char_count) {
+  if (glyph >= fb->font->char_count) {
     fb_putblank(fb);
     return;
   }
 
   /* get font */
-  font = fb->font.data + glyph * fb->font.char_size;
+  font = fb->font->data + glyph * fb->font->char_size;
   bit = 1 << 7;
 
   /* print glyph */
-  for (y = 0; y < fb->font.height; y++) {
-    for (x = 0; x < fb->font.width; x++) {
-      if (x < fb->font.width) {
+  for (y = 0; y < fb->font->height; y++) {
+    for (x = 0; x < fb->font->width; x++) {
+      if (x < fb->font->width) {
         if ((*font) & bit)
           fb_put_pixel(fb, fb->x + x, fb->y + y, fb->red, fb->green, fb->blue);
         else
@@ -108,19 +117,27 @@ static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph)
   }
 
   /* update cursor */
-  fb->x += fb->font.width;
+  fb->x += fb->font->width;
 }
 
 /*
- * Clear the frame buffer.
+ * Clear the frame buffer (text mode).
  */
-static void fb_clear(struct framebuffer_t *fb)
+static void fb_text_clear(struct framebuffer_t *fb)
+{
+  memset((void *) fb->addr, 0, fb->width * fb->height * 2);
+}
+
+/*
+ * Clear the frame buffer (font mode).
+ */
+static void fb_font_clear(struct framebuffer_t *fb)
 {
   uint32_t h, y;
   uint8_t *p;
 
-  for (y = 0; y < fb->height - fb->font.height; y++) {
-    for (h = 0; h < fb->font.height; h++) {
+  for (y = 0; y < fb->height - fb->font->height; y++) {
+    for (h = 0; h < fb->font->height; h++) {
       p = (uint8_t *) (fb->addr + (y + h) * fb->pitch);
       memset(p, 0, fb->width);
     }
@@ -128,9 +145,9 @@ static void fb_clear(struct framebuffer_t *fb)
 }
 
 /*
- * Print a character on the frame buffer.
+ * Print a unicode character on the frame buffer.
  */
-static void fb_putc(struct framebuffer_t *fb, uint8_t c)
+static void fb_glyph_putc(struct framebuffer_t *fb, uint8_t c)
 {
   int glyph;
 
@@ -141,10 +158,10 @@ static void fb_putc(struct framebuffer_t *fb, uint8_t c)
       break;
     case '\n':
       fb->x = 0;
-      fb->y += fb->font.height;
+      fb->y += fb->font->height;
       break;
     default:
-      glyph = get_glyph(&fb->font, c);
+      glyph = get_glyph(fb->font, c);
 
       if (glyph < 0)
         fb_putblank(fb);
@@ -155,14 +172,47 @@ static void fb_putc(struct framebuffer_t *fb, uint8_t c)
   }
 
   /* go to next line */
-  if (fb->x + fb->font.width > fb->width) {
+  if (fb->x + fb->font->width > fb->width) {
     fb->x = 0;
-    fb->y += fb->font.height;
+    fb->y += fb->font->height;
   }
 
   /* end of frame buffer : blank screen */
-  if (fb->y + fb->font.height > fb->height) {
-    fb_clear(fb);
+  if (fb->y + fb->font->height > fb->height) {
+    fb_font_clear(fb);
+    fb->y = 0;
+  }
+}
+
+/*
+ * Print a text character on the frame buffer.
+ */
+static void fb_text_putc(struct framebuffer_t *fb, uint8_t c)
+{
+  /* handle new character */
+  switch (c) {
+    case '\r':
+      fb->x = 0;
+      break;
+    case '\n':
+      fb->x = 0;
+      fb->y++;
+      break;
+    default:
+      *((uint16_t *) (fb->addr + fb->y * fb->pitch + fb->x * 2)) = TEXT_ENTRY(TEXT_BLACK, TEXT_LIGHT_GREY, c);
+      fb->x++;
+      break;
+  }
+
+  /* go to next line */
+  if (fb->x >= fb->width) {
+    fb->x = 0;
+    fb->y++;
+  }
+
+  /* end of frame buffer : blank screen */
+  if (fb->y >= fb->height) {
+    fb_text_clear(fb);
     fb->y = 0;
   }
 }
@@ -175,5 +225,5 @@ void fb_write(struct framebuffer_t *fb, const char *buf, size_t n)
   size_t i;
 
   for (i = 0; i < n; i++)
-    fb_putc(fb, buf[i]);
+    fb->putc(fb, buf[i]);
 }

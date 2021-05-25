@@ -44,7 +44,7 @@ struct font_t {
   unsigned char   *data;                /* pointer to first glyph */
 };
 
-int load_font(struct font_t *font, void *font_start, void *font_end);
+struct font_t *get_default_font();
 int get_glyph(struct font_t *font, uint16_t unicode);
 
 #endif

@@ -1,5 +1,13 @@
 #include <font.h>
+#include <mm/mm.h>
 #include <stderr.h>
+
+/* default font (linked to the kernel) */
+extern char _binary_fonts_ter_powerline_v16n_psf_start;
+extern char _binary_fonts_ter_powerline_v16n_psf_end;
+
+/* default font */
+static struct font_t *default_font = NULL;
 
 /*
  * Decode a UTF8 value to a unicode value.
@@ -133,7 +141,7 @@ static int map_ascii(struct font_t *font)
 /*
  * Load a font.
  */
-int load_font(struct font_t *font, void *font_start, void *font_end)
+static int load_font(struct font_t *font, void *font_start, void *font_end)
 {
   struct psf2_header_t *header;
   int ret;
@@ -161,4 +169,24 @@ int load_font(struct font_t *font, void *font_start, void *font_end)
     ret = map_ascii(font);
 
   return ret;
+}
+
+/*
+ * Get default font.
+ */
+struct font_t *get_default_font()
+{
+  /* load it if needed */
+  if (!default_font) {
+    default_font = (struct font_t *) kmalloc(sizeof(struct font_t));
+    if (!default_font)
+      return NULL;
+
+    if (load_font(default_font,
+                  &_binary_fonts_ter_powerline_v16n_psf_start,
+                  &_binary_fonts_ter_powerline_v16n_psf_end) != 0)
+      return NULL;
+  }
+
+  return default_font;
 }
