@@ -38,7 +38,7 @@ struct font_t {
   uint32_t        height;               /* font height */
   uint32_t        width;                /* font width */
   uint32_t        char_size;            /* glyph size in bytes */
-  uint32_t        char_count;           /* number of glyphs */
+  int32_t         char_count;           /* number of glyphs */
   uint32_t        uc_size;              /* number of unicode mappings */
   uint32_t        uc_map[UC_MAP_SIZE];  /* unicode mapping */
   unsigned char   *data;                /* pointer to first glyph */

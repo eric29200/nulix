@@ -92,23 +92,20 @@ static void fb_putblank(struct framebuffer_t *fb, uint32_t pos_x, uint32_t pos_y
   /* print glyph */
   for (y = 0; y < fb->font->height; y++)
     for (x = 0; x < fb->font->width; x++)
-      if (x == 1 || x == fb->font->width - 2 || y == 1 || y == fb->font->height - 2)
-        fb_put_pixel(fb, pos_x + x, pos_y + y, fb->red, fb->green, fb->blue);
-      else
-        fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
+      fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
 }
 
 /*
  * Print a glyph on the frame buffer.
  */
-static void fb_putglyph(struct framebuffer_t *fb, uint16_t glyph, uint32_t pos_x, uint32_t pos_y)
+static void fb_putglyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, uint32_t pos_y)
 {
   uint32_t x, y;
-  uint8_t bit;
   uint8_t *font;
+  uint8_t bit;
 
   /* invalid glyph */
-  if (glyph >= fb->font->char_count) {
+  if (glyph < 0 || glyph >= fb->font->char_count) {
     fb_putblank(fb, pos_x, pos_y);
     return;
   }
@@ -213,6 +210,7 @@ static void fb_update_text(struct framebuffer_t *fb)
   outb(0x03D4, 15);
   outb(0x03D5, pos);
 
+  /* marke frame buffer clean */
   fb->dirty = 0;
 }
 
@@ -224,18 +222,14 @@ static void fb_update_rgb(struct framebuffer_t *fb)
   uint32_t x, y;
   int glyph;
 
+  /* print each glyph */
   for (y = 0; y < fb->height_glyph; y++) {
     for (x = 0; x < fb->width_glyph; x++) {
-      /* get glyph */
       glyph = get_glyph(fb->font, fb->buf[y * fb->width_glyph + x]);
-
-      /* print glyph */
-      if (glyph < 0)
-        fb_putblank(fb, x * fb->font->width, y * fb->font->height);
-      else
-        fb_putglyph(fb, glyph, x * fb->font->width, y * fb->font->height);
+      fb_putglyph(fb, glyph, x * fb->font->width, y * fb->font->height);
     }
   }
 
+  /* mark frame buffer clean */
   fb->dirty = 0;
 }
