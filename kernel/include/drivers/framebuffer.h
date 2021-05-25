@@ -29,10 +29,10 @@ struct framebuffer_t {
   char *          buf;
   size_t          buf_size;
   char            dirty;
+  void            (*update)(struct framebuffer_t *);
 };
 
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb);
 size_t fb_write(struct framebuffer_t *fb, const char *buf, size_t n);
-void fb_update(struct framebuffer_t *fb);
 
 #endif

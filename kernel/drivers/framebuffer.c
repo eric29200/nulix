@@ -5,9 +5,9 @@
 #include <font.h>
 #include <stderr.h>
 
-/* put char functions */
-static void fb_glyph_putc(struct framebuffer_t *fb, uint8_t c);
-static void fb_text_putc(struct framebuffer_t *fb, uint8_t c);
+/* frame buffer update functions */
+static void fb_update_text(struct framebuffer_t *fb);
+static void fb_update_rgb(struct framebuffer_t *fb);
 
 /*
  * Init the framebuffer.
@@ -37,10 +37,12 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
       if (!fb->font)
         return -ENOSPC;
       fb->buf_size = fb->width * fb->height / (fb->font->width * fb->font->height);
+      fb->update = fb_update_rgb;
       break;
     case MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT:
       fb->font = NULL;
       fb->buf_size = fb->width * fb->height;
+      fb->update = fb_update_text;
       break;
     default:
       return -EINVAL;
@@ -237,9 +239,9 @@ size_t fb_write(struct framebuffer_t *fb, const char *buf, size_t n)
 }
 
 /*
- * Update a frame buffer.
+ * Update a text frame buffer.
  */
-void fb_update(struct framebuffer_t *fb)
+static void fb_update_text(struct framebuffer_t *fb)
 {
   uint16_t pos = fb->y * fb->width + fb->x;
   uint16_t *video_buf = (uint16_t *) fb->addr;
@@ -255,5 +257,13 @@ void fb_update(struct framebuffer_t *fb)
   outb(0x03D4, 15);
   outb(0x03D5, pos);
 
+  fb->dirty = 0;
+}
+
+/*
+ * Update a RGB frame buffer.
+ */
+static void fb_update_rgb(struct framebuffer_t *fb)
+{
   fb->dirty = 0;
 }

@@ -223,7 +223,7 @@ static void tty_refresh()
 {
   /* update current screen */
   if (tty_table[current_tty].fb.dirty)
-    fb_update(&tty_table[current_tty].fb);
+    tty_table[current_tty].fb.update(&tty_table[current_tty].fb);
 
   /* reschedule timer */
   timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
