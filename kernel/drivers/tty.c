@@ -15,6 +15,7 @@
 /* global ttys */
 static struct tty_t tty_table[NB_TTYS];
 static int current_tty;
+static struct timer_event_t refresh_tm;
 
 /*
  * Lookup for a tty.
@@ -163,8 +164,10 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
  */
 void tty_change(uint32_t n)
 {
-  if (n < NB_TTYS)
+  if (n < NB_TTYS) {
     current_tty = n;
+    tty_table[current_tty].fb.dirty = 1;
+  }
 }
 
 /*
@@ -214,6 +217,19 @@ void tty_signal_group(dev_t dev, int sig)
 }
 
 /*
+ * TTY update.
+ */
+static void tty_refresh()
+{
+  /* update current screen */
+  if (tty_table[current_tty].fb.dirty)
+    fb_update(&tty_table[current_tty].fb);
+
+  /* reschedule timer */
+  timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
+}
+
+/*
  * Init TTYs.
  */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb)
@@ -236,6 +252,10 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 
   /* set current tty to first tty */
   current_tty = 0;
+
+  /* create refrsh timer */
+  timer_event_init(&refresh_tm, tty_refresh, NULL, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
+  timer_event_add(&refresh_tm);
 
   return 0;
 }

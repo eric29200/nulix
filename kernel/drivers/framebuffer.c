@@ -1,6 +1,7 @@
 #include <drivers/framebuffer.h>
 #include <string.h>
 #include <mm/mm.h>
+#include <x86/io.h>
 #include <font.h>
 #include <stderr.h>
 
@@ -27,18 +28,28 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
   fb->red = 0xFF;
   fb->green = 0xFF;
   fb->blue = 0xFF;
+  fb->dirty = 1;
 
   /* if rgb frame buffer, use default font */
-  if (fb->type == MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
-    fb->font = get_default_font();
-    if (!fb->font)
-      return -ENOSPC;
-    fb->putc = fb_glyph_putc;
+  switch (fb->type) {
+    case MULTIBOOT_FRAMEBUFFER_TYPE_RGB:
+      fb->font = get_default_font();
+      if (!fb->font)
+        return -ENOSPC;
+      fb->buf_size = fb->width * fb->height / (fb->font->width * fb->font->height);
+      break;
+    case MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT:
+      fb->font = NULL;
+      fb->buf_size = fb->width * fb->height;
+      break;
+    default:
+      return -EINVAL;
   }
-  else {
-    fb->font = NULL;
-    fb->putc = fb_text_putc;
-  }
+
+  /* allocate buffer */
+  fb->buf = (char *) kmalloc(fb->buf_size);
+  if (!fb->buf)
+    return -ENOMEM;
 
   /* identity map frame buffer */
   fb_nb_pages = div_ceil(fb->height * fb->pitch, PAGE_SIZE);
@@ -169,23 +180,25 @@ static void fb_glyph_putc(struct framebuffer_t *fb, uint8_t c)
 }
 
 /*
- * Print a text character on the frame buffer.
+ * Print a character on the frame buffer.
  */
-static void fb_text_putc(struct framebuffer_t *fb, uint8_t c)
+static void fb_putc(struct framebuffer_t *fb, uint8_t c)
 {
-  /* handle new character */
-  switch (c) {
-    case '\r':
-      fb->x = 0;
-      break;
-    case '\n':
-      fb->x = 0;
-      fb->y++;
-      break;
-    default:
-      *((uint16_t *) (fb->addr + fb->y * fb->pitch + fb->x * 2)) = TEXT_ENTRY(TEXT_BLACK, TEXT_LIGHT_GREY, c);
-      fb->x++;
-      break;
+  uint32_t i;
+
+  /* handle character */
+  if (c >= ' ' && c <= '~') {
+    fb->buf[fb->y * fb->width + fb->x] = c;
+    fb->x++;
+  } else if (c == '\b' && fb->x != 0) {
+    fb->x--;
+  } else if (c == '\t') {
+    fb->x = (fb->x + 4) & ~0x03;
+  } else if (c == '\n') {
+    fb->y++;
+    fb->x = 0;
+  } else if (c == '\r') {
+    fb->x = 0;
   }
 
   /* go to next line */
@@ -194,11 +207,20 @@ static void fb_text_putc(struct framebuffer_t *fb, uint8_t c)
     fb->y++;
   }
 
-  /* end of frame buffer : blank screen */
+  /* scroll */
   if (fb->y >= fb->height) {
-    fb_clear(fb);
-    fb->y = 0;
+    /* move each line up */
+    for (i = 0; i < fb->width * (fb->height - 1); i++)
+      fb->buf[i] = fb->buf[i + fb->width];
+
+    /* clear last line */
+    memset(&fb->buf[i], 0, fb->width);
+
+    fb->y = fb->height - 1;
   }
+
+  /* mark frame buffer dirty */
+  fb->dirty = 1;
 }
 
 /*
@@ -209,7 +231,29 @@ size_t fb_write(struct framebuffer_t *fb, const char *buf, size_t n)
   size_t i;
 
   for (i = 0; i < n; i++)
-    fb->putc(fb, buf[i]);
+    fb_putc(fb, buf[i]);
 
   return n;
+}
+
+/*
+ * Update a frame buffer.
+ */
+void fb_update(struct framebuffer_t *fb)
+{
+  uint16_t pos = fb->y * fb->width + fb->x;
+  uint16_t *video_buf = (uint16_t *) fb->addr;
+  size_t i;
+
+  /* copy the buffer */
+  for (i = 0; i < fb->width * fb->height; i++)
+    video_buf[i] = TEXT_ENTRY(TEXT_BLACK, TEXT_LIGHT_GREY, fb->buf[i]);
+
+  /* update hardware cursor */
+  outb(0x03D4, 14);
+  outb(0x03D5, pos >> 8);
+  outb(0x03D4, 15);
+  outb(0x03D5, pos);
+
+  fb->dirty = 0;
 }
