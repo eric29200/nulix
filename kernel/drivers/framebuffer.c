@@ -1,4 +1,5 @@
 #include <drivers/framebuffer.h>
+#include <string.h>
 #include <mm/mm.h>
 #include <font.h>
 
@@ -113,18 +114,60 @@ static void fb_putglyph(uint16_t glyph)
   fb.x += fb.font.width;
 }
 
+/*
+ * Clear the frame buffer.
+ */
+static void fb_clear()
+{
+  uint32_t h, y;
+  uint8_t *p;
+
+  for (y = 0; y < fb.height - fb.font.height; y++) {
+    for (h = 0; h < fb.font.height; h++) {
+      p = (uint8_t *) (fb.addr + (y + h) * fb.pitch);
+      memset(p, 0, fb.width);
+    }
+  }
+}
 
 /*
  * Print a character on the frame buffer.
  */
 void fb_putc(uint8_t c)
 {
-  int glyph = get_glyph(&fb.font, c);
+  int glyph;
 
-  if (glyph < 0)
-    fb_putblank();
-  else
-    fb_putglyph(glyph);
+  /* handle new character */
+  switch (c) {
+    case '\r':
+      fb.x = 0;
+      break;
+    case '\n':
+      fb.x = 0;
+      fb.y += fb.font.height;
+      break;
+    default:
+      glyph = get_glyph(&fb.font, c);
+
+      if (glyph < 0)
+        fb_putblank();
+      else
+        fb_putglyph(glyph);
+
+      break;
+  }
+
+  /* go to next line */
+  if (fb.x + fb.font.width > fb.width) {
+    fb.x = 0;
+    fb.y += fb.font.height;
+  }
+
+  /* end of frame buffer : blank screen */
+  if (fb.y + fb.font.height > fb.height) {
+    fb_clear();
+    fb.y = 0;
+  }
 }
 
 /*
