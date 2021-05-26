@@ -4,7 +4,7 @@
 #include <drivers/framebuffer.h>
 #include <drivers/termios.h>
 
-#define TTY_BUF_SIZE            1024
+#define TTY_BUF_SIZE            4096
 #define TTY_DELAY_UPDATE_MS     20
 
 /*
@@ -14,7 +14,8 @@ struct tty_t {
   dev_t                 dev;                  /* dev number */
   pid_t                 pgrp;                 /* process group id */
   uint32_t              r_pos;                /* read position */
-  uint32_t              w_pos;                /* write positions */
+  uint32_t              w_pos;                /* write position */
+  uint32_t              b_pos;                /* real buffer position (used to handle del key) */
   unsigned char         buf[TTY_BUF_SIZE];    /* tty buffer */
   struct winsize_t      winsize;              /* window size */
   struct framebuffer_t  fb;                   /* framebuffer of the tty */

@@ -60,6 +60,9 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
   if (!tty)
     return -EINVAL;
 
+  /* reset buffer position */
+  tty->b_pos = 0;
+
   /* read all characters */
   while (count < n) {
     /* wait for a character */
@@ -86,6 +89,9 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
         break;
     }
   }
+
+  /* reset buffer position */
+  tty->b_pos = 0;
 
   return count;
 }
@@ -114,17 +120,37 @@ void tty_update(unsigned char c)
   /* get tty */
   tty = &tty_table[current_tty];
 
-  /* adjust read/write positions */
+  /* adjust read position */
   if (tty->w_pos >= TTY_BUF_SIZE)
     tty->w_pos = TTY_BUF_SIZE - 1;
+
+  /* adjust real buffer position */
+  if (tty->b_pos >= TTY_BUF_SIZE)
+    tty->b_pos = TTY_BUF_SIZE - 1;
+
+  /* adjust write position */
   if (tty->r_pos > tty->w_pos)
     tty->r_pos = tty->w_pos = 0;
 
   /* handle special keys */
-  if (c == 13)
-    c = '\n';
-  else if (c == 127)
-    c = '\b';
+  switch (c) {
+    case 13:
+      c = '\n';
+      tty->b_pos++;
+      break;
+    case 127:
+      c = '\b';
+
+      /* do not allow to delete characters before buffer */
+      if (tty->b_pos == 0)
+        return;
+
+      tty->b_pos--;
+      break;
+    default:
+      tty->b_pos++;
+      break;
+  }
 
   /* store character */
   tty->buf[tty->w_pos++] = c;
@@ -235,6 +261,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
     tty_table[i].pgrp = 0;
     tty_table[i].r_pos = 0;
     tty_table[i].w_pos = 0;
+    tty_table[i].b_pos = 0;
     tty_table[i].buf[0] = 0;
     init_framebuffer(&tty_table[i].fb, tag_fb);
     tty_table[i].winsize.ws_row = tty_table[i].fb.height;
