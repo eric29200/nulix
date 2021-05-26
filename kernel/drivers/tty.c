@@ -83,23 +83,20 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
 
   while (count < n) {
     /* read next char */
-    key = tty_read_wait(dev, count == 0);
+    key = tty_read_wait(dev, 1);
 
-    if (key == 0 && count == 0) {           /* ^D */
-      break;
-    } else if (key < 0 && count == 0) {     /* nothing to read */
-      count = -EAGAIN;
-      goto out;
-    } else if (key < 0 && count > 0) {      /* end */
-      break;
-    } else {
-      ((unsigned char *) buf)[count] = key;
-    }
+    /* nothing to read */
+    if (key <= 0)
+      return -EAGAIN;
 
-    count++;
+    /* store new character */
+    ((unsigned char *) buf)[count++] = key;
+
+    /* new line : break */
+    if (key == 10)
+      break;
   }
 
-out:
   return count;
 }
 
