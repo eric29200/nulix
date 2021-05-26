@@ -120,7 +120,7 @@ dev_t tty_get()
 /*
  * Write a character to tty.
  */
-void tty_update(char c)
+void tty_update(unsigned char c)
 {
   struct tty_t *tty;
 
