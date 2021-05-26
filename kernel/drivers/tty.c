@@ -90,7 +90,10 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
       return -EAGAIN;
 
     /* store new character */
-    ((unsigned char *) buf)[count++] = key;
+    if (key == '\b')
+      ((unsigned char *) buf)[--count] = 0;
+    else
+      ((unsigned char *) buf)[count++] = key;
 
     /* new line : break */
     if (key == 10)
@@ -129,6 +132,12 @@ void tty_update(unsigned char c)
     tty->w_pos = TTY_BUF_SIZE - 1;
   if (tty->r_pos > tty->w_pos)
     tty->r_pos = tty->w_pos = 0;
+
+  /* handle special keys */
+  if (c == 13)
+    c = '\n';
+  else if (c == 127)
+    c = '\b';
 
   /* store character */
   tty->buf[tty->w_pos++] = c;
