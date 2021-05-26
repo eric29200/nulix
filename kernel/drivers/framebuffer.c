@@ -86,6 +86,17 @@ static inline void fb_put_blank(struct framebuffer_t *fb, uint32_t pos_x, uint32
 }
 
 /*
+ * Print a cursor on the frame buffer.
+ */
+static inline void fb_put_cursor(struct framebuffer_t *fb, uint32_t pos_x, uint32_t pos_y)
+{
+  uint32_t y;
+
+  for (y = 0; y < fb->font->height; y++)
+    memset((void *) (fb->addr + pos_x * 3 + (pos_y + y) * fb->pitch), 0xFF, fb->font->width * 3);
+}
+
+/*
  * Print a glyph on the frame buffer.
  */
 static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, uint32_t pos_y)
@@ -218,6 +229,9 @@ static void fb_update_rgb(struct framebuffer_t *fb)
       fb_put_glyph(fb, c ? get_glyph(fb->font, c) : -1, x * fb->font->width, y * fb->font->height);
     }
   }
+
+  /* add cursor */
+  fb_put_cursor(fb, fb->x * fb->font->width, fb->y * fb->font->height);
 
   /* mark frame buffer clean */
   fb->dirty = 0;
