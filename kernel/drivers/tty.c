@@ -47,43 +47,29 @@ static struct tty_t *tty_lookup(dev_t dev)
 }
 
 /*
- * Read a character from a tty (block if no character available).
+ * Read TTY.
  */
-static int tty_read_wait(dev_t dev, int block)
+size_t tty_read(dev_t dev, void *buf, size_t n)
 {
   struct tty_t *tty;
-  int c = -1;
+  size_t count = 0;
+  int key;
 
   /* get tty */
   tty = tty_lookup(dev);
   if (!tty)
     return -EINVAL;
 
-  /* wait for character */
-  while (tty->r_pos >= tty->w_pos && block) {
-    tty->r_pos = 0;
-    tty->w_pos = 0;
-    task_sleep(tty);
-  }
-
-  /* get next character */
-  if (tty->r_pos < tty->w_pos)
-    c = tty->buf[tty->r_pos++];
-
-  return c;
-}
-
-/*
- * Read TTY.
- */
-size_t tty_read(dev_t dev, void *buf, size_t n)
-{
-  size_t count = 0;
-  int key;
-
   while (count < n) {
-    /* read next char */
-    key = tty_read_wait(dev, 1);
+    /* wait for a character */
+    while (tty->r_pos >= tty->w_pos) {
+      tty->r_pos = 0;
+      tty->w_pos = 0;
+      task_sleep(tty);
+    }
+
+    /* get key */
+    key = tty->buf[tty->r_pos++];
 
     /* nothing to read */
     if (key <= 0)

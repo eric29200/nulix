@@ -4,7 +4,7 @@
 #include <drivers/framebuffer.h>
 #include <drivers/termios.h>
 
-#define TTY_BUF_SIZE            256
+#define TTY_BUF_SIZE            1024
 #define TTY_DELAY_UPDATE_MS     20
 
 /*
