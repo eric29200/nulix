@@ -145,8 +145,8 @@ static void fb_putc(struct framebuffer_t *fb, uint8_t c)
     fb->buf[fb->y * fb->width_glyph + fb->x] = c;
     fb->x++;
   } else if (c == '\b' && fb->x != 0) {
-    fb->buf[fb->y * fb->width_glyph + fb->x] = 0;
     fb->x--;
+    fb->buf[fb->y * fb->width_glyph + fb->x] = 0;
   } else if (c == '\t') {
     fb->x = (fb->x + 4) & ~0x03;
   } else if (c == '\n') {
