@@ -60,6 +60,10 @@ int get_glyph(struct font_t *font, uint16_t unicode)
 {
   uint32_t s;
 
+  /* use ascii direct mapping */
+  if (unicode < ASCII_MAP_SIZE)
+      return (font->ascii_map[unicode] & 0xFFFF0000) >> 16;
+
   for (s = 0; s < font->uc_size; s++)
     if (unicode == (font->uc_map[s] & 0xFFFF))
       return (font->uc_map[s] & 0xFFFF0000) >> 16;
@@ -72,9 +76,15 @@ int get_glyph(struct font_t *font, uint16_t unicode)
  */
 static int map_glyph(struct font_t *font, uint16_t unicode, uint16_t glyph_index)
 {
+  /* directly map ascii characters */
+  if (unicode < ASCII_MAP_SIZE)
+    font->ascii_map[unicode] = unicode | (glyph_index << 16);
+
+  /* invalid unicode */
   if (font->uc_size >= UC_MAP_SIZE)
     return -ENOSPC;
 
+  /* map unicode characters */
   font->uc_map[font->uc_size++] = unicode | (glyph_index << 16);
   return 0;
 }

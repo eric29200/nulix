@@ -30,18 +30,20 @@ struct psf2_header_t {
 };
 
 #define UC_MAP_SIZE       1024
+#define ASCII_MAP_SIZE    128
 
 /*
  * Font structure.
  */
 struct font_t {
-  uint32_t        height;               /* font height */
-  uint32_t        width;                /* font width */
-  uint32_t        char_size;            /* glyph size in bytes */
-  int32_t         char_count;           /* number of glyphs */
-  uint32_t        uc_size;              /* number of unicode mappings */
-  uint32_t        uc_map[UC_MAP_SIZE];  /* unicode mapping */
-  unsigned char   *data;                /* pointer to first glyph */
+  uint32_t        height;                     /* font height */
+  uint32_t        width;                      /* font width */
+  uint32_t        char_size;                  /* glyph size in bytes */
+  int32_t         char_count;                 /* number of glyphs */
+  uint32_t        uc_size;                    /* number of unicode mappings */
+  uint32_t        uc_map[UC_MAP_SIZE];        /* unicode mapping */
+  uint32_t        ascii_map[ASCII_MAP_SIZE];  /* ascii mapping */
+  unsigned char   *data;                      /* pointer to first glyph */
 };
 
 struct font_t *get_default_font();
