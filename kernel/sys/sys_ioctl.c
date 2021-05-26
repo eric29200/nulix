@@ -2,6 +2,7 @@
 #include <drivers/tty.h>
 #include <fcntl.h>
 #include <stderr.h>
+#include <stdio.h>
 #include <dev.h>
 
 /*
@@ -16,15 +17,15 @@ int sys_ioctl(int fd, unsigned long request, unsigned long arg)
   if (fd >= NR_OPEN || !current_task->filp[fd])
     return -EBADF;
 
-  /* ioctl on char/block devices only */
+  /* ioctl on tty only */
   filp = current_task->filp[fd];
-  if (!S_ISCHR(filp->f_inode->i_mode) && !S_ISBLK(filp->f_inode->i_mode))
-    return -EINVAL;
+  if (S_ISCHR(filp->f_inode->i_mode)) {
+    dev = filp->f_inode->i_zone[0];
 
-  /* actually on tty only */
-  dev = filp->f_inode->i_zone[0];
-  if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
-    return tty_ioctl(dev, request, arg);
+    if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
+      return tty_ioctl(dev, request, arg);
+  }
 
+  printf("Unknown ioctl (request=%d) on file (fd=%d)\n", request, fd);
   return -EINVAL;
 }
