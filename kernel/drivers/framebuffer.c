@@ -66,7 +66,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 /*
  * Put a pixel on the screen.
  */
-static void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint8_t red, uint8_t green, uint8_t blue)
+static inline void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint8_t red, uint8_t green, uint8_t blue)
 {
   uint8_t *pixel = (uint8_t *) (fb->addr + x * 3 + y * fb->pitch);
   *pixel++ = red;
@@ -77,14 +77,12 @@ static void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint8
 /*
  * Print a blanck character on the frame buffer.
  */
-static void fb_put_blank(struct framebuffer_t *fb, uint32_t pos_x, uint32_t pos_y)
+static inline void fb_put_blank(struct framebuffer_t *fb, uint32_t pos_x, uint32_t pos_y)
 {
-  uint32_t x, y;
+  uint32_t y;
 
-  /* print glyph */
   for (y = 0; y < fb->font->height; y++)
-    for (x = 0; x < fb->font->width; x++)
-      fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
+    memset((void *) (fb->addr + pos_x * 3 + (pos_y + y) * fb->pitch), 0, fb->font->width * 3);
 }
 
 /*
@@ -213,11 +211,15 @@ static void fb_update_text(struct framebuffer_t *fb)
 static void fb_update_rgb(struct framebuffer_t *fb)
 {
   uint32_t x, y;
+  char c;
 
   /* print each glyph */
-  for (y = 0; y < fb->height_glyph; y++)
-    for (x = 0; x < fb->width_glyph; x++)
-      fb_put_glyph(fb, get_glyph(fb->font, fb->buf[y * fb->width_glyph + x]), x * fb->font->width, y * fb->font->height);
+  for (y = 0; y < fb->height_glyph; y++) {
+    for (x = 0; x < fb->width_glyph; x++) {
+      c = fb->buf[y * fb->width_glyph + x];
+      fb_put_glyph(fb, c ? get_glyph(fb->font, c) : -1, x * fb->font->width, y * fb->font->height);
+    }
+  }
 
   /* mark frame buffer clean */
   fb->dirty = 0;
