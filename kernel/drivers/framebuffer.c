@@ -107,12 +107,10 @@ static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, ui
   /* print glyph */
   for (y = 0; y < fb->font->height; y++) {
     for (x = 0; x < fb->font->width; x++) {
-      if (x < fb->font->width) {
-        if ((*font) & bit)
-          fb_put_pixel(fb, pos_x + x, pos_y + y, fb->red, fb->green, fb->blue);
-        else
-          fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
-      }
+      if ((*font) & bit)
+        fb_put_pixel(fb, pos_x + x, pos_y + y, fb->red, fb->green, fb->blue);
+      else
+        fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
 
       /* go to next glyph */
       bit >>= 1;
