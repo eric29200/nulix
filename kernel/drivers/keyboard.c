@@ -151,7 +151,9 @@ static void keyboard_handler(struct registers_t *regs)
           c = key_map[c];
         }
 
-        tty_update(c);
+        /* send character to tty */
+        if (c)
+          tty_update(c);
       }
       break;
   }
