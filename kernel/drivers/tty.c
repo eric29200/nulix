@@ -89,15 +89,19 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
     if (key <= 0)
       return -EAGAIN;
 
-    /* store new character */
-    if (key == '\b')
-      ((unsigned char *) buf)[--count] = 0;
-    else
-      ((unsigned char *) buf)[count++] = key;
-
-    /* new line : break */
-    if (key == 10)
-      break;
+    /* handle new key */
+    switch (key) {
+      case '\b':
+        if(count > 0)
+          ((unsigned char *) buf)[--count] = 0;
+        break;
+      case '\n':
+        ((unsigned char *) buf)[count++] = key;
+        return count;
+      default:
+        ((unsigned char *) buf)[count++] = key;
+        break;
+    }
   }
 
   return count;
