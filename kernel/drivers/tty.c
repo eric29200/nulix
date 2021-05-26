@@ -60,6 +60,7 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
   if (!tty)
     return -EINVAL;
 
+  /* read all characters */
   while (count < n) {
     /* wait for a character */
     while (tty->r_pos >= tty->w_pos) {
@@ -70,10 +71,6 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
 
     /* get key */
     key = tty->buf[tty->r_pos++];
-
-    /* nothing to read */
-    if (key <= 0)
-      return -EAGAIN;
 
     /* handle new key */
     switch (key) {
