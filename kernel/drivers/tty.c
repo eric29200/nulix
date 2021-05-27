@@ -53,6 +53,7 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
 {
   struct tty_t *tty;
   size_t count = 0;
+  uint32_t r_pos;
   int key;
 
   /* get tty */
@@ -61,19 +62,21 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
     return -EINVAL;
 
   /* reset buffer position */
-  tty->b_pos = 0;
+  tty->w_pos = 0;
+  tty->d_pos = 0;
+  r_pos = 0;
 
   /* read all characters */
   while (count < n) {
     /* wait for a character */
-    while (tty->r_pos >= tty->w_pos) {
-      tty->r_pos = 0;
+    while (r_pos >= tty->w_pos) {
+      r_pos = 0;
       tty->w_pos = 0;
       task_sleep(tty);
     }
 
     /* get key */
-    key = tty->buf[tty->r_pos++];
+    key = tty->buf[r_pos++];
 
     /* handle new key */
     switch (key) {
@@ -91,7 +94,8 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
   }
 
   /* reset buffer position */
-  tty->b_pos = 0;
+  tty->w_pos = 0;
+  tty->d_pos = 0;
 
   return count;
 }
@@ -121,34 +125,28 @@ void tty_update(unsigned char c)
   tty = &tty_table[current_tty];
 
   /* adjust read position */
-  if (tty->w_pos >= TTY_BUF_SIZE)
+  if (tty->w_pos >= TTY_BUF_SIZE) {
     tty->w_pos = TTY_BUF_SIZE - 1;
-
-  /* adjust real buffer position */
-  if (tty->b_pos >= TTY_BUF_SIZE)
-    tty->b_pos = TTY_BUF_SIZE - 1;
-
-  /* adjust write position */
-  if (tty->r_pos > tty->w_pos)
-    tty->r_pos = tty->w_pos = 0;
+    tty->d_pos = TTY_BUF_SIZE - 1;
+  }
 
   /* handle special keys */
   switch (c) {
     case 13:
       c = '\n';
-      tty->b_pos++;
+      tty->d_pos++;
       break;
     case 127:
       c = '\b';
 
       /* do not allow to delete characters before buffer */
-      if (tty->b_pos == 0)
+      if (tty->d_pos == 0)
         return;
 
-      tty->b_pos--;
+      tty->d_pos--;
       break;
     default:
-      tty->b_pos++;
+      tty->d_pos++;
       break;
   }
 
@@ -259,9 +257,8 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
   for (i = 0; i < NB_TTYS; i++) {
     tty_table[i].dev = DEV_TTY1 + i;
     tty_table[i].pgrp = 0;
-    tty_table[i].r_pos = 0;
     tty_table[i].w_pos = 0;
-    tty_table[i].b_pos = 0;
+    tty_table[i].d_pos = 0;
     tty_table[i].buf[0] = 0;
     init_framebuffer(&tty_table[i].fb, tag_fb);
     tty_table[i].winsize.ws_row = tty_table[i].fb.height;
