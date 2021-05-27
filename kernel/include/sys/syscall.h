@@ -63,6 +63,7 @@
 #define __NR_rt_sigaction       174
 #define __NR_rt_sigprocmask     175
 #define __NR_getcwd             183
+#define __NR_vfork              190
 #define __NR_mmap2              192
 #define __NR_getuid32           199
 #define __NR_getgid32           200
@@ -93,6 +94,7 @@ void init_syscall();
 
 void sys_exit(int status);
 pid_t sys_fork();
+pid_t sys_vfork();
 int sys_read(int fd, char *buf, int count);
 int sys_write(int fd, const char *buf, int count);
 int sys_open(const char *pathname, int flags, mode_t mode);
