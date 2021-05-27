@@ -10,7 +10,7 @@ extern struct file_t filp_table[NR_FILE];
  */
 int read_pipe(struct inode_t *inode, char *buf, int count)
 {
-  int chars, size, read = 0;
+  int chars, size, rpos, read = 0;
 
   while (count > 0) {
     /* no data available */
@@ -27,7 +27,7 @@ int read_pipe(struct inode_t *inode, char *buf, int count)
     }
 
     /* compute number of characters to read */
-    chars = PAGE_SIZE - PIPE_TAIL(inode);
+    chars = PAGE_SIZE - PIPE_RPOS(inode);
     if (chars > count)
       chars = count;
     if (chars > size)
@@ -37,13 +37,13 @@ int read_pipe(struct inode_t *inode, char *buf, int count)
     count -= chars;
     read += chars;
 
-    /* update pipe size (PIPE_TAIL contains read position) */
-    size = PIPE_TAIL(inode);
-    PIPE_TAIL(inode) += chars;
-    PIPE_TAIL(inode) &= (PAGE_SIZE - 1);
+    /* update pipe read position */
+    rpos = PIPE_RPOS(inode);
+    PIPE_RPOS(inode) += chars;
+    PIPE_RPOS(inode) &= (PAGE_SIZE - 1);
 
     /* copy data to buffer */
-    memcpy(buf, &((char *) inode->i_size)[size], chars);
+    memcpy(buf, &((char *) inode->i_size)[rpos], chars);
     buf += chars;
   }
 
@@ -57,7 +57,7 @@ int read_pipe(struct inode_t *inode, char *buf, int count)
  */
 int write_pipe(struct inode_t *inode, const char *buf, int count)
 {
-  int chars, size, written = 0;
+  int chars, size, wpos, written = 0;
 
   while (count > 0) {
     /* no free space */
@@ -74,7 +74,7 @@ int write_pipe(struct inode_t *inode, const char *buf, int count)
     }
 
     /* compute number of characters to write */
-    chars = PAGE_SIZE - PIPE_HEAD(inode);
+    chars = PAGE_SIZE - PIPE_WPOS(inode);
     if (chars > count)
       chars = count;
     if (chars > size)
@@ -84,13 +84,13 @@ int write_pipe(struct inode_t *inode, const char *buf, int count)
     count -= chars;
     written += chars;
 
-    /* update pipe size (PIPE_HEAD contains write position) */
-    size = PIPE_HEAD(inode);
-    PIPE_HEAD(inode) += chars;
-    PIPE_HEAD(inode) &= (PAGE_SIZE - 1);
+    /* update pipe write position */
+    wpos = PIPE_WPOS(inode);
+    PIPE_WPOS(inode) += chars;
+    PIPE_WPOS(inode) &= (PAGE_SIZE - 1);
 
     /* copy data to memory */
-    memcpy(&((char *) inode->i_size)[size], buf, chars);
+    memcpy(&((char *) inode->i_size)[wpos], buf, chars);
     buf += chars;
   }
 

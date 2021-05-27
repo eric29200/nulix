@@ -18,10 +18,10 @@
 
 #define BLOCK_SIZE                    1024
 
-#define PIPE_HEAD(inode)              ((inode)->i_zone[0])
-#define PIPE_TAIL(inode)              ((inode)->i_zone[1])
-#define PIPE_SIZE(inode)              ((PIPE_HEAD(inode) - PIPE_TAIL(inode)) & (PAGE_SIZE - 1))
-#define PIPE_EMPTY(inode)             (PIPE_HEAD(inode) == PIPE_TAIL(inode))
+#define PIPE_WPOS(inode)              ((inode)->i_zone[0])
+#define PIPE_RPOS(inode)              ((inode)->i_zone[1])
+#define PIPE_SIZE(inode)              ((PIPE_WPOS(inode) - PIPE_RPOS(inode)) & (PAGE_SIZE - 1))
+#define PIPE_EMPTY(inode)             (PIPE_WPOS(inode) == PIPE_RPOS(inode))
 #define PIPE_FULL(inode)              (PIPE_SIZE(inode) == (PAGE_SIZE - 1))
 
 /*

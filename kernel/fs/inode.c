@@ -58,8 +58,8 @@ struct inode_t *get_pipe_inode()
   /* set pipe inode (2 references = reader + writer) */
   inode->i_ref = 2;
   inode->i_pipe = 1;
-  PIPE_HEAD(inode) = 0;
-  PIPE_TAIL(inode) = 0;
+  PIPE_RPOS(inode) = 0;
+  PIPE_WPOS(inode) = 0;
 
   return inode;
 }
