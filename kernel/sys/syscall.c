@@ -80,6 +80,7 @@ static const void *syscalls[] = {
   [__NR_readlinkat]       = sys_readlinkat,
   [__NR_uname]            = sys_uname,
   [__NR_pipe]             = sys_pipe,
+  [__NR_clock_gettime64]  = sys_clock_gettime64,
 };
 
 /*

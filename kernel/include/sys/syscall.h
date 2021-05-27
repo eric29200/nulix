@@ -9,7 +9,7 @@
 #include <sys/utsname.h>
 #include <time.h>
 
-#define SYSCALLS_NUM            (__NR_statx + 1)
+#define SYSCALLS_NUM            (__NR_clock_gettime64 + 1)
 
 #define __NR_exit               1
 #define __NR_fork               2
@@ -85,6 +85,7 @@
 #define __NR_symlinkat          304
 #define __NR_readlinkat         305
 #define __NR_statx              383
+#define __NR_clock_gettime64    403
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -156,5 +157,6 @@ ssize_t sys_readlink(const char *pathname, char *buf, size_t bufsize);
 ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsize);
 int sys_uname(struct utsname_t *buf);
 int sys_pipe(int pipefd[2]);
+int sys_clock_gettime64(clockid_t clockid, struct timespec_t *tp);
 
 #endif

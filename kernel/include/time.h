@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <proc/sched.h>
 
+#define CLOCK_REALTIME      0
+
 /*
  * Time value structure.
  */
@@ -17,7 +19,7 @@ struct timeval_t {
  */
 struct timespec_t {
   time_t  tv_sec;              /* seconds */
-  long    tv_nsec;               /* nano seconds */
+  long    tv_nsec;             /* nano seconds */
 };
 
 time_t mktime(uint32_t year, uint32_t month, int32_t day, uint32_t hour, uint32_t min, uint32_t sec);

@@ -21,6 +21,7 @@ typedef uint64_t ino_t;
 typedef unsigned uid_t;
 typedef unsigned gid_t;
 typedef int sigset_t;
+typedef int clockid_t;
 
 #define INT_MAX                               ((int) (~0U > >1))
 #define UINT_MAX                              (~0U)
