@@ -37,6 +37,34 @@ struct inode_t *get_empty_inode()
 }
 
 /*
+ * Get a pipe inode.
+ */
+struct inode_t *get_pipe_inode()
+{
+  struct inode_t *inode;
+
+  /* get an empty inode */
+  inode = get_empty_inode();
+  if (!inode)
+    return NULL;
+
+  /* allocate some memory for data */
+  inode->i_size = (uint32_t) kmalloc(PAGE_SIZE);
+  if (!inode->i_size) {
+    inode->i_ref = 0;
+    return NULL;
+  }
+
+  /* set pipe inode (2 references = reader + writer) */
+  inode->i_ref = 2;
+  inode->i_pipe = 1;
+  PIPE_HEAD(inode) = 0;
+  PIPE_TAIL(inode) = 0;
+
+  return inode;
+}
+
+/*
  * Read an inode.
  */
 static struct inode_t *read_inode(struct inode_t *inode)
@@ -247,6 +275,21 @@ void iput(struct inode_t *inode)
 
   /* update inode reference count */
   inode->i_ref--;
+
+  /* special case : pipe inode */
+  if (inode->i_pipe) {
+    /* wakeup eventual readers/writers */
+    task_wakeup(&inode->i_rwait);
+    task_wakeup(&inode->i_wwait);
+
+    /* no references : free inode */
+    if (!inode->i_ref) {
+      kfree((void *) inode->i_size);
+      memset(inode, 0, sizeof(struct inode_t));
+    }
+
+    return;
+  }
 
   /* removed inode : truncate and free it */
   if (!inode->i_nlinks && inode->i_ref == 0) {

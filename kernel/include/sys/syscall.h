@@ -32,6 +32,7 @@
 #define __NR_mkdir              39
 #define __NR_rmdir              40
 #define __NR_dup                41
+#define __NR_pipe               42
 #define __NR_brk                45
 #define __NR_setgid             46
 #define __NR_getgid             47
@@ -154,5 +155,6 @@ int sys_symlinkat(const char *target, int newdirfd, const char *linkpath);
 ssize_t sys_readlink(const char *pathname, char *buf, size_t bufsize);
 ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsize);
 int sys_uname(struct utsname_t *buf);
+int sys_pipe(int pipefd[2]);
 
 #endif

@@ -24,7 +24,11 @@ ssize_t do_read(int fd, char *buf, int count)
   /* get current file */
   filp = current_task->filp[fd];
 
-  /* read from character device */
+  /* read from a pipe */
+  if (filp->f_inode->i_pipe)
+    return read_pipe(filp->f_inode, buf, count);
+
+  /* read from a character device */
   if (S_ISCHR(filp->f_inode->i_mode))
     return read_char(filp->f_inode->i_zone[0], buf, count);
 
@@ -50,7 +54,11 @@ ssize_t do_write(int fd, const char *buf, int count)
   /* get current file */
   filp = current_task->filp[fd];
 
-  /* write to character device */
+  /* write to a pipe */
+  if (filp->f_inode->i_pipe)
+    return write_pipe(filp->f_inode, buf, count);
+
+  /* write to a character device */
   if (S_ISCHR(filp->f_inode->i_mode))
     return write_char(filp->f_inode->i_zone[0], buf, count);
 

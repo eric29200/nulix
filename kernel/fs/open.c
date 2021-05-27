@@ -8,7 +8,7 @@
 #include <string.h>
 
 /* global file table */
-static struct file_t filp_table[NR_FILE];
+struct file_t filp_table[NR_FILE];
 
 /*
  * Open system call.

@@ -18,6 +18,12 @@
 
 #define BLOCK_SIZE                    1024
 
+#define PIPE_HEAD(inode)              ((inode)->i_zone[0])
+#define PIPE_TAIL(inode)              ((inode)->i_zone[1])
+#define PIPE_SIZE(inode)              ((PIPE_HEAD(inode) - PIPE_TAIL(inode)) & (PAGE_SIZE - 1))
+#define PIPE_EMPTY(inode)             (PIPE_HEAD(inode) == PIPE_TAIL(inode))
+#define PIPE_FULL(inode)              (PIPE_SIZE(inode) == (PAGE_SIZE - 1))
+
 /*
  * Buffer structure.
  */
@@ -76,6 +82,9 @@ struct inode_t {
   ino_t                         i_ino;
   int                           i_ref;
   char                          i_dirt;
+  char                          i_pipe;
+  char                          i_rwait;
+  char                          i_wwait;
   struct minix_super_block_t *  i_sb;
   struct ata_device_t *         i_dev;
 };
@@ -134,6 +143,7 @@ struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
 struct inode_t *iget_parent(struct inode_t *dir);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode();
+struct inode_t *get_pipe_inode();
 struct inode_t *new_inode();
 int free_inode(struct inode_t *inode);
 void truncate(struct inode_t *inode);
@@ -152,6 +162,8 @@ int file_read(struct file_t *filp, char *buf, int count);
 int file_write(struct file_t *filp, const char *buf, int count);
 int read_char(dev_t dev, char *buf, int count);
 int write_char(dev_t dev, const char *buf, int count);
+int read_pipe(struct inode_t *inode, char *buf, int count);
+int write_pipe(struct inode_t *inode, const char *buf, int count);
 
 /* system calls */
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
@@ -171,5 +183,6 @@ int do_rmdir(int dirfd, const char *pathname);
 int do_getdents(int fd, struct dirent_t *dirent, uint32_t count);
 int do_getdents64(int fd, void *dirp, size_t count);
 int do_getcwd(char *buf, size_t size);
+int do_pipe(int pipefd[2]);
 
 #endif
