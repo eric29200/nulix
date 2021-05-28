@@ -241,6 +241,10 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
     if (!*pathname)
       break;
 
+    /* skip empty folder */
+    if (!name_len)
+      continue;
+
     /* find entry */
     bh = find_entry(inode, name, name_len, &de);
     if (!bh) {
