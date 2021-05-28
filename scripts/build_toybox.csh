@@ -21,6 +21,7 @@ tar -xzvf toybox-0.8.4.tar.gz
 
 # build toybox
 cd toybox-0.8.4
-make bsd_defconfig
+make clean
+cp ../../config/toybox-0.8.4.config .config
 make -j8
 make install_flat
