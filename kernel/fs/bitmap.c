@@ -6,7 +6,7 @@
 #include <stderr.h>
 
 /* root super block */
-extern struct minix_super_block_t *root_sb;
+extern struct super_block_t *root_sb;
 
 /*
  * Get first free bit in a bitmap block (inode or block).

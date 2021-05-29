@@ -7,7 +7,7 @@
 #include <string.h>
 
 /* root super block */
-extern struct minix_super_block_t *root_sb;
+extern struct super_block_t *root_sb;
 
 /*
  * Test if a name matches a directory entry.
@@ -202,8 +202,8 @@ static struct inode_t *follow_link(struct inode_t *inode)
  */
 static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **basename, size_t *basename_len)
 {
-  struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
+  struct super_block_t *sb;
   struct buffer_head_t *bh;
   struct inode_t *inode;
   const char *name;
@@ -279,9 +279,9 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
  */
 struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
 {
-  struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
   struct inode_t *dir, *inode;
+  struct super_block_t *sb;
   struct buffer_head_t *bh;
   const char *basename;
   size_t basename_len;
@@ -324,9 +324,9 @@ struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
  */
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
 {
-  struct minix_super_block_t *sb;
   struct minix_dir_entry_t *de;
   struct inode_t *dir, *inode;
+  struct super_block_t *sb;
   struct buffer_head_t *bh;
   const char *basename;
   size_t basename_len;

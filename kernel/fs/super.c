@@ -6,7 +6,7 @@
 #include <string.h>
 
 /* root fs super block */
-struct minix_super_block_t *root_sb = NULL;
+struct super_block_t *root_sb = NULL;
 
 /*
  * Mount root device.
@@ -23,9 +23,8 @@ int mount_root(struct ata_device_t *dev)
   if (!bh)
     goto bad_sb;
 
-  /* set super block */
+  /* read minix super block */
   sb = (struct minix_super_block_t *) bh->b_data;
-  root_sb = sb;
 
   /* check magic number */
   if (sb->s_magic != MINIX_SUPER_MAGIC) {
@@ -33,20 +32,35 @@ int mount_root(struct ata_device_t *dev)
     goto err_magic;
   }
 
-  /* set super block device */
-  sb->s_dev = dev;
+  /* allocate root super block */
+  root_sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
+  if (!root_sb) {
+    ret = -ENOMEM;
+    goto err_mem_sb;
+  }
+
+  /* set root super block */
+  root_sb->s_ninodes = sb->s_ninodes;
+  root_sb->s_nzones = sb->s_nzones;
+  root_sb->s_imap_blocks = sb->s_imap_blocks;
+  root_sb->s_zmap_blocks = sb->s_zmap_blocks;
+  root_sb->s_firstdatazone = sb->s_firstdatazone;
+  root_sb->s_log_zone_size = sb->s_log_zone_size;
+  root_sb->s_max_size = sb->s_max_size;
+  root_sb->s_magic = sb->s_magic;
+  root_sb->s_dev = dev;
 
   /* reset maps */
   for (i = 0; i < sb->s_imap_blocks; i++)
-    sb->s_imap[i] = NULL;
+    root_sb->s_imap[i] = NULL;
   for (i = 0; i < sb->s_zmap_blocks; i++)
-    sb->s_zmap[i] = NULL;
+    root_sb->s_zmap[i] = NULL;
 
   /* read imap blocks */
   block = 2;
   for (i = 0; i < sb->s_imap_blocks; i++, block++) {
-    sb->s_imap[i] = bread(dev, block);
-    if (!sb->s_imap[i]) {
+    root_sb->s_imap[i] = bread(dev, block);
+    if (!root_sb->s_imap[i]) {
       ret = ENOMEM;
       goto err_map;
     }
@@ -54,16 +68,16 @@ int mount_root(struct ata_device_t *dev)
 
   /* read zmap blocks */
   for (i = 0; i < sb->s_zmap_blocks; i++, block++) {
-    sb->s_zmap[i] = bread(dev, block);
-    if (!sb->s_zmap[i]) {
+    root_sb->s_zmap[i] = bread(dev, block);
+    if (!root_sb->s_zmap[i]) {
       ret = ENOMEM;
       goto err_map;
     }
   }
 
   /* read root inode */
-  sb->s_imount = iget(sb, MINIX_ROOT_INODE);
-  if (!sb->s_imount) {
+  root_sb->s_imount = iget(root_sb, MINIX_ROOT_INODE);
+  if (!root_sb->s_imount) {
     ret = EINVAL;
     goto err_root_inode;
   }
@@ -71,22 +85,24 @@ int mount_root(struct ata_device_t *dev)
   return 0;
 err_root_inode:
   printf("[Minix-fs] Can't read root inode\n");
-  if (sb->s_imount)
-    kfree(sb->s_imount);
+  if (root_sb->s_imount)
+    kfree(root_sb->s_imount);
   goto release_map;
 err_map:
   printf("[Minix-fs] Can't read imap and zmap\n");
 release_map:
   for (i = 0; i < sb->s_imap_blocks; i++)
-    brelse(sb->s_imap[i]);
+    brelse(root_sb->s_imap[i]);
   for (i = 0; i < sb->s_zmap_blocks; i++)
-    brelse(sb->s_zmap[i]);
+    brelse(root_sb->s_zmap[i]);
   goto release_sb;
+err_mem_sb:
+  printf("[Minix-fs] Can't allocate superblock\n");
+release_sb:
+  kfree(root_sb);
+  goto err;
 err_magic:
   printf("[Minix-fs] Bad magic number\n");
-release_sb:
-  kfree(sb);
-  goto err;
 bad_sb:
   printf("[Minix-fs] Can't read super block\n");
 err:

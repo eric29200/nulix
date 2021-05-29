@@ -47,7 +47,20 @@ struct minix_super_block_t {
   uint16_t                s_log_zone_size;
   uint32_t                s_max_size;
   uint16_t                s_magic;
-  /* these are only in memory */
+};
+
+/*
+ * In memory super block.
+ */
+struct super_block_t {
+  uint16_t                s_ninodes;
+  uint16_t                s_nzones;
+  uint16_t                s_imap_blocks;
+  uint16_t                s_zmap_blocks;
+  uint16_t                s_firstdatazone;
+  uint16_t                s_log_zone_size;
+  uint32_t                s_max_size;
+  uint16_t                s_magic;
   struct buffer_head_t *  s_imap[MINIX_IMAP_SLOTS];
   struct buffer_head_t *  s_zmap[MINIX_ZMAP_SLOTS];
   struct ata_device_t *   s_dev;
@@ -78,14 +91,13 @@ struct inode_t {
   gid_t                         i_gid;
   uint8_t                       i_nlinks;
   uint16_t                      i_zone[9];
-  /* these are only in memory */
   ino_t                         i_ino;
   int                           i_ref;
   char                          i_dirt;
   char                          i_pipe;
   char                          i_rwait;
   char                          i_wwait;
-  struct minix_super_block_t *  i_sb;
+  struct super_block_t *        i_sb;
   struct ata_device_t *         i_dev;
 };
 
@@ -139,7 +151,7 @@ int bwrite(struct buffer_head_t *bh);
 void brelse(struct buffer_head_t *bh);
 
 /* inode operations */
-struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino);
+struct inode_t *iget(struct super_block_t *sb, ino_t ino);
 struct inode_t *iget_parent(struct inode_t *dir);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode();

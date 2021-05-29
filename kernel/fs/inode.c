@@ -237,7 +237,7 @@ int bmap(struct inode_t *inode, int block, int create)
 /*
  * Get an inode.
  */
-struct inode_t *iget(struct minix_super_block_t *sb, ino_t ino)
+struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 {
   struct inode_t *inode;
   int i;
