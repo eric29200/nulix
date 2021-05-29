@@ -4,7 +4,7 @@
 /*
  * Free single indirect blocks.
  */
-static void free_indirect_blocks(struct ata_device_t *dev, int block)
+static void free_indirect_blocks(struct super_block_t *sb, int block)
 {
   struct buffer_head_t *bh;
   uint16_t *blocks;
@@ -14,7 +14,7 @@ static void free_indirect_blocks(struct ata_device_t *dev, int block)
     return;
 
   /* get block */
-  bh = bread(dev, block);
+  bh = bread(sb->s_dev, block);
   if (!bh)
     return;
 
@@ -22,19 +22,19 @@ static void free_indirect_blocks(struct ata_device_t *dev, int block)
   blocks = (uint16_t *) bh->b_data;
   for (i = 0; i < BLOCK_SIZE / 2; i++)
     if (blocks[i])
-      free_block(blocks[i]);
+      free_block(sb, blocks[i]);
 
   /* release buffer */
   brelse(bh);
 
   /* free this block */
-  free_block(block);
+  free_block(sb, block);
 }
 
 /*
  * Free double indirect blocks.
  */
-static void free_double_indirect_blocks(struct ata_device_t *dev, int block)
+static void free_double_indirect_blocks(struct super_block_t *sb, int block)
 {
   struct buffer_head_t *bh;
   uint16_t *blocks;
@@ -44,7 +44,7 @@ static void free_double_indirect_blocks(struct ata_device_t *dev, int block)
     return;
 
   /* get block */
-  bh = bread(dev, block);
+  bh = bread(sb->s_dev, block);
   if (!bh)
     return;
 
@@ -52,13 +52,13 @@ static void free_double_indirect_blocks(struct ata_device_t *dev, int block)
   blocks = (uint16_t *) bh->b_data;
   for (i = 0; i < BLOCK_SIZE / 2; i++)
     if (blocks[i])
-      free_indirect_blocks(dev, blocks[i]);
+      free_indirect_blocks(sb, blocks[i]);
 
   /* release buffer */
   brelse(bh);
 
   /* free this block */
-  free_block(block);
+  free_block(sb, block);
 }
 
 /*
@@ -75,17 +75,17 @@ void truncate(struct inode_t *inode)
   /* free direct blocks */
   for (i = 0; i < 7; i++) {
     if (inode->i_zone[i]) {
-      free_block(inode->i_zone[i]);
+      free_block(inode->i_sb, inode->i_zone[i]);
       inode->i_zone[i] = 0;
     }
   }
 
   /* free indirect blocks */
-  free_indirect_blocks(inode->i_dev, inode->i_zone[7]);
+  free_indirect_blocks(inode->i_sb, inode->i_zone[7]);
   inode->i_zone[7] = 0;
 
   /* free double indirect blocks */
-  free_double_indirect_blocks(inode->i_dev, inode->i_zone[8]);
+  free_double_indirect_blocks(inode->i_sb, inode->i_zone[8]);
   inode->i_zone[8] = 0;
 
   /* update inode size */

@@ -6,7 +6,7 @@
 #include <string.h>
 
 /* root fs super block */
-struct super_block_t *root_sb = NULL;
+static struct super_block_t *root_sb = NULL;
 
 /*
  * Mount root device.

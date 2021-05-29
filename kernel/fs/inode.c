@@ -157,7 +157,7 @@ int bmap(struct inode_t *inode, int block, int create)
   /* direct blocks */
   if (block < 7) {
     if (create && !inode->i_zone[block])
-      if ((inode->i_zone[block] = new_block()))
+      if ((inode->i_zone[block] = new_block(inode->i_sb)))
         inode->i_dirt = 1;
 
     return inode->i_zone[block];
@@ -168,7 +168,7 @@ int bmap(struct inode_t *inode, int block, int create)
   if (block < 512) {
     /* create block if needed */
     if (create && !inode->i_zone[7])
-      if ((inode->i_zone[7] = new_block()))
+      if ((inode->i_zone[7] = new_block(inode->i_sb)))
         inode->i_dirt = 1;
 
     if (!inode->i_zone[7])
@@ -182,7 +182,7 @@ int bmap(struct inode_t *inode, int block, int create)
     /* get matching block */
     i = ((uint16_t *) bh->b_data)[block];
     if (create && !i) {
-      if ((i = new_block())) {
+      if ((i = new_block(inode->i_sb))) {
         ((uint16_t *) (bh->b_data))[block] = i;
         bh->b_dirt = 1;
       }
@@ -194,7 +194,7 @@ int bmap(struct inode_t *inode, int block, int create)
   /* second indirect block */
   block -= 512;
   if (create && !inode->i_zone[8])
-    if ((inode->i_zone[8] = new_block()))
+    if ((inode->i_zone[8] = new_block(inode->i_sb)))
       inode->i_dirt = 1;
 
   if (!inode->i_zone[8])
@@ -208,7 +208,7 @@ int bmap(struct inode_t *inode, int block, int create)
 
   /* create it if needed */
   if (create && !i) {
-    if ((i = new_block())) {
+    if ((i = new_block(inode->i_sb))) {
       ((uint16_t *) (bh->b_data))[block >> 9] = i;
       bh->b_dirt = 1;
     }
@@ -224,7 +224,7 @@ int bmap(struct inode_t *inode, int block, int create)
     return 0;
   i = ((uint16_t *) bh->b_data)[block & 511];
   if (create && !i) {
-    if ((i = new_block())) {
+    if ((i = new_block(inode->i_sb))) {
       ((uint16_t *) (bh->b_data))[block & 511] = i;
       bh->b_dirt = 1;
     }

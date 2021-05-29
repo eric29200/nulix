@@ -156,13 +156,13 @@ struct inode_t *iget_parent(struct inode_t *dir);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode();
 struct inode_t *get_pipe_inode();
-struct inode_t *new_inode();
+struct inode_t *new_inode(struct super_block_t *sb);
 int free_inode(struct inode_t *inode);
 void truncate(struct inode_t *inode);
 
 /* block operations */
-uint32_t new_block();
-int free_block(uint32_t block);
+uint32_t new_block(struct super_block_t *sb);
+int free_block(struct super_block_t *sb, uint32_t block);
 
 /* name operations */
 struct inode_t *namei(int dirfd, const char *pathname, int follow_links);

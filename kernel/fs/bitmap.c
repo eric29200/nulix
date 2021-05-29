@@ -5,9 +5,6 @@
 #include <stdio.h>
 #include <stderr.h>
 
-/* root super block */
-extern struct super_block_t *root_sb;
-
 /*
  * Get first free bit in a bitmap block (inode or block).
  */
@@ -42,14 +39,14 @@ static void clear_bitmap(struct buffer_head_t *bh, int i)
 /*
  * Create a new block.
  */
-uint32_t new_block()
+uint32_t new_block(struct super_block_t *sb)
 {
   struct buffer_head_t *bh;
   int i, j, block_nr;
 
   /* find first free block in bitmap */
-  for (i = 0; i < root_sb->s_zmap_blocks; i++) {
-    j = get_free_bitmap(root_sb->s_zmap[i]);
+  for (i = 0; i < sb->s_zmap_blocks; i++) {
+    j = get_free_bitmap(sb->s_zmap[i]);
     if (j != -1)
       break;
   }
@@ -59,12 +56,12 @@ uint32_t new_block()
     return 0;
 
   /* compute real block number */
-  block_nr = j + i * BLOCK_SIZE * 8 + root_sb->s_firstdatazone - 1;
-  if (block_nr >= root_sb->s_nzones)
+  block_nr = j + i * BLOCK_SIZE * 8 + sb->s_firstdatazone - 1;
+  if (block_nr >= sb->s_nzones)
     return 0;
 
   /* read new block */
-  bh = bread(root_sb->s_dev, block_nr);
+  bh = bread(sb->s_dev, block_nr);
   if (!bh)
     return 0;
 
@@ -73,8 +70,8 @@ uint32_t new_block()
   brelse(bh);
 
   /* set block in bitmap and write bitmap to disk */
-  set_bitmap(root_sb->s_zmap[i], j);
-  if (bwrite(root_sb->s_zmap[i]) != 0)
+  set_bitmap(sb->s_zmap[i], j);
+  if (bwrite(sb->s_zmap[i]) != 0)
     return 0;
 
   return block_nr;
@@ -83,16 +80,16 @@ uint32_t new_block()
 /*
  * Free a block.
  */
-int free_block(uint32_t block)
+int free_block(struct super_block_t *sb, uint32_t block)
 {
   struct buffer_head_t *bh;
 
   /* check block number */
-  if (block < root_sb->s_firstdatazone || block >= root_sb->s_nzones)
+  if (block < sb->s_firstdatazone || block >= sb->s_nzones)
     return -EINVAL;
 
   /* update/clear inode bitmap */
-  bh = root_sb->s_zmap[block / (BLOCK_SIZE * 8)];
+  bh = sb->s_zmap[block / (BLOCK_SIZE * 8)];
   clear_bitmap(bh, block & (BLOCK_SIZE * 8 - 1));
   return bwrite(bh);
 }
@@ -115,7 +112,7 @@ int free_inode(struct inode_t *inode)
   }
 
   /* update/clear inode bitmap */
-  bh = root_sb->s_imap[inode->i_ino >> 13];
+  bh = inode->i_sb->s_imap[inode->i_ino >> 13];
   clear_bitmap(bh, inode->i_ino & (BLOCK_SIZE * 8 - 1));
   ret = bwrite(bh);
 
@@ -127,7 +124,7 @@ int free_inode(struct inode_t *inode)
 /*
  * Create a new inode.
  */
-struct inode_t *new_inode()
+struct inode_t *new_inode(struct super_block_t *sb)
 {
   struct inode_t *inode;
   int i, j;
@@ -138,8 +135,8 @@ struct inode_t *new_inode()
     return NULL;
 
   /* find first free inode in bitmap */
-  for (i = 0; i < root_sb->s_imap_blocks; i++) {
-    j = get_free_bitmap(root_sb->s_imap[i]);
+  for (i = 0; i < sb->s_imap_blocks; i++) {
+    j = get_free_bitmap(sb->s_imap[i]);
     if (j != -1)
       break;
   }
@@ -154,12 +151,12 @@ struct inode_t *new_inode()
   inode->i_nlinks = 1;
   inode->i_ino = i * BLOCK_SIZE * 8 + j;
   inode->i_ref = 1;
-  inode->i_sb = root_sb;
-  inode->i_dev = root_sb->s_dev;
+  inode->i_sb = sb;
+  inode->i_dev = sb->s_dev;
 
   /* set inode in bitmap and write bitmap to disk */
-  set_bitmap(root_sb->s_imap[i], j);
-  if (bwrite(root_sb->s_imap[i]) != 0) {
+  set_bitmap(sb->s_imap[i], j);
+  if (bwrite(sb->s_imap[i]) != 0) {
     free_inode(inode);
     return NULL;
   }

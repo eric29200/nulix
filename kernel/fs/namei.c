@@ -360,7 +360,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
     }
 
     /* create a new inode */
-    inode = new_inode();
+    inode = new_inode(dir->i_sb);
     if (!inode) {
       iput(dir);
       return -ENOSPC;
@@ -505,7 +505,7 @@ int do_mkdir(int dirfd, const char *pathname, mode_t mode)
   }
 
   /* allocate a new inode */
-  inode = new_inode();
+  inode = new_inode(dir->i_sb);
   if (!inode) {
     iput(dir);
     return -ENOSPC;
@@ -519,7 +519,7 @@ int do_mkdir(int dirfd, const char *pathname, mode_t mode)
   inode->i_mode = S_IFDIR | (mode & ~current_task->umask & 0777);
   inode->i_uid = current_task->uid;
   inode->i_gid = current_task->gid;
-  inode->i_zone[0] = new_block();
+  inode->i_zone[0] = new_block(inode->i_sb);
   if (!inode->i_zone[0]) {
     iput(dir);
     iput(inode);
@@ -530,7 +530,7 @@ int do_mkdir(int dirfd, const char *pathname, mode_t mode)
   bh = bread(inode->i_dev, inode->i_zone[0]);
   if (!bh) {
     iput(dir);
-    free_block(inode->i_zone[0]);
+    free_block(inode->i_sb, inode->i_zone[0]);
     iput(inode);
   }
 
@@ -552,7 +552,7 @@ int do_mkdir(int dirfd, const char *pathname, mode_t mode)
   bh = add_entry(dir, basename, basename_len, &de);
   if (!bh) {
     iput(dir);
-    free_block(inode->i_zone[0]);
+    free_block(inode->i_sb, inode->i_zone[0]);
     iput(inode);
     return -ENOSPC;
   }
@@ -656,7 +656,7 @@ int do_symlink(const char *target, int newdirfd, const char *linkpath)
     return -ENOENT;
 
   /* allocate a new inode */
-  inode = new_inode();
+  inode = new_inode(dir->i_sb);
   if (!inode) {
     iput(dir);
     return -ENOSPC;
@@ -667,7 +667,7 @@ int do_symlink(const char *target, int newdirfd, const char *linkpath)
   inode->i_dirt = 1;
 
   /* create first block */
-  inode->i_zone[0] = new_block();
+  inode->i_zone[0] = new_block(inode->i_sb);
   if (!inode->i_zone[0]) {
     iput(dir);
     inode->i_nlinks--;
