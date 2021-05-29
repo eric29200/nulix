@@ -50,6 +50,7 @@ struct task_t {
   sigset_t                    sigmask;            /* masked signals */
   struct sigaction_t          signals[NSIGS];     /* signal handlers */
   struct inode_t *            cwd;                /* current working directory */
+  struct inode_t *            root;               /* root directory */
   struct registers_t          user_regs;          /* saved registers at syscall entry */
   struct registers_t          signal_regs;        /* saved registers at signal entry */
   struct page_directory_t *   pgd;                /* page directory */
@@ -70,7 +71,7 @@ struct task_registers_t {
 };
 
 struct task_t *create_kinit_task(void (*func)(void));
-struct task_t *create_init_task();
+struct task_t *create_init_task(struct task_t *parent);
 struct task_t *fork_task(struct task_t *parent);
 void destroy_task(struct task_t *task);
 struct task_t *get_task(pid_t pid);

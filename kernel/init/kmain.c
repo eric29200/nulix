@@ -84,6 +84,10 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
  */
 static void kinit()
 {
+  /* mount root file system */
+  printf("[Kernel] Root file system init\n");
+  mount_root(ata_get_device(0));
+
   /* spawn init process */
   if (spawn_init() != 0)
     panic("Cannot spawn init process");
@@ -149,10 +153,6 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
   /* init system calls */
   printf("[Kernel] System calls Init\n");
   init_syscall();
-
-  /* mount root file system */
-  printf("[Kernel] Root file system init\n");
-  mount_root(ata_get_device(0));
 
   /* init ttys */
   printf("[Kernel] Ttys Init\n");

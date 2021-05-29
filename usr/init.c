@@ -52,9 +52,6 @@ int main(void)
   pid_t pid;
   int i;
 
-  /* set current working dir to root */
-  chdir("/");
-
   /* spawn a shell on each tty */
   for (i = 0; i < NTTYS; i++)
     ttys_pid[i] = spawn_shell(i + 1);

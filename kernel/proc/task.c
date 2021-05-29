@@ -127,6 +127,14 @@ static struct task_t *create_task(struct task_t *parent)
     task->cwd = NULL;
   }
 
+  /* duplicate root dir */
+  if (parent && parent->root) {
+    task->root = parent->root;
+    task->root->i_ref++;
+  } else {
+    task->root = NULL;
+  }
+
   /* copy open files */
   for (i = 0; i < NR_OPEN; i++) {
     task->filp[i] = parent ? parent->filp[i] : NULL;
@@ -188,13 +196,13 @@ struct task_t *fork_task(struct task_t *parent)
 /*
  * Create init process.
  */
-struct task_t *create_init_task()
+struct task_t *create_init_task(struct task_t *parent)
 {
   struct task_registers_t *regs;
   struct task_t *task;
 
   /* create task */
-  task = create_task(NULL);
+  task = create_task(parent);
   if (!task)
     return NULL;
 

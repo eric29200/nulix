@@ -82,6 +82,10 @@ int mount_root(struct ata_device_t *dev)
     goto err_root_inode;
   }
 
+  /* set current task current working dir to root */
+  current_task->cwd = root_sb->s_imount;
+  current_task->root = root_sb->s_imount;
+
   return 0;
 err_root_inode:
   printf("[Minix-fs] Can't read root inode\n");

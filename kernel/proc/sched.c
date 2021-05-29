@@ -78,7 +78,7 @@ static struct task_t *get_next_task()
  */
 int spawn_init()
 {
-  init_task = create_init_task();
+  init_task = create_init_task(kinit_task);
   if (!init_task)
     return -ENOMEM;
 

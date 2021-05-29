@@ -6,9 +6,6 @@
 #include <fcntl.h>
 #include <string.h>
 
-/* root super block */
-extern struct super_block_t *root_sb;
-
 /*
  * Test if a name matches a directory entry.
  */
@@ -212,7 +209,7 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
 
   /* absolute or relative path */
   if (*pathname == '/') {
-    inode = root_sb->s_imount;
+    inode = current_task->root;
     pathname++;
   } else if (dirfd == AT_FDCWD) {
     inode = current_task->cwd;
