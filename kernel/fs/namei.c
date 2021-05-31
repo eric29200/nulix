@@ -380,13 +380,14 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
 
     /* set inode entry */
     de->inode = inode->i_ino;
+    sb = dir->i_sb;
 
     /* release current dir inode/block and new inode (to write them on disk) */
     iput(dir);
     iput(inode);
 
     /* read inode from disk */
-    *res_inode = iget(dir->i_sb, de->inode);
+    *res_inode = iget(sb, de->inode);
     if (!*res_inode) {
       brelse(bh);
       return -EACCES;
@@ -652,8 +653,14 @@ int do_symlink(const char *target, int newdirfd, const char *linkpath)
 
   /* get new parent directory */
   dir = dir_namei(newdirfd, linkpath, &basename, &basename_len);
-  if (!dir || !basename_len)
+  if (!dir)
     return -ENOENT;
+
+  /* check directory name */
+  if (!basename_len) {
+    iput(dir);
+    return -ENOENT;
+  }
 
   /* allocate a new inode */
   inode = new_inode(dir->i_sb);
