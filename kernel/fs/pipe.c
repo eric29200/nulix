@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
 #include <stderr.h>
+#include <mm/mm.h>
 
 /* global file table (defined in open.c) */
 extern struct file_t filp_table[NR_FILE];
@@ -8,8 +9,9 @@ extern struct file_t filp_table[NR_FILE];
 /*
  * Read from a pipe.
  */
-int read_pipe(struct inode_t *inode, char *buf, int count)
+static int pipe_read(struct file_t *filp, char *buf, int count)
 {
+  struct inode_t *inode = filp->f_inode;
   int chars, size, rpos, read = 0;
 
   while (count > 0) {
@@ -55,8 +57,9 @@ int read_pipe(struct inode_t *inode, char *buf, int count)
 /*
  * Write to a pipe.
  */
-int write_pipe(struct inode_t *inode, const char *buf, int count)
+static int pipe_write(struct file_t *filp, const char *buf, int count)
 {
+  struct inode_t *inode = filp->f_inode;
   int chars, size, wpos, written = 0;
 
   while (count > 0) {
@@ -97,6 +100,44 @@ int write_pipe(struct inode_t *inode, const char *buf, int count)
   /* wake up reader */
   task_wakeup(&inode->i_rwait);
   return written;
+}
+
+/*
+ * Pipe operations.
+ */
+static struct file_operations_t pipe_fops = {
+  .read           = pipe_read,
+  .write          = pipe_write,
+  .getdents       = NULL,
+  .getdents64     = NULL,
+};
+
+/*
+ * Get a pipe inode.
+ */
+static struct inode_t *get_pipe_inode()
+{
+  struct inode_t *inode;
+
+  /* get an empty inode */
+  inode = get_empty_inode();
+  if (!inode)
+    return NULL;
+
+  /* allocate some memory for data */
+  inode->i_size = (uint32_t) kmalloc(PAGE_SIZE);
+  if (!inode->i_size) {
+    inode->i_ref = 0;
+    return NULL;
+  }
+
+  /* set pipe inode (2 references = reader + writer) */
+  inode->i_ref = 2;
+  inode->i_pipe = 1;
+  PIPE_RPOS(inode) = 0;
+  PIPE_WPOS(inode) = 0;
+
+  return inode;
 }
 
 /*
@@ -154,12 +195,14 @@ int do_pipe(int pipefd[2])
   filps[0]->f_inode = inode;
   filps[0]->f_pos = 0;
   filps[0]->f_mode = 1;
+  filps[0]->f_op = &pipe_fops;
   pipefd[0] = fd[0];
 
   /* set 2nd file descriptor as write channel */
   filps[1]->f_inode = inode;
   filps[1]->f_pos = 0;
   filps[1]->f_mode = 2;
+  filps[1]->f_op = &pipe_fops;
   pipefd[1] = fd[1];
 
   return 0;

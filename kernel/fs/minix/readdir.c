@@ -12,7 +12,7 @@ int minix_getdents(struct file_t *filp, struct dirent_t *dirent, uint32_t count)
 
   for (entries_size = 0;;) {
     /* read minix dir entry */
-    if (file_read(filp, (char *) &de, sizeof(struct minix_dir_entry_t)) != sizeof(struct minix_dir_entry_t))
+    if (minix_file_read(filp, (char *) &de, sizeof(struct minix_dir_entry_t)) != sizeof(struct minix_dir_entry_t))
       return entries_size;
 
     /* skip null entries */
@@ -55,7 +55,7 @@ int minix_getdents64(struct file_t *filp, void *dirp, size_t count)
 
   for (entries_size = 0, dirent = (struct dirent64_t *) dirp;;) {
     /* read minix dir entry */
-    if (file_read(filp, (char *) &de, sizeof(struct minix_dir_entry_t)) != sizeof(struct minix_dir_entry_t))
+    if (minix_file_read(filp, (char *) &de, sizeof(struct minix_dir_entry_t)) != sizeof(struct minix_dir_entry_t))
       return entries_size;
 
     /* skip null entries */

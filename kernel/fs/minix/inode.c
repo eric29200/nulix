@@ -7,18 +7,76 @@
 #include <string.h>
 
 /*
- * File operations.
+ * Directory operations.
  */
-struct file_operations_t minix_file_operations = {
+struct file_operations_t minix_dir_fops = {
+  .read           = minix_file_read,
+  .write          = minix_file_write,
   .getdents       = minix_getdents,
   .getdents64     = minix_getdents64,
 };
 
 /*
- * Minix inode operations.
+ * File operations.
  */
-struct inode_operations_t minix_inode_operations = {
-  .fops           = &minix_file_operations,
+struct file_operations_t minix_file_fops = {
+  .read           = minix_file_read,
+  .write          = minix_file_write,
+  .getdents       = NULL,
+  .getdents64     = NULL,
+};
+
+/*
+ * Char device operations.
+ */
+struct file_operations_t minix_char_fops = {
+  .read           = minix_char_read,
+  .write          = minix_char_write,
+  .getdents       = NULL,
+  .getdents64     = NULL,
+};
+
+/*
+ * Minix file inode operations.
+ */
+struct inode_operations_t minix_file_iops = {
+  .fops           = &minix_file_fops,
+  .lookup         = minix_lookup,
+  .create         = minix_create,
+  .follow_link    = minix_follow_link,
+  .readlink       = minix_readlink,
+  .link           = minix_link,
+  .unlink         = minix_unlink,
+  .symlink        = minix_symlink,
+  .mkdir          = minix_mkdir,
+  .rmdir          = minix_rmdir,
+  .truncate       = minix_truncate,
+  .bmap           = minix_bmap,
+};
+
+/*
+ * Minix directory inode operations.
+ */
+struct inode_operations_t minix_dir_iops = {
+  .fops           = &minix_dir_fops,
+  .lookup         = minix_lookup,
+  .create         = minix_create,
+  .follow_link    = minix_follow_link,
+  .readlink       = minix_readlink,
+  .link           = minix_link,
+  .unlink         = minix_unlink,
+  .symlink        = minix_symlink,
+  .mkdir          = minix_mkdir,
+  .rmdir          = minix_rmdir,
+  .truncate       = minix_truncate,
+  .bmap           = minix_bmap,
+};
+
+/*
+ * Minix char device inode operations.
+ */
+struct inode_operations_t minix_char_iops = {
+  .fops           = &minix_char_fops,
   .lookup         = minix_lookup,
   .create         = minix_create,
   .follow_link    = minix_follow_link,
@@ -65,7 +123,13 @@ int minix_read_inode(struct inode_t *inode)
   inode->i_nlinks = minix_inode[i].i_nlinks;
   for (j = 0; j < 9; j++)
     inode->i_zone[j] = minix_inode[i].i_zone[j];
-  inode->i_op = &minix_inode_operations;
+
+  if (S_ISDIR(inode->i_mode))
+    inode->i_op = &minix_dir_iops;
+  else if (S_ISCHR(inode->i_mode))
+    inode->i_op = &minix_char_iops;
+  else
+    inode->i_op = &minix_file_iops;
 
   /* free minix inode */
   brelse(bh);

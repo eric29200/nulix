@@ -5,7 +5,7 @@
 /*
  * Minix super operations.
  */
-struct super_operations_t minix_super_operations = {
+struct super_operations_t minix_sops = {
   .read_inode     = minix_read_inode,
   .write_inode    = minix_write_inode,
   .put_inode      = minix_put_inode,
@@ -45,7 +45,7 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev)
   sb->s_max_size = msb->s_max_size;
   sb->s_magic = msb->s_magic;
   sb->s_dev = dev;
-  sb->s_op = &minix_super_operations;
+  sb->s_op = &minix_sops;
 
   /* reset maps */
   for (i = 0; i < msb->s_imap_blocks; i++)

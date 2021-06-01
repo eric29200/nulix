@@ -136,6 +136,8 @@ struct inode_operations_t {
  * File operations.
  */
 struct file_operations_t {
+  int (*read)(struct file_t *, char *, int);
+  int (*write)(struct file_t *, const char *, int);
   int (*getdents)(struct file_t *, struct dirent_t *, uint32_t);
   int (*getdents64)(struct file_t*, void *, size_t);
 };
@@ -152,19 +154,10 @@ void brelse(struct buffer_head_t *bh);
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode();
-struct inode_t *get_pipe_inode();
 
 /* name operations */
 struct inode_t *namei(int dirfd, const char *pathname, int follow_links);
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
-
-/* read write operations */
-int file_read(struct file_t *filp, char *buf, int count);
-int file_write(struct file_t *filp, const char *buf, int count);
-int read_char(dev_t dev, char *buf, int count);
-int write_char(dev_t dev, const char *buf, int count);
-int read_pipe(struct inode_t *inode, char *buf, int count);
-int write_pipe(struct inode_t *inode, const char *buf, int count);
 
 /* system calls */
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);

@@ -1,15 +1,11 @@
-#include <fs/fs.h>
-#include <proc/sched.h>
-#include <mm/mm.h>
-#include <stdio.h>
-#include <stderr.h>
-#include <fcntl.h>
+#include <fs/minix_fs.h>
 #include <string.h>
+#include <fcntl.h>
 
 /*
  * Read a file.
  */
-int file_read(struct file_t *filp, char *buf, int count)
+int minix_file_read(struct file_t *filp, char *buf, int count)
 {
   int pos, nb_chars, left, block_nr;
   struct buffer_head_t *bh;
@@ -56,7 +52,7 @@ out:
 /*
  * Write to a file.
  */
-int file_write(struct file_t *filp, const char *buf, int count)
+int minix_file_write(struct file_t *filp, const char *buf, int count)
 {
   uint32_t pos, nb_chars, left;
   struct buffer_head_t *bh;

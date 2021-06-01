@@ -24,16 +24,11 @@ ssize_t do_read(int fd, char *buf, int count)
   /* get current file */
   filp = current_task->filp[fd];
 
-  /* read from a pipe */
-  if (filp->f_inode->i_pipe)
-    return read_pipe(filp->f_inode, buf, count);
+  /* read not implemented */
+  if (!filp->f_op || !filp->f_op->read)
+    return -EPERM;
 
-  /* read from a character device */
-  if (S_ISCHR(filp->f_inode->i_mode))
-    return read_char(filp->f_inode->i_zone[0], buf, count);
-
-  /* read file */
-  return file_read(filp, buf, count);
+  return filp->f_op->read(filp, buf, count);
 }
 
 /*
@@ -54,15 +49,11 @@ ssize_t do_write(int fd, const char *buf, int count)
   /* get current file */
   filp = current_task->filp[fd];
 
-  /* write to a pipe */
-  if (filp->f_inode->i_pipe)
-    return write_pipe(filp->f_inode, buf, count);
+  /* write not implemented */
+  if (!filp->f_op || !filp->f_op->write)
+    return -EPERM;
 
-  /* write to a character device */
-  if (S_ISCHR(filp->f_inode->i_mode))
-    return write_char(filp->f_inode->i_zone[0], buf, count);
-
-  return file_write(filp, buf, count);
+  return filp->f_op->write(filp, buf, count);
 }
 
 /*

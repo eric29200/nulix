@@ -45,9 +45,13 @@ struct minix_dir_entry_t {
 };
 
 /* minix operations */
-extern struct inode_operations_t minix_inode_operations;
-extern struct super_operations_t minix_super_operations;
-extern struct file_operations_t minix_file_operations;
+extern struct super_operations_t minix_sops;
+extern struct inode_operations_t minix_file_iops;
+extern struct inode_operations_t minix_dir_iops;
+extern struct inode_operations_t minix_char_iops;
+extern struct file_operations_t minix_file_fops;
+extern struct file_operations_t minix_dir_fops;
+extern struct file_operations_t minix_char_fops;
 
 /* minix super operations */
 int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev);
@@ -75,5 +79,13 @@ int minix_rmdir(struct inode_t *dir, const char *name, size_t name_len);
 /* minix directory operations */
 int minix_getdents(struct file_t *filp, struct dirent_t *dirent, uint32_t count);
 int minix_getdents64(struct file_t *filp, void *dirp, size_t count);
+
+/* minix file operations */
+int minix_file_read(struct file_t *filp, char *buf, int count);
+int minix_file_write(struct file_t *filp, const char *buf, int count);
+
+/* minix char device operations */
+int minix_char_read(struct file_t *filp, char *buf, int count);
+int minix_char_write(struct file_t *filp, const char *buf, int count);
 
 #endif

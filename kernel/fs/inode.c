@@ -37,34 +37,6 @@ struct inode_t *get_empty_inode()
 }
 
 /*
- * Get a pipe inode.
- */
-struct inode_t *get_pipe_inode()
-{
-  struct inode_t *inode;
-
-  /* get an empty inode */
-  inode = get_empty_inode();
-  if (!inode)
-    return NULL;
-
-  /* allocate some memory for data */
-  inode->i_size = (uint32_t) kmalloc(PAGE_SIZE);
-  if (!inode->i_size) {
-    inode->i_ref = 0;
-    return NULL;
-  }
-
-  /* set pipe inode (2 references = reader + writer) */
-  inode->i_ref = 2;
-  inode->i_pipe = 1;
-  PIPE_RPOS(inode) = 0;
-  PIPE_WPOS(inode) = 0;
-
-  return inode;
-}
-
-/*
  * Get an inode.
  */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino)
