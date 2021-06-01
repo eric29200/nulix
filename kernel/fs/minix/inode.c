@@ -7,6 +7,17 @@
 #include <string.h>
 
 /*
+ * Minix inode operations.
+ */
+static struct inode_operations_t minix_inode_operations = {
+  .link           = minix_link,
+  .unlink         = minix_unlink,
+  .symlink        = minix_symlink,
+  .mkdir          = minix_mkdir,
+  .rmdir          = minix_rmdir,
+};
+
+/*
  * Read an inode.
  */
 int minix_read_inode(struct inode_t *inode)
@@ -39,6 +50,7 @@ int minix_read_inode(struct inode_t *inode)
   inode->i_nlinks = minix_inode[i].i_nlinks;
   for (j = 0; j < 9; j++)
     inode->i_zone[j] = minix_inode[i].i_zone[j];
+  inode->i_op = &minix_inode_operations;
 
   /* free minix inode */
   brelse(bh);

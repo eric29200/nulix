@@ -100,6 +100,7 @@ struct inode_t {
   char                          i_wwait;
   struct super_block_t *        i_sb;
   struct ata_device_t *         i_dev;
+  struct inode_operations_t *   i_op;
 };
 
 /*
@@ -152,11 +153,28 @@ struct super_operations_t {
   int (*put_inode)(struct inode_t *);
 };
 
+/*
+ * Inode operations.
+ */
+struct inode_operations_t {
+  int (*link)(struct inode_t *, struct inode_t *, const char *, size_t);
+  int (*unlink)(struct inode_t *, const char *, size_t);
+  int (*symlink)(struct inode_t *, const char *, size_t, const char *);
+  int (*mkdir)(struct inode_t *, const char *, size_t, mode_t);
+  int (*rmdir)(struct inode_t *, const char *, size_t);
+};
+
 int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev);
 int minix_read_inode(struct inode_t *inode);
 int minix_write_inode(struct inode_t *inode);
 int minix_put_inode(struct inode_t *inode);
 void minix_truncate(struct inode_t *inode);
+
+int minix_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, size_t name_len);
+int minix_unlink(struct inode_t *dir, const char *name, size_t name_len);
+int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target);
+int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mode);
+int minix_rmdir(struct inode_t *dir, const char *name, size_t name_len);
 
 /* file system operations */
 int mount_root(struct ata_device_t *dev);
