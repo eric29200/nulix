@@ -84,6 +84,7 @@ int mount_root(struct ata_device_t *dev)
 
   /* set current task current working dir to root */
   current_task->cwd = root_sb->s_imount;
+  strcpy(current_task->cwd_path, "/");
   current_task->root = root_sb->s_imount;
 
   return 0;

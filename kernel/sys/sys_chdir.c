@@ -28,5 +28,8 @@ int sys_chdir(const char *path)
   /* set current working dir */
   current_task->cwd = inode;
 
+  /* update current working dir path */
+  strncpy(current_task->cwd_path, path, MAX_PATH_LEN);
+
   return 0;
 }
