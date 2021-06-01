@@ -377,7 +377,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
 
   /* truncate file */
   if (flags & O_TRUNC)
-    truncate(*res_inode);
+    minix_truncate(*res_inode);
 
   return 0;
 }

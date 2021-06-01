@@ -53,18 +53,19 @@ struct minix_super_block_t {
  * In memory super block.
  */
 struct super_block_t {
-  uint16_t                s_ninodes;
-  uint16_t                s_nzones;
-  uint16_t                s_imap_blocks;
-  uint16_t                s_zmap_blocks;
-  uint16_t                s_firstdatazone;
-  uint16_t                s_log_zone_size;
-  uint32_t                s_max_size;
-  uint16_t                s_magic;
-  struct buffer_head_t *  s_imap[MINIX_IMAP_SLOTS];
-  struct buffer_head_t *  s_zmap[MINIX_ZMAP_SLOTS];
-  struct ata_device_t *   s_dev;
-  struct inode_t *        s_imount;
+  uint16_t                    s_ninodes;
+  uint16_t                    s_nzones;
+  uint16_t                    s_imap_blocks;
+  uint16_t                    s_zmap_blocks;
+  uint16_t                    s_firstdatazone;
+  uint16_t                    s_log_zone_size;
+  uint32_t                    s_max_size;
+  uint16_t                    s_magic;
+  struct buffer_head_t *      s_imap[MINIX_IMAP_SLOTS];
+  struct buffer_head_t *      s_zmap[MINIX_ZMAP_SLOTS];
+  struct ata_device_t *       s_dev;
+  struct inode_t *            s_imount;
+  struct super_operations_t * s_op;
 };
 
 /*
@@ -142,6 +143,21 @@ struct dirent64_t {
   char            d_name[];
 };
 
+/*
+ * Super operations.
+ */
+struct super_operations_t {
+  int (*read_inode)(struct inode_t *);
+  int (*write_inode)(struct inode_t *);
+  int (*put_inode)(struct inode_t *);
+};
+
+int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev);
+int minix_read_inode(struct inode_t *inode);
+int minix_write_inode(struct inode_t *inode);
+int minix_put_inode(struct inode_t *inode);
+void minix_truncate(struct inode_t *inode);
+
 /* file system operations */
 int mount_root(struct ata_device_t *dev);
 
@@ -157,7 +173,6 @@ struct inode_t *get_empty_inode();
 struct inode_t *get_pipe_inode();
 struct inode_t *new_inode(struct super_block_t *sb);
 int free_inode(struct inode_t *inode);
-void truncate(struct inode_t *inode);
 
 /* block operations */
 uint32_t new_block(struct super_block_t *sb);

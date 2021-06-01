@@ -4,7 +4,7 @@ LD		= i686-linux-gnu-ld
 OBJCOPY		= i686-linux-gnu-objcopy
 KERNEL		= kernel.bin
 HEADER_PATH	= include
-C_SOURCES 	= $(wildcard */*.c)
+C_SOURCES 	= $(wildcard */*.c */*/*.c)
 AS_SOURCES 	= $(wildcard */*.s)
 PSF_SOURCES 	= $(wildcard */*.psf)
 OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.s=.o} ${PSF_SOURCES:.psf=.o}
@@ -25,4 +25,4 @@ $(KERNEL): $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $^
 
 clean:
-	rm -f *.o */*.o $(KERNEL)
+	rm -f *.o */*.o */*/*.o $(KERNEL)

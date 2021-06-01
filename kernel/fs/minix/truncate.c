@@ -4,7 +4,7 @@
 /*
  * Free single indirect blocks.
  */
-static void free_indirect_blocks(struct super_block_t *sb, int block)
+static void minix_free_indirect_blocks(struct super_block_t *sb, int block)
 {
   struct buffer_head_t *bh;
   uint16_t *blocks;
@@ -34,7 +34,7 @@ static void free_indirect_blocks(struct super_block_t *sb, int block)
 /*
  * Free double indirect blocks.
  */
-static void free_double_indirect_blocks(struct super_block_t *sb, int block)
+static void minix_free_double_indirect_blocks(struct super_block_t *sb, int block)
 {
   struct buffer_head_t *bh;
   uint16_t *blocks;
@@ -52,7 +52,7 @@ static void free_double_indirect_blocks(struct super_block_t *sb, int block)
   blocks = (uint16_t *) bh->b_data;
   for (i = 0; i < BLOCK_SIZE / 2; i++)
     if (blocks[i])
-      free_indirect_blocks(sb, blocks[i]);
+      minix_free_indirect_blocks(sb, blocks[i]);
 
   /* release buffer */
   brelse(bh);
@@ -64,7 +64,7 @@ static void free_double_indirect_blocks(struct super_block_t *sb, int block)
 /*
  * Truncate an inode.
  */
-void truncate(struct inode_t *inode)
+void minix_truncate(struct inode_t *inode)
 {
   int i;
 
@@ -81,11 +81,11 @@ void truncate(struct inode_t *inode)
   }
 
   /* free indirect blocks */
-  free_indirect_blocks(inode->i_sb, inode->i_zone[7]);
+  minix_free_indirect_blocks(inode->i_sb, inode->i_zone[7]);
   inode->i_zone[7] = 0;
 
   /* free double indirect blocks */
-  free_double_indirect_blocks(inode->i_sb, inode->i_zone[8]);
+  minix_free_double_indirect_blocks(inode->i_sb, inode->i_zone[8]);
   inode->i_zone[8] = 0;
 
   /* update inode size */
