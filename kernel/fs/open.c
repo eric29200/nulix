@@ -55,6 +55,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
   current_task->filp[fd]->f_flags = flags;
   current_task->filp[fd]->f_pos = 0;
   current_task->filp[fd]->f_ref++;
+  current_task->filp[fd]->f_op = inode->i_op->fops;
 
   return fd;
 }

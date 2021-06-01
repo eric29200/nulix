@@ -7,9 +7,18 @@
 #include <string.h>
 
 /*
+ * File operations.
+ */
+static struct file_operations_t minix_file_operations = {
+  .getdents       = minix_getdents,
+  .getdents64     = minix_getdents64,
+};
+
+/*
  * Minix inode operations.
  */
 struct inode_operations_t minix_inode_operations = {
+  .fops           = &minix_file_operations,
   .lookup         = minix_lookup,
   .create         = minix_create,
   .follow_link    = minix_follow_link,

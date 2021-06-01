@@ -107,11 +107,12 @@ struct inode_t {
  * Opened file.
  */
 struct file_t {
-  uint16_t          f_mode;
-  int               f_flags;
-  size_t            f_pos;
-  int               f_ref;
-  struct inode_t *  f_inode;
+  uint16_t                  f_mode;
+  int                       f_flags;
+  size_t                    f_pos;
+  int                       f_ref;
+  struct inode_t *          f_inode;
+  struct file_operations_t *f_op;
 };
 
 /*
@@ -157,6 +158,7 @@ struct super_operations_t {
  * Inode operations.
  */
 struct inode_operations_t {
+  struct file_operations_t *fops;
   int (*lookup)(struct inode_t *, const char *, size_t, struct inode_t **);
   int (*create)(struct inode_t *, const char *, size_t, mode_t, struct inode_t **);
   int (*follow_link)(struct inode_t *, struct inode_t **);
@@ -168,6 +170,14 @@ struct inode_operations_t {
   int (*rmdir)(struct inode_t *, const char *, size_t);
   void (*truncate)(struct inode_t *);
   int (*bmap)(struct inode_t *, int, int);
+};
+
+/*
+ * File operations.
+ */
+struct file_operations_t {
+  int (*getdents)(struct file_t *, struct dirent_t *, uint32_t);
+  int (*getdents64)(struct file_t*, void *, size_t);
 };
 
 extern struct inode_operations_t minix_inode_operations;
@@ -193,6 +203,9 @@ int minix_unlink(struct inode_t *dir, const char *name, size_t name_len);
 int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target);
 int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mode);
 int minix_rmdir(struct inode_t *dir, const char *name, size_t name_len);
+
+int minix_getdents(struct file_t *filp, struct dirent_t *dirent, uint32_t count);
+int minix_getdents64(struct file_t *filp, void *dirp, size_t count);
 
 /* file system operations */
 int mount_root(struct ata_device_t *dev);
