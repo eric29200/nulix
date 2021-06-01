@@ -1,7 +1,25 @@
-#include <fs/fs.h>
+#include <fs/minix_fs.h>
 #include <drivers/tty.h>
+#include <proc/sched.h>
 #include <stderr.h>
 #include <dev.h>
+
+/*
+ * Open a character device.
+ */
+int minix_char_open(struct file_t *filp)
+{
+  dev_t dev = filp->f_inode->i_zone[0];
+
+  /* get a new tty */
+  if (dev == DEV_TTY) {
+    current_task->tty = tty_get();
+    if ((int) current_task->tty < 0)
+      return -EBUSY;
+  }
+
+  return 0;
+}
 
 /*
  * Read from a character device.

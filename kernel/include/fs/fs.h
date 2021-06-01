@@ -136,6 +136,7 @@ struct inode_operations_t {
  * File operations.
  */
 struct file_operations_t {
+  int (*open)(struct file_t *file);
   int (*read)(struct file_t *, char *, int);
   int (*write)(struct file_t *, const char *, int);
   int (*getdents)(struct file_t *, struct dirent_t *, uint32_t);

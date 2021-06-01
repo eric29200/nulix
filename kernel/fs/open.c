@@ -16,14 +16,8 @@ struct file_t filp_table[NR_FILE];
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
   struct inode_t *inode;
+  struct file_t *filp;
   int fd, i, ret;
-
-  /* get a new tty */
-  if (strcmp(pathname, "/dev/tty") == 0) {
-    current_task->tty = tty_get();
-    if ((int) current_task->tty < 0)
-      return -EBUSY;
-  }
 
   /* find a free slot in current process */
   for (fd = 0; fd < NR_OPEN; fd++)
@@ -49,13 +43,17 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
     return ret;
 
   /* set file */
-  current_task->filp[fd] = &filp_table[i];
-  current_task->filp[fd]->f_mode = inode->i_mode;
-  current_task->filp[fd]->f_inode = inode;
-  current_task->filp[fd]->f_flags = flags;
-  current_task->filp[fd]->f_pos = 0;
-  current_task->filp[fd]->f_ref++;
-  current_task->filp[fd]->f_op = inode->i_op->fops;
+  filp = current_task->filp[fd] = &filp_table[i];
+  filp->f_mode = inode->i_mode;
+  filp->f_inode = inode;
+  filp->f_flags = flags;
+  filp->f_pos = 0;
+  filp->f_ref++;
+  filp->f_op = inode->i_op->fops;
+
+  /* specific open function */
+  if (filp->f_op && filp->f_op->open)
+    filp->f_op->open(filp);
 
   return fd;
 }
@@ -67,7 +65,6 @@ int do_close(int fd)
 {
   if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
     return -EINVAL;
-
 
   /* release file if not used anymore */
   current_task->filp[fd]->f_ref--;

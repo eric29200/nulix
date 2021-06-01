@@ -85,6 +85,7 @@ int minix_file_read(struct file_t *filp, char *buf, int count);
 int minix_file_write(struct file_t *filp, const char *buf, int count);
 
 /* minix char device operations */
+int minix_char_open(struct file_t *filp);
 int minix_char_read(struct file_t *filp, char *buf, int count);
 int minix_char_write(struct file_t *filp, const char *buf, int count);
 

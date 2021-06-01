@@ -22,18 +22,15 @@ struct file_operations_t minix_dir_fops = {
 struct file_operations_t minix_file_fops = {
   .read           = minix_file_read,
   .write          = minix_file_write,
-  .getdents       = NULL,
-  .getdents64     = NULL,
 };
 
 /*
  * Char device operations.
  */
 struct file_operations_t minix_char_fops = {
+  .open           = minix_char_open,
   .read           = minix_char_read,
   .write          = minix_char_write,
-  .getdents       = NULL,
-  .getdents64     = NULL,
 };
 
 /*
