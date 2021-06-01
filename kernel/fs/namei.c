@@ -7,31 +7,18 @@
 #include <string.h>
 
 /*
- * Resolve a symbolic link.
+ * Follow a link.
  */
 static struct inode_t *follow_link(struct inode_t *inode)
 {
-  struct buffer_head_t *bh;
+  struct inode_t *res_inode;
 
-  if (!inode || !S_ISLNK(inode->i_mode))
+  /* not implemented : return inode */
+  if (!inode || !inode->i_op || !inode->i_op->follow_link)
     return inode;
 
-  /* read first link block */
-  bh = bread(inode->i_dev, inode->i_zone[0]);
-  if (!bh) {
-    iput(inode);
-    return NULL;
-  }
-
-  /* release link inode */
-  iput(inode);
-
-  /* resolve target inode */
-  inode = namei(AT_FDCWD, bh->b_data, 0);
-
-  /* release link buffer */
-  brelse(bh);
-  return inode;
+  inode->i_op->follow_link(inode, &res_inode);
+  return res_inode;
 }
 
 /*
@@ -214,8 +201,8 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
     return -EACCES;
 
   /* truncate file */
-  if (flags & O_TRUNC)
-    minix_truncate(*res_inode);
+  if (flags & O_TRUNC && (*res_inode)->i_op && (*res_inode)->i_op->truncate)
+    (*res_inode)->i_op->truncate(*res_inode);
 
   return 0;
 }

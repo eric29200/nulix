@@ -12,11 +12,14 @@
 struct inode_operations_t minix_inode_operations = {
   .lookup         = minix_lookup,
   .create         = minix_create,
+  .follow_link    = minix_follow_link,
+  .readlink       = minix_readlink,
   .link           = minix_link,
   .unlink         = minix_unlink,
   .symlink        = minix_symlink,
   .mkdir          = minix_mkdir,
   .rmdir          = minix_rmdir,
+  .truncate       = minix_truncate,
   .bmap           = minix_bmap,
 };
 
