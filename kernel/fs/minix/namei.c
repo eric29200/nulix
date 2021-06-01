@@ -226,6 +226,60 @@ int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct 
 }
 
 /*
+ * Create a file in a directory.
+ */
+int minix_create(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, struct inode_t **res_inode)
+{
+  struct minix_dir_entry_t *de;
+  struct super_block_t *sb;
+  struct buffer_head_t *bh;
+  struct inode_t *inode;
+
+  /* check directory */
+  *res_inode = NULL;
+  if (!dir)
+    return -ENOENT;
+
+  /* create a new inode */
+  inode = new_inode(dir->i_sb);
+  if (!inode) {
+    iput(dir);
+    return -ENOSPC;
+  }
+
+  /* set inode */
+  inode->i_mode = mode;
+  inode->i_dirt = 1;
+
+  /* add new entry to dir */
+  bh = minix_add_entry(dir, name, name_len, &de);
+  if (!bh) {
+    inode->i_nlinks--;
+    iput(inode);
+    iput(dir);
+    return -ENOSPC;
+  }
+
+  /* set inode entry */
+  de->inode = inode->i_ino;
+  sb = dir->i_sb;
+
+  /* release current dir inode/block and new inode (to write them on disk) */
+  iput(dir);
+  iput(inode);
+
+  /* read inode from disk */
+  *res_inode = iget(sb, de->inode);
+  if (!*res_inode) {
+    brelse(bh);
+    return -EACCES;
+  }
+
+  brelse(bh);
+  return 0;
+}
+
+/*
  * Make a new name for a file = hard link.
  */
 int minix_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, size_t name_len)

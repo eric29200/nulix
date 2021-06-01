@@ -11,6 +11,7 @@
  */
 static struct inode_operations_t minix_inode_operations = {
   .lookup         = minix_lookup,
+  .create         = minix_create,
   .link           = minix_link,
   .unlink         = minix_unlink,
   .symlink        = minix_symlink,
