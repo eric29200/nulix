@@ -71,25 +71,3 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
   iput(inode);
   return 0;
 }
-
-/*
- * Read value of a symbolic link.
- */
-ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
-{
-  struct inode_t *inode;
-
-  /* get inode */
-  inode = namei(dirfd, pathname, 0);
-  if (!inode)
-    return -ENOENT;
-
-  /* readlink not implemented */
-  if (!inode->i_op || !inode->i_op->readlink) {
-    iput(inode);
-    return -EACCES;
-  }
-
-  /* read link */
-  return inode->i_op->readlink(inode, buf, bufsize);
-}
