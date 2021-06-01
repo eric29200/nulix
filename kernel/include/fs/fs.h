@@ -164,6 +164,7 @@ struct inode_operations_t {
   int (*symlink)(struct inode_t *, const char *, size_t, const char *);
   int (*mkdir)(struct inode_t *, const char *, size_t, mode_t);
   int (*rmdir)(struct inode_t *, const char *, size_t);
+  int (*bmap)(struct inode_t *, int, int);
 };
 
 extern struct inode_operations_t minix_inode_operations;
@@ -173,7 +174,12 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev);
 int minix_read_inode(struct inode_t *inode);
 int minix_write_inode(struct inode_t *inode);
 int minix_put_inode(struct inode_t *inode);
+struct inode_t *minix_new_inode(struct super_block_t *sb);
+int minix_free_inode(struct inode_t *inode);
+uint32_t minix_new_block(struct super_block_t *sb);
+int minix_free_block(struct super_block_t *sb, uint32_t block);
 void minix_truncate(struct inode_t *inode);
+int minix_bmap(struct inode_t *inode, int block, int create);
 
 int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode);
 int minix_create(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, struct inode_t **res_inode);
@@ -196,17 +202,10 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode();
 struct inode_t *get_pipe_inode();
-struct inode_t *new_inode(struct super_block_t *sb);
-int free_inode(struct inode_t *inode);
-
-/* block operations */
-uint32_t new_block(struct super_block_t *sb);
-int free_block(struct super_block_t *sb, uint32_t block);
 
 /* name operations */
 struct inode_t *namei(int dirfd, const char *pathname, int follow_links);
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
-int bmap(struct inode_t *inode, int block, int create);
 
 /* read write operations */
 int file_read(struct file_t *filp, char *buf, int count);

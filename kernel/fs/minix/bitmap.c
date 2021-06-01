@@ -8,7 +8,7 @@
 /*
  * Get first free bit in a bitmap block (inode or block).
  */
-static int get_free_bitmap(struct buffer_head_t *bh)
+static int minix_get_free_bitmap(struct buffer_head_t *bh)
 {
   int i, j;
 
@@ -23,7 +23,7 @@ static int get_free_bitmap(struct buffer_head_t *bh)
 /*
  * Set bit in a bitmap block (inode or block).
  */
-static void set_bitmap(struct buffer_head_t *bh, int i)
+static void minix_set_bitmap(struct buffer_head_t *bh, int i)
 {
   bh->b_data[i / 8] |= (0x1 << (i % 8));
 }
@@ -31,7 +31,7 @@ static void set_bitmap(struct buffer_head_t *bh, int i)
 /*
  * Clear bit in a bitmap block (inode or block).
  */
-static void clear_bitmap(struct buffer_head_t *bh, int i)
+static void minix_clear_bitmap(struct buffer_head_t *bh, int i)
 {
   bh->b_data[i / 8] &= ~(0x1 << (i % 8));
 }
@@ -39,14 +39,14 @@ static void clear_bitmap(struct buffer_head_t *bh, int i)
 /*
  * Create a new block.
  */
-uint32_t new_block(struct super_block_t *sb)
+uint32_t minix_new_block(struct super_block_t *sb)
 {
   struct buffer_head_t *bh;
   int i, j, block_nr;
 
   /* find first free block in bitmap */
   for (i = 0; i < sb->s_zmap_blocks; i++) {
-    j = get_free_bitmap(sb->s_zmap[i]);
+    j = minix_get_free_bitmap(sb->s_zmap[i]);
     if (j != -1)
       break;
   }
@@ -70,7 +70,7 @@ uint32_t new_block(struct super_block_t *sb)
   brelse(bh);
 
   /* set block in bitmap and write bitmap to disk */
-  set_bitmap(sb->s_zmap[i], j);
+  minix_set_bitmap(sb->s_zmap[i], j);
   if (bwrite(sb->s_zmap[i]) != 0)
     return 0;
 
@@ -80,7 +80,7 @@ uint32_t new_block(struct super_block_t *sb)
 /*
  * Free a block.
  */
-int free_block(struct super_block_t *sb, uint32_t block)
+int minix_free_block(struct super_block_t *sb, uint32_t block)
 {
   struct buffer_head_t *bh;
 
@@ -90,14 +90,14 @@ int free_block(struct super_block_t *sb, uint32_t block)
 
   /* update/clear inode bitmap */
   bh = sb->s_zmap[block / (BLOCK_SIZE * 8)];
-  clear_bitmap(bh, block & (BLOCK_SIZE * 8 - 1));
+  minix_clear_bitmap(bh, block & (BLOCK_SIZE * 8 - 1));
   return bwrite(bh);
 }
 
 /*
  * Free an inode.
  */
-int free_inode(struct inode_t *inode)
+int minix_free_inode(struct inode_t *inode)
 {
   struct buffer_head_t *bh;
   int ret;
@@ -113,7 +113,7 @@ int free_inode(struct inode_t *inode)
 
   /* update/clear inode bitmap */
   bh = inode->i_sb->s_imap[inode->i_ino >> 13];
-  clear_bitmap(bh, inode->i_ino & (BLOCK_SIZE * 8 - 1));
+  minix_clear_bitmap(bh, inode->i_ino & (BLOCK_SIZE * 8 - 1));
   ret = bwrite(bh);
 
   /* free inode */
@@ -124,7 +124,7 @@ int free_inode(struct inode_t *inode)
 /*
  * Create a new inode.
  */
-struct inode_t *new_inode(struct super_block_t *sb)
+struct inode_t *minix_new_inode(struct super_block_t *sb)
 {
   struct inode_t *inode;
   int i, j;
@@ -136,7 +136,7 @@ struct inode_t *new_inode(struct super_block_t *sb)
 
   /* find first free inode in bitmap */
   for (i = 0; i < sb->s_imap_blocks; i++) {
-    j = get_free_bitmap(sb->s_imap[i]);
+    j = minix_get_free_bitmap(sb->s_imap[i]);
     if (j != -1)
       break;
   }
@@ -155,9 +155,9 @@ struct inode_t *new_inode(struct super_block_t *sb)
   inode->i_dev = sb->s_dev;
 
   /* set inode in bitmap and write bitmap to disk */
-  set_bitmap(sb->s_imap[i], j);
+  minix_set_bitmap(sb->s_imap[i], j);
   if (bwrite(sb->s_imap[i]) != 0) {
-    free_inode(inode);
+    minix_free_inode(inode);
     return NULL;
   }
 

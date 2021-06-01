@@ -33,7 +33,7 @@ static struct buffer_head_t *minix_find_entry(struct inode_t *dir, const char *n
     /* read next block if needed */
     if (i % MINIX_DIR_ENTRIES_PER_BLOCK == 0) {
       brelse(bh);
-      block_nr = bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
+      block_nr = minix_bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
       bh = bread(dir->i_dev, block_nr);
       if (!bh)
         return NULL;
@@ -89,7 +89,7 @@ static struct buffer_head_t *minix_add_entry(struct inode_t *dir, const char *na
       bh = NULL;
 
       /* get or map next block number */
-      block = bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 1);
+      block = minix_bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 1);
       if (!block)
         return NULL;
 
@@ -161,7 +161,7 @@ static int minix_empty_dir(struct inode_t *inode)
       brelse(bh);
 
       /* get next block buffer */
-      block = bmap(inode, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
+      block = minix_bmap(inode, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
       bh = bread(inode->i_dev, block);
       if (!bh)
         return 0;
@@ -241,7 +241,7 @@ int minix_create(struct inode_t *dir, const char *name, size_t name_len, mode_t 
     return -ENOENT;
 
   /* create a new inode */
-  inode = new_inode(dir->i_sb);
+  inode = minix_new_inode(dir->i_sb);
   if (!inode) {
     iput(dir);
     return -ENOSPC;
@@ -374,7 +374,7 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
   int i;
 
   /* create a new inode */
-  inode = new_inode(dir->i_sb);
+  inode = minix_new_inode(dir->i_sb);
   if (!inode) {
     iput(dir);
     return -ENOSPC;
@@ -385,7 +385,7 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
   inode->i_dirt = 1;
 
   /* create first block */
-  inode->i_zone[0] = new_block(inode->i_sb);
+  inode->i_zone[0] = minix_new_block(inode->i_sb);
   if (!inode->i_zone[0]) {
     iput(dir);
     inode->i_nlinks--;
@@ -462,7 +462,7 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   }
 
   /* allocate a new inode */
-  inode = new_inode(dir->i_sb);
+  inode = minix_new_inode(dir->i_sb);
   if (!inode) {
     iput(dir);
     return -ENOSPC;
@@ -476,7 +476,7 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   inode->i_mode = S_IFDIR | (mode & ~current_task->umask & 0777);
   inode->i_uid = current_task->uid;
   inode->i_gid = current_task->gid;
-  inode->i_zone[0] = new_block(inode->i_sb);
+  inode->i_zone[0] = minix_new_block(inode->i_sb);
   if (!inode->i_zone[0]) {
     iput(dir);
     iput(inode);
@@ -487,7 +487,7 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   bh = bread(inode->i_dev, inode->i_zone[0]);
   if (!bh) {
     iput(dir);
-    free_block(inode->i_sb, inode->i_zone[0]);
+    minix_free_block(inode->i_sb, inode->i_zone[0]);
     iput(inode);
   }
 
@@ -509,7 +509,7 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   bh = minix_add_entry(dir, name, name_len, &de);
   if (!bh) {
     iput(dir);
-    free_block(inode->i_sb, inode->i_zone[0]);
+    minix_free_block(inode->i_sb, inode->i_zone[0]);
     iput(inode);
     return -ENOSPC;
   }

@@ -24,7 +24,7 @@ int file_read(struct file_t *filp, char *buf, int count)
   left = count;
   while (left > 0) {
     /* get block number */
-    block_nr = bmap(filp->f_inode, filp->f_pos / BLOCK_SIZE, 0);
+    block_nr = filp->f_inode->i_op->bmap(filp->f_inode, filp->f_pos / BLOCK_SIZE, 0);
     if (!block_nr)
       goto out;
 
@@ -71,7 +71,7 @@ int file_write(struct file_t *filp, const char *buf, int count)
   left = count;
   while (left > 0) {
     /* get/create block number */
-    block_nr = bmap(filp->f_inode, pos / BLOCK_SIZE, 1);
+    block_nr = filp->f_inode->i_op->bmap(filp->f_inode, pos / BLOCK_SIZE, 1);
     if (!block_nr)
       goto out;
 

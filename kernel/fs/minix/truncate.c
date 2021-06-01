@@ -22,13 +22,13 @@ static void minix_free_indirect_blocks(struct super_block_t *sb, int block)
   blocks = (uint16_t *) bh->b_data;
   for (i = 0; i < BLOCK_SIZE / 2; i++)
     if (blocks[i])
-      free_block(sb, blocks[i]);
+      minix_free_block(sb, blocks[i]);
 
   /* release buffer */
   brelse(bh);
 
   /* free this block */
-  free_block(sb, block);
+  minix_free_block(sb, block);
 }
 
 /*
@@ -58,7 +58,7 @@ static void minix_free_double_indirect_blocks(struct super_block_t *sb, int bloc
   brelse(bh);
 
   /* free this block */
-  free_block(sb, block);
+  minix_free_block(sb, block);
 }
 
 /*
@@ -75,7 +75,7 @@ void minix_truncate(struct inode_t *inode)
   /* free direct blocks */
   for (i = 0; i < 7; i++) {
     if (inode->i_zone[i]) {
-      free_block(inode->i_sb, inode->i_zone[i]);
+      minix_free_block(inode->i_sb, inode->i_zone[i]);
       inode->i_zone[i] = 0;
     }
   }
