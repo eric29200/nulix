@@ -157,6 +157,7 @@ struct super_operations_t {
  * Inode operations.
  */
 struct inode_operations_t {
+  int (*lookup)(struct inode_t *, const char *, size_t, struct inode_t **);
   int (*link)(struct inode_t *, struct inode_t *, const char *, size_t);
   int (*unlink)(struct inode_t *, const char *, size_t);
   int (*symlink)(struct inode_t *, const char *, size_t, const char *);
@@ -170,6 +171,7 @@ int minix_write_inode(struct inode_t *inode);
 int minix_put_inode(struct inode_t *inode);
 void minix_truncate(struct inode_t *inode);
 
+int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode);
 int minix_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, size_t name_len);
 int minix_unlink(struct inode_t *dir, const char *name, size_t name_len);
 int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target);

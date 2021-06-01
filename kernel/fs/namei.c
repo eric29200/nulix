@@ -161,13 +161,10 @@ static struct inode_t *follow_link(struct inode_t *inode)
  */
 static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **basename, size_t *basename_len)
 {
-  struct minix_dir_entry_t *de;
-  struct super_block_t *sb;
-  struct buffer_head_t *bh;
-  struct inode_t *inode;
+  struct inode_t *inode, *tmp;
   const char *name;
   size_t name_len;
-  ino_t ino_nr;
+  int err;
 
   /* absolute or relative path */
   if (*pathname == '/') {
@@ -204,26 +201,22 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
     if (!name_len)
       continue;
 
-    /* find entry */
-    bh = find_entry(inode, name, name_len, &de);
-    if (!bh) {
+    /* lookup not implemented */
+    inode->i_ref++;
+    if (!inode->i_op || !inode->i_op->lookup) {
       iput(inode);
       return NULL;
     }
 
-    /* save inode number and release block buffer */
-    ino_nr = de->inode;
-    sb = inode->i_sb;
-    brelse(bh);
-    iput(inode);
-
-    /* get next inode */
-    inode = iget(sb, ino_nr);
-    if (!inode)
+    /* lookup file */
+    err = inode->i_op->lookup(inode, name, name_len, &tmp);
+    if (err) {
+      iput(inode);
       return NULL;
+    }
 
     /* follow symbolic links */
-    inode = follow_link(inode);
+    inode = follow_link(tmp);
     if (!inode)
       return NULL;
   }
@@ -238,13 +231,10 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
  */
 struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
 {
-  struct minix_dir_entry_t *de;
   struct inode_t *dir, *inode;
-  struct super_block_t *sb;
-  struct buffer_head_t *bh;
   const char *basename;
   size_t basename_len;
-  ino_t ino_nr;
+  int err;
 
   /* find directory */
   dir = dir_namei(dirfd, pathname, &basename, &basename_len);
@@ -255,26 +245,25 @@ struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
   if (!basename_len)
     return dir;
 
-  /* find entry */
-  bh = find_entry(dir, basename, basename_len, &de);
-  if (!bh) {
+  /* lookup not implemented */
+  if (!dir->i_op || !dir->i_op->lookup) {
     iput(dir);
     return NULL;
   }
 
-  /* save inode number and release buffer */
-  ino_nr = de->inode;
-  sb = dir->i_sb;
-  brelse(bh);
-  iput(dir);
-
-  /* read inode */
-  inode = iget(sb, ino_nr);
+  /* lookup file */
+  dir->i_ref++;
+  err = dir->i_op->lookup(dir, basename, basename_len, &inode);
+  if (err) {
+    iput(dir);
+    return NULL;
+  }
 
   /* follow symbolic link */
   if (follow_links)
     inode = follow_link(inode);
 
+  iput(dir);
   return inode;
 }
 

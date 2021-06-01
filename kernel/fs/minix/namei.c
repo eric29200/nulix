@@ -187,6 +187,45 @@ static int minix_empty_dir(struct inode_t *inode)
 }
 
 /*
+ * Lookup for a file in a directory.
+ */
+int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+{
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  ino_t ino;
+
+  /* dir must be a directory */
+  if (!dir)
+    return -ENOENT;
+  if (!S_ISDIR(dir->i_mode)) {
+    iput(dir);
+    return -ENOENT;
+  }
+
+  /* find entry */
+  bh = minix_find_entry(dir, name, name_len, &de);
+  if (!bh) {
+    iput(dir);
+    return -ENOENT;
+  }
+
+  /* get inode number */
+  ino = de->inode;
+  brelse(bh);
+
+  /* get inode */
+  *res_inode = iget(dir->i_sb, ino);
+  if (!*res_inode) {
+    iput(dir);
+    return -EACCES;
+  }
+
+  iput(dir);
+  return 0;
+}
+
+/*
  * Make a new name for a file = hard link.
  */
 int minix_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, size_t name_len)
