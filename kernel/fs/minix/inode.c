@@ -41,15 +41,8 @@ struct file_operations_t minix_char_fops = {
  */
 struct inode_operations_t minix_file_iops = {
   .fops           = &minix_file_fops,
-  .lookup         = minix_lookup,
-  .create         = minix_create,
   .follow_link    = minix_follow_link,
   .readlink       = minix_readlink,
-  .link           = minix_link,
-  .unlink         = minix_unlink,
-  .symlink        = minix_symlink,
-  .mkdir          = minix_mkdir,
-  .rmdir          = minix_rmdir,
   .truncate       = minix_truncate,
   .bmap           = minix_bmap,
 };
@@ -61,8 +54,6 @@ struct inode_operations_t minix_dir_iops = {
   .fops           = &minix_dir_fops,
   .lookup         = minix_lookup,
   .create         = minix_create,
-  .follow_link    = minix_follow_link,
-  .readlink       = minix_readlink,
   .link           = minix_link,
   .unlink         = minix_unlink,
   .symlink        = minix_symlink,
@@ -77,15 +68,6 @@ struct inode_operations_t minix_dir_iops = {
  */
 struct inode_operations_t minix_char_iops = {
   .fops           = &minix_char_fops,
-  .lookup         = minix_lookup,
-  .create         = minix_create,
-  .follow_link    = minix_follow_link,
-  .readlink       = minix_readlink,
-  .link           = minix_link,
-  .unlink         = minix_unlink,
-  .symlink        = minix_symlink,
-  .mkdir          = minix_mkdir,
-  .rmdir          = minix_rmdir,
   .truncate       = minix_truncate,
   .bmap           = minix_bmap,
 };
