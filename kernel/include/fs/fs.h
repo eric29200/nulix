@@ -166,6 +166,9 @@ struct inode_operations_t {
   int (*rmdir)(struct inode_t *, const char *, size_t);
 };
 
+extern struct inode_operations_t minix_inode_operations;
+extern struct super_operations_t minix_super_operations;
+
 int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev);
 int minix_read_inode(struct inode_t *inode);
 int minix_write_inode(struct inode_t *inode);

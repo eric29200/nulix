@@ -5,7 +5,7 @@
 /*
  * Minix super operations.
  */
-static struct super_operations_t minix_super_operations = {
+struct super_operations_t minix_super_operations = {
   .read_inode     = minix_read_inode,
   .write_inode    = minix_write_inode,
   .put_inode      = minix_put_inode,

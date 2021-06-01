@@ -248,6 +248,7 @@ int minix_create(struct inode_t *dir, const char *name, size_t name_len, mode_t 
   }
 
   /* set inode */
+  inode->i_op = &minix_inode_operations;
   inode->i_mode = mode;
   inode->i_dirt = 1;
 
