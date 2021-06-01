@@ -1,4 +1,4 @@
-#include <fs/fs.h>
+#include <fs/minix_fs.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <stdio.h>
@@ -9,7 +9,7 @@
 /*
  * File operations.
  */
-static struct file_operations_t minix_file_operations = {
+struct file_operations_t minix_file_operations = {
   .getdents       = minix_getdents,
   .getdents64     = minix_getdents64,
 };

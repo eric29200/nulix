@@ -8,15 +8,10 @@
 #define NR_BUFFER                     256
 #define NR_FILE                       256
 
-#define MINIX_SUPER_MAGIC             0x138F
-#define MINIX_ROOT_INODE              1
-#define MINIX_IMAP_SLOTS              8
-#define MINIX_ZMAP_SLOTS              8
-#define MINIX_FILENAME_LEN            30
-#define MINIX_INODES_PER_BLOCK        ((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
-#define MINIX_DIR_ENTRIES_PER_BLOCK   ((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
-
 #define BLOCK_SIZE                    1024
+
+#define IMAP_SLOTS                    8
+#define ZMAP_SLOTS                    8
 
 #define PIPE_WPOS(inode)              ((inode)->i_zone[0])
 #define PIPE_RPOS(inode)              ((inode)->i_zone[1])
@@ -36,21 +31,7 @@ struct buffer_head_t {
 };
 
 /*
- * Minix super block.
- */
-struct minix_super_block_t {
-  uint16_t                s_ninodes;
-  uint16_t                s_nzones;
-  uint16_t                s_imap_blocks;
-  uint16_t                s_zmap_blocks;
-  uint16_t                s_firstdatazone;
-  uint16_t                s_log_zone_size;
-  uint32_t                s_max_size;
-  uint16_t                s_magic;
-};
-
-/*
- * In memory super block.
+ * Generic super block.
  */
 struct super_block_t {
   uint16_t                    s_ninodes;
@@ -61,28 +42,15 @@ struct super_block_t {
   uint16_t                    s_log_zone_size;
   uint32_t                    s_max_size;
   uint16_t                    s_magic;
-  struct buffer_head_t *      s_imap[MINIX_IMAP_SLOTS];
-  struct buffer_head_t *      s_zmap[MINIX_ZMAP_SLOTS];
+  struct buffer_head_t *      s_imap[IMAP_SLOTS];
+  struct buffer_head_t *      s_zmap[ZMAP_SLOTS];
   struct ata_device_t *       s_dev;
   struct inode_t *            s_imount;
   struct super_operations_t * s_op;
 };
 
 /*
- * Minix inode.
- */
-struct minix_inode_t {
-  uint16_t                i_mode;
-  uint16_t                i_uid;
-  uint32_t                i_size;
-  uint32_t                i_time;
-  uint8_t                 i_gid;
-  uint8_t                 i_nlinks;
-  uint16_t                i_zone[9];
-};
-
-/*
- * In memory inode.
+ * Generic inode.
  */
 struct inode_t {
   uint16_t                      i_mode;
@@ -113,14 +81,6 @@ struct file_t {
   int                       f_ref;
   struct inode_t *          f_inode;
   struct file_operations_t *f_op;
-};
-
-/*
- * Minix dir entry.
- */
-struct minix_dir_entry_t {
-  uint16_t  inode;
-  char      name[MINIX_FILENAME_LEN];
 };
 
 /*
@@ -179,33 +139,6 @@ struct file_operations_t {
   int (*getdents)(struct file_t *, struct dirent_t *, uint32_t);
   int (*getdents64)(struct file_t*, void *, size_t);
 };
-
-extern struct inode_operations_t minix_inode_operations;
-extern struct super_operations_t minix_super_operations;
-
-int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev);
-int minix_read_inode(struct inode_t *inode);
-int minix_write_inode(struct inode_t *inode);
-int minix_put_inode(struct inode_t *inode);
-struct inode_t *minix_new_inode(struct super_block_t *sb);
-int minix_free_inode(struct inode_t *inode);
-uint32_t minix_new_block(struct super_block_t *sb);
-int minix_free_block(struct super_block_t *sb, uint32_t block);
-void minix_truncate(struct inode_t *inode);
-int minix_bmap(struct inode_t *inode, int block, int create);
-
-int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode);
-int minix_create(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, struct inode_t **res_inode);
-int minix_follow_link(struct inode_t *inode, struct inode_t **res_inode);
-ssize_t minix_readlink(struct inode_t *inode, char *buf, size_t bufsize);
-int minix_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, size_t name_len);
-int minix_unlink(struct inode_t *dir, const char *name, size_t name_len);
-int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target);
-int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mode);
-int minix_rmdir(struct inode_t *dir, const char *name, size_t name_len);
-
-int minix_getdents(struct file_t *filp, struct dirent_t *dirent, uint32_t count);
-int minix_getdents64(struct file_t *filp, void *dirp, size_t count);
 
 /* file system operations */
 int mount_root(struct ata_device_t *dev);

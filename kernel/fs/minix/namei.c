@@ -1,4 +1,4 @@
-#include <fs/fs.h>
+#include <fs/minix_fs.h>
 #include <proc/sched.h>
 #include <stderr.h>
 #include <fcntl.h>
