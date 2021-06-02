@@ -181,7 +181,7 @@ int minix_bmap(struct inode_t *inode, int block, int create)
   struct buffer_head_t *bh;
   int i;
 
-  if (block < 0 || block >= 7 + 512 + 512 * 512)
+  if (block < 0 || (uint32_t) block >= (inode->i_sb->s_max_size / BLOCK_SIZE))
     return 0;
 
   /* direct blocks */

@@ -31,7 +31,7 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev)
 
   /* check magic number */
   if (msb->s_magic != MINIX_SUPER_MAGIC) {
-    ret = EINVAL;
+    ret = -EINVAL;
     goto err_magic;
   }
 
@@ -58,7 +58,7 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev)
   for (i = 0; i < msb->s_imap_blocks; i++, block++) {
     sb->s_imap[i] = bread(dev, block);
     if (!sb->s_imap[i]) {
-      ret = ENOMEM;
+      ret = -ENOMEM;
       goto err_map;
     }
   }
@@ -67,7 +67,7 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev)
   for (i = 0; i < msb->s_zmap_blocks; i++, block++) {
     sb->s_zmap[i] = bread(dev, block);
     if (!sb->s_zmap[i]) {
-      ret = ENOMEM;
+      ret = -ENOMEM;
       goto err_map;
     }
   }
@@ -75,7 +75,7 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev)
   /* read root inode */
   sb->s_imount = iget(sb, MINIX_ROOT_INODE);
   if (!sb->s_imount) {
-    ret = EINVAL;
+    ret = -EINVAL;
     goto err_root_inode;
   }
 
