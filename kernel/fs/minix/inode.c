@@ -94,10 +94,10 @@ int minix_read_inode(struct inode_t *inode)
   inode->i_mode = minix_inode[i].i_mode;
   inode->i_uid = minix_inode[i].i_uid;
   inode->i_size = minix_inode[i].i_size;
-  inode->i_time = minix_inode[i].i_time;
+  inode->i_time = minix_inode[i].i_atime;
   inode->i_gid = minix_inode[i].i_gid;
   inode->i_nlinks = minix_inode[i].i_nlinks;
-  for (j = 0; j < 9; j++)
+  for (j = 0; j < 10; j++)
     inode->i_zone[j] = minix_inode[i].i_zone[j];
 
   if (S_ISDIR(inode->i_mode))
@@ -139,10 +139,12 @@ int minix_write_inode(struct inode_t *inode)
   minix_inode[i].i_mode = inode->i_mode;
   minix_inode[i].i_uid = inode->i_uid;
   minix_inode[i].i_size = inode->i_size;
-  minix_inode[i].i_time = inode->i_time;
+  minix_inode[i].i_atime = inode->i_time;
+  minix_inode[i].i_mtime = inode->i_time;
+  minix_inode[i].i_ctime = inode->i_time;
   minix_inode[i].i_gid = inode->i_gid;
   minix_inode[i].i_nlinks = inode->i_nlinks;
-  for (j = 0; j < 9; j++)
+  for (j = 0; j < 10; j++)
     minix_inode[i].i_zone[j] = inode->i_zone[j];
 
   /* write inode block */
@@ -170,7 +172,10 @@ int minix_put_inode(struct inode_t *inode)
   return 0;
 }
 
-struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int create)
+/*
+ * Get an inode buffer.
+ */
+static struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int create)
 {
   /* create block if needed */
   if (create && !inode->i_zone[nr])
@@ -183,17 +188,20 @@ struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int create)
   return bread(inode->i_dev, inode->i_zone[nr]);
 }
 
-struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_head_t *bh, int block, int create)
+/*
+ * Get a block buffer.
+ */
+static struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_head_t *bh, int block, int create)
 {
   int i;
 
   if (!bh)
     return NULL;
 
-  i = ((uint16_t *) bh->b_data)[block];
+  i = ((uint32_t *) bh->b_data)[block];
   if (create && !i) {
     if ((i = minix_new_block(inode->i_sb))) {
-      ((uint16_t *) (bh->b_data))[block] = i;
+      ((uint32_t *) (bh->b_data))[block] = i;
       bh->b_dirt = 1;
     }
   }
@@ -206,6 +214,9 @@ struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_head_t *
   return bread(inode->i_dev, i);
 }
 
+/*
+ * Read a buffer.
+ */
 struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create)
 {
   struct buffer_head_t *bh;
@@ -218,13 +229,21 @@ struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create)
     return inode_getblk(inode, block, create);
 
   block -= 7;
-  if (block < 512) {
+  if (block < 256) {
     bh = inode_getblk(inode, 7, create);
     return block_getblk(inode, bh, block, create);
   }
 
-  block -= 512;
-  bh = inode_getblk(inode, 8, create);
-  bh = block_getblk(inode, bh, (block >> 9) & 511, create);
-  return block_getblk(inode, bh, block & 511, create);
+  block -= 256;
+  if (block < 256 * 256) {
+    bh = inode_getblk(inode, 8, create);
+    bh = block_getblk(inode, bh, (block >> 8) & 255, create);
+    return block_getblk(inode, bh, block & 255, create);
+  }
+
+  block -= 256 * 256;
+  bh = inode_getblk(inode, 9, create);
+  bh = block_getblk(inode, bh, (block >> 16) & 255, create);
+  bh = block_getblk(inode, bh, (block >> 8) & 255, create);
+  return block_getblk(inode, bh, block & 255, create);
 }

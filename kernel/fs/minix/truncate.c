@@ -7,7 +7,7 @@
 static void minix_free_indirect_blocks(struct super_block_t *sb, int block)
 {
   struct buffer_head_t *bh;
-  uint16_t *blocks;
+  uint32_t *blocks;
   int i;
 
   if (!block)
@@ -19,8 +19,8 @@ static void minix_free_indirect_blocks(struct super_block_t *sb, int block)
     return;
 
   /* free all pointed blocks */
-  blocks = (uint16_t *) bh->b_data;
-  for (i = 0; i < BLOCK_SIZE / 2; i++)
+  blocks = (uint32_t *) bh->b_data;
+  for (i = 0; i < BLOCK_SIZE / 4; i++)
     if (blocks[i])
       minix_free_block(sb, blocks[i]);
 
@@ -34,10 +34,10 @@ static void minix_free_indirect_blocks(struct super_block_t *sb, int block)
 /*
  * Free double indirect blocks.
  */
-static void minix_free_double_indirect_blocks(struct super_block_t *sb, int block)
+static void minix_free_dindirect_blocks(struct super_block_t *sb, int block)
 {
   struct buffer_head_t *bh;
-  uint16_t *blocks;
+  uint32_t *blocks;
   int i;
 
   if (!block)
@@ -49,10 +49,40 @@ static void minix_free_double_indirect_blocks(struct super_block_t *sb, int bloc
     return;
 
   /* free all pointed blocks */
-  blocks = (uint16_t *) bh->b_data;
-  for (i = 0; i < BLOCK_SIZE / 2; i++)
+  blocks = (uint32_t *) bh->b_data;
+  for (i = 0; i < BLOCK_SIZE / 4; i++)
     if (blocks[i])
       minix_free_indirect_blocks(sb, blocks[i]);
+
+  /* release buffer */
+  brelse(bh);
+
+  /* free this block */
+  minix_free_block(sb, block);
+}
+
+/*
+ * Free triple indirect blocks.
+ */
+static void minix_free_tindirect_blocks(struct super_block_t *sb, int block)
+{
+  struct buffer_head_t *bh;
+  uint32_t *blocks;
+  int i;
+
+  if (!block)
+    return;
+
+  /* get block */
+  bh = bread(sb->s_dev, block);
+  if (!bh)
+    return;
+
+  /* free all pointed blocks */
+  blocks = (uint32_t *) bh->b_data;
+  for (i = 0; i < BLOCK_SIZE / 4; i++)
+    if (blocks[i])
+      minix_free_dindirect_blocks(sb, blocks[i]);
 
   /* release buffer */
   brelse(bh);
@@ -85,8 +115,12 @@ void minix_truncate(struct inode_t *inode)
   inode->i_zone[7] = 0;
 
   /* free double indirect blocks */
-  minix_free_double_indirect_blocks(inode->i_sb, inode->i_zone[8]);
+  minix_free_dindirect_blocks(inode->i_sb, inode->i_zone[8]);
   inode->i_zone[8] = 0;
+
+  /* free triple indirect blocks */
+  minix_free_tindirect_blocks(inode->i_sb, inode->i_zone[9]);
+  inode->i_zone[9] = 0;
 
   /* update inode size */
   inode->i_size = 0;

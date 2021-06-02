@@ -11,7 +11,7 @@
 #define BLOCK_SIZE                    1024
 
 #define IMAP_SLOTS                    8
-#define ZMAP_SLOTS                    8
+#define ZMAP_SLOTS                    64
 
 #define PIPE_WPOS(inode)              ((inode)->i_zone[0])
 #define PIPE_RPOS(inode)              ((inode)->i_zone[1])
@@ -59,7 +59,7 @@ struct inode_t {
   uint32_t                      i_time;
   gid_t                         i_gid;
   uint8_t                       i_nlinks;
-  uint16_t                      i_zone[9];
+  uint32_t                      i_zone[10];
   ino_t                         i_ino;
   int                           i_ref;
   char                          i_dirt;

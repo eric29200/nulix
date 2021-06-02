@@ -1,11 +1,11 @@
 #!/bin/csh
 
 set DISK		= hdd.img
-set DISK_SIZE		= 128M
+set DISK_SIZE		= 512M
 
 # create disk
 dd if=/dev/zero of=$DISK bs=1 count=1 seek=$DISK_SIZE
-mkfs.minix -1 $DISK
+mkfs.minix -2 $DISK
 
 # mount disk
 mkdir tmp >& /dev/null

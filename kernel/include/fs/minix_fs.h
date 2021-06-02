@@ -3,7 +3,7 @@
 
 #include <fs/fs.h>
 
-#define MINIX_SUPER_MAGIC             0x138F
+#define MINIX_SUPER_MAGIC             0x2478
 #define MINIX_ROOT_INODE              1
 #define MINIX_FILENAME_LEN            30
 #define MINIX_INODES_PER_BLOCK        ((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
@@ -28,12 +28,14 @@ struct minix_super_block_t {
  */
 struct minix_inode_t {
   uint16_t                i_mode;
+  uint16_t                i_nlinks;
   uint16_t                i_uid;
+  uint16_t                i_gid;
   uint32_t                i_size;
-  uint32_t                i_time;
-  uint8_t                 i_gid;
-  uint8_t                 i_nlinks;
-  uint16_t                i_zone[9];
+  uint32_t                i_atime;
+  uint32_t                i_mtime;
+  uint32_t                i_ctime;
+  uint32_t                i_zone[10];
 };
 
 /*
