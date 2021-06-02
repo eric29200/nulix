@@ -81,7 +81,6 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
 int minix_rmdir(struct inode_t *dir, const char *name, size_t name_len);
 
 /* minix directory operations */
-int minix_getdents(struct file_t *filp, struct dirent_t *dirent, uint32_t count);
 int minix_getdents64(struct file_t *filp, void *dirp, size_t count);
 
 /* minix file operations */

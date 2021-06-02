@@ -108,7 +108,6 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 static struct file_operations_t pipe_fops = {
   .read           = pipe_read,
   .write          = pipe_write,
-  .getdents       = NULL,
   .getdents64     = NULL,
 };
 

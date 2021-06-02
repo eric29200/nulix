@@ -140,7 +140,6 @@ struct file_operations_t {
   int (*open)(struct file_t *file);
   int (*read)(struct file_t *, char *, int);
   int (*write)(struct file_t *, const char *, int);
-  int (*getdents)(struct file_t *, struct dirent_t *, uint32_t);
   int (*getdents64)(struct file_t*, void *, size_t);
 };
 
@@ -177,7 +176,6 @@ ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize);
 int do_symlink(const char *target, int newdirfd, const char *linkpath);
 int do_unlink(int dirfd, const char *pathname);
 int do_rmdir(int dirfd, const char *pathname);
-int do_getdents(int fd, struct dirent_t *dirent, uint32_t count);
 int do_getdents64(int fd, void *dirp, size_t count);
 int do_pipe(int pipefd[2]);
 

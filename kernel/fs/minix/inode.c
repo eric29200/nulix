@@ -12,7 +12,6 @@
 struct file_operations_t minix_dir_fops = {
   .read           = minix_file_read,
   .write          = minix_file_write,
-  .getdents       = minix_getdents,
   .getdents64     = minix_getdents64,
 };
 

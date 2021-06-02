@@ -30,7 +30,6 @@ static const void *syscalls[] = {
   [__NR_unlink]           = sys_unlink,
   [__NR_rmdir]            = sys_rmdir,
   [__NR_wait4]            = sys_wait4,
-  [__NR_getdents]         = sys_getdents,
   [__NR_readv]            = sys_readv,
   [__NR_writev]           = sys_writev,
   [__NR_nanosleep]        = sys_nanosleep,

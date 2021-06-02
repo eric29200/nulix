@@ -56,7 +56,6 @@
 #define __NR_modify_ldt         123
 #define __NR_sigprocmask        126
 #define __NR_getpgid            132
-#define __NR_getdents           141
 #define __NR_readv              145
 #define __NR_writev             146
 #define __NR_nanosleep          162
@@ -116,7 +115,6 @@ int sys_creat(const char *pathname, mode_t mode);
 int sys_link(const char *oldpath, const char *newpath);
 int sys_unlink(const char *pathname);
 int sys_rmdir(const char *pathname);
-int sys_getdents(int fd, struct dirent_t *dirent, uint32_t count);
 ssize_t sys_readv(int fd, const struct iovec_t *iov, int iovcnt);
 ssize_t sys_writev(int fd, const struct iovec_t *iov, int iovcnt);
 int sys_nanosleep(const struct timespec_t *req, struct timespec_t *rem);
