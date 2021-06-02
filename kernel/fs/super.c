@@ -4,6 +4,64 @@
 #include <stdio.h>
 #include <stderr.h>
 #include <string.h>
+#include <fcntl.h>
+
+/*
+ * Mount a file system.
+ */
+int do_mount(uint16_t magic, struct ata_device_t *dev, const char *mount_point)
+{
+  struct super_block_t *sb;
+  struct inode_t *dir;
+  int err;
+
+  /* get mount point */
+  dir = namei(AT_FDCWD, mount_point, 1);
+  if (!dir)
+    return -EINVAL;
+
+  /* mount point busy */
+  if (dir->i_ref != 1 || dir->i_mount) {
+    iput(dir);
+    return -EBUSY;
+  }
+
+  /* mount point must be a directory */
+  if (!S_ISDIR(dir->i_mode)) {
+    iput(dir);
+    return -EPERM;
+  }
+
+  /* allocate a super block */
+  sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
+  if (!sb) {
+    iput(dir);
+    return -ENOMEM;
+  }
+
+  /* read super block */
+  switch (magic) {
+    case MINIX_SUPER_MAGIC:
+      err = minix_read_super(sb, dev);
+      break;
+    default:
+      err = -EINVAL;
+      break;
+  }
+
+  /* no way to read super block */
+  if (err) {
+    kfree(sb);
+    iput(dir);
+    return err;
+  }
+
+  /* set mount point */
+  sb->s_covered = dir;
+  dir->i_mount = sb->s_mounted;
+
+  return 0;
+}
 
 /*
  * Mount root device.

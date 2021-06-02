@@ -162,6 +162,7 @@ struct inode_t *namei(int dirfd, const char *pathname, int follow_links);
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
 
 /* system calls */
+int do_mount(uint16_t magic, struct ata_device_t *dev, const char *mount_point);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(int fd);
 ssize_t do_read(int fd, char *buf, int count);
