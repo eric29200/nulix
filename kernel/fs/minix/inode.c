@@ -41,7 +41,6 @@ struct inode_operations_t minix_file_iops = {
   .follow_link    = minix_follow_link,
   .readlink       = minix_readlink,
   .truncate       = minix_truncate,
-  .bmap           = minix_bmap,
 };
 
 /*
@@ -57,7 +56,6 @@ struct inode_operations_t minix_dir_iops = {
   .mkdir          = minix_mkdir,
   .rmdir          = minix_rmdir,
   .truncate       = minix_truncate,
-  .bmap           = minix_bmap,
 };
 
 /*
@@ -66,7 +64,6 @@ struct inode_operations_t minix_dir_iops = {
 struct inode_operations_t minix_char_iops = {
   .fops           = &minix_char_fops,
   .truncate       = minix_truncate,
-  .bmap           = minix_bmap,
 };
 
 /*

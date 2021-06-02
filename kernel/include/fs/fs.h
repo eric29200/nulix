@@ -129,7 +129,6 @@ struct inode_operations_t {
   int (*mkdir)(struct inode_t *, const char *, size_t, mode_t);
   int (*rmdir)(struct inode_t *, const char *, size_t);
   void (*truncate)(struct inode_t *);
-  int (*bmap)(struct inode_t *, int, int);
 };
 
 /*
