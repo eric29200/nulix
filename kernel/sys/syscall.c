@@ -89,7 +89,7 @@ static const void *syscalls[] = {
  */
 static void syscall_handler(struct registers_t *regs)
 {
-  uint32_t ret;
+  int ret;
 
   /* system call not handled */
   if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL) {
