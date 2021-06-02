@@ -358,8 +358,6 @@ int do_unlink(int dirfd, const char *pathname)
 
   /* unlink file */
   err = dir->i_op->unlink(dir, basename, basename_len);
-
-  iput(dir);
   return err;
 }
 
@@ -392,8 +390,6 @@ int do_rmdir(int dirfd, const char *pathname)
 
   /* remove directory */
   err = dir->i_op->rmdir(dir, basename, basename_len);
-
-  iput(dir);
   return err;
 }
 
