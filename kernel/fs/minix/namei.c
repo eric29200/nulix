@@ -19,7 +19,7 @@ static struct buffer_head_t *minix_find_entry(struct inode_t *dir, const char *n
 {
   struct minix_dir_entry_t *entries;
   struct buffer_head_t *bh = NULL;
-  int nb_entries, i, block_nr;
+  int nb_entries, i;
 
   /* check name length */
   if (!name_len || name_len > MINIX_FILENAME_LEN)
@@ -33,8 +33,7 @@ static struct buffer_head_t *minix_find_entry(struct inode_t *dir, const char *n
     /* read next block if needed */
     if (i % MINIX_DIR_ENTRIES_PER_BLOCK == 0) {
       brelse(bh);
-      block_nr = minix_bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
-      bh = bread(dir->i_dev, block_nr);
+      bh = minix_bread(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
       if (!bh)
         return NULL;
 
@@ -62,19 +61,14 @@ static struct buffer_head_t *minix_add_entry(struct inode_t *dir, const char *na
 {
   struct minix_dir_entry_t *de;
   struct buffer_head_t *bh;
-  int block, i;
+  int i;
 
   /* check file name length */
   if (!name_len || name_len > MINIX_FILENAME_LEN)
     return NULL;
 
-  /* get first dir block */
-  block = dir->i_zone[0];
-  if (!block)
-    return NULL;
-
   /* read first dir block */
-  bh = bread(dir->i_dev, dir->i_zone[0]);
+  bh = minix_bread(dir, 0, 1);
   if (!bh)
     return NULL;
 
@@ -86,15 +80,9 @@ static struct buffer_head_t *minix_add_entry(struct inode_t *dir, const char *na
     if ((char *) de >= bh->b_data + BLOCK_SIZE) {
       /* release previous block */
       brelse(bh);
-      bh = NULL;
 
-      /* get or map next block number */
-      block = minix_bmap(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 1);
-      if (!block)
-        return NULL;
-
-      /* read block */
-      bh = bread(dir->i_dev, block);
+      /* read next block */
+      bh = minix_bread(dir, i / MINIX_DIR_ENTRIES_PER_BLOCK, 1);
       if (!bh) {
         i += MINIX_DIR_ENTRIES_PER_BLOCK;
         continue;
@@ -132,7 +120,7 @@ static int minix_empty_dir(struct inode_t *inode)
 {
   struct minix_dir_entry_t *de;
   struct buffer_head_t *bh;
-  int len, i, block;
+  int len, i;
 
   /* check if inode is a directory */
   if (!inode || S_ISREG(inode->i_mode))
@@ -144,7 +132,7 @@ static int minix_empty_dir(struct inode_t *inode)
     return 0;
 
   /* get first zone */
-  bh = bread(inode->i_dev, inode->i_zone[0]);
+  bh = minix_bread(inode, 0, 0);
   if (!bh)
     return 0;
 
@@ -161,8 +149,7 @@ static int minix_empty_dir(struct inode_t *inode)
       brelse(bh);
 
       /* get next block buffer */
-      block = minix_bmap(inode, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
-      bh = bread(inode->i_dev, block);
+      bh = minix_bread(inode, i / MINIX_DIR_ENTRIES_PER_BLOCK, 0);
       if (!bh)
         return 0;
 
@@ -394,7 +381,7 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
   }
 
   /* read first block */
-  bh = bread(inode->i_dev, inode->i_zone[0]);
+  bh = minix_bread(inode, 0, 0);
   if (!bh) {
     iput(dir);
     inode->i_nlinks--;
@@ -484,7 +471,7 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   }
 
   /* read first block */
-  bh = bread(inode->i_dev, inode->i_zone[0]);
+  bh = minix_bread(inode, 0, 0);
   if (!bh) {
     iput(dir);
     minix_free_block(inode->i_sb, inode->i_zone[0]);

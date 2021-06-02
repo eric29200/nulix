@@ -170,94 +170,61 @@ int minix_put_inode(struct inode_t *inode)
   return 0;
 }
 
-/*
- * Get block number.
- */
-int minix_bmap(struct inode_t *inode, int block, int create)
+struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int create)
 {
-  struct buffer_head_t *bh;
-  int i;
-
-  if (block < 0 || (uint32_t) block >= (inode->i_sb->s_max_size / BLOCK_SIZE))
-    return 0;
-
-  /* direct blocks */
-  if (block < 7) {
-    if (create && !inode->i_zone[block])
-      if ((inode->i_zone[block] = minix_new_block(inode->i_sb)))
-        inode->i_dirt = 1;
-
-    return inode->i_zone[block];
-  }
-
-  /* first indirect block (contains address to 512 blocks) */
-  block -= 7;
-  if (block < 512) {
-    /* create block if needed */
-    if (create && !inode->i_zone[7])
-      if ((inode->i_zone[7] = minix_new_block(inode->i_sb)))
-        inode->i_dirt = 1;
-
-    if (!inode->i_zone[7])
-      return 0;
-
-    /* read indirect block */
-    bh = bread(inode->i_dev, inode->i_zone[7]);
-    if (!bh)
-      return 0;
-
-    /* get matching block */
-    i = ((uint16_t *) bh->b_data)[block];
-    if (create && !i) {
-      if ((i = minix_new_block(inode->i_sb))) {
-        ((uint16_t *) (bh->b_data))[block] = i;
-        bh->b_dirt = 1;
-      }
-    }
-    brelse(bh);
-    return i;
-  }
-
-  /* second indirect block */
-  block -= 512;
-  if (create && !inode->i_zone[8])
-    if ((inode->i_zone[8] = minix_new_block(inode->i_sb)))
+  /* create block if needed */
+  if (create && !inode->i_zone[nr])
+    if ((inode->i_zone[nr] = minix_new_block(inode->i_sb)))
       inode->i_dirt = 1;
 
-  if (!inode->i_zone[8])
-    return 0;
+  if (!inode->i_zone[nr])
+    return NULL;
 
-  /* read second indirect block */
-  bh = bread(inode->i_dev, inode->i_zone[8]);
+  return bread(inode->i_dev, inode->i_zone[nr]);
+}
+
+struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_head_t *bh, int block, int create)
+{
+  int i;
+
   if (!bh)
-    return 0;
-  i = ((uint16_t *) bh->b_data)[block >> 9];
+    return NULL;
 
-  /* create it if needed */
+  i = ((uint16_t *) bh->b_data)[block];
   if (create && !i) {
     if ((i = minix_new_block(inode->i_sb))) {
-      ((uint16_t *) (bh->b_data))[block >> 9] = i;
+      ((uint16_t *) (bh->b_data))[block] = i;
       bh->b_dirt = 1;
     }
   }
+
   brelse(bh);
 
   if (!i)
-    return 0;
+    return NULL;
 
-  /* get second second indirect block */
-  bh = bread(inode->i_dev, i);
-  if (!bh)
-    return 0;
-  i = ((uint16_t *) bh->b_data)[block & 511];
-  if (create && !i) {
-    if ((i = minix_new_block(inode->i_sb))) {
-      ((uint16_t *) (bh->b_data))[block & 511] = i;
-      bh->b_dirt = 1;
-    }
-  }
-  brelse(bh);
-
-  return i;
+  return bread(inode->i_dev, i);
 }
 
+struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create)
+{
+  struct buffer_head_t *bh;
+
+  /* check block number */
+  if (block < 0 || (uint32_t) block >= inode->i_sb->s_max_size / BLOCK_SIZE)
+    return NULL;
+
+  if (block < 7)
+    return inode_getblk(inode, block, create);
+
+  block -= 7;
+  if (block < 512) {
+    bh = inode_getblk(inode, 7, create);
+    return block_getblk(inode, bh, block, create);
+  }
+
+  block -= 512;
+  bh = inode_getblk(inode, 8, create);
+  bh = block_getblk(inode, bh, (block >> 9) & 511, create);
+  return block_getblk(inode, bh, block & 511, create);
+}

@@ -7,8 +7,8 @@
  */
 int minix_file_read(struct file_t *filp, char *buf, int count)
 {
-  int pos, nb_chars, left, block_nr;
   struct buffer_head_t *bh;
+  int pos, nb_chars, left;
 
   /* adjust size */
   if (filp->f_pos + count > filp->f_inode->i_size)
@@ -19,13 +19,8 @@ int minix_file_read(struct file_t *filp, char *buf, int count)
 
   left = count;
   while (left > 0) {
-    /* get block number */
-    block_nr = minix_bmap(filp->f_inode, filp->f_pos / BLOCK_SIZE, 0);
-    if (!block_nr)
-      goto out;
-
     /* read block */
-    bh = bread(filp->f_inode->i_dev, block_nr);
+    bh = minix_bread(filp->f_inode, filp->f_pos / BLOCK_SIZE, 0);
     if (!bh)
       goto out;
 
@@ -56,7 +51,6 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
 {
   uint32_t pos, nb_chars, left;
   struct buffer_head_t *bh;
-  int block_nr;
 
   /* handle append flag */
   if (filp->f_flags & O_APPEND)
@@ -66,13 +60,8 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
 
   left = count;
   while (left > 0) {
-    /* get/create block number */
-    block_nr = minix_bmap(filp->f_inode, pos / BLOCK_SIZE, 1);
-    if (!block_nr)
-      goto out;
-
     /* read block */
-    bh = bread(filp->f_inode->i_dev, block_nr);
+    bh = minix_bread(filp->f_inode, filp->f_pos / BLOCK_SIZE, 1);
     if (!bh)
       goto out;
 

@@ -63,7 +63,7 @@ int minix_free_inode(struct inode_t *inode);
 uint32_t minix_new_block(struct super_block_t *sb);
 int minix_free_block(struct super_block_t *sb, uint32_t block);
 void minix_truncate(struct inode_t *inode);
-int minix_bmap(struct inode_t *inode, int block, int create);
+struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create);
 
 /* minix inode operations */
 int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode);
