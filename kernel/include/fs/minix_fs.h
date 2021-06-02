@@ -21,6 +21,8 @@ struct minix_super_block_t {
   uint16_t                s_log_zone_size;
   uint32_t                s_max_size;
   uint16_t                s_magic;
+  uint16_t                s_state;
+  uint32_t                s_zones;
 };
 
 /*

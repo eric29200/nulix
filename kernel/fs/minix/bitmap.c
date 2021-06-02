@@ -42,7 +42,8 @@ static void minix_clear_bitmap(struct buffer_head_t *bh, int i)
 uint32_t minix_new_block(struct super_block_t *sb)
 {
   struct buffer_head_t *bh;
-  int i, j, block_nr;
+  uint32_t block_nr, i;
+  int j;
 
   /* find first free block in bitmap */
   for (i = 0; i < sb->s_zmap_blocks; i++) {
@@ -127,7 +128,8 @@ int minix_free_inode(struct inode_t *inode)
 struct inode_t *minix_new_inode(struct super_block_t *sb)
 {
   struct inode_t *inode;
-  int i, j;
+  uint32_t i;
+  int j;
 
   /* get an empty new inode */
   inode = get_empty_inode();

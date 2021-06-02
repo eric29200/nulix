@@ -34,12 +34,12 @@ struct buffer_head_t {
  * Generic super block.
  */
 struct super_block_t {
-  uint16_t                    s_ninodes;
-  uint16_t                    s_nzones;
-  uint16_t                    s_imap_blocks;
-  uint16_t                    s_zmap_blocks;
-  uint16_t                    s_firstdatazone;
-  uint16_t                    s_log_zone_size;
+  uint32_t                    s_ninodes;
+  uint32_t                    s_nzones;
+  uint32_t                    s_imap_blocks;
+  uint32_t                    s_zmap_blocks;
+  uint32_t                    s_firstdatazone;
+  uint32_t                    s_log_zone_size;
   uint32_t                    s_max_size;
   uint16_t                    s_magic;
   struct buffer_head_t *      s_imap[IMAP_SLOTS];

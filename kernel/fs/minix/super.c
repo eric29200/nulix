@@ -37,7 +37,7 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev)
 
   /* set root super block */
   sb->s_ninodes = msb->s_ninodes;
-  sb->s_nzones = msb->s_nzones;
+  sb->s_nzones = msb->s_zones;
   sb->s_imap_blocks = msb->s_imap_blocks;
   sb->s_zmap_blocks = msb->s_zmap_blocks;
   sb->s_firstdatazone = msb->s_firstdatazone;

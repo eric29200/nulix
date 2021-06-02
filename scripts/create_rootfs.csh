@@ -1,7 +1,7 @@
 #!/bin/csh
 
 set DISK		= hdd.img
-set DISK_SIZE		= 64M
+set DISK_SIZE		= 512M
 
 # create disk
 dd if=/dev/zero of=$DISK bs=1 count=1 seek=$DISK_SIZE
