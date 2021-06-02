@@ -11,6 +11,7 @@
 int mount_root(struct ata_device_t *dev)
 {
   struct super_block_t *root_sb;
+  struct inode_t *inode;
   int err;
 
   /* allocate root super block */
@@ -25,10 +26,15 @@ int mount_root(struct ata_device_t *dev)
     return err;
   }
 
+  /* set mount point */
+  inode = root_sb->s_mounted;
+  inode->i_ref = 3;
+  root_sb->s_covered = inode;
+
   /* set current task current working dir to root */
-  current_task->cwd = root_sb->s_imount;
+  current_task->cwd = inode;
+  current_task->root = inode;
   strcpy(current_task->cwd_path, "/");
-  current_task->root = root_sb->s_imount;
 
   return 0;
 }

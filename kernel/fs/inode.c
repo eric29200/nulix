@@ -41,7 +41,7 @@ struct inode_t *get_empty_inode()
  */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 {
-  struct inode_t *inode;
+  struct inode_t *inode, *tmp;
   int i;
 
   /* try to find inode in table */
@@ -49,6 +49,15 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
     if (inode_table[i].i_ino == ino && inode_table[i].i_sb == sb) {
       inode = &inode_table[i];
       inode->i_ref++;
+
+      /* cross mount point */
+      if (inode->i_mount) {
+        tmp = inode->i_mount;
+        tmp->i_ref++;
+        iput(inode);
+        inode = tmp;
+      }
+
       return inode;
     }
   }

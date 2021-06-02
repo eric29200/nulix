@@ -45,7 +45,8 @@ struct super_block_t {
   struct buffer_head_t *      s_imap[IMAP_SLOTS];
   struct buffer_head_t *      s_zmap[ZMAP_SLOTS];
   struct ata_device_t *       s_dev;
-  struct inode_t *            s_imount;
+  struct inode_t *            s_covered;
+  struct inode_t *            s_mounted;
   struct super_operations_t * s_op;
 };
 
@@ -68,6 +69,7 @@ struct inode_t {
   char                          i_wwait;
   struct super_block_t *        i_sb;
   struct ata_device_t *         i_dev;
+  struct inode_t *              i_mount;
   struct inode_operations_t *   i_op;
 };
 

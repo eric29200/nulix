@@ -73,8 +73,8 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev)
   }
 
   /* read root inode */
-  sb->s_imount = iget(sb, MINIX_ROOT_INODE);
-  if (!sb->s_imount) {
+  sb->s_mounted = iget(sb, MINIX_ROOT_INODE);
+  if (!sb->s_mounted) {
     ret = -EINVAL;
     goto err_root_inode;
   }
