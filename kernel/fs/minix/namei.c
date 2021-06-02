@@ -476,6 +476,7 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
     iput(dir);
     minix_free_block(inode->i_sb, inode->i_zone[0]);
     iput(inode);
+    return -ENOSPC;
   }
 
   /* add entry '.' */

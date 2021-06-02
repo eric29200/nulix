@@ -48,9 +48,9 @@ int minix_read_super(struct super_block_t *sb, struct ata_device_t *dev)
   sb->s_op = &minix_sops;
 
   /* reset maps */
-  for (i = 0; i < msb->s_imap_blocks; i++)
+  for (i = 0; i < IMAP_SLOTS; i++)
     sb->s_imap[i] = NULL;
-  for (i = 0; i < msb->s_zmap_blocks; i++)
+  for (i = 0; i < ZMAP_SLOTS; i++)
     sb->s_zmap[i] = NULL;
 
   /* read imap blocks */
