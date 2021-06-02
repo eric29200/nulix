@@ -465,18 +465,12 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   inode->i_uid = current_task->uid;
   inode->i_gid = current_task->gid;
   inode->i_op = &minix_dir_iops;
-  inode->i_zone[0] = minix_new_block(inode->i_sb);
-  if (!inode->i_zone[0]) {
-    iput(dir);
-    iput(inode);
-    return -ENOSPC;
-  }
 
   /* read first block */
-  bh = minix_bread(inode, 0, 0);
+  bh = minix_bread(inode, 0, 1);
   if (!bh) {
+    inode->i_nlinks = 0;
     iput(dir);
-    minix_free_block(inode->i_sb, inode->i_zone[0]);
     iput(inode);
     return -ENOSPC;
   }
@@ -498,8 +492,8 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   /* add entry to parent dir */
   bh = minix_add_entry(dir, name, name_len, &de);
   if (!bh) {
+    inode->i_nlinks = 0;
     iput(dir);
-    minix_free_block(inode->i_sb, inode->i_zone[0]);
     iput(inode);
     return -ENOSPC;
   }

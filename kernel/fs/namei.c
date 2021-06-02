@@ -188,6 +188,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
     }
 
     /* create new inode */
+    dir->i_ref++;
     err = dir->i_op->create(dir, basename, basename_len, mode, res_inode);
 
     /* release directory */
@@ -235,6 +236,7 @@ int do_mkdir(int dirfd, const char *pathname, mode_t mode)
   }
 
   /* create directory */
+  dir->i_ref++;
   err = dir->i_op->mkdir(dir, basename, basename_len, mode);
   iput(dir);
 
@@ -284,6 +286,7 @@ int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath
   }
 
   /* create link */
+  dir->i_ref++;
   err = dir->i_op->link(old_inode, dir, basename, basename_len);
 
   iput(old_inode);
@@ -319,6 +322,7 @@ int do_symlink(const char *target, int newdirfd, const char *linkpath)
   }
 
   /* create symbolic link */
+  dir->i_ref++;
   err = dir->i_op->symlink(dir, basename, basename_len, target);
 
   iput(dir);
