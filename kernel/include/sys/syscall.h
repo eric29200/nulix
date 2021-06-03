@@ -1,13 +1,14 @@
 #ifndef _SYSCALL_H_
 #define _SYSCALL_H_
 
-#include <stddef.h>
 #include <fs/fs.h>
 #include <ipc/signal.h>
-#include <uio.h>
 #include <resource.h>
 #include <sys/utsname.h>
+#include <sys/sysinfo.h>
 #include <time.h>
+#include <uio.h>
+#include <stddef.h>
 
 #define SYSCALLS_NUM            (__NR_clock_gettime64 + 1)
 
@@ -51,6 +52,7 @@
 #define __NR_munmap             91
 #define __NR_stat               106
 #define __NR_wait4              114
+#define __NR_sysinfo            116
 #define __NR_sigreturn          119
 #define __NR_uname              122
 #define __NR_modify_ldt         123
@@ -158,5 +160,6 @@ ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz
 int sys_uname(struct utsname_t *buf);
 int sys_pipe(int pipefd[2]);
 int sys_clock_gettime64(clockid_t clockid, struct timespec_t *tp);
+int sys_sysinfo(struct sysinfo_t *info);
 
 #endif
