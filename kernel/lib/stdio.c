@@ -38,7 +38,7 @@ static int __print_num_signed(void (*putch)(char), int32_t num, uint16_t base)
     buf[i++] = '-';
 
   ret = i;
-  while (i >= 0)
+  while (i > 0)
     putch(buf[--i]);
 
   return ret;
@@ -61,7 +61,7 @@ static int __print_num_unsigned(void (*putch)(char), uint32_t num, uint16_t base
   } while (n > 0);
 
   ret = i;
-  while (i >= 0)
+  while (i > 0)
     putch(buf[--i]);
 
   return ret;
@@ -116,6 +116,7 @@ static int vsprintf(void (*putch)(char), const char *format, va_list args)
         putch('%');
         putch(c);
         count += 2;
+        break;
     }
   }
 
