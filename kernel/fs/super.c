@@ -1,4 +1,5 @@
 #include <fs/minix_fs.h>
+#include <fs/proc_fs.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <stdio.h>
@@ -43,6 +44,9 @@ int do_mount(uint16_t magic, struct ata_device_t *dev, const char *mount_point)
   switch (magic) {
     case MINIX_SUPER_MAGIC:
       err = minix_read_super(sb, dev);
+      break;
+    case PROC_SUPER_MAGIC:
+      err = proc_read_super(sb);
       break;
     default:
       err = -EINVAL;

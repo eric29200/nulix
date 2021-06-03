@@ -12,7 +12,7 @@
 #include <drivers/tty.h>
 #include <drivers/keyboard.h>
 #include <drivers/framebuffer.h>
-#include <fs/fs.h>
+#include <fs/proc_fs.h>
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <string.h>
@@ -86,7 +86,13 @@ static void kinit()
 {
   /* mount root file system */
   printf("[Kernel] Root file system init\n");
-  mount_root(ata_get_device(0));
+  if (mount_root(ata_get_device(0)) != 0)
+    panic("Cannot mount root file system");
+
+  /* mount proc file system */
+  printf("[Kernel] Proc file system init\n");
+  if (do_mount(PROC_SUPER_MAGIC, NULL, "/proc") != 0)
+    panic("Cannot mount proc file system");
 
   /* spawn init process */
   if (spawn_init() != 0)
