@@ -88,6 +88,7 @@ static int segment_load(int fd, int off)
 int elf_load(const char *path)
 {
   struct elf_header_t elf_header;
+  char name[TASK_NAME_LEN];
   int fd, off, ret;
   uint32_t i;
 
@@ -95,6 +96,10 @@ int elf_load(const char *path)
   fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
   if (fd < 0)
     return fd;
+
+  /* save path */
+  strncpy(name, path, TASK_NAME_LEN - 1);
+  name[TASK_NAME_LEN - 1] = 0;
 
   /* read elf header */
   if ((size_t) do_read(fd, (void *) &elf_header, sizeof(struct elf_header_t)) != sizeof(struct elf_header_t)) {
@@ -130,6 +135,9 @@ int elf_load(const char *path)
   /* set elf entry point */
   current_task->user_entry = elf_header.e_entry;
   current_task->user_stack = USTACK_START;
+
+  /* change task name */
+  memcpy(current_task->name, name, TASK_NAME_LEN);
 
   ret = 0;
 out:

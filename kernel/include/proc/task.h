@@ -16,6 +16,8 @@
 #define TASK_STOPPED      3
 #define TASK_ZOMBIE       4
 
+#define TASK_NAME_LEN     32
+
 #define NR_OPEN           32
 #define MAX_PATH_LEN      1024
 
@@ -26,6 +28,7 @@ struct task_t {
   pid_t                       pid;                            /* process id */
   pid_t                       pgid;                           /* process group id */
   uint8_t                     state;                          /* process state */
+  char                        name[TASK_NAME_LEN];            /* process name */
   uid_t                       uid;                            /* user id */
   uid_t                       euid;                           /* effective user id */
   uid_t                       suid;                           /* saved user id */

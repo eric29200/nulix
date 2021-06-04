@@ -82,6 +82,12 @@ static struct task_t *create_task(struct task_t *parent)
   INIT_LIST_HEAD(&task->list);
   INIT_LIST_HEAD(&task->vm_list);
 
+  /* set task name */
+  if (parent)
+    memcpy(task->name, parent->name, TASK_NAME_LEN);
+  else
+  memset(task->name, 0, TASK_NAME_LEN);
+
   /* init signals */
   sigemptyset(&task->sigpend);
   sigemptyset(&task->sigmask);

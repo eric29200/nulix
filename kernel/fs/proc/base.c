@@ -1,9 +1,8 @@
 #include <fs/proc_fs.h>
+#include <proc/sched.h>
 #include <string.h>
 #include <stderr.h>
 #include <fcntl.h>
-
-#include <proc/sched.h>
 #include <stdio.h>
 
 #define NR_BASE_DIRENTRY        (sizeof(base_dir) / sizeof(base_dir[0]))
@@ -17,19 +16,33 @@ static struct proc_dir_entry_t base_dir[] = {
 };
 
 /*
+ * Process states.
+ */
+static char proc_states[] = {
+  'R',        /* running */
+  'S',        /* sleeping */
+  'T',        /* stopped */
+  'Z',        /* zombie */
+};
+
+/*
  * Read process stat.
  */
 static int proc_stat_read(struct file_t *filp, char *buf, int count)
 {
+  struct task_t *task;
   char tmp_buf[256];
   size_t len;
   pid_t pid;
 
-  /* get process pid */
+  /* get process */
   pid = filp->f_inode->i_ino >> 16;
+  task = find_task(pid);
+  if (!task)
+    return -EINVAL;
 
   /* print pid in temporary buffer */
-  len = sprintf(tmp_buf, "%d\n", pid);
+  len = sprintf(tmp_buf, "%d (%s) %c\n", task->pid, task->name, proc_states[task->state - 1]);
 
   /* file position after end */
   if (filp->f_pos >= len)
