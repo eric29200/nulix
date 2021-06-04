@@ -36,7 +36,6 @@ static uint8_t ata_polling(struct ata_device_t *device)
 static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint16_t *buffer)
 {
   uint8_t cmd;
-  int i;
 
   if (device->drive == ATA_MASTER)
     cmd = 0xE0;
@@ -62,11 +61,9 @@ static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint1
   if (ata_polling(device) != 0)
     return -ENXIO;
 
-  /* write sector word by word */
-  for (i = 0; i < 256; i++) {
-    outw(device->io_base, buffer[i]);
-    outw(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
-  }
+  /* write sector and flush */
+  outsw(device->io_base, buffer, 256);
+  outw(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
 
   return 0;
 }
@@ -95,7 +92,6 @@ int ata_write(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, ui
 static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16_t *buffer)
 {
   uint8_t cmd;
-  int i;
 
   if (device->drive == ATA_MASTER)
     cmd = 0xE0;
@@ -121,9 +117,8 @@ static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16
   if (ata_polling(device) != 0)
     return -ENXIO;
 
-  /* read sector word by word */
-  for (i = 0; i < 256; i++)
-    buffer[i] = inw(device->io_base + ATA_REG_DATA);
+  /* read all sector */
+  insw(device->io_base + ATA_REG_DATA, buffer, 256);
 
   return 0;
 }
