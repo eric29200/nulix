@@ -7,6 +7,7 @@
 
 #define PROC_ROOT_INO         1
 #define PROC_UPTIME_INO       2
+#define PROC_BASE_INO         1000
 
 /*
  * Procfs dir entry.
@@ -27,6 +28,7 @@ int proc_put_inode(struct inode_t *inode);
 
 /* inode operations */
 extern struct inode_operations_t proc_root_iops;
+extern struct inode_operations_t proc_base_iops;
 extern struct inode_operations_t proc_uptime_iops;
 
 #endif

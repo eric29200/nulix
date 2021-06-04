@@ -1,5 +1,6 @@
 #include <fs/proc_fs.h>
 #include <proc/sched.h>
+#include <stderr.h>
 #include <fcntl.h>
 
 /*
@@ -16,19 +17,11 @@ int proc_read_inode(struct inode_t *inode)
   inode->i_size = 0;
   inode->i_time = CURRENT_TIME;
 
-  /* set inode operations based on inode number */
-  switch (inode->i_ino) {
-    case PROC_ROOT_INO:
-      inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-      inode->i_nlinks = 2;
-      inode->i_op = &proc_root_iops;
-      break;
-    case PROC_UPTIME_INO:
-      inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-      inode->i_op = &proc_uptime_iops;
-      break;
-    default:
-      break;
+  /* root directory */
+  if (inode->i_ino == PROC_ROOT_INO) {
+    inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
+    inode->i_nlinks = 2;
+    inode->i_op = &proc_root_iops;
   }
 
   return 0;

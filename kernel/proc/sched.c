@@ -28,6 +28,23 @@ pid_t get_next_pid()
 }
 
 /*
+ * Find a task matching pid.
+ */
+struct task_t *find_task(pid_t pid)
+{
+  struct list_head_t *pos;
+  struct task_t *task;
+
+  list_for_each(pos, &tasks_list) {
+    task = list_entry(pos, struct task_t, list);
+    if (task->pid == pid)
+      return task;
+  }
+
+  return NULL;
+}
+
+/*
  * Init scheduler.
  */
 int init_scheduler(void (*kinit_func)())

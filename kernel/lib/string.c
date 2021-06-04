@@ -182,3 +182,28 @@ void *memcpy(void *dest, const void *src, size_t n)
 
   return dest;
 }
+
+/*
+ * Convert a string to an integer.
+ */
+int atoi(const char *s)
+{
+  unsigned int ret = 0;
+  unsigned int d;
+  int neg = 0;
+
+  if (*s == '-') {
+    neg = 1;
+    s++;
+  }
+
+  for (;;) {
+    d = (*s++) - '0';
+    if (d > 9)
+      break;
+    ret *= 10;
+    ret += d;
+  }
+
+  return neg ? -ret : ret;
+}

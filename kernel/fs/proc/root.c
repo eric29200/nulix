@@ -1,6 +1,8 @@
 #include <fs/proc_fs.h>
+#include <proc/sched.h>
 #include <stderr.h>
 #include <string.h>
+#include <stdio.h>
 #include <fcntl.h>
 
 #define NR_ROOT_DIRENTRY        (sizeof(root_dir) / sizeof(root_dir[0]))
@@ -20,7 +22,10 @@ static struct proc_dir_entry_t root_dir[] = {
 static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 {
   struct dirent64_t *dirent;
-  int n, name_len;
+  struct list_head_t *pos;
+  struct task_t *task;
+  int name_len, n;
+  char pid_s[16];
   size_t i;
 
   /* read root dir entries */
@@ -45,6 +50,41 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
     dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
   }
 
+  /* add all processes */
+  i = 2;
+  list_for_each(pos, &tasks_list) {
+    /* skip init task */
+    task = list_entry(pos, struct task_t, list);
+    if (!task || !task->pid)
+      continue;
+
+    /* skip processes before offset */
+    if (filp->f_pos > i++)
+      continue;
+
+    /* check buffer size */
+    name_len = sprintf(pid_s, "%d", task->pid);
+    if (count < sizeof(struct dirent64_t) + name_len + 1)
+      return n;
+
+    /* set dir entry */
+    dirent->d_inode = task->pid + PROC_BASE_INO;
+    dirent->d_type = 0;
+    memcpy(dirent->d_name, pid_s, name_len);
+    dirent->d_name[name_len] = 0;
+
+    /* set dir entry size */
+    dirent->d_reclen = sizeof(struct dirent64_t) + name_len + 1;
+
+    /* go to next dir entry */
+    count -= dirent->d_reclen;
+    n += dirent->d_reclen;
+    dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+
+    /* update file position */
+    filp->f_pos++;
+  }
+
   return n;
 }
 
@@ -61,7 +101,9 @@ static inline int proc_match(const char *name, size_t len, struct proc_dir_entry
  */
 static int proc_root_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
 {
-  struct proc_dir_entry_t *de;
+  struct task_t *task;
+  pid_t pid;
+  ino_t ino;
   size_t i;
 
   /* dir must be a directory */
@@ -73,26 +115,45 @@ static int proc_root_lookup(struct inode_t *dir, const char *name, size_t name_l
   }
 
   /* find matching entry */
-  for (i = 0, de = NULL; i < NR_ROOT_DIRENTRY; i++) {
+  for (i = 0; i < NR_ROOT_DIRENTRY; i++) {
     if (proc_match(name, name_len, &root_dir[i])) {
-      de = &root_dir[i];
+      ino = root_dir[i].ino;
       break;
     }
   }
 
-  /* no matching entry */
-  if (!de) {
-    iput(dir);
-    return -ENOENT;
+  /* else try to find matching process */
+  if (i >= NR_ROOT_DIRENTRY) {
+    pid = atoi(name);
+    task = find_task(atoi(name));
+    if (!pid || !task) {
+      iput(dir);
+      return -ENOENT;
+    }
+    ino = PROC_BASE_INO + task->pid;
   }
 
   /* get inode */
-  *res_inode = iget(dir->i_sb, de->ino);
+  *res_inode = iget(dir->i_sb, ino);
   if (!*res_inode) {
     iput(dir);
     return -EACCES;
   }
 
+  if (ino == PROC_UPTIME_INO) {
+    (*res_inode)->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+    (*res_inode)->i_op = &proc_uptime_iops;
+    goto out;
+  }
+
+  if (ino >= PROC_BASE_INO) {
+    (*res_inode)->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
+    (*res_inode)->i_nlinks = 2;
+    (*res_inode)->i_op = &proc_base_iops;
+    goto out;
+  }
+
+out:
   iput(dir);
   return 0;
 }

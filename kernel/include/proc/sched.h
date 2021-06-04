@@ -13,9 +13,11 @@ extern uint32_t startup_time;
 
 extern struct task_t *init_task;
 extern struct task_t *current_task;
+extern struct list_head_t tasks_list;
 
 int init_scheduler(void (*kinit_func)());
 int spawn_init();
+struct task_t *find_task(pid_t pid);
 pid_t get_next_pid();
 void schedule();
 
