@@ -2,6 +2,7 @@
 #define _PROC_FS_H_
 
 #include <fs/fs.h>
+#include <string.h>
 
 #define PROC_SUPER_MAGIC      0x9FA0
 
@@ -30,5 +31,13 @@ int proc_put_inode(struct inode_t *inode);
 extern struct inode_operations_t proc_root_iops;
 extern struct inode_operations_t proc_base_iops;
 extern struct inode_operations_t proc_uptime_iops;
+
+/*
+ * Test if a name matches a directory entry.
+ */
+static inline int proc_match(const char *name, size_t len, struct proc_dir_entry_t *de)
+{
+  return len == de->name_len && strncmp(name, de->name, len) == 0;
+}
 
 #endif

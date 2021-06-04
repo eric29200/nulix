@@ -89,14 +89,6 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 }
 
 /*
- * Test if a name matches a directory entry.
- */
-static inline int proc_match(const char *name, size_t len, struct proc_dir_entry_t *de)
-{
-  return len == de->name_len && strncmp(name, de->name, len) == 0;
-}
-
-/*
  * Root dir lookup.
  */
 static int proc_root_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
@@ -140,12 +132,14 @@ static int proc_root_lookup(struct inode_t *dir, const char *name, size_t name_l
     return -EACCES;
   }
 
+  /* uptime file */
   if (ino == PROC_UPTIME_INO) {
     (*res_inode)->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
     (*res_inode)->i_op = &proc_uptime_iops;
     goto out;
   }
 
+  /* base process file */
   if (ino >= PROC_BASE_INO) {
     (*res_inode)->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
     (*res_inode)->i_nlinks = 2;
