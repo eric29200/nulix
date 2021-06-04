@@ -66,7 +66,7 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
       goto out;
 
     /* find position and number of chars to read */
-    pos = pos % BLOCK_SIZE;
+    pos = filp->f_pos % BLOCK_SIZE;
     nb_chars = BLOCK_SIZE - pos <= left ? BLOCK_SIZE - pos : left;
 
     /* copy into buffer */
@@ -77,18 +77,17 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
     brelse(bh);
 
     /* update sizes */
-    pos += nb_chars;
+    filp->f_pos += nb_chars;
     buf += nb_chars;
     left -= nb_chars;
 
     /* end of file : grow it and mark inode dirty */
-    if (pos > filp->f_inode->i_size) {
-      filp->f_inode->i_size = pos;
+    if (filp->f_pos > filp->f_inode->i_size) {
+      filp->f_inode->i_size = filp->f_pos;
       filp->f_inode->i_dirt = 1;
     }
   }
 
 out:
-  filp->f_pos = pos;
   return count - left;
 }
