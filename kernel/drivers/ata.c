@@ -31,11 +31,12 @@ static uint8_t ata_polling(struct ata_device_t *device)
 }
 
 /*
- * Write a sector from an ata device.
+ * Write from an ata device.
  */
-static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint16_t *buffer)
+int ata_write(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, uint16_t *buffer)
 {
   uint8_t cmd;
+  uint32_t i;
 
   if (device->drive == ATA_MASTER)
     cmd = 0xE0;
@@ -51,7 +52,7 @@ static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint1
 
   /* set write parameters */
   outb(device->io_base + 1, 0x00);
-  outb(device->io_base + ATA_REG_SECCOUNT0, 1);
+  outb(device->io_base + ATA_REG_SECCOUNT0, nb_sectors);
   outb(device->io_base + ATA_REG_LBA0, (uint8_t) lba);
   outb(device->io_base + ATA_REG_LBA1, (uint8_t) (lba >> 8));
   outb(device->io_base + ATA_REG_LBA2, (uint8_t) (lba >> 16));
@@ -62,36 +63,26 @@ static int ata_write_one_sector(struct ata_device_t *device, uint32_t lba, uint1
     return -ENXIO;
 
   /* write sector and flush */
-  outsw(device->io_base, buffer, 256);
-  outw(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
+  for (i = 0; i < nb_sectors; i++, buffer += 256) {
+    /* write sector and flush */
+    outsw(device->io_base, buffer, 256);
+    outw(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
+
+    /* wait for disk to be ready */
+    if (ata_polling(device) != 0)
+      return -ENXIO;
+  }
 
   return 0;
 }
 
 /*
- * Write from an ata device.
+ * Read from an ata device.
  */
-int ata_write(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, uint16_t *buffer)
-{
-  int ret = 0;
-  uint32_t i;
-
-  /* write sector by sector */
-  for (i = 0; i < nb_sectors; i++, buffer += 256) {
-    ret = ata_write_one_sector(device, lba + i, buffer);
-    if (ret != 0)
-      return ret;
-  }
-
-  return ret;
-}
-
-/*
- * Read a sector from an ata device.
- */
-static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16_t *buffer)
+int ata_read(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, uint16_t *buffer)
 {
   uint8_t cmd;
+  uint32_t i;
 
   if (device->drive == ATA_MASTER)
     cmd = 0xE0;
@@ -107,7 +98,7 @@ static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16
 
   /* set read parameters */
   outb(device->io_base + 1, 0x00);
-  outb(device->io_base + ATA_REG_SECCOUNT0, 1);
+  outb(device->io_base + ATA_REG_SECCOUNT0, nb_sectors);
   outb(device->io_base + ATA_REG_LBA0, (uint8_t) lba);
   outb(device->io_base + ATA_REG_LBA1, (uint8_t) (lba >> 8));
   outb(device->io_base + ATA_REG_LBA2, (uint8_t) (lba >> 16));
@@ -117,28 +108,16 @@ static int ata_read_one_sector(struct ata_device_t *device, uint32_t lba, uint16
   if (ata_polling(device) != 0)
     return -ENXIO;
 
-  /* read all sector */
-  insw(device->io_base + ATA_REG_DATA, buffer, 256);
-
-  return 0;
-}
-
-/*
- * Read from an ata device.
- */
-int ata_read(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, uint16_t *buffer)
-{
-  uint32_t i;
-  int ret = 0;
-
-  /* read sector by sector */
+  /* read all sectors */
   for (i = 0; i < nb_sectors; i++, buffer += 256) {
-    ret = ata_read_one_sector(device, lba + i, buffer);
-    if (ret != 0)
-      return ret;
+    insw(device->io_base + ATA_REG_DATA, buffer, 256);
+
+    /* wait for disk to be ready */
+    if (ata_polling(device) != 0)
+      return -ENXIO;
   }
 
-  return ret;
+  return 0;
 }
 
 /*
