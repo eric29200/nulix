@@ -1,11 +1,11 @@
 #include <fs/fs.h>
+#include <proc/sched.h>
+#include <proc/timer.h>
+#include <drivers/ata.h>
 #include <mm/mm.h>
 #include <string.h>
 #include <stderr.h>
 #include <stdio.h>
-
-#include <proc/sched.h>
-#include <proc/timer.h>
 #include <time.h>
 
 /* global buffer table */
@@ -45,15 +45,10 @@ repeat:
 /*
  * Read a block from a device.
  */
-struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
+struct buffer_head_t *bread(dev_t dev, uint32_t block)
 {
-  uint32_t nb_sectors, sector;
   struct buffer_head_t *bh;
   int i;
-
-  /* compute nb sectors */
-  nb_sectors = BLOCK_SIZE / ATA_SECTOR_SIZE;
-  sector = block * BLOCK_SIZE / ATA_SECTOR_SIZE;
 
   /* try to find buffer in table */
   for (i = 0; i < NR_BUFFER; i++) {
@@ -74,7 +69,7 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
   bh->b_blocknr = block;
 
   /* read from device */
-  if (ata_read(dev, sector, nb_sectors, (uint16_t *) bh->b_data) != 0) {
+  if (ata_read(dev, bh) != 0) {
     brelse(bh);
     return NULL;
   }
@@ -87,18 +82,13 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
  */
 int bwrite(struct buffer_head_t *bh)
 {
-  uint32_t nb_sectors, sector;
   int ret;
 
   if (!bh)
     return -EINVAL;
 
-  /* compute nb sectors */
-  nb_sectors = BLOCK_SIZE / ATA_SECTOR_SIZE;
-  sector = bh->b_blocknr * BLOCK_SIZE / ATA_SECTOR_SIZE;
-
   /* write to block device */
-  ret = ata_write(bh->b_dev, sector, nb_sectors, (uint16_t *) bh->b_data);
+  ret = ata_write(bh->b_dev, bh);
   if (ret)
     return ret;
 

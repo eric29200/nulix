@@ -1,6 +1,7 @@
 #ifndef _ATA_H_
 #define _ATA_H_
 
+#include <fs/fs.h>
 #include <stddef.h>
 
 #define ATA_SECTOR_SIZE           512
@@ -70,8 +71,7 @@ struct ata_device_t {
 };
 
 void init_ata();
-struct ata_device_t *ata_get_device(int dev_num);
-int ata_read(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, uint16_t *buffer);
-int ata_write(struct ata_device_t *device, uint32_t lba, uint32_t nb_sectors, uint16_t *buffer);
+int ata_read(dev_t dev, struct buffer_head_t *bh);
+int ata_write(dev_t dev, struct buffer_head_t *bh);
 
 #endif

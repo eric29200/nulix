@@ -86,12 +86,12 @@ static void kinit()
 {
   /* mount root file system */
   printf("[Kernel] Root file system init\n");
-  if (mount_root(ata_get_device(0)) != 0)
+  if (mount_root(DEV_ATA0) != 0)
     panic("Cannot mount root file system");
 
   /* mount proc file system */
   printf("[Kernel] Proc file system init\n");
-  if (do_mount(PROC_SUPER_MAGIC, NULL, "/proc") != 0)
+  if (do_mount(PROC_SUPER_MAGIC, 0, "/proc") != 0)
     panic("Cannot mount proc file system");
 
   /* spawn init process */

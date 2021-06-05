@@ -10,7 +10,7 @@
 /*
  * Mount a file system.
  */
-int do_mount(uint16_t magic, struct ata_device_t *dev, const char *mount_point)
+int do_mount(uint16_t magic, dev_t dev, const char *mount_point)
 {
   struct super_block_t *sb;
   struct inode_t *dir;
@@ -70,7 +70,7 @@ int do_mount(uint16_t magic, struct ata_device_t *dev, const char *mount_point)
 /*
  * Mount root device.
  */
-int mount_root(struct ata_device_t *dev)
+int mount_root(dev_t dev)
 {
   struct super_block_t *root_sb;
   struct inode_t *inode;

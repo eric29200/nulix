@@ -2,7 +2,7 @@
 #define _FS_H_
 
 #include <fs/stat.h>
-#include <drivers/ata.h>
+#include <dev.h>
 
 #define NR_INODE                      256
 #define NR_BUFFER                     256
@@ -24,7 +24,7 @@
  * Buffer structure.
  */
 struct buffer_head_t {
-  struct ata_device_t *   b_dev;
+  dev_t                   b_dev;
   char                    b_data[BLOCK_SIZE];
   int                     b_ref;
   char                    b_dirt;
@@ -45,7 +45,7 @@ struct super_block_t {
   uint16_t                    s_magic;
   struct buffer_head_t *      s_imap[IMAP_SLOTS];
   struct buffer_head_t *      s_zmap[ZMAP_SLOTS];
-  struct ata_device_t *       s_dev;
+  dev_t                       s_dev;
   struct inode_t *            s_covered;
   struct inode_t *            s_mounted;
   struct super_operations_t * s_op;
@@ -69,7 +69,7 @@ struct inode_t {
   char                          i_rwait;
   char                          i_wwait;
   struct super_block_t *        i_sb;
-  struct ata_device_t *         i_dev;
+  dev_t                         i_dev;
   struct inode_t *              i_mount;
   struct inode_operations_t *   i_op;
 };
@@ -145,10 +145,10 @@ struct file_operations_t {
 };
 
 /* file system operations */
-int mount_root(struct ata_device_t *dev);
+int mount_root(dev_t dev);
 
 /* buffer operations */
-struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block);
+struct buffer_head_t *bread(dev_t dev, uint32_t block);
 void brelse(struct buffer_head_t *bh);
 void bsync();
 void binit();
@@ -163,7 +163,7 @@ struct inode_t *namei(int dirfd, const char *pathname, int follow_links);
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
 
 /* system calls */
-int do_mount(uint16_t magic, struct ata_device_t *dev, const char *mount_point);
+int do_mount(uint16_t magic, dev_t dev, const char *mount_point);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(int fd);
 ssize_t do_read(int fd, char *buf, int count);
