@@ -9,6 +9,7 @@
 #define NR_FILE                       256
 
 #define BLOCK_SIZE                    1024
+#define BSYNC_TIMER_MS                10000
 
 #define IMAP_SLOTS                    8
 #define ZMAP_SLOTS                    64
@@ -148,8 +149,9 @@ int mount_root(struct ata_device_t *dev);
 
 /* buffer operations */
 struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block);
-int bwrite(struct buffer_head_t *bh);
 void brelse(struct buffer_head_t *bh);
+void bsync();
+void binit();
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);

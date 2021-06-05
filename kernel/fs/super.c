@@ -76,6 +76,9 @@ int mount_root(struct ata_device_t *dev)
   struct inode_t *inode;
   int err;
 
+  /* init buffers */
+  binit();
+
   /* allocate root super block */
   root_sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
   if (!root_sb)

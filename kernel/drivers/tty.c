@@ -270,7 +270,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
   /* set current tty to first tty */
   current_tty = 0;
 
-  /* create refrsh timer */
+  /* create refresh timer */
   timer_event_init(&refresh_tm, tty_refresh, NULL, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
   timer_event_add(&refresh_tm);
 

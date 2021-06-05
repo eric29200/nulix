@@ -2,9 +2,15 @@
 #include <mm/mm.h>
 #include <string.h>
 #include <stderr.h>
+#include <stdio.h>
+
+#include <proc/sched.h>
+#include <proc/timer.h>
+#include <time.h>
 
 /* global buffer table */
 static struct buffer_head_t buffer_table[NR_BUFFER];
+static struct timer_event_t bsync_tm;
 
 /*
  * Get an empty buffer.
@@ -63,8 +69,6 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
   /* set buffer */
   bh->b_dev = dev;
   bh->b_blocknr = block;
-  bh->b_dirt = 0;
-  memset(bh->b_data, 0, BLOCK_SIZE);
 
   /* read from device */
   if (ata_read(dev, sector, nb_sectors, (uint16_t *) bh->b_data) != 0) {
@@ -81,6 +85,7 @@ struct buffer_head_t *bread(struct ata_device_t *dev, uint32_t block)
 int bwrite(struct buffer_head_t *bh)
 {
   uint32_t nb_sectors, sector;
+  int ret;
 
   if (!bh)
     return -EINVAL;
@@ -90,7 +95,12 @@ int bwrite(struct buffer_head_t *bh)
   sector = bh->b_blocknr * BLOCK_SIZE / ATA_SECTOR_SIZE;
 
   /* write to block device */
-  return ata_write(bh->b_dev, sector, nb_sectors, (uint16_t *) bh->b_data);
+  ret = ata_write(bh->b_dev, sector, nb_sectors, (uint16_t *) bh->b_data);
+  if (ret)
+    return ret;
+
+  bh->b_dirt = 0;
+  return ret;
 }
 
 /*
@@ -102,13 +112,54 @@ void brelse(struct buffer_head_t *bh)
     return;
 
   /* write dirty buffer */
-  if (bh->b_dirt) {
+  if (bh->b_dirt)
     bwrite(bh);
-    bh->b_dirt = 0;
-  }
 
   /* update inode reference count */
   bh->b_ref--;
   if (bh->b_ref == 0)
     memset(bh, 0, sizeof(struct buffer_head_t));
+}
+
+/*
+ * Write all dirty buffers on disk.
+ */
+void bsync()
+{
+  int i;
+
+  /* write all dirty buffers */
+  for (i = 0; i < NR_BUFFER; i++) {
+    if (buffer_table[i].b_dirt) {
+      if (bwrite(&buffer_table[i])) {
+        printf("Can't write block %d on disk\n", buffer_table[i].b_blocknr);
+        panic("Disk error");
+      }
+    }
+  }
+}
+
+/*
+ * Bsync timer handler.
+ */
+static void bsync_timer_handler()
+{
+  /* sync all buffers */
+  bsync();
+
+  /* reschedule timer */
+  timer_event_mod(&bsync_tm, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
+}
+
+/*
+ * Init buffers.
+ */
+void binit()
+{
+  /* memzero all buffers */
+  memset(buffer_table, 0, sizeof(struct buffer_head_t) * NR_BUFFER);
+
+  /* create sync timer */
+  timer_event_init(&bsync_tm, bsync_timer_handler, NULL, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
+  timer_event_add(&bsync_tm);
 }
