@@ -80,7 +80,7 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
 }
 
 /*
- * Kos init (second phase).
+ * Nulix init (second phase).
  */
 static void kinit()
 {
@@ -106,7 +106,7 @@ static void kinit()
 }
 
 /*
- * Main kos function.
+ * Main nulix function.
  */
 int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 {
