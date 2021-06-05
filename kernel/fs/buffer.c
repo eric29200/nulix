@@ -17,20 +17,23 @@ static struct timer_event_t bsync_tm;
  */
 static struct buffer_head_t *get_empty_buffer()
 {
-  struct buffer_head_t *bh;
+  struct buffer_head_t *bh = NULL;
   int i;
 
-  /* find a free buffer */
+repeat:
+  /* find a free clean buffer */
   for (i = 0; i < NR_BUFFER; i++) {
-    if (!buffer_table[i].b_ref) {
+    if (!buffer_table[i].b_ref && !buffer_table[i].b_dirt) {
       bh = &buffer_table[i];
       break;
     }
   }
 
-  /* no more buffer */
-  if (!bh)
-    return NULL;
+  /* no more buffer : sync all buffers */
+  if (!bh) {
+    bsync();
+    goto repeat;
+  }
 
   /* reset inode */
   memset(bh, 0, sizeof(struct buffer_head_t));
@@ -111,14 +114,8 @@ void brelse(struct buffer_head_t *bh)
   if (!bh)
     return;
 
-  /* write dirty buffer */
-  if (bh->b_dirt)
-    bwrite(bh);
-
   /* update inode reference count */
   bh->b_ref--;
-  if (bh->b_ref == 0)
-    memset(bh, 0, sizeof(struct buffer_head_t));
 }
 
 /*
