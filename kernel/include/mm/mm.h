@@ -6,8 +6,8 @@
 
 #define PAGE_SIZE               0x1000
 
-#define KHEAP_START             0x400000                      /* kernel memory : from 0 to 6 MB */
-#define KHEAP_SIZE              0x200000
+#define KHEAP_START             0x400000                      /* kernel memory : from 0 to 16 MB */
+#define KHEAP_SIZE              0xF00000
 #define KMEM_SIZE               (KHEAP_START + KHEAP_SIZE)
 
 #define UHEAP_START             0                             /* user heap : just after text section */
