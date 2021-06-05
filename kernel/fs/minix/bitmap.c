@@ -90,7 +90,8 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
     return -EINVAL;
 
   /* update/clear block bitmap */
-  bh = sb->s_zmap[block / (BLOCK_SIZE * 8)];
+  block -= sb->s_firstdatazone - 1;
+  bh = sb->s_zmap[block / (8 * BLOCK_SIZE)];
   minix_clear_bitmap(bh, block & (BLOCK_SIZE * 8 - 1));
   bh->b_dirt = 1;
 
