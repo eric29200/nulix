@@ -90,6 +90,11 @@ struct buffer_head_t *bread(dev_t dev, uint32_t block)
     bh = list_entry(pos, struct buffer_head_t, b_list);
     if (bh->b_blocknr == block) {
       bh->b_ref++;
+
+      /* put it in front of the list */
+      list_del(&bh->b_list);
+      list_add(&bh->b_list, &cached_buffers);
+
       return bh;
     }
   }
