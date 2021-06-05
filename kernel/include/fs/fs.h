@@ -2,6 +2,7 @@
 #define _FS_H_
 
 #include <fs/stat.h>
+#include <list.h>
 #include <dev.h>
 
 #define NR_INODE                      256
@@ -29,6 +30,7 @@ struct buffer_head_t {
   int                     b_ref;
   char                    b_dirt;
   uint32_t                b_blocknr;
+  struct list_head_t      b_list;
 };
 
 /*
