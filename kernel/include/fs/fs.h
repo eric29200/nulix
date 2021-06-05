@@ -5,7 +5,7 @@
 #include <dev.h>
 
 #define NR_INODE                      256
-#define NR_BUFFER                     256
+#define NR_BUFFER                     4096
 #define NR_FILE                       256
 
 #define BLOCK_SIZE                    1024
@@ -151,7 +151,7 @@ int mount_root(dev_t dev);
 struct buffer_head_t *bread(dev_t dev, uint32_t block);
 void brelse(struct buffer_head_t *bh);
 void bsync();
-void binit();
+int binit();
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);

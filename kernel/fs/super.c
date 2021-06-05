@@ -77,7 +77,8 @@ int mount_root(dev_t dev)
   int err;
 
   /* init buffers */
-  binit();
+  if (binit())
+    panic("Cannot allocate memory for I/O buffers");
 
   /* allocate root super block */
   root_sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));

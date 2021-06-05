@@ -9,7 +9,7 @@
 #include <time.h>
 
 /* global buffer table */
-static struct buffer_head_t buffer_table[NR_BUFFER];
+static struct buffer_head_t *buffer_table = NULL;
 static struct timer_event_t bsync_tm;
 
 /*
@@ -141,12 +141,19 @@ static void bsync_timer_handler()
 /*
  * Init buffers.
  */
-void binit()
+int binit()
 {
+  /* allocate buffers */
+  buffer_table = (struct buffer_head_t *) kmalloc(sizeof(struct buffer_head_t) * NR_BUFFER);
+  if (!buffer_table)
+    return -ENOMEM;
+
   /* memzero all buffers */
   memset(buffer_table, 0, sizeof(struct buffer_head_t) * NR_BUFFER);
 
   /* create sync timer */
   timer_event_init(&bsync_tm, bsync_timer_handler, NULL, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
   timer_event_add(&bsync_tm);
+
+  return 0;
 }
