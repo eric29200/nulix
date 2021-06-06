@@ -59,11 +59,8 @@ static struct buffer_head_t *get_empty_buffer()
   if (bh->b_dirt && bwrite(bh))
     printf("Can't write block %d on disk\n", bh->b_blocknr);
 
-  /* remove it from list */
-  list_del(&bh->b_list);
-
   /* reset buffer */
-  memset(bh, 0, sizeof(struct buffer_head_t));
+  memset(bh->b_data, 0, BLOCK_SIZE);
   bh->b_ref = 1;
 
   return bh;
@@ -82,7 +79,6 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block)
     if (buffer_table[i].b_blocknr == block) {
       bh = &buffer_table[i];
       bh->b_ref++;
-      list_del(&bh->b_list);
       goto out;
     }
   }
@@ -99,6 +95,7 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block)
 
 out:
   /* put it at the end of LRU list */
+  list_del(&bh->b_list);
   list_add_tail(&bh->b_list, &lru_buffers);
   return bh;
 }
