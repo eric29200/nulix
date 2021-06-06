@@ -10,8 +10,7 @@
 
 /* global buffer table */
 static struct buffer_head_t *buffer_table = NULL;
-static LIST_HEAD(free_buffers);
-static LIST_HEAD(cached_buffers);
+static LIST_HEAD(lru_buffers);
 
 /* sync timer */
 static struct timer_event_t bsync_tm;
@@ -43,26 +42,22 @@ struct buffer_head_t *get_empty_buffer()
   struct buffer_head_t *bh = NULL, *bh_tmp;
   struct list_head_t *pos;
 
-  /* get first free buffer or remove first entry from cache */
-  if (!list_empty(&free_buffers)) {
-    bh = list_first_entry(&free_buffers, struct buffer_head_t, b_list);
-  } else {
-    list_for_each(pos, &cached_buffers) {
-      bh_tmp = list_entry(pos, struct buffer_head_t, b_list);
-      if (!bh_tmp->b_ref) {
-        bh = bh_tmp;
-        break;
-      }
+  /* get first free entry from LRU list */
+  list_for_each(pos, &lru_buffers) {
+    bh_tmp = list_entry(pos, struct buffer_head_t, b_list);
+    if (!bh_tmp->b_ref) {
+      bh = bh_tmp;
+      break;
     }
-
-    /* no free buffer : exit */
-    if (!bh)
-      return NULL;
-
-    /* write it on disk if needed */
-    if (bh->b_dirt && bwrite(bh))
-      printf("Can't write block %d on disk\n", bh->b_blocknr);
   }
+
+  /* no free buffer : exit */
+  if (!bh)
+    return NULL;
+
+  /* write it on disk if needed */
+  if (bh->b_dirt && bwrite(bh))
+    printf("Can't write block %d on disk\n", bh->b_blocknr);
 
   /* remove it from list */
   list_del(&bh->b_list);
@@ -72,7 +67,7 @@ struct buffer_head_t *get_empty_buffer()
   bh->b_ref = 1;
 
   /* add it at the end of the list */
-  list_add_tail(&bh->b_list, &cached_buffers);
+  list_add_tail(&bh->b_list, &lru_buffers);
 
   return bh;
 }
@@ -83,19 +78,18 @@ struct buffer_head_t *get_empty_buffer()
 struct buffer_head_t *bread(dev_t dev, uint32_t block)
 {
   struct buffer_head_t *bh;
-  struct list_head_t *pos;
+  int i;
 
   /* try to find buffer in cache */
-  list_for_each(pos, &cached_buffers) {
-    bh = list_entry(pos, struct buffer_head_t, b_list);
-    if (bh->b_blocknr == block) {
-      bh->b_ref++;
+  for (i = 0; i < NR_BUFFER; i++) {
+    if (buffer_table[i].b_blocknr == block) {
+      buffer_table[i].b_ref++;
 
       /* put it in front of the list */
-      list_del(&bh->b_list);
-      list_add(&bh->b_list, &cached_buffers);
+      list_del(&buffer_table[i].b_list);
+      list_add_tail(&buffer_table[i].b_list, &lru_buffers);
 
-      return bh;
+      return &buffer_table[i];
     }
   }
 
@@ -134,14 +128,12 @@ void brelse(struct buffer_head_t *bh)
  */
 void bsync()
 {
-  struct buffer_head_t *bh;
-  struct list_head_t *pos;
+  int i;
 
   /* write all dirty buffers */
-  list_for_each(pos, &cached_buffers) {
-    bh = list_entry(pos, struct buffer_head_t, b_list);
-    if (bh->b_dirt && bwrite(bh)) {
-      printf("Can't write block %d on disk\n", bh->b_blocknr);
+  for (i = 0; i < NR_BUFFER; i++) {
+    if (buffer_table[i].b_dirt && bwrite(&buffer_table[i])) {
+      printf("Can't write block %d on disk\n", buffer_table[i].b_blocknr);
       panic("Disk error");
     }
   }
@@ -174,13 +166,12 @@ int binit()
   /* memzero all buffers */
   memset(buffer_table, 0, sizeof(struct buffer_head_t) * NR_BUFFER);
 
-  /* init free/cached buffers lists */
-  INIT_LIST_HEAD(&free_buffers);
-  INIT_LIST_HEAD(&cached_buffers);
+  /* init Last Recently Used buffers list */
+  INIT_LIST_HEAD(&lru_buffers);
 
-  /* add all buffers to the free list */
+  /* add all buffers to LRU list */
   for (i = 0; i < NR_BUFFER; i++)
-    list_add(&buffer_table[i].b_list, &free_buffers);
+    list_add(&buffer_table[i].b_list, &lru_buffers);
 
   /* create sync timer */
   timer_event_init(&bsync_tm, bsync_timer_handler, NULL, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
