@@ -11,14 +11,15 @@
 /*
  * Get first free bit in a bitmap block (inode or block).
  */
-static int minix_get_free_bitmap(struct buffer_head_t *bh)
+static inline int minix_get_free_bitmap(struct buffer_head_t *bh)
 {
-  int i, j;
+  register int i, j;
 
   for (i = 0; i < BLOCK_SIZE; i++)
-    for (j = 0; j < 8; j++)
-      if (!(bh->b_data[i] & (0x1 << j)))
-        return i * 8 + j;
+    if (bh->b_data[i] != 0xFF)
+      for (j = 0; j < 8; j++)
+        if (!(bh->b_data[i] & (0x1 << j)))
+          return i * 8 + j;
 
   return -1;
 }
