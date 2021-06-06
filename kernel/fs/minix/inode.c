@@ -184,6 +184,7 @@ static struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int cre
   if (!inode->i_zone[nr])
     return NULL;
 
+  /* read block from device */
   return bread(inode->i_dev, inode->i_zone[nr]);
 }
 
@@ -197,6 +198,7 @@ static struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_h
   if (!bh)
     return NULL;
 
+  /* create block if needed */
   i = ((uint32_t *) bh->b_data)[block];
   if (create && !i) {
     if ((i = minix_new_block(inode->i_sb))) {
@@ -205,11 +207,13 @@ static struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_h
     }
   }
 
+  /* release block */
   brelse(bh);
 
   if (!i)
     return NULL;
 
+  /* read block from device */
   return bread(inode->i_dev, i);
 }
 
@@ -224,15 +228,18 @@ struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create)
   if (block < 0 || (uint32_t) block >= inode->i_sb->s_max_size / BLOCK_SIZE)
     return NULL;
 
+  /* direct block */
   if (block < 7)
     return inode_getblk(inode, block, create);
 
+  /* indirect block */
   block -= 7;
   if (block < 256) {
     bh = inode_getblk(inode, 7, create);
     return block_getblk(inode, bh, block, create);
   }
 
+  /* double indirect block */
   block -= 256;
   if (block < 256 * 256) {
     bh = inode_getblk(inode, 8, create);
@@ -240,6 +247,7 @@ struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create)
     return block_getblk(inode, bh, block & 255, create);
   }
 
+  /* triple indirect block */
   block -= 256 * 256;
   bh = inode_getblk(inode, 9, create);
   bh = block_getblk(inode, bh, (block >> 16) & 255, create);
