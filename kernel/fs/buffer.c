@@ -38,7 +38,7 @@ static int bwrite(struct buffer_head_t *bh)
 /*
  * Get an empty buffer.
  */
-static struct buffer_head_t *get_empty_buffer()
+struct buffer_head_t *get_empty_buffer()
 {
   struct buffer_head_t *bh = NULL, *bh_tmp;
   struct list_head_t *pos;

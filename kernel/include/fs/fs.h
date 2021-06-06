@@ -150,6 +150,7 @@ struct file_operations_t {
 int mount_root(dev_t dev);
 
 /* buffer operations */
+struct buffer_head_t *get_empty_buffer();
 struct buffer_head_t *bread(dev_t dev, uint32_t block);
 void brelse(struct buffer_head_t *bh);
 void bsync();

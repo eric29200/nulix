@@ -48,12 +48,14 @@ uint32_t minix_new_block(struct super_block_t *sb)
   if (block_nr >= sb->s_nzones)
     return 0;
 
-  /* read new block */
-  bh = bread(sb->s_dev, block_nr);
+  /* get an empty buffer */
+  bh = get_empty_buffer();
   if (!bh)
     return 0;
 
-  /* zero new block */
+  /* set buffer and release it */
+  bh->b_dev = sb->s_dev;
+  bh->b_blocknr = block_nr;
   memset(bh->b_data, 0, BLOCK_SIZE);
   bh->b_dirt = 1;
   brelse(bh);
@@ -75,6 +77,14 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
   /* check block number */
   if (block < sb->s_firstdatazone || block >= sb->s_nzones)
     return -EINVAL;
+
+  /* get buffer and clear it */
+  bh = bread(sb->s_dev, block);
+  if (bh) {
+    bh->b_dirt = 1;
+    memset(bh->b_data, 0, BLOCK_SIZE);
+  }
+  brelse(bh);
 
   /* update/clear block bitmap */
   block -= sb->s_firstdatazone - 1;
