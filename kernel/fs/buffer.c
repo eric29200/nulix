@@ -37,7 +37,7 @@ static int bwrite(struct buffer_head_t *bh)
 /*
  * Get an empty buffer.
  */
-struct buffer_head_t *get_empty_buffer()
+static struct buffer_head_t *get_empty_buffer()
 {
   struct buffer_head_t *bh = NULL, *bh_tmp;
   struct list_head_t *pos;
@@ -73,9 +73,9 @@ struct buffer_head_t *get_empty_buffer()
 }
 
 /*
- * Read a block from a device.
+ * Get a buffer (from cache or create one).
  */
-struct buffer_head_t *bread(dev_t dev, uint32_t block)
+struct buffer_head_t *getblk(dev_t dev, uint32_t block)
 {
   struct buffer_head_t *bh;
   int i;
@@ -101,13 +101,30 @@ struct buffer_head_t *bread(dev_t dev, uint32_t block)
   /* set buffer */
   bh->b_dev = dev;
   bh->b_blocknr = block;
+  bh->b_uptodate = 0;
 
-  /* read from device */
-  if (ata_read(dev, bh) != 0) {
+  return bh;
+}
+
+/*
+ * Read a block from a device.
+ */
+struct buffer_head_t *bread(dev_t dev, uint32_t block)
+{
+  struct buffer_head_t *bh;
+
+  /* get buffer */
+  bh = getblk(dev, block);
+  if (!bh)
+    return NULL;
+
+  /* read it from device */
+  if (!bh->b_uptodate && ata_read(dev, bh) != 0) {
     brelse(bh);
     return NULL;
   }
 
+  bh->b_uptodate = 1;
   return bh;
 }
 

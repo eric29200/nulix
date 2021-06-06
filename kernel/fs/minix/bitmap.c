@@ -48,16 +48,15 @@ uint32_t minix_new_block(struct super_block_t *sb)
   if (block_nr >= sb->s_nzones)
     return 0;
 
-  /* get an empty buffer */
-  bh = get_empty_buffer();
+  /* get a buffer */
+  bh = getblk(sb->s_dev, block_nr);
   if (!bh)
     return 0;
 
-  /* set buffer and release it */
-  bh->b_dev = sb->s_dev;
-  bh->b_blocknr = block_nr;
+  /* memzero buffer and release it */
   memset(bh->b_data, 0, BLOCK_SIZE);
   bh->b_dirt = 1;
+  bh->b_uptodate = 1;
   brelse(bh);
 
   /* set block in bitmap */

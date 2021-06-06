@@ -29,6 +29,7 @@ struct buffer_head_t {
   char                    b_data[BLOCK_SIZE];
   int                     b_ref;
   char                    b_dirt;
+  char                    b_uptodate;
   uint32_t                b_blocknr;
   struct list_head_t      b_list;
 };
@@ -150,11 +151,11 @@ struct file_operations_t {
 int mount_root(dev_t dev);
 
 /* buffer operations */
-struct buffer_head_t *get_empty_buffer();
 struct buffer_head_t *bread(dev_t dev, uint32_t block);
 void brelse(struct buffer_head_t *bh);
 void bsync();
 int binit();
+struct buffer_head_t *getblk(dev_t dev, uint32_t block);
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);
