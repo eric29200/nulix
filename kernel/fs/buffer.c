@@ -39,22 +39,20 @@ static int bwrite(struct buffer_head_t *bh)
  */
 static struct buffer_head_t *get_empty_buffer()
 {
-  struct buffer_head_t *bh = NULL, *bh_tmp;
+  struct buffer_head_t *bh;
   struct list_head_t *pos;
 
   /* get first free entry from LRU list */
   list_for_each(pos, &lru_buffers) {
-    bh_tmp = list_entry(pos, struct buffer_head_t, b_list);
-    if (!bh_tmp->b_ref) {
-      bh = bh_tmp;
-      break;
-    }
+    bh = list_entry(pos, struct buffer_head_t, b_list);
+    if (!bh->b_ref)
+      goto found;
   }
 
   /* no free buffer : exit */
-  if (!bh)
-    return NULL;
+  return NULL;
 
+found:
   /* write it on disk if needed */
   if (bh->b_dirt && bwrite(bh))
     printf("Can't write block %d on disk\n", bh->b_blocknr);
