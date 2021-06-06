@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stderr.h>
 
+#define MINIX_SET_BITMAP(bh, i)         ((bh)->b_data[(i) / 8] |= (0x1 << ((i) % 8)))
+#define MINIX_CLEAR_BITMAP(bh, i)       ((bh)->b_data[(i) / 8] &= ~(0x1 << ((i) % 8)))
+
 /*
  * Get first free bit in a bitmap block (inode or block).
  */
@@ -18,22 +21,6 @@ static int minix_get_free_bitmap(struct buffer_head_t *bh)
         return i * 8 + j;
 
   return -1;
-}
-
-/*
- * Set bit in a bitmap block (inode or block).
- */
-static void minix_set_bitmap(struct buffer_head_t *bh, int i)
-{
-  bh->b_data[i / 8] |= (0x1 << (i % 8));
-}
-
-/*
- * Clear bit in a bitmap block (inode or block).
- */
-static void minix_clear_bitmap(struct buffer_head_t *bh, int i)
-{
-  bh->b_data[i / 8] &= ~(0x1 << (i % 8));
 }
 
 /*
@@ -72,7 +59,7 @@ uint32_t minix_new_block(struct super_block_t *sb)
   brelse(bh);
 
   /* set block in bitmap */
-  minix_set_bitmap(sb->s_zmap[i], j);
+  MINIX_SET_BITMAP(sb->s_zmap[i], j);
   sb->s_zmap[i]->b_dirt = 1;
 
   return block_nr;
@@ -92,7 +79,7 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
   /* update/clear block bitmap */
   block -= sb->s_firstdatazone - 1;
   bh = sb->s_zmap[block / (8 * BLOCK_SIZE)];
-  minix_clear_bitmap(bh, block & (BLOCK_SIZE * 8 - 1));
+  MINIX_CLEAR_BITMAP(bh, block & (BLOCK_SIZE * 8 - 1));
   bh->b_dirt = 1;
 
   return 0;
@@ -116,7 +103,7 @@ int minix_free_inode(struct inode_t *inode)
 
   /* update/clear inode bitmap */
   bh = inode->i_sb->s_imap[inode->i_ino >> 13];
-  minix_clear_bitmap(bh, inode->i_ino & (BLOCK_SIZE * 8 - 1));
+  MINIX_CLEAR_BITMAP(bh, inode->i_ino & (BLOCK_SIZE * 8 - 1));
   bh->b_dirt = 1;
 
   /* free inode */
@@ -160,7 +147,7 @@ struct inode_t *minix_new_inode(struct super_block_t *sb)
   inode->i_dev = sb->s_dev;
 
   /* set inode in bitmap */
-  minix_set_bitmap(sb->s_imap[i], j);
+  MINIX_SET_BITMAP(sb->s_imap[i], j);
   sb->s_imap[i]->b_dirt = 1;
 
   return inode;
