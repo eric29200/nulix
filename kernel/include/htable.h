@@ -66,7 +66,8 @@ static inline void htable_delete(struct htable_link_t *node)
   struct htable_link_t *next = node->next;
   struct htable_link_t **pprev = node->pprev;
 
-  *pprev = next;
+  if (pprev)
+    *pprev = next;
   if (next)
     next->pprev = pprev;
 }

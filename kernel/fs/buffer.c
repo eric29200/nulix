@@ -10,6 +10,7 @@
 
 /* global buffer table */
 static struct buffer_head_t *buffer_table = NULL;
+static struct htable_link_t **buffer_htable = NULL;
 static LIST_HEAD(lru_buffers);
 
 /* sync timer */
@@ -69,16 +70,19 @@ found:
  */
 struct buffer_head_t *getblk(dev_t dev, uint32_t block)
 {
+  struct htable_link_t *node;
   struct buffer_head_t *bh;
-  int i;
 
   /* try to find buffer in cache */
-  for (i = 0; i < NR_BUFFER; i++) {
-    if (buffer_table[i].b_blocknr == block) {
-      bh = &buffer_table[i];
+  node = htable_lookup(buffer_htable, block, BUFFER_HTABLE_BITS);
+  while (node) {
+    bh = htable_entry(node, struct buffer_head_t, b_htable);
+    if (bh->b_blocknr == block) {
       bh->b_ref++;
       goto out;
     }
+
+    node = node->next;
   }
 
   /* get an empty buffer */
@@ -91,6 +95,9 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block)
   bh->b_blocknr = block;
   bh->b_uptodate = 0;
 
+  /* hash the new buffer */
+  htable_delete(&bh->b_htable);
+  htable_insert(buffer_htable, &bh->b_htable, block, BUFFER_HTABLE_BITS);
 out:
   /* put it at the end of LRU list */
   list_del(&bh->b_list);
@@ -181,6 +188,16 @@ int binit()
   /* add all buffers to LRU list */
   for (i = 0; i < NR_BUFFER; i++)
     list_add(&buffer_table[i].b_list, &lru_buffers);
+
+  /* allocate buffers hash table */
+  buffer_htable = (struct htable_link_t **) kmalloc(sizeof(struct htable_link_t *) * NR_BUFFER);
+  if (!buffer_htable) {
+    kfree(buffer_table);
+    return -ENOMEM;
+  }
+
+  /* init buffers hash table */
+  htable_init(buffer_htable, BUFFER_HTABLE_BITS);
 
   /* create sync timer */
   timer_event_init(&bsync_tm, bsync_timer_handler, NULL, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));

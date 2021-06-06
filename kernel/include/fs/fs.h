@@ -2,12 +2,14 @@
 #define _FS_H_
 
 #include <fs/stat.h>
+#include <htable.h>
 #include <list.h>
 #include <dev.h>
 
 #define NR_INODE                      256
-#define NR_BUFFER                     4096
 #define NR_FILE                       256
+#define BUFFER_HTABLE_BITS            12
+#define NR_BUFFER                     (1 << BUFFER_HTABLE_BITS)
 
 #define BLOCK_SIZE                    1024
 #define BSYNC_TIMER_MS                10000
@@ -32,6 +34,7 @@ struct buffer_head_t {
   char                    b_uptodate;
   uint32_t                b_blocknr;
   struct list_head_t      b_list;
+  struct htable_link_t    b_htable;
 };
 
 /*
