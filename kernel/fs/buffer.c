@@ -66,9 +66,6 @@ static struct buffer_head_t *get_empty_buffer()
   memset(bh, 0, sizeof(struct buffer_head_t));
   bh->b_ref = 1;
 
-  /* add it at the end of the list */
-  list_add_tail(&bh->b_list, &lru_buffers);
-
   return bh;
 }
 
@@ -83,13 +80,10 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block)
   /* try to find buffer in cache */
   for (i = 0; i < NR_BUFFER; i++) {
     if (buffer_table[i].b_blocknr == block) {
-      buffer_table[i].b_ref++;
-
-      /* put it in front of the list */
-      list_del(&buffer_table[i].b_list);
-      list_add_tail(&buffer_table[i].b_list, &lru_buffers);
-
-      return &buffer_table[i];
+      bh = &buffer_table[i];
+      bh->b_ref++;
+      list_del(&bh->b_list);
+      goto out;
     }
   }
 
@@ -103,6 +97,9 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block)
   bh->b_blocknr = block;
   bh->b_uptodate = 0;
 
+out:
+  /* put it at the end of LRU list */
+  list_add_tail(&bh->b_list, &lru_buffers);
   return bh;
 }
 
