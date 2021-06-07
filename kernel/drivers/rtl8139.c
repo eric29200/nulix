@@ -113,7 +113,7 @@ int init_rtl8139()
   rtl8139_net_dev->irq = pci_read_field(pci_dev->address, PCI_INTERRUPT_LINE);
 
   /* register interrupt handler */
-  register_interrupt_handler(rtl8139_net_dev->irq, rtl8139_irq_handler);
+  register_interrupt_handler(IRQ0 + rtl8139_net_dev->irq, rtl8139_irq_handler);
 
   return 0;
 }
