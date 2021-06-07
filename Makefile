@@ -13,7 +13,10 @@ run:
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
 	./scripts/create_rootfs.csh
-	$(QEMU) -m $(MEM_SIZE) -serial stdio -cdrom $(ISO) -drive format=raw,file=$(DISK) -device rtl8139
+	sudo $(QEMU) -m $(MEM_SIZE) -serial stdio 			\
+		-cdrom $(ISO) 						\
+		-drive format=raw,file=$(DISK)				\
+		-netdev user,id=mynet0 -device rtl8139,netdev=mynet0
 
 clean:
 	make clean -C kernel
