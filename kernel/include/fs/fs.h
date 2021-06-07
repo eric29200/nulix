@@ -137,6 +137,7 @@ struct inode_operations_t {
   int (*symlink)(struct inode_t *, const char *, size_t, const char *);
   int (*mkdir)(struct inode_t *, const char *, size_t, mode_t);
   int (*rmdir)(struct inode_t *, const char *, size_t);
+  int (*rename)(struct inode_t *, const char *, size_t, struct inode_t *, const char *, size_t);
   void (*truncate)(struct inode_t *);
 };
 
@@ -187,5 +188,6 @@ int do_unlink(int dirfd, const char *pathname);
 int do_rmdir(int dirfd, const char *pathname);
 int do_getdents64(int fd, void *dirp, size_t count);
 int do_pipe(int pipefd[2]);
+int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
 
 #endif

@@ -414,3 +414,57 @@ ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
   /* read link */
   return inode->i_op->readlink(inode, buf, bufsize);
 }
+
+/*
+ * Rename a file.
+ */
+int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
+{
+  const char *old_basename, *new_basename;
+  size_t old_basename_len, new_basename_len;
+  struct inode_t *old_dir, *new_dir;
+
+  /* get old directory */
+  old_dir = dir_namei(olddirfd, oldpath, &old_basename, &old_basename_len);
+  if (!old_dir)
+    return -ENOENT;
+
+  /* do not allow to move '.' and '..' */
+  if (!old_basename_len
+      || (old_basename[0] == '.' && (old_basename_len == 1 || (old_basename[1] == '.' && old_basename_len == 2)))) {
+    iput(old_dir);
+    return -EPERM;
+  }
+
+  /* get new directory */
+  new_dir = dir_namei(newdirfd, newpath, &new_basename, &new_basename_len);
+  if (!new_dir) {
+    iput(old_dir);
+    return -ENOENT;
+  }
+
+  /* do not allow to move to '.' and '..' */
+  if (!new_basename_len
+      || (new_basename[0] == '.' && (new_basename_len == 1 || (new_basename[1] == '.' && new_basename_len == 2)))) {
+    iput(old_dir);
+    iput(new_dir);
+    return -EPERM;
+  }
+
+  /* do not allow to move to another device */
+  if (old_dir->i_dev != new_dir->i_dev) {
+    iput(old_dir);
+    iput(new_dir);
+    return -EPERM;
+  }
+
+  /* rename not implemented */
+  if (!old_dir->i_op || !old_dir->i_op->rename) {
+    iput(old_dir);
+    iput(new_dir);
+    return -EPERM;
+  }
+
+  new_dir->i_ref++;
+  return old_dir->i_op->rename(old_dir, old_basename, old_basename_len, new_dir, new_basename, new_basename_len);
+}

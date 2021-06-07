@@ -82,6 +82,8 @@ static const void *syscalls[] = {
   [__NR_pipe]             = sys_pipe,
   [__NR_clock_gettime64]  = sys_clock_gettime64,
   [__NR_sysinfo]          = sys_sysinfo,
+  [__NR_rename]           = sys_rename,
+  [__NR_renameat]         = sys_renameat,
 };
 
 /*

@@ -30,6 +30,7 @@
 #define __NR_getuid             24
 #define __NR_access             33
 #define __NR_kill               37
+#define __NR_rename             38
 #define __NR_mkdir              39
 #define __NR_rmdir              40
 #define __NR_dup                41
@@ -83,6 +84,7 @@
 #define __NR_mkdirat            296
 #define __NR_unlinkat           301
 #define __NR_faccessat          307
+#define __NR_renameat           302
 #define __NR_linkat             303
 #define __NR_symlinkat          304
 #define __NR_readlinkat         305
@@ -161,5 +163,7 @@ int sys_uname(struct utsname_t *buf);
 int sys_pipe(int pipefd[2]);
 int sys_clock_gettime64(clockid_t clockid, struct timespec_t *tp);
 int sys_sysinfo(struct sysinfo_t *info);
+int sys_rename(const char *oldpath, const char *newpath);
+int sys_renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
 
 #endif

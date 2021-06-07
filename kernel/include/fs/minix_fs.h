@@ -79,6 +79,8 @@ int minix_unlink(struct inode_t *dir, const char *name, size_t name_len);
 int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target);
 int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mode);
 int minix_rmdir(struct inode_t *dir, const char *name, size_t name_len);
+int minix_rename(struct inode_t *old_dir, const char *old_name, size_t old_name_len,
+                 struct inode_t *new_dir, const char *new_name, size_t new_name_len);
 
 /* minix directory operations */
 int minix_getdents64(struct file_t *filp, void *dirp, size_t count);

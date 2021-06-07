@@ -571,3 +571,82 @@ int minix_rmdir(struct inode_t *dir, const char *name, size_t name_len)
   iput(dir);
   return 0;
 }
+
+/*
+ * Rename a file.
+ */
+int minix_rename(struct inode_t *old_dir, const char *old_name, size_t old_name_len,
+                 struct inode_t *new_dir, const char *new_name, size_t new_name_len)
+{
+  struct minix_dir_entry_t *old_de = NULL, *new_de = NULL;
+  struct buffer_head_t *old_bh = NULL, *new_bh = NULL;
+  struct inode_t *old_inode = NULL, *new_inode = NULL;
+  int ret = -ENOENT;
+
+  /* find old entry */
+  old_bh = minix_find_entry(old_dir, old_name, old_name_len, &old_de);
+  if (!old_bh)
+    goto out;
+
+  /* get old inode */
+  old_inode = iget(old_dir->i_sb, old_de->inode);
+  if (!old_inode)
+    goto out;
+
+  /* find new entry */
+  new_bh = minix_find_entry(new_dir, new_name, new_name_len, &new_de);
+  if (!old_bh)
+    goto out;
+
+  /* get new inode */
+  new_inode = iget(new_dir->i_sb, new_de->inode);
+  if (!new_inode)
+    goto out;
+
+  /* same inode : exit */
+  if (old_inode == new_inode) {
+    ret = 0;
+    goto out;
+  }
+
+  /* add a new entry if needed */
+  if (!new_bh) {
+    new_bh = minix_add_entry(new_dir, new_name, new_name_len, &new_de);
+    if (!new_bh) {
+      ret = -ENOSPC;
+      goto out;
+    }
+  }
+
+  /* cancel old directory entry */
+  old_de->inode = 0;
+  memset(old_de, 0, sizeof(struct minix_dir_entry_t));
+
+  /* set new directory entry inode */
+  new_de->inode = old_inode->i_ino;
+
+  /* update new inode */
+  new_inode->i_nlinks--;
+  new_inode->i_time = CURRENT_TIME;
+  new_inode->i_dirt = 1;
+
+  /* update old and new directories */
+  old_dir->i_time = CURRENT_TIME;
+  old_dir->i_dirt = 1;
+  new_dir->i_time = CURRENT_TIME;
+  new_dir->i_dirt = 1;
+
+  /* mark buffers dirty */
+  old_bh->b_dirt = 1;
+  new_bh->b_dirt = 1;
+
+  ret = 0;
+out:
+  brelse(old_bh);
+  brelse(new_bh);
+  iput(old_inode);
+  iput(new_inode);
+  iput(old_dir);
+  iput(new_dir);
+  return ret;
+}
