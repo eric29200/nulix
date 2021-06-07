@@ -29,9 +29,9 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
         continue;
       else if (pid == 0 && task->pgid != current_task->pgid)
         continue;
-      else if (pid != -1 && task->pgid != -pid)
+      else if (pid < -1 && task->pgid != -pid)
         continue;
-      else if (task->parent != current_task)
+      else if (pid == -1 && task->parent != current_task)
         continue;
 
       has_children = 1;
