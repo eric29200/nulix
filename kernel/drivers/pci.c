@@ -18,10 +18,19 @@ static inline uint32_t pci_get_address(uint8_t bus, uint8_t device, uint8_t func
 /*
  * Read a PCI field.
  */
-static inline uint32_t pci_read_field(uint32_t address, uint8_t  offset)
+uint32_t pci_read_field(uint32_t address, uint8_t  offset)
 {
   outl(PCI_ADDRESS_PORT, address | (offset & 0xFC));
   return inl(PCI_VALUE_PORT);
+}
+
+/*
+ * Write a PCI field.
+ */
+void pci_write_field(uint32_t address, uint8_t offset, uint32_t value)
+{
+  outl(PCI_ADDRESS_PORT, address | (offset & 0xFC));
+  outl(PCI_VALUE_PORT, value);
 }
 
 /*
