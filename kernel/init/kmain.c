@@ -8,6 +8,7 @@
 #include <drivers/serial.h>
 #include <drivers/pit.h>
 #include <drivers/rtc.h>
+#include <drivers/pci.h>
 #include <drivers/ata.h>
 #include <drivers/tty.h>
 #include <drivers/keyboard.h>
@@ -151,6 +152,10 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
   /* init keyboard */
   printf("[Kernel] Keyboard Init\n");
   init_keyboard();
+
+  /* init pci devices */
+  printf("[Kernel] PCI devices Init\n");
+  init_pci();
 
   /* init ata devices */
   printf("[Kernel] ATA devices Init\n");
