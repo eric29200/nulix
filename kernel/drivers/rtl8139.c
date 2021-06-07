@@ -2,16 +2,41 @@
 #include <drivers/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
+#include <net/net.h>
 #include <mm/mm.h>
 #include <stderr.h>
 #include <string.h>
 
+/* Realtek 8139 device */
+static struct net_device_t *rtl8139_net_dev = NULL;
+
+/* transmit buffers */
+static void *tx_buffer[4];
+static uint32_t tx_buffers_phys[4];
+static int tx_cur = 0;
+
 /*
  * Realtek 8139 IRQ handler.
  */
-void rtl_8139_irq_handler(struct registers_t *regs)
+void rtl8139_irq_handler(struct registers_t *regs)
 {
   UNUSED(regs);
+}
+
+/*
+ * Send a packet.
+ */
+void rtl8139_send_packet(void *packet, size_t size)
+{
+  /* copy packet to tx buffer */
+  memcpy(tx_buffer[tx_cur], packet, size);
+
+  /* put packet on device */
+  outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, tx_buffers_phys[tx_cur]);
+  outl(rtl8139_net_dev->io_base + 0x10 + tx_cur * 4, size);
+
+  /* update tx buffer index */
+  tx_cur = tx_cur >= 3 ? 0 : tx_cur + 1;
 }
 
 /*
@@ -22,7 +47,7 @@ int init_rtl8139()
   uint32_t io_base, pci_cmd, rx_buffer_phys;
   struct pci_device_t *pci_dev;
   void *rx_buffer;
-  uint8_t irq;
+  int i;
 
   /* get pci device */
   pci_dev = pci_get_device(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID);
@@ -31,6 +56,15 @@ int init_rtl8139()
 
   /* get I/O base address */
   io_base = pci_dev->bar0 & ~(0x3);
+
+  /* register net device */
+  rtl8139_net_dev = register_net_device(io_base);
+  if (!rtl8139_net_dev)
+    return -ENOSPC;
+
+  /* get mac address */
+  for (i = 0; i < 6; i++)
+    rtl8139_net_dev->mac_address[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
 
   /* enable PCI Bus Mastering to allow NIC to perform DMA */
   pci_cmd = pci_read_field(pci_dev->address, PCI_CMD);
@@ -51,6 +85,17 @@ int init_rtl8139()
   if (!rx_buffer)
     return -ENOMEM;
 
+  /* allocate transmit buffers */
+  for (i = 0; i < 4; i++) {
+    tx_buffer[i] = kmalloc_align_phys(PAGE_SIZE, &tx_buffers_phys[i]);
+    if (!tx_buffer[i]) {
+      while (--i >= 0)
+        kfree(tx_buffer[i]);
+      kfree(rx_buffer);
+      return -ENOMEM;
+    }
+  }
+
   /* memzero buffer and set physical address on chip */
   memset(rx_buffer, 0, RX_BUFFER_SIZE);
   outl(io_base + 0x30, rx_buffer_phys);
@@ -65,10 +110,10 @@ int init_rtl8139()
   outb(io_base + 0x37, 0x0C);
 
   /* get PCI interrupt line */
-  irq = pci_read_field(pci_dev->address, PCI_INTERRUPT_LINE);
+  rtl8139_net_dev->irq = pci_read_field(pci_dev->address, PCI_INTERRUPT_LINE);
 
   /* register interrupt handler */
-  register_interrupt_handler(irq, rtl_8139_irq_handler);
+  register_interrupt_handler(rtl8139_net_dev->irq, rtl8139_irq_handler);
 
   return 0;
 }
