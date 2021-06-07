@@ -46,8 +46,8 @@ static inline uint16_t pci_get_device_id(uint32_t address)
 static void pci_scan_bus(uint8_t bus)
 {
   uint16_t vendor_id, device_id;
+  uint32_t address, bar0;
   uint8_t device, func;
-  uint32_t address;
 
   /* parse all devices/functions slots */
   for (device = 0; device < 32; device++) {
@@ -59,8 +59,9 @@ static void pci_scan_bus(uint8_t bus)
       if (vendor_id == PCI_INVALID_VENDOR)
         continue;
 
-      /* get device id */
+      /* get device id and first Base Address Register */
       device_id = pci_get_device_id(address);
+      bar0 = pci_read_field(address, PCI_BAR0);
 
       if (nb_pci_devices >= NR_PCI_DEVICES) {
         printf("PCI device (vendor id = %x, device id = %x) cannot be registered : too many devices\n",
@@ -72,11 +73,26 @@ static void pci_scan_bus(uint8_t bus)
       pci_devices[nb_pci_devices].address = address;
       pci_devices[nb_pci_devices].vendor_id = vendor_id;
       pci_devices[nb_pci_devices].device_id = device_id;
+      pci_devices[nb_pci_devices].bar0 = bar0;
       nb_pci_devices++;
 
-      printf("PCI device (vendor id = %x, device id = %x) registered\n", vendor_id, device_id);
+      printf("PCI device (vendor id = %x, device id = %x, BAR = %x) registered\n", vendor_id, device_id, bar0);
     }
   }
+}
+
+/*
+ * Get a PCI device.
+ */
+struct pci_device_t *pci_get_device(uint32_t vendor_id, uint32_t device_id)
+{
+  int i;
+
+  for (i = 0; i < nb_pci_devices; i++)
+    if (pci_devices[i].vendor_id == vendor_id && pci_devices[i].device_id == device_id)
+      return &pci_devices[i];
+
+  return NULL;
 }
 
 /*
