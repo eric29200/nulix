@@ -13,7 +13,6 @@
 #include <drivers/tty.h>
 #include <drivers/keyboard.h>
 #include <drivers/framebuffer.h>
-#include <drivers/rtl8139.h>
 #include <fs/proc_fs.h>
 #include <sys/syscall.h>
 #include <stdio.h>
@@ -161,11 +160,6 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
   /* init ata devices */
   printf("[Kernel] ATA devices Init\n");
   init_ata();
-
-  /* init Realtek network card */
-  printf("[Kernel] Realtek network card Init\n");
-  if (init_rtl8139() != 0)
-    printf("[Kernel] Cannot init Realtek network card\n");
 
   /* init system calls */
   printf("[Kernel] System calls Init\n");
