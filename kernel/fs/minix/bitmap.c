@@ -13,13 +13,14 @@
  */
 static inline int minix_get_free_bitmap(struct buffer_head_t *bh)
 {
+  uint32_t *bits = (uint32_t *) bh->b_data;
   register int i, j;
 
-  for (i = 0; i < BLOCK_SIZE; i++)
-    if (bh->b_data[i] != 0xFF)
-      for (j = 0; j < 8; j++)
-        if (!(bh->b_data[i] & (0x1 << j)))
-          return i * 8 + j;
+  for (i = 0; i < BLOCK_SIZE / 4; i++)
+    if (bits[i] != 0xFFFFFFFF)
+      for (j = 0; j < 32; j++)
+        if (!(bits[i] & (0x1 << j)))
+          return 32 * i + j;
 
   return -1;
 }
