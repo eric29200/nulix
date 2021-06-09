@@ -3,6 +3,7 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <net/net.h>
+#include <net/ethernet.h>
 #include <mm/mm.h>
 #include <stderr.h>
 #include <string.h>
@@ -15,18 +16,13 @@ static void *tx_buffer[4];
 static uint32_t tx_buffers_phys[4];
 static int tx_cur = 0;
 
-/*
- * Realtek 8139 IRQ handler.
- */
-void rtl8139_irq_handler(struct registers_t *regs)
-{
-  UNUSED(regs);
-}
+/* receive buffer */
+static void *rx_buffer = NULL;
 
 /*
  * Send a packet.
  */
-void rtl8139_send_packet(void *packet, size_t size)
+static void rtl8139_send_packet(void *packet, size_t size)
 {
   /* copy packet to tx buffer */
   memcpy(tx_buffer[tx_cur], packet, size);
@@ -40,13 +36,73 @@ void rtl8139_send_packet(void *packet, size_t size)
 }
 
 /*
+ * Receive a packet.
+ */
+static void rtl8139_receive_packet()
+{
+  struct rtl8139_rx_header_t *rx_header;
+  uint16_t rx_buf_ptr;
+  void *packet;
+
+  /* handle all received packets */
+  while ((inb(rtl8139_net_dev->io_base + 0x37) & 0x01) == 0) {
+    /* get packet header */
+    rx_buf_ptr = inw(rtl8139_net_dev->io_base + 0x38) + 0x10;
+    rx_header = (struct rtl8139_rx_header_t *) (rx_buffer + rx_buf_ptr);
+    rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header_t) + 3) & ~(0x3);
+
+    /*  handle packet */
+    packet = kmalloc(rx_header->size);
+    if (packet) {
+      memcpy(packet, ((void *) rx_header) + sizeof(struct rtl8139_rx_header_t), rx_header->size);
+
+      /* handle packet */
+      ethernet_receive_packet(packet, rx_header->size);
+
+      /* free packet */
+      kfree(packet);
+    }
+
+    /* update received buffer pointer */
+    outw(rtl8139_net_dev->io_base + 0x38, rx_buf_ptr - 0x10);
+  }
+}
+
+/*
+ * Realtek 8139 IRQ handler.
+ */
+void rtl8139_irq_handler(struct registers_t *regs)
+{
+  int status;
+
+  UNUSED(regs);
+
+  /* get status */
+  status = inw(rtl8139_net_dev->io_base + 0x3E);
+
+  /* handle reception */
+  if (status & ROK)
+    rtl8139_receive_packet();
+
+  /* ack/reset interrupt */
+  outw(rtl8139_net_dev->io_base + 0x3E, 0x5);
+}
+
+/*
+ * Get Realtek 8139 network device.
+ */
+struct net_device_t *rtl8139_get_net_device()
+{
+  return rtl8139_net_dev;
+}
+
+/*
  * Init Realtek 8139 device.
  */
 int init_rtl8139()
 {
   uint32_t io_base, pci_cmd, rx_buffer_phys;
   struct pci_device_t *pci_dev;
-  void *rx_buffer;
   int i;
 
   /* get pci device */
@@ -64,7 +120,10 @@ int init_rtl8139()
 
   /* get mac address */
   for (i = 0; i < 6; i++)
-    rtl8139_net_dev->mac_address[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
+    rtl8139_net_dev->mac_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
+
+  /* set methods */
+  rtl8139_net_dev->send_packet = rtl8139_send_packet;
 
   /* enable PCI Bus Mastering to allow NIC to perform DMA */
   pci_cmd = pci_read_field(pci_dev->address, PCI_CMD);

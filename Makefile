@@ -13,11 +13,10 @@ run:
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
 	./scripts/create_rootfs.csh
-	./scripts/create_bridge.csh
 	sudo $(QEMU) -m $(MEM_SIZE) -serial stdio 						\
 		-cdrom $(ISO) 								\
 		-drive format=raw,file=$(DISK)						\
-		-netdev tap,helper=/usr/lib/qemu/qemu-bridge-helper,id=nulix_net	\
+		-netdev tap,id=nulix_net	\
 		-device rtl8139,netdev=nulix_net,id=nulix_nic
 
 clean:

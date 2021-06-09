@@ -8,9 +8,20 @@
 
 #define RTL8139_MAC_ADDRESS     0x0
 
+#define ROK                     0x01
+#define TOK                     0x04
+
 #define RX_BUFFER_SIZE          (8192 + 16 + 1500)
 
+/*
+ * Reception header.
+ */
+struct rtl8139_rx_header_t {
+  uint16_t status;
+  uint16_t size;
+};
+
 int init_rtl8139();
-void rtl8139_send_packet(void *packet, size_t size);
+struct net_device_t *rtl8139_get_net_device();
 
 #endif
