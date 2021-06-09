@@ -15,6 +15,7 @@ struct net_device_t {
   uint32_t  io_base;
   uint8_t   irq;
   uint8_t   mac_addr[6];
+  uint8_t   ip_addr[4];
   void      (*send_packet)(void *data, size_t len);
 };
 

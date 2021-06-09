@@ -20,6 +20,6 @@ struct ethernet_frame_t {
 
 int ethernet_send_packet(struct net_device_t *net_dev, uint8_t *dst_mac_addr,
                          void *data, size_t data_len, uint16_t protocol);
-void ethernet_receive_packet(void *packet, size_t packet_len);
+void ethernet_receive_packet(struct net_device_t *net_dev, void *packet, size_t packet_len);
 
 #endif

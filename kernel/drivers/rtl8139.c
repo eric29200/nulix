@@ -57,7 +57,7 @@ static void rtl8139_receive_packet()
       memcpy(packet, ((void *) rx_header) + sizeof(struct rtl8139_rx_header_t), rx_header->size);
 
       /* handle packet */
-      ethernet_receive_packet(packet, rx_header->size);
+      ethernet_receive_packet(rtl8139_net_dev, packet, rx_header->size);
 
       /* free packet */
       kfree(packet);

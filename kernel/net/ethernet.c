@@ -39,7 +39,7 @@ int ethernet_send_packet(struct net_device_t *net_dev, uint8_t *dst_mac_addr,
 /*
  * Receive an ethernet packet.
  */
-void ethernet_receive_packet(void *packet, size_t packet_len)
+void ethernet_receive_packet(struct net_device_t *net_dev, void *packet, size_t packet_len)
 {
   struct ethernet_frame_t *eth_frame;
   int data_len;
@@ -54,5 +54,5 @@ void ethernet_receive_packet(void *packet, size_t packet_len)
 
   /* handle ARP packet */
   if (ntohs(eth_frame->type) == ETHERNET_TYPE_ARP)
-    arp_receive_packet(packet + sizeof(struct ethernet_frame_t), data_len);
+    arp_receive_packet(net_dev, packet + sizeof(struct ethernet_frame_t), data_len);
 }
