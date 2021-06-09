@@ -21,7 +21,7 @@ struct rtl8139_rx_header_t {
   uint16_t size;
 };
 
-int init_rtl8139();
+int init_rtl8139(uint8_t *ip_addr);
 struct net_device_t *rtl8139_get_net_device();
 
 #endif

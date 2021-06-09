@@ -99,7 +99,7 @@ struct net_device_t *rtl8139_get_net_device()
 /*
  * Init Realtek 8139 device.
  */
-int init_rtl8139()
+int init_rtl8139(uint8_t *ip_addr)
 {
   uint32_t io_base, pci_cmd, rx_buffer_phys;
   struct pci_device_t *pci_dev;
@@ -121,6 +121,9 @@ int init_rtl8139()
   /* get mac address */
   for (i = 0; i < 6; i++)
     rtl8139_net_dev->mac_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
+
+  /* set ip address */
+  memcpy(rtl8139_net_dev->ip_addr, ip_addr, 4);
 
   /* set methods */
   rtl8139_net_dev->send_packet = rtl8139_send_packet;

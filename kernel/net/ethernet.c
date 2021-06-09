@@ -1,5 +1,6 @@
 #include <net/ethernet.h>
 #include <net/arp.h>
+#include <net/ip.h>
 #include <mm/mm.h>
 #include <string.h>
 #include <stderr.h>
@@ -55,4 +56,6 @@ void ethernet_receive_packet(struct net_device_t *net_dev, void *packet, size_t 
   /* handle ARP packet */
   if (ntohs(eth_frame->type) == ETHERNET_TYPE_ARP)
     arp_receive_packet(net_dev, packet + sizeof(struct ethernet_frame_t), data_len);
+  else if (ntohs(eth_frame->type) == ETHERNET_TYPE_IP)
+    ip_receive_packet(net_dev, packet + sizeof(struct ethernet_frame_t), data_len);
 }
