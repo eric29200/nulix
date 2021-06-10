@@ -5,12 +5,15 @@
 #include <mm/mm.h>
 #include <string.h>
 
+/*
+ * Build ICMP header.
+ */
 void icmp_build_header(struct icmp_header_t *icmp_header, uint8_t type, uint32_t gateway)
 {
   icmp_header->type = type;
   icmp_header->code = 0;
+  icmp_header->chksum = 0;
   icmp_header->un.gateway = htonl(gateway);
-  icmp_header->chksum = net_checksum(icmp_header, sizeof(struct icmp_header_t));
 }
 
 /*
@@ -61,6 +64,9 @@ void icmp_reply_request(struct sk_buff_t *skb)
     data = skb_put(skb_reply, data_len);
     memcpy(data, skb->tail, data_len);
   }
+
+  /* compute checksum */
+  skb_reply->h.icmp_header->chksum = net_checksum(skb_reply->h.icmp_header, sizeof(struct icmp_header_t) + data_len);
 
   /* send data */
   skb->dev->send_packet(skb_reply);

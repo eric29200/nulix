@@ -32,19 +32,20 @@ struct net_device_t *register_net_device(uint32_t io_base)
  */
 uint16_t net_checksum(void *data, size_t size)
 {
+  uint16_t *chunk, ret;
   uint32_t chksum;
-  uint16_t *chunk;
 
-  for (chksum = 0, chunk = (uint16_t *) data; size > 1; size -= 2, chunk += 1)
-    chksum += *chunk;
+  for (chksum = 0, chunk = (uint16_t *) data; size > 1; size -= 2)
+    chksum += *chunk++;
 
   if (size == 1)
     chksum += *((uint8_t *) chunk);
 
-  while (chksum > CHKSUM_MASK)
-    chksum = (chksum & CHKSUM_MASK) + (chksum >> 16);
+  chksum = (chksum & 0xFFFF) + (chksum >> 16);
+  chksum += (chksum >> 16);
+  ret = ~chksum;
 
-  return ~chksum & CHKSUM_MASK;
+  return ret;
 }
 
 /*

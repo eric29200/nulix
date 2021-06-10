@@ -5,8 +5,6 @@
 
 #define NR_NET_DEVICES      4
 
-#define CHKSUM_MASK         0xFFFF
-
 #define htons(s)            ((((s) & 0xFF) << 8) | (((s) & 0xFF00) >> 8))
 #define htonl(l)            ((((l) & 0xFF) << 24) | (((l) & 0xFF00) << 8) | (((l) & 0xFF0000) >> 8) | (((l) & 0xFF000000) >> 24))
 #define ntohs(s)            (htons((s)))
