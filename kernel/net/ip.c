@@ -1,27 +1,32 @@
 #include <net/ip.h>
+#include <net/net.h>
 #include <string.h>
 
 /*
- * Receive an IP packet.
+ * Build an IPv4 header.
  */
-void ip_receive_packet(struct net_device_t *net_dev, void *packet, size_t packet_len)
+void ip_build_header(struct ip_header_t *ip_header, uint16_t length, uint16_t id,
+                     uint8_t protocol, uint8_t *src_addr, uint8_t *dst_addr)
 {
-  struct ip_packet_t *ip_packet;
+  ip_header->ihl = 5;
+  ip_header->version = 4;
+  ip_header->tos = 0;
+  ip_header->length = htons(length);
+  ip_header->id = htonl(id);
+  ip_header->fragment_offset = 0;
+  ip_header->flags = 0;
+  ip_header->ttl = IPV4_TTL;
+  ip_header->protocol = protocol;
+  memcpy(ip_header->src_addr, src_addr, 4);
+  memcpy(ip_header->dst_addr, dst_addr, 4);
+  ip_header->chksum = net_checksum(ip_header, sizeof(struct ip_header_t));
+}
 
-  /* get IP packet */
-  ip_packet = (struct ip_packet_t *) packet;
-  if (packet_len < sizeof(struct ip_packet_t))
-    return;
-
-  /* IPv4 only */
-  if (ip_packet->version != 4)
-    return;
-
-  /* check if message is adressed to us */
-  if (memcmp(net_dev->ip_addr, ip_packet->dst_addr, 4) != 0)
-    return;
-
-  /* handle ICMP packet */
-  if (ip_packet->protocol == IP_PROTO_ICMP)
-    icmp_receive_packet(net_dev, packet + sizeof(struct ip_packet_t), packet_len - sizeof(struct ip_packet_t));
+/*
+ * Receive/decode an IP packet.
+ */
+void ip_receive(struct sk_buff_t *skb)
+{
+  skb->nh.ip_header = (struct ip_header_t *) skb->data;
+  skb_pull(skb, sizeof(struct ip_header_t));
 }

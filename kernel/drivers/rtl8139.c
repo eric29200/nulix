@@ -3,7 +3,7 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <net/net.h>
-#include <net/ethernet.h>
+#include <net/sk_buff.h>
 #include <mm/mm.h>
 #include <stderr.h>
 #include <string.h>
@@ -22,14 +22,14 @@ static void *rx_buffer = NULL;
 /*
  * Send a packet.
  */
-static void rtl8139_send_packet(void *packet, size_t size)
+static void rtl8139_send_packet(struct sk_buff_t *skb)
 {
   /* copy packet to tx buffer */
-  memcpy(tx_buffer[tx_cur], packet, size);
+  memcpy(tx_buffer[tx_cur], skb->head, skb->size);
 
   /* put packet on device */
   outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, tx_buffers_phys[tx_cur]);
-  outl(rtl8139_net_dev->io_base + 0x10 + tx_cur * 4, size);
+  outl(rtl8139_net_dev->io_base + 0x10 + tx_cur * 4, skb->size);
 
   /* update tx buffer index */
   tx_cur = tx_cur >= 3 ? 0 : tx_cur + 1;
@@ -41,8 +41,8 @@ static void rtl8139_send_packet(void *packet, size_t size)
 static void rtl8139_receive_packet()
 {
   struct rtl8139_rx_header_t *rx_header;
+  struct sk_buff_t *skb;
   uint16_t rx_buf_ptr;
-  void *packet;
 
   /* handle all received packets */
   while ((inb(rtl8139_net_dev->io_base + 0x37) & 0x01) == 0) {
@@ -51,17 +51,22 @@ static void rtl8139_receive_packet()
     rx_header = (struct rtl8139_rx_header_t *) (rx_buffer + rx_buf_ptr);
     rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header_t) + 3) & ~(0x3);
 
-    /*  handle packet */
-    packet = kmalloc(rx_header->size);
-    if (packet) {
-      memcpy(packet, ((void *) rx_header) + sizeof(struct rtl8139_rx_header_t), rx_header->size);
+    /* allocate a socket buffer */
+    skb = skb_alloc(rx_header->size);
+    if (skb) {
+      /* set network device */
+      skb->dev = rtl8139_net_dev;
 
-      /* handle packet */
-      ethernet_receive_packet(rtl8139_net_dev, packet, rx_header->size);
+      /* copy data into socket buffer */
+      memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header_t), rx_header->size);
+      skb_put(skb, rx_header->size);
 
-      /* free packet */
-      kfree(packet);
+      /* handle socket buffer */
+      skb_handle(skb);
     }
+
+    /* free socket buffer */
+    skb_free(skb);
 
     /* update received buffer pointer */
     outw(rtl8139_net_dev->io_base + 0x38, rx_buf_ptr - 0x10);

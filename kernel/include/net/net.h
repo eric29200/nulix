@@ -1,12 +1,16 @@
 #ifndef _NET_H_
 #define _NET_H_
 
-#include <stddef.h>
+#include <net/sk_buff.h>
 
 #define NR_NET_DEVICES      4
 
+#define CHKSUM_MASK         0xFFFF
+
 #define htons(s)            ((((s) & 0xFF) << 8) | (((s) & 0xFF00) >> 8))
+#define htonl(l)            ((((l) & 0xFF) << 24) | (((l) & 0xFF00) << 8) | (((l) & 0xFF0000) >> 8) | (((l) & 0xFF000000) >> 24))
 #define ntohs(s)            (htons((s)))
+#define ntohl(s)            (htonl((s)))
 
 /*
  * Network device.
@@ -16,9 +20,11 @@ struct net_device_t {
   uint8_t   irq;
   uint8_t   mac_addr[6];
   uint8_t   ip_addr[4];
-  void      (*send_packet)(void *data, size_t len);
+  void      (*send_packet)(struct sk_buff_t *);
 };
 
 struct net_device_t *register_net_device(uint32_t io_base);
+void skb_handle(struct sk_buff_t *skb);
+uint16_t net_checksum(void *data, size_t size);
 
 #endif
