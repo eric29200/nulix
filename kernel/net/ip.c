@@ -12,7 +12,7 @@ void ip_build_header(struct ip_header_t *ip_header, uint16_t length, uint16_t id
   ip_header->version = 4;
   ip_header->tos = 0;
   ip_header->length = htons(length);
-  ip_header->id = htonl(id);
+  ip_header->id = htons(id);
   ip_header->fragment_offset = 0;
   ip_header->flags = 0;
   ip_header->ttl = IPV4_TTL;

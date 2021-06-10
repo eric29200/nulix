@@ -52,7 +52,7 @@ void icmp_reply_request(struct sk_buff_t *skb)
 
   /* build ip header */
   skb_reply->nh.ip_header = (struct ip_header_t *) skb_put(skb_reply, sizeof(struct ip_header_t));
-  ip_build_header(skb_reply->nh.ip_header, ip_len, ntohl(skb->nh.ip_header->id),
+  ip_build_header(skb_reply->nh.ip_header, ip_len, ntohs(skb->nh.ip_header->id),
                      IP_PROTO_ICMP, skb->dev->ip_addr, skb->nh.ip_header->src_addr);
 
   /* build icmp header */

@@ -13,3 +13,4 @@ coreutils/*
 toybox/*
 tmp/*
 usr/init
+traffic.pcap
