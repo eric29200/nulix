@@ -166,6 +166,9 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode();
 
+/* file operations */
+struct file_t *get_empty_filp();
+
 /* name operations */
 struct inode_t *namei(int dirfd, const char *pathname, int follow_links);
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);

@@ -11,13 +11,31 @@
 struct file_t filp_table[NR_FILE];
 
 /*
+ * Get an empty file.
+ */
+struct file_t *get_empty_filp()
+{
+  int i;
+
+  for (i = 0; i < NR_FILE; i++)
+    if (!filp_table[i].f_ref)
+      break;
+
+  if (i >= NR_FILE)
+    return NULL;
+
+  filp_table[i].f_ref = 1;
+  return &filp_table[i];
+}
+
+/*
  * Open system call.
  */
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
   struct inode_t *inode;
   struct file_t *filp;
-  int fd, i, ret;
+  int fd, ret;
 
   /* find a free slot in current process */
   for (fd = 0; fd < NR_OPEN; fd++)
@@ -28,13 +46,9 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
   if (fd >= NR_OPEN)
     return -EINVAL;
 
-  /* find a free file descriptor in global table */
-  for (i = 0; i < NR_FILE; i++)
-    if (!filp_table[i].f_ref)
-      break;
-
-  /* no free file in global table */
-  if (i >= NR_FILE)
+  /* get an empty file */
+  filp = get_empty_filp();
+  if (!filp)
     return -EINVAL;
 
   /* open file */
@@ -43,12 +57,11 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
     return ret;
 
   /* set file */
-  filp = current_task->filp[fd] = &filp_table[i];
+  current_task->filp[fd] = filp;
   filp->f_mode = inode->i_mode;
   filp->f_inode = inode;
   filp->f_flags = flags;
   filp->f_pos = 0;
-  filp->f_ref++;
   filp->f_op = inode->i_op->fops;
 
   /* specific open function */
