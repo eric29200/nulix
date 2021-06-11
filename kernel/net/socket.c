@@ -1,4 +1,5 @@
 #include <net/socket.h>
+#include <net/ip.h>
 #include <proc/sched.h>
 #include <fs/fs.h>
 #include <stderr.h>
@@ -74,7 +75,7 @@ int do_socket(int domain, int type, int protocol)
   int fd;
 
   /* check protocol */
-  if (domain != AF_INET && type != SOCK_DGRAM)
+  if (domain != AF_INET || type != SOCK_DGRAM || protocol != IP_PROTO_ICMP)
     return -EINVAL;
 
   /* allocate a socket */
@@ -86,6 +87,7 @@ int do_socket(int domain, int type, int protocol)
   sock->state = SS_UNCONNECTED;
   sock->type = type;
   sock->protocol = protocol;
+  sock->ops = &icmp_prot_ops;
 
   /* get a new empty file */
   filp = get_empty_filp();
@@ -125,6 +127,9 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
 {
   struct socket_t *sock;
 
+  /* unused flags */
+  UNUSED(flags);
+
   /* check socket file descriptor */
   if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
     return -EBADF;
@@ -134,5 +139,9 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
   if (!sock)
     return -EINVAL;
 
-  return len;
+  /* send message no implemented */
+  if (!sock->ops || !sock->ops->sendto)
+    return -EINVAL;
+
+  return sock->ops->sendto(sock, buf, len, dest_addr, addrlen);
 }

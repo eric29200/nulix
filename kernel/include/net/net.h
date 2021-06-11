@@ -25,4 +25,7 @@ struct net_device_t *register_net_device(uint32_t io_base);
 void skb_handle(struct sk_buff_t *skb);
 uint16_t net_checksum(void *data, size_t size);
 
+/* protocol operations */
+extern struct prot_ops icmp_prot_ops;
+
 #endif

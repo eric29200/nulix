@@ -2,8 +2,10 @@
 #include <net/ethernet.h>
 #include <net/net.h>
 #include <net/ip.h>
+#include <net/socket.h>
 #include <mm/mm.h>
 #include <string.h>
+#include <stderr.h>
 
 /*
  * Receive/decode an ICMP packet.
@@ -59,3 +61,19 @@ void icmp_reply_echo(struct sk_buff_t *skb)
   /* free reply buffer */
   skb_free(skb_reply);
 }
+
+/*
+ * ICMP send to.
+ */
+static int icmp_sendto(struct socket_t *sock, const void *buf, size_t len,
+                       const struct sockaddr *dest_addr, size_t addrlen)
+{
+  return -EINVAL;
+}
+
+/*
+ * ICMP protocol operations.
+ */
+struct prot_ops icmp_prot_ops = {
+  .sendto       = icmp_sendto,
+};

@@ -46,13 +46,14 @@ struct socket_t {
   uint16_t              protocol;
   uint16_t              type;
   struct inode_t *      inode;
+  struct prot_ops *     ops;
 };
 
 /*
  * Protocol operations.
  */
 struct prot_ops {
-  int (*sendto)(struct socket_t *, void *, size_t, struct sockaddr *, size_t);
+  int (*sendto)(struct socket_t *, const void *, size_t, const struct sockaddr *, size_t);
 };
 
 int do_socket(int domain, int type, int protocol);

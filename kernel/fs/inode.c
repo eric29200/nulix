@@ -103,13 +103,13 @@ void iput(struct inode_t *inode)
   }
 
   /* removed inode : truncate and free it */
-  if (!inode->i_nlinks && inode->i_ref == 0) {
+  if (!inode->i_nlinks && inode->i_ref == 0 && inode->i_sb) {
     inode->i_sb->s_op->put_inode(inode);
     return;
   }
 
   /* write inode if needed */
-  if (inode->i_dirt) {
+  if (inode->i_dirt && inode->i_sb) {
     inode->i_sb->s_op->write_inode(inode);
     inode->i_dirt = 0;
   }
