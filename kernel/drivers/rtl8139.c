@@ -63,10 +63,10 @@ static void rtl8139_receive_packet()
 
       /* handle socket buffer */
       skb_handle(skb);
-    }
 
-    /* free socket buffer */
-    skb_free(skb);
+      /* free socket buffer */
+      skb_free(skb);
+    }
 
     /* update received buffer pointer */
     outw(rtl8139_net_dev->io_base + 0x38, rx_buf_ptr - 0x10);
@@ -84,13 +84,15 @@ void rtl8139_irq_handler(struct registers_t *regs)
 
   /* get status */
   status = inw(rtl8139_net_dev->io_base + 0x3E);
+  if (!status)
+    return;
+
+  /* ack/reset interrupt */
+  outw(rtl8139_net_dev->io_base + 0x3E, status);
 
   /* handle reception */
   if (status & ROK)
     rtl8139_receive_packet();
-
-  /* ack/reset interrupt */
-  outw(rtl8139_net_dev->io_base + 0x3E, 0x5);
 }
 
 /*
