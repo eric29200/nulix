@@ -25,7 +25,7 @@ static void *rx_buffer = NULL;
 static void rtl8139_send_packet(struct sk_buff_t *skb)
 {
   /* copy packet to tx buffer */
-  memcpy(tx_buffer[tx_cur], skb->head, skb->size);
+  memcpy(tx_buffer[tx_cur], skb->head, skb->len);
 
   /* put packet on device */
   outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, tx_buffers_phys[tx_cur]);
