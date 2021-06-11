@@ -134,5 +134,5 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
   if (!sock)
     return -EINVAL;
 
-  return 0;
+  return len;
 }
