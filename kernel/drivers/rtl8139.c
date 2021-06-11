@@ -58,8 +58,8 @@ static void rtl8139_receive_packet()
       skb->dev = rtl8139_net_dev;
 
       /* copy data into socket buffer */
-      memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header_t), rx_header->size);
       skb_put(skb, rx_header->size);
+      memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header_t), rx_header->size);
 
       /* handle socket buffer */
       skb_handle(skb);
