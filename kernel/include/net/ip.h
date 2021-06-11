@@ -20,8 +20,7 @@ struct ip_header_t {
   uint8_t   tos;
   uint16_t  length;
   uint16_t  id;
-  uint16_t  fragment_offset:13;
-  uint8_t   flags:3;
+  uint16_t  fragment_offset;
   uint8_t   ttl;
   uint8_t   protocol;
   uint16_t  chksum;
@@ -29,8 +28,8 @@ struct ip_header_t {
   uint8_t   dst_addr[4];
 };
 
-void ip_build_header(struct ip_header_t *ip_header, uint16_t length, uint16_t id,
-                     uint8_t protocol, uint8_t *src_addr, uint8_t *dst_addr);
+void ip_build_header(struct ip_header_t *ip_header, uint8_t tos, uint16_t length, uint16_t id,
+                     uint8_t ttl, uint8_t protocol, uint8_t *src_addr, uint8_t *dst_addr);
 void ip_receive(struct sk_buff_t *skb);
 
 #endif

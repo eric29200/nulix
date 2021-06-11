@@ -3,10 +3,7 @@
 
 #include <net/sk_buff.h>
 
-#define ICMP_TYPE_REPLY       0x00
-#define ICMP_CODE_REPLY       0x00
-#define ICMP_TYPE_REQUEST     0x08
-#define ICMP_CODE_REQUEST     0x00
+#define ICMP_TYPE_ECHO       0x08
 
 /*
  * ICMP header.
@@ -25,6 +22,6 @@ struct icmp_header_t {
 };
 
 void icmp_receive(struct sk_buff_t *skb);
-void icmp_reply_request(struct sk_buff_t *skb);
+void icmp_reply_echo(struct sk_buff_t *skb);
 
 #endif
