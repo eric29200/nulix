@@ -28,6 +28,16 @@ struct ip_header_t {
   uint8_t   dst_addr[4];
 };
 
+/*
+ * Decode an IP address.
+ */
+static inline void inet_ntoi(uint32_t value, uint8_t *buf)
+{
+  int i;
+  for (i = 0; i < 4; i++)
+    buf[i] = ((uint8_t *) &value)[i];
+}
+
 void ip_build_header(struct ip_header_t *ip_header, uint8_t tos, uint16_t length, uint16_t id,
                      uint8_t ttl, uint8_t protocol, uint8_t *src_addr, uint8_t *dst_addr);
 void ip_receive(struct sk_buff_t *skb);

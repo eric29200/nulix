@@ -28,6 +28,16 @@ struct sockaddr {
 };
 
 /*
+ * Inet socker address.
+ */
+struct sockaddr_in {
+  uint16_t    sin_family;
+  uint16_t    sin_port;
+  uint32_t    sin_addr;
+  uint8_t     sin_pad[8];
+};
+
+/*
  * Socket state.
  */
 typedef enum {
@@ -42,6 +52,7 @@ typedef enum {
  * Socket structure.
  */
 struct socket_t {
+  struct net_device_t * dev;
   socket_state_t        state;
   uint16_t              protocol;
   uint16_t              type;

@@ -1,4 +1,5 @@
 #include <net/socket.h>
+#include <drivers/rtl8139.h>
 #include <net/ip.h>
 #include <proc/sched.h>
 #include <fs/fs.h>
@@ -84,6 +85,7 @@ int do_socket(int domain, int type, int protocol)
     return -EMFILE;
 
   /* set socket */
+  sock->dev = rtl8139_get_net_device();
   sock->state = SS_UNCONNECTED;
   sock->type = type;
   sock->protocol = protocol;

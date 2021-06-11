@@ -9,6 +9,7 @@ static int arp_table_idx = 0;
 
 /* broadcast MAC address */
 static uint8_t broadcast_mac_addr[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+static uint8_t zero_mac_addr[] = {0, 0, 0, 0, 0, 0};
 
 /*
  * Build an ARP header.
@@ -38,6 +39,41 @@ void arp_receive(struct sk_buff_t *skb)
 }
 
 /*
+ * Lookup for an arp table entry.
+ */
+struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr)
+{
+  struct sk_buff_t *skb;
+  int i;
+
+  /* try to find address in cache */
+  for (i = 0; i < ARP_TABLE_SIZE; i++)
+    if (memcmp(arp_table[i].ip_addr, ip_addr, 3) == 0)
+      return &arp_table[i];
+
+  /* else send an ARP request */
+  skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct arp_header_t));
+  if (!skb)
+    return NULL;
+
+  /* build ethernet header */
+  skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
+  ethernet_build_header(skb->eth_header, dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
+
+  /* build ARP header */
+  skb->nh.arp_header = (struct arp_header_t *) skb_put(skb, sizeof(struct arp_header_t));
+  arp_build_header(skb->nh.arp_header, ARP_REQUEST, dev->mac_addr, dev->ip_addr, zero_mac_addr, ip_addr);
+
+  /* send request */
+  dev->send_packet(skb);
+
+  /* free ARP request packet */
+  skb_free(skb);
+
+  return NULL;
+}
+
+/*
  * Extract MAC/IP address relation from an ARP packet.
  */
 void arp_add_table(struct arp_header_t *arp_header)
@@ -45,9 +81,12 @@ void arp_add_table(struct arp_header_t *arp_header)
   int i;
 
   /* update MAC/IP addresses relation */
-  for (i = 0; i < arp_table_idx; i++)
-    if (memcmp(arp_table[i].mac_addr, arp_header->dst_hardware_addr, 6) == 0)
+  for (i = 0; i < arp_table_idx; i++) {
+    if (memcmp(arp_table[i].mac_addr, arp_header->dst_hardware_addr, 6) == 0) {
       memcpy(arp_table[i].ip_addr, arp_header->dst_protocol_addr, 4);
+      return;
+    }
+  }
 
   /* add MAC/IP adresses relation */
   if (i >= arp_table_idx) {
