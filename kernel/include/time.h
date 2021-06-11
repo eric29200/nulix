@@ -5,6 +5,7 @@
 #include <proc/sched.h>
 
 #define CLOCK_REALTIME      0
+#define CLOCK_MONOTONIC     1
 
 /*
  * Time value structure.
