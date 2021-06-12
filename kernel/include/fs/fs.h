@@ -146,6 +146,7 @@ struct inode_operations_t {
  */
 struct file_operations_t {
   int (*open)(struct file_t *file);
+  int (*close)(struct file_t *file);
   int (*read)(struct file_t *, char *, int);
   int (*write)(struct file_t *, const char *, int);
   int (*getdents64)(struct file_t*, void *, size_t);

@@ -60,6 +60,31 @@ static struct socket_t *sock_lookup(struct inode_t *inode)
 }
 
 /*
+ * Close a socket.
+ */
+int socket_close(struct file_t *filp)
+{
+  struct socket_t *sock;
+
+  /* get socket */
+  sock = sock_lookup(filp->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* free socket */
+  sock_release(sock);
+
+  return 0;
+}
+
+/*
+ * Socket file operations.
+ */
+struct file_operations_t socket_fops = {
+  .close      = socket_close,
+};
+
+/*
  * Create a socket.
  */
 int do_socket(int domain, int type, int protocol)
@@ -110,6 +135,7 @@ int do_socket(int domain, int type, int protocol)
   current_task->filp[fd]->f_pos = 0;
   current_task->filp[fd]->f_ref = 1;
   current_task->filp[fd]->f_inode = sock->inode;
+  current_task->filp[fd]->f_op = &socket_fops;
 
   return fd;
 }

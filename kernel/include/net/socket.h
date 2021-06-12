@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <net/net.h>
 
-#define NR_SOCKETS      32
+#define NR_SOCKETS      2
 
 /* addresses families */
 #define AF_UNIX         1

@@ -79,6 +79,10 @@ int do_close(int fd)
   if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
     return -EINVAL;
 
+  /* specific close operation */
+  if (current_task->filp[fd]->f_op && current_task->filp[fd]->f_op->close)
+    current_task->filp[fd]->f_op->close(current_task->filp[fd]);
+
   /* release file if not used anymore */
   current_task->filp[fd]->f_ref--;
   if (current_task->filp[fd]->f_ref <= 0) {
