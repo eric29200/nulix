@@ -7,7 +7,7 @@
 #define IP_PROTO_TCP                0x06
 #define IP_PROTO_UDP                0x11
 
-#define IPV4_TTL                    0x80
+#define IPV4_DEFAULT_TTL            64
 
 #define ip_version(ip_packet)       (((ip_packet)->version & 0xF0) >> 4)
 

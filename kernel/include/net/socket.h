@@ -67,6 +67,10 @@ struct prot_ops {
   int (*sendto)(struct socket_t *, const void *, size_t, const struct sockaddr *, size_t);
 };
 
+/* protocol operations */
+extern struct prot_ops icmp_prot_ops;
+
+/* socket system calls */
 int do_socket(int domain, int type, int protocol);
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
 

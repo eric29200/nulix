@@ -24,6 +24,9 @@ static struct socket_t *sock_alloc()
   if (i >= NR_SOCKETS)
     return NULL;
 
+  /* reset socket */
+  memset(&sockets[i], 0, sizeof(struct socket_t));
+
   /* get an empty inode */
   sockets[i].inode = get_empty_inode();
   if (!sockets[i].inode) {
@@ -79,6 +82,7 @@ int do_socket(int domain, int type, int protocol)
   sock->state = SS_UNCONNECTED;
   sock->type = type;
   sock->protocol = protocol;
+  sock->ops = &icmp_prot_ops;
 
   /* get a new empty file */
   filp = get_empty_filp();

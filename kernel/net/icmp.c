@@ -62,3 +62,60 @@ void icmp_reply_echo(struct sk_buff_t *skb)
   /* free reply buffer */
   skb_free(skb_reply);
 }
+
+/*
+ * Send an ICMP message.
+ */
+int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct sockaddr *dest_addr, size_t addrlen)
+{
+  struct arp_table_entry_t *arp_entry;
+  struct sockaddr_in *dest_addr_in;
+  struct sk_buff_t *skb;
+  uint8_t dest_ip[4];
+
+  /* get destination IP */
+  dest_addr_in = (struct sockaddr_in *) dest_addr;
+  inet_ntoi(dest_addr_in->sin_addr, dest_ip);
+
+  /* find destination MAC address from arp */
+  arp_entry = arp_lookup(sock->dev, dest_ip);
+  if (!arp_entry)
+    return -EINVAL;
+
+  /* allocate a socket buffer */
+  skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + len);
+  if (!skb)
+    return -ENOMEM;
+
+  /* build ethernet header */
+  skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
+  ethernet_build_header(skb->eth_header, sock->dev->mac_addr, arp_entry->mac_addr, ETHERNET_TYPE_IP);
+
+  /* build ip header */
+  skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
+  ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0,
+                  IPV4_DEFAULT_TTL, IP_PROTO_ICMP, sock->dev->ip_addr, dest_ip);
+
+  /* copy icmp message */
+  skb->h.icmp_header = (struct icmp_header_t *) skb_put(skb, len);
+  memcpy(skb->h.icmp_header, buf, len);
+
+  /* recompute checksum */
+  skb->h.icmp_header->chksum = 0;
+  skb->h.icmp_header->chksum = net_checksum(skb->h.icmp_header, len);
+
+  /* send message */
+  sock->dev->send_packet(skb);
+
+  /* free message */
+  skb_free(skb);
+
+  return len;
+}
+
+/*
+ * ICMP protocol operations.
+ */
+struct prot_ops icmp_prot_ops = {
+  .sendto       = icmp_sendto,
+};
