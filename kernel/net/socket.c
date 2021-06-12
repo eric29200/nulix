@@ -9,16 +9,6 @@
 static struct socket_t sockets[NR_SOCKETS];
 
 /*
- * Socket operations.
- */
-static struct file_operations_t sock_fops = {
-  .open           = NULL,
-  .read           = NULL,
-  .write          = NULL,
-  .getdents64     = NULL,
-};
-
-/*
  * Allocate a socket.
  */
 static struct socket_t *sock_alloc()
@@ -89,7 +79,6 @@ int do_socket(int domain, int type, int protocol)
   sock->state = SS_UNCONNECTED;
   sock->type = type;
   sock->protocol = protocol;
-  sock->ops = &icmp_prot_ops;
 
   /* get a new empty file */
   filp = get_empty_filp();
@@ -117,7 +106,6 @@ int do_socket(int domain, int type, int protocol)
   current_task->filp[fd]->f_pos = 0;
   current_task->filp[fd]->f_ref = 1;
   current_task->filp[fd]->f_inode = sock->inode;
-  current_task->filp[fd]->f_op = &sock_fops;
 
   return fd;
 }
