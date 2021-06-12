@@ -2,6 +2,7 @@
 #include <net/net.h>
 #include <net/ethernet.h>
 #include <string.h>
+#include <stdio.h>
 
 /* ARP table (relation between MAC/IP addresses) */
 static struct arp_table_entry_t arp_table[ARP_TABLE_SIZE];
@@ -74,6 +75,24 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr)
 }
 
 /*
+ * Print an ARP entry.
+ */
+void arp_entry_print(struct arp_table_entry_t *arp_entry)
+{
+  printf("ARP entry added : %x:%x:%x:%x:%x:%x -> %d.%d.%d.%d\n",
+         arp_entry->mac_addr[0],
+         arp_entry->mac_addr[1],
+         arp_entry->mac_addr[2],
+         arp_entry->mac_addr[3],
+         arp_entry->mac_addr[4],
+         arp_entry->mac_addr[5],
+         arp_entry->ip_addr[0],
+         arp_entry->ip_addr[1],
+         arp_entry->ip_addr[2],
+         arp_entry->ip_addr[3]);
+}
+
+/*
  * Extract MAC/IP address relation from an ARP packet.
  */
 void arp_add_table(struct arp_header_t *arp_header)
@@ -82,16 +101,16 @@ void arp_add_table(struct arp_header_t *arp_header)
 
   /* update MAC/IP addresses relation */
   for (i = 0; i < arp_table_idx; i++) {
-    if (memcmp(arp_table[i].mac_addr, arp_header->dst_hardware_addr, 6) == 0) {
-      memcpy(arp_table[i].ip_addr, arp_header->dst_protocol_addr, 4);
+    if (memcmp(arp_table[i].mac_addr, arp_header->src_hardware_addr, 6) == 0) {
+      memcpy(arp_table[i].ip_addr, arp_header->src_protocol_addr, 4);
       return;
     }
   }
 
   /* add MAC/IP adresses relation */
   if (i >= arp_table_idx) {
-    memcpy(arp_table[arp_table_idx].mac_addr, arp_header->dst_hardware_addr, 6);
-    memcpy(arp_table[arp_table_idx].ip_addr, arp_header->dst_protocol_addr, 4);
+    memcpy(arp_table[arp_table_idx].mac_addr, arp_header->src_hardware_addr, 6);
+    memcpy(arp_table[arp_table_idx].ip_addr, arp_header->src_protocol_addr, 4);
 
     /* update ARP table index */
     if (++arp_table_idx >= ARP_TABLE_SIZE)

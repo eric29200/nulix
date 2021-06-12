@@ -61,12 +61,11 @@ void skb_handle(struct sk_buff_t *skb)
       /* decode ARP header */
       arp_receive(skb);
 
-      /* update ARP table */
-      arp_add_table(skb->nh.arp_header);
-
-      /* reply to ARP request */
+      /* reply to ARP request or add arp table entry */
       if (ntohs(skb->nh.arp_header->opcode) == ARP_REQUEST)
         arp_reply_request(skb);
+      else if (ntohs(skb->nh.arp_header->opcode) == ARP_REPLY)
+        arp_add_table(skb->nh.arp_header);
 
       break;
     case ETHERNET_TYPE_IP:
