@@ -91,6 +91,7 @@
 #define __NR_readlinkat         305
 #define __NR_socket             359
 #define __NR_sendto             369
+#define __NR_recvmsg            372
 #define __NR_statx              383
 #define __NR_clock_gettime64    403
 
@@ -170,5 +171,6 @@ int sys_rename(const char *oldpath, const char *newpath);
 int sys_renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
 int sys_socket(int domain, int type, int protocol);
 int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
+int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 
 #endif

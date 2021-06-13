@@ -4,6 +4,7 @@
 #include <net/arp.h>
 #include <net/ip.h>
 #include <net/socket.h>
+#include <proc/sched.h>
 #include <mm/mm.h>
 #include <string.h>
 #include <stderr.h>
@@ -114,8 +115,28 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
 }
 
 /*
+ * Receive an ICMP message.
+ */
+int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
+{
+  //struct sockaddr_in *sin;
+
+  /* unused flags */
+  UNUSED(flags);
+
+  //sin = (struct sockaddr_in *) msg->msg_name;
+
+  /* go to sleep */
+  current_task->state = TASK_SLEEPING;
+  schedule();
+
+  return 0;
+}
+
+/*
  * ICMP protocol operations.
  */
 struct prot_ops icmp_prot_ops = {
   .sendto       = icmp_sendto,
+  .recvmsg      = icmp_recvmsg,
 };

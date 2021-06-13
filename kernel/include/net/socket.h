@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <net/net.h>
+#include <uio.h>
 
 #define NR_SOCKETS      32
 
@@ -38,6 +39,19 @@ struct sockaddr_in {
 };
 
 /*
+ * Message header.
+ */
+struct msghdr_t {
+  void *            msg_name;
+  size_t            msg_namelen;
+  struct iovec_t *  msg_iov;
+  size_t            msg_iovlen;
+  void *            msg_control;
+  size_t            msg_controllen;
+  int               msg_flags;
+};
+
+/*
  * Socket state.
  */
 typedef enum {
@@ -65,6 +79,7 @@ struct socket_t {
  */
 struct prot_ops {
   int (*sendto)(struct socket_t *, const void *, size_t, const struct sockaddr *, size_t);
+  int (*recvmsg)(struct socket_t *, struct msghdr_t *, int);
 };
 
 /* protocol operations */
@@ -73,5 +88,6 @@ extern struct prot_ops icmp_prot_ops;
 /* socket system calls */
 int do_socket(int domain, int type, int protocol);
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
+int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 
 #endif

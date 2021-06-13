@@ -165,3 +165,26 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
 
   return sock->ops->sendto(sock, buf, len, dest_addr, addrlen);
 }
+
+/*
+ * Receive a message system call.
+ */
+int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
+{
+  struct socket_t *sock;
+
+  /* check socket file descriptor */
+  if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+    return -EBADF;
+
+  /* find socket */
+  sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* send message no implemented */
+  if (!sock->ops || !sock->ops->recvmsg)
+    return -EINVAL;
+
+  return sock->ops->recvmsg(sock, msg, flags);
+}
