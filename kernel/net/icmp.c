@@ -117,6 +117,8 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
   return len;
 }
 
+#include <ipc/signal.h>
+
 /*
  * Receive an ICMP message.
  */
@@ -130,8 +132,18 @@ int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   UNUSED(flags);
 
   /* sleep until we receive a packet */
-  while (list_empty(&sock->skb_list))
+  for (;;) {
+    /* signal received : restart system call */
+    if (!sigisemptyset(&current_task->sigpend))
+      return -ERESTARTSYS;
+
+    /* message received : break */
+    if (!list_empty(&sock->skb_list))
+      break;
+
+    /* sleep */
     task_sleep(&sock->waiting_chan);
+  }
 
   /* get first message */
   skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
