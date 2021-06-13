@@ -6,7 +6,7 @@
 #include <stderr.h>
 
 /* sockets table */
-static struct socket_t sockets[NR_SOCKETS];
+struct socket_t sockets[NR_SOCKETS];
 
 /*
  * Allocate a socket.
@@ -42,6 +42,17 @@ static struct socket_t *sock_alloc()
  */
 static void sock_release(struct socket_t *sock)
 {
+  struct list_head_t *pos, *n;
+  struct sk_buff_t *skb;
+
+  /* free all remaining buffers */
+  list_for_each_safe(pos, n, &sock->skb_list) {
+    skb = list_entry(pos, struct sk_buff_t, list);
+    list_del(&skb->list);
+    skb_free(skb);
+  }
+
+  /* mark socket free */
   sock->state = SS_FREE;
 }
 
@@ -108,6 +119,7 @@ int do_socket(int domain, int type, int protocol)
   sock->type = type;
   sock->protocol = protocol;
   sock->ops = &icmp_prot_ops;
+  INIT_LIST_HEAD(&sock->skb_list);
 
   /* get a new empty file */
   filp = get_empty_filp();

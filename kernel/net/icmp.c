@@ -74,6 +74,9 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
   struct sk_buff_t *skb;
   uint8_t dest_ip[4];
 
+  /* unused address length */
+  UNUSED(addrlen);
+
   /* get destination IP */
   dest_addr_in = (struct sockaddr_in *) dest_addr;
   inet_ntoi(dest_addr_in->sin_addr, dest_ip);
@@ -119,18 +122,38 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
  */
 int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 {
-  //struct sockaddr_in *sin;
+  struct sk_buff_t *skb;
+  size_t len, n, count = 0;
+  size_t i;
 
   /* unused flags */
   UNUSED(flags);
 
-  //sin = (struct sockaddr_in *) msg->msg_name;
+  /* sleep until we receive a packet */
+  while (list_empty(&sock->skb_list))
+    task_sleep(&sock->waiting_chan);
 
-  /* go to sleep */
-  current_task->state = TASK_SLEEPING;
-  schedule();
+  /* get first message */
+  skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
 
-  return 0;
+  /* get ICMP header */
+  skb->h.icmp_header = (struct icmp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
+
+  /* compute message length */
+  len = (void *) skb->end - (void *) skb->h.icmp_header;
+
+  /* copy message */
+  for (i = 0; i < msg->msg_iovlen; i++) {
+    n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
+    memcpy(msg->msg_iov[i].iov_base, skb->h.icmp_header, n);
+    count += n;
+  }
+
+  /* remove and free socket buffer */
+  list_del(&skb->list);
+  skb_free(skb);
+
+  return count;
 }
 
 /*

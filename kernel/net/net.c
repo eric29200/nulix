@@ -1,13 +1,19 @@
 #include <net/net.h>
+#include <net/socket.h>
 #include <net/ethernet.h>
 #include <net/arp.h>
 #include <net/ip.h>
 #include <net/icmp.h>
+#include <proc/sched.h>
 #include <string.h>
+#include <list.h>
 
 /* network devices */
 static struct net_device_t net_devices[NR_NET_DEVICES];
 static int nb_net_devices = 0;
+
+/* sockets (defined in socket.c) */
+extern struct socket_t sockets[NR_SOCKETS];
 
 /*
  * Register a newtork device.
@@ -49,6 +55,37 @@ uint16_t net_checksum(void *data, size_t size)
 }
 
 /*
+ * Deliver a packet to sockets.
+ */
+static void skb_deliver_to_sockets(struct sk_buff_t *skb)
+{
+  struct sk_buff_t *skb_new;
+  int i;
+
+  /* find matching sockets */
+  for (i = 0; i < NR_SOCKETS; i++) {
+    /* unused socket */
+    if (sockets[i].state == SS_FREE)
+      continue;
+
+    /* check protocol */
+    if (sockets[i].protocol != skb->nh.ip_header->protocol)
+      continue;
+
+    /* clone socket buffer */
+    skb_new = skb_clone(skb);
+    if (!skb_new)
+      break;
+
+    /* push skb in socket queue */
+    list_add_tail(&skb_new->list, &sockets[i].skb_list);
+
+    /* wake up socket */
+    task_wakeup_all(&sockets[i].waiting_chan);
+  }
+}
+
+/*
  * Handle a socket buffer.
  */
 void skb_handle(struct sk_buff_t *skb)
@@ -56,6 +93,7 @@ void skb_handle(struct sk_buff_t *skb)
   /* decode ethernet header */
   ethernet_receive(skb);
 
+  /* handle packet */
   switch(htons(skb->eth_header->type)) {
     case ETHERNET_TYPE_ARP:
       /* decode ARP header */
@@ -93,6 +131,9 @@ void skb_handle(struct sk_buff_t *skb)
         default:
           break;
       }
+
+      /* deliver message to sockets */
+      skb_deliver_to_sockets(skb);
 
       break;
     default:

@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <net/net.h>
+#include <list.h>
 #include <uio.h>
 
 #define NR_SOCKETS      32
@@ -72,6 +73,8 @@ struct socket_t {
   uint16_t              type;
   struct inode_t *      inode;
   struct prot_ops *     ops;
+  int                   waiting_chan;
+  struct list_head_t    skb_list;
 };
 
 /*

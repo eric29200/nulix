@@ -2,6 +2,7 @@
 #define _SK_BUFF_H_
 
 #include <stddef.h>
+#include <list.h>
 
 /*
  * Socket buffer.
@@ -22,6 +23,7 @@ struct sk_buff_t {
   uint8_t *                   data;
   uint8_t *                   tail;
   uint8_t *                   end;
+  struct list_head_t          list;
 };
 
 /*
@@ -64,8 +66,8 @@ static inline uint8_t *skb_pull(struct sk_buff_t *skb, size_t len)
   return skb->data;
 }
 
-
 struct sk_buff_t *skb_alloc(size_t size);
+struct sk_buff_t *skb_clone(struct sk_buff_t *skb);
 void skb_free(struct sk_buff_t *skb);
 
 #endif

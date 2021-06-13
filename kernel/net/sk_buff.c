@@ -36,6 +36,27 @@ struct sk_buff_t *skb_alloc(size_t size)
 }
 
 /*
+ * Clone a socket buffer.
+ */
+struct sk_buff_t *skb_clone(struct sk_buff_t *skb)
+{
+  struct sk_buff_t *skb_new;
+
+  /* allocate a new socket buffer */
+  skb_new = skb_alloc(skb->size);
+  if (!skb_new)
+    return NULL;
+
+  /* put data */
+  if (skb->len > 0) {
+    memcpy(skb_new->head, skb->head, skb->size);
+    skb_put(skb_new, skb->len);
+  }
+
+  return skb_new;
+}
+
+/*
  * Free a socket buffer.
  */
 void skb_free(struct sk_buff_t *skb)
