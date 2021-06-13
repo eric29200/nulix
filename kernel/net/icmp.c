@@ -5,6 +5,7 @@
 #include <net/ip.h>
 #include <net/socket.h>
 #include <proc/sched.h>
+#include <ipc/signal.h>
 #include <mm/mm.h>
 #include <string.h>
 #include <stderr.h>
@@ -116,8 +117,6 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
 
   return len;
 }
-
-#include <ipc/signal.h>
 
 /*
  * Receive an ICMP message.
