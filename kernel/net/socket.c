@@ -3,6 +3,7 @@
 #include <net/ip.h>
 #include <proc/sched.h>
 #include <fs/fs.h>
+#include <time.h>
 #include <stderr.h>
 
 /* sockets table */
@@ -89,9 +90,30 @@ int socket_close(struct file_t *filp)
 }
 
 /*
+ * Poll on a socket.
+ */
+int socket_poll(struct file_t *filp)
+{
+  struct socket_t *sock;
+  int mask = 0;
+
+  /* get socket */
+  sock = sock_lookup(filp->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* check if there is a message in the queue */
+  if (!list_empty(&sock->skb_list))
+    mask |= POLLIN;
+
+  return mask;
+}
+
+/*
  * Socket file operations.
  */
 struct file_operations_t socket_fops = {
+  .poll       = socket_poll,
   .close      = socket_close,
 };
 

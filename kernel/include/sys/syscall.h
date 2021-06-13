@@ -63,6 +63,7 @@
 #define __NR_readv              145
 #define __NR_writev             146
 #define __NR_nanosleep          162
+#define __NR_poll               168
 #define __NR_rt_sigaction       174
 #define __NR_rt_sigprocmask     175
 #define __NR_getcwd             183
@@ -172,5 +173,6 @@ int sys_renameat(int olddirfd, const char *oldpath, int newdirfd, const char *ne
 int sys_socket(int domain, int type, int protocol);
 int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
 int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
+int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout);
 
 #endif

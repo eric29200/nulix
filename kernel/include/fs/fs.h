@@ -2,6 +2,7 @@
 #define _FS_H_
 
 #include <fs/stat.h>
+#include <fs/poll.h>
 #include <htable.h>
 #include <list.h>
 #include <dev.h>
@@ -149,7 +150,8 @@ struct file_operations_t {
   int (*close)(struct file_t *file);
   int (*read)(struct file_t *, char *, int);
   int (*write)(struct file_t *, const char *, int);
-  int (*getdents64)(struct file_t*, void *, size_t);
+  int (*getdents64)(struct file_t *, void *, size_t);
+  int (*poll)(struct file_t *);
 };
 
 /* file system operations */
@@ -193,5 +195,6 @@ int do_rmdir(int dirfd, const char *pathname);
 int do_getdents64(int fd, void *dirp, size_t count);
 int do_pipe(int pipefd[2]);
 int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout);
 
 #endif
