@@ -102,6 +102,9 @@ int socket_poll(struct file_t *filp)
   if (!sock)
     return -EINVAL;
 
+  /* set waiting channel */
+  current_task->waiting_chan = &sock->waiting_chan;
+
   /* check if there is a message in the queue */
   if (!list_empty(&sock->skb_list))
     mask |= POLLIN;

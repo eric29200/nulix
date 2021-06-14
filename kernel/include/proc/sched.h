@@ -22,6 +22,7 @@ pid_t get_next_pid();
 void schedule();
 
 void task_sleep(void *chan);
+void task_sleep_timeout(int timeout_ms);
 void task_wakeup(void *chan);
 void task_wakeup_all(void *chan);
 

@@ -50,13 +50,12 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
       do_pollfd(&fds[i], &count);
 
     /* events catched or signal transmitted : break */
-    if (count || !sigisemptyset(&current_task->sigpend))
+    if (count || !sigisemptyset(&current_task->sigpend) || !timeout)
       break;
 
     /* no events : sleep */
-    current_task->state = TASK_SLEEPING;
-    current_task->timeout = jiffies + ms_to_jiffies(timeout);
-    schedule();
+    task_sleep_timeout(timeout);
+    timeout = 0;
   }
 
   return count;
