@@ -3,10 +3,11 @@
 
 #include <net/sk_buff.h>
 
-#define ARP_REQUEST         1
-#define ARP_REPLY           2
+#define ARP_REQUEST           1
+#define ARP_REPLY             2
 
-#define ARP_TABLE_SIZE      512
+#define ARP_TABLE_SIZE        512
+#define ARP_REQUEST_WAIT_MS   200
 
 /*
  * ARP header.

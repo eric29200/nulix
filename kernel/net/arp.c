@@ -1,6 +1,7 @@
 #include <net/arp.h>
 #include <net/net.h>
 #include <net/ethernet.h>
+#include <proc/sched.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -47,29 +48,33 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr)
   struct sk_buff_t *skb;
   int i;
 
-  /* try to find address in cache */
-  for (i = 0; i < ARP_TABLE_SIZE; i++)
-    if (memcmp(arp_table[i].ip_addr, ip_addr, 3) == 0)
-      return &arp_table[i];
+  for (;;) {
+    /* try to find address in cache */
+    for (i = 0; i < ARP_TABLE_SIZE; i++)
+      if (memcmp(arp_table[i].ip_addr, ip_addr, 3) == 0)
+        return &arp_table[i];
 
-  /* else send an ARP request */
-  skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct arp_header_t));
-  if (!skb)
-    return NULL;
+    /* else send an ARP request */
+    skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct arp_header_t));
+    if (!skb)
+      return NULL;
 
-  /* build ethernet header */
-  skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
-  ethernet_build_header(skb->eth_header, dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
+    /* build ethernet header */
+    skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
+    ethernet_build_header(skb->eth_header, dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
 
-  /* build ARP header */
-  skb->nh.arp_header = (struct arp_header_t *) skb_put(skb, sizeof(struct arp_header_t));
-  arp_build_header(skb->nh.arp_header, ARP_REQUEST, dev->mac_addr, dev->ip_addr, zero_mac_addr, ip_addr);
+    /* build ARP header */
+    skb->nh.arp_header = (struct arp_header_t *) skb_put(skb, sizeof(struct arp_header_t));
+    arp_build_header(skb->nh.arp_header, ARP_REQUEST, dev->mac_addr, dev->ip_addr, zero_mac_addr, ip_addr);
 
-  /* send request */
-  dev->send_packet(skb);
+    /* send request */
+    dev->send_packet(skb);
 
-  /* free ARP request packet */
-  skb_free(skb);
+    /* free ARP request packet */
+    skb_free(skb);
+
+    task_sleep_timeout(ARP_REQUEST_WAIT_MS);
+  }
 
   return NULL;
 }
