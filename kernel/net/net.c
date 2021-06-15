@@ -124,8 +124,10 @@ void skb_handle(struct sk_buff_t *skb)
           icmp_receive(skb);
 
           /* handle ICMP requests */
-          if (skb->h.icmp_header->type == ICMP_TYPE_ECHO)
+          if (skb->h.icmp_header->type == ICMP_TYPE_ECHO) {
             icmp_reply_echo(skb);
+            return;
+          }
 
           break;
         default:
