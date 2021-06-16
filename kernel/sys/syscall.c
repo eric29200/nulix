@@ -88,6 +88,7 @@ static const void *syscalls[] = {
   [__NR_sendto]           = sys_sendto,
   [__NR_recvmsg]          = sys_recvmsg,
   [__NR_poll]             = sys_poll,
+  [__NR_bind]             = sys_bind,
 };
 
 /*

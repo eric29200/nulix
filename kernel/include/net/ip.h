@@ -3,6 +3,7 @@
 
 #include <net/sk_buff.h>
 
+#define IP_PROTO_IP                 0x00
 #define IP_PROTO_ICMP               0x01
 #define IP_PROTO_TCP                0x06
 #define IP_PROTO_UDP                0x11

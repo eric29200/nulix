@@ -91,6 +91,7 @@
 #define __NR_symlinkat          304
 #define __NR_readlinkat         305
 #define __NR_socket             359
+#define __NR_bind               361
 #define __NR_sendto             369
 #define __NR_recvmsg            372
 #define __NR_statx              383
@@ -174,5 +175,6 @@ int sys_socket(int domain, int type, int protocol);
 int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
 int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout);
+int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 
 #endif

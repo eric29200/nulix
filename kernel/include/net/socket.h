@@ -72,6 +72,7 @@ struct socket_t {
   uint16_t              protocol;
   uint16_t              type;
   struct inode_t *      inode;
+  struct sockaddr       addr;
   struct prot_ops *     ops;
   int                   waiting_chan;
   struct list_head_t    skb_list;
@@ -87,9 +88,11 @@ struct prot_ops {
 
 /* protocol operations */
 extern struct prot_ops icmp_prot_ops;
+extern struct prot_ops ip_prot_ops;
 
 /* socket system calls */
 int do_socket(int domain, int type, int protocol);
+int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
 int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 

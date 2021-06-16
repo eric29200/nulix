@@ -1,5 +1,6 @@
 #include <net/ip.h>
 #include <net/net.h>
+#include <net/socket.h>
 #include <string.h>
 
 /*
@@ -50,3 +51,11 @@ void ip_route(struct net_device_t *dev, const uint8_t *dest_ip, uint8_t *route_i
   else
     memcpy(route_ip, dev->ip_route, 4);
 }
+
+/*
+ * IP protocol operations.
+ */
+struct prot_ops ip_prot_ops = {
+  .recvmsg      = NULL,
+  .sendmsg      = NULL,
+};

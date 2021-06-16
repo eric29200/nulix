@@ -125,12 +125,17 @@ struct file_operations_t socket_fops = {
  */
 int do_socket(int domain, int type, int protocol)
 {
+  struct prot_ops *sock_ops;
   struct socket_t *sock;
   struct file_t *filp;
   int fd;
 
   /* check protocol */
-  if (domain != AF_INET || type != SOCK_DGRAM || protocol != IP_PROTO_ICMP)
+  if (domain == AF_INET && type == SOCK_DGRAM && protocol == IP_PROTO_ICMP)
+    sock_ops = &icmp_prot_ops;
+  else if (domain == AF_INET && type == SOCK_DGRAM && protocol == IP_PROTO_IP)
+    sock_ops = &ip_prot_ops;
+  else
     return -EINVAL;
 
   /* allocate a socket */
@@ -143,7 +148,7 @@ int do_socket(int domain, int type, int protocol)
   sock->state = SS_UNCONNECTED;
   sock->type = type;
   sock->protocol = protocol;
-  sock->ops = &icmp_prot_ops;
+  sock->ops = sock_ops;
   INIT_LIST_HEAD(&sock->skb_list);
 
   /* get a new empty file */
@@ -175,6 +180,31 @@ int do_socket(int domain, int type, int protocol)
   current_task->filp[fd]->f_op = &socket_fops;
 
   return fd;
+}
+
+/*
+ * Bind system call (attach an address to a socket).
+ */
+int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
+{
+  struct socket_t *sock;
+
+  /* unused addrlen */
+  UNUSED(addrlen);
+
+  /* check socket file descriptor */
+  if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+    return -EBADF;
+
+  /* find socket */
+  sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* copy address */
+  memcpy(&sock->addr, addr, sizeof(struct sockaddr));
+
+  return 0;
 }
 
 /*
