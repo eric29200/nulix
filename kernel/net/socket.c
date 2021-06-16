@@ -202,8 +202,11 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
   if (!sock->ops || !sock->ops->sendmsg)
     return -EINVAL;
 
+  /* build buffer */
   iovec.iov_base = (void *) buf;
   iovec.iov_len = len;
+
+  /* build message */
   msg.msg_name = (void *) dest_addr;
   msg.msg_namelen = sizeof(struct sockaddr);
   msg.msg_iov = &iovec;
@@ -212,6 +215,7 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
   msg.msg_controllen = 0;
   msg.msg_flags = 0;
 
+  /* send message */
   return sock->ops->sendmsg(sock, &msg, flags);
 }
 
