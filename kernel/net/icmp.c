@@ -72,8 +72,8 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
 {
   struct arp_table_entry_t *arp_entry;
   struct sockaddr_in *dest_addr_in;
+  uint8_t dest_ip[4], route_ip[4];
   struct sk_buff_t *skb;
-  uint8_t dest_ip[4];
 
   /* unused address length */
   UNUSED(addrlen);
@@ -82,8 +82,11 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
   dest_addr_in = (struct sockaddr_in *) dest_addr;
   inet_ntoi(dest_addr_in->sin_addr, dest_ip);
 
+  /* get route IP */
+  ip_route(sock->dev, dest_ip, route_ip);
+
   /* find destination MAC address from arp */
-  arp_entry = arp_lookup(sock->dev, dest_ip);
+  arp_entry = arp_lookup(sock->dev, route_ip);
   if (!arp_entry)
     return -EINVAL;
 

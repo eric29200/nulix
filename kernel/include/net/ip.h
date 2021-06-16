@@ -41,5 +41,6 @@ static inline void inet_ntoi(uint32_t value, uint8_t *buf)
 void ip_build_header(struct ip_header_t *ip_header, uint8_t tos, uint16_t length, uint16_t id,
                      uint8_t ttl, uint8_t protocol, uint8_t *src_addr, uint8_t *dst_addr);
 void ip_receive(struct sk_buff_t *skb);
+void ip_route(struct net_device_t *dev, const uint8_t *dest_ip, uint8_t *route_ip);
 
 #endif

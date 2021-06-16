@@ -29,7 +29,9 @@ extern uint32_t kernel_end;
 static struct multiboot_tag_framebuffer *tag_fb;
 
 /* static IP address */
-static uint8_t ip_address[] = {192, 168, 1, 100};
+static uint8_t default_ip_address[] = {192, 168, 1, 100};
+static uint8_t default_ip_netmask[] = {255, 255, 255, 0};
+static uint8_t default_ip_route[] = {192, 168, 1, 1};
 
 /*
  * Parse multiboot header.
@@ -167,7 +169,7 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 
   /* init realtek 8139 device */
   printf("[Kernel] Realtek 8139 card Init\n");
-  if (init_rtl8139(ip_address) != 0)
+  if (init_rtl8139(default_ip_address, default_ip_netmask, default_ip_route) != 0)
     printf("[Kernel] Realtek 8139 card Init error\n");
 
   /* init system calls */

@@ -29,3 +29,24 @@ void ip_receive(struct sk_buff_t *skb)
   skb->nh.ip_header = (struct ip_header_t *) skb->data;
   skb_pull(skb, sizeof(struct ip_header_t));
 }
+
+/*
+ * Get IP route.
+ */
+void ip_route(struct net_device_t *dev, const uint8_t *dest_ip, uint8_t *route_ip)
+{
+  int i, same_net;
+
+  /* check if destination ip is on same network */
+  for (i = 0, same_net = 0; i < 4; i++) {
+    same_net = (dev->ip_addr[i] & dev->ip_netmask[i]) == (dest_ip[i] & dev->ip_netmask[i]);
+    if (!same_net)
+      break;
+  }
+
+  /* set route ip */
+  if (same_net)
+    memcpy(route_ip, dest_ip, 4);
+  else
+    memcpy(route_ip, dev->ip_route, 4);
+}
