@@ -183,9 +183,11 @@ int do_socket(int domain, int type, int protocol)
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen)
 {
   struct socket_t *sock;
+  struct msghdr_t msg;
+  struct iovec_t iovec;
 
-  /* unused flags */
-  UNUSED(flags);
+  /* unused address length */
+  UNUSED(addrlen);
 
   /* check socket file descriptor */
   if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
@@ -196,11 +198,21 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
   if (!sock)
     return -EINVAL;
 
-  /* send message no implemented */
-  if (!sock->ops || !sock->ops->sendto)
+  /* send message not implemented */
+  if (!sock->ops || !sock->ops->sendmsg)
     return -EINVAL;
 
-  return sock->ops->sendto(sock, buf, len, dest_addr, addrlen);
+  iovec.iov_base = (void *) buf;
+  iovec.iov_len = len;
+  msg.msg_name = (void *) dest_addr;
+  msg.msg_namelen = sizeof(struct sockaddr);
+  msg.msg_iov = &iovec;
+  msg.msg_iovlen = 1;
+  msg.msg_control = NULL;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+
+  return sock->ops->sendmsg(sock, &msg, flags);
 }
 
 /*

@@ -68,18 +68,20 @@ void icmp_reply_echo(struct sk_buff_t *skb)
 /*
  * Send an ICMP message.
  */
-int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct sockaddr *dest_addr, size_t addrlen)
+int icmp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 {
   struct arp_table_entry_t *arp_entry;
   struct sockaddr_in *dest_addr_in;
   uint8_t dest_ip[4], route_ip[4];
   struct sk_buff_t *skb;
+  size_t len, i;
+  void *buf;
 
-  /* unused address length */
-  UNUSED(addrlen);
+  /* unused flags */
+  UNUSED(flags);
 
   /* get destination IP */
-  dest_addr_in = (struct sockaddr_in *) dest_addr;
+  dest_addr_in = (struct sockaddr_in *) msg->msg_name;
   inet_ntoi(dest_addr_in->sin_addr, dest_ip);
 
   /* get route IP */
@@ -89,6 +91,11 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
   arp_entry = arp_lookup(sock->dev, route_ip);
   if (!arp_entry)
     return -EINVAL;
+
+  /* compute data length */
+  len = 0;
+  for (i = 0; i < msg->msg_iovlen; i++)
+    len += msg->msg_iov[i].iov_len;
 
   /* allocate a socket buffer */
   skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + len);
@@ -105,8 +112,11 @@ int icmp_sendto(struct socket_t *sock, const void *buf, size_t len, const struct
                   IPV4_DEFAULT_TTL, IP_PROTO_ICMP, sock->dev->ip_addr, dest_ip);
 
   /* copy icmp message */
-  skb->h.icmp_header = (struct icmp_header_t *) skb_put(skb, len);
-  memcpy(skb->h.icmp_header, buf, len);
+  skb->h.icmp_header = buf = (struct icmp_header_t *) skb_put(skb, len);
+  for (i = 0; i < msg->msg_iovlen; i++) {
+    memcpy(buf, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
+    buf += msg->msg_iov[i].iov_len;
+  }
 
   /* recompute checksum */
   skb->h.icmp_header->chksum = 0;
@@ -174,6 +184,6 @@ int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
  * ICMP protocol operations.
  */
 struct prot_ops icmp_prot_ops = {
-  .sendto       = icmp_sendto,
   .recvmsg      = icmp_recvmsg,
+  .sendmsg      = icmp_sendmsg,
 };

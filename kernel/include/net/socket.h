@@ -81,8 +81,8 @@ struct socket_t {
  * Protocol operations.
  */
 struct prot_ops {
-  int (*sendto)(struct socket_t *, const void *, size_t, const struct sockaddr *, size_t);
   int (*recvmsg)(struct socket_t *, struct msghdr_t *, int);
+  int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int);
 };
 
 /* protocol operations */
