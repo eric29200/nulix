@@ -133,8 +133,6 @@ int do_socket(int domain, int type, int protocol)
   /* check protocol */
   if (domain == AF_INET && type == SOCK_DGRAM && protocol == IP_PROTO_ICMP)
     sock_ops = &icmp_prot_ops;
-  else if (domain == AF_INET && type == SOCK_DGRAM && protocol == IP_PROTO_IP)
-    sock_ops = &ip_prot_ops;
   else
     return -EINVAL;
 
