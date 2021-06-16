@@ -12,6 +12,7 @@ struct sk_buff_t {
   struct ethernet_header_t *  eth_header;
   struct {
     struct icmp_header_t *    icmp_header;
+    struct udp_header_t *     udp_header;
   }                           h;
   struct {
     struct arp_header_t *     arp_header;
