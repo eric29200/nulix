@@ -293,6 +293,47 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
 }
 
 /*
+ * Receive from system call.
+ */
+int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen)
+{
+  struct socket_t *sock;
+  struct msghdr_t msg;
+  struct iovec_t iovec;
+
+  /* unused address length */
+  UNUSED(addrlen);
+
+  /* check socket file descriptor */
+  if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+    return -EBADF;
+
+  /* find socket */
+  sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* receive message not implemented */
+  if (!sock->ops || !sock->ops->recvmsg)
+    return -EINVAL;
+
+  /* build buffer */
+  iovec.iov_base = (void *) buf;
+  iovec.iov_len = len;
+
+  /* build message */
+  msg.msg_name = (void *) dest_addr;
+  msg.msg_namelen = sizeof(struct sockaddr);
+  msg.msg_iov = &iovec;
+  msg.msg_iovlen = 1;
+  msg.msg_control = NULL;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
+
+  return sock->ops->recvmsg(sock, &msg, flags);
+}
+
+/*
  * Receive a message system call.
  */
 int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
@@ -308,7 +349,7 @@ int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
   if (!sock)
     return -EINVAL;
 
-  /* send message no implemented */
+  /* receive message not implemented */
   if (!sock->ops || !sock->ops->recvmsg)
     return -EINVAL;
 
