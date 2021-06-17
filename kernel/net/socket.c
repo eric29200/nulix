@@ -130,7 +130,7 @@ int do_socket(int domain, int type, int protocol)
   struct file_t *filp;
   int fd;
 
-  /* only internect sockets */
+  /* only internet sockets */
   if (domain != AF_INET)
     return -EINVAL;
 
