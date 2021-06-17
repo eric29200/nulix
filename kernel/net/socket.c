@@ -130,11 +130,31 @@ int do_socket(int domain, int type, int protocol)
   struct file_t *filp;
   int fd;
 
-  /* check protocol */
-  if (domain == AF_INET && type == SOCK_DGRAM && protocol == IP_PROTO_ICMP)
-    sock_ops = &icmp_prot_ops;
-  else
+  /* only internect sockets */
+  if (domain != AF_INET)
     return -EINVAL;
+
+  /* choose socket type */
+  switch (type) {
+    case SOCK_DGRAM:
+      /* choose protocol */
+      switch (protocol) {
+        case 0:
+        case IP_PROTO_UDP:
+          protocol = IP_PROTO_UDP;
+          sock_ops = &udp_prot_ops;
+          break;
+        case IP_PROTO_ICMP:
+          sock_ops = &icmp_prot_ops;
+          break;
+        default:
+          return -EINVAL;
+      }
+
+      break;
+    default:
+      return -EINVAL;
+  }
 
   /* allocate a socket */
   sock = sock_alloc();
@@ -185,7 +205,10 @@ int do_socket(int domain, int type, int protocol)
  */
 int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
+  uint16_t max_port;
+  struct sockaddr_in *sin;
   struct socket_t *sock;
+  int i;
 
   /* unused addrlen */
   UNUSED(addrlen);
@@ -199,8 +222,30 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
   if (!sock)
     return -EINVAL;
 
+  /* get internet address */
+  sin = (struct sockaddr_in *) addr;
+
+  /* check if asked port is already mapped or find max mapped port */
+  for (i = 0, max_port = 0; i < NR_SOCKETS; i++) {
+    /* different protocol : skip */
+    if (!sockets[i].state || sockets[i].protocol != sock->protocol)
+      continue;
+
+    /* already mapped */
+    if (sin->sin_port && sin->sin_port == sockets[i].sin.sin_port)
+      return -ENOSPC;
+
+    /* update max mapped port */
+    if (htons(sockets[i].sin.sin_port) > max_port)
+      max_port = htons(sockets[i].sin.sin_port);
+  }
+
+  /* allocate a dynamic port */
+  if (!sin->sin_port)
+    sin->sin_port = htons(max_port < IP_START_DYN_PORT ? IP_START_DYN_PORT : max_port + 1);
+
   /* copy address */
-  memcpy(&sock->addr, addr, sizeof(struct sockaddr));
+  memcpy(&sock->sin, sin, sizeof(struct sockaddr));
 
   return 0;
 }
