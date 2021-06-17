@@ -4,6 +4,7 @@
 #include <net/ethernet.h>
 #include <net/arp.h>
 #include <net/socket.h>
+#include <proc/sched.h>
 #include <string.h>
 #include <stderr.h>
 
@@ -99,7 +100,48 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
  */
 int udp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 {
-  return -1;
+  struct sk_buff_t *skb;
+  size_t len, n, count = 0;
+  size_t i;
+
+  /* unused flags */
+  UNUSED(flags);
+
+  /* sleep until we receive a packet */
+  for (;;) {
+    /* signal received : restart system call */
+    if (!sigisemptyset(&current_task->sigpend))
+      return -ERESTARTSYS;
+
+    /* message received : break */
+    if (!list_empty(&sock->skb_list))
+      break;
+
+    /* sleep */
+    task_sleep(&sock->waiting_chan);
+  }
+
+  /* get first message */
+  skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
+
+  /* get UDP header */
+  skb->h.udp_header = (struct udp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct udp_header_t));
+
+  /* compute message length */
+  len = (void *) skb->end - (void *) skb->h.udp_header;
+
+  /* copy message */
+  for (i = 0; i < msg->msg_iovlen; i++) {
+    n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
+    memcpy(msg->msg_iov[i].iov_base, skb->h.udp_header, n);
+    count += n;
+  }
+
+  /* remove and free socket buffer */
+  list_del(&skb->list);
+  skb_free(skb);
+
+  return count;
 }
 
 /*
