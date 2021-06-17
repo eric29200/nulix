@@ -126,8 +126,10 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
  */
 int udp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 {
-  struct sk_buff_t *skb;
   size_t len, n, count = 0;
+  struct sockaddr_in *sin;
+  struct sk_buff_t *skb;
+  void *buf;
   size_t i;
 
   /* unused flags */
@@ -150,18 +152,32 @@ int udp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   /* get first message */
   skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
 
+  /* get IP header */
+  skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+
   /* get UDP header */
-  skb->h.udp_header = (struct udp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct udp_header_t));
+  skb->h.udp_header = (struct udp_header_t *) (skb->head
+                                               + sizeof(struct ethernet_header_t)
+                                               + sizeof(struct ip_header_t));
+
+  /* get message */
+  buf = (void *) skb->h.udp_header + sizeof(struct udp_header_t);
 
   /* compute message length */
-  len = (void *) skb->end - (void *) skb->h.udp_header;
+  len = (void *) skb->end - buf;
 
   /* copy message */
   for (i = 0; i < msg->msg_iovlen; i++) {
     n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
-    memcpy(msg->msg_iov[i].iov_base, skb->h.udp_header, n);
+    memcpy(msg->msg_iov[i].iov_base, buf, n);
     count += n;
   }
+
+  /* set source address */
+  sin = (struct sockaddr_in *) msg->msg_name;
+  sin->sin_family = AF_INET;
+  sin->sin_port = skb->h.udp_header->src_port;
+  sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
 
   /* remove and free socket buffer */
   list_del(&skb->list);

@@ -95,7 +95,7 @@ extern struct prot_ops icmp_prot_ops;
 int do_socket(int domain, int type, int protocol);
 int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
-int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
+int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen);
 int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 
 #endif

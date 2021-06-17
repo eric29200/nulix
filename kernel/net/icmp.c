@@ -158,8 +158,9 @@ int icmp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
  */
 int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 {
-  struct sk_buff_t *skb;
   size_t len, n, count = 0;
+  struct sockaddr_in *sin;
+  struct sk_buff_t *skb;
   size_t i;
 
   /* unused flags */
@@ -194,6 +195,12 @@ int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
     memcpy(msg->msg_iov[i].iov_base, skb->h.icmp_header, n);
     count += n;
   }
+
+  /* set source address */
+  sin = (struct sockaddr_in *) msg->msg_name;
+  sin->sin_family = AF_INET;
+  sin->sin_port = 0;
+  sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
 
   /* remove and free socket buffer */
   list_del(&skb->list);
