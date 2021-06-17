@@ -66,6 +66,28 @@ void icmp_reply_echo(struct sk_buff_t *skb)
 }
 
 /*
+ * Handle an ICMP packet.
+ */
+int icmp_handle(struct socket_t *sock, struct sk_buff_t *skb)
+{
+  struct sk_buff_t *skb_new;
+
+  /* check protocol */
+  if (sock->protocol != skb->nh.ip_header->protocol)
+    return -EINVAL;
+
+  /* clone socket buffer */
+  skb_new = skb_clone(skb);
+  if (!skb_new)
+    return -ENOMEM;
+
+  /* push skb in socket queue */
+  list_add_tail(&skb_new->list, &sock->skb_list);
+
+  return 0;
+}
+
+/*
  * Send an ICMP message.
  */
 int icmp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
@@ -184,6 +206,7 @@ int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
  * ICMP protocol operations.
  */
 struct prot_ops icmp_prot_ops = {
+  .handle       = icmp_handle,
   .recvmsg      = icmp_recvmsg,
   .sendmsg      = icmp_sendmsg,
 };

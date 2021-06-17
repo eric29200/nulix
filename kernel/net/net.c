@@ -60,8 +60,7 @@ uint16_t net_checksum(void *data, size_t size)
  */
 static void skb_deliver_to_sockets(struct sk_buff_t *skb)
 {
-  struct sk_buff_t *skb_new;
-  int i;
+  int i, ret;
 
   /* find matching sockets */
   for (i = 0; i < NR_SOCKETS; i++) {
@@ -69,20 +68,14 @@ static void skb_deliver_to_sockets(struct sk_buff_t *skb)
     if (sockets[i].state == SS_FREE)
       continue;
 
-    /* check protocol */
-    if (sockets[i].protocol != skb->nh.ip_header->protocol)
-      continue;
+    /* handle packet */
+    if (sockets[i].ops && sockets[i].ops->handle) {
+      ret = sockets[i].ops->handle(&sockets[i], skb);
 
-    /* clone socket buffer */
-    skb_new = skb_clone(skb);
-    if (!skb_new)
-      break;
-
-    /* push skb in socket queue */
-    list_add_tail(&skb_new->list, &sockets[i].skb_list);
-
-    /* wake up socket */
-    task_wakeup_all(&sockets[i].waiting_chan);
+      /* wake up waiting processes */
+      if (ret == 0)
+        task_wakeup_all(&sockets[i].waiting_chan);
+    }
   }
 }
 

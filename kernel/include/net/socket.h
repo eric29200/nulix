@@ -82,6 +82,7 @@ struct socket_t {
  * Protocol operations.
  */
 struct prot_ops {
+  int (*handle)(struct socket_t *, struct sk_buff_t *);
   int (*recvmsg)(struct socket_t *, struct msghdr_t *, int);
   int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int);
 };
