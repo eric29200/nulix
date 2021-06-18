@@ -183,6 +183,9 @@ int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   /* get first message */
   skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
 
+  /* get IP header */
+  skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+
   /* get ICMP header */
   skb->h.icmp_header = (struct icmp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
 
