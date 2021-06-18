@@ -23,6 +23,9 @@ mkdir musl-1.2.2-build
 wget https://musl.libc.org/releases/musl-1.2.2.tar.gz
 tar -xzvf musl-1.2.2.tar.gz
 
+# patch musl (to force IPv4)
+patch -p0 < ../patches/musl-1.2.2-force-ipv4.patch
+
 # build musl
 cd ./musl-1.2.2/
 make clean
