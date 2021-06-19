@@ -136,7 +136,7 @@ static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, ui
 /*
  * Print a character on the frame buffer.
  */
-static void fb_putc(struct framebuffer_t *fb, uint8_t c)
+void fb_putc(struct framebuffer_t *fb, uint8_t c)
 {
   uint32_t i;
 
@@ -176,19 +176,6 @@ static void fb_putc(struct framebuffer_t *fb, uint8_t c)
 
   /* mark frame buffer dirty */
   fb->dirty = 1;
-}
-
-/*
- * Write a string to the frame buffer.
- */
-size_t fb_write(struct framebuffer_t *fb, const char *buf, size_t n)
-{
-  size_t i;
-
-  for (i = 0; i < n; i++)
-    fb_putc(fb, buf[i]);
-
-  return n;
 }
 
 /*

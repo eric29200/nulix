@@ -166,6 +166,8 @@ void tty_update(unsigned char c)
 size_t tty_write(dev_t dev, const void *buf, size_t n)
 {
   struct tty_t *tty;
+  const char *chars;
+  size_t i;
 
   /* get tty */
   tty = tty_lookup(dev);
@@ -173,7 +175,11 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
     return -EINVAL;
 
   /* write to frame buffer */
-  return fb_write(&tty->fb, buf, n);
+  chars = (const char *) buf;
+  for (i = 0; i < n; i++)
+    fb_putc(&tty->fb, chars[i]);
+
+  return n;
 }
 
 /*
@@ -200,9 +206,6 @@ int tty_ioctl(dev_t dev, int request, unsigned long arg)
     return -EINVAL;
 
   switch (request) {
-    case TCGETS:
-      memcpy((struct termios_t *) arg, &tty->termios, sizeof(struct termios_t));
-      break;
     case TIOCGWINSZ:
       memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
       break;
@@ -266,15 +269,6 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 
     /* init frame buffer */
     init_framebuffer(&tty_table[i].fb, tag_fb);
-
-    /* set termios */
-    tty_table[i].termios = (struct termios_t) {
-      .c_iflag      = ICRNL,
-      .c_oflag      = OPOST | ONLCR,
-      .c_cflag      = 0,
-      .c_lflag      = IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
-      .c_cc         = INIT_C_CC,
-    };
 
     /* set winsize */
     tty_table[i].winsize.ws_row = tty_table[i].fb.height;
