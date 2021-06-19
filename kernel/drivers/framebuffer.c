@@ -179,6 +179,18 @@ void fb_putc(struct framebuffer_t *fb, uint8_t c)
 }
 
 /*
+ * Set framebuffer position.
+ */
+void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y)
+{
+  if (!fb)
+    return;
+
+  fb->x = x;
+  fb->y = y;
+}
+
+/*
  * Update a text frame buffer.
  */
 static void fb_update_text(struct framebuffer_t *fb)

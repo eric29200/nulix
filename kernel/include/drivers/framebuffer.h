@@ -34,6 +34,7 @@ struct framebuffer_t {
 };
 
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb);
+void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y);
 void fb_putc(struct framebuffer_t *fb, uint8_t c);
 
 #endif
