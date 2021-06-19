@@ -23,6 +23,9 @@ typedef unsigned gid_t;
 typedef int sigset_t;
 typedef int clockid_t;
 
+typedef unsigned char cc_t;
+typedef unsigned long tcflag_t;
+
 #define INT_MAX                               ((int) (~0U >> 1))
 #define UINT_MAX                              (~0U)
 #define LONG_MAX                              ((long) (~0UL >> 1))

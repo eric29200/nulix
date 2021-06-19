@@ -200,6 +200,9 @@ int tty_ioctl(dev_t dev, int request, unsigned long arg)
     return -EINVAL;
 
   switch (request) {
+    case TCGETS:
+      memcpy((struct termios_t *) arg, &tty->termios, sizeof(struct termios_t));
+      break;
     case TIOCGWINSZ:
       memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
       break;
@@ -260,7 +263,20 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
     tty_table[i].w_pos = 0;
     tty_table[i].d_pos = 0;
     tty_table[i].buf[0] = 0;
+
+    /* init frame buffer */
     init_framebuffer(&tty_table[i].fb, tag_fb);
+
+    /* set termios */
+    tty_table[i].termios = (struct termios_t) {
+      .c_iflag      = ICRNL,
+      .c_oflag      = OPOST | ONLCR,
+      .c_cflag      = 0,
+      .c_lflag      = IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
+      .c_cc         = INIT_C_CC,
+    };
+
+    /* set winsize */
     tty_table[i].winsize.ws_row = tty_table[i].fb.height;
     tty_table[i].winsize.ws_col = tty_table[i].fb.width;
     tty_table[i].winsize.ws_xpixel = 0;
