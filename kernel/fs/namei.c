@@ -101,6 +101,10 @@ struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
   size_t basename_len;
   int err;
 
+  /* use directly dir fd */
+  if (dirfd >= 0 && (!pathname || *pathname == 0))
+    return dirfd < NR_OPEN && current_task->filp[dirfd] ? current_task->filp[dirfd]->f_inode : NULL;
+
   /* find directory */
   dir = dir_namei(dirfd, pathname, &basename, &basename_len);
   if (!dir)
