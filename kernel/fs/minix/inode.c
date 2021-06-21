@@ -30,6 +30,7 @@ struct file_operations_t minix_char_fops = {
   .open           = minix_char_open,
   .read           = minix_char_read,
   .write          = minix_char_write,
+  .poll           = minix_char_poll,
 };
 
 /*

@@ -22,8 +22,8 @@
 struct tty_t {
   dev_t                 dev;                        /* dev number */
   pid_t                 pgrp;                       /* process group id */
+  uint32_t              r_pos;                      /* read position */
   uint32_t              w_pos;                      /* write position */
-  uint32_t              d_pos;                      /* real buffer position (used to handle del key) */
   uint8_t               buf[TTY_BUF_SIZE];          /* tty buffer */
   uint32_t              pars[NPARS];                /* escaped pars */
   uint32_t              npars;                      /* number of escaped pars */
@@ -40,6 +40,7 @@ size_t tty_write(dev_t dev, const void *buf, size_t n);
 void tty_update(unsigned char c);
 void tty_change(uint32_t n);
 int tty_ioctl(dev_t dev, int request, unsigned long arg);
+int tty_poll(dev_t dev);
 void tty_signal_group(dev_t dev, int sig);
 
 #endif

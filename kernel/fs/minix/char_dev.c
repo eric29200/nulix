@@ -49,3 +49,16 @@ int minix_char_write(struct file_t *filp, const char *buf, int count)
   return -EINVAL;
 }
 
+/*
+ * Poll a character device.
+ */
+int minix_char_poll(struct file_t *filp)
+{
+  dev_t dev = filp->f_inode->i_zone[0];
+
+  /* TTY devices */
+  if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
+    return tty_poll(dev);
+
+  return -EINVAL;
+}
