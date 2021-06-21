@@ -69,19 +69,12 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
     /* get key */
     key = tty->buf[tty->r_pos++];
 
-    /* handle new key */
-    switch (key) {
-      case '\b':
-        if(count > 0)
-          ((unsigned char *) buf)[--count] = 0;
-        break;
-      case '\n':
-        ((unsigned char *) buf)[count++] = key;
-        return count;
-      default:
-        ((unsigned char *) buf)[count++] = key;
-        break;
-    }
+    /* add key to buffer */
+    ((unsigned char *) buf)[count++] = key;
+
+    /* end of line : return */
+    if (key == '\n')
+      return count;
   }
 
   return count;
