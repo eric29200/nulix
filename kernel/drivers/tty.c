@@ -144,6 +144,41 @@ void tty_update(unsigned char c)
 }
 
 /*
+ * Handle escape K sequences (delete line or part of line).
+ */
+static void csi_K(struct tty_t *tty)
+{
+  uint32_t i, x, y;
+
+  /* save current position */
+  x = tty->fb.x;
+  y = tty->fb.y;
+
+  switch (tty->pars[0]) {
+    case 0:                 /* erase from cursor to end of line */
+      for (i = tty->fb.x; i < tty->fb.width; i++)
+        fb_putc(&tty->fb, ' ');
+      break;
+    case 1:                 /* erase from start of line to cursor */
+      tty->fb.x = 0;
+      for (i = 0; i < x; i++)
+        fb_putc(&tty->fb, ' ');
+      break;
+    case 2:                 /* erase whole line */
+      tty->fb.x = 0;
+      for (i = 0; i < tty->fb.width; i++)
+        fb_putc(&tty->fb, ' ');
+      break;
+    default:
+      break;
+  }
+
+  /* restore current position */
+  tty->fb.x = x;
+  tty->fb.y = y;
+}
+
+/*
  * Write to TTY.
  */
 size_t tty_write(dev_t dev, const void *buf, size_t n)
@@ -229,6 +264,7 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
             fb_set_xy(&tty->fb, tty->pars[1], tty->pars[0]);
             break;
           case 'K':
+            csi_K(tty);
             break;
           default:
             break;
