@@ -152,17 +152,50 @@ static void csi_K(struct tty_t *tty)
 
   switch (tty->pars[0]) {
     case 0:                 /* erase from cursor to end of line */
-      for (x = tty->fb.x; x < tty->fb.width - 1; x++)
+      for (x = tty->fb.x; x < tty->fb.width; x++)
         fb_del(&tty->fb, x, tty->fb.y);
       break;
     case 1:                 /* erase from start of line to cursor */
-      tty->fb.x = 0;
       for (x = 0; x < tty->fb.x; x++)
         fb_del(&tty->fb, x, tty->fb.y);
       break;
     case 2:                 /* erase whole line */
       for (x = 0; x < tty->fb.width; x++)
         fb_del(&tty->fb, x, tty->fb.y);
+      break;
+    default:
+      break;
+  }
+}
+
+/*
+ * Handle escape J sequences (delete screen or part of the screen).
+ */
+static void csi_J(struct tty_t *tty)
+{
+  uint32_t x, y;
+
+  switch (tty->pars[0]) {
+    case 0:                 /* erase from cursor to end of display */
+      for (x = tty->fb.x; x < tty->fb.width; x++)
+        fb_del(&tty->fb, x, tty->fb.y);
+
+      for (y = tty->fb.y + 1; y < tty->fb.height; y++)
+        for (x = 0; x < tty->fb.width; x++)
+          fb_del(&tty->fb, x, y);
+      break;
+    case 1:                 /* erase from start of display to cursor */
+      for (y = 0; y < tty->fb.y; y++)
+        for (x = 0; x < tty->fb.width; x++)
+          fb_del(&tty->fb, x, y);
+
+      for (x = 0; x <= tty->fb.x; x++)
+        fb_del(&tty->fb, x, tty->fb.y);
+      break;
+    case 2:                 /* erase whole display */
+      for (y = 0; y < tty->fb.height; y++)
+        for (x = 0; x < tty->fb.width; x++)
+          fb_del(&tty->fb, x, y);
       break;
     default:
       break;
@@ -256,6 +289,9 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
             break;
           case 'K':
             csi_K(tty);
+            break;
+          case 'J':
+            csi_J(tty);
             break;
           default:
             break;
