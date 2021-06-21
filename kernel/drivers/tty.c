@@ -63,11 +63,8 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
   /* read all characters */
   while (count < n) {
     /* wait for a character */
-    while (tty->r_pos >= tty->w_pos) {
-      tty->r_pos = 0;
-      tty->w_pos = 0;
+    while (tty->r_pos >= tty->w_pos)
       task_sleep(tty);
-    }
 
     /* get key */
     key = tty->buf[tty->r_pos++];
@@ -116,8 +113,8 @@ void tty_update(unsigned char c)
 
   /* adjust read position */
   if (tty->w_pos >= TTY_BUF_SIZE) {
-    tty->r_pos = TTY_BUF_SIZE - 1;
-    tty->w_pos = TTY_BUF_SIZE - 1;
+    tty->r_pos = 0;
+    tty->w_pos = 0;
   }
 
   /* handle special keys */
