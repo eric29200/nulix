@@ -148,34 +148,25 @@ void tty_update(unsigned char c)
  */
 static void csi_K(struct tty_t *tty)
 {
-  uint32_t i, x, y;
-
-  /* save current position */
-  x = tty->fb.x;
-  y = tty->fb.y;
+  uint32_t x;
 
   switch (tty->pars[0]) {
     case 0:                 /* erase from cursor to end of line */
-      for (i = tty->fb.x; i < tty->fb.width; i++)
-        fb_putc(&tty->fb, ' ');
+      for (x = tty->fb.x; x < tty->fb.width - 1; x++)
+        fb_del(&tty->fb, x, tty->fb.y);
       break;
     case 1:                 /* erase from start of line to cursor */
       tty->fb.x = 0;
-      for (i = 0; i < x; i++)
-        fb_putc(&tty->fb, ' ');
+      for (x = 0; x < tty->fb.x; x++)
+        fb_del(&tty->fb, x, tty->fb.y);
       break;
     case 2:                 /* erase whole line */
-      tty->fb.x = 0;
-      for (i = 0; i < tty->fb.width; i++)
-        fb_putc(&tty->fb, ' ');
+      for (x = 0; x < tty->fb.width; x++)
+        fb_del(&tty->fb, x, tty->fb.y);
       break;
     default:
       break;
   }
-
-  /* restore current position */
-  tty->fb.x = x;
-  tty->fb.y = y;
 }
 
 /*

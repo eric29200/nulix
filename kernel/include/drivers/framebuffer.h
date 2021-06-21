@@ -37,4 +37,13 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y);
 void fb_putc(struct framebuffer_t *fb, uint8_t c);
 
+/*
+ * Delete a character at a position.
+ */
+static inline void fb_del(struct framebuffer_t *fb, uint32_t x, uint32_t y)
+{
+  fb->buf[y * fb->width_glyph + x] = ' ';
+}
+
+
 #endif
