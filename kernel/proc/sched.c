@@ -153,8 +153,9 @@ void task_sleep(void *chan)
 /*
  * Sleep for a timeout in ms.
  */
-void task_sleep_timeout(int timeout_ms)
+void task_sleep_timeout(void *chan, int timeout_ms)
 {
+  current_task->waiting_chan = chan;
   current_task->timeout = jiffies + ms_to_jiffies(timeout_ms);
   current_task->state = TASK_SLEEPING;
 

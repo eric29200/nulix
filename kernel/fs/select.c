@@ -14,6 +14,7 @@ static void do_pollfd(struct pollfd_t *fds, int *count)
 
   /* for each file descriptor */
   mask = 0;
+
   /* check file descriptor */
   fd = fds->fd;
   if (fd >= 0 && fd < NR_FILE && current_task->filp[fd]) {
@@ -54,8 +55,14 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
       break;
 
     /* no events : sleep */
-    task_sleep_timeout(timeout);
-    timeout = 0;
+    if (timeout > 0) {
+      task_sleep_timeout(current_task->waiting_chan, timeout);
+      timeout = 0;
+    } else if (timeout == 0) {
+      return count;
+    } else {
+      task_sleep(current_task->waiting_chan);
+    }
   }
 
   return count;

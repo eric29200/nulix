@@ -73,7 +73,7 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr)
     /* free ARP request packet */
     skb_free(skb);
 
-    task_sleep_timeout(ARP_REQUEST_WAIT_MS);
+    task_sleep_timeout(current_task->waiting_chan, ARP_REQUEST_WAIT_MS);
   }
 
   return NULL;
