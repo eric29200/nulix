@@ -16,6 +16,31 @@
 
 #define NPARS                   16
 
+#define _L_FLAG(tty,f)          ((tty)->termios.c_lflag & f)
+#define _I_FLAG(tty,f)          ((tty)->termios.c_iflag & f)
+#define _O_FLAG(tty,f)          ((tty)->termios.c_oflag & f)
+
+#define L_CANON(tty)            _L_FLAG((tty),ICANON)
+#define L_ISIG(tty)             _L_FLAG((tty),ISIG)
+#define L_ECHO(tty)             _L_FLAG((tty),ECHO)
+#define L_ECHOE(tty)            _L_FLAG((tty),ECHOE)
+#define L_ECHOK(tty)            _L_FLAG((tty),ECHOK)
+#define L_ECHOCTL(tty)          _L_FLAG((tty),ECHOCTL)
+#define L_ECHOKE(tty)           _L_FLAG((tty),ECHOKE)
+#define L_TOSTOP(tty)           _L_FLAG((tty),TOSTOP)
+
+#define I_UCLC(tty)             _I_FLAG((tty),IUCLC)
+#define I_NLCR(tty)             _I_FLAG((tty),INLCR)
+#define I_CRNL(tty)             _I_FLAG((tty),ICRNL)
+#define I_NOCR(tty)             _I_FLAG((tty),IGNCR)
+#define I_IXON(tty)             _I_FLAG((tty),IXON)
+
+#define O_POST(tty)             _O_FLAG((tty),OPOST)
+#define O_NLCR(tty)             _O_FLAG((tty),ONLCR)
+#define O_CRNL(tty)             _O_FLAG((tty),OCRNL)
+#define O_NLRET(tty)            _O_FLAG((tty),ONLRET)
+#define O_LCUC(tty)             _O_FLAG((tty),OLCUC)
+
 /*
  * TTY structure.
  */
@@ -30,6 +55,7 @@ struct tty_t {
   int                   esc_buf_size;               /* escape buffer size */
   int                   state;                      /* tty state (NORMAL or ESCAPE) */
   struct winsize_t      winsize;                    /* window size */
+  struct termios_t      termios;                    /* terminal i/o */
   struct framebuffer_t  fb;                         /* framebuffer of the tty */
 };
 

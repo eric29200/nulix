@@ -139,7 +139,8 @@ void tty_update(unsigned char c)
   task_wakeup(tty);
 
   /* echo character on device */
-  tty_write(tty->dev, &c, 1);
+  if (L_ECHO(tty))
+    tty_write(tty->dev, &c, 1);
 }
 
 /*
@@ -264,6 +265,12 @@ int tty_ioctl(dev_t dev, int request, unsigned long arg)
     return -EINVAL;
 
   switch (request) {
+    case TCGETS:
+      memcpy((struct termios_t *) arg, &tty->termios, sizeof(struct termios_t));
+      break;
+    case TCSETS:
+      memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+      break;
     case TIOCGWINSZ:
       memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
       break;
@@ -356,6 +363,16 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
     tty_table[i].winsize.ws_col = tty_table[i].fb.width;
     tty_table[i].winsize.ws_xpixel = 0;
     tty_table[i].winsize.ws_ypixel = 0;
+
+    /* init termios */
+    tty_table[i].termios = (struct termios_t) {
+      .c_iflag    = ICRNL,
+      .c_oflag    = OPOST | ONLCR,
+      .c_cflag    = 0,
+      .c_lflag    = IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
+      .c_line     = 0,
+      .c_cc       = INIT_C_CC,
+    };
   }
 
   /* set current tty to first tty */
