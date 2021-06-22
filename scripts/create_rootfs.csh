@@ -27,13 +27,13 @@ sudo cp usr/init tmp/sbin/
 sudo cp dash/dash-0.5.10.2-build/bin/dash tmp/bin
 
 # cp toybox binaries
-#sudo cp toybox/toybox-0.8.4-build/* tmp/bin
+sudo cp toybox/toybox-0.8.4-build/* tmp/bin
 
 # cp busybox binaries
-sudo cp busybox/busybox-1.33.1/_install/bin/* tmp/bin
-sudo cp busybox/busybox-1.33.1/_install/sbin/* tmp/sbin
-sudo cp busybox/busybox-1.33.1/_install/usr/bin/* tmp/usr/bin
-sudo cp busybox/busybox-1.33.1/_install/usr/sbin/* tmp/usr/sbin
+#sudo cp busybox/busybox-1.33.1/_install/bin/* tmp/bin
+#sudo cp busybox/busybox-1.33.1/_install/sbin/* tmp/sbin
+#sudo cp busybox/busybox-1.33.1/_install/usr/bin/* tmp/usr/bin
+#sudo cp busybox/busybox-1.33.1/_install/usr/sbin/* tmp/usr/sbin
 
 # create devices nodes
 sudo mkdir tmp/dev

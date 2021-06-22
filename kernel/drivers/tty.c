@@ -349,6 +349,12 @@ int tty_ioctl(dev_t dev, int request, unsigned long arg)
     case TCSETS:
       memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
       break;
+    case TCSETSW:
+      memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+      break;
+    case TCSETSF:
+      memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+      break;
     case TIOCGWINSZ:
       memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
       break;
