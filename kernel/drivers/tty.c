@@ -60,6 +60,12 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
   if (!tty)
     return -EINVAL;
 
+  /* reset read/write positions on canonical mode */
+  if (L_CANON(tty)) {
+    tty->r_pos = 0;
+    tty->w_pos = 0;
+  }
+
   /* read all characters */
   while (count < n) {
     /* wait for a character */
@@ -100,6 +106,7 @@ dev_t tty_get()
 void tty_update(unsigned char c)
 {
   struct tty_t *tty;
+  int echo;
 
   /* get tty */
   tty = &tty_table[current_tty];
@@ -110,27 +117,45 @@ void tty_update(unsigned char c)
     tty->w_pos = 0;
   }
 
-  /* handle special keys */
-  switch (c) {
-    case 13:
-      c = '\n';
-      break;
-    case 127:
-      c = '\b';
-      break;
-    default:
-      break;
+  /* handle carriage return */
+  if (c == 13)
+    c = '\n';
+  else if (c == 127)
+    c = '\b';
+
+  /*
+   * Canon mode   = handle special characters and return to read in end of line
+   * Else         = do not handle special characters and return to read at each character
+   */
+  echo = 0;
+  if (L_CANON(tty)) {
+    /* handle new character */
+    if (c == '\b' && tty->w_pos > 0) {
+      tty->buf[tty->w_pos--] = 0;
+      echo = 1;
+    } else if (c != '\b') {
+      tty->buf[tty->w_pos++] = c;
+      echo = 1;
+    }
+
+    /* echo character on device */
+    if (echo && L_ECHO(tty))
+      tty_write(tty->dev, &c, 1);
+
+    /* wake up eventual process */
+    if (c == '\n')
+      task_wakeup(tty);
+  } else {
+    /* store character */
+    tty->buf[tty->w_pos++] = c;
+
+    /* echo character on device */
+    if (L_ECHO(tty))
+      tty_write(tty->dev, &c, 1);
+
+    /* wake up eventual process */
+    task_wakeup(tty);
   }
-
-  /* store character */
-  tty->buf[tty->w_pos++] = c;
-
-  /* wake up eventual process */
-  task_wakeup(tty);
-
-  /* echo character on device */
-  if (L_ECHO(tty))
-    tty_write(tty->dev, &c, 1);
 }
 
 /*
