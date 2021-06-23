@@ -11,8 +11,7 @@ int sys_dup2(int oldfd, int newfd)
   int ret;
 
   /* check parameters */
-  if (oldfd < 0 || oldfd >= NR_OPEN || current_task->filp[oldfd] == NULL
-      || newfd < 0 || newfd >= NR_OPEN)
+  if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->filp[oldfd] || newfd < 0 || newfd >= NR_OPEN)
     return -EBADF;
 
   /* same fd */
