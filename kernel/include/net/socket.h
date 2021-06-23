@@ -90,6 +90,7 @@ struct prot_ops {
 /* protocol operations */
 extern struct prot_ops udp_prot_ops;
 extern struct prot_ops icmp_prot_ops;
+extern struct prot_ops raw_prot_ops;
 
 /* socket system calls */
 int do_socket(int domain, int type, int protocol);

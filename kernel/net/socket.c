@@ -152,6 +152,9 @@ int do_socket(int domain, int type, int protocol)
       }
 
       break;
+    case SOCK_RAW:
+      sock_ops = &raw_prot_ops;
+      break;
     default:
       return -EINVAL;
   }
