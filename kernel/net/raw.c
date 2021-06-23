@@ -37,6 +37,7 @@ int raw_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   size_t len, n, count = 0;
   struct sockaddr_in *sin;
   struct sk_buff_t *skb;
+  void *buf;
   size_t i;
 
   /* unused flags */
@@ -62,28 +63,26 @@ int raw_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   /* get IP header */
   skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
 
-  /* get ICMP header */
-  //skb->h.icmp_header = (struct icmp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
-
   /* compute message length */
-  //len = (void *) skb->end - (void *) skb->h.icmp_header;
+  len = skb->size - sizeof(struct ip_header_t) - sizeof(struct ethernet_header_t);
+  buf = skb->nh.ip_header + sizeof(struct ip_header_t);
 
   /* copy message */
-  //for (i = 0; i < msg->msg_iovlen; i++) {
-  //  n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
-  //  memcpy(msg->msg_iov[i].iov_base, skb->h.icmp_header, n);
-  //  count += n;
-  //}
+  for (i = 0; i < msg->msg_iovlen; i++) {
+    n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
+    memcpy(msg->msg_iov[i].iov_base, buf, n);
+    count += n;
+  }
 
   /* set source address */
-  //sin = (struct sockaddr_in *) msg->msg_name;
-  //sin->sin_family = AF_INET;
-  //sin->sin_port = 0;
-  //sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+  sin = (struct sockaddr_in *) msg->msg_name;
+  sin->sin_family = AF_INET;
+  sin->sin_port = 0;
+  sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
 
   /* remove and free socket buffer */
-  //list_del(&skb->list);
-  //skb_free(skb);
+  list_del(&skb->list);
+  skb_free(skb);
 
   return count;
 }
