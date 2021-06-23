@@ -52,6 +52,7 @@
 #define __NR_readlink           85
 #define __NR_mmap               90
 #define __NR_munmap             91
+#define __NR_setitimer          104
 #define __NR_stat               106
 #define __NR_wait4              114
 #define __NR_sysinfo            116
@@ -178,5 +179,6 @@ int sys_recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *
 int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout);
 int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
+int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerval_t *old_value);
 
 #endif

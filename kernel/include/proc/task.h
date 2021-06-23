@@ -2,6 +2,7 @@
 #define _TASK_H_
 
 #include <proc/elf.h>
+#include <proc/timer.h>
 #include <mm/paging.h>
 #include <mm/mmap.h>
 #include <fs/fs.h>
@@ -60,6 +61,7 @@ struct task_t {
   struct registers_t          signal_regs;                    /* saved registers at signal entry */
   struct page_directory_t *   pgd;                            /* page directory */
   struct file_t *             filp[NR_OPEN];                  /* opened files */
+  struct timer_event_t        sig_tm;                         /* signal timer */
   struct list_head_t          list;                           /* next process */
 };
 

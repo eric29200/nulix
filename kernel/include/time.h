@@ -7,6 +7,10 @@
 #define CLOCK_REALTIME      0
 #define CLOCK_MONOTONIC     1
 
+#define ITIMER_REAL         0
+#define ITIMER_VIRTUAL      1
+#define ITIMER_PROF         2
+
 /*
  * Time value structure.
  */
@@ -21,6 +25,16 @@ struct timeval_t {
 struct timespec_t {
   time_t  tv_sec;              /* seconds */
   long    tv_nsec;             /* nano seconds */
+};
+
+/*
+ * Timer value.
+ */
+struct itimerval_t {
+  int32_t it_interval_sec;    /* timer interval in seconds */
+  int32_t it_interval_usec;   /* timer interval in micro seconds */
+  int32_t it_value_sec;       /* current value in seconds */
+  int32_t it_value_usec;      /* current value in micro seconds */
 };
 
 time_t mktime(uint32_t year, uint32_t month, int32_t day, uint32_t hour, uint32_t min, uint32_t sec);
