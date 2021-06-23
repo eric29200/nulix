@@ -42,7 +42,11 @@ static int proc_stat_read(struct file_t *filp, char *buf, int count)
     return -EINVAL;
 
   /* print pid in temporary buffer */
-  len = sprintf(tmp_buf, "%d (%s) %c\n", task->pid, task->name, proc_states[task->state - 1]);
+  len = sprintf(tmp_buf, "%d (%s) "                               /* pid, name */
+                "%c %d "                                          /* state, ppid */
+                "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 \n",   /* unimplemented stats (used to satisfy busybox) */
+                task->pid, task->name,
+                proc_states[task->state - 1], task->parent ? task->parent->pid : task->pid);
 
   /* file position after end */
   if (filp->f_pos >= len)
