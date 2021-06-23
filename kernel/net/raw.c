@@ -37,7 +37,6 @@ int raw_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   size_t len, n, count = 0;
   struct sockaddr_in *sin;
   struct sk_buff_t *skb;
-  void *buf;
   size_t i;
 
   /* unused flags */
@@ -64,13 +63,12 @@ int raw_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
 
   /* compute message length */
-  len = skb->size - sizeof(struct ip_header_t) - sizeof(struct ethernet_header_t);
-  buf = skb->nh.ip_header + sizeof(struct ip_header_t);
+  len = skb->size - sizeof(struct ethernet_header_t);
 
   /* copy message */
   for (i = 0; i < msg->msg_iovlen; i++) {
     n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
-    memcpy(msg->msg_iov[i].iov_base, buf, n);
+    memcpy(msg->msg_iov[i].iov_base, skb->nh.ip_header, n);
     count += n;
   }
 
