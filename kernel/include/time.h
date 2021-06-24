@@ -11,6 +11,13 @@
 #define ITIMER_VIRTUAL      1
 #define ITIMER_PROF         2
 
+#define  rdtsc(low, high)   __asm__ __volatile__("rdtsc" : "=a" (low), "=d" (high))
+
+/* time stamp counter (defined in drivers/pit.c) */
+extern uint32_t last_tsc_low;
+extern uint32_t tsc_quotient;
+extern volatile uint32_t time_offset_us;
+
 /*
  * Time value structure.
  */
@@ -68,6 +75,28 @@ static inline void jiffies_to_timespec(uint32_t jiffies, struct timespec_t *ts)
 {
   ts->tv_nsec = (jiffies % HZ) * (1000000000L / HZ);
   ts->tv_sec = jiffies / HZ;
+}
+
+/*
+ * Get time offset (based on time stamp counter).
+ */
+static inline uint32_t get_time_offset()
+{
+  register uint32_t eax, edx;
+
+  /* read time stamp counter */
+  rdtsc(eax, edx);
+
+  /* relative to previous jiffy */
+  eax -= last_tsc_low;
+
+  /* get time offset */
+  __asm__("mull %2"
+          :"=a" (eax), "=d" (edx)
+          :"rm" (tsc_quotient),
+          "0" (eax));
+
+  return edx;
 }
 
 #endif
