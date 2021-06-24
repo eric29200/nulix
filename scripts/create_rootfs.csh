@@ -23,12 +23,6 @@ sudo mkdir tmp/usr/sbin
 # cp init process
 sudo cp usr/init tmp/sbin/
 
-# cp dash binary
-sudo cp dash/dash-0.5.10.2-build/bin/dash tmp/bin
-
-# cp toybox binaries
-#sudo cp toybox/toybox-0.8.5-build/* tmp/bin
-
 # cp busybox binaries
 sudo cp busybox/busybox-1.33.1/_install/bin/* tmp/bin
 sudo cp busybox/busybox-1.33.1/_install/sbin/* tmp/sbin
