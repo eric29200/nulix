@@ -8,12 +8,12 @@ int sys_getcwd(char *buf, size_t size)
   size_t n;
 
   /* check size limit */
-  n = strlen(current_task->cwd_path) + 1;
-  if (size < n)
-    n = size;
+  n = strlen(current_task->cwd_path);
+  if (size <= n)
+    n = size - 1;
 
   /* get current working dir path */
-  strncpy(buf, current_task->cwd_path, n - 1);
+  strncpy(buf, current_task->cwd_path, n);
   buf[n] = 0;
 
   return n;
