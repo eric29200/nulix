@@ -15,13 +15,14 @@ static void fb_update_rgb(struct framebuffer_t *fb);
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb)
 {
   uint32_t fb_nb_pages, i;
+  uint32_t width, height;
 
   /* set frame buffer */
   fb->addr = tag_fb->common.framebuffer_addr;
   fb->type = tag_fb->common.framebuffer_type;
   fb->pitch = tag_fb->common.framebuffer_pitch;
-  fb->width = tag_fb->common.framebuffer_width;
-  fb->height = tag_fb->common.framebuffer_height;
+  width = tag_fb->common.framebuffer_width;
+  height = tag_fb->common.framebuffer_height;
   fb->bpp = tag_fb->common.framebuffer_bpp;
   fb->x = 0;
   fb->y = 0;
@@ -36,14 +37,14 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
       fb->font = get_default_font();
       if (!fb->font)
         return -ENOSPC;
-      fb->width_glyph = fb->width / fb->font->width;
-      fb->height_glyph = fb->height / fb->font->height;
+      fb->width = width / fb->font->width;
+      fb->height = height / fb->font->height;
       fb->update = fb_update_rgb;
       break;
     case MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT:
       fb->font = NULL;
-      fb->width_glyph = fb->width;
-      fb->height_glyph = fb->height;
+      fb->width = width;
+      fb->height = height;
       fb->update = fb_update_text;
       break;
     default:
@@ -51,12 +52,12 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
   }
 
   /* allocate buffer */
-  fb->buf = (char *) kmalloc(fb->width_glyph * fb->height_glyph);
+  fb->buf = (char *) kmalloc(fb->width * fb->height);
   if (!fb->buf)
     return -ENOMEM;
 
   /* identity map frame buffer */
-  fb_nb_pages = div_ceil(fb->height * fb->pitch, PAGE_SIZE);
+  fb_nb_pages = div_ceil(height * fb->pitch, PAGE_SIZE);
   for (i = 0; i < fb_nb_pages; i++)
     map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, 0, 1);
 
@@ -142,7 +143,7 @@ void fb_putc(struct framebuffer_t *fb, uint8_t c)
 
   /* handle character */
   if (c >= ' ' && c <= '~') {
-    fb->buf[fb->y * fb->width_glyph + fb->x] = c;
+    fb->buf[fb->y * fb->width + fb->x] = c;
     fb->x++;
   } else if (c == '\t') {
     fb->x = (fb->x + 4) & ~0x03;
@@ -151,25 +152,25 @@ void fb_putc(struct framebuffer_t *fb, uint8_t c)
     fb->x = 0;
   } else if (c == '\b') {
     fb->x--;
-    fb->buf[fb->y * fb->width_glyph + fb->x] = 0;
+    fb->buf[fb->y * fb->width + fb->x] = 0;
   }
 
   /* go to next line */
-  if (fb->x >= fb->width_glyph) {
+  if (fb->x >= fb->width) {
     fb->x = 0;
-    fb->buf[fb->y * fb->width_glyph + fb->x] = 0;
+    fb->buf[fb->y * fb->width + fb->x] = 0;
   }
 
   /* scroll */
-  if (fb->y >= fb->height_glyph) {
+  if (fb->y >= fb->height) {
     /* move each line up */
-    for (i = 0; i < fb->width_glyph * (fb->height_glyph - 1); i++)
-      fb->buf[i] = fb->buf[i + fb->width_glyph];
+    for (i = 0; i < fb->width * (fb->height - 1); i++)
+      fb->buf[i] = fb->buf[i + fb->width];
 
     /* clear last line */
-    memset(&fb->buf[i], 0, fb->width_glyph);
+    memset(&fb->buf[i], 0, fb->width);
 
-    fb->y = fb->height_glyph - 1;
+    fb->y = fb->height - 1;
   }
 
   /* mark frame buffer dirty */
@@ -198,7 +199,7 @@ static void fb_update_text(struct framebuffer_t *fb)
   size_t i;
 
   /* copy the buffer */
-  for (i = 0; i < fb->width_glyph * fb->height_glyph; i++)
+  for (i = 0; i < fb->width * fb->height; i++)
     fb_buf[i] = TEXT_ENTRY(TEXT_BLACK, TEXT_LIGHT_GREY, fb->buf[i]);
 
   /* update hardware cursor */
@@ -221,9 +222,9 @@ static void fb_update_rgb(struct framebuffer_t *fb)
   char c;
 
   /* print each glyph */
-  for (y = 0; y < fb->height_glyph; y++) {
-    for (x = 0; x < fb->width_glyph; x++) {
-      c = fb->buf[y * fb->width_glyph + x];
+  for (y = 0; y < fb->height; y++) {
+    for (x = 0; x < fb->width; x++) {
+      c = fb->buf[y * fb->width + x];
       fb_put_glyph(fb, c ? get_glyph(fb->font, c) : -1, x * fb->font->width, y * fb->font->height);
     }
   }

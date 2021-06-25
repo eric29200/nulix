@@ -19,8 +19,6 @@ struct framebuffer_t {
   uint32_t        pitch;
   uint32_t        width;
   uint32_t        height;
-  uint32_t        width_glyph;
-  uint32_t        height_glyph;
   uint8_t         bpp;
   struct font_t * font;
   uint32_t        x;
@@ -42,7 +40,7 @@ void fb_putc(struct framebuffer_t *fb, uint8_t c);
  */
 static inline void fb_del(struct framebuffer_t *fb, uint32_t x, uint32_t y)
 {
-  fb->buf[y * fb->width_glyph + x] = ' ';
+  fb->buf[y * fb->width + x] = ' ';
 }
 
 

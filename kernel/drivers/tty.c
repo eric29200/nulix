@@ -106,7 +106,6 @@ dev_t tty_get()
 void tty_update(unsigned char c)
 {
   struct tty_t *tty;
-  int echo;
 
   /* get tty */
   tty = &tty_table[current_tty];
@@ -137,7 +136,7 @@ static void csi_K(struct tty_t *tty)
 
   switch (tty->pars[0]) {
     case 0:                 /* erase from cursor to end of line */
-      for (x = tty->fb.x; x < tty->fb.width_glyph; x++)
+      for (x = tty->fb.x; x < tty->fb.width; x++)
         fb_del(&tty->fb, x, tty->fb.y);
       break;
     case 1:                 /* erase from start of line to cursor */
@@ -145,7 +144,7 @@ static void csi_K(struct tty_t *tty)
         fb_del(&tty->fb, x, tty->fb.y);
       break;
     case 2:                 /* erase whole line */
-      for (x = 0; x < tty->fb.width_glyph; x++)
+      for (x = 0; x < tty->fb.width; x++)
         fb_del(&tty->fb, x, tty->fb.y);
       break;
     default:
@@ -162,24 +161,24 @@ static void csi_J(struct tty_t *tty)
 
   switch (tty->pars[0]) {
     case 0:                 /* erase from cursor to end of display */
-      for (x = tty->fb.x; x < tty->fb.width_glyph; x++)
+      for (x = tty->fb.x; x < tty->fb.width; x++)
         fb_del(&tty->fb, x, tty->fb.y);
 
-      for (y = tty->fb.y + 1; y < tty->fb.height_glyph; y++)
+      for (y = tty->fb.y + 1; y < tty->fb.height; y++)
         for (x = 0; x < tty->fb.width; x++)
           fb_del(&tty->fb, x, y);
       break;
     case 1:                 /* erase from start of display to cursor */
       for (y = 0; y < tty->fb.y; y++)
-        for (x = 0; x < tty->fb.width_glyph; x++)
+        for (x = 0; x < tty->fb.width; x++)
           fb_del(&tty->fb, x, y);
 
       for (x = 0; x <= tty->fb.x; x++)
         fb_del(&tty->fb, x, tty->fb.y);
       break;
     case 2:                 /* erase whole display */
-      for (y = 0; y < tty->fb.height_glyph; y++)
-        for (x = 0; x < tty->fb.width_glyph; x++)
+      for (y = 0; y < tty->fb.height; y++)
+        for (x = 0; x < tty->fb.width; x++)
           fb_del(&tty->fb, x, y);
       break;
     default:
@@ -413,8 +412,8 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
     init_framebuffer(&tty_table[i].fb, tag_fb);
 
     /* set winsize */
-    tty_table[i].winsize.ws_row = tty_table[i].fb.height_glyph;
-    tty_table[i].winsize.ws_col = tty_table[i].fb.width_glyph;
+    tty_table[i].winsize.ws_row = tty_table[i].fb.height;
+    tty_table[i].winsize.ws_col = tty_table[i].fb.width;
     tty_table[i].winsize.ws_xpixel = 0;
     tty_table[i].winsize.ws_ypixel = 0;
 
