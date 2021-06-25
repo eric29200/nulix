@@ -72,7 +72,7 @@ struct socket_t {
   uint16_t              protocol;
   uint16_t              type;
   struct inode_t *      inode;
-  struct sockaddr_in    sin;
+  struct sockaddr_in    src_sin;
   struct prot_ops *     ops;
   int                   waiting_chan;
   struct list_head_t    skb_list;
@@ -88,6 +88,7 @@ struct prot_ops {
 };
 
 /* protocol operations */
+extern struct prot_ops tcp_prot_ops;
 extern struct prot_ops udp_prot_ops;
 extern struct prot_ops icmp_prot_ops;
 extern struct prot_ops raw_prot_ops;

@@ -40,7 +40,7 @@ int udp_handle(struct socket_t *sock, struct sk_buff_t *skb)
     return -EINVAL;
 
   /* check destination */
-  if (sock->sin.sin_port != skb->h.udp_header->dst_port)
+  if (sock->src_sin.sin_port != skb->h.udp_header->dst_port)
     return -EINVAL;
 
   /* clone socket buffer */
@@ -102,7 +102,7 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 
   /* build udp header */
   skb->h.udp_header = (struct udp_header_t *) skb_put(skb, sizeof(struct udp_header_t));
-  udp_build_header(skb->h.udp_header, ntohs(sock->sin.sin_port), ntohs(dest_addr_in->sin_port),
+  udp_build_header(skb->h.udp_header, ntohs(sock->src_sin.sin_port), ntohs(dest_addr_in->sin_port),
                    sizeof(struct udp_header_t) + len);
 
   /* copy message */

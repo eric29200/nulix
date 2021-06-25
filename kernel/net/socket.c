@@ -136,8 +136,19 @@ int do_socket(int domain, int type, int protocol)
 
   /* choose socket type */
   switch (type) {
+    case SOCK_STREAM:
+      switch (protocol) {
+        case 0:
+        case IP_PROTO_TCP:
+          protocol = IP_PROTO_UDP;
+          sock_ops = &tcp_prot_ops;
+          break;
+        default:
+          return -EINVAL;
+      }
+
+      break;
     case SOCK_DGRAM:
-      /* choose protocol */
       switch (protocol) {
         case 0:
         case IP_PROTO_UDP:
@@ -209,7 +220,7 @@ int do_socket(int domain, int type, int protocol)
 int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
   uint16_t max_port;
-  struct sockaddr_in *sin;
+  struct sockaddr_in *src_sin;
   struct socket_t *sock;
   int i;
 
@@ -226,7 +237,7 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
     return -EINVAL;
 
   /* get internet address */
-  sin = (struct sockaddr_in *) addr;
+  src_sin = (struct sockaddr_in *) addr;
 
   /* check if asked port is already mapped or find max mapped port */
   for (i = 0, max_port = 0; i < NR_SOCKETS; i++) {
@@ -235,20 +246,20 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
       continue;
 
     /* already mapped */
-    if (sin->sin_port && sin->sin_port == sockets[i].sin.sin_port)
+    if (src_sin->sin_port && src_sin->sin_port == sockets[i].src_sin.sin_port)
       return -ENOSPC;
 
     /* update max mapped port */
-    if (htons(sockets[i].sin.sin_port) > max_port)
-      max_port = htons(sockets[i].sin.sin_port);
+    if (htons(sockets[i].src_sin.sin_port) > max_port)
+      max_port = htons(sockets[i].src_sin.sin_port);
   }
 
   /* allocate a dynamic port */
-  if (!sin->sin_port)
-    sin->sin_port = htons(max_port < IP_START_DYN_PORT ? IP_START_DYN_PORT : max_port + 1);
+  if (!src_sin->sin_port)
+    src_sin->sin_port = htons(max_port < IP_START_DYN_PORT ? IP_START_DYN_PORT : max_port + 1);
 
   /* copy address */
-  memcpy(&sock->sin, sin, sizeof(struct sockaddr));
+  memcpy(&sock->src_sin, src_sin, sizeof(struct sockaddr));
 
   return 0;
 }
