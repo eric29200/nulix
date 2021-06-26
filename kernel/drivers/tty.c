@@ -81,7 +81,7 @@ size_t tty_read(dev_t dev, void *buf, size_t n)
 
     /* end of line : return */
     if (key == '\n')
-      return count;
+      break;
   }
 
   return count;
@@ -340,6 +340,11 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
       tty->state = TTY_STATE_NORMAL;
 
       switch (chars[i]) {
+        case 'D':
+          if (!tty->pars[0])
+            tty->pars[0]++;
+          fb_set_xy(&tty->fb, tty->fb.x - tty->pars[0], tty->fb.y);
+          break;
         case 'H':
           if (tty->pars[0])
             tty->pars[0]--;
