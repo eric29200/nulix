@@ -106,7 +106,7 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
                    sizeof(struct udp_header_t) + len);
 
   /* copy message */
-  buf = (struct udp_header_t *) skb_put(skb, len);
+  buf = skb_put(skb, len);
   for (i = 0; i < msg->msg_iovlen; i++) {
     memcpy(buf, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
     buf += msg->msg_iov[i].iov_len;

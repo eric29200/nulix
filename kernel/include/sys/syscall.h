@@ -93,6 +93,7 @@
 #define __NR_readlinkat         305
 #define __NR_socket             359
 #define __NR_bind               361
+#define __NR_connect            362
 #define __NR_sendto             369
 #define __NR_recvfrom           371
 #define __NR_recvmsg            372
@@ -180,5 +181,6 @@ int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout);
 int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerval_t *old_value);
+int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
 
 #endif

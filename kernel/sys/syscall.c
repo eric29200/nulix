@@ -91,6 +91,7 @@ static const void *syscalls[] = {
   [__NR_bind]             = sys_bind,
   [__NR_recvfrom]         = sys_recvfrom,
   [__NR_setitimer]        = sys_setitimer,
+  [__NR_connect]          = sys_connect,
 };
 
 /*

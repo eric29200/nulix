@@ -13,6 +13,7 @@ struct sk_buff_t {
   struct {
     struct icmp_header_t *    icmp_header;
     struct udp_header_t *     udp_header;
+    struct tcp_header_t *     tcp_header;
   }                           h;
   struct {
     struct arp_header_t *     arp_header;

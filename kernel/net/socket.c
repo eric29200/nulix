@@ -219,9 +219,9 @@ int do_socket(int domain, int type, int protocol)
  */
 int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
-  uint16_t max_port;
   struct sockaddr_in *src_sin;
   struct socket_t *sock;
+  uint16_t max_port;
   int i;
 
   /* unused addrlen */
@@ -262,6 +262,51 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
   memcpy(&sock->src_sin, src_sin, sizeof(struct sockaddr));
 
   return 0;
+}
+
+/*
+ * Connect system call.
+ */
+int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
+{
+  struct socket_t *sock;
+  uint16_t max_port;
+  int i;
+
+  /* unused addrlen */
+  UNUSED(addrlen);
+
+  /* check socket file descriptor */
+  if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+    return -EBADF;
+
+  /* find socket */
+  sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* find max mapped port */
+  for (i = 0, max_port = 0; i < NR_SOCKETS; i++) {
+    /* different protocol : skip */
+    if (!sockets[i].state || sockets[i].protocol != sock->protocol)
+      continue;
+
+    /* update max mapped port */
+    if (htons(sockets[i].src_sin.sin_port) > max_port)
+      max_port = htons(sockets[i].src_sin.sin_port);
+  }
+
+  /* allocate a dynamic port */
+  sock->src_sin.sin_port = htons(max_port < IP_START_DYN_PORT ? IP_START_DYN_PORT : max_port + 1);
+
+  /* copy address */
+  memcpy(&sock->dst_sin, addr, sizeof(struct sockaddr));
+
+  /* connect not implemented */
+  if (!sock->ops || !sock->ops->connect)
+    return -EINVAL;
+
+  return sock->ops->connect(sock);
 }
 
 /*
