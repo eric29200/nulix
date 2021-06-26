@@ -152,7 +152,6 @@ void fb_putc(struct framebuffer_t *fb, uint8_t c)
     fb->x = 0;
   } else if (c == '\b') {
     fb->x--;
-    fb->buf[fb->y * fb->width + fb->x] = 0;
   }
 
   /* go to next line */

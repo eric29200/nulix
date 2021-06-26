@@ -330,27 +330,27 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
 
     /* handle pars */
     if (tty->state == TTY_STATE_GOTPARS) {
-        tty->state = TTY_STATE_NORMAL;
+      tty->state = TTY_STATE_NORMAL;
 
-        switch (chars[i]) {
-          case 'H':
-            if (tty->pars[0])
-              tty->pars[0]--;
-            if (tty->pars[1])
-              tty->pars[1]--;
-            fb_set_xy(&tty->fb, tty->pars[1], tty->pars[0]);
-            break;
-          case 'K':
-            csi_K(tty);
-            break;
-          case 'J':
-            csi_J(tty);
-            break;
-          default:
-            break;
-        }
+      switch (chars[i]) {
+        case 'H':
+          if (tty->pars[0])
+            tty->pars[0]--;
+          if (tty->pars[1])
+            tty->pars[1]--;
+          fb_set_xy(&tty->fb, tty->pars[1], tty->pars[0]);
+          break;
+        case 'K':
+          csi_K(tty);
+          break;
+        case 'J':
+          csi_J(tty);
+          break;
+        default:
+          break;
+      }
 
-        continue;
+      continue;
     }
   }
 
