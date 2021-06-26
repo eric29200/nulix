@@ -15,8 +15,19 @@
 #define KEYBOARD_STATUS_ALT         0x04
 #define KEYBOARD_STATUS_CAPSLOCK    0x08
 
-#define F1_KEY                      0x3B
-#define F10_KEY                     0x44
+#define KEY_F1                      0x3B
+#define KEY_F10                     0x44
+
+#define KEY_HOME                    0xE0
+#define KEY_END                     0xE1
+#define KEY_UP                      0xE2
+#define KEY_DOWN                    0xE3
+#define KEY_LEFT                    0xE4
+#define KEY_RIGHT                   0xE5
+#define KEY_PAGEUP                  0xE6
+#define KEY_PAGEDOWN                0xE7
+#define KEY_INSERT                  0xE8
+#define KEY_DELETE                  0xE9
 
 /* keyboard status */
 static uint32_t keyboard_status = 0;
@@ -69,6 +80,22 @@ static unsigned char alt_map[] = {
     0,    0,    0,    0,    0,    0,    0,    0,
     0 };
 
+/* escape map */
+static unsigned char esc_map[] = {
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    KEY_HOME,
+  KEY_UP,    KEY_PAGEUP,    0,    KEY_LEFT,    0,    KEY_RIGHT,    0,    KEY_END,
+  KEY_DOWN,    KEY_PAGEDOWN,    KEY_INSERT,    KEY_DELETE,    0,    0,    0,    0,
+  0,    0,    0,    0,    0,    0,    0,    0,
+  0 };
+
 /*
  * Scan keyboard key.
  */
@@ -92,14 +119,14 @@ static uint32_t scan_key()
  */
 static void keyboard_handler(struct registers_t *regs)
 {
-  uint32_t c;
+  uint32_t scan_code, key_code;
 
   UNUSED(regs);
 
   /* get key */
-  c = scan_key();
+  scan_code = scan_key();
 
-  switch (c) {
+  switch (scan_code) {
     case 0x2A:
     case 0x36:
       keyboard_status |= KEYBOARD_STATUS_SHIFT;
@@ -125,35 +152,39 @@ static void keyboard_handler(struct registers_t *regs)
       break;
     default:
       /* on key down, send char to current tty */
-      if ((c & 0x80) == 0) {
+      if ((scan_code & 0x80) == 0) {
         if ((keyboard_status & KEYBOARD_STATUS_CTRL) != 0) {
-          c = key_map[c];
+          key_code = key_map[scan_code];
 
           /* SIGINT/SIGSTOP signals */
-          if (c == 'c')
+          if (key_code == 'c')
             tty_signal_group(DEV_TTY0, SIGINT);
-          else if (c == 'z')
+          else if (key_code == 'z')
             tty_signal_group(DEV_TTY0, SIGSTOP);
 
-          c = '\n';
+          key_code = '\n';
         } else if ((keyboard_status & KEYBOARD_STATUS_ALT) != 0) {
           /* F keys : change tty */
-          if (c >= F1_KEY && c <= F10_KEY) {
-            tty_change(c - F1_KEY);
+          if (scan_code >= KEY_F1 && scan_code <= KEY_F10) {
+            tty_change(scan_code - KEY_F1);
             return;
           }
 
-          c = alt_map[c];
+          key_code = alt_map[scan_code];
         } else if ((((keyboard_status & KEYBOARD_STATUS_SHIFT) != 0)
                     ^ ((keyboard_status & KEYBOARD_STATUS_CAPSLOCK) != 0)) != 0) {
-          c = shift_map[c];
+          key_code = shift_map[scan_code];
         } else {
-          c = key_map[c];
+          key_code = key_map[scan_code];
         }
 
+        /* check escape map */
+        if (!key_code)
+          key_code = esc_map[scan_code];
+
         /* send character to tty */
-        if (c)
-          tty_update(c);
+        if (key_code)
+          tty_update(key_code);
       }
       break;
   }
