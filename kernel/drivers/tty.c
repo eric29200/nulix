@@ -135,6 +135,13 @@ void tty_update(unsigned char c)
     case KEY_PAGEDOWN:
       tty->buf[tty->w_pos++] = 27;
       tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 54;
+      tty->buf[tty->w_pos++] = 126;
+      len = 4;
+      break;
+    case KEY_HOME:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
       tty->buf[tty->w_pos++] = 72;
       len = 3;
       break;
@@ -354,6 +361,7 @@ size_t tty_write(dev_t dev, const void *buf, size_t n)
     }
   }
 
+  tty->fb.dirty = 1;
   return n;
 }
 
