@@ -1,4 +1,5 @@
 #include <drivers/serial.h>
+#include <drivers/keyboard.h>
 #include <drivers/termios.h>
 #include <drivers/tty.h>
 #include <drivers/pit.h>
@@ -106,6 +107,8 @@ dev_t tty_get()
 void tty_update(unsigned char c)
 {
   struct tty_t *tty;
+  size_t len;
+  uint8_t *buf;
 
   /* get tty */
   tty = &tty_table[current_tty];
@@ -116,12 +119,78 @@ void tty_update(unsigned char c)
     tty->w_pos = 0;
   }
 
-  /* store character */
-  tty->buf[tty->w_pos++] = c;
+  /* set buffer */
+  len = 0;
+  buf = &tty->buf[tty->w_pos];
+
+  /* handle special keys */
+  switch (c) {
+    case KEY_PAGEUP:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 53;
+      tty->buf[tty->w_pos++] = 126;
+      len = 4;
+      break;
+    case KEY_PAGEDOWN:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 72;
+      len = 3;
+      break;
+    case KEY_END:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 70;
+      len = 3;
+      break;
+    case KEY_INSERT:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 50;
+      tty->buf[tty->w_pos++] = 126;
+      len = 4;
+      break;
+    case KEY_DELETE:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 51;
+      tty->buf[tty->w_pos++] = 126;
+      len = 4;
+      break;
+    case KEY_UP:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 65;
+      len = 3;
+      break;
+    case KEY_DOWN:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 66;
+      len = 3;
+      break;
+    case KEY_RIGHT:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 67;
+      len = 3;
+      break;
+    case KEY_LEFT:
+      tty->buf[tty->w_pos++] = 27;
+      tty->buf[tty->w_pos++] = 91;
+      tty->buf[tty->w_pos++] = 68;
+      len = 3;
+      break;
+    default:
+      tty->buf[tty->w_pos++] = c;
+      len = 1;
+      break;
+  }
 
   /* echo character on device */
-  if (L_ECHO(tty))
-    tty_write(tty->dev, &c, 1);
+  if (L_ECHO(tty) && len > 0)
+    tty_write(tty->dev, buf, len);
 
   /* wake up eventual process */
   task_wakeup(tty);
