@@ -7,6 +7,50 @@
 #include <stderr.h>
 
 /*
+ * Compute TCP checksum.
+ */
+static uint16_t tcp_checksum(struct tcp_header_t *tcp_header, uint8_t *src_address, uint8_t *dst_address, size_t len)
+{
+  uint16_t *chunk, ret;
+  uint32_t chksum;
+  size_t size;
+
+  /* compute size = tcp header + len */
+  size = sizeof(struct tcp_header_t) + len;
+
+  /* build TCP check header */
+  struct tcp_check_header_t tcp_check_header = {
+    .src_address      = inet_iton(src_address),
+    .dst_address      = inet_iton(dst_address),
+    .zero             = 0,
+    .protocol         = IP_PROTO_TCP,
+    .len              = htons(size),
+  };
+
+  /* compute check sum on TCP check header */
+  size = sizeof(struct tcp_check_header_t);
+  for (chksum = 0, chunk = (uint16_t *) &tcp_check_header; size > 1; size -= 2)
+    chksum += *chunk++;
+
+  if (size == 1)
+    chksum += *((uint8_t *) chunk);
+
+  /* compute check sum on TCP header */
+  size = sizeof(struct tcp_header_t) + len;
+  for (chunk = (uint16_t *) tcp_header; size > 1; size -= 2)
+    chksum += *chunk++;
+
+  if (size == 1)
+    chksum += *((uint8_t *) chunk);
+
+  chksum = (chksum & 0xFFFF) + (chksum >> 16);
+  chksum += (chksum >> 16);
+  ret = ~chksum;
+
+  return ret;
+}
+
+/*
  * Build a TCP header.
  */
 static void tcp_build_header(struct tcp_header_t *tcp_header, uint16_t src_port, uint16_t dst_port,
@@ -70,6 +114,9 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint32_t seq, uin
   skb->h.tcp_header = (struct tcp_header_t *) skb_put(skb, sizeof(struct tcp_header_t));
   tcp_build_header(skb->h.tcp_header, ntohs(sock->src_sin.sin_port), ntohs(sock->dst_sin.sin_port),
                    seq, ack, 0xFFFFU, flags);
+
+  /* compute TCP checksum */
+  skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sock->dev->ip_addr, dest_ip, 0);
 
   /* copy message */
   buf = skb_put(skb, len);

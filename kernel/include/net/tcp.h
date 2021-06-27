@@ -34,4 +34,15 @@ struct tcp_header_t {
   uint16_t  urg_ptr;
 };
 
+/*
+ * TCP check header.
+ */
+struct tcp_check_header_t {
+  uint32_t  src_address;
+  uint32_t  dst_address;
+  uint8_t   zero;
+  uint8_t   protocol;
+  uint16_t  len;
+};
+
 #endif
