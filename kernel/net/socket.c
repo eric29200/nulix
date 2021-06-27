@@ -169,7 +169,7 @@ int do_socket(int domain, int type, int protocol)
       switch (protocol) {
         case 0:
         case IP_PROTO_TCP:
-          protocol = IP_PROTO_UDP;
+          protocol = IP_PROTO_TCP;
           sock_ops = &tcp_prot_ops;
           break;
         default:
