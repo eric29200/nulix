@@ -113,9 +113,38 @@ int socket_poll(struct file_t *filp)
 }
 
 /*
+ * Socket read.
+ */
+int socket_read(struct file_t *filp, char *buf, int len)
+{
+  struct socket_t *sock;
+  struct msghdr_t msg;
+  struct iovec_t iov;
+
+  /* get socket */
+  sock = sock_lookup(filp->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* receive message not implemented */
+  if (!sock->ops || !sock->ops->recvmsg)
+    return -EINVAL;
+
+  /* build message */
+  memset(&msg, 0, sizeof(struct msghdr_t));
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  iov.iov_base = buf;
+  iov.iov_len = len;
+
+  return sock->ops->recvmsg(sock, &msg, 0);
+}
+
+/*
  * Socket file operations.
  */
 struct file_operations_t socket_fops = {
+  .read       = socket_read,
   .poll       = socket_poll,
   .close      = socket_close,
 };

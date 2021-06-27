@@ -3,6 +3,7 @@
 #include <net/ip.h>
 #include <net/arp.h>
 #include <net/ethernet.h>
+#include <proc/sched.h>
 #include <string.h>
 #include <stderr.h>
 
@@ -161,6 +162,28 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 }
 
 /*
+ * Receive a TCP message.
+ */
+int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
+{
+  /* sleep until we receive a packet */
+  for (;;) {
+    /* signal received : restart system call */
+    if (!sigisemptyset(&current_task->sigpend))
+      return -ERESTARTSYS;
+
+    /* message received : break */
+    if (!list_empty(&sock->skb_list))
+      break;
+
+    /* sleep */
+    task_sleep(&sock->waiting_chan);
+  }
+
+  return 0;
+}
+
+/*
  * Create a TCP connection.
  */
 int tcp_connect(struct socket_t *sock)
@@ -185,7 +208,7 @@ int tcp_connect(struct socket_t *sock)
  */
 struct prot_ops tcp_prot_ops = {
   .handle       = tcp_handle,
-  .recvmsg      = NULL,
+  .recvmsg      = tcp_recvmsg,
   .sendmsg      = NULL,
   .connect      = tcp_connect,
 };
