@@ -8,6 +8,8 @@
 
 #define HARWARE_TYPE_ETHERNET   0x01
 
+#define ETHERNET_MAX_MTU        0xFFFF
+
 /*
  * Ethernet header.
  */

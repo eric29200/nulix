@@ -4,6 +4,7 @@
 #include <net/arp.h>
 #include <net/ethernet.h>
 #include <proc/sched.h>
+#include <math.h>
 #include <string.h>
 #include <stderr.h>
 
@@ -123,7 +124,7 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint32_t seq, uin
   /* build tcp header */
   skb->h.tcp_header = (struct tcp_header_t *) skb_put(skb, sizeof(struct tcp_header_t));
   tcp_build_header(skb->h.tcp_header, ntohs(sock->src_sin.sin_port), ntohs(sock->dst_sin.sin_port),
-                   seq, ack, 0xFFFFU, flags);
+                   seq, ack, ETHERNET_MAX_MTU, flags);
 
   /* compute TCP checksum */
   skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sock->dev->ip_addr, dest_ip, 0);
@@ -147,7 +148,7 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
     return -EINVAL;
 
   /* check destination */
-  if (sock->src_sin.sin_port != skb->h.tcp_header->dst_port)
+  if (sock->src_sin.sin_port != skb->h.tcp_header->dst_port || sock->dst_sin.sin_port != skb->h.tcp_header->src_port)
     return -EINVAL;
 
   /* clone socket buffer */
@@ -189,15 +190,22 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 int tcp_connect(struct socket_t *sock)
 {
   struct sk_buff_t *skb;
+  uint32_t seq;
+
+  /* generate random sequence */
+  seq = rand();
 
   /* create SYN message */
-  skb = tcp_create_skb(sock, 1002, 0, TCPCB_FLAG_SYN, NULL, 0);
+  skb = tcp_create_skb(sock, seq, 0, TCPCB_FLAG_SYN, NULL, 0);
   if (!skb)
     return -EINVAL;
 
   /* send SYN message */
   sock->dev->send_packet(skb);
   skb_free(skb);
+
+  /* set socket state */
+  sock->state = SS_CONNECTING;
 
   return 0;
 }
