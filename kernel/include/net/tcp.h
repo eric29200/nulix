@@ -2,6 +2,7 @@
 #define _TCP_H_
 
 #include <stddef.h>
+#include <net/sk_buff.h>
 
 #define TCPCB_FLAG_FIN      0x01
 #define TCPCB_FLAG_SYN      0x02
@@ -44,5 +45,7 @@ struct tcp_check_header_t {
   uint8_t   protocol;
   uint16_t  len;
 };
+
+void tcp_receive(struct sk_buff_t *skb);
 
 #endif

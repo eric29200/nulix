@@ -4,6 +4,7 @@
 #include <net/arp.h>
 #include <net/ip.h>
 #include <net/udp.h>
+#include <net/tcp.h>
 #include <net/icmp.h>
 #include <proc/sched.h>
 #include <string.h>
@@ -116,6 +117,9 @@ void skb_handle(struct sk_buff_t *skb)
       switch (skb->nh.ip_header->protocol) {
         case IP_PROTO_UDP:
           udp_receive(skb);
+          break;
+        case IP_PROTO_TCP:
+          tcp_receive(skb);
           break;
         case IP_PROTO_ICMP:
           icmp_receive(skb);

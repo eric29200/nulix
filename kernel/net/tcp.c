@@ -75,6 +75,15 @@ static void tcp_build_header(struct tcp_header_t *tcp_header, uint16_t src_port,
 }
 
 /*
+ * Receive/decode a TCP packet.
+ */
+void tcp_receive(struct sk_buff_t *skb)
+{
+  skb->h.tcp_header = (struct tcp_header_t *) skb->data;
+  skb_pull(skb, sizeof(struct tcp_header_t));
+}
+
+/*
  * Create a TCP message.
  */
 static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint32_t seq, uint32_t ack,
@@ -126,6 +135,32 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint32_t seq, uin
 }
 
 /*
+ * Handle a TCP packet.
+ */
+int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
+{
+  struct sk_buff_t *skb_new;
+
+  /* check protocol */
+  if (sock->protocol != skb->nh.ip_header->protocol)
+    return -EINVAL;
+
+  /* check destination */
+  if (sock->src_sin.sin_port != skb->h.tcp_header->dst_port)
+    return -EINVAL;
+
+  /* clone socket buffer */
+  skb_new = skb_clone(skb);
+  if (!skb_new)
+    return -ENOMEM;
+
+  /* push skb in socket queue */
+  list_add_tail(&skb_new->list, &sock->skb_list);
+
+  return 0;
+}
+
+/*
  * Create a TCP connection.
  */
 int tcp_connect(struct socket_t *sock)
@@ -149,7 +184,7 @@ int tcp_connect(struct socket_t *sock)
  * TCP protocol operations.
  */
 struct prot_ops tcp_prot_ops = {
-  .handle       = NULL,
+  .handle       = tcp_handle,
   .recvmsg      = NULL,
   .sendmsg      = NULL,
   .connect      = tcp_connect,
