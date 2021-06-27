@@ -33,6 +33,10 @@ int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerv
   expires_ms = new_value->it_value_sec * 1000;
   expires_ms += (new_value->it_value_usec / 1000);
 
+  /* delete timer */
+  if (current_task->sig_tm.list.next)
+    timer_event_del(&current_task->sig_tm);
+
   /* set timer */
   timer_event_init(&current_task->sig_tm, itimer_handler, &current_task->pid, jiffies + ms_to_jiffies(expires_ms));
   timer_event_add(&current_task->sig_tm);

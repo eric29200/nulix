@@ -10,6 +10,10 @@ void sys_exit(int status)
   struct task_t *child;
   int i;
 
+  /* delete timer */
+  if (current_task->sig_tm.list.next)
+    timer_event_del(&current_task->sig_tm);
+
   /* close opened files */
   for (i = 0; i < NR_OPEN; i++)
     if (current_task->filp[i])
