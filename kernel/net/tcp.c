@@ -126,16 +126,16 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
                    sock->seq_no, sock->ack_no, ETHERNET_MAX_MTU, flags);
 
   /* compute tcp checksum */
-  skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sock->dev->ip_addr, dest_ip, 0);
+  skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sock->dev->ip_addr, dest_ip, len);
 
   /* copy message */
   buf = skb_put(skb, len);
   memcpy(buf, msg, len);
 
-  /* update socket sequence */
+  /* update sequence */
   if (len)
     sock->seq_no += len;
-  else
+  else if (flags & TCPCB_FLAG_SYN)
     sock->seq_no += 1;
 
   return skb;
