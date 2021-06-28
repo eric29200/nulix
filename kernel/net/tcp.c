@@ -207,6 +207,13 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
  */
 int tcp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 {
+  struct sk_buff_t *skb;
+  size_t i;
+  int len;
+
+  /* unused flags */
+  UNUSED(flags);
+
   /* sleep until connected */
   for (;;) {
     /* signal received : restart system call */
@@ -221,7 +228,22 @@ int tcp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
     task_sleep(&sock->waiting_chan);
   }
 
-  return 0;
+  for (i = 0, len = 0; i < msg->msg_iovlen; i++) {
+    /* create socket buffer */
+    skb = tcp_create_skb(sock, TCPCB_FLAG_ACK, msg->msg_iov->iov_base, msg->msg_iov->iov_len);
+    if (!skb)
+      return -EINVAL;
+
+    /* send message */
+    sock->dev->send_packet(skb);
+
+    /* free message */
+    skb_free(skb);
+
+    len += msg->msg_iov->iov_len;
+  }
+
+  return len;
 }
 
 /*
