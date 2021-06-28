@@ -141,10 +141,39 @@ int socket_read(struct file_t *filp, char *buf, int len)
 }
 
 /*
+ * Socket write.
+ */
+int socket_write(struct file_t *filp, const char *buf, int len)
+{
+  struct socket_t *sock;
+  struct msghdr_t msg;
+  struct iovec_t iov;
+
+  /* get socket */
+  sock = sock_lookup(filp->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* send message not implemented */
+  if (!sock->ops || !sock->ops->sendmsg)
+    return -EINVAL;
+
+  /* build message */
+  memset(&msg, 0, sizeof(struct msghdr_t));
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  iov.iov_base = (char *) buf;
+  iov.iov_len = len;
+
+  return sock->ops->sendmsg(sock, &msg, 0);
+}
+
+/*
  * Socket file operations.
  */
 struct file_operations_t socket_fops = {
   .read       = socket_read,
+  .write      = socket_write,
   .poll       = socket_poll,
   .close      = socket_close,
 };
