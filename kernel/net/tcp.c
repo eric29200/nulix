@@ -88,8 +88,7 @@ void tcp_receive(struct sk_buff_t *skb)
 /*
  * Create a TCP message.
  */
-static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint32_t seq, uint32_t ack,
-                                        uint16_t flags, void *msg, size_t len)
+static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, void *msg, size_t len)
 {
   struct arp_table_entry_t *arp_entry;
   uint8_t dest_ip[4], route_ip[4];
@@ -124,7 +123,7 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint32_t seq, uin
   /* build tcp header */
   skb->h.tcp_header = (struct tcp_header_t *) skb_put(skb, sizeof(struct tcp_header_t));
   tcp_build_header(skb->h.tcp_header, ntohs(sock->src_sin.sin_port), ntohs(sock->dst_sin.sin_port),
-                   seq, ack, ETHERNET_MAX_MTU, flags);
+                   sock->seq_no, sock->ack_no, ETHERNET_MAX_MTU, flags);
 
   /* compute TCP checksum */
   skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sock->dev->ip_addr, dest_ip, 0);
@@ -132,6 +131,12 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint32_t seq, uin
   /* copy message */
   buf = skb_put(skb, len);
   memcpy(buf, msg, len);
+
+  /* update socket sequence */
+  if (len)
+    sock->seq_no += len;
+  else
+    sock->seq_no += 1;
 
   return skb;
 }
@@ -185,6 +190,28 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 }
 
 /*
+ * Send a TCP message.
+ */
+int tcp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
+{
+  /* sleep until connected */
+  for (;;) {
+    /* signal received : restart system call */
+    if (!sigisemptyset(&current_task->sigpend))
+      return -ERESTARTSYS;
+
+    /* connected : break */
+    if (sock->state == SS_CONNECTED)
+      break;
+
+    /* sleep */
+    task_sleep(&sock->waiting_chan);
+  }
+
+  return 0;
+}
+
+/*
  * Create a TCP connection.
  */
 int tcp_connect(struct socket_t *sock)
@@ -192,11 +219,12 @@ int tcp_connect(struct socket_t *sock)
   struct sk_buff_t *skb;
   uint32_t seq;
 
-  /* generate random sequence */
-  seq = rand();
+  /* generate sequence */
+  sock->seq_no = 0;
+  sock->ack_no = 0;
 
   /* create SYN message */
-  skb = tcp_create_skb(sock, seq, 0, TCPCB_FLAG_SYN, NULL, 0);
+  skb = tcp_create_skb(sock, TCPCB_FLAG_SYN, NULL, 0);
   if (!skb)
     return -EINVAL;
 
@@ -217,6 +245,6 @@ int tcp_connect(struct socket_t *sock)
 struct prot_ops tcp_prot_ops = {
   .handle       = tcp_handle,
   .recvmsg      = tcp_recvmsg,
-  .sendmsg      = NULL,
+  .sendmsg      = tcp_sendmsg,
   .connect      = tcp_connect,
 };

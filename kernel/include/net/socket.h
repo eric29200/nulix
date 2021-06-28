@@ -76,6 +76,8 @@ struct socket_t {
   struct sockaddr_in    dst_sin;
   struct prot_ops *     ops;
   int                   waiting_chan;
+  uint32_t              seq_no;
+  uint32_t              ack_no;
   struct list_head_t    skb_list;
 };
 
