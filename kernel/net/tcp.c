@@ -125,7 +125,7 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
   tcp_build_header(skb->h.tcp_header, ntohs(sock->src_sin.sin_port), ntohs(sock->dst_sin.sin_port),
                    sock->seq_no, sock->ack_no, ETHERNET_MAX_MTU, flags);
 
-  /* compute TCP checksum */
+  /* compute tcp checksum */
   skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sock->dev->ip_addr, dest_ip, 0);
 
   /* copy message */
@@ -156,13 +156,26 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
   if (sock->src_sin.sin_port != skb->h.tcp_header->dst_port || sock->dst_sin.sin_port != skb->h.tcp_header->src_port)
     return -EINVAL;
 
-  /* clone socket buffer */
-  skb_new = skb_clone(skb);
-  if (!skb_new)
-    return -ENOMEM;
+  switch (sock->state) {
+    case SS_CONNECTING:
+      /* find SYN/ACK message */
+      if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
+        sock->state = SS_CONNECTED;
+        sock->ack_no = ntohl(skb->h.tcp_header->seq) + ((uint32_t) skb->end - (uint32_t) skb->tail) + 1;
 
-  /* push skb in socket queue */
-  list_add_tail(&skb_new->list, &sock->skb_list);
+        /* create ACK message */
+        skb_new = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
+        if (!skb_new)
+          return -ENOMEM;
+
+        /* send ACK message */
+        sock->dev->send_packet(skb_new);
+        skb_free(skb_new);
+      }
+      break;
+    default:
+      break;
+  }
 
   return 0;
 }
@@ -217,7 +230,6 @@ int tcp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 int tcp_connect(struct socket_t *sock)
 {
   struct sk_buff_t *skb;
-  uint32_t seq;
 
   /* generate sequence */
   sock->seq_no = 0;
