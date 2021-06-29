@@ -234,13 +234,13 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   /* get IP header */
   skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
 
-  /* get UDP header */
-  skb->h.udp_header = (struct udp_header_t *) (skb->head
+  /* get TCP header */
+  skb->h.tcp_header = (struct tcp_header_t *) (skb->head
                                                + sizeof(struct ethernet_header_t)
                                                + sizeof(struct ip_header_t));
 
   /* get message */
-  buf = (void *) skb->h.udp_header + sizeof(struct tcp_header_t);
+  buf = (void *) skb->h.tcp_header + sizeof(struct tcp_header_t);
 
   /* compute message length */
   len = (void *) skb->end - buf;
