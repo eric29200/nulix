@@ -61,6 +61,7 @@
 #define __NR_modify_ldt         123
 #define __NR_sigprocmask        126
 #define __NR_getpgid            132
+#define __NR_llseek             140
 #define __NR_readv              145
 #define __NR_writev             146
 #define __NR_nanosleep          162
@@ -182,5 +183,6 @@ int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout);
 int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerval_t *old_value);
 int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
+int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence);
 
 #endif
