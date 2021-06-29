@@ -210,6 +210,9 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
       break;
   }
 
+  /* wake up eventual processes */
+  task_wakeup(&sock->waiting_chan);
+
   return 0;
 }
 
@@ -237,7 +240,7 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
       break;
 
     if (sock->state == SS_DISCONNECTING)
-      return 0;
+      return -ENOTCONN;
 
     /* sleep */
     task_sleep(&sock->waiting_chan);
