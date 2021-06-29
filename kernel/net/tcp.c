@@ -146,7 +146,7 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
  */
 int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 {
-  struct sk_buff_t *skb_new;
+  struct sk_buff_t *skb_ack, *skb_new;
 
   /* check protocol */
   if (sock->protocol != skb->nh.ip_header->protocol)
@@ -164,14 +164,35 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
         sock->ack_no = ntohl(skb->h.tcp_header->seq) + ((uint32_t) skb->end - (uint32_t) skb->tail) + 1;
 
         /* create ACK message */
-        skb_new = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
-        if (!skb_new)
+        skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
+        if (!skb_ack)
           return -ENOMEM;
 
         /* send ACK message */
-        sock->dev->send_packet(skb_new);
-        skb_free(skb_new);
+        sock->dev->send_packet(skb_ack);
+        skb_free(skb_ack);
       }
+      break;
+    case SS_CONNECTED:
+        /* clone socket buffer */
+        skb_new = skb_clone(skb);
+        if (!skb_new)
+          return -ENOMEM;
+
+        /* push skb in socket queue */
+        list_add_tail(&skb_new->list, &sock->skb_list);
+
+        /* update ack number */
+        sock->ack_no = ntohl(skb->h.tcp_header->seq) + ((uint32_t) skb->end - (uint32_t) skb->tail) + 1;
+
+        /* create ACK message */
+        skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
+        if (!skb_ack)
+          return -ENOMEM;
+
+        /* send ACK message */
+        sock->dev->send_packet(skb_ack);
+        skb_free(skb_ack);
       break;
     default:
       break;
@@ -185,6 +206,14 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
  */
 int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 {
+  size_t len, n, i, count = 0;
+  struct sockaddr_in *sin;
+  struct sk_buff_t *skb;
+  void *buf;
+
+  /* unused flags */
+  UNUSED(flags);
+
   /* sleep until we receive a packet */
   for (;;) {
     /* signal received : restart system call */
@@ -199,7 +228,41 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
     task_sleep(&sock->waiting_chan);
   }
 
-  return 0;
+  /* get first message */
+  skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
+
+  /* get IP header */
+  skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+
+  /* get UDP header */
+  skb->h.udp_header = (struct udp_header_t *) (skb->head
+                                               + sizeof(struct ethernet_header_t)
+                                               + sizeof(struct ip_header_t));
+
+  /* get message */
+  buf = (void *) skb->h.udp_header + sizeof(struct tcp_header_t);
+
+  /* compute message length */
+  len = (void *) skb->end - buf;
+
+  /* copy message */
+  for (i = 0; i < msg->msg_iovlen; i++) {
+    n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
+    memcpy(msg->msg_iov[i].iov_base, buf, n);
+    count += n;
+  }
+
+  /* set source address */
+  sin = (struct sockaddr_in *) msg->msg_name;
+  sin->sin_family = AF_INET;
+  sin->sin_port = skb->h.tcp_header->src_port;
+  sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+
+  /* remove and free socket buffer */
+  list_del(&skb->list);
+  skb_free(skb);
+
+  return count;
 }
 
 /*

@@ -126,11 +126,10 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
  */
 int udp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 {
-  size_t len, n, count = 0;
+  size_t len, n, i, count = 0;
   struct sockaddr_in *sin;
   struct sk_buff_t *skb;
   void *buf;
-  size_t i;
 
   /* unused flags */
   UNUSED(flags);
