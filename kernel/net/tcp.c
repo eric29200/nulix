@@ -180,15 +180,17 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 
       break;
     case SS_CONNECTED:
-        /* push skb in socket queue */
-        if (data_len > 0) {
-          /* clone socket buffer */
-          skb_new = skb_clone(skb);
-          if (!skb_new)
-            return -ENOMEM;
+        /* ignore null messages */
+        if (data_len <= 0)
+          break;
 
-          list_add_tail(&skb_new->list, &sock->skb_list);
-        }
+        /* clone socket buffer */
+        skb_new = skb_clone(skb);
+        if (!skb_new)
+          return -ENOMEM;
+
+        /* add buffer to socket */
+        list_add_tail(&skb_new->list, &sock->skb_list);
 
         /* update ack number */
         sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
