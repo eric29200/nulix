@@ -147,6 +147,7 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
 int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 {
   struct sk_buff_t *skb_ack, *skb_new;
+  uint32_t data_len;
 
   /* check protocol */
   if (sock->protocol != skb->nh.ip_header->protocol)
@@ -161,7 +162,7 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
       /* find SYN/ACK message */
       if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
         sock->state = SS_CONNECTED;
-        sock->ack_no = ntohl(skb->h.tcp_header->seq) + ((uint32_t) skb->end - (uint32_t) skb->tail) + 1;
+        sock->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
 
         /* create ACK message */
         skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
@@ -172,18 +173,24 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
         sock->dev->send_packet(skb_ack);
         skb_free(skb_ack);
       }
+
       break;
     case SS_CONNECTED:
-        /* clone socket buffer */
-        skb_new = skb_clone(skb);
-        if (!skb_new)
-          return -ENOMEM;
+        /* compute data length */
+        data_len = (uint32_t) skb->end - (uint32_t) skb->h.tcp_header - sizeof(struct tcp_header_t);
 
         /* push skb in socket queue */
-        list_add_tail(&skb_new->list, &sock->skb_list);
+        if (data_len > 0) {
+          /* clone socket buffer */
+          skb_new = skb_clone(skb);
+          if (!skb_new)
+            return -ENOMEM;
+
+          list_add_tail(&skb_new->list, &sock->skb_list);
+        }
 
         /* update ack number */
-        sock->ack_no = ntohl(skb->h.tcp_header->seq) + ((uint32_t) skb->end - (uint32_t) skb->tail) + 1;
+        sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
 
         /* create ACK message */
         skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
@@ -193,6 +200,10 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
         /* send ACK message */
         sock->dev->send_packet(skb_ack);
         skb_free(skb_ack);
+
+        /* FIN message : close socket */
+        if (skb->h.tcp_header->fin)
+          sock->state = SS_DISCONNECTING;
       break;
     default:
       break;
@@ -223,6 +234,9 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
     /* message received : break */
     if (!list_empty(&sock->skb_list))
       break;
+
+    if (sock->state == SS_DISCONNECTING)
+      return 0;
 
     /* sleep */
     task_sleep(&sock->waiting_chan);
