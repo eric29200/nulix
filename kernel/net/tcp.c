@@ -125,12 +125,12 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
   tcp_build_header(skb->h.tcp_header, ntohs(sock->src_sin.sin_port), ntohs(sock->dst_sin.sin_port),
                    sock->seq_no, sock->ack_no, ETHERNET_MAX_MTU, flags);
 
-  /* compute tcp checksum */
-  skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sock->dev->ip_addr, dest_ip, len);
-
   /* copy message */
   buf = skb_put(skb, len);
   memcpy(buf, msg, len);
+
+  /* compute tcp checksum */
+  skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sock->dev->ip_addr, dest_ip, len);
 
   /* update sequence */
   if (len)
