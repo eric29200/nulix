@@ -2,6 +2,8 @@
 #define _TCP_H_
 
 #include <stddef.h>
+#include <net/ip.h>
+#include <net/net.h>
 #include <net/sk_buff.h>
 
 #define TCPCB_FLAG_FIN      0x01
@@ -47,5 +49,13 @@ struct tcp_check_header_t {
 };
 
 void tcp_receive(struct sk_buff_t *skb);
+
+/*
+ * Get TCP data length.
+ */
+static inline uint16_t tcp_data_length(struct sk_buff_t *skb)
+{
+  return ntohs(skb->nh.ip_header->length) - (skb->nh.ip_header->ihl + skb->h.tcp_header->doff) * 4;
+}
 
 #endif

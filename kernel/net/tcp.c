@@ -157,12 +157,16 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
   if (sock->src_sin.sin_port != skb->h.tcp_header->dst_port || sock->dst_sin.sin_port != skb->h.tcp_header->src_port)
     return -EINVAL;
 
+  /* compute data length */
+  data_len = tcp_data_length(skb);
+
+  /* handle TCP packet */
   switch (sock->state) {
     case SS_CONNECTING:
       /* find SYN/ACK message */
       if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
         sock->state = SS_CONNECTED;
-        sock->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
+        sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
 
         /* create ACK message */
         skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
@@ -176,9 +180,6 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 
       break;
     case SS_CONNECTED:
-        /* compute data length */
-        data_len = (uint32_t) skb->end - (uint32_t) skb->h.tcp_header - sizeof(struct tcp_header_t);
-
         /* push skb in socket queue */
         if (data_len > 0) {
           /* clone socket buffer */
