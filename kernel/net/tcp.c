@@ -241,8 +241,9 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
     if (!list_empty(&sock->skb_list))
       break;
 
+    /* disconnected : break */
     if (sock->state == SS_DISCONNECTING)
-      return -ENOTCONN;
+      return 0;
 
     /* sleep */
     task_sleep(&sock->waiting_chan);
