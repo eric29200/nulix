@@ -261,14 +261,24 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
                                                + sizeof(struct ip_header_t));
 
   /* get message */
-  buf = tcp_data(skb);
-  len = tcp_data_length(skb);
+  buf = tcp_data(skb) + sock->msg_position;
+  len = tcp_data_length(skb) - sock->msg_position;
 
   /* copy message */
-  for (i = 0; i < msg->msg_iovlen; i++) {
+  for (i = 0; i < msg->msg_iovlen && len > 0; i++) {
     n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
     memcpy(msg->msg_iov[i].iov_base, buf, n);
     count += n;
+    len -= n;
+  }
+
+  /* remove and free socket buffer or remember position packet */
+  if (len <= 0) {
+    list_del(&skb->list);
+    skb_free(skb);
+    sock->msg_position = 0;
+  } else {
+    sock->msg_position = count;
   }
 
   /* set source address */
@@ -276,10 +286,6 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
   sin->sin_family = AF_INET;
   sin->sin_port = skb->h.tcp_header->src_port;
   sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
-
-  /* remove and free socket buffer */
-  list_del(&skb->list);
-  skb_free(skb);
 
   return count;
 }

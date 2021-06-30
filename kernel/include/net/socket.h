@@ -78,6 +78,7 @@ struct socket_t {
   int                   waiting_chan;
   uint32_t              seq_no;
   uint32_t              ack_no;
+  off_t                 msg_position;
   struct list_head_t    skb_list;
 };
 
