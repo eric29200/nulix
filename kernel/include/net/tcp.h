@@ -51,11 +51,27 @@ struct tcp_check_header_t {
 void tcp_receive(struct sk_buff_t *skb);
 
 /*
+ * Get TCP options length.
+ */
+static inline uint16_t tcp_option_length(struct sk_buff_t *skb)
+{
+  return skb->h.tcp_header->doff * 4 - sizeof(struct tcp_header_t);
+}
+
+/*
  * Get TCP data length.
  */
 static inline uint16_t tcp_data_length(struct sk_buff_t *skb)
 {
   return ntohs(skb->nh.ip_header->length) - (skb->nh.ip_header->ihl + skb->h.tcp_header->doff) * 4;
+}
+
+/*
+ * Get TCP data.
+ */
+static inline void *tcp_data(struct sk_buff_t *skb)
+{
+  return (void *) skb->h.tcp_header + sizeof(struct tcp_header_t) + tcp_option_length (skb);
 }
 
 #endif

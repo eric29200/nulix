@@ -261,10 +261,8 @@ int tcp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
                                                + sizeof(struct ip_header_t));
 
   /* get message */
-  buf = (void *) skb->h.tcp_header + sizeof(struct tcp_header_t);
-
-  /* compute message length */
-  len = (void *) skb->end - buf;
+  buf = tcp_data(skb);
+  len = tcp_data_length(skb);
 
   /* copy message */
   for (i = 0; i < msg->msg_iovlen; i++) {
