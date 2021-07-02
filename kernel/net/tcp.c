@@ -180,29 +180,34 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 
       break;
     case SS_CONNECTED:
-        /* ignore null messages */
-        if (data_len <= 0)
-          break;
+        /* add message */
+        if (data_len > 0) {
+          /* clone socket buffer */
+          skb_new = skb_clone(skb);
+          if (!skb_new)
+            return -ENOMEM;
 
-        /* clone socket buffer */
-        skb_new = skb_clone(skb);
-        if (!skb_new)
-          return -ENOMEM;
-
-        /* add buffer to socket */
-        list_add_tail(&skb_new->list, &sock->skb_list);
+          /* add buffer to socket */
+          list_add_tail(&skb_new->list, &sock->skb_list);
+        }
 
         /* update ack number */
-        sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len;
-
-        /* create ACK message */
-        skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
-        if (!skb_ack)
-          return -ENOMEM;
+        if (data_len > 0)
+          sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len;
+        else if (skb->h.tcp_header->fin)
+          sock->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
 
         /* send ACK message */
-        sock->dev->send_packet(skb_ack);
-        skb_free(skb_ack);
+        if (data_len || skb->h.tcp_header->fin) {
+          /* create ACK message */
+          skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
+          if (!skb_ack)
+            return -ENOMEM;
+
+          /* send ACK message */
+          sock->dev->send_packet(skb_ack);
+          skb_free(skb_ack);
+        }
 
         /* FIN message : close socket */
         if (skb->h.tcp_header->fin) {
