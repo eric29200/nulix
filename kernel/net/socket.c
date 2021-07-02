@@ -6,8 +6,19 @@
 #include <time.h>
 #include <stderr.h>
 
-/* sockets table */
+/* sockets table and free port index */
 struct socket_t sockets[NR_SOCKETS];
+static uint16_t next_port = IP_START_DYN_PORT;
+
+/*
+ * Get next free port.
+ */
+static uint16_t get_next_free_port()
+{
+  uint16_t port = next_port;
+  next_port++;
+  return port;
+}
 
 /*
  * Allocate a socket.
@@ -279,7 +290,6 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
   struct sockaddr_in *src_sin;
   struct socket_t *sock;
-  uint16_t max_port;
   int i;
 
   /* unused addrlen */
@@ -297,8 +307,8 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
   /* get internet address */
   src_sin = (struct sockaddr_in *) addr;
 
-  /* check if asked port is already mapped or find max mapped port */
-  for (i = 0, max_port = 0; i < NR_SOCKETS; i++) {
+  /* check if asked port is already mapped */
+  for (i = 0; i < NR_SOCKETS; i++) {
     /* different protocol : skip */
     if (!sockets[i].state || sockets[i].protocol != sock->protocol)
       continue;
@@ -306,15 +316,11 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
     /* already mapped */
     if (src_sin->sin_port && src_sin->sin_port == sockets[i].src_sin.sin_port)
       return -ENOSPC;
-
-    /* update max mapped port */
-    if (htons(sockets[i].src_sin.sin_port) > max_port)
-      max_port = htons(sockets[i].src_sin.sin_port);
   }
 
   /* allocate a dynamic port */
   if (!src_sin->sin_port)
-    src_sin->sin_port = htons(max_port < IP_START_DYN_PORT ? IP_START_DYN_PORT : max_port + 1);
+    src_sin->sin_port = htons(get_next_free_port());
 
   /* copy address */
   memcpy(&sock->src_sin, src_sin, sizeof(struct sockaddr));
