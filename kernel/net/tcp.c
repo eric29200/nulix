@@ -205,8 +205,20 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
         skb_free(skb_ack);
 
         /* FIN message : close socket */
-        if (skb->h.tcp_header->fin)
+        if (skb->h.tcp_header->fin) {
+          /* create FIN | ACK message */
+          sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
+          skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK | TCPCB_FLAG_FIN, NULL, 0);
+          if (!skb_ack)
+            return -ENOMEM;
+
+          /* send FIN | ACK message */
+          sock->dev->send_packet(skb_ack);
+          skb_free(skb_ack);
+
+          /* close socket */
           sock->state = SS_DISCONNECTING;
+        }
       break;
     default:
       break;
@@ -342,7 +354,7 @@ int tcp_connect(struct socket_t *sock)
   struct sk_buff_t *skb;
 
   /* generate sequence */
-  sock->seq_no = 0;
+  sock->seq_no = rand();
   sock->ack_no = 0;
 
   /* create SYN message */
