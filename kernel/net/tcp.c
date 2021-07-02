@@ -193,7 +193,7 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
         list_add_tail(&skb_new->list, &sock->skb_list);
 
         /* update ack number */
-        sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
+        sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len;
 
         /* create ACK message */
         skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
