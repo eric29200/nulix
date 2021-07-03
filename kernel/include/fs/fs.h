@@ -196,5 +196,6 @@ int do_getdents64(int fd, void *dirp, size_t count);
 int do_pipe(int pipefd[2]);
 int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
 int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout);
+int do_chmod(const char *pathname, mode_t mode);
 
 #endif

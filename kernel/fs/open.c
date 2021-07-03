@@ -95,3 +95,27 @@ int do_close(int fd)
 
   return 0;
 }
+
+/*
+ * Chmod system call.
+ */
+int do_chmod(const char *filename, mode_t mode)
+{
+  struct inode_t *inode;
+
+  /* get inode */
+  inode = namei(AT_FDCWD, filename, 1);
+  if (!inode)
+    return -ENOSPC;
+
+  /* adjust mode */
+  if (mode == (mode_t) - 1)
+    mode = inode->i_mode;
+
+  /* change mode */
+  inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
+  inode->i_dirt = 1;
+  iput(inode);
+
+  return 0;
+}

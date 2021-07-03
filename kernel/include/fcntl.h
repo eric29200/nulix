@@ -34,6 +34,9 @@
 #define S_IWOTH       0002
 #define S_IXOTH       0001
 
+#define S_IRWXUGO     (S_IRWXU | S_IRWXG | S_IRWXO)
+#define S_IALLUGO     (S_ISUID | S_ISGID | S_ISVTX | S_IRWXUGO)
+
 #define SEEK_SET      0
 #define SEEK_CUR      1
 #define SEEK_END      2

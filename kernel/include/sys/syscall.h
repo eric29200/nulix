@@ -25,6 +25,7 @@
 #define __NR_unlink             10
 #define __NR_execve             11
 #define __NR_chdir              12
+#define __NR_chmod              15
 #define __NR_lseek              19
 #define __NR_getpid             20
 #define __NR_setuid             23
@@ -184,5 +185,6 @@ int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerval_t *old_value);
 int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence);
+int sys_chmod(const char *pathname, mode_t mode);
 
 #endif

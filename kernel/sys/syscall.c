@@ -93,6 +93,7 @@ static const void *syscalls[] = {
   [__NR_setitimer]        = sys_setitimer,
   [__NR_connect]          = sys_connect,
   [__NR_llseek]           = sys_llseek,
+  [__NR_chmod]            = sys_chmod,
 };
 
 /*
