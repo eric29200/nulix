@@ -29,6 +29,10 @@ sudo cp busybox/busybox-1.33.1/_install/sbin/* tmp/sbin
 sudo cp busybox/busybox-1.33.1/_install/usr/bin/* tmp/usr/bin
 sudo cp busybox/busybox-1.33.1/_install/usr/sbin/* tmp/usr/sbin
 
+# cp busybox binaries
+sudo cp dropbear/dropbear-2020.81-build/bin/* tmp/usr/bin/
+sudo cp dropbear/dropbear-2020.81-build/sbin/* tmp/usr/sbin/
+
 # create devices nodes
 sudo mkdir tmp/dev
 sudo mknod tmp/dev/tty0 c 4 0
