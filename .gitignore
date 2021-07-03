@@ -12,6 +12,7 @@ dash/*
 coreutils/*
 toybox/*
 busybox/*
+dropbear/*
 tmp/*
 usr/init
 traffic.pcap
