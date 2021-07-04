@@ -361,6 +361,28 @@ int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 }
 
 /*
+ * Listen system call.
+ */
+int do_listen(int sockfd, int backlog)
+{
+  struct socket_t *sock;
+
+  /* unused backlog */
+  UNUSED(backlog);
+
+  /* check socket file descriptor */
+  if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+    return -EBADF;
+
+  /* find socket */
+  sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  return 0;
+}
+
+/*
  * Send to system call.
  */
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen)

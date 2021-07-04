@@ -96,6 +96,7 @@
 #define __NR_socket             359
 #define __NR_bind               361
 #define __NR_connect            362
+#define __NR_listen             363
 #define __NR_sendto             369
 #define __NR_recvfrom           371
 #define __NR_recvmsg            372
@@ -186,5 +187,6 @@ int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerv
 int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence);
 int sys_chmod(const char *pathname, mode_t mode);
+int sys_listen(int sockfd, int backlog);
 
 #endif

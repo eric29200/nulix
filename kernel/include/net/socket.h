@@ -102,6 +102,7 @@ extern struct prot_ops raw_prot_ops;
 int do_socket(int domain, int type, int protocol);
 int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
+int do_listen(int sockfd, int backlog);
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
 int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen);
 int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
