@@ -2,7 +2,12 @@
 #define _TIME_H_
 
 #include <stddef.h>
-#include <proc/sched.h>
+
+extern uint32_t startup_time;
+extern volatile uint32_t jiffies;
+
+#define HZ                                100
+#define CURRENT_TIME                      (startup_time + (jiffies / HZ))
 
 #define CLOCK_REALTIME      0
 #define CLOCK_MONOTONIC     1

@@ -67,3 +67,12 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 
   return count;
 }
+
+/*
+ * Select system call.
+ */
+int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout)
+{
+  printf("*****************************");
+  return 0;
+}

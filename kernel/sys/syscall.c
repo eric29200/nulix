@@ -95,6 +95,7 @@ static const void *syscalls[] = {
   [__NR_llseek]           = sys_llseek,
   [__NR_chmod]            = sys_chmod,
   [__NR_listen]           = sys_listen,
+  [__NR_select]           = sys_select,
 };
 
 /*

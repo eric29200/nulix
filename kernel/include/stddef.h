@@ -26,6 +26,12 @@ typedef int clockid_t;
 typedef unsigned char cc_t;
 typedef unsigned long tcflag_t;
 
+#define FDSET_SIZE  1024
+
+typedef struct {
+  unsigned int fds_bits[FDSET_SIZE / (8 * sizeof(unsigned int))];
+} fd_set_t;
+
 #define INT_MAX                               ((int) (~0U >> 1))
 #define UINT_MAX                              (~0U)
 #define LONG_MAX                              ((long) (~0UL >> 1))

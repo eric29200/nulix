@@ -3,7 +3,6 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>
-#include <proc/sched.h>
 #include <grub/multiboot2.h>
 #include <drivers/serial.h>
 #include <drivers/pit.h>
@@ -14,6 +13,7 @@
 #include <drivers/keyboard.h>
 #include <drivers/framebuffer.h>
 #include <drivers/rtl8139.h>
+#include <proc/sched.h>
 #include <fs/proc_fs.h>
 #include <sys/syscall.h>
 #include <stdio.h>

@@ -3,12 +3,6 @@
 
 #include <proc/task.h>
 
-#define HZ                                100
-#define CURRENT_TIME                      (startup_time + (jiffies / HZ))
-
-extern volatile uint32_t jiffies;
-extern uint32_t startup_time;
-
 #define TASK_RETURN_ADDRESS               0xFFFFFFFF
 
 extern struct task_t *init_task;

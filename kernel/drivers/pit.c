@@ -1,9 +1,9 @@
+#include <drivers/pit.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <x86/system.h>
 #include <mm/mm.h>
 #include <proc/sched.h>
-#include <drivers/pit.h>
 #include <time.h>
 #include <stdio.h>
 #include <stderr.h>

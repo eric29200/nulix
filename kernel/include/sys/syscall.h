@@ -6,8 +6,9 @@
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
 #include <net/socket.h>
-#include <resource.h>
+#include <proc/sched.h>
 #include <time.h>
+#include <resource.h>
 #include <uio.h>
 #include <stddef.h>
 
@@ -63,6 +64,7 @@
 #define __NR_sigprocmask        126
 #define __NR_getpgid            132
 #define __NR_llseek             140
+#define __NR_select             142
 #define __NR_readv              145
 #define __NR_writev             146
 #define __NR_nanosleep          162
@@ -188,5 +190,6 @@ int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence);
 int sys_chmod(const char *pathname, mode_t mode);
 int sys_listen(int sockfd, int backlog);
+int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
 
 #endif
