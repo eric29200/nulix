@@ -99,6 +99,7 @@
 #define __NR_bind               361
 #define __NR_connect            362
 #define __NR_listen             363
+#define __NR_accept             364
 #define __NR_sendto             369
 #define __NR_recvfrom           371
 #define __NR_recvmsg            372
@@ -191,5 +192,6 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
 int sys_chmod(const char *pathname, mode_t mode);
 int sys_listen(int sockfd, int backlog);
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
+int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
 
 #endif

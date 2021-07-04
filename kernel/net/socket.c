@@ -3,6 +3,7 @@
 #include <net/ip.h>
 #include <proc/sched.h>
 #include <fs/fs.h>
+#include <sys/syscall.h>
 #include <time.h>
 #include <stderr.h>
 
@@ -247,6 +248,7 @@ int do_socket(int domain, int type, int protocol)
   /* set socket */
   sock->dev = rtl8139_get_net_device();
   sock->state = SS_UNCONNECTED;
+  sock->family = domain;
   sock->type = type;
   sock->protocol = protocol;
   sock->ops = sock_ops;
@@ -383,6 +385,56 @@ int do_listen(int sockfd, int backlog)
   sock->state = SS_LISTENING;
 
   return 0;
+}
+
+/*
+ * Accept system call.
+ */
+int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
+{
+  struct socket_t *sock, *new_sock;
+  int new_sockfd, ret;
+
+  /* unused address length */
+  UNUSED(addrlen);
+
+  /* check socket file descriptor */
+  if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+    return -EBADF;
+
+  /* find socket */
+  sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* create a new socket */
+  new_sockfd = do_socket(sock->family, sock->type, sock->protocol);
+  if (new_sockfd < 0)
+    return new_sockfd;
+
+  /* get new socket */
+  new_sock = sock_lookup(current_task->filp[new_sockfd]->f_inode);
+  if (!new_sock)
+    return -EINVAL;
+
+  /* accept not implemented */
+  if (new_sock->ops || !new_sock->ops->accept) {
+    sys_close(new_sockfd);
+    return -EINVAL;
+  }
+
+  /* call accept protocol */
+  ret = new_sock->ops->accept(sock, new_sock);
+  if (ret < 0) {
+    sys_close(new_sockfd);
+    return ret;
+  }
+
+  /* set accepted address */
+  if (addr)
+    memcpy(addr, &new_sock->dst_sin, sizeof(struct sockaddr));
+
+  return new_sockfd;
 }
 
 /*
