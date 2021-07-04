@@ -379,6 +379,9 @@ int do_listen(int sockfd, int backlog)
   if (!sock)
     return -EINVAL;
 
+  /* update socket state */
+  sock->state = SS_LISTENING;
+
   return 0;
 }
 

@@ -58,6 +58,7 @@ struct msghdr_t {
 typedef enum {
   SS_FREE = 0,
   SS_UNCONNECTED,
+  SS_LISTENING,
   SS_CONNECTING,
   SS_CONNECTED,
   SS_DISCONNECTING

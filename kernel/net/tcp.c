@@ -154,7 +154,12 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
     return -EINVAL;
 
   /* check destination */
-  if (sock->src_sin.sin_port != skb->h.tcp_header->dst_port || sock->dst_sin.sin_port != skb->h.tcp_header->src_port)
+  if (sock->src_sin.sin_port != skb->h.tcp_header->dst_port)
+    return -EINVAL;
+
+  /* check source */
+  if ((sock->state == SS_CONNECTED || sock->state == SS_CONNECTING)
+      && sock->dst_sin.sin_port != skb->h.tcp_header->src_port)
     return -EINVAL;
 
   /* compute data length */
@@ -162,6 +167,16 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 
   /* handle TCP packet */
   switch (sock->state) {
+    case SS_LISTENING:
+      /* clone socket buffer */
+      skb_new = skb_clone(skb);
+      if (!skb_new)
+        return -ENOMEM;
+
+      /* add buffer to socket */
+      list_add_tail(&skb_new->list, &sock->skb_list);
+
+      break;
     case SS_CONNECTING:
       /* find SYN/ACK message */
       if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
