@@ -418,7 +418,7 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
     return -EINVAL;
 
   /* accept not implemented */
-  if (new_sock->ops || !new_sock->ops->accept) {
+  if (!new_sock->ops || !new_sock->ops->accept) {
     sys_close(new_sockfd);
     return -EINVAL;
   }

@@ -392,6 +392,43 @@ int tcp_connect(struct socket_t *sock)
   return 0;
 }
 
+/*
+ * Accept a TCP connection.
+ */
+int tcp_accept(struct socket_t *sock, struct socket_t *sock_new)
+{
+  struct sk_buff_t *skb;
+
+  /* empty socket : return */
+  if (list_empty(&sock->skb_list))
+    return -EINVAL;
+
+  /* get first socket buffer */
+  skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
+
+  /* get IP header */
+  skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+
+  /* get TCP header */
+  skb->h.tcp_header = (struct tcp_header_t *) (skb->head
+                                               + sizeof(struct ethernet_header_t)
+                                               + sizeof(struct ip_header_t));
+
+  /* set new socket */
+  sock_new->state = SS_CONNECTED;
+  memcpy(&sock_new->src_sin, &sock->src_sin, sizeof(struct sockaddr));
+  sock_new->dst_sin.sin_family = AF_INET;
+  sock_new->dst_sin.sin_port = skb->h.tcp_header->src_port;
+  sock_new->dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+  sock_new->seq_no = 0;
+  sock_new->ack_no = 0;
+
+  /* free socket buffer */
+  list_del(&skb->list);
+  skb_free(skb);
+
+  return 0;
+}
 
 /*
  * TCP protocol operations.
@@ -401,4 +438,5 @@ struct prot_ops tcp_prot_ops = {
   .recvmsg      = tcp_recvmsg,
   .sendmsg      = tcp_sendmsg,
   .connect      = tcp_connect,
+  .accept       = tcp_accept,
 };
