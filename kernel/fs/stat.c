@@ -41,6 +41,7 @@ int do_stat(int dirfd, const char *filename, struct stat_t *statbuf)
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
 {
   struct inode_t *inode;
+  dev_t dev;
 
   /* unused mask */
   UNUSED(mask);
@@ -53,7 +54,7 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
   /* reset stat buf */
   memset(statbuf, 0, sizeof(struct statx_t));
 
-  /* fill stat */
+  /* set stat buf */
   statbuf->stx_mask |= STATX_BASIC_STATS;
   statbuf->stx_blksize = BLOCK_SIZE;
   statbuf->stx_nlink = inode->i_nlinks;
@@ -66,6 +67,13 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
   statbuf->stx_btime.tv_sec = inode->i_time;
   statbuf->stx_ctime.tv_sec = inode->i_time;
   statbuf->stx_mtime.tv_sec = inode->i_time;
+
+  /* set minor/major */
+  if (S_ISCHR(inode->i_mode)) {
+    dev = inode->i_zone[0];
+    statbuf->stx_rdev_major = major(dev);
+    statbuf->stx_rdev_minor = minor(dev);
+  }
 
   /* release inode */
   iput(inode);
