@@ -26,6 +26,7 @@
 #define __NR_unlink             10
 #define __NR_execve             11
 #define __NR_chdir              12
+#define __NR_mknod              14
 #define __NR_chmod              15
 #define __NR_lseek              19
 #define __NR_getpid             20
@@ -193,5 +194,6 @@ int sys_chmod(const char *pathname, mode_t mode);
 int sys_listen(int sockfd, int backlog);
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
 int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
+int sys_mknod(const char *pathname, mode_t mode, dev_t dev);
 
 #endif

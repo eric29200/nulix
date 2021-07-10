@@ -650,3 +650,68 @@ out:
   iput(new_dir);
   return ret;
 }
+
+/*
+ * Create a node.
+ */
+int minix_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
+{
+  struct minix_dir_entry_t *de;
+  struct buffer_head_t *bh;
+  struct inode_t *inode;
+
+  /* no directory */
+  if (!dir)
+    return -ENOENT;
+
+  /* check if entry exists */
+  bh = minix_find_entry(dir, name, name_len, &de);
+  if (bh) {
+    brelse(bh);
+    iput(dir);
+    return -EEXIST;
+  }
+
+  /* create a new inode */
+  inode = minix_new_inode(dir->i_sb);
+  if (!inode) {
+    iput(dir);
+    return -ENOSPC;
+  }
+
+  /* set inode */
+  inode->i_uid = current_task->uid;
+  inode->i_gid = current_task->gid;
+  inode->i_mode = mode;
+  inode->i_time = CURRENT_TIME;
+  inode->i_dirt = 1;
+
+  /* set inode operations */
+  if (S_ISREG(inode->i_mode))
+    inode->i_op = &minix_file_iops;
+  else if (S_ISDIR(inode->i_mode))
+    inode->i_op = &minix_dir_iops;
+  else if (S_ISCHR(inode->i_mode))
+    inode->i_op = &minix_char_iops;
+
+  /* add inode to directory */
+  bh = minix_add_entry(dir, name, name_len, &de);
+  if (!bh) {
+    inode->i_nlinks--;
+    inode->i_dirt = 1;
+    iput(inode);
+    iput(dir);
+    return -ENOSPC;
+  }
+
+  /* set directory entry */
+  de->inode = inode->i_ino;
+  bh->b_dirt = 1;
+
+  /* release new inode and directory */
+  brelse(bh);
+  iput(inode);
+  iput(dir);
+
+  return 0;
+}

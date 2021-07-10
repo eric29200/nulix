@@ -97,6 +97,7 @@ static const void *syscalls[] = {
   [__NR_listen]           = sys_listen,
   [__NR_select]           = sys_select,
   [__NR_accept]           = sys_accept,
+  [__NR_mknod]            = sys_mknod,
 };
 
 /*

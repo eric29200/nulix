@@ -56,6 +56,7 @@ struct inode_operations_t minix_dir_iops = {
   .mkdir          = minix_mkdir,
   .rmdir          = minix_rmdir,
   .rename         = minix_rename,
+  .mknod          = minix_mknod,
   .truncate       = minix_truncate,
 };
 

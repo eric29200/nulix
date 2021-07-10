@@ -477,3 +477,26 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
   new_dir->i_ref++;
   return old_dir->i_op->rename(old_dir, old_basename, old_basename_len, new_dir, new_basename, new_basename_len);
 }
+
+/*
+ * Mknod system call.
+ */
+int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
+{
+  const char *basename;
+  size_t basename_len;
+  struct inode_t *dir;
+
+  /* get directory */
+  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
+  if (!dir)
+    return -ENOENT;
+
+  /* mknod not implemented */
+  if (!dir->i_op || !dir->i_op->mknod) {
+    iput(dir);
+    return -EPERM;
+  }
+
+  return dir->i_op->mknod(dir, basename, basename_len, mode, dev);
+}
