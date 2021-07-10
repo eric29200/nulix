@@ -684,6 +684,7 @@ int minix_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   inode->i_gid = current_task->gid;
   inode->i_mode = mode;
   inode->i_time = CURRENT_TIME;
+  inode->i_zone[0] = dev;
   inode->i_dirt = 1;
 
   /* set inode operations */
