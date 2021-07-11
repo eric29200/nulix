@@ -71,8 +71,6 @@ int pty_ioctl(struct file_t *filp, int request, unsigned long arg)
   if (!tty)
     return -EINVAL;
 
-  printf("ok\n");
-
   switch (request) {
     case TCGETS:
       memcpy((struct termios_t *) arg, &tty->termios, sizeof(struct termios_t));
