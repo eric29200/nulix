@@ -1,6 +1,7 @@
 #include <fs/minix_fs.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
+#include <drivers/tty.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -21,16 +22,6 @@ struct file_operations_t minix_dir_fops = {
 struct file_operations_t minix_file_fops = {
   .read           = minix_file_read,
   .write          = minix_file_write,
-};
-
-/*
- * Char device operations.
- */
-struct file_operations_t minix_char_fops = {
-  .open           = minix_char_open,
-  .read           = minix_char_read,
-  .write          = minix_char_write,
-  .poll           = minix_char_poll,
 };
 
 /*
@@ -57,14 +48,6 @@ struct inode_operations_t minix_dir_iops = {
   .rmdir          = minix_rmdir,
   .rename         = minix_rename,
   .mknod          = minix_mknod,
-  .truncate       = minix_truncate,
-};
-
-/*
- * Minix char device inode operations.
- */
-struct inode_operations_t minix_char_iops = {
-  .fops           = &minix_char_fops,
   .truncate       = minix_truncate,
 };
 
@@ -102,12 +85,23 @@ int minix_read_inode(struct inode_t *inode)
   for (j = 0; j < 10; j++)
     inode->i_zone[j] = minix_inode[i].i_zone[j];
 
-  if (S_ISDIR(inode->i_mode))
+  if (S_ISDIR(inode->i_mode)) {
     inode->i_op = &minix_dir_iops;
-  else if (S_ISCHR(inode->i_mode))
-    inode->i_op = &minix_char_iops;
-  else
+  } else if (S_ISCHR(inode->i_mode)) {
+    switch (major(inode->i_zone[0])) {
+      case major(DEV_TTY):
+        inode->i_op = &tty_iops;
+        break;
+      case major(DEV_TTY0):
+        inode->i_op = &tty_iops;
+        break;
+      default:
+        inode->i_op = NULL;
+        break;
+    }
+  } else {
     inode->i_op = &minix_file_iops;
+  }
 
   /* free minix inode */
   brelse(bh);

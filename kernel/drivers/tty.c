@@ -51,13 +51,14 @@ static struct tty_t *tty_lookup(dev_t dev)
 /*
  * Read TTY.
  */
-size_t tty_read(dev_t dev, void *buf, size_t n)
+int tty_read(struct file_t *filp, char *buf, int n)
 {
   struct tty_t *tty;
-  size_t count = 0;
-  int key;
+  int key, count = 0;
+  dev_t dev;
 
   /* get tty */
+  dev = filp->f_inode->i_zone[0];
   tty = tty_lookup(dev);
   if (!tty)
     return -EINVAL;
@@ -198,7 +199,7 @@ void tty_update(unsigned char c)
 
   /* echo character on device */
   if (L_ECHO(tty) && len > 0)
-    tty_write(tty->dev, (char *) buf, len);
+    tty->write(tty, (char *) buf, len);
 
   /* wake up eventual process */
   task_wakeup(tty);
@@ -207,11 +208,13 @@ void tty_update(unsigned char c)
 /*
  * Write to TTY.
  */
-int tty_write(dev_t dev, const char *buf, int n)
+int tty_write(struct file_t *filp, const char *buf, int n)
 {
   struct tty_t *tty;
+  dev_t dev;
 
   /* get tty */
+  dev = filp->f_inode->i_zone[0];
   tty = tty_lookup(dev);
   if (!tty)
     return -EINVAL;
@@ -237,11 +240,13 @@ void tty_change(uint32_t n)
 /*
  * TTY ioctl.
  */
-int tty_ioctl(dev_t dev, int request, unsigned long arg)
+int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 {
   struct tty_t *tty;
+  dev_t dev;
 
   /* get tty */
+  dev = filp->f_inode->i_zone[0];
   tty = tty_lookup(dev);
   if (!tty)
     return -EINVAL;
@@ -279,12 +284,14 @@ int tty_ioctl(dev_t dev, int request, unsigned long arg)
 /*
  * Poll a tty.
  */
-int tty_poll(dev_t dev)
+int tty_poll(struct file_t *filp)
 {
   struct tty_t *tty;
   int mask = 0;
+  dev_t dev;
 
   /* get tty */
+  dev = filp->f_inode->i_zone[0];
   tty = tty_lookup(dev);
   if (!tty)
     return -EINVAL;
@@ -373,3 +380,21 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 
   return 0;
 }
+
+/*
+ * Tty file operations.
+ */
+struct file_operations_t tty_fops = {
+  .read       = tty_read,
+  .write      = tty_write,
+  .poll       = tty_poll,
+  .ioctl      = tty_ioctl,
+};
+
+/*
+ * Tty inode operations.
+ */
+struct inode_operations_t tty_iops = {
+  .fops           = &tty_fops,
+};
+

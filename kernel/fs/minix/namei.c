@@ -1,5 +1,6 @@
 #include <fs/minix_fs.h>
 #include <proc/sched.h>
+#include <drivers/tty.h>
 #include <stderr.h>
 #include <fcntl.h>
 
@@ -688,12 +689,23 @@ int minix_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t m
   inode->i_dirt = 1;
 
   /* set inode operations */
-  if (S_ISREG(inode->i_mode))
+  if (S_ISREG(inode->i_mode)) {
     inode->i_op = &minix_file_iops;
-  else if (S_ISDIR(inode->i_mode))
+  } else if (S_ISDIR(inode->i_mode)) {
     inode->i_op = &minix_dir_iops;
-  else if (S_ISCHR(inode->i_mode))
-    inode->i_op = &minix_char_iops;
+  } else if (S_ISCHR(inode->i_mode)) {
+    switch (major(dev)) {
+      case major(DEV_TTY):
+        inode->i_op = &tty_iops;
+        break;
+      case major(DEV_TTY0):
+        inode->i_op = &tty_iops;
+        break;
+      default:
+        inode->i_op = NULL;
+        break;
+    }
+  }
 
   /* add inode to directory */
   bh = minix_add_entry(dir, name, name_len, &de);

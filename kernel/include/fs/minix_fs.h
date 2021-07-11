@@ -55,7 +55,6 @@ extern struct inode_operations_t minix_dir_iops;
 extern struct inode_operations_t minix_char_iops;
 extern struct file_operations_t minix_file_fops;
 extern struct file_operations_t minix_dir_fops;
-extern struct file_operations_t minix_char_fops;
 
 /* minix super operations */
 int minix_read_super(struct super_block_t *sb, dev_t dev);
@@ -89,11 +88,5 @@ int minix_getdents64(struct file_t *filp, void *dirp, size_t count);
 /* minix file operations */
 int minix_file_read(struct file_t *filp, char *buf, int count);
 int minix_file_write(struct file_t *filp, const char *buf, int count);
-
-/* minix char device operations */
-int minix_char_open(struct file_t *filp);
-int minix_char_read(struct file_t *filp, char *buf, int count);
-int minix_char_write(struct file_t *filp, const char *buf, int count);
-int minix_char_poll(struct file_t *filp);
 
 #endif

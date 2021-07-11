@@ -154,6 +154,7 @@ struct file_operations_t {
   int (*write)(struct file_t *, const char *, int);
   int (*getdents64)(struct file_t *, void *, size_t);
   int (*poll)(struct file_t *);
+  int (*ioctl)(struct file_t *, int, unsigned long);
 };
 
 /* file system operations */
@@ -185,6 +186,7 @@ int do_close(int fd);
 ssize_t do_read(int fd, char *buf, int count);
 ssize_t do_write(int fd, const char *buf, int count);
 off_t do_lseek(int fd, off_t offset, int whence);
+int do_ioctl(int fd, int request, unsigned long arg);
 int do_stat(int dirfd, const char *filename, struct stat_t *statbuf);
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
 int do_faccessat(int dirfd, const char *pathname, int flags);
