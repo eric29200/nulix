@@ -12,7 +12,7 @@
 #include <time.h>
 #include <dev.h>
 
-#define NB_TTYS         4
+#define NB_TTYS                 4
 
 /* global ttys */
 static struct tty_t tty_table[NB_TTYS];
@@ -384,7 +384,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 /*
  * Tty file operations.
  */
-struct file_operations_t tty_fops = {
+static struct file_operations_t tty_fops = {
   .read       = tty_read,
   .write      = tty_write,
   .poll       = tty_poll,

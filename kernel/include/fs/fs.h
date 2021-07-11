@@ -179,6 +179,9 @@ struct file_t *get_empty_filp();
 struct inode_t *namei(int dirfd, const char *pathname, int follow_links);
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
 
+/* character device drivers */
+struct inode_operations_t *char_get_driver(struct inode_t *inode);
+
 /* system calls */
 int do_mount(uint16_t magic, dev_t dev, const char *mount_point);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
