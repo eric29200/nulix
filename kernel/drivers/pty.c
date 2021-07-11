@@ -1,5 +1,6 @@
 #include <drivers/pty.h>
 #include <drivers/tty.h>
+#include <proc/sched.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -55,6 +56,68 @@ int ptmx_ioctl(struct file_t *filp, int request, unsigned long arg)
   }
 
   return 0;
+}
+
+/*
+ * Read a PTY.
+ */
+static int pty_read(struct file_t *filp, char *buf, int n)
+{
+  struct tty_t *tty;
+  int key, count = 0;
+  dev_t dev;
+
+  /* get tty */
+  dev = filp->f_inode->i_zone[0];
+  tty = pty_lookup(dev);
+  if (!tty)
+    return -EINVAL;
+
+  /* reset read/write positions on canonical mode */
+  if (L_CANON(tty)) {
+    tty->r_pos = 0;
+    tty->w_pos = 0;
+  }
+
+  /* read all characters */
+  while (count < n) {
+    /* wait for a character */
+    while (tty->r_pos >= tty->w_pos)
+      task_sleep(tty);
+
+    /* get key */
+    key = tty->buf[tty->r_pos++];
+
+    /* add key to buffer */
+    ((unsigned char *) buf)[count++] = key;
+
+    /* end of line : return */
+    if (key == '\n')
+      break;
+  }
+
+  return count;
+}
+
+/*
+ * Write to a PTY.
+ */
+static int pty_write(struct file_t *filp, const char *buf, int n)
+{
+  struct tty_t *tty;
+  dev_t dev;
+
+  /* get tty */
+  dev = filp->f_inode->i_zone[0];
+  tty = pty_lookup(dev);
+  if (!tty)
+    return -EINVAL;
+
+  /* write not implemented */
+  if (!tty->write)
+    return -EINVAL;
+
+  return tty->write(tty, buf, n);
 }
 
 /*
@@ -151,6 +214,8 @@ struct inode_operations_t ptmx_iops = {
  * Pty file operations.
  */
 static struct file_operations_t pty_fops = {
+  .read         = pty_read,
+  .write        = pty_write,
   .ioctl        = pty_ioctl,
 };
 

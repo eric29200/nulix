@@ -51,7 +51,7 @@ static struct tty_t *tty_lookup(dev_t dev)
 /*
  * Read TTY.
  */
-int tty_read(struct file_t *filp, char *buf, int n)
+static int tty_read(struct file_t *filp, char *buf, int n)
 {
   struct tty_t *tty;
   int key, count = 0;
@@ -208,7 +208,7 @@ void tty_update(unsigned char c)
 /*
  * Write to TTY.
  */
-int tty_write(struct file_t *filp, const char *buf, int n)
+static int tty_write(struct file_t *filp, const char *buf, int n)
 {
   struct tty_t *tty;
   dev_t dev;
@@ -284,7 +284,7 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 /*
  * Poll a tty.
  */
-int tty_poll(struct file_t *filp)
+static int tty_poll(struct file_t *filp)
 {
   struct tty_t *tty;
   int mask = 0;
