@@ -32,6 +32,8 @@
 #define FIONREAD        0x541B
 #define TIOCINQ         FIONREAD
 
+#define TIOCSPTLCK      0x40045431
+#define TIOCGPTN        0x80045430
 
 /*
  * Window size structure.
