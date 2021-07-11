@@ -101,6 +101,7 @@
 #define __NR_connect            362
 #define __NR_listen             363
 #define __NR_accept             364
+#define __NR_getpeername        368
 #define __NR_sendto             369
 #define __NR_recvfrom           371
 #define __NR_recvmsg            372
@@ -195,5 +196,6 @@ int sys_listen(int sockfd, int backlog);
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
 int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
 int sys_mknod(const char *pathname, mode_t mode, dev_t dev);
+int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 
 #endif

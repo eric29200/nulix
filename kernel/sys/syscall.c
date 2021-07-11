@@ -98,6 +98,7 @@ static const void *syscalls[] = {
   [__NR_select]           = sys_select,
   [__NR_accept]           = sys_accept,
   [__NR_mknod]            = sys_mknod,
+  [__NR_getpeername]      = sys_getpeername,
 };
 
 /*

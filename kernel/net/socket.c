@@ -542,3 +542,34 @@ int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 
   return sock->ops->recvmsg(sock, msg, flags);
 }
+
+/*
+ * Get peer name system call.
+ */
+int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
+{
+  struct sockaddr_in *sin;
+  struct socket_t *sock;
+
+  /* unused address length */
+  UNUSED(addrlen);
+
+  /* check socket file descriptor */
+  if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+    return -EBADF;
+
+  /* find socket */
+  sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+  if (!sock)
+    return -EINVAL;
+
+  /* copy destination address */
+  memset(addr, 0, sizeof(struct sockaddr));
+  sin = (struct sockaddr_in *) addr;
+  sin->sin_family = AF_INET;
+  sin->sin_port = sock->dst_sin.sin_port;
+  sin->sin_addr = sock->dst_sin.sin_addr;
+  *addrlen = sizeof(struct sockaddr_in);
+
+  return 0;
+}
