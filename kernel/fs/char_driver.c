@@ -1,4 +1,5 @@
 #include <fs/fs.h>
+#include <drivers/null.h>
 #include <drivers/tty.h>
 #include <drivers/pty.h>
 #include <fcntl.h>
@@ -16,6 +17,10 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
 
   /* get device number */
   dev = inode->i_zone[0];
+
+  /* null driver */
+  if (dev == DEV_NULL)
+    return &null_iops;
 
   /* ptmx driver */
   if (dev == DEV_PTMX)
