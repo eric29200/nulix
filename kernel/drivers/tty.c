@@ -82,11 +82,11 @@ static int tty_read(struct file_t *filp, char *buf, int n)
     ((unsigned char *) buf)[count++] = key;
 
     /* end of line : return */
-    if (key == 13)
+    if (key == '\n')
       break;
   }
 
-  return n;
+  return count;
 }
 
 /*
@@ -190,6 +190,10 @@ void tty_update(unsigned char c)
       tty->buf[tty->w_pos++] = 91;
       tty->buf[tty->w_pos++] = 68;
       len = 3;
+      break;
+    case 13:
+      tty->buf[tty->w_pos++] = '\n';
+      len = 1;
       break;
     default:
       tty->buf[tty->w_pos++] = c;
