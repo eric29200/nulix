@@ -122,6 +122,31 @@ int do_chmod(const char *filename, mode_t mode)
 }
 
 /*
+ * Fchmod system call.
+ */
+int do_fchmod(int fd, mode_t mode)
+{
+  struct inode_t *inode;
+
+  /* check file descriptor */
+  if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
+    return -EINVAL;
+
+  /* get inode */
+  inode = current_task->filp[fd]->f_inode;
+
+  /* adjust mode */
+  if (mode == (mode_t) - 1)
+    mode = inode->i_mode;
+
+  /* change mode */
+  inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
+  inode->i_dirt = 1;
+
+  return 0;
+}
+
+/*
  * Chown system call.
  */
 int do_chown(const char *pathname, uid_t owner, gid_t group)
@@ -153,13 +178,11 @@ int do_fchown(int fd, uid_t owner, gid_t group)
   if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
     return -EINVAL;
 
-
   /* update inode */
   inode = current_task->filp[fd]->f_inode;
   inode->i_uid = owner;
   inode->i_gid = group;
   inode->i_dirt = 1;
-  iput(inode);
 
   return 0;
 }

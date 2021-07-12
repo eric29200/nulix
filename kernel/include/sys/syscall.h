@@ -55,6 +55,7 @@
 #define __NR_readlink           85
 #define __NR_mmap               90
 #define __NR_munmap             91
+#define __NR_fchmod             94
 #define __NR_setitimer          104
 #define __NR_stat               106
 #define __NR_wait4              114
@@ -193,6 +194,7 @@ int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerval_t *old_value);
 int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence);
+int sys_fchmod(int fd, mode_t mode);
 int sys_chmod(const char *pathname, mode_t mode);
 int sys_listen(int sockfd, int backlog);
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
