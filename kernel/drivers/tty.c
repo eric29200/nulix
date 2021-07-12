@@ -86,7 +86,7 @@ static int tty_read(struct file_t *filp, char *buf, int n)
       break;
   }
 
-  return count;
+  return n;
 }
 
 /*
