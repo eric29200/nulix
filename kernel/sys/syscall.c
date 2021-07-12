@@ -99,6 +99,8 @@ static const void *syscalls[] = {
   [__NR_accept]           = sys_accept,
   [__NR_mknod]            = sys_mknod,
   [__NR_getpeername]      = sys_getpeername,
+  [__NR_chown32]          = sys_chown,
+  [__NR_fchown32]         = sys_fchown,
 };
 
 /*

@@ -76,6 +76,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
  */
 int do_close(int fd)
 {
+  /* check file descriptor */
   if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
     return -EINVAL;
 
@@ -114,6 +115,49 @@ int do_chmod(const char *filename, mode_t mode)
 
   /* change mode */
   inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
+  inode->i_dirt = 1;
+  iput(inode);
+
+  return 0;
+}
+
+/*
+ * Chown system call.
+ */
+int do_chown(const char *pathname, uid_t owner, gid_t group)
+{
+  struct inode_t *inode;
+
+  /* get inode */
+  inode = namei(AT_FDCWD, pathname, 1);
+  if (!inode)
+    return -ENOSPC;
+
+  /* update inode */
+  inode->i_uid = owner;
+  inode->i_gid = group;
+  inode->i_dirt = 1;
+  iput(inode);
+
+  return 0;
+}
+
+/*
+ * Fchown system call.
+ */
+int do_fchown(int fd, uid_t owner, gid_t group)
+{
+  struct inode_t *inode;
+
+  /* check file descriptor */
+  if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
+    return -EINVAL;
+
+
+  /* update inode */
+  inode = current_task->filp[fd]->f_inode;
+  inode->i_uid = owner;
+  inode->i_gid = group;
   inode->i_dirt = 1;
   iput(inode);
 

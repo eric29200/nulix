@@ -79,6 +79,8 @@
 #define __NR_getgid32           200
 #define __NR_geteuid32          201
 #define __NR_getegid32          202
+#define __NR_fchown32           207
+#define __NR_chown32            212
 #define __NR_setuid32           213
 #define __NR_setgid32           214
 #define __NR_getdents64         220
@@ -197,5 +199,7 @@ int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *except
 int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
 int sys_mknod(const char *pathname, mode_t mode, dev_t dev);
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
+int sys_chown(const char *pathname, uid_t owner, gid_t group);
+int sys_fchown(int fd, uid_t owner, gid_t group);
 
 #endif
