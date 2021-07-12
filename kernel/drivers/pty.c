@@ -106,6 +106,7 @@ static int pty_write(struct file_t *filp, const char *buf, int n)
 {
   struct tty_t *tty;
   dev_t dev;
+  int i;
 
   /* get tty */
   dev = filp->f_inode->i_zone[0];
@@ -113,11 +114,11 @@ static int pty_write(struct file_t *filp, const char *buf, int n)
   if (!tty)
     return -EINVAL;
 
-  /* write not implemented */
-  if (!tty->write)
-    return -EINVAL;
+  /* store characters in tty buffer */
+  for (i = 0; i < n; i++)
+    tty->buf[tty->w_pos++] = buf[i];
 
-  return tty->write(tty, buf, n);
+  return n;
 }
 
 /*
