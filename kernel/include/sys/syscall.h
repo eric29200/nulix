@@ -80,6 +80,7 @@
 #define __NR_getgid32           200
 #define __NR_geteuid32          201
 #define __NR_getegid32          202
+#define __NR_setgroups32        206
 #define __NR_fchown32           207
 #define __NR_chown32            212
 #define __NR_setuid32           213
@@ -203,5 +204,6 @@ int sys_mknod(const char *pathname, mode_t mode, dev_t dev);
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_chown(const char *pathname, uid_t owner, gid_t group);
 int sys_fchown(int fd, uid_t owner, gid_t group);
+int sys_setgroups(size_t size, const gid_t *list);
 
 #endif

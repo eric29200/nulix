@@ -102,6 +102,7 @@ static const void *syscalls[] = {
   [__NR_chown32]          = sys_chown,
   [__NR_fchown32]         = sys_fchown,
   [__NR_fchmod]           = sys_fchmod,
+  [__NR_setgroups32]      = sys_setgroups,
 };
 
 /*

@@ -205,6 +205,7 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
 int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout);
 int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
 int do_chmod(const char *pathname, mode_t mode);
+int do_fchmod(int fd, mode_t mode);
 int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev);
 int do_chown(const char *pathname, uid_t owner, gid_t group);
 int do_fchown(int fd, uid_t owner, gid_t group);
