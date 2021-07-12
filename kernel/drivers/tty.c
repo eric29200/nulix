@@ -82,7 +82,7 @@ static int tty_read(struct file_t *filp, char *buf, int n)
     ((unsigned char *) buf)[count++] = key;
 
     /* end of line : return */
-    if (key == '\n')
+    if (key == 13)
       break;
   }
 
