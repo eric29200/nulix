@@ -48,6 +48,9 @@ sudo mknod tmp/dev/pts/4 c 136 4
 # create resolv.conf
 sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
 
+# create /etc/issue.net
+sudo sh -c 'echo "nulix" > tmp/etc/issue.net'
+
 # unmount disk
 sudo umount tmp
 sudo rm -rf tmp
