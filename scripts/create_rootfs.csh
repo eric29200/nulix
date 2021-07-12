@@ -51,6 +51,9 @@ sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
 # create /etc/issue.net
 sudo sh -c 'echo "nulix" > tmp/etc/issue.net'
 
+# create /etc/passwd
+sudo sh -c 'echo "root::0:0:root:/:/bin/sh" > tmp/etc/passwd'
+
 # unmount disk
 sudo umount tmp
 sudo rm -rf tmp
