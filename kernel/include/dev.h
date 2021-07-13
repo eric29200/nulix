@@ -12,8 +12,4 @@
 
 #define DEV_NULL          0x103     /* /dev/null device */
 
-#define DEV_PTMX          0x502     /* ptys multiplexer */
-
-#define DEV_PTY_MAJOR     0x88
-
 #endif
