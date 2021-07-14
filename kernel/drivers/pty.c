@@ -1,8 +1,10 @@
 #include <drivers/pty.h>
 #include <drivers/tty.h>
 #include <drivers/termios.h>
+#include <proc/sched.h>
 #include <fs/fs.h>
 #include <stdio.h>
+#include <stderr.h>
 
 #define NB_PTYS     4
 
@@ -46,6 +48,139 @@ int ptmx_ioctl(struct file_t *filp, int request, unsigned long arg)
 }
 
 /*
+ * Lookup for a pty.
+ */
+static struct tty_t *pty_lookup(dev_t dev)
+{
+  if (minor(dev) > 0 && minor(dev) <= NB_PTYS)
+    return &pty_table[minor(dev) - 1];
+
+  return NULL;
+}
+
+/*
+ * Read PTY.
+ */
+static int pty_read(struct file_t *filp, char *buf, int n)
+{
+  struct tty_t *pty;
+  int count = 0;
+  uint8_t key;
+  dev_t dev;
+
+  /* get pty */
+  dev = filp->f_inode->i_zone[0];
+  pty = pty_lookup(dev);
+  if (!pty)
+    return -EINVAL;
+
+  /* read all characters */
+  while (count < n) {
+    /* read key */
+    ring_buffer_read(&pty->buffer, &key, 1);
+
+    /* add key to buffer */
+    ((unsigned char *) buf)[count++] = key;
+
+    /* end of line : return */
+    if (key == '\n')
+      break;
+  }
+
+  return count;
+}
+
+/*
+ * Write to PTY.
+ */
+static int pty_write(struct file_t *filp, const char *buf, int n)
+{
+  struct tty_t *pty;
+  dev_t dev;
+
+  /* get pty */
+  dev = filp->f_inode->i_zone[0];
+  pty = pty_lookup(dev);
+  if (!pty)
+    return -EINVAL;
+
+  /* write not implemented */
+  if (!pty->write)
+    return -EINVAL;
+
+  return pty->write(pty, buf, n);
+}
+
+/*
+ * Poll a pty.
+ */
+static int pty_poll(struct file_t *filp)
+{
+  struct tty_t *pty;
+  int mask = 0;
+  dev_t dev;
+
+  /* get pty */
+  dev = filp->f_inode->i_zone[0];
+  pty = pty_lookup(dev);
+  if (!pty)
+    return -EINVAL;
+
+  /* set waiting channel */
+  current_task->waiting_chan = pty;
+
+  /* check if there is some characters to read */
+  if (pty->buffer.size > 0)
+    mask |= POLLIN;
+
+  return mask;
+}
+
+/*
+ * PTY ioctl.
+ */
+int pty_ioctl(struct file_t *filp, int request, unsigned long arg)
+{
+  struct tty_t *pty;
+  dev_t dev;
+
+  /* get tty */
+  dev = filp->f_inode->i_zone[0];
+  pty = pty_lookup(dev);
+  if (!pty)
+    return -EINVAL;
+
+  switch (request) {
+    case TCGETS:
+      memcpy((struct termios_t *) arg, &pty->termios, sizeof(struct termios_t));
+      break;
+    case TCSETS:
+      memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+      break;
+    case TCSETSW:
+      memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+      break;
+    case TCSETSF:
+      memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+      break;
+    case TIOCGWINSZ:
+      memcpy((struct winsize_t *) arg, &pty->winsize, sizeof(struct winsize_t));
+      break;
+    case TIOCGPGRP:
+      *((pid_t *) arg) = pty->pgrp;
+      break;
+    case TIOCSPGRP:
+      pty->pgrp = *((pid_t *) arg);
+      break;
+    default:
+      printf("Unknown ioctl request (%x) on device %x\n", request, dev);
+      break;
+  }
+
+  return 0;
+}
+
+/*
  * Init PTYs.
  */
 int init_pty()
@@ -77,6 +212,24 @@ int init_pty()
 
   return 0;
 }
+
+/*
+ * Pty file operations.
+ */
+static struct file_operations_t pty_fops = {
+  .read       = pty_read,
+  .write      = pty_write,
+  .poll       = pty_poll,
+  .ioctl      = pty_ioctl,
+};
+
+/*
+ * Pty inode operations.
+ */
+struct inode_operations_t pty_iops = {
+  .fops           = &pty_fops,
+};
+
 
 /*
  * Ptmx file operations.

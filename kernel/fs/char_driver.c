@@ -26,6 +26,10 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
   if (dev == DEV_PTMX)
     return &ptmx_iops;
 
+  /* pty driver */
+  if (major(dev) == DEV_PTY_MAJOR)
+    return &pty_iops;
+
   /* tty driver */
   if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
     return &tty_iops;

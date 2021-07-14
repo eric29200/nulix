@@ -2,6 +2,7 @@
 #include <drivers/keyboard.h>
 #include <drivers/termios.h>
 #include <drivers/tty.h>
+#include <drivers/pty.h>
 #include <drivers/console.h>
 #include <drivers/pit.h>
 #include <proc/sched.h>
