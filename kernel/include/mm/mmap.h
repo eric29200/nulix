@@ -1,8 +1,8 @@
 #ifndef _MMAP_H_
 #define _MMAP_H_
 
+#include <lib/list.h>
 #include <stddef.h>
-#include <list.h>
 
 #define VM_READ         0x01
 #define VM_WRITE        0x02

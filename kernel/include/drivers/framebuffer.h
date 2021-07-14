@@ -3,7 +3,7 @@
 
 #include <grub/multiboot2.h>
 #include <stddef.h>
-#include <font.h>
+#include <lib/font.h>
 
 #define TEXT_BLACK              0
 #define TEXT_LIGHT_GREY         7

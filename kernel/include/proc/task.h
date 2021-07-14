@@ -7,8 +7,8 @@
 #include <mm/mmap.h>
 #include <fs/fs.h>
 #include <ipc/signal.h>
+#include <lib/list.h>
 #include <stddef.h>
-#include <list.h>
 
 #define STACK_SIZE        0x2000
 

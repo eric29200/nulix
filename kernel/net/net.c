@@ -7,8 +7,8 @@
 #include <net/tcp.h>
 #include <net/icmp.h>
 #include <proc/sched.h>
+#include <lib/list.h>
 #include <string.h>
-#include <list.h>
 
 /* network devices */
 static struct net_device_t net_devices[NR_NET_DEVICES];

@@ -1,10 +1,10 @@
 #ifndef _SOCKET_H_
 #define _SOCKET_H_
 
-#include <stddef.h>
 #include <net/net.h>
-#include <list.h>
+#include <lib/list.h>
 #include <uio.h>
+#include <stddef.h>
 
 #define NR_SOCKETS      32
 

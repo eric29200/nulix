@@ -1,8 +1,8 @@
 #ifndef _SK_BUFF_H_
 #define _SK_BUFF_H_
 
+#include <lib/list.h>
 #include <stddef.h>
-#include <list.h>
 
 /*
  * Socket buffer.

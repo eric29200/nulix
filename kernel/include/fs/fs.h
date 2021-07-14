@@ -3,9 +3,9 @@
 
 #include <fs/stat.h>
 #include <fs/poll.h>
+#include <lib/htable.h>
+#include <lib/list.h>
 #include <time.h>
-#include <htable.h>
-#include <list.h>
 #include <dev.h>
 
 #define NR_INODE                      256

@@ -1,8 +1,8 @@
 #include <drivers/framebuffer.h>
-#include <string.h>
 #include <mm/mm.h>
 #include <x86/io.h>
-#include <font.h>
+#include <lib/font.h>
+#include <string.h>
 #include <stderr.h>
 
 /* frame buffer update functions */

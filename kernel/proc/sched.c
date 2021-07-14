@@ -5,7 +5,7 @@
 #include <proc/task.h>
 #include <proc/timer.h>
 #include <sys/syscall.h>
-#include <list.h>
+#include <lib/list.h>
 #include <stderr.h>
 
 LIST_HEAD(tasks_list);                    /* active processes list */
