@@ -3,6 +3,7 @@
 
 #include <drivers/framebuffer.h>
 #include <drivers/termios.h>
+#include <lib/ring_buffer.h>
 
 #define TTY_BUF_SIZE            1024
 #define TTY_ESC_BUF_SIZE        16
@@ -47,9 +48,7 @@
 struct tty_t {
   dev_t                 dev;                                              /* dev number */
   pid_t                 pgrp;                                             /* process group id */
-  uint32_t              r_pos;                                            /* read position */
-  uint32_t              w_pos;                                            /* write position */
-  uint8_t               buf[TTY_BUF_SIZE];                                /* tty buffer */
+  struct ring_buffer_t  buffer;                                           /* tty ring buffer */
   uint32_t              pars[NPARS];                                      /* escaped pars */
   uint32_t              npars;                                            /* number of escaped pars */
   int                   esc_buf_size;                                     /* escape buffer size */

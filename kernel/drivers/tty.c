@@ -54,7 +54,8 @@ static struct tty_t *tty_lookup(dev_t dev)
 static int tty_read(struct file_t *filp, char *buf, int n)
 {
   struct tty_t *tty;
-  int key, count = 0;
+  int count = 0;
+  uint8_t key;
   dev_t dev;
 
   /* get tty */
@@ -63,20 +64,10 @@ static int tty_read(struct file_t *filp, char *buf, int n)
   if (!tty)
     return -EINVAL;
 
-  /* reset read/write positions on canonical mode */
-  if (L_CANON(tty)) {
-    tty->r_pos = 0;
-    tty->w_pos = 0;
-  }
-
   /* read all characters */
   while (count < n) {
-    /* wait for a character */
-    while (tty->r_pos >= tty->w_pos)
-      task_sleep(tty);
-
-    /* get key */
-    key = tty->buf[tty->r_pos++];
+    /* read key */
+    ring_buffer_read(&tty->buffer, &key, 1);
 
     /* add key to buffer */
     ((unsigned char *) buf)[count++] = key;
@@ -109,97 +100,94 @@ dev_t tty_get()
 void tty_update(unsigned char c)
 {
   struct tty_t *tty;
-  uint8_t *buf;
+  uint8_t buf[8];
   int len;
 
   /* get tty */
   tty = &tty_table[current_tty];
 
-  /* adjust read position */
-  if (tty->w_pos >= TTY_BUF_SIZE) {
-    tty->r_pos = 0;
-    tty->w_pos = 0;
-  }
-
   /* set buffer */
   len = 0;
-  buf = &tty->buf[tty->w_pos];
 
   /* handle special keys */
   switch (c) {
     case KEY_PAGEUP:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 53;
-      tty->buf[tty->w_pos++] = 126;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 53;
+      buf[3] = 126;
       len = 4;
       break;
     case KEY_PAGEDOWN:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 54;
-      tty->buf[tty->w_pos++] = 126;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 54;
+      buf[3] = 126;
       len = 4;
       break;
     case KEY_HOME:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 72;
+      buf[1] = 27;
+      buf[2] = 91;
+      buf[3] = 72;
       len = 3;
       break;
     case KEY_END:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 70;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 70;
       len = 3;
       break;
     case KEY_INSERT:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 50;
-      tty->buf[tty->w_pos++] = 126;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 50;
+      buf[3] = 126;
       len = 4;
       break;
     case KEY_DELETE:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 51;
-      tty->buf[tty->w_pos++] = 126;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 51;
+      buf[3] = 126;
       len = 4;
       break;
     case KEY_UP:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 65;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 65;
       len = 3;
       break;
     case KEY_DOWN:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 66;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 66;
       len = 3;
       break;
     case KEY_RIGHT:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 67;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 67;
       len = 3;
       break;
     case KEY_LEFT:
-      tty->buf[tty->w_pos++] = 27;
-      tty->buf[tty->w_pos++] = 91;
-      tty->buf[tty->w_pos++] = 68;
+      buf[0] = 27;
+      buf[1] = 91;
+      buf[2] = 68;
       len = 3;
       break;
     case 13:
-      tty->buf[tty->w_pos++] = '\n';
+      buf[0] = '\n';
       len = 1;
       break;
     default:
-      tty->buf[tty->w_pos++] = c;
+      buf[0] = c;
       len = 1;
       break;
   }
+
+  /* store buffer */
+  if (len > 0)
+    ring_buffer_write(&tty->buffer, buf, len);
 
   /* echo character on device */
   if (L_ECHO(tty) && len > 0)
@@ -304,7 +292,7 @@ static int tty_poll(struct file_t *filp)
   current_task->waiting_chan = tty;
 
   /* check if there is some characters to read */
-  if (tty->w_pos > tty->r_pos)
+  if (tty->buffer.size > 0)
     mask |= POLLIN;
 
   return mask;
@@ -344,19 +332,23 @@ static void tty_refresh()
  */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 {
-  int i;
+  int i, ret;
 
   /* init each tty */
   for (i = 0; i < NB_TTYS; i++) {
     tty_table[i].dev = DEV_TTY1 + i;
     tty_table[i].pgrp = 0;
-    tty_table[i].r_pos = 0;
-    tty_table[i].w_pos = 0;
-    tty_table[i].buf[0] = 0;
     tty_table[i].write = console_write;
 
+    /* init buffer */
+    ret = ring_buffer_init(&tty_table[i].buffer, TTY_BUF_SIZE);
+    if (ret != 0)
+      return ret;
+
     /* init frame buffer */
-    init_framebuffer(&tty_table[i].fb, tag_fb);
+    ret = init_framebuffer(&tty_table[i].fb, tag_fb);
+    if (ret != 0)
+      return ret;
 
     /* set winsize */
     tty_table[i].winsize.ws_row = tty_table[i].fb.height;
