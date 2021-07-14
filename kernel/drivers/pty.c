@@ -104,11 +104,8 @@ static int pty_write(struct file_t *filp, const char *buf, int n)
   if (!pty)
     return -EINVAL;
 
-  /* write not implemented */
-  if (!pty->write)
-    return -EINVAL;
-
-  return pty->write(pty, buf, n);
+  /* write to buffer */
+  return ring_buffer_write(&pty->buffer, (const uint8_t *) buf, n);
 }
 
 /*

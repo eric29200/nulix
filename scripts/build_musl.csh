@@ -27,7 +27,6 @@ tar -xzvf musl-1.2.2.tar.gz
 patch -p0 < ../patches/musl-1.2.2-disable-tls.patch
 patch -p0 < ../patches/musl-1.2.2-force-ipv4.patch
 
-
 # build musl
 cd ./musl-1.2.2/
 make clean
