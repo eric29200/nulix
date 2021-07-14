@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <drivers/null.h>
 #include <drivers/tty.h>
+#include <drivers/pty.h>
 #include <fcntl.h>
 
 /*
@@ -20,6 +21,10 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
   /* null driver */
   if (dev == DEV_NULL)
     return &null_iops;
+
+  /* pty multiplixer */
+  if (dev == DEV_PTMX)
+    return &ptmx_iops;
 
   /* tty driver */
   if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))

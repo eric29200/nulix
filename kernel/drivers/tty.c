@@ -367,6 +367,9 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
     };
   }
 
+  /* init ptys */
+  init_pty();
+
   /* set current tty to first tty */
   current_tty = 0;
 

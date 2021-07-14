@@ -10,6 +10,10 @@
 #define DEV_TTY4          0x404
 #define DEV_TTY           0x500     /* current taks tty */
 
+#define DEV_PTMX          0x502     /* pty multiplexer */
+
 #define DEV_NULL          0x103     /* /dev/null device */
+
+#define DEV_PTY_MAJOR     136
 
 #endif
