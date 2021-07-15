@@ -23,8 +23,9 @@ mkdir musl-1.2.2-build
 wget https://musl.libc.org/releases/musl-1.2.2.tar.gz
 tar -xzvf musl-1.2.2.tar.gz
 
-# patch musl (to disable TLS and force IPv4)
+# patch musl (to disable TLS, errno and force IPv4)
 patch -p0 < ../patches/musl-1.2.2-disable-tls.patch
+patch -p0 < ../patches/musl-1.2.2-errno.patch
 patch -p0 < ../patches/musl-1.2.2-force-ipv4.patch
 
 # build musl
