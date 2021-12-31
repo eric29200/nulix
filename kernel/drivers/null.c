@@ -37,7 +37,7 @@ static int null_write(struct file_t *filp, const char *buf, int n)
   UNUSED(filp);
   UNUSED(buf);
   UNUSED(n);
-  return 0;
+  return n;
 }
 
 /*
