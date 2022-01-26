@@ -38,7 +38,7 @@ int do_dup2(int oldfd, int newfd)
   }
 
   /* duplicate */
-  return dupfd(newfd, oldfd);
+  return dupfd(oldfd, newfd);
 }
 
 /*
