@@ -60,7 +60,6 @@ struct tty_t {
 };
 
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
-dev_t tty_get();
 void tty_update(unsigned char c);
 void tty_change(uint32_t n);
 void tty_signal_group(dev_t dev, int sig);

@@ -29,8 +29,6 @@ static struct tty_t *tty_lookup(dev_t dev)
 
   /* current task tty */
   if (dev == DEV_TTY) {
-    dev = tty_get();
-
     for (i = 0; i < NB_TTYS; i++)
       if (current_task->tty == tty_table[i].dev)
         return &tty_table[i];
@@ -47,6 +45,18 @@ static struct tty_t *tty_lookup(dev_t dev)
     return &tty_table[minor(dev) - 1];
 
   return NULL;
+}
+
+/*
+ * Open a TTY.
+ */
+static int tty_open(struct file_t *filp)
+{
+  /* set current task tty */
+  if (major(filp->f_inode->i_zone[0]) == major(DEV_TTY0))
+    current_task->tty = filp->f_inode->i_zone[0];
+
+  return 0;
 }
 
 /*
@@ -79,20 +89,6 @@ static int tty_read(struct file_t *filp, char *buf, int n)
   }
 
   return count;
-}
-
-/*
- * Get current task tty.
- */
-dev_t tty_get()
-{
-  int i;
-
-  for (i = 0; i < NB_TTYS; i++)
-    if (tty_table[i].pgrp == current_task->pgid)
-      return tty_table[i].dev;
-
-  return (dev_t) -ENOENT;
 }
 
 /*
@@ -385,6 +381,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
  * Tty file operations.
  */
 static struct file_operations_t tty_fops = {
+  .open       = tty_open,
   .read       = tty_read,
   .write      = tty_write,
   .poll       = tty_poll,

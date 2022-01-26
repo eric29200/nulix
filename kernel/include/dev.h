@@ -8,7 +8,7 @@
 #define DEV_TTY2          0x402
 #define DEV_TTY3          0x403
 #define DEV_TTY4          0x404
-#define DEV_TTY           0x500     /* current taks tty */
+#define DEV_TTY           0x500     /* current task tty */
 
 #define DEV_PTMX          0x502     /* pty multiplexer */
 
