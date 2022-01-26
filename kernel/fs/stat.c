@@ -63,6 +63,7 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
   statbuf->stx_mode = inode->i_mode;
   statbuf->stx_ino = inode->i_ino;
   statbuf->stx_size = inode->i_size;
+  statbuf->stx_blocks = inode->i_size / 512;
   statbuf->stx_atime.tv_sec = inode->i_time;
   statbuf->stx_btime.tv_sec = inode->i_time;
   statbuf->stx_ctime.tv_sec = inode->i_time;
