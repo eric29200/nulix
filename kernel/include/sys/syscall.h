@@ -76,6 +76,8 @@
 #define __NR_getcwd             183
 #define __NR_vfork              190
 #define __NR_mmap2              192
+#define __NR_truncate64         193
+#define __NR_ftruncate64        194
 #define __NR_getuid32           199
 #define __NR_getgid32           200
 #define __NR_geteuid32          201
@@ -205,5 +207,7 @@ int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_chown(const char *pathname, uid_t owner, gid_t group);
 int sys_fchown(int fd, uid_t owner, gid_t group);
 int sys_setgroups(size_t size, const gid_t *list);
+int sys_truncate64(const char *path, off_t length);
+int sys_ftruncate64(int fd, off_t length);
 
 #endif

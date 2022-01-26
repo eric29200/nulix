@@ -211,8 +211,11 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
     return -EACCES;
 
   /* truncate file */
-  if (flags & O_TRUNC && (*res_inode)->i_op && (*res_inode)->i_op->truncate)
+  if (flags & O_TRUNC && (*res_inode)->i_op && (*res_inode)->i_op->truncate) {
+    (*res_inode)->i_size = 0;
     (*res_inode)->i_op->truncate(*res_inode);
+    (*res_inode)->i_dirt = 1;
+  }
 
   return 0;
 }

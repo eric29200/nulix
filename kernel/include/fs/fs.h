@@ -209,5 +209,7 @@ int do_fchmod(int fd, mode_t mode);
 int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev);
 int do_chown(const char *pathname, uid_t owner, gid_t group);
 int do_fchown(int fd, uid_t owner, gid_t group);
+int do_truncate(const char *pathname, off_t length);
+int do_ftruncate(int fd, off_t length);
 
 #endif
