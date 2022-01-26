@@ -102,6 +102,7 @@
 #define __NR_linkat             303
 #define __NR_symlinkat          304
 #define __NR_readlinkat         305
+#define __NR_utimensat          320
 #define __NR_socket             359
 #define __NR_bind               361
 #define __NR_connect            362
@@ -209,5 +210,6 @@ int sys_fchown(int fd, uid_t owner, gid_t group);
 int sys_setgroups(size_t size, const gid_t *list);
 int sys_truncate64(const char *path, off_t length);
 int sys_ftruncate64(int fd, off_t length);
+int sys_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags);
 
 #endif

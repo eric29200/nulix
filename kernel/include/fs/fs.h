@@ -211,5 +211,6 @@ int do_chown(const char *pathname, uid_t owner, gid_t group);
 int do_fchown(int fd, uid_t owner, gid_t group);
 int do_truncate(const char *pathname, off_t length);
 int do_ftruncate(int fd, off_t length);
+int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags);
 
 #endif

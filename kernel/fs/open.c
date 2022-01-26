@@ -186,3 +186,27 @@ int do_fchown(int fd, uid_t owner, gid_t group)
 
   return 0;
 }
+
+/*
+ * Utimensat system call.
+ */
+int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags)
+{
+  struct inode_t *inode;
+
+  /* get inode */
+  inode = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+  if (!inode)
+    return -ENOENT;
+
+  /* set time */
+  inode->i_time = times[0].tv_sec;
+
+  /* mark inode dirty */
+  inode->i_dirt = 1;
+
+  /* release inode */
+  iput(inode);
+
+  return 0;
+}

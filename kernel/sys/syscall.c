@@ -105,6 +105,7 @@ static const void *syscalls[] = {
   [__NR_setgroups32]      = sys_setgroups,
   [__NR_truncate64]       = sys_truncate64,
   [__NR_ftruncate64]      = sys_ftruncate64,
+  [__NR_utimensat]        = sys_utimensat,
 };
 
 /*
