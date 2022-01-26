@@ -8,21 +8,5 @@
  */
 int sys_dup(int oldfd)
 {
-  int newfd;
-
-  /* check parameter */
-  if (oldfd < 0 || oldfd >= NR_OPEN || current_task->filp[oldfd] == NULL)
-    return -EBADF;
-
-  /* find a free slot */
-  for (newfd = 0; newfd < NR_OPEN; newfd++) {
-    if (current_task->filp[newfd] == NULL) {
-      current_task->filp[newfd] = current_task->filp[oldfd];
-      current_task->filp[newfd]->f_ref++;
-      return newfd;
-    }
-  }
-
-  /* no free slot : too many files open */
-  return -EMFILE;
+  return do_dup(oldfd);
 }

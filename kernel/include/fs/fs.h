@@ -213,5 +213,7 @@ int do_truncate(const char *pathname, off_t length);
 int do_ftruncate(int fd, off_t length);
 int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags);
 int do_fcntl(int fd, int cmd, unsigned long arg);
+int do_dup(int oldfd);
+int do_dup2(int oldfd, int newfd);
 
 #endif
