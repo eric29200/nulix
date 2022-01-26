@@ -54,18 +54,19 @@
 #define O_NDELAY      O_NONBLOCK
 #define O_SYNC        010000
 
-#define F_DUPFD       0       /* fcntl : dup file descriptor (with a free slot after argument) */
-#define F_GETFD       1       /* fcntl : get file mode */
-#define F_SETFD       2       /* fcntl : set file mode */
-#define F_GETFL       3       /* fcntl : get file flags */
-#define F_SETFL       4       /* fcntl : set file flags */
-#define F_GETLK       5
-#define F_SETLK       6
-#define F_SETLKW      7
-#define F_SETOWN      8
-#define F_GETOWN      9
-#define F_SETSIG      10
-#define F_GETSIG      11
+#define F_DUPFD             0       /* fcntl : dup file descriptor (with a free slot after argument) */
+#define F_GETFD             1       /* fcntl : get file mode */
+#define F_SETFD             2       /* fcntl : set file mode */
+#define F_GETFL             3       /* fcntl : get file flags */
+#define F_SETFL             4       /* fcntl : set file flags */
+#define F_GETLK             5
+#define F_SETLK             6
+#define F_SETLKW            7
+#define F_SETOWN            8
+#define F_GETOWN            9
+#define F_SETSIG            10
+#define F_GETSIG            11
+#define F_DUPFD_CLOEXEC     1030
 
 #define AT_FDCWD              -100    /* openat should use the current working dir */
 #define AT_EMPTY_PATH         0x1000  /* allow empty relative pathname */

@@ -92,6 +92,7 @@ int do_fcntl(int fd, int cmd, unsigned long arg)
   filp = current_task->filp[fd];
   switch (cmd) {
       case F_DUPFD:
+      case F_DUPFD_CLOEXEC:
         ret = dup_after(fd, arg);
         break;
       case F_GETFD:
