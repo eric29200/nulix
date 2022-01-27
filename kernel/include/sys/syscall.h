@@ -33,6 +33,7 @@
 #define __NR_setuid             23
 #define __NR_getuid             24
 #define __NR_access             33
+#define __NR_sync               36
 #define __NR_kill               37
 #define __NR_rename             38
 #define __NR_mkdir              39
@@ -211,5 +212,6 @@ int sys_setgroups(size_t size, const gid_t *list);
 int sys_truncate64(const char *path, off_t length);
 int sys_ftruncate64(int fd, off_t length);
 int sys_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags);
+int sys_sync();
 
 #endif
