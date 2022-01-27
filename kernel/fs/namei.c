@@ -9,7 +9,7 @@
 /*
  * Follow a link.
  */
-static struct inode_t *follow_link(struct inode_t *inode)
+static struct inode_t *follow_link(struct inode_t *dir, struct inode_t *inode)
 {
   struct inode_t *res_inode;
 
@@ -17,14 +17,15 @@ static struct inode_t *follow_link(struct inode_t *inode)
   if (!inode || !inode->i_op || !inode->i_op->follow_link)
     return inode;
 
-  inode->i_op->follow_link(inode, &res_inode);
+  inode->i_op->follow_link(dir, inode, &res_inode);
   return res_inode;
 }
 
 /*
  * Resolve a path name to the inode of the top most directory.
  */
-static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **basename, size_t *basename_len)
+static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pathname,
+                                 const char **basename, size_t *basename_len)
 {
   struct inode_t *inode, *tmp;
   const char *name;
@@ -32,7 +33,9 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
   int err;
 
   /* absolute or relative path */
-  if (*pathname == '/') {
+  if (base) {
+    inode = base;
+  } else if (*pathname == '/') {
     inode = current_task->root;
     pathname++;
   } else if (dirfd == AT_FDCWD) {
@@ -81,7 +84,7 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
     }
 
     /* follow symbolic links */
-    inode = follow_link(tmp);
+    inode = follow_link(inode, tmp);
     if (!inode)
       return NULL;
   }
@@ -94,7 +97,7 @@ static struct inode_t *dir_namei(int dirfd, const char *pathname, const char **b
 /*
  * Resolve a path name to the matching inode.
  */
-struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
+struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int follow_links)
 {
   struct inode_t *dir, *inode;
   const char *basename;
@@ -111,7 +114,7 @@ struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
   }
 
   /* find directory */
-  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
+  dir = dir_namei(dirfd, base, pathname, &basename, &basename_len);
   if (!dir)
     return NULL;
 
@@ -135,7 +138,7 @@ struct inode_t *namei(int dirfd, const char *pathname, int follow_links)
 
   /* follow symbolic link */
   if (follow_links)
-    inode = follow_link(inode);
+    inode = follow_link(dir, inode);
 
   iput(dir);
   return inode;
@@ -154,7 +157,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
   *res_inode = NULL;
 
   /* find directory */
-  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
+  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -206,7 +209,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
   }
 
   /* follow symbolic link */
-  *res_inode = follow_link(inode);
+  *res_inode = follow_link(dir, inode);
   if (!*res_inode)
     return -EACCES;
 
@@ -231,7 +234,7 @@ int do_mkdir(int dirfd, const char *pathname, mode_t mode)
   int err;
 
   /* get parent directory */
-  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
+  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -266,7 +269,7 @@ int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath
   int err;
 
   /* get old inode */
-  old_inode = namei(olddirfd, oldpath, 1);
+  old_inode = namei(olddirfd, NULL, oldpath, 1);
   if (!old_inode)
     return -ENOENT;
 
@@ -277,7 +280,7 @@ int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath
   }
 
   /* get directory of new file */
-  dir = dir_namei(newdirfd, newpath, &basename, &basename_len);
+  dir = dir_namei(newdirfd, NULL, newpath, &basename, &basename_len);
   if (!dir) {
     iput(old_inode);
     return -EACCES;
@@ -317,7 +320,7 @@ int do_symlink(const char *target, int newdirfd, const char *linkpath)
   int err;
 
   /* get new parent directory */
-  dir = dir_namei(newdirfd, linkpath, &basename, &basename_len);
+  dir = dir_namei(newdirfd, NULL, linkpath, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -352,7 +355,7 @@ int do_unlink(int dirfd, const char *pathname)
   int err;
 
   /* get parent directory */
-  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
+  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -384,7 +387,7 @@ int do_rmdir(int dirfd, const char *pathname)
   int err;
 
   /* get parent directory */
-  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
+  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 
@@ -413,7 +416,7 @@ ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(dirfd, pathname, 0);
+  inode = namei(dirfd, NULL, pathname, 0);
   if (!inode)
     return -ENOENT;
 
@@ -437,7 +440,7 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
   struct inode_t *old_dir, *new_dir;
 
   /* get old directory */
-  old_dir = dir_namei(olddirfd, oldpath, &old_basename, &old_basename_len);
+  old_dir = dir_namei(olddirfd, NULL, oldpath, &old_basename, &old_basename_len);
   if (!old_dir)
     return -ENOENT;
 
@@ -449,7 +452,7 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
   }
 
   /* get new directory */
-  new_dir = dir_namei(newdirfd, newpath, &new_basename, &new_basename_len);
+  new_dir = dir_namei(newdirfd, NULL, newpath, &new_basename, &new_basename_len);
   if (!new_dir) {
     iput(old_dir);
     return -ENOENT;
@@ -491,7 +494,7 @@ int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
   struct inode_t *dir;
 
   /* get directory */
-  dir = dir_namei(dirfd, pathname, &basename, &basename_len);
+  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
   if (!dir)
     return -ENOENT;
 

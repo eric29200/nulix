@@ -132,7 +132,7 @@ struct inode_operations_t {
   struct file_operations_t *fops;
   int (*lookup)(struct inode_t *, const char *, size_t, struct inode_t **);
   int (*create)(struct inode_t *, const char *, size_t, mode_t, struct inode_t **);
-  int (*follow_link)(struct inode_t *, struct inode_t **);
+  int (*follow_link)(struct inode_t *, struct inode_t *, struct inode_t **);
   ssize_t (*readlink)(struct inode_t *, char *, size_t);
   int (*link)(struct inode_t *, struct inode_t *, const char *, size_t);
   int (*unlink)(struct inode_t *, const char *, size_t);
@@ -176,7 +176,7 @@ struct inode_t *get_empty_inode();
 struct file_t *get_empty_filp();
 
 /* name operations */
-struct inode_t *namei(int dirfd, const char *pathname, int follow_links);
+struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int follow_links);
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
 
 /* character device drivers */

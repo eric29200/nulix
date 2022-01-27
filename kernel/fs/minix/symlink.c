@@ -5,7 +5,7 @@
 /*
  * Resolve a symbolic link.
  */
-int minix_follow_link(struct inode_t *inode, struct inode_t **res_inode)
+int minix_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode)
 {
   struct buffer_head_t *bh;
 
@@ -32,7 +32,7 @@ int minix_follow_link(struct inode_t *inode, struct inode_t **res_inode)
   iput(inode);
 
   /* resolve target inode */
-  *res_inode = namei(AT_FDCWD, bh->b_data, 0);
+  *res_inode = namei(AT_FDCWD, dir, bh->b_data, 0);
   if (!*res_inode) {
     brelse(bh);
     return -EACCES;

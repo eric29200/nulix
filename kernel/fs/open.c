@@ -105,7 +105,7 @@ int do_chmod(const char *filename, mode_t mode)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(AT_FDCWD, filename, 1);
+  inode = namei(AT_FDCWD, NULL, filename, 1);
   if (!inode)
     return -ENOSPC;
 
@@ -154,7 +154,7 @@ int do_chown(const char *pathname, uid_t owner, gid_t group)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(AT_FDCWD, pathname, 1);
+  inode = namei(AT_FDCWD, NULL, pathname, 1);
   if (!inode)
     return -ENOSPC;
 
@@ -195,7 +195,7 @@ int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+  inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
   if (!inode)
     return -ENOENT;
 

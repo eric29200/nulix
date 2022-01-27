@@ -11,7 +11,7 @@ int do_truncate(const char *pathname, off_t length)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(AT_FDCWD, pathname, 1);
+  inode = namei(AT_FDCWD, NULL, pathname, 1);
   if (!inode)
     return -ENOENT;
 

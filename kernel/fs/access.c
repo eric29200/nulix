@@ -15,7 +15,7 @@ int do_faccessat(int dirfd, const char *pathname, int flags)
   UNUSED(flags);
 
   /* check inode */
-  inode = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+  inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
   if (!inode)
     return -ENOENT;
 

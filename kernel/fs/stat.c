@@ -14,7 +14,7 @@ int do_stat(int dirfd, const char *filename, struct stat_t *statbuf)
   struct inode_t *inode;
 
   /* get inode */
-  inode = namei(dirfd, filename, 0);
+  inode = namei(dirfd, NULL, filename, 0);
   if (!inode)
     return -ENOENT;
 
@@ -47,7 +47,7 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
   UNUSED(mask);
 
   /* get inode */
-  inode = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+  inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
   if (!inode)
     return -ENOENT;
 

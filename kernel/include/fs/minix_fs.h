@@ -71,7 +71,7 @@ struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create);
 /* minix inode operations */
 int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode);
 int minix_create(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, struct inode_t **res_inode);
-int minix_follow_link(struct inode_t *inode, struct inode_t **res_inode);
+int minix_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode);
 ssize_t minix_readlink(struct inode_t *inode, char *buf, size_t bufsize);
 int minix_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, size_t name_len);
 int minix_unlink(struct inode_t *dir, const char *name, size_t name_len);

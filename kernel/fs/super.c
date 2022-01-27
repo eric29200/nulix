@@ -17,7 +17,7 @@ int do_mount(uint16_t magic, dev_t dev, const char *mount_point)
   int err;
 
   /* get mount point */
-  dir = namei(AT_FDCWD, mount_point, 1);
+  dir = namei(AT_FDCWD, NULL, mount_point, 1);
   if (!dir)
     return -EINVAL;
 
