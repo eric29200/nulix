@@ -49,6 +49,7 @@
 #define __NR_fcntl              55
 #define __NR_setpgid            57
 #define __NR_umask              60
+#define __NR_chroot             61
 #define __NR_dup2               63
 #define __NR_getppid            64
 #define __NR_sigaction          67
@@ -215,5 +216,6 @@ int sys_truncate64(const char *path, off_t length);
 int sys_ftruncate64(int fd, off_t length);
 int sys_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags);
 int sys_sync();
+int sys_chroot(const char *path);
 
 #endif

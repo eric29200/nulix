@@ -210,3 +210,26 @@ int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[
 
   return 0;
 }
+
+/*
+ * Chroot system call.
+ */
+int do_chroot(const char *path)
+{
+  struct inode_t *inode;
+
+  /* get inode */
+  inode = namei(AT_FDCWD, NULL, path, 1);
+  if (!inode)
+    return -ENOENT;
+
+  /* check if it's a directory */
+  if (!S_ISDIR(inode->i_mode))
+    return -ENOTDIR;
+
+  /* release current root directory and change it */
+  iput(current_task->root);
+  current_task->root = inode;
+
+  return 0;
+}
