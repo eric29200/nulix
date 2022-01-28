@@ -150,6 +150,8 @@ void fb_putc(struct framebuffer_t *fb, uint8_t c)
   } else if (c == '\n') {
     fb->y++;
     fb->x = 0;
+  } else if (c == '\r') {
+    fb->x = 0;
   } else if (c == '\b') {
     fb->x--;
   }
