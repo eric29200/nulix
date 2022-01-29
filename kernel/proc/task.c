@@ -154,9 +154,9 @@ static struct task_t *create_task(struct task_t *parent)
 }
 
 /*
- * Create kernel init task.
+ * Create kernel thread.
  */
-struct task_t *create_kinit_task(void (*func)(void))
+struct task_t *create_kernel_thread(void (*func)(void))
 {
   struct task_registers_t *regs;
   struct task_t *task;
@@ -173,6 +173,9 @@ struct task_t *create_kinit_task(void (*func)(void))
   /* set eip to function */
   regs->return_address = TASK_RETURN_ADDRESS;
   regs->eip = (uint32_t) func;
+
+  /* add task */
+  list_add(&task->list, &tasks_list);
 
   return task;
 }

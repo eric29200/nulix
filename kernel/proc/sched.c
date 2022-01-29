@@ -50,12 +50,9 @@ struct task_t *find_task(pid_t pid)
 int init_scheduler(void (*kinit_func)())
 {
   /* create init task */
-  kinit_task = create_kinit_task(kinit_func);
+  kinit_task = create_kernel_thread(kinit_func);
   if (!kinit_task)
     return -ENOMEM;
-
-  /* set current task to kinit */
-  list_add(&kinit_task->list, &tasks_list);
 
   return 0;
 }

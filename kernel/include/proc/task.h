@@ -77,7 +77,7 @@ struct task_registers_t {
   uint32_t parameter3;
 };
 
-struct task_t *create_kinit_task(void (*func)(void));
+struct task_t *create_kernel_thread(void (*func)(void));
 struct task_t *create_init_task(struct task_t *parent);
 struct task_t *fork_task(struct task_t *parent);
 void destroy_task(struct task_t *task);
