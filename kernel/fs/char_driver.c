@@ -1,5 +1,6 @@
 #include <fs/fs.h>
 #include <drivers/null.h>
+#include <drivers/zero.h>
 #include <drivers/tty.h>
 #include <drivers/pty.h>
 #include <fcntl.h>
@@ -21,6 +22,10 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
   /* null driver */
   if (dev == DEV_NULL)
     return &null_iops;
+
+  /* zero driver */
+  if (dev == DEV_ZERO)
+    return &zero_iops;
 
   /* pty multiplixer */
   if (dev == DEV_PTMX)
