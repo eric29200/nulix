@@ -108,8 +108,6 @@
 #define __NR_socket             359
 #define __NR_bind               361
 #define __NR_connect            362
-#define __NR_listen             363
-#define __NR_accept             364
 #define __NR_getsockname        367
 #define __NR_getpeername        368
 #define __NR_sendto             369
@@ -203,9 +201,7 @@ int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence);
 int sys_fchmod(int fd, mode_t mode);
 int sys_chmod(const char *pathname, mode_t mode);
-int sys_listen(int sockfd, int backlog);
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
-int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
 int sys_mknod(const char *pathname, mode_t mode, dev_t dev);
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);
