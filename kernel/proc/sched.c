@@ -50,7 +50,7 @@ struct task_t *find_task(pid_t pid)
 int init_scheduler(void (*kinit_func)())
 {
   /* create init task */
-  kinit_task = create_kernel_thread(kinit_func);
+  kinit_task = create_kernel_thread(kinit_func, NULL);
   if (!kinit_task)
     return -ENOMEM;
 

@@ -14,17 +14,20 @@
  * Network device.
  */
 struct net_device_t {
-  uint32_t  io_base;
-  uint8_t   irq;
-  uint8_t   mac_addr[6];
-  uint8_t   ip_addr[4];
-  uint8_t   ip_netmask[4];
-  uint8_t   ip_route[4];
-  void      (*send_packet)(struct sk_buff_t *);
+  uint32_t            io_base;
+  uint8_t             irq;
+  uint8_t             mac_addr[6];
+  uint8_t             ip_addr[4];
+  uint8_t             ip_netmask[4];
+  uint8_t             ip_route[4];
+  int                 waiting_chan;
+  struct list_head_t  skb_list;
+  void                (*send_packet)(struct sk_buff_t *);
 };
 
 struct net_device_t *register_net_device(uint32_t io_base);
 void skb_handle(struct sk_buff_t *skb);
 uint16_t net_checksum(void *data, size_t size);
+void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb);
 
 #endif

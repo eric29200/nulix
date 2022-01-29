@@ -156,7 +156,7 @@ static struct task_t *create_task(struct task_t *parent)
 /*
  * Create kernel thread.
  */
-struct task_t *create_kernel_thread(void (*func)(void))
+struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 {
   struct task_registers_t *regs;
   struct task_t *task;
@@ -171,6 +171,7 @@ struct task_t *create_kernel_thread(void (*func)(void))
   memset(regs, 0, sizeof(struct task_registers_t));
 
   /* set eip to function */
+  regs->parameter1 = (uint32_t) arg;
   regs->return_address = TASK_RETURN_ADDRESS;
   regs->eip = (uint32_t) func;
 
