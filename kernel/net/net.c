@@ -145,7 +145,7 @@ static void net_handler_thread(void *arg)
     }
 
     /* wait for incoming packets */
-    task_sleep(&net_dev->waiting_chan);
+    task_sleep(current_task->waiting_chan);
   }
 }
 
@@ -166,7 +166,8 @@ struct net_device_t *register_net_device(uint32_t io_base)
   INIT_LIST_HEAD(&net_dev->skb_list);
 
   /* create kernel thread to handle received packets */
-  if (create_kernel_thread(net_handler_thread, net_dev) == NULL)
+  net_dev->thread = create_kernel_thread(net_handler_thread, net_dev);
+  if (!net_dev->thread)
     return NULL;
 
   return net_dev;
@@ -185,6 +186,6 @@ void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb)
   list_add_tail(&skb->list, &net_dev->skb_list);
 
   /* wake up handler */
-  task_wakeup_all(&net_dev->waiting_chan);
+  task_wakeup_all(net_dev->thread->waiting_chan);
 }
 
