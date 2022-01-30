@@ -187,3 +187,4 @@ void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb)
   /* wake up handler */
   task_wakeup_all(&net_dev->waiting_chan);
 }
+

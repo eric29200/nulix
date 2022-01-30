@@ -94,7 +94,9 @@ static const void *syscalls[] = {
   [__NR_connect]          = sys_connect,
   [__NR_llseek]           = sys_llseek,
   [__NR_chmod]            = sys_chmod,
+  [__NR_listen]           = sys_listen,
   [__NR_select]           = sys_select,
+  [__NR_accept]           = sys_accept,
   [__NR_mknod]            = sys_mknod,
   [__NR_getsockname]      = sys_getsockname,
   [__NR_getpeername]      = sys_getpeername,
@@ -141,3 +143,4 @@ void init_syscall()
   /* register syscall interrupt handler */
   register_interrupt_handler(0x80, syscall_handler);
 }
+

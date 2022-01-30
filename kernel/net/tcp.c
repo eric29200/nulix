@@ -393,6 +393,73 @@ int tcp_connect(struct socket_t *sock)
 }
 
 /*
+ * Accept a TCP connection.
+ */
+int tcp_accept(struct socket_t *sock, struct socket_t *sock_new)
+{
+  struct sk_buff_t *skb, *skb_ack;
+  struct list_head_t *pos;
+
+  for (;;) {
+    /* signal received : restart system call */
+    if (!sigisemptyset(&current_task->sigpend))
+      return -ERESTARTSYS;
+
+    /* for each received packet */
+    list_for_each(pos, &sock->skb_list) {
+      /* get socket buffer */
+      skb = list_entry(pos, struct sk_buff_t, list);
+
+      /* get IP header */
+      skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+
+      /* get TCP header */
+      skb->h.tcp_header = (struct tcp_header_t *) (skb->head
+                                                   + sizeof(struct ethernet_header_t)
+                                                   + sizeof(struct ip_header_t));
+
+      /* not a SYN message : go to next packet */
+      if (!skb->h.tcp_header->syn)
+        continue;
+
+      /* set new socket */
+      sock_new->state = SS_CONNECTED;
+      memcpy(&sock_new->src_sin, &sock->src_sin, sizeof(struct sockaddr));
+      sock_new->dst_sin.sin_family = AF_INET;
+      sock_new->dst_sin.sin_port = skb->h.tcp_header->src_port;
+      sock_new->dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+      sock_new->seq_no = 0;
+      sock_new->ack_no = 0;
+
+      /* create SYN | ACK message */
+      sock_new->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
+      skb_ack = tcp_create_skb(sock_new, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, NULL, 0);
+      if (!skb_ack)
+        return -ENOMEM;
+
+      /* send SYN | ACK message */
+      sock->dev->send_packet(skb_ack);
+      skb_free(skb_ack);
+
+      /* free socket buffer */
+      list_del(&skb->list);
+      skb_free(skb);
+
+      return 0;
+    }
+
+    /* disconnected : break */
+    if (sock->state == SS_DISCONNECTING)
+      return 0;
+
+    /* sleep */
+    task_sleep(&sock->waiting_chan);
+  }
+
+  return 0;
+}
+
+/*
  * TCP protocol operations.
  */
 struct prot_ops tcp_prot_ops = {
@@ -400,4 +467,6 @@ struct prot_ops tcp_prot_ops = {
   .recvmsg      = tcp_recvmsg,
   .sendmsg      = tcp_sendmsg,
   .connect      = tcp_connect,
+  .accept       = tcp_accept,
 };
+
