@@ -149,6 +149,7 @@ static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t 
   struct arp_table_entry_t *arp_entry;
   uint8_t dest_ip[4], route_ip[4];
   struct sk_buff_t *skb_ack;
+  int len;
 
   /* get destination IP */
   inet_ntoi(inet_iton(skb->nh.ip_header->src_addr), dest_ip);
@@ -176,7 +177,10 @@ static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t 
                   IPV4_DEFAULT_TTL, IP_PROTO_TCP, sock->dev->ip_addr, dest_ip);
 
   /* compute ack number */
-  sock->ack_no = ntohl(skb->h.tcp_header->seq) + tcp_data_length(skb) + 1;
+  len = tcp_data_length(skb);
+  sock->ack_no = ntohl(skb->h.tcp_header->seq) + len;
+  if (!len)
+    sock->ack_no += 1;
 
   /* build tcp header */
   skb_ack->h.tcp_header = (struct tcp_header_t *) skb_put(skb_ack, sizeof(struct tcp_header_t));
@@ -191,7 +195,10 @@ static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t 
   skb_free(skb_ack);
 
   /* update sequence */
-  sock->seq_no += 1;
+  if (len)
+    sock->seq_no += len;
+  else if (flags & TCPCB_FLAG_SYN)
+    sock->seq_no += 1;
 
   return 0;
 }
@@ -233,23 +240,16 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 
       /* reply to SYN messages */
       if (skb->h.tcp_header->syn)
-        tcp_reply_ack(sock, skb, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, 1);
+        tcp_reply_ack(sock, skb, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, 0);
 
       break;
     case SS_CONNECTING:
-      /* find SYN/ACK message */
+      /* find SYN | ACK message */
       if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
         sock->state = SS_CONNECTED;
-        sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
 
-        /* create ACK message */
-        skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0, 0);
-        if (!skb_ack)
-          return -ENOMEM;
-
-        /* send ACK message */
-        sock->dev->send_packet(skb_ack);
-        skb_free(skb_ack);
+        /* reply ACK */
+        tcp_reply_ack(sock, skb, TCPCB_FLAG_ACK, 0);
       }
 
       break;
