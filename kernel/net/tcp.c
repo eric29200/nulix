@@ -142,6 +142,61 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
 }
 
 /*
+ * Reply a ACK message.
+ */
+static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t flags, int block)
+{
+  struct arp_table_entry_t *arp_entry;
+  uint8_t dest_ip[4], route_ip[4];
+  struct sk_buff_t *skb_ack;
+
+  /* get destination IP */
+  inet_ntoi(inet_iton(skb->nh.ip_header->src_addr), dest_ip);
+
+  /* get route IP */
+  ip_route(sock->dev, dest_ip, route_ip);
+
+  /* find destination MAC address from arp */
+  arp_entry = arp_lookup(sock->dev, route_ip, block);
+  if (!arp_entry)
+    return -EINVAL;
+
+  /* allocate a socket buffer */
+  skb_ack = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + sizeof(struct tcp_header_t));
+  if (!skb_ack)
+    return -ENOMEM;
+
+  /* build ethernet header */
+  skb_ack->eth_header = (struct ethernet_header_t *) skb_put(skb_ack, sizeof(struct ethernet_header_t));
+  ethernet_build_header(skb_ack->eth_header, sock->dev->mac_addr, arp_entry->mac_addr, ETHERNET_TYPE_IP);
+
+  /* build ip header */
+  skb_ack->nh.ip_header = (struct ip_header_t *) skb_put(skb_ack, sizeof(struct ip_header_t));
+  ip_build_header(skb_ack->nh.ip_header, 0, sizeof(struct ip_header_t) + sizeof(struct tcp_header_t), 0,
+                  IPV4_DEFAULT_TTL, IP_PROTO_TCP, sock->dev->ip_addr, dest_ip);
+
+  /* compute ack number */
+  sock->ack_no = ntohl(skb->h.tcp_header->seq) + tcp_data_length(skb) + 1;
+
+  /* build tcp header */
+  skb_ack->h.tcp_header = (struct tcp_header_t *) skb_put(skb_ack, sizeof(struct tcp_header_t));
+  tcp_build_header(skb_ack->h.tcp_header, ntohs(sock->src_sin.sin_port), ntohs(skb->h.tcp_header->src_port),
+                   sock->seq_no, sock->ack_no, ETHERNET_MAX_MTU, flags);
+
+  /* compute tcp checksum */
+  skb_ack->h.tcp_header->chksum = tcp_checksum(skb_ack->h.tcp_header, sock->dev->ip_addr, dest_ip, 0);
+
+  /* send ACK message */
+  sock->dev->send_packet(skb_ack);
+  skb_free(skb_ack);
+
+  /* update sequence */
+  sock->seq_no += 1;
+
+  return 0;
+}
+
+/*
  * Handle a TCP packet.
  */
 int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
@@ -175,6 +230,10 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 
       /* add buffer to socket */
       list_add_tail(&skb_new->list, &sock->skb_list);
+
+      /* reply to SYN messages */
+      if (skb->h.tcp_header->syn)
+        tcp_reply_ack(sock, skb, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, 1);
 
       break;
     case SS_CONNECTING:
@@ -397,8 +456,8 @@ int tcp_connect(struct socket_t *sock)
  */
 int tcp_accept(struct socket_t *sock, struct socket_t *sock_new)
 {
-  struct sk_buff_t *skb, *skb_ack;
   struct list_head_t *pos;
+  struct sk_buff_t *skb;
 
   for (;;) {
     /* signal received : restart system call */
@@ -428,18 +487,8 @@ int tcp_accept(struct socket_t *sock, struct socket_t *sock_new)
       sock_new->dst_sin.sin_family = AF_INET;
       sock_new->dst_sin.sin_port = skb->h.tcp_header->src_port;
       sock_new->dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
-      sock_new->seq_no = 0;
-      sock_new->ack_no = 0;
-
-      /* create SYN | ACK message */
+      sock_new->seq_no = 1;
       sock_new->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
-      skb_ack = tcp_create_skb(sock_new, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, NULL, 0, 1);
-      if (!skb_ack)
-        return -ENOMEM;
-
-      /* send SYN | ACK message */
-      sock->dev->send_packet(skb_ack);
-      skb_free(skb_ack);
 
       /* free socket buffer */
       list_del(&skb->list);
