@@ -126,28 +126,6 @@ void skb_handle(struct sk_buff_t *skb)
       break;
   }
 }
-/*
- * Network handler thread.
- */
-static void net_handler_thread(void *arg)
-{
-  struct net_device_t *net_dev = (struct net_device_t *) arg;
-  struct list_head_t *pos, *n;
-  struct sk_buff_t *skb;
-
-  for (;;) {
-    /* handle incoming packets */
-    list_for_each_safe(pos, n, &net_dev->skb_list) {
-      skb = list_entry(pos, struct sk_buff_t, list);
-      list_del(&skb->list);
-      skb_handle(skb);
-      skb_free(skb);
-    }
-
-    /* wait for incoming packets */
-    task_sleep(current_task->waiting_chan);
-  }
-}
 
 /*
  * Register a network device.
@@ -163,29 +141,6 @@ struct net_device_t *register_net_device(uint32_t io_base)
   /* set net device */
   net_dev = &net_devices[nb_net_devices++];
   net_dev->io_base = io_base;
-  INIT_LIST_HEAD(&net_dev->skb_list);
-
-  /* create kernel thread to handle received packets */
-  net_dev->thread = create_kernel_thread(net_handler_thread, net_dev);
-  if (!net_dev->thread)
-    return NULL;
 
   return net_dev;
 }
-
-/*
- * Handle network packet (put it in device queue).
- */
-void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb)
-{
-  /* null buffer */
-  if (!skb)
-    return;
-
-  /* put socket buffer in net device list */
-  list_add_tail(&skb->list, &net_dev->skb_list);
-
-  /* wake up handler */
-  task_wakeup_all(net_dev->thread->waiting_chan);
-}
-
