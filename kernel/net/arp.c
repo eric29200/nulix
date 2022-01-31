@@ -43,7 +43,7 @@ void arp_receive(struct sk_buff_t *skb)
 /*
  * Lookup for an arp table entry.
  */
-struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr)
+struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr, int block)
 {
   struct sk_buff_t *skb;
   int i;
@@ -72,6 +72,10 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr)
 
     /* free ARP request packet */
     skb_free(skb);
+
+    /* do not block */
+    if (!block)
+      break;
 
     /* wait for response */
     task_sleep_timeout(current_task->waiting_chan, ARP_REQUEST_WAIT_MS);

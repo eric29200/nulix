@@ -88,7 +88,7 @@ void tcp_receive(struct sk_buff_t *skb)
 /*
  * Create a TCP message.
  */
-static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, void *msg, size_t len)
+static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, void *msg, size_t len, int block)
 {
   struct arp_table_entry_t *arp_entry;
   uint8_t dest_ip[4], route_ip[4];
@@ -102,7 +102,7 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
   ip_route(sock->dev, dest_ip, route_ip);
 
   /* find destination MAC address from arp */
-  arp_entry = arp_lookup(sock->dev, route_ip);
+  arp_entry = arp_lookup(sock->dev, route_ip, block);
   if (!arp_entry)
     return NULL;
 
@@ -184,7 +184,7 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
         sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
 
         /* create ACK message */
-        skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
+        skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0, 0);
         if (!skb_ack)
           return -ENOMEM;
 
@@ -215,7 +215,7 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
         /* send ACK message */
         if (data_len || skb->h.tcp_header->fin) {
           /* create ACK message */
-          skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0);
+          skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0, 0);
           if (!skb_ack)
             return -ENOMEM;
 
@@ -228,7 +228,7 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
         if (skb->h.tcp_header->fin) {
           /* create FIN | ACK message */
           sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
-          skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK | TCPCB_FLAG_FIN, NULL, 0);
+          skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK | TCPCB_FLAG_FIN, NULL, 0, 0);
           if (!skb_ack)
             return -ENOMEM;
 
@@ -350,7 +350,7 @@ int tcp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 
   for (i = 0, len = 0; i < msg->msg_iovlen; i++) {
     /* create socket buffer */
-    skb = tcp_create_skb(sock, TCPCB_FLAG_ACK, msg->msg_iov->iov_base, msg->msg_iov->iov_len);
+    skb = tcp_create_skb(sock, TCPCB_FLAG_ACK, msg->msg_iov->iov_base, msg->msg_iov->iov_len, 1);
     if (!skb)
       return -EINVAL;
 
@@ -378,7 +378,7 @@ int tcp_connect(struct socket_t *sock)
   sock->ack_no = 0;
 
   /* create SYN message */
-  skb = tcp_create_skb(sock, TCPCB_FLAG_SYN, NULL, 0);
+  skb = tcp_create_skb(sock, TCPCB_FLAG_SYN, NULL, 0, 1);
   if (!skb)
     return -EINVAL;
 
@@ -433,7 +433,7 @@ int tcp_accept(struct socket_t *sock, struct socket_t *sock_new)
 
       /* create SYN | ACK message */
       sock_new->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
-      skb_ack = tcp_create_skb(sock_new, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, NULL, 0);
+      skb_ack = tcp_create_skb(sock_new, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, NULL, 0, 1);
       if (!skb_ack)
         return -ENOMEM;
 

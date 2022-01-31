@@ -77,7 +77,7 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
   ip_route(sock->dev, dest_ip, route_ip);
 
   /* find destination MAC address from arp */
-  arp_entry = arp_lookup(sock->dev, route_ip);
+  arp_entry = arp_lookup(sock->dev, route_ip, 1);
   if (!arp_entry)
     return -EINVAL;
 
