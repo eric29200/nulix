@@ -195,9 +195,7 @@ static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t 
   skb_free(skb_ack);
 
   /* update sequence */
-  if (len)
-    sock->seq_no += len;
-  else if (flags & TCPCB_FLAG_SYN)
+  if (flags & TCPCB_FLAG_SYN || flags & TCPCB_FLAG_FIN)
     sock->seq_no += 1;
 
   return 0;
@@ -208,7 +206,7 @@ static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t 
  */
 int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 {
-  struct sk_buff_t *skb_ack, *skb_new;
+  struct sk_buff_t *skb_new;
   uint32_t data_len;
 
   /* check protocol */
@@ -265,35 +263,14 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
           list_add_tail(&skb_new->list, &sock->skb_list);
         }
 
-        /* update ack number */
-        if (data_len > 0)
-          sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len;
-        else if (skb->h.tcp_header->fin)
-          sock->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
-
-        /* send ACK message */
-        if (data_len || skb->h.tcp_header->fin) {
-          /* create ACK message */
-          skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK, NULL, 0, 0);
-          if (!skb_ack)
-            return -ENOMEM;
-
-          /* send ACK message */
-          sock->dev->send_packet(skb_ack);
-          skb_free(skb_ack);
-        }
+        /* reply ACK message */
+        if (data_len || skb->h.tcp_header->fin)
+          tcp_reply_ack(sock, skb, TCPCB_FLAG_ACK, 0);
 
         /* FIN message : close socket */
         if (skb->h.tcp_header->fin) {
-          /* create FIN | ACK message */
-          sock->ack_no = ntohl(skb->h.tcp_header->seq) + data_len + 1;
-          skb_ack = tcp_create_skb(sock, TCPCB_FLAG_ACK | TCPCB_FLAG_FIN, NULL, 0, 0);
-          if (!skb_ack)
-            return -ENOMEM;
-
-          /* send FIN | ACK message */
-          sock->dev->send_packet(skb_ack);
-          skb_free(skb_ack);
+          /* reply FIN | ACK message */
+          tcp_reply_ack(sock, skb, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, 0);
 
           /* close socket */
           sock->state = SS_DISCONNECTING;
