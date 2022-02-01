@@ -207,6 +207,7 @@ static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t 
 int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 {
   struct sk_buff_t *skb_new;
+  uint16_t ack_flags;
   uint32_t data_len;
 
   /* check protocol */
@@ -225,15 +226,16 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
   /* compute data length */
   data_len = tcp_data_length(skb);
 
-  /* ack message */
-  if (skb->h.tcp_header->syn && skb->h.tcp_header->ack)
-    tcp_reply_ack(sock, skb, TCPCB_FLAG_ACK, 0);
-  else if (skb->h.tcp_header->syn)
-    tcp_reply_ack(sock, skb, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, 0);
+  /* set ack flags */
+  ack_flags = TCPCB_FLAG_ACK;
+  if (skb->h.tcp_header->syn && !skb->h.tcp_header->ack)
+    ack_flags |= TCPCB_FLAG_SYN;
   else if (skb->h.tcp_header->fin)
-    tcp_reply_ack(sock, skb, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, 0);
-  else if (data_len > 0 || skb->h.tcp_header->fin)
-    tcp_reply_ack(sock, skb, TCPCB_FLAG_ACK, 0);
+    ack_flags |= TCPCB_FLAG_FIN;
+
+  /* send ACK message */
+  if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin)
+    tcp_reply_ack(sock, skb, ack_flags, 0);
 
   /* handle TCP packet */
   switch (sock->state) {
