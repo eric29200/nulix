@@ -225,6 +225,16 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
   /* compute data length */
   data_len = tcp_data_length(skb);
 
+  /* ack message */
+  if (skb->h.tcp_header->syn && skb->h.tcp_header->ack)
+    tcp_reply_ack(sock, skb, TCPCB_FLAG_ACK, 0);
+  else if (skb->h.tcp_header->syn)
+    tcp_reply_ack(sock, skb, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, 0);
+  else if (skb->h.tcp_header->fin)
+    tcp_reply_ack(sock, skb, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, 0);
+  else if (data_len > 0 || skb->h.tcp_header->fin)
+    tcp_reply_ack(sock, skb, TCPCB_FLAG_ACK, 0);
+
   /* handle TCP packet */
   switch (sock->state) {
     case SS_LISTENING:
@@ -236,19 +246,11 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
       /* add buffer to socket */
       list_add_tail(&skb_new->list, &sock->skb_list);
 
-      /* reply to SYN messages */
-      if (skb->h.tcp_header->syn)
-        tcp_reply_ack(sock, skb, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, 0);
-
       break;
     case SS_CONNECTING:
       /* find SYN | ACK message */
-      if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
+      if (skb->h.tcp_header->syn && skb->h.tcp_header->ack)
         sock->state = SS_CONNECTED;
-
-        /* reply ACK */
-        tcp_reply_ack(sock, skb, TCPCB_FLAG_ACK, 0);
-      }
 
       break;
     case SS_CONNECTED:
@@ -263,18 +265,10 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
           list_add_tail(&skb_new->list, &sock->skb_list);
         }
 
-        /* reply ACK message */
-        if (data_len || skb->h.tcp_header->fin)
-          tcp_reply_ack(sock, skb, TCPCB_FLAG_ACK, 0);
-
         /* FIN message : close socket */
-        if (skb->h.tcp_header->fin) {
-          /* reply FIN | ACK message */
-          tcp_reply_ack(sock, skb, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, 0);
-
-          /* close socket */
+        if (skb->h.tcp_header->fin)
           sock->state = SS_DISCONNECTING;
-        }
+
       break;
     default:
       break;
