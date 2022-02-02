@@ -51,7 +51,7 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr,
   for (;;) {
     /* try to find address in cache */
     for (i = 0; i < ARP_TABLE_SIZE; i++)
-      if (memcmp(arp_table[i].ip_addr, ip_addr, 3) == 0)
+      if (memcmp(arp_table[i].ip_addr, ip_addr, 4) == 0)
         return &arp_table[i];
 
     /* else send an ARP request */
