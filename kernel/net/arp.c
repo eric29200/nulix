@@ -67,11 +67,8 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr,
     skb->nh.arp_header = (struct arp_header_t *) skb_put(skb, sizeof(struct arp_header_t));
     arp_build_header(skb->nh.arp_header, ARP_REQUEST, dev->mac_addr, dev->ip_addr, zero_mac_addr, ip_addr);
 
-    /* send request */
-    dev->send_packet(skb);
-
-    /* free ARP request packet */
-    skb_free(skb);
+    /* transmit request */
+    net_transmit(dev, skb);
 
     /* do not block */
     if (!block)
@@ -153,9 +150,6 @@ void arp_reply_request(struct sk_buff_t *skb)
   arp_build_header(skb_reply->nh.arp_header, ARP_REPLY, skb->dev->mac_addr, skb->dev->ip_addr,
                    skb->nh.arp_header->src_hardware_addr, skb->nh.arp_header->src_protocol_addr);
 
-  /* send reply buffer */
-  skb->dev->send_packet(skb_reply);
-
-  /* free reply buffer */
-  skb_free(skb_reply);
+  /* transmit reply */
+  net_transmit(skb->dev, skb_reply);
 }

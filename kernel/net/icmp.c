@@ -58,11 +58,8 @@ void icmp_reply_echo(struct sk_buff_t *skb)
   skb_reply->h.icmp_header->chksum = 0;
   skb_reply->h.icmp_header->chksum = net_checksum(skb_reply->h.icmp_header, sizeof(struct icmp_header_t) + data_len);
 
-  /* send data */
-  skb->dev->send_packet(skb_reply);
-
-  /* free reply buffer */
-  skb_free(skb_reply);
+  /* transmit reply */
+  net_transmit(skb->dev, skb_reply);
 }
 
 /*
@@ -144,11 +141,8 @@ int icmp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
   skb->h.icmp_header->chksum = 0;
   skb->h.icmp_header->chksum = net_checksum(skb->h.icmp_header, len);
 
-  /* send message */
-  sock->dev->send_packet(skb);
-
-  /* free message */
-  skb_free(skb);
+  /* transmit message */
+  net_transmit(sock->dev, skb);
 
   return len;
 }

@@ -139,10 +139,7 @@ int raw_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
   }
 
   /* send message */
-  sock->dev->send_packet(skb);
-
-  /* free message */
-  skb_free(skb);
+  net_transmit(sock->dev, skb);
 
   return len;
 }

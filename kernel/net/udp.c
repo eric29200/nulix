@@ -112,11 +112,8 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
     buf += msg->msg_iov[i].iov_len;
   }
 
-  /* send message */
-  sock->dev->send_packet(skb);
-
-  /* free message */
-  skb_free(skb);
+  /* transmit message */
+  net_transmit(sock->dev, skb);
 
   return len;
 }

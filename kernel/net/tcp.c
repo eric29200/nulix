@@ -190,9 +190,8 @@ static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t 
   /* compute tcp checksum */
   skb_ack->h.tcp_header->chksum = tcp_checksum(skb_ack->h.tcp_header, sock->dev->ip_addr, dest_ip, 0);
 
-  /* send ACK message */
-  sock->dev->send_packet(skb_ack);
-  skb_free(skb_ack);
+  /* transmit ACK message */
+  net_transmit(sock->dev, skb_ack);
 
   /* update sequence */
   if (flags & TCPCB_FLAG_SYN || flags & TCPCB_FLAG_FIN)
@@ -386,11 +385,8 @@ int tcp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
     if (!skb)
       return -EINVAL;
 
-    /* send message */
-    sock->dev->send_packet(skb);
-
-    /* free message */
-    skb_free(skb);
+    /* transmit message */
+    net_transmit(sock->dev, skb);
 
     len += msg->msg_iov->iov_len;
   }
@@ -414,9 +410,8 @@ int tcp_connect(struct socket_t *sock)
   if (!skb)
     return -EINVAL;
 
-  /* send SYN message */
-  sock->dev->send_packet(skb);
-  skb_free(skb);
+  /* transmit SYN message */
+  net_transmit(sock->dev, skb);
 
   /* set socket state */
   sock->state = SS_CONNECTING;

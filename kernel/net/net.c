@@ -133,14 +133,18 @@ void skb_handle(struct sk_buff_t *skb)
 static void net_handler_thread(void *arg)
 {
   struct net_device_t *net_dev = (struct net_device_t *) arg;
-  struct list_head_t *pos, *n;
+  struct list_head_t *pos1, *n1, *pos2, *n2;
   struct sk_buff_t *skb;
+  uint32_t flags;
 
   for (;;) {
+    /* disable interrupts */
+    irq_save(flags);
+
     /* handle incoming packets */
-    list_for_each_safe(pos, n, &net_dev->skb_list) {
+    list_for_each_safe(pos1, n1, &net_dev->skb_input_list) {
       /* get packet */
-      skb = list_entry(pos, struct sk_buff_t, list);
+      skb = list_entry(pos1, struct sk_buff_t, list);
       list_del(&skb->list);
 
       /* handle packet */
@@ -150,8 +154,24 @@ static void net_handler_thread(void *arg)
       skb_free(skb);
     }
 
+    /* handle outcoming packets */
+    list_for_each_safe(pos2, n2, &net_dev->skb_output_list) {
+      /* get packet */
+      skb = list_entry(pos2, struct sk_buff_t, list);
+      list_del(&skb->list);
+
+      /* send packet */
+      net_dev->send_packet(skb);
+
+      /* free packet */
+      skb_free(skb);
+    }
+
+    /* enable interrupts */
+    irq_restore(flags);
+
     /* wait for incoming packets */
-    task_sleep(current_task->waiting_chan);
+    task_sleep_timeout(current_task->waiting_chan, NET_HANDLE_FREQ_MS);
   }
 }
 
@@ -169,7 +189,8 @@ struct net_device_t *register_net_device(uint32_t io_base)
   /* set net device */
   net_dev = &net_devices[nb_net_devices++];
   net_dev->io_base = io_base;
-  INIT_LIST_HEAD(&net_dev->skb_list);
+  INIT_LIST_HEAD(&net_dev->skb_input_list);
+  INIT_LIST_HEAD(&net_dev->skb_output_list);
 
   /* create kernel thread to handle receive packets */
   net_dev->thread = create_kernel_thread(net_handler_thread, net_dev);
@@ -188,7 +209,22 @@ void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb)
     return;
 
   /* put socket buffer in net device list */
-  list_add_tail(&skb->list, &net_dev->skb_list);
+  list_add_tail(&skb->list, &net_dev->skb_input_list);
+
+  /* wake up handler */
+  task_wakeup_all(net_dev->thread->waiting_chan);
+}
+
+/*
+ * Transmit a network packet (put it in device queue).
+ */
+void net_transmit(struct net_device_t *net_dev, struct sk_buff_t *skb)
+{
+  if (!skb)
+    return;
+
+  /* put socket buffer in net device list */
+  list_add_tail(&skb->list, &net_dev->skb_output_list);
 
   /* wake up handler */
   task_wakeup_all(net_dev->thread->waiting_chan);
