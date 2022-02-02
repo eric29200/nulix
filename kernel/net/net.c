@@ -136,6 +136,7 @@ static void net_handler_thread(void *arg)
   struct list_head_t *pos1, *n1, *pos2, *n2;
   struct sk_buff_t *skb;
   uint32_t flags;
+  int ret;
 
   for (;;) {
     /* disable interrupts */
@@ -158,13 +159,16 @@ static void net_handler_thread(void *arg)
     list_for_each_safe(pos2, n2, &net_dev->skb_output_list) {
       /* get packet */
       skb = list_entry(pos2, struct sk_buff_t, list);
-      list_del(&skb->list);
 
-      /* send packet */
-      net_dev->send_packet(skb);
+      /* rebuild ethernet header */
+      ret = ethernet_rebuild_header(net_dev, skb);
 
-      /* free packet */
-      skb_free(skb);
+      /* send packet and remove it from list */
+      if (ret == 0) {
+        list_del(&skb->list);
+        net_dev->send_packet(skb);
+        skb_free(skb);
+      }
     }
 
     /* enable interrupts */

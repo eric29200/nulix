@@ -88,23 +88,14 @@ void tcp_receive(struct sk_buff_t *skb)
 /*
  * Create a TCP message.
  */
-static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, void *msg, size_t len, int block)
+static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, void *msg, size_t len)
 {
-  struct arp_table_entry_t *arp_entry;
-  uint8_t dest_ip[4], route_ip[4];
   struct sk_buff_t *skb;
+  uint8_t dest_ip[4];
   void *buf;
 
   /* get destination IP */
   inet_ntoi(sock->dst_sin.sin_addr, dest_ip);
-
-  /* get route IP */
-  ip_route(sock->dev, dest_ip, route_ip);
-
-  /* find destination MAC address from arp */
-  arp_entry = arp_lookup(sock->dev, route_ip, block);
-  if (!arp_entry)
-    return NULL;
 
   /* allocate a socket buffer */
   skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + sizeof(struct tcp_header_t) + len);
@@ -113,7 +104,7 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
 
   /* build ethernet header */
   skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
-  ethernet_build_header(skb->eth_header, sock->dev->mac_addr, arp_entry->mac_addr, ETHERNET_TYPE_IP);
+  ethernet_build_header(skb->eth_header, sock->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
   /* build ip header */
   skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
@@ -144,23 +135,14 @@ static struct sk_buff_t *tcp_create_skb(struct socket_t *sock, uint16_t flags, v
 /*
  * Reply a ACK message.
  */
-static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t flags, int block)
+static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t flags)
 {
-  struct arp_table_entry_t *arp_entry;
-  uint8_t dest_ip[4], route_ip[4];
   struct sk_buff_t *skb_ack;
+  uint8_t dest_ip[4];
   int len;
 
   /* get destination IP */
   inet_ntoi(inet_iton(skb->nh.ip_header->src_addr), dest_ip);
-
-  /* get route IP */
-  ip_route(sock->dev, dest_ip, route_ip);
-
-  /* find destination MAC address from arp */
-  arp_entry = arp_lookup(sock->dev, route_ip, block);
-  if (!arp_entry)
-    return -EINVAL;
 
   /* allocate a socket buffer */
   skb_ack = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + sizeof(struct tcp_header_t));
@@ -169,7 +151,7 @@ static int tcp_reply_ack(struct socket_t *sock, struct sk_buff_t *skb, uint16_t 
 
   /* build ethernet header */
   skb_ack->eth_header = (struct ethernet_header_t *) skb_put(skb_ack, sizeof(struct ethernet_header_t));
-  ethernet_build_header(skb_ack->eth_header, sock->dev->mac_addr, arp_entry->mac_addr, ETHERNET_TYPE_IP);
+  ethernet_build_header(skb_ack->eth_header, sock->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
   /* build ip header */
   skb_ack->nh.ip_header = (struct ip_header_t *) skb_put(skb_ack, sizeof(struct ip_header_t));
@@ -234,7 +216,7 @@ int tcp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 
   /* send ACK message */
   if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin)
-    tcp_reply_ack(sock, skb, ack_flags, 0);
+    tcp_reply_ack(sock, skb, ack_flags);
 
   /* handle TCP packet */
   switch (sock->state) {
@@ -381,7 +363,7 @@ int tcp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 
   for (i = 0, len = 0; i < msg->msg_iovlen; i++) {
     /* create socket buffer */
-    skb = tcp_create_skb(sock, TCPCB_FLAG_ACK, msg->msg_iov->iov_base, msg->msg_iov->iov_len, 1);
+    skb = tcp_create_skb(sock, TCPCB_FLAG_ACK, msg->msg_iov->iov_base, msg->msg_iov->iov_len);
     if (!skb)
       return -EINVAL;
 
@@ -406,7 +388,7 @@ int tcp_connect(struct socket_t *sock)
   sock->ack_no = 0;
 
   /* create SYN message */
-  skb = tcp_create_skb(sock, TCPCB_FLAG_SYN, NULL, 0, 1);
+  skb = tcp_create_skb(sock, TCPCB_FLAG_SYN, NULL, 0);
   if (!skb)
     return -EINVAL;
 

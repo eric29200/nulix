@@ -59,10 +59,9 @@ int udp_handle(struct socket_t *sock, struct sk_buff_t *skb)
  */
 int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 {
-  struct arp_table_entry_t *arp_entry;
   struct sockaddr_in *dest_addr_in;
-  uint8_t dest_ip[4], route_ip[4];
   struct sk_buff_t *skb;
+  uint8_t dest_ip[4];
   size_t len, i;
   void *buf;
 
@@ -72,14 +71,6 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
   /* get destination IP */
   dest_addr_in = (struct sockaddr_in *) msg->msg_name;
   inet_ntoi(dest_addr_in->sin_addr, dest_ip);
-
-  /* get route IP */
-  ip_route(sock->dev, dest_ip, route_ip);
-
-  /* find destination MAC address from arp */
-  arp_entry = arp_lookup(sock->dev, route_ip, 1);
-  if (!arp_entry)
-    return -EINVAL;
 
   /* compute data length */
   len = 0;
@@ -93,7 +84,7 @@ int udp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 
   /* build ethernet header */
   skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
-  ethernet_build_header(skb->eth_header, sock->dev->mac_addr, arp_entry->mac_addr, ETHERNET_TYPE_IP);
+  ethernet_build_header(skb->eth_header, sock->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
   /* build ip header */
   skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
