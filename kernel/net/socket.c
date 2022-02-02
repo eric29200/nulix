@@ -89,16 +89,21 @@ static struct socket_t *sock_lookup(struct inode_t *inode)
 int socket_close(struct file_t *filp)
 {
   struct socket_t *sock;
+  int ret = 0;
 
   /* get socket */
   sock = sock_lookup(filp->f_inode);
   if (!sock)
     return -EINVAL;
 
+  /* close protocol operation */
+  if (sock->ops && sock->ops->close)
+    sock->ops->close(sock);
+
   /* free socket */
   sock_release(sock);
 
-  return 0;
+  return ret;
 }
 
 /*

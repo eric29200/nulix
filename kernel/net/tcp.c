@@ -459,6 +459,21 @@ int tcp_accept(struct socket_t *sock, struct socket_t *sock_new)
 }
 
 /*
+ * Close a TCP connection.
+ */
+static int tcp_close(struct socket_t *sock)
+{
+  struct sk_buff_t *skb;
+
+  /* send FIN message */
+  skb = tcp_create_skb(sock, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, NULL, 0);
+  if (skb)
+    net_transmit(sock->dev, skb);
+
+  return 0;
+}
+
+/*
  * TCP protocol operations.
  */
 struct prot_ops tcp_prot_ops = {
@@ -467,5 +482,6 @@ struct prot_ops tcp_prot_ops = {
   .sendmsg      = tcp_sendmsg,
   .connect      = tcp_connect,
   .accept       = tcp_accept,
+  .close        = tcp_close,
 };
 

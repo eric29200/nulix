@@ -93,6 +93,7 @@ struct prot_ops {
   int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int);
   int (*connect)(struct socket_t *);
   int (*accept)(struct socket_t *, struct socket_t *);
+  int (*close)(struct socket_t *);
 };
 
 /* protocol operations */
