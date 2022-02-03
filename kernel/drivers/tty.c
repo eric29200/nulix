@@ -333,7 +333,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 
   /* init each tty */
   for (i = 0; i < NB_TTYS; i++) {
-    tty_table[i].dev = DEV_TTY1 + i;
+    tty_table[i].dev = DEV_TTY0 + i + 1;
     tty_table[i].pgrp = 0;
     tty_table[i].write = console_write;
 
