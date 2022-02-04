@@ -71,7 +71,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
  */
 static inline void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint8_t red, uint8_t green, uint8_t blue)
 {
-  uint8_t *pixel = (uint8_t *) (fb->addr + x * 3 + y * fb->pitch);
+  uint8_t *pixel = (uint8_t *) (fb->addr + x * 4 + y * fb->pitch);
   *pixel++ = red;
   *pixel++ = green;
   *pixel++ = blue;
@@ -85,7 +85,7 @@ static inline void fb_put_blank(struct framebuffer_t *fb, uint32_t pos_x, uint32
   uint32_t y;
 
   for (y = 0; y < fb->font->height; y++)
-    memset((void *) (fb->addr + pos_x * 3 + (pos_y + y) * fb->pitch), 0, fb->font->width * 3);
+    memset((void *) (fb->addr + pos_x * 4 + (pos_y + y) * fb->pitch), 0, fb->font->width * 4);
 }
 
 /*
@@ -96,7 +96,7 @@ static inline void fb_put_cursor(struct framebuffer_t *fb, uint32_t pos_x, uint3
   uint32_t y;
 
   for (y = 0; y < fb->font->height; y++)
-    memset((void *) (fb->addr + pos_x * 3 + (pos_y + y) * fb->pitch), 0xFF, fb->font->width * 3);
+    memset((void *) (fb->addr + pos_x * 4 + (pos_y + y) * fb->pitch), 0xFF, fb->font->width * 4);
 }
 
 /*
@@ -121,7 +121,7 @@ static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, ui
   /* print glyph */
   for (y = 0; y < fb->font->height; y++) {
     for (x = 0; x < fb->font->width; x++) {
-      if ((*font) & bit)
+      if (*font & bit)
         fb_put_pixel(fb, pos_x + x, pos_y + y, fb->red, fb->green, fb->blue);
       else
         fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
