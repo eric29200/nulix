@@ -11,6 +11,8 @@
 #define DEV_NULL          0x103     /* /dev/null device */
 #define DEV_ZERO          0x105     /* /dev/zero device */
 
-#define DEV_PTY_MAJOR     0x88      /* pseudo terminal */
+#define DEV_PTY_MAJOR     136       /* pseudo terminal */
+
+#define DEV_FB_MAJOR      29        /* frame buffer */
 
 #endif

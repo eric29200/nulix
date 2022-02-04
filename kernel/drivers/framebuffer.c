@@ -1,4 +1,6 @@
 #include <drivers/framebuffer.h>
+#include <drivers/tty.h>
+#include <fs/fs.h>
 #include <mm/mm.h>
 #include <x86/io.h>
 #include <lib/font.h>
@@ -236,3 +238,71 @@ static void fb_update_rgb(struct framebuffer_t *fb)
   /* mark frame buffer clean */
   fb->dirty = 0;
 }
+
+/*
+ * Open a frame buffer.
+ */
+static int fb_open(struct file_t *filp)
+{
+  UNUSED(filp);
+  return 0;
+}
+
+/*
+ * Read a framebuffer.
+ */
+static int fb_read(struct file_t *filp, char *buf, int n)
+{
+  UNUSED(filp);
+  UNUSED(buf);
+  UNUSED(n);
+  return 0;
+}
+
+/*
+ * Write to a frame buffer.
+ */
+static int fb_write(struct file_t *filp, const char *buf, int n)
+{
+  struct tty_t *tty;
+
+  /* get first tty */
+  tty = tty_lookup(DEV_TTY0);
+  if (!tty)
+    return -EINVAL;
+
+  /* check position */
+  if (filp->f_pos > tty->fb.width * tty->fb.height)
+    return 0;
+
+  /* ajust size */
+  if (filp->f_pos + n > tty->fb.width * tty->fb.height)
+    n = tty->fb.width * tty->fb.height - filp->f_pos;
+
+  /* write */
+  memcpy(tty->fb.buf, buf, n);
+
+  /* update position */
+  filp->f_pos += n;
+
+  /* mark frame buffer dirty */
+  tty->fb.dirty = 1;
+
+  return n;
+}
+
+/*
+ * Framebuffer file operations.
+ */
+static struct file_operations_t fb_fops = {
+  .open       = fb_open,
+  .read       = fb_read,
+  .write      = fb_write,
+};
+
+/*
+ * Framebuffer inode operations.
+ */
+struct inode_operations_t fb_iops = {
+  .fops       = &fb_fops,
+};

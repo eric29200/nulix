@@ -23,7 +23,7 @@ static struct timer_event_t refresh_tm;
 /*
  * Lookup for a tty.
  */
-static struct tty_t *tty_lookup(dev_t dev)
+struct tty_t *tty_lookup(dev_t dev)
 {
   int i;
 

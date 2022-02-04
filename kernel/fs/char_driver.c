@@ -3,6 +3,7 @@
 #include <drivers/zero.h>
 #include <drivers/tty.h>
 #include <drivers/pty.h>
+#include <drivers/framebuffer.h>
 #include <fcntl.h>
 
 /*
@@ -38,6 +39,10 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
   /* tty driver */
   if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
     return &tty_iops;
+
+  /* frame buffer driver */
+  if (major(dev) == DEV_FB_MAJOR)
+    return &fb_iops;
 
   return NULL;
 }
