@@ -347,7 +347,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
       return ret;
 
     /* init frame buffer */
-    ret = init_framebuffer(&tty_table[i].fb, tag_fb);
+    ret = init_framebuffer(&tty_table[i].fb, tag_fb, 0);
     if (ret != 0)
       return ret;
 

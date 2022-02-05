@@ -8,13 +8,25 @@
 #include <stderr.h>
 
 /* frame buffer update functions */
+static void fb_update_direct(struct framebuffer_t *fb);
 static void fb_update_text(struct framebuffer_t *fb);
 static void fb_update_rgb(struct framebuffer_t *fb);
+
+/* direct frame buffer */
+static struct framebuffer_t direct_fb;
+
+/*
+ * Init direct frame buffer.
+ */
+int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
+{
+  return init_framebuffer(&direct_fb, tag_fb, 1);
+}
 
 /*
  * Init the framebuffer.
  */
-int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb)
+int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, int direct)
 {
   uint32_t fb_nb_pages, i;
   uint32_t width, height;
@@ -33,24 +45,26 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
   fb->blue = 0xFF;
   fb->dirty = 1;
 
-  /* if rgb frame buffer, use default font */
-  switch (fb->type) {
-    case MULTIBOOT_FRAMEBUFFER_TYPE_RGB:
-      fb->font = get_default_font();
-      if (!fb->font)
-        return -ENOSPC;
-      fb->width = width / fb->font->width;
-      fb->height = height / fb->font->height;
-      fb->update = fb_update_rgb;
-      break;
-    case MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT:
-      fb->font = NULL;
-      fb->width = width;
-      fb->height = height;
-      fb->update = fb_update_text;
-      break;
-    default:
-      return -EINVAL;
+  /* init frame buffer */
+  if (direct) {
+    fb->font = NULL;
+    fb->width = width;
+    fb->height = height;
+    fb->update = fb_update_direct;
+  } else if (fb->type == MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT) {
+    fb->font = NULL;
+    fb->width = width;
+    fb->height = height;
+    fb->update = fb_update_text;
+  } else if (fb->type == MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
+    fb->font = get_default_font();
+    if (!fb->font)
+      return -ENOSPC;
+    fb->width = width / fb->font->width;
+    fb->height = height / fb->font->height;
+    fb->update = fb_update_rgb;
+  } else {
+    return -EINVAL;
   }
 
   /* allocate buffer */
@@ -193,6 +207,15 @@ void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y)
 }
 
 /*
+ * Update a direct frame buffer.
+ */
+static void fb_update_direct(struct framebuffer_t *fb)
+{
+  UNUSED(fb);
+  return;
+}
+
+/*
  * Update a text frame buffer.
  */
 static void fb_update_text(struct framebuffer_t *fb)
@@ -264,29 +287,22 @@ static int fb_read(struct file_t *filp, char *buf, int n)
  */
 static int fb_write(struct file_t *filp, const char *buf, int n)
 {
-  struct tty_t *tty;
-
-  /* get first tty */
-  tty = tty_lookup(DEV_TTY0);
-  if (!tty)
-    return -EINVAL;
-
   /* check position */
-  if (filp->f_pos > tty->fb.width * tty->fb.height)
+  if (filp->f_pos > direct_fb.width * direct_fb.height)
     return 0;
 
   /* ajust size */
-  if (filp->f_pos + n > tty->fb.width * tty->fb.height)
-    n = tty->fb.width * tty->fb.height - filp->f_pos;
+  if (filp->f_pos + n > direct_fb.width * direct_fb.height)
+    n = direct_fb.width * direct_fb.height - filp->f_pos;
 
   /* write */
-  memcpy(tty->fb.buf, buf, n);
+  memcpy(direct_fb.buf, buf, n);
 
   /* update position */
   filp->f_pos += n;
 
   /* mark frame buffer dirty */
-  tty->fb.dirty = 1;
+  direct_fb.dirty = 1;
 
   return n;
 }
