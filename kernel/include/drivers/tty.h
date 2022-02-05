@@ -62,7 +62,7 @@ struct tty_t {
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
 struct tty_t *tty_lookup(dev_t dev);
 void tty_update(unsigned char c);
-void tty_change(uint32_t n);
+void tty_change(int n);
 void tty_signal_group(dev_t dev, int sig);
 
 extern struct inode_operations_t tty_iops;

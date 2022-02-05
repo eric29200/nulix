@@ -11,14 +11,8 @@ mkfs.minix -2 $DISK
 mkdir tmp >& /dev/null
 sudo mount $DISK tmp
 
-# create folders
-sudo mkdir tmp/sbin
-sudo mkdir tmp/bin
-sudo mkdir tmp/proc
-sudo mkdir tmp/etc
-sudo mkdir tmp/usr
-sudo mkdir tmp/usr/bin
-sudo mkdir tmp/usr/sbin
+# copy root folders
+cp -Rv root/* tmp/
 
 # cp init process
 sudo cp usr/init tmp/sbin/
@@ -30,8 +24,6 @@ sudo cp -P busybox/busybox-1.33.1/_install/usr/bin/* tmp/usr/bin
 sudo cp -P busybox/busybox-1.33.1/_install/usr/sbin/* tmp/usr/sbin
 
 # create devices nodes
-sudo mkdir tmp/dev
-sudo mkdir tmp/dev/pts
 sudo mknod tmp/dev/null c 1 3
 sudo mknod tmp/dev/zero c 1 5
 sudo mknod tmp/dev/tty0 c 4 0
@@ -46,16 +38,6 @@ sudo mknod tmp/dev/pts/2 c 136 2
 sudo mknod tmp/dev/pts/3 c 136 3
 sudo mknod tmp/dev/pts/4 c 136 4
 sudo mknod tmp/dev/fb c 29 0
-
-# create resolv.conf
-sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
-
-# create /etc/issue.net
-sudo sh -c 'echo "nulix" > tmp/etc/issue.net'
-
-# create /etc/passwd and /etc/group
-sudo sh -c 'echo "root::0:0:root:/:/bin/sh" > tmp/etc/passwd'
-sudo sh -c 'echo "root::0:" > tmp/etc/group'
 
 # unmount disk
 sudo umount tmp

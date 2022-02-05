@@ -38,7 +38,7 @@ struct tty_t *tty_lookup(dev_t dev)
 
   /* current active tty */
   if (dev == DEV_TTY0)
-    return &tty_table[current_tty];
+    return current_tty >= 0 ? &tty_table[current_tty] : NULL;
 
   /* asked tty */
   if (minor(dev) > 0 && minor(dev) <= NB_TTYS)
@@ -99,6 +99,10 @@ void tty_update(unsigned char c)
   struct tty_t *tty;
   uint8_t buf[8];
   int len;
+
+  /* no current TTY */
+  if (current_tty < 0)
+    return;
 
   /* get tty */
   tty = &tty_table[current_tty];
@@ -218,9 +222,9 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 /*
  * Change current tty.
  */
-void tty_change(uint32_t n)
+void tty_change(int n)
 {
-  if (n < NB_TTYS) {
+  if (n >= 0 && n < NB_TTYS) {
     current_tty = n;
     tty_table[current_tty].fb.dirty = 1;
   }
@@ -317,7 +321,7 @@ void tty_signal_group(dev_t dev, int sig)
 static void tty_refresh()
 {
   /* update current screen */
-  if (tty_table[current_tty].fb.dirty)
+  if (current_tty >= 0 && current_tty < NB_TTYS && tty_table[current_tty].fb.dirty)
     tty_table[current_tty].fb.update(&tty_table[current_tty].fb);
 
   /* reschedule timer */
