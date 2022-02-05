@@ -16,6 +16,7 @@ cp -Rv root/* tmp/
 
 # cp user binaries
 sudo cp usr/init tmp/sbin/
+sudo cp usr/wallpaper tmp/usr/bin/
 
 # cp busybox binaries
 sudo cp -P busybox/busybox-1.33.1/_install/bin/* tmp/bin
