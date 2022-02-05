@@ -14,4 +14,5 @@ toybox/*
 busybox/*
 tmp/*
 usr/init
+usr/wallpaper
 traffic.pcap
