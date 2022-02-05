@@ -16,6 +16,14 @@ static void fb_update_rgb(struct framebuffer_t *fb);
 static struct framebuffer_t direct_fb;
 
 /*
+ * Get direct frame buffer.
+ */
+struct framebuffer_t *fb_get_direct()
+{
+  return &direct_fb;
+}
+
+/*
  * Init direct frame buffer.
  */
 int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
@@ -211,8 +219,7 @@ void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y)
  */
 static void fb_update_direct(struct framebuffer_t *fb)
 {
-  UNUSED(fb);
-  return;
+  memcpy((void *) fb->addr, fb->buf, fb->width * fb->height);
 }
 
 /*

@@ -227,6 +227,8 @@ void tty_change(int n)
   if (n >= 0 && n < NB_TTYS) {
     current_tty = n;
     tty_table[current_tty].fb.dirty = 1;
+  } else {
+    current_tty = -1;
   }
 }
 
@@ -320,9 +322,17 @@ void tty_signal_group(dev_t dev, int sig)
  */
 static void tty_refresh()
 {
+  struct framebuffer_t *fb;
+
+  /* get frame buffer to update */
+  if (current_tty >= 0 && current_tty < NB_TTYS)
+    fb = &tty_table[current_tty].fb;
+  else
+    fb = fb_get_direct();
+
   /* update current screen */
-  if (current_tty >= 0 && current_tty < NB_TTYS && tty_table[current_tty].fb.dirty)
-    tty_table[current_tty].fb.update(&tty_table[current_tty].fb);
+  if (fb && fb->dirty)
+    fb->update(fb);
 
   /* reschedule timer */
   timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
