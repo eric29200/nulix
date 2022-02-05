@@ -100,39 +100,42 @@ static int bitmap_load(char *filename, struct bitmap_t *bmp)
 }
 
 /*
+ * Write a bitmap row to a frame buffer.
+ */
+static void bitmap_row_to_fb(struct bitmap_t *bmp, uint32_t row, int fd_fb)
+{
+  uint32_t frame_buffer_row[bmp->width];
+  uint32_t r, g, b, i, j;
+  char *bmp_row;
+
+  /* get bit map row */
+  bmp_row = bmp->image_bytes + row * bmp->width * 3;
+
+  /* set frame buffer row */
+  for (i = 0, j = 0; i < bmp->width; i++) {
+    b = bmp_row[j++] & 0xFF;
+    g = bmp_row[j++] & 0xFF;
+    r = bmp_row[j++] & 0xFF;
+    frame_buffer_row[i] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
+  }
+
+  /* write row to frame buffer */
+  write(fd_fb, frame_buffer_row, sizeof(uint32_t) * bmp->width);
+}
+
+/*
  * Load a wallpaper.
  */
 int main()
 {
-  uint32_t *frame_buffer_row, r, g, b, i, j, k;
-  char *frame_buffer = NULL, *bmp_row;
   struct bitmap_t bmp;
   int ret = 0, fd_fb;
+  uint32_t i;
 
   /* load bitmap */
   ret = bitmap_load("/etc/wallpaper.bmp", &bmp);
   if (ret != 0)
     goto out;
-
-  /* allocate frame buffer */
-  frame_buffer = (char *) malloc(bmp.height * bmp.width * 4);
-  if (!frame_buffer)
-    goto out;
-
-  /* create frame buffer */
-  for (i = 0; i < bmp.height; i++) {
-    /* get bmp and frame buffer row */
-    bmp_row = bmp.image_bytes + i * bmp.width * 3;
-    frame_buffer_row = (void *) frame_buffer + (bmp.height - 1 - i) * bmp.width * 4;
-
-    /* set row */
-    for (k = 0, j = 0; k < bmp.width; k++) {
-      b = bmp_row[j++] & 0xFF;
-      g = bmp_row[j++] & 0xFF;
-      r = bmp_row[j++] & 0xFF;
-      frame_buffer_row[k] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
-    }
-  }
 
   /* open frame bufer */
   fd_fb = open("/dev/fb", O_RDWR);
@@ -141,8 +144,16 @@ int main()
     goto out;
   }
 
-  /* write image to frame buffer */
-  write(fd_fb, frame_buffer, bmp.width * bmp.height * 4);
+  /* seek to start of frame buffer */
+  ret = lseek(fd_fb, 0, SEEK_SET);
+  if (ret != 0) {
+    close(fd_fb);
+    goto out;
+  }
+
+  /* write frame buffer row by row */
+  for (i = 0; i < bmp.height; i++)
+    bitmap_row_to_fb(&bmp, i, fd_fb);
 
   /* close frame buffer */
   close(fd_fb);

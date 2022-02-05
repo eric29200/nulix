@@ -303,7 +303,7 @@ static int fb_write(struct file_t *filp, const char *buf, int n)
     n = direct_fb.width * direct_fb.height * direct_fb.bpp / 8 - filp->f_pos;
 
   /* write */
-  memcpy(direct_fb.buf, buf, n);
+  memcpy(direct_fb.buf + filp->f_pos, buf, n);
 
   /* update position */
   filp->f_pos += n;
