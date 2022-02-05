@@ -76,7 +76,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
   }
 
   /* allocate buffer */
-  fb->buf = (char *) kmalloc(fb->width * fb->height);
+  fb->buf = (char *) kmalloc(fb->width * fb->height * fb->bpp / 8);
   if (!fb->buf)
     return -ENOMEM;
 
@@ -93,7 +93,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
  */
 static inline void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint8_t red, uint8_t green, uint8_t blue)
 {
-  uint8_t *pixel = (uint8_t *) (fb->addr + x * 4 + y * fb->pitch);
+  uint8_t *pixel = (uint8_t *) (fb->addr + x * fb->bpp / 8  + y * fb->pitch);
   *pixel++ = red;
   *pixel++ = green;
   *pixel++ = blue;
@@ -107,7 +107,7 @@ static inline void fb_put_blank(struct framebuffer_t *fb, uint32_t pos_x, uint32
   uint32_t y;
 
   for (y = 0; y < fb->font->height; y++)
-    memset((void *) (fb->addr + pos_x * 4 + (pos_y + y) * fb->pitch), 0, fb->font->width * 4);
+    memset((void *) (fb->addr + pos_x * fb->bpp / 8 + (pos_y + y) * fb->pitch), 0, fb->font->width * fb->bpp / 8);
 }
 
 /*
@@ -118,7 +118,7 @@ static inline void fb_put_cursor(struct framebuffer_t *fb, uint32_t pos_x, uint3
   uint32_t y;
 
   for (y = 0; y < fb->font->height; y++)
-    memset((void *) (fb->addr + pos_x * 4 + (pos_y + y) * fb->pitch), 0xFF, fb->font->width * 4);
+    memset((void *) (fb->addr + pos_x * fb->bpp / 8 + (pos_y + y) * fb->pitch), 0xFF, fb->font->width * fb->bpp / 8);
 }
 
 /*
@@ -170,7 +170,7 @@ void fb_putc(struct framebuffer_t *fb, uint8_t c)
     fb->buf[fb->y * fb->width + fb->x] = c;
     fb->x++;
   } else if (c == '\t') {
-    fb->x = (fb->x + 4) & ~0x03;
+    fb->x = (fb->x + fb->bpp / 8) & ~0x03;
   } else if (c == '\n') {
     fb->y++;
     fb->x = 0;
@@ -219,7 +219,7 @@ void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y)
  */
 static void fb_update_direct(struct framebuffer_t *fb)
 {
-  memcpy((void *) fb->addr, fb->buf, fb->width * fb->height);
+  memcpy((void *) fb->addr, fb->buf, fb->width * fb->height * sizeof(int));
 }
 
 /*
@@ -295,12 +295,12 @@ static int fb_read(struct file_t *filp, char *buf, int n)
 static int fb_write(struct file_t *filp, const char *buf, int n)
 {
   /* check position */
-  if (filp->f_pos > direct_fb.width * direct_fb.height)
+  if (filp->f_pos > direct_fb.width * direct_fb.height * direct_fb.bpp / 8)
     return 0;
 
   /* ajust size */
-  if (filp->f_pos + n > direct_fb.width * direct_fb.height)
-    n = direct_fb.width * direct_fb.height - filp->f_pos;
+  if (filp->f_pos + n > direct_fb.width * direct_fb.height * direct_fb.bpp / 8)
+    n = direct_fb.width * direct_fb.height * direct_fb.bpp / 8 - filp->f_pos;
 
   /* write */
   memcpy(direct_fb.buf, buf, n);

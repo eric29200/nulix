@@ -14,7 +14,7 @@ sudo mount $DISK tmp
 # copy root folders
 cp -Rv root/* tmp/
 
-# cp init process
+# cp user binaries
 sudo cp usr/init tmp/sbin/
 
 # cp busybox binaries
