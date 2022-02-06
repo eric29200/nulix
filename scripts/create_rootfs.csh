@@ -39,6 +39,7 @@ sudo mknod tmp/dev/pts/2 c 136 2
 sudo mknod tmp/dev/pts/3 c 136 3
 sudo mknod tmp/dev/pts/4 c 136 4
 sudo mknod tmp/dev/fb c 29 0
+sudo mknod tmp/dev/mouse c 13 0
 
 # chown root
 sudo chown -R 0.0 tmp/

@@ -4,6 +4,7 @@
 #include <drivers/tty.h>
 #include <drivers/pty.h>
 #include <drivers/framebuffer.h>
+#include <drivers/mouse.h>
 #include <fcntl.h>
 
 /*
@@ -43,6 +44,10 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
   /* frame buffer driver */
   if (major(dev) == DEV_FB_MAJOR)
     return &fb_iops;
+
+  /* mouse driver */
+  if (major(dev) == DEV_MOUSE_MAJOR)
+    return &mouse_iops;
 
   return NULL;
 }

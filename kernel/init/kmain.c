@@ -11,6 +11,7 @@
 #include <drivers/ata.h>
 #include <drivers/tty.h>
 #include <drivers/keyboard.h>
+#include <drivers/mouse.h>
 #include <drivers/framebuffer.h>
 #include <drivers/rtl8139.h>
 #include <proc/sched.h>
@@ -158,6 +159,10 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
   /* init keyboard */
   printf("[Kernel] Keyboard Init\n");
   init_keyboard();
+
+  /* init mouse */
+  printf("[Kernel] Mouse Init\n");
+  init_mouse();
 
   /* init pci devices */
   printf("[Kernel] PCI devices Init\n");

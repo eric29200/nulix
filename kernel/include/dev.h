@@ -15,4 +15,6 @@
 
 #define DEV_FB_MAJOR      29        /* frame buffer */
 
+#define DEV_MOUSE_MAJOR   13        /* mouse */
+
 #endif
