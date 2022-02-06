@@ -126,47 +126,84 @@ static int bitmap_load(char *filename, struct bitmap_t *bmp)
 }
 
 /*
+ * Draw a RGB bitmap on frame buffer.
+ */
+static void draw_bitmap_rgb(struct bitmap_t *bmp, int32_t x, int32_t y)
+{
+  uint32_t *frame_buffer_row, i, j, k, r, g, b;
+  char *bmp_row;
+
+  for (i = 0; i < bmp->height; i++) {
+    /* check overflow */
+    if (y + i + 1 >= FRAME_BUFFER_HEIGHT)
+      continue;
+
+    /* get frame buffer row */
+    frame_buffer_row = (void *) frame_buffer + (FRAME_BUFFER_HEIGHT - y - i - 1) * FRAME_BUFFER_WITDH * 4;
+
+    /* get bmp row */
+    bmp_row = bmp->image_bytes + i * bmp->width * 3;
+
+    /* set frame buffer row */
+    for (k = 0, j = 0; k < bmp->width; k++) {
+      /* check overflow */
+      if (x + k >= FRAME_BUFFER_WITDH)
+        continue;
+
+      b = bmp_row[j++] & 0xFF;
+      g = bmp_row[j++] & 0xFF;
+      r = bmp_row[j++] & 0xFF;
+      frame_buffer_row[x + k] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
+    }
+  }
+}
+
+/*
+ * Draw a RGBA bitmap on frame buffer.
+ */
+static void draw_bitmap_rgba(struct bitmap_t *bmp, int32_t x, int32_t y)
+{
+  uint32_t *frame_buffer_row, i, j, k, r, g, b, a;
+  char *bmp_row;
+
+  for (i = 0; i < bmp->height; i++) {
+    /* check overflow */
+    if (y + i + 1 >= FRAME_BUFFER_HEIGHT)
+      continue;
+
+    /* get frame buffer row */
+    frame_buffer_row = (void *) frame_buffer + (FRAME_BUFFER_HEIGHT - y - i - 1) * FRAME_BUFFER_WITDH * 4;
+
+    /* get bmp row */
+    bmp_row = bmp->image_bytes + i * bmp->width * 4;
+
+    /* set frame buffer row */
+    for (k = 0, j = 0; k < bmp->width; k++) {
+      /* check overflow */
+      if (x + k >= FRAME_BUFFER_WITDH)
+        continue;
+
+      b = bmp_row[j++] & 0xFF;
+      g = bmp_row[j++] & 0xFF;
+      r = bmp_row[j++] & 0xFF;
+      a = bmp_row[j++] & 0xFF;
+      frame_buffer_row[x + k] = (a << 24) | (r << 16) | (g << 8) | b;
+    }
+  }
+}
+
+/*
  * Set wallpaper.
  */
 static int draw_frame_buffer(int fd_fb)
 {
-  uint32_t r, g, b, a, i, j, k, *frame_buffer_row;
-  char *wallpaper_row, *cursor_row;
   int ret;
 
   /* fill in frame buffer with wallpaper */
-  for (i = 0; i < FRAME_BUFFER_HEIGHT; i++) {
-    /* get frame buffer row */
-    frame_buffer_row = (void *) frame_buffer + (FRAME_BUFFER_HEIGHT - 1 - i) * FRAME_BUFFER_WITDH * 4;
-
-    /* get wallpaper row */
-    wallpaper_row = bmp_wallpaper.image_bytes + i * bmp_wallpaper.width * 3;
-
-    /* set frame buffer row */
-    for (k = 0, j = 0; k < FRAME_BUFFER_WITDH; k++) {
-      b = wallpaper_row[j++] & 0xFF;
-      g = wallpaper_row[j++] & 0xFF;
-      r = wallpaper_row[j++] & 0xFF;
-      frame_buffer_row[k] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
-    }
-  }
+  draw_bitmap_rgb(&bmp_wallpaper, 0, 0);
 
   /* draw cursor */
-  for (i = 0; i < bmp_cursor.height; i++) {
-    /* get frame buffer row */
-    frame_buffer_row = (void *) frame_buffer + (FRAME_BUFFER_HEIGHT - 1 - mouse_y - i) * FRAME_BUFFER_WITDH * 4;
-
-    /* get cursor row */
-    cursor_row = bmp_cursor.image_bytes + i * bmp_cursor.width * 4;
-
-    for (k = 0, j = 0; k < bmp_cursor.width; k++) {
-      b = cursor_row[j++] & 0xFF;
-      g = cursor_row[j++] & 0xFF;
-      r = cursor_row[j++] & 0xFF;
-      a = cursor_row[j++] & 0xFF;
-      frame_buffer_row[mouse_x + k] = (a << 24) | (r << 16) | (g << 8) | b;
-    }
-  }
+  draw_bitmap_rgba(&bmp_cursor, mouse_x, mouse_y);
 
   /* seek to start of frame buffer */
   ret = lseek(fd_fb, 0, SEEK_SET);
@@ -181,9 +218,9 @@ out:
 }
 
 /*
- * Update mouse position.
+ * Wait for mouse event.
  */
-static void update_mouse_position(int fd_mouse)
+static void wait_for_mouse_event(int fd_mouse)
 {
   struct mouse_event_t mouse_event;
   struct pollfd pfds[1];
@@ -219,8 +256,8 @@ static int main_loop(int fd_fb, int fd_mouse)
   int ret = 0;
 
   for (;;) {
-    /* update mouse position */
-    update_mouse_position(fd_mouse);
+    /* wait for mouse event */
+    wait_for_mouse_event(fd_mouse);
 
     /* draw frame buffer */
     draw_frame_buffer(fd_fb);
