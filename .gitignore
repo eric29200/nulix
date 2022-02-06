@@ -15,4 +15,5 @@ busybox/*
 tmp/*
 usr/init
 usr/wallpaper
+usr/xserver
 traffic.pcap

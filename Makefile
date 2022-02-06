@@ -1,7 +1,7 @@
 KERNEL		= kernel/kernel.bin
 ISO		= nulix.iso
 NJOBS		= 8
-MEM_SIZE	= 256M
+MEM_SIZE	= 512M
 DISK		= hdd.img
 QEMU		= qemu-system-i386
 

@@ -6,6 +6,12 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#define FRAME_BUFFER_WITDH        1024
+#define FRAME_BUFFER_HEIGHT       768
+
+/* global frame buffer */
+static uint32_t *frame_buffer;
+
 /*
  * Bitmap header.
  */
@@ -45,6 +51,11 @@ struct bitmap_t {
   uint32_t    total_size;
   uint32_t    bpp;
 };
+
+
+/* bitmap wallpaper */
+static struct bitmap_t wallpaper;
+
 
 /*
  * Load a bitmap file.
@@ -100,27 +111,29 @@ static int bitmap_load(char *filename, struct bitmap_t *bmp)
 }
 
 /*
- * Write a bitmap row to a frame buffer.
+ * Set wallpaper.
  */
-static void bitmap_row_to_fb(struct bitmap_t *bmp, uint32_t row, int fd_fb)
+static int draw_frame_buffer()
 {
-  uint32_t frame_buffer_row[bmp->width];
-  uint32_t r, g, b, i, j;
+  uint32_t r, g, b, i, j, k, *frame_buffer_row;
   char *bmp_row;
 
-  /* get bit map row */
-  bmp_row = bmp->image_bytes + row * bmp->width * 3;
+  /* fill in frame buffer with wallpaper */
+  for (i = 0; i < wallpaper.height; i++) {
+    /* get bit map row */
+    bmp_row = wallpaper.image_bytes + i * wallpaper.width * 3;
+    frame_buffer_row = (void *) frame_buffer + (wallpaper.height - 1 - i) * wallpaper.width * 4;
 
-  /* set frame buffer row */
-  for (i = 0, j = 0; i < bmp->width; i++) {
-    b = bmp_row[j++] & 0xFF;
-    g = bmp_row[j++] & 0xFF;
-    r = bmp_row[j++] & 0xFF;
-    frame_buffer_row[i] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
+    /* set frame buffer row */
+    for (k = 0, j = 0; k < wallpaper.width; k++) {
+      b = bmp_row[j++] & 0xFF;
+      g = bmp_row[j++] & 0xFF;
+      r = bmp_row[j++] & 0xFF;
+      frame_buffer_row[k] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
+    }
   }
 
-  /* write row to frame buffer */
-  write(fd_fb, frame_buffer_row, sizeof(uint32_t) * bmp->width);
+  return 0;
 }
 
 /*
@@ -128,40 +141,40 @@ static void bitmap_row_to_fb(struct bitmap_t *bmp, uint32_t row, int fd_fb)
  */
 int main()
 {
-  struct bitmap_t bmp;
-  int ret = 0, fd_fb;
-  uint32_t i;
+  int fd_fb, ret = 0;
 
-  /* load bitmap */
-  ret = bitmap_load("/etc/wallpaper.bmp", &bmp);
-  if (ret != 0)
-    goto out;
+  /* create frame buffer */
+  frame_buffer = (uint32_t *) malloc(FRAME_BUFFER_WITDH * FRAME_BUFFER_HEIGHT * 4);
+  if (!frame_buffer)
+    return ENOMEM;
+
+  /* load wallpaper */
+  ret = bitmap_load("/etc/wallpaper.bmp", &wallpaper);
+  if (ret)
+    return ret;
+
+  /* draw frame buffer */
+  draw_frame_buffer();
 
   /* open frame bufer */
   fd_fb = open("/dev/fb", O_RDWR);
-  if (fd_fb < 0) {
-    ret = fd_fb;
-    goto out;
-  }
+  if (fd_fb < 0)
+    return fd_fb;
 
-  /* seek to start of frame buffer */
-  ret = lseek(fd_fb, 0, SEEK_SET);
-  if (ret != 0) {
-    close(fd_fb);
-    goto out;
-  }
+  for (;;) {
+    /* seek to start of frame buffer */
+    ret = lseek(fd_fb, 0, SEEK_SET);
+    if (ret != 0) {
+      close(fd_fb);
+      return ret;
+    }
 
-  /* write frame buffer row by row */
-  for (i = 0; i < bmp.height; i++)
-    bitmap_row_to_fb(&bmp, i, fd_fb);
+    /* write frame buffer */
+    write(fd_fb, frame_buffer, FRAME_BUFFER_WITDH * FRAME_BUFFER_HEIGHT * 4);
+  }
 
   /* close frame buffer */
   close(fd_fb);
-
-out:
-  /* free bitmap */
-  if (bmp.buf)
-    free(bmp.buf);
 
   return ret;
 }
