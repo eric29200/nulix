@@ -82,7 +82,7 @@ static void mouse_update_position()
 
   /* set mouse event */
   mouse_event.x = move_x;
-  mouse_event.y = -move_y;
+  mouse_event.y = move_y;
   mouse_event.state = mouse_event.buttons;
 
   /* set mouse event button */

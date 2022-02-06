@@ -127,10 +127,11 @@ static int bitmap_load(char *filename, struct bitmap_t *bmp)
 /*
  * Set wallpaper.
  */
-static int draw_frame_buffer()
+static int draw_frame_buffer(int fd_fb)
 {
-  uint32_t r, g, b, i, j, k, *frame_buffer_row;
+  uint32_t r, g, b, a, i, j, k, *frame_buffer_row;
   char *wallpaper_row, *cursor_row;
+  int ret;
 
   /* fill in frame buffer with wallpaper */
   for (i = 0; i < FRAME_BUFFER_HEIGHT; i++) {
@@ -161,12 +162,64 @@ static int draw_frame_buffer()
       b = cursor_row[j++] & 0xFF;
       g = cursor_row[j++] & 0xFF;
       r = cursor_row[j++] & 0xFF;
-      frame_buffer_row[mouse_x + k] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
+      a = cursor_row[j++] & 0xFF;
+      frame_buffer_row[mouse_x + k] = (a << 24) | (r << 16) | (g << 8) | b;
     }
   }
 
+  /* seek to start of frame buffer */
+  ret = lseek(fd_fb, 0, SEEK_SET);
+  if (ret != 0)
+    goto out;
 
-  return 0;
+  /* write frame buffer */
+  write(fd_fb, frame_buffer, FRAME_BUFFER_WITDH * FRAME_BUFFER_HEIGHT * 4);
+
+out:
+  return ret;
+}
+
+/*
+ * Update mouse position.
+ */
+static void update_mouse_position(int fd_mouse)
+{
+  struct mouse_event_t mouse_event;
+
+  /* read mouse event */
+  read(fd_mouse, &mouse_event, sizeof(struct mouse_event_t));
+
+  /* update mouse x */
+  mouse_x += mouse_event.x;
+  if (mouse_x > FRAME_BUFFER_WITDH)
+    mouse_x = FRAME_BUFFER_WITDH;
+  else if (mouse_x < 0)
+    mouse_x = 0;
+
+  /* update mouse y */
+  mouse_y += mouse_event.y;
+  if (mouse_y > FRAME_BUFFER_HEIGHT)
+    mouse_y = FRAME_BUFFER_HEIGHT;
+  else if (mouse_y < 0)
+    mouse_y = 0;
+}
+
+/*
+ * Main server loop (wait for events).
+ */
+static int main_loop(int fd_fb, int fd_mouse)
+{
+  int ret = 0;
+
+  for (;;) {
+    /* update mouse position */
+    update_mouse_position(fd_mouse);
+
+    /* draw frame buffer */
+    draw_frame_buffer(fd_fb);
+  }
+
+  return ret;
 }
 
 /*
@@ -174,7 +227,6 @@ static int draw_frame_buffer()
  */
 int main()
 {
-  struct mouse_event_t mouse_event;
   int fd_fb, fd_mouse, ret = 0;
 
   /* create frame buffer */
@@ -204,33 +256,8 @@ int main()
     return fd_mouse;
   }
 
-  for (;;) {
-    /* read mouse event */
-    read(fd_mouse, &mouse_event, sizeof(struct mouse_event_t));
-
-    /* update mouse x */
-    mouse_x += mouse_event.x;
-    if (mouse_x > FRAME_BUFFER_WITDH)
-      mouse_x = FRAME_BUFFER_WITDH;
-
-    /* update mouse y */
-    mouse_y += mouse_event.y;
-    if (mouse_y > FRAME_BUFFER_HEIGHT)
-      mouse_y = FRAME_BUFFER_HEIGHT;
-
-    /* draw frame buffer */
-    draw_frame_buffer();
-
-    /* seek to start of frame buffer */
-    ret = lseek(fd_fb, 0, SEEK_SET);
-    if (ret != 0) {
-      close(fd_fb);
-      return ret;
-    }
-
-    /* write frame buffer */
-    write(fd_fb, frame_buffer, FRAME_BUFFER_WITDH * FRAME_BUFFER_HEIGHT * 4);
-  }
+  /* main loop */
+  ret = main_loop(fd_fb, fd_mouse);
 
   /* close frame buffer */
   close(fd_fb);
