@@ -224,12 +224,19 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
  */
 void tty_change(int n)
 {
+  struct framebuffer_t *fb;
+
+  /* get new frame buffer */
   if (n >= 0 && n < NB_TTYS) {
     current_tty = n;
-    tty_table[current_tty].fb.dirty = 1;
+    fb = &tty_table[current_tty].fb;
   } else {
     current_tty = -1;
+    fb = fb_get_direct();
   }
+
+  /* mark frame buffer dirty */
+  fb->dirty = 1;
 }
 
 /*

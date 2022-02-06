@@ -220,6 +220,9 @@ void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y)
 static void fb_update_direct(struct framebuffer_t *fb)
 {
   memcpy((void *) fb->addr, fb->buf, fb->width * fb->height * sizeof(int));
+
+  /* mark frame buffer clean */
+  fb->dirty = 0;
 }
 
 /*
