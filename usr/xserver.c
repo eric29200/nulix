@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <poll.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -185,6 +186,12 @@ out:
 static void update_mouse_position(int fd_mouse)
 {
   struct mouse_event_t mouse_event;
+  struct pollfd pfds[1];
+
+  /* wait for mouse event */
+  pfds[0].fd = fd_mouse;
+  pfds[0].events = POLLIN;
+  poll(pfds, 1, -1);
 
   /* read mouse event */
   read(fd_mouse, &mouse_event, sizeof(struct mouse_event_t));
@@ -255,6 +262,9 @@ int main()
     close(fd_fb);
     return fd_mouse;
   }
+
+  /* draw frame buffer */
+  draw_frame_buffer(fd_fb);
 
   /* main loop */
   ret = main_loop(fd_fb, fd_mouse);

@@ -1,5 +1,6 @@
 #include <drivers/mouse.h>
 #include <x86/interrupt.h>
+#include <proc/sched.h>
 #include <x86/io.h>
 #include <fs/fs.h>
 
@@ -132,6 +133,9 @@ static void mouse_handler(struct registers_t *regs)
         break;
     }
   }
+
+  /* wake up readers */
+  task_wakeup_all(&mouse_event);
 }
 
 /*
@@ -158,6 +162,25 @@ static int mouse_read(struct file_t *filp, char *buf, int n)
   memset(&mouse_event, 0, sizeof(struct mouse_event_t));
 
   return 0;
+}
+
+/*
+ * Poll a mouse.
+ */
+static int mouse_poll(struct file_t *filp)
+{
+  int mask = 0;
+
+  UNUSED(filp);
+
+  /* set waiting channel = mouse event */
+  current_task->waiting_chan = &mouse_event;
+
+  /* check if an event is queued */
+  if (mouse_event.x || mouse_event.y || mouse_event.buttons || mouse_event.state)
+    mask |= POLLIN;
+
+  return mask;
 }
 
 /*
@@ -207,6 +230,7 @@ void init_mouse()
 static struct file_operations_t mouse_fops = {
   .open       = mouse_open,
   .read       = mouse_read,
+  .poll       = mouse_poll,
 };
 
 /*
