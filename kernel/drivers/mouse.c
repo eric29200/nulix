@@ -154,6 +154,9 @@ static int mouse_read(struct file_t *filp, char *buf, int n)
   if (n >= (int) sizeof(struct mouse_event_t))
     memcpy(buf, &mouse_event, sizeof(struct mouse_event_t));
 
+  /* reset mouse event */
+  memset(&mouse_event, 0, sizeof(struct mouse_event_t));
+
   return 0;
 }
 

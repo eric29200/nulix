@@ -13,6 +13,16 @@
 static uint32_t *frame_buffer;
 
 /*
+ * Mouse event.
+ */
+struct mouse_event_t {
+  int32_t       x;
+  int32_t       y;
+  unsigned char buttons;
+  uint32_t      state;
+};
+
+/*
  * Bitmap header.
  */
 struct bitmap_file_header_t {
@@ -53,9 +63,13 @@ struct bitmap_t {
 };
 
 
-/* bitmap wallpaper */
-static struct bitmap_t wallpaper;
+/* bitmaps */
+static struct bitmap_t bmp_wallpaper;
+static struct bitmap_t bmp_cursor;
 
+/* mouse position */
+static int32_t mouse_x = 0;
+static int32_t mouse_y = 0;
 
 /*
  * Load a bitmap file.
@@ -116,22 +130,41 @@ static int bitmap_load(char *filename, struct bitmap_t *bmp)
 static int draw_frame_buffer()
 {
   uint32_t r, g, b, i, j, k, *frame_buffer_row;
-  char *bmp_row;
+  char *wallpaper_row, *cursor_row;
 
   /* fill in frame buffer with wallpaper */
-  for (i = 0; i < wallpaper.height; i++) {
-    /* get bit map row */
-    bmp_row = wallpaper.image_bytes + i * wallpaper.width * 3;
-    frame_buffer_row = (void *) frame_buffer + (wallpaper.height - 1 - i) * wallpaper.width * 4;
+  for (i = 0; i < FRAME_BUFFER_HEIGHT; i++) {
+    /* get frame buffer row */
+    frame_buffer_row = (void *) frame_buffer + (FRAME_BUFFER_HEIGHT - 1 - i) * FRAME_BUFFER_WITDH * 4;
+
+    /* get wallpaper row */
+    wallpaper_row = bmp_wallpaper.image_bytes + i * bmp_wallpaper.width * 3;
 
     /* set frame buffer row */
-    for (k = 0, j = 0; k < wallpaper.width; k++) {
-      b = bmp_row[j++] & 0xFF;
-      g = bmp_row[j++] & 0xFF;
-      r = bmp_row[j++] & 0xFF;
+    for (k = 0, j = 0; k < FRAME_BUFFER_WITDH; k++) {
+      b = wallpaper_row[j++] & 0xFF;
+      g = wallpaper_row[j++] & 0xFF;
+      r = wallpaper_row[j++] & 0xFF;
       frame_buffer_row[k] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
     }
   }
+
+  /* draw cursor */
+  for (i = 0; i < bmp_cursor.height; i++) {
+    /* get frame buffer row */
+    frame_buffer_row = (void *) frame_buffer + (FRAME_BUFFER_HEIGHT - 1 - mouse_y - i) * FRAME_BUFFER_WITDH * 4;
+
+    /* get cursor row */
+    cursor_row = bmp_cursor.image_bytes + i * bmp_cursor.width * 4;
+
+    for (k = 0, j = 0; k < bmp_cursor.width; k++) {
+      b = cursor_row[j++] & 0xFF;
+      g = cursor_row[j++] & 0xFF;
+      r = cursor_row[j++] & 0xFF;
+      frame_buffer_row[mouse_x + k] = (((r << 16) | (g << 8) | (b)) & 0x00FFFFFF) | 0xFF000000;
+    }
+  }
+
 
   return 0;
 }
@@ -141,27 +174,53 @@ static int draw_frame_buffer()
  */
 int main()
 {
-  int fd_fb, ret = 0;
+  struct mouse_event_t mouse_event;
+  int fd_fb, fd_mouse, ret = 0;
 
   /* create frame buffer */
   frame_buffer = (uint32_t *) malloc(FRAME_BUFFER_WITDH * FRAME_BUFFER_HEIGHT * 4);
   if (!frame_buffer)
     return ENOMEM;
 
-  /* load wallpaper */
-  ret = bitmap_load("/etc/wallpaper.bmp", &wallpaper);
+  /* load cursor */
+  ret = bitmap_load("/etc/cursor.bmp", &bmp_cursor);
   if (ret)
     return ret;
 
-  /* draw frame buffer */
-  draw_frame_buffer();
+  /* load wallpaper */
+  ret = bitmap_load("/etc/wallpaper.bmp", &bmp_wallpaper);
+  if (ret)
+    return ret;
 
   /* open frame bufer */
   fd_fb = open("/dev/fb", O_RDWR);
   if (fd_fb < 0)
     return fd_fb;
 
+  /* open mouse */
+  fd_mouse = open("/dev/mouse", O_RDONLY);
+  if (fd_mouse < fd_fb) {
+    close(fd_fb);
+    return fd_mouse;
+  }
+
   for (;;) {
+    /* read mouse event */
+    read(fd_mouse, &mouse_event, sizeof(struct mouse_event_t));
+
+    /* update mouse x */
+    mouse_x += mouse_event.x;
+    if (mouse_x > FRAME_BUFFER_WITDH)
+      mouse_x = FRAME_BUFFER_WITDH;
+
+    /* update mouse y */
+    mouse_y += mouse_event.y;
+    if (mouse_y > FRAME_BUFFER_HEIGHT)
+      mouse_y = FRAME_BUFFER_HEIGHT;
+
+    /* draw frame buffer */
+    draw_frame_buffer();
+
     /* seek to start of frame buffer */
     ret = lseek(fd_fb, 0, SEEK_SET);
     if (ret != 0) {
@@ -175,6 +234,7 @@ int main()
 
   /* close frame buffer */
   close(fd_fb);
+  close(fd_mouse);
 
   return ret;
 }
