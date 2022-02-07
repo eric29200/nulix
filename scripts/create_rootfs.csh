@@ -18,6 +18,7 @@ sudo mkdir -p tmp/usr/bin
 sudo mkdir -p tmp/usr/sbin
 sudo mkdir -p tmp/dev
 sudo mkdir -p tmp/dev/pts
+sudo mkdir -p tmp/proc
 
 # copy root folders
 sudo cp -Rv root/etc tmp/
