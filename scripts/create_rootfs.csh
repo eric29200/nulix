@@ -11,8 +11,16 @@ mkfs.minix -2 $DISK
 mkdir tmp >& /dev/null
 sudo mount $DISK tmp
 
+# create root folders
+sudo mkdir -p tmp/bin
+sudo mkdir -p tmp/sbin
+sudo mkdir -p tmp/usr/bin
+sudo mkdir -p tmp/usr/sbin
+sudo mkdir -p tmp/dev
+sudo mkdir -p tmp/dev/pts
+
 # copy root folders
-cp -Rv root/* tmp/
+sudo cp -Rv root/etc tmp/
 
 # cp user binaries
 sudo cp usr/init tmp/sbin/
