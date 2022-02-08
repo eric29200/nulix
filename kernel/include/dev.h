@@ -13,8 +13,6 @@
 
 #define DEV_PTY_MAJOR     136       /* pseudo terminal */
 
-#define DEV_FB_MAJOR      29        /* frame buffer */
-
 #define DEV_MOUSE_MAJOR   13        /* mouse */
 
 #endif

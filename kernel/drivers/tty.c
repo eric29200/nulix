@@ -224,19 +224,10 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
  */
 void tty_change(int n)
 {
-  struct framebuffer_t *fb;
-
-  /* get new frame buffer */
   if (n >= 0 && n < NB_TTYS) {
     current_tty = n;
-    fb = &tty_table[current_tty].fb;
-  } else {
-    current_tty = -1;
-    fb = fb_get_direct();
+    tty_table[current_tty].fb.dirty = 1;
   }
-
-  /* mark frame buffer dirty */
-  fb->dirty = 1;
 }
 
 /*
@@ -329,17 +320,8 @@ void tty_signal_group(dev_t dev, int sig)
  */
 static void tty_refresh()
 {
-  struct framebuffer_t *fb;
-
-  /* get frame buffer to update */
-  if (current_tty >= 0 && current_tty < NB_TTYS)
-    fb = &tty_table[current_tty].fb;
-  else
-    fb = fb_get_direct();
-
-  /* update current screen */
-  if (fb && fb->dirty)
-    fb->update(fb);
+  if (current_tty >= 0 && current_tty < NB_TTYS && tty_table[current_tty].fb.dirty)
+    tty_table[current_tty].fb.update(&tty_table[current_tty].fb);
 
   /* reschedule timer */
   timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
@@ -364,7 +346,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
       return ret;
 
     /* init frame buffer */
-    ret = init_framebuffer(&tty_table[i].fb, tag_fb, 0);
+    ret = init_framebuffer(&tty_table[i].fb, tag_fb);
     if (ret != 0)
       return ret;
 

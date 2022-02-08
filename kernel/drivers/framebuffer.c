@@ -8,33 +8,13 @@
 #include <stderr.h>
 
 /* frame buffer update functions */
-static void fb_update_direct(struct framebuffer_t *fb);
 static void fb_update_text(struct framebuffer_t *fb);
 static void fb_update_rgb(struct framebuffer_t *fb);
-
-/* direct frame buffer */
-static struct framebuffer_t direct_fb;
-
-/*
- * Get direct frame buffer.
- */
-struct framebuffer_t *fb_get_direct()
-{
-  return &direct_fb;
-}
-
-/*
- * Init direct frame buffer.
- */
-int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
-{
-  return init_framebuffer(&direct_fb, tag_fb, 1);
-}
 
 /*
  * Init the framebuffer.
  */
-int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, int direct)
+int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb)
 {
   uint32_t fb_nb_pages, i;
   uint32_t width, height;
@@ -54,12 +34,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
   fb->dirty = 1;
 
   /* init frame buffer */
-  if (direct) {
-    fb->font = NULL;
-    fb->width = width;
-    fb->height = height;
-    fb->update = fb_update_direct;
-  } else if (fb->type == MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT) {
+  if (fb->type == MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT) {
     fb->font = NULL;
     fb->width = width;
     fb->height = height;
@@ -215,17 +190,6 @@ void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y)
 }
 
 /*
- * Update a direct frame buffer.
- */
-static void fb_update_direct(struct framebuffer_t *fb)
-{
-  memcpy((void *) fb->addr, fb->buf, fb->width * fb->height * sizeof(int));
-
-  /* mark frame buffer clean */
-  fb->dirty = 0;
-}
-
-/*
  * Update a text frame buffer.
  */
 static void fb_update_text(struct framebuffer_t *fb)
@@ -271,64 +235,3 @@ static void fb_update_rgb(struct framebuffer_t *fb)
   /* mark frame buffer clean */
   fb->dirty = 0;
 }
-
-/*
- * Open a frame buffer.
- */
-static int fb_open(struct file_t *filp)
-{
-  UNUSED(filp);
-  return 0;
-}
-
-/*
- * Read a framebuffer.
- */
-static int fb_read(struct file_t *filp, char *buf, int n)
-{
-  UNUSED(filp);
-  UNUSED(buf);
-  UNUSED(n);
-  return 0;
-}
-
-/*
- * Write to a frame buffer.
- */
-static int fb_write(struct file_t *filp, const char *buf, int n)
-{
-  /* check position */
-  if (filp->f_pos > direct_fb.width * direct_fb.height * direct_fb.bpp / 8)
-    return 0;
-
-  /* ajust size */
-  if (filp->f_pos + n > direct_fb.width * direct_fb.height * direct_fb.bpp / 8)
-    n = direct_fb.width * direct_fb.height * direct_fb.bpp / 8 - filp->f_pos;
-
-  /* write */
-  memcpy(direct_fb.buf + filp->f_pos, buf, n);
-
-  /* update position */
-  filp->f_pos += n;
-
-  /* mark frame buffer dirty */
-  direct_fb.dirty = 1;
-
-  return n;
-}
-
-/*
- * Framebuffer file operations.
- */
-static struct file_operations_t fb_fops = {
-  .open       = fb_open,
-  .read       = fb_read,
-  .write      = fb_write,
-};
-
-/*
- * Framebuffer inode operations.
- */
-struct inode_operations_t fb_iops = {
-  .fops       = &fb_fops,
-};

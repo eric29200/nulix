@@ -41,10 +41,6 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
   if (major(dev) == major(DEV_TTY) || major(dev) == major(DEV_TTY0))
     return &tty_iops;
 
-  /* frame buffer driver */
-  if (major(dev) == DEV_FB_MAJOR)
-    return &fb_iops;
-
   /* mouse driver */
   if (major(dev) == DEV_MOUSE_MAJOR)
     return &mouse_iops;

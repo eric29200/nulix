@@ -31,12 +31,7 @@ struct framebuffer_t {
   void            (*update)(struct framebuffer_t *);
 };
 
-/* frame buffer inode operations */
-extern struct inode_operations_t fb_iops;
-
-struct framebuffer_t *fb_get_direct();
-int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb);
-int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, int direct);
+int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb);
 void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y);
 void fb_putc(struct framebuffer_t *fb, uint8_t c);
 
