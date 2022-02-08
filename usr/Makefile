@@ -1,13 +1,10 @@
 CC		= ../musl/musl-1.2.2-build/bin/musl-gcc
 CFLAGS		= -m32 -ffreestanding -fno-stack-protector -Wall -Wextra
 
-all: init xserver
+all: init
 
 init: init.o
 	$(CC) $(CFLAGS) -o $@ $< -static
 
-xserver: xserver.o
-	$(CC) $(CFLAGS) -o $@ $< -static
-
 clean:
-	rm -f *.o init xserver
+	rm -f *.o init
