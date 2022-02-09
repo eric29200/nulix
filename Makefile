@@ -15,7 +15,6 @@ run:
 	./scripts/create_rootfs.csh
 	sudo $(QEMU) -m $(MEM_SIZE) -serial stdio 				\
 		-cdrom $(ISO) 							\
-    --enable-kvm                \
 		-drive format=raw,file=$(DISK)					\
 		-netdev tap,id=nulix_net					\
 		-device rtl8139,netdev=nulix_net,id=nulix_nic			\
