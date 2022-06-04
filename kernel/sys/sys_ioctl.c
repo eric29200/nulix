@@ -10,5 +10,5 @@
  */
 int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 {
-  return do_ioctl(fd, request, arg);
+	return do_ioctl(fd, request, arg);
 }

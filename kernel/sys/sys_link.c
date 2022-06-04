@@ -6,5 +6,5 @@
  */
 int sys_link(const char *oldpath, const char *newpath)
 {
-  return do_link(AT_FDCWD, oldpath, AT_FDCWD, newpath);
+	return do_link(AT_FDCWD, oldpath, AT_FDCWD, newpath);
 }

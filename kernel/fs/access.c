@@ -9,17 +9,17 @@
  */
 int do_faccessat(int dirfd, const char *pathname, int flags)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* unused flags */
-  UNUSED(flags);
+	/* unused flags */
+	UNUSED(flags);
 
-  /* check inode */
-  inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
-  if (!inode)
-    return -ENOENT;
+	/* check inode */
+	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (!inode)
+		return -ENOENT;
 
-  /* release inode */
-  iput(inode);
-  return 0;
+	/* release inode */
+	iput(inode);
+	return 0;
 }

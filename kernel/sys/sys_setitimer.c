@@ -9,8 +9,8 @@
  */
 static void itimer_handler(void *arg)
 {
-  pid_t *pid = (pid_t *) arg;
-  task_signal(*pid, SIGALRM);
+	pid_t *pid = (pid_t *) arg;
+	task_signal(*pid, SIGALRM);
 }
 
 /*
@@ -18,30 +18,30 @@ static void itimer_handler(void *arg)
  */
 int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerval_t *old_value)
 {
-  uint32_t expires_ms;
+	uint32_t expires_ms;
 
-  /* unused old value */
-  UNUSED(old_value);
+	/* unused old value */
+	UNUSED(old_value);
 
-  /* implement only real timer */
-  if (which != ITIMER_REAL) {
-    printf("setitimer (%d) not implemented\n", which);
-    return -ENOSYS;
-  }
+	/* implement only real timer */
+	if (which != ITIMER_REAL) {
+		printf("setitimer (%d) not implemented\n", which);
+		return -ENOSYS;
+	}
 
-  /* compute expiration in ms */
-  expires_ms = new_value->it_value_sec * 1000;
-  expires_ms += (new_value->it_value_usec / 1000);
+	/* compute expiration in ms */
+	expires_ms = new_value->it_value_sec * 1000;
+	expires_ms += (new_value->it_value_usec / 1000);
 
-  /* delete timer */
-  if (current_task->sig_tm.list.next)
-    timer_event_del(&current_task->sig_tm);
+	/* delete timer */
+	if (current_task->sig_tm.list.next)
+		timer_event_del(&current_task->sig_tm);
 
-  /* set timer */
-  if (new_value->it_value_sec || new_value->it_value_usec) {
-    timer_event_init(&current_task->sig_tm, itimer_handler, &current_task->pid, jiffies + ms_to_jiffies(expires_ms));
-    timer_event_add(&current_task->sig_tm);
-  }
+	/* set timer */
+	if (new_value->it_value_sec || new_value->it_value_usec) {
+		timer_event_init(&current_task->sig_tm, itimer_handler, &current_task->pid, jiffies + ms_to_jiffies(expires_ms));
+		timer_event_add(&current_task->sig_tm);
+	}
 
-  return 0;
+	return 0;
 }

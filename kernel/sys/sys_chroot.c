@@ -5,5 +5,5 @@
  */
 int sys_chroot(const char *path)
 {
-  return do_chroot(path);
+	return do_chroot(path);
 }

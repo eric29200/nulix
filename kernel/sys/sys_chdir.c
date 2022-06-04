@@ -9,28 +9,28 @@
  */
 int sys_chdir(const char *path)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* get inode */
-  inode = namei(AT_FDCWD, NULL, path, 1);
-  if (!inode)
-    return -ENOENT;
+	/* get inode */
+	inode = namei(AT_FDCWD, NULL, path, 1);
+	if (!inode)
+		return -ENOENT;
 
-  /* check directory */
-  if (!S_ISDIR(inode->i_mode)) {
-    iput(inode);
-    return -ENOTDIR;
-  }
+	/* check directory */
+	if (!S_ISDIR(inode->i_mode)) {
+		iput(inode);
+		return -ENOTDIR;
+	}
 
-  /* release current working dir */
-  iput(current_task->cwd);
+	/* release current working dir */
+	iput(current_task->cwd);
 
-  /* set current working dir */
-  current_task->cwd = inode;
+	/* set current working dir */
+	current_task->cwd = inode;
 
-  /* update current working dir path */
-  memset(current_task->cwd_path, 0, MAX_PATH_LEN);
-  strncpy(current_task->cwd_path, path, MAX_PATH_LEN);
+	/* update current working dir path */
+	memset(current_task->cwd_path, 0, MAX_PATH_LEN);
+	strncpy(current_task->cwd_path, path, MAX_PATH_LEN);
 
-  return 0;
+	return 0;
 }

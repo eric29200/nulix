@@ -8,5 +8,5 @@
  */
 int sys_fcntl(int fd, int cmd, unsigned long arg)
 {
-  return do_fcntl(fd, cmd, arg);
+	return do_fcntl(fd, cmd, arg);
 }

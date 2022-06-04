@@ -6,5 +6,5 @@
  */
 int sys_socket(int domain, int type, int protocol)
 {
-  return do_socket(domain, type, protocol);
+	return do_socket(domain, type, protocol);
 }

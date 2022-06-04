@@ -5,5 +5,5 @@
  */
 int sys_ftruncate64(int fd, off_t length)
 {
-  return do_ftruncate(fd, length);
+	return do_ftruncate(fd, length);
 }

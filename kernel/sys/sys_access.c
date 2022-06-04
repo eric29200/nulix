@@ -6,6 +6,6 @@
  */
 int sys_access(const char *filename, mode_t mode)
 {
-  UNUSED(mode);
-  return do_faccessat(AT_FDCWD, filename, 0);
+	UNUSED(mode);
+	return do_faccessat(AT_FDCWD, filename, 0);
 }

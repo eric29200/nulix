@@ -5,5 +5,5 @@
  */
 int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 {
-  return do_recvmsg(sockfd, msg, flags);
+	return do_recvmsg(sockfd, msg, flags);
 }

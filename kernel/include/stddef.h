@@ -26,35 +26,35 @@ typedef int clockid_t;
 typedef unsigned char cc_t;
 typedef unsigned long tcflag_t;
 
-#define NFD_BITS                              (8 * sizeof(uint32_t))
-#define FDSET_SIZE                            1024
-#define FDSET_INTS                            (FDSET_SIZE / NFD_BITS)
+#define NFD_BITS				(8 * sizeof(uint32_t))
+#define FDSET_SIZE				1024
+#define FDSET_INTS				(FDSET_SIZE / NFD_BITS)
 
-#define FD_ISSET(i, fdsp)                     ((fdsp) && (((fdsp)->fds_bits[(i) / sizeof(uint32_t)]) & (0x1 << ((i) % sizeof(uint32_t)))))
-#define FD_SET(i, fdsp)                       ((fdsp)->fds_bits[(i) / sizeof(uint32_t)] |= (0x1 << ((i) % sizeof(uint32_t))))
+#define FD_ISSET(i, fdsp)			((fdsp) && (((fdsp)->fds_bits[(i) / sizeof(uint32_t)]) & (0x1 << ((i) % sizeof(uint32_t)))))
+#define FD_SET(i, fdsp)				((fdsp)->fds_bits[(i) / sizeof(uint32_t)] |= (0x1 << ((i) % sizeof(uint32_t))))
 
 
 typedef struct {
-  uint32_t fds_bits[FDSET_SIZE / (8 * sizeof(uint32_t))];
+	uint32_t fds_bits[FDSET_SIZE / (8 * sizeof(uint32_t))];
 } fd_set_t;
 
-#define INT_MAX                               ((int) (~0U >> 1))
-#define UINT_MAX                              (~0U)
-#define LONG_MAX                              ((long) (~0UL >> 1))
-#define ULONG_MAX                             (~0UL)
+#define INT_MAX					((int) (~0U >> 1))
+#define UINT_MAX				(~0U)
+#define LONG_MAX				((long) (~0UL >> 1))
+#define ULONG_MAX				(~0UL)
 
-#define NULL                                  ((void *) 0)
-#define UNUSED(x)                             ((void) (x))
+#define NULL					((void *) 0)
+#define UNUSED(x)				((void) (x))
 
-#define offsetof(type, member)                ((size_t) & ((type *) 0)->member)
-#define container_of(ptr, type, member)       ({void *__mptr = (void *)(ptr);                   \
-                                              ((type *)(__mptr - offsetof(type, member))); })
+#define offsetof(type, member)			((size_t) & ((type *) 0)->member)
+#define container_of(ptr, type, member)		({void *__mptr = (void *)(ptr);			\
+						((type *)(__mptr - offsetof(type, member))); })
 
-#define div_floor(x, y)                       ((x) / (y))
-#define div_ceil(x, y)                        (((x) / (y)) + (((x) % (y)) > 0 ? 1 : 0))
+#define div_floor(x, y)				((x) / (y))
+#define div_ceil(x, y)				(((x) / (y)) + (((x) % (y)) > 0 ? 1 : 0))
 
-#define major(dev)                            ((unsigned short) ((dev) >> 8))
-#define minor(dev)                            ((unsigned short) ((dev) & 0xFF))
-#define mkdev(major, minor)                   (((major) << 8) | (minor))
+#define major(dev)				((unsigned short) ((dev) >> 8))
+#define minor(dev)				((unsigned short) ((dev) & 0xFF))
+#define mkdev(major, minor)		 	(((major) << 8) | (minor))
 
 #endif

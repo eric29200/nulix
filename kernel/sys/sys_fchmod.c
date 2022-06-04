@@ -5,5 +5,5 @@
  */
 int sys_fchmod(int fd, mode_t mode)
 {
-  return do_fchmod(fd, mode);
+	return do_fchmod(fd, mode);
 }

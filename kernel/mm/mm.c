@@ -15,35 +15,35 @@ struct heap_t *kheap = NULL;
  */
 static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
 {
-  struct page_t *page;
-  void *ret;
+	struct page_t *page;
+	void *ret;
 
-  /* use kernel heap */
-  if (kheap) {
-    ret = heap_alloc(kheap, size, align);
-    if (!ret)
-      return NULL;
+	/* use kernel heap */
+	if (kheap) {
+		ret = heap_alloc(kheap, size, align);
+		if (!ret)
+			return NULL;
 
-    if (phys) {
-      page = get_page((uint32_t) ret, 0, kernel_pgd);
-      *phys = page->frame * PAGE_SIZE + ((uint32_t) ret & 0xFFF);
-    }
+		if (phys) {
+			page = get_page((uint32_t) ret, 0, kernel_pgd);
+			*phys = page->frame * PAGE_SIZE + ((uint32_t) ret & 0xFFF);
+		}
 
-    return ret;
-  }
+		return ret;
+	}
 
-  /* align adress on PAGE boundary */
-  if (align == 1 && !PAGE_ALIGNED(placement_address))
-    placement_address = PAGE_ALIGN_UP(placement_address);
+	/* align adress on PAGE boundary */
+	if (align == 1 && !PAGE_ALIGNED(placement_address))
+		placement_address = PAGE_ALIGN_UP(placement_address);
 
-  /* get physical memory */
-  if (phys)
-    *phys = placement_address;
+	/* get physical memory */
+	if (phys)
+		*phys = placement_address;
 
-  /* update placement_address */
-  ret = (void *) placement_address;
-  placement_address += size;
-  return ret;
+	/* update placement_address */
+	ret = (void *) placement_address;
+	placement_address += size;
+	return ret;
 }
 
 /*
@@ -51,7 +51,7 @@ static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
  */
 void *kmalloc(uint32_t size)
 {
-  return __kmalloc(size, 0, NULL);
+	return __kmalloc(size, 0, NULL);
 }
 
 /*
@@ -59,7 +59,7 @@ void *kmalloc(uint32_t size)
  */
 void *kmalloc_align(uint32_t size)
 {
-  return __kmalloc(size, 1, NULL);
+	return __kmalloc(size, 1, NULL);
 }
 
 /*
@@ -67,7 +67,7 @@ void *kmalloc_align(uint32_t size)
  */
 void *kmalloc_align_phys(uint32_t size, uint32_t *phys)
 {
-  return __kmalloc(size, 1, phys);
+	return __kmalloc(size, 1, phys);
 }
 
 /*
@@ -75,8 +75,8 @@ void *kmalloc_align_phys(uint32_t size, uint32_t *phys)
  */
 void kfree(void *p)
 {
-  if (kheap)
-    heap_free(kheap, p);
+	if (kheap)
+		heap_free(kheap, p);
 }
 
 /*
@@ -84,36 +84,36 @@ void kfree(void *p)
  */
 void init_mem(uint32_t start, uint32_t end)
 {
-  uint32_t i;
+	uint32_t i;
 
-  /* set placement address */
-  placement_address = start;
+	/* set placement address */
+	placement_address = start;
 
-  /* set frames */
-  nb_frames = end / PAGE_SIZE;
-  frames = (uint32_t *) kmalloc(nb_frames / 32);
-  memset(frames, 0, nb_frames / 32);
+	/* set frames */
+	nb_frames = end / PAGE_SIZE;
+	frames = (uint32_t *) kmalloc(nb_frames / 32);
+	memset(frames, 0, nb_frames / 32);
 
-  /* allocate kernel page directory */
-  kernel_pgd = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), NULL);
-  memset(kernel_pgd, 0, sizeof(struct page_directory_t));
+	/* allocate kernel page directory */
+	kernel_pgd = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), NULL);
+	memset(kernel_pgd, 0, sizeof(struct page_directory_t));
 
-  /* allocate kernel frames/pages */
-  for (i = 0; i < KMEM_SIZE; i += PAGE_SIZE)
-    map_page(i, kernel_pgd, 0, 0);
+	/* allocate kernel frames/pages */
+	for (i = 0; i < KMEM_SIZE; i += PAGE_SIZE)
+		map_page(i, kernel_pgd, 0, 0);
 
-  /* register page fault handler */
-  register_interrupt_handler(14, page_fault_handler);
+	/* register page fault handler */
+	register_interrupt_handler(14, page_fault_handler);
 
-  /* enable paging */
-  switch_page_directory(kernel_pgd);
+	/* enable paging */
+	switch_page_directory(kernel_pgd);
 
-  /* allocate heap frames */
-  for (i = KHEAP_START; i < KHEAP_START + KHEAP_SIZE; i += PAGE_SIZE)
-    map_page(i, kernel_pgd, 0, 0);
+	/* allocate heap frames */
+	for (i = KHEAP_START; i < KHEAP_START + KHEAP_SIZE; i += PAGE_SIZE)
+		map_page(i, kernel_pgd, 0, 0);
 
-  /* init heap */
-  kheap = heap_create(KHEAP_START, KHEAP_SIZE);
-  if (!kheap)
-    panic("Cannot create kernel heap");
+	/* init heap */
+	kheap = heap_create(KHEAP_START, KHEAP_SIZE);
+	if (!kheap)
+		panic("Cannot create kernel heap");
 }

@@ -8,153 +8,153 @@
 #include <time.h>
 #include <dev.h>
 
-#define NR_INODE                      256
-#define NR_FILE                       256
-#define BUFFER_HTABLE_BITS            12
-#define NR_BUFFER                     (1 << BUFFER_HTABLE_BITS)
+#define NR_INODE		256
+#define NR_FILE			256
+#define BUFFER_HTABLE_BITS	12
+#define NR_BUFFER		(1 << BUFFER_HTABLE_BITS)
 
-#define BLOCK_SIZE                    1024
-#define BSYNC_TIMER_MS                10000
+#define BLOCK_SIZE		1024
+#define BSYNC_TIMER_MS		10000
 
-#define IMAP_SLOTS                    8
-#define ZMAP_SLOTS                    64
+#define IMAP_SLOTS		8
+#define ZMAP_SLOTS		64
 
-#define PIPE_WPOS(inode)              ((inode)->i_zone[0])
-#define PIPE_RPOS(inode)              ((inode)->i_zone[1])
-#define PIPE_SIZE(inode)              ((PIPE_WPOS(inode) - PIPE_RPOS(inode)) & (PAGE_SIZE - 1))
-#define PIPE_EMPTY(inode)             (PIPE_WPOS(inode) == PIPE_RPOS(inode))
-#define PIPE_FULL(inode)              (PIPE_SIZE(inode) == (PAGE_SIZE - 1))
+#define PIPE_WPOS(inode)	((inode)->i_zone[0])
+#define PIPE_RPOS(inode)	((inode)->i_zone[1])
+#define PIPE_SIZE(inode)	((PIPE_WPOS(inode) - PIPE_RPOS(inode)) & (PAGE_SIZE - 1))
+#define PIPE_EMPTY(inode)	(PIPE_WPOS(inode) == PIPE_RPOS(inode))
+#define PIPE_FULL(inode)	(PIPE_SIZE(inode) == (PAGE_SIZE - 1))
 
 /*
  * Buffer structure.
  */
 struct buffer_head_t {
-  dev_t                   b_dev;
-  char                    b_data[BLOCK_SIZE];
-  int                     b_ref;
-  char                    b_dirt;
-  char                    b_uptodate;
-  uint32_t                b_blocknr;
-  struct list_head_t      b_list;
-  struct htable_link_t    b_htable;
+	dev_t				b_dev;
+	char				b_data[BLOCK_SIZE];
+	int				b_ref;
+	char				b_dirt;
+	char				b_uptodate;
+	uint32_t			b_blocknr;
+	struct list_head_t		b_list;
+	struct htable_link_t		b_htable;
 };
 
 /*
  * Generic super block.
  */
 struct super_block_t {
-  uint32_t                    s_ninodes;
-  uint32_t                    s_nzones;
-  uint32_t                    s_imap_blocks;
-  uint32_t                    s_zmap_blocks;
-  uint32_t                    s_firstdatazone;
-  uint32_t                    s_log_zone_size;
-  uint32_t                    s_max_size;
-  uint16_t                    s_magic;
-  struct buffer_head_t *      s_imap[IMAP_SLOTS];
-  struct buffer_head_t *      s_zmap[ZMAP_SLOTS];
-  dev_t                       s_dev;
-  struct inode_t *            s_covered;
-  struct inode_t *            s_mounted;
-  struct super_operations_t * s_op;
+	uint32_t			s_ninodes;
+	uint32_t			s_nzones;
+	uint32_t			s_imap_blocks;
+	uint32_t			s_zmap_blocks;
+	uint32_t			s_firstdatazone;
+	uint32_t			s_log_zone_size;
+	uint32_t			s_max_size;
+	uint16_t			s_magic;
+	struct buffer_head_t *		s_imap[IMAP_SLOTS];
+	struct buffer_head_t *		s_zmap[ZMAP_SLOTS];
+	dev_t				s_dev;
+	struct inode_t *		s_covered;
+	struct inode_t *		s_mounted;
+	struct super_operations_t *	s_op;
 };
 
 /*
  * Generic inode.
  */
 struct inode_t {
-  uint16_t                      i_mode;
-  uid_t                         i_uid;
-  uint32_t                      i_size;
-  uint32_t                      i_time;
-  gid_t                         i_gid;
-  uint8_t                       i_nlinks;
-  uint32_t                      i_zone[10];
-  ino_t                         i_ino;
-  int                           i_ref;
-  char                          i_dirt;
-  char                          i_pipe;
-  char                          i_rwait;
-  char                          i_wwait;
-  struct super_block_t *        i_sb;
-  dev_t                         i_dev;
-  struct inode_t *              i_mount;
-  struct inode_operations_t *   i_op;
+	uint16_t			i_mode;
+	uid_t				i_uid;
+	uint32_t			i_size;
+	uint32_t			i_time;
+	gid_t				i_gid;
+	uint8_t				i_nlinks;
+	uint32_t			i_zone[10];
+	ino_t				i_ino;
+	int				i_ref;
+	char				i_dirt;
+	char				i_pipe;
+	char				i_rwait;
+	char				i_wwait;
+	struct super_block_t *		i_sb;
+	dev_t				i_dev;
+	struct inode_t *		i_mount;
+	struct inode_operations_t *	i_op;
 };
 
 /*
  * Opened file.
  */
 struct file_t {
-  uint16_t                  f_mode;
-  int                       f_flags;
-  size_t                    f_pos;
-  int                       f_ref;
-  struct inode_t *          f_inode;
-  struct file_operations_t *f_op;
+	uint16_t			f_mode;
+	int				f_flags;
+	size_t				f_pos;
+	int				f_ref;
+	struct inode_t *		f_inode;
+	struct file_operations_t *	f_op;
 };
 
 /*
  * Directory entry (used by libc and getdents system call).
  */
 struct dirent_t {
-  ino_t           d_inode;
-  off_t           d_off;
-  unsigned short  d_reclen;
-  unsigned char   d_type;
-  char            d_name[];
+	ino_t				d_inode;
+	off_t				d_off;
+	unsigned short			d_reclen;
+	unsigned char			d_type;
+	char				d_name[];
 };
 
 /*
  * Directory entry (used by libc and getdents system call).
  */
 struct dirent64_t {
-  uint64_t        d_inode;
-  int64_t         d_off;
-  unsigned short  d_reclen;
-  unsigned char   d_type;
-  char            d_name[];
+	uint64_t			d_inode;
+	int64_t				d_off;
+	unsigned short			d_reclen;
+	unsigned char			d_type;
+	char				d_name[];
 };
 
 /*
  * Super operations.
  */
 struct super_operations_t {
-  int (*read_inode)(struct inode_t *);
-  int (*write_inode)(struct inode_t *);
-  int (*put_inode)(struct inode_t *);
+	int (*read_inode)(struct inode_t *);
+	int (*write_inode)(struct inode_t *);
+	int (*put_inode)(struct inode_t *);
 };
 
 /*
  * Inode operations.
  */
 struct inode_operations_t {
-  struct file_operations_t *fops;
-  int (*lookup)(struct inode_t *, const char *, size_t, struct inode_t **);
-  int (*create)(struct inode_t *, const char *, size_t, mode_t, struct inode_t **);
-  int (*follow_link)(struct inode_t *, struct inode_t *, struct inode_t **);
-  ssize_t (*readlink)(struct inode_t *, char *, size_t);
-  int (*link)(struct inode_t *, struct inode_t *, const char *, size_t);
-  int (*unlink)(struct inode_t *, const char *, size_t);
-  int (*symlink)(struct inode_t *, const char *, size_t, const char *);
-  int (*mkdir)(struct inode_t *, const char *, size_t, mode_t);
-  int (*rmdir)(struct inode_t *, const char *, size_t);
-  int (*rename)(struct inode_t *, const char *, size_t, struct inode_t *, const char *, size_t);
-  int (*mknod)(struct inode_t *, const char *, size_t, mode_t, dev_t);
-  void (*truncate)(struct inode_t *);
+	struct file_operations_t *fops;
+	int (*lookup)(struct inode_t *, const char *, size_t, struct inode_t **);
+	int (*create)(struct inode_t *, const char *, size_t, mode_t, struct inode_t **);
+	int (*follow_link)(struct inode_t *, struct inode_t *, struct inode_t **);
+	ssize_t (*readlink)(struct inode_t *, char *, size_t);
+	int (*link)(struct inode_t *, struct inode_t *, const char *, size_t);
+	int (*unlink)(struct inode_t *, const char *, size_t);
+	int (*symlink)(struct inode_t *, const char *, size_t, const char *);
+	int (*mkdir)(struct inode_t *, const char *, size_t, mode_t);
+	int (*rmdir)(struct inode_t *, const char *, size_t);
+	int (*rename)(struct inode_t *, const char *, size_t, struct inode_t *, const char *, size_t);
+	int (*mknod)(struct inode_t *, const char *, size_t, mode_t, dev_t);
+	void (*truncate)(struct inode_t *);
 };
 
 /*
  * File operations.
  */
 struct file_operations_t {
-  int (*open)(struct file_t *file);
-  int (*close)(struct file_t *file);
-  int (*read)(struct file_t *, char *, int);
-  int (*write)(struct file_t *, const char *, int);
-  int (*getdents64)(struct file_t *, void *, size_t);
-  int (*poll)(struct file_t *);
-  int (*ioctl)(struct file_t *, int, unsigned long);
+	int (*open)(struct file_t *file);
+	int (*close)(struct file_t *file);
+	int (*read)(struct file_t *, char *, int);
+	int (*write)(struct file_t *, const char *, int);
+	int (*getdents64)(struct file_t *, void *, size_t);
+	int (*poll)(struct file_t *);
+	int (*ioctl)(struct file_t *, int, unsigned long);
 };
 
 /* file system operations */

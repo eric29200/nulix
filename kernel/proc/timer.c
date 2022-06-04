@@ -9,10 +9,10 @@ static LIST_HEAD(timers_list);
  */
 void timer_event_init(struct timer_event_t *tm, void (*func)(void *), void *data, uint32_t expires)
 {
-  INIT_LIST_HEAD(&tm->list);
-  tm->expires = expires;
-  tm->func = func;
-  tm->data = data;
+	INIT_LIST_HEAD(&tm->list);
+	tm->expires = expires;
+	tm->func = func;
+	tm->data = data;
 }
 
 /*
@@ -20,7 +20,7 @@ void timer_event_init(struct timer_event_t *tm, void (*func)(void *), void *data
  */
 void timer_event_add(struct timer_event_t *tm)
 {
-  list_add(&tm->list, &timers_list);
+	list_add(&tm->list, &timers_list);
 }
 
 /*
@@ -28,7 +28,7 @@ void timer_event_add(struct timer_event_t *tm)
  */
 void timer_event_del(struct timer_event_t *tm)
 {
-  list_del(&tm->list);
+	list_del(&tm->list);
 }
 
 /*
@@ -36,8 +36,8 @@ void timer_event_del(struct timer_event_t *tm)
  */
 void timer_event_mod(struct timer_event_t *tm, uint32_t expires)
 {
-  tm->expires = expires;
-  timer_event_add(tm);
+	tm->expires = expires;
+	timer_event_add(tm);
 }
 
 /*
@@ -45,16 +45,16 @@ void timer_event_mod(struct timer_event_t *tm, uint32_t expires)
  */
 void timer_update()
 {
-  struct list_head_t *pos, *n;
-  struct timer_event_t *tm;
+	struct list_head_t *pos, *n;
+	struct timer_event_t *tm;
 
-  list_for_each_safe(pos, n, &timers_list) {
-    tm = list_entry(pos, struct timer_event_t, list);
+	list_for_each_safe(pos, n, &timers_list) {
+		tm = list_entry(pos, struct timer_event_t, list);
 
-    /* timer expires : run and remove it */
-    if (tm->expires <= jiffies) {
-      timer_event_del(tm);
-      tm->func(tm->data);
-    }
-  }
+		/* timer expires : run and remove it */
+		if (tm->expires <= jiffies) {
+			timer_event_del(tm);
+			tm->func(tm->data);
+		}
+	}
 }

@@ -5,9 +5,9 @@
  */
 pid_t sys_getppid()
 {
-  if (current_task->parent)
-    return current_task->parent->pid;
+	if (current_task->parent)
+		return current_task->parent->pid;
 
-  /* init process : no father */
-  return current_task->pid;
+	/* init process : no father */
+	return current_task->pid;
 }

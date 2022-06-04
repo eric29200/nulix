@@ -11,87 +11,86 @@
  */
 static struct inode_t *follow_link(struct inode_t *dir, struct inode_t *inode)
 {
-  struct inode_t *res_inode;
+	struct inode_t *res_inode;
 
-  /* not implemented : return inode */
-  if (!inode || !inode->i_op || !inode->i_op->follow_link)
-    return inode;
+	/* not implemented : return inode */
+	if (!inode || !inode->i_op || !inode->i_op->follow_link)
+		return inode;
 
-  inode->i_op->follow_link(dir, inode, &res_inode);
-  return res_inode;
+	inode->i_op->follow_link(dir, inode, &res_inode);
+	return res_inode;
 }
 
 /*
  * Resolve a path name to the inode of the top most directory.
  */
-static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pathname,
-                                 const char **basename, size_t *basename_len)
+static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pathname, const char **basename, size_t *basename_len)
 {
-  struct inode_t *inode, *tmp;
-  const char *name;
-  size_t name_len;
-  int err;
+	struct inode_t *inode, *tmp;
+	const char *name;
+	size_t name_len;
+	int err;
 
-  /* absolute or relative path */
-  if (base) {
-    inode = base;
-  } else if (*pathname == '/') {
-    inode = current_task->root;
-    pathname++;
-  } else if (dirfd == AT_FDCWD) {
-    inode = current_task->cwd;
-  } else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->filp[dirfd]) {
-    inode = current_task->filp[dirfd]->f_inode;
-  }
+	/* absolute or relative path */
+	if (base) {
+		inode = base;
+	} else if (*pathname == '/') {
+		inode = current_task->root;
+		pathname++;
+	} else if (dirfd == AT_FDCWD) {
+		inode = current_task->cwd;
+	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->filp[dirfd]) {
+		inode = current_task->filp[dirfd]->f_inode;
+	}
 
-  if (!inode)
-    return NULL;
+	if (!inode)
+		return NULL;
 
-  /* update reference count */
-  inode->i_ref++;
+	/* update reference count */
+	inode->i_ref++;
 
-  while (1) {
-    /* check if inode is a directory */
-    if (!S_ISDIR(inode->i_mode)) {
-      iput(inode);
-      return NULL;
-    }
+	while (1) {
+		/* check if inode is a directory */
+		if (!S_ISDIR(inode->i_mode)) {
+			iput(inode);
+			return NULL;
+		}
 
-    /* compute next path name */
-    name = pathname;
-    for (name_len = 0; *pathname && *pathname++ != '/'; name_len++);
+		/* compute next path name */
+		name = pathname;
+		for (name_len = 0; *pathname && *pathname++ != '/'; name_len++);
 
-    /* end : return current inode */
-    if (!*pathname)
-      break;
+		/* end : return current inode */
+		if (!*pathname)
+			break;
 
-    /* skip empty folder */
-    if (!name_len)
-      continue;
+		/* skip empty folder */
+		if (!name_len)
+			continue;
 
-    /* lookup not implemented */
-    inode->i_ref++;
-    if (!inode->i_op || !inode->i_op->lookup) {
-      iput(inode);
-      return NULL;
-    }
+		/* lookup not implemented */
+		inode->i_ref++;
+		if (!inode->i_op || !inode->i_op->lookup) {
+			iput(inode);
+			return NULL;
+		}
 
-    /* lookup file */
-    err = inode->i_op->lookup(inode, name, name_len, &tmp);
-    if (err) {
-      iput(inode);
-      return NULL;
-    }
+		/* lookup file */
+		err = inode->i_op->lookup(inode, name, name_len, &tmp);
+		if (err) {
+			iput(inode);
+			return NULL;
+		}
 
-    /* follow symbolic links */
-    inode = follow_link(inode, tmp);
-    if (!inode)
-      return NULL;
-  }
+		/* follow symbolic links */
+		inode = follow_link(inode, tmp);
+		if (!inode)
+			return NULL;
+	}
 
-  *basename = name;
-  *basename_len = name_len;
-  return inode;
+	*basename = name;
+	*basename_len = name_len;
+	return inode;
 }
 
 /*
@@ -99,49 +98,49 @@ static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pa
  */
 struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int follow_links)
 {
-  struct inode_t *dir, *inode;
-  const char *basename;
-  size_t basename_len;
-  int err;
+	struct inode_t *dir, *inode;
+	const char *basename;
+	size_t basename_len;
+	int err;
 
-  /* use directly dir fd */
-  if (dirfd >= 0 && (!pathname || *pathname == 0)) {
-    if (dirfd >= NR_OPEN || !current_task->filp[dirfd])
-      return NULL;
+	/* use directly dir fd */
+	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
+		if (dirfd >= NR_OPEN || !current_task->filp[dirfd])
+			return NULL;
 
-    current_task->filp[dirfd]->f_inode->i_ref++;
-    return current_task->filp[dirfd]->f_inode;
-  }
+		current_task->filp[dirfd]->f_inode->i_ref++;
+		return current_task->filp[dirfd]->f_inode;
+	}
 
-  /* find directory */
-  dir = dir_namei(dirfd, base, pathname, &basename, &basename_len);
-  if (!dir)
-    return NULL;
+	/* find directory */
+	dir = dir_namei(dirfd, base, pathname, &basename, &basename_len);
+	if (!dir)
+		return NULL;
 
-  /* special case : '/' */
-  if (!basename_len)
-    return dir;
+	/* special case : '/' */
+	if (!basename_len)
+		return dir;
 
-  /* lookup not implemented */
-  if (!dir->i_op || !dir->i_op->lookup) {
-    iput(dir);
-    return NULL;
-  }
+	/* lookup not implemented */
+	if (!dir->i_op || !dir->i_op->lookup) {
+		iput(dir);
+		return NULL;
+	}
 
-  /* lookup file */
-  dir->i_ref++;
-  err = dir->i_op->lookup(dir, basename, basename_len, &inode);
-  if (err) {
-    iput(dir);
-    return NULL;
-  }
+	/* lookup file */
+	dir->i_ref++;
+	err = dir->i_op->lookup(dir, basename, basename_len, &inode);
+	if (err) {
+		iput(dir);
+		return NULL;
+	}
 
-  /* follow symbolic link */
-  if (follow_links)
-    inode = follow_link(dir, inode);
+	/* follow symbolic link */
+	if (follow_links)
+		inode = follow_link(dir, inode);
 
-  iput(dir);
-  return inode;
+	iput(dir);
+	return inode;
 }
 
 /*
@@ -149,78 +148,78 @@ struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int
  */
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
 {
-  struct inode_t *dir, *inode;
-  const char *basename;
-  size_t basename_len;
-  int err;
+	struct inode_t *dir, *inode;
+	const char *basename;
+	size_t basename_len;
+	int err;
 
-  *res_inode = NULL;
+	*res_inode = NULL;
 
-  /* find directory */
-  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
-  if (!dir)
-    return -ENOENT;
+	/* find directory */
+	dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
+	if (!dir)
+		return -ENOENT;
 
-  /* open a directory */
-  if (!basename_len) {
-    /* do not allow to create/truncate directories here */
-    if (!(flags & (O_ACCMODE | O_CREAT | O_TRUNC))) {
-      *res_inode = dir;
-      return 0;
-    }
+	/* open a directory */
+	if (!basename_len) {
+		/* do not allow to create/truncate directories here */
+		if (!(flags & (O_ACCMODE | O_CREAT | O_TRUNC))) {
+			*res_inode = dir;
+			return 0;
+		}
 
-    iput(dir);
-    return -EISDIR;
-  }
+		iput(dir);
+		return -EISDIR;
+	}
 
-  /* set mode (needed if new file is created) */
-  mode &= ~current_task->umask & 0777;
-  mode |= S_IFREG;
+	/* set mode (needed if new file is created) */
+	mode &= ~current_task->umask & 0777;
+	mode |= S_IFREG;
 
-  /* lookup not implemented */
-  if (!dir->i_op || !dir->i_op->lookup) {
-    iput(dir);
-    return -EPERM;
-  }
+	/* lookup not implemented */
+	if (!dir->i_op || !dir->i_op->lookup) {
+		iput(dir);
+		return -EPERM;
+	}
 
-  /* lookup inode */
-  dir->i_ref++;
-  err = dir->i_op->lookup(dir, basename, basename_len, &inode);
-  if (err) {
-    /* no such entry */
-    if (!(flags & O_CREAT)) {
-      iput(dir);
-      return -ENOENT;
-    }
+	/* lookup inode */
+	dir->i_ref++;
+	err = dir->i_op->lookup(dir, basename, basename_len, &inode);
+	if (err) {
+		/* no such entry */
+		if (!(flags & O_CREAT)) {
+			iput(dir);
+			return -ENOENT;
+		}
 
-    /* create not implemented */
-    if (!dir->i_op || !dir->i_op->create) {
-      iput(dir);
-      return -EPERM;
-    }
+		/* create not implemented */
+		if (!dir->i_op || !dir->i_op->create) {
+			iput(dir);
+			return -EPERM;
+		}
 
-    /* create new inode */
-    dir->i_ref++;
-    err = dir->i_op->create(dir, basename, basename_len, mode, res_inode);
+		/* create new inode */
+		dir->i_ref++;
+		err = dir->i_op->create(dir, basename, basename_len, mode, res_inode);
 
-    /* release directory */
-    iput(dir);
-    return err;
-  }
+		/* release directory */
+		iput(dir);
+		return err;
+	}
 
-  /* follow symbolic link */
-  *res_inode = follow_link(dir, inode);
-  if (!*res_inode)
-    return -EACCES;
+	/* follow symbolic link */
+	*res_inode = follow_link(dir, inode);
+	if (!*res_inode)
+		return -EACCES;
 
-  /* truncate file */
-  if (flags & O_TRUNC && (*res_inode)->i_op && (*res_inode)->i_op->truncate) {
-    (*res_inode)->i_size = 0;
-    (*res_inode)->i_op->truncate(*res_inode);
-    (*res_inode)->i_dirt = 1;
-  }
+	/* truncate file */
+	if (flags & O_TRUNC && (*res_inode)->i_op && (*res_inode)->i_op->truncate) {
+		(*res_inode)->i_size = 0;
+		(*res_inode)->i_op->truncate(*res_inode);
+		(*res_inode)->i_dirt = 1;
+	}
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -228,34 +227,34 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
  */
 int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 {
-  struct inode_t *dir;
-  const char *basename;
-  size_t basename_len;
-  int err;
+	struct inode_t *dir;
+	const char *basename;
+	size_t basename_len;
+	int err;
 
-  /* get parent directory */
-  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
-  if (!dir)
-    return -ENOENT;
+	/* get parent directory */
+	dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
+	if (!dir)
+		return -ENOENT;
 
-  /* check name length */
-  if (!basename_len) {
-    iput(dir);
-    return -ENOENT;
-  }
+	/* check name length */
+	if (!basename_len) {
+		iput(dir);
+		return -ENOENT;
+	}
 
-  /* mkdir not implemented */
-  if (!dir->i_op || !dir->i_op->mkdir) {
-    iput(dir);
-    return -EPERM;
-  }
+	/* mkdir not implemented */
+	if (!dir->i_op || !dir->i_op->mkdir) {
+		iput(dir);
+		return -EPERM;
+	}
 
-  /* create directory */
-  dir->i_ref++;
-  err = dir->i_op->mkdir(dir, basename, basename_len, mode);
-  iput(dir);
+	/* create directory */
+	dir->i_ref++;
+	err = dir->i_op->mkdir(dir, basename, basename_len, mode);
+	iput(dir);
 
-  return err;
+	return err;
 }
 
 /*
@@ -263,50 +262,50 @@ int do_mkdir(int dirfd, const char *pathname, mode_t mode)
  */
 int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
 {
-  struct inode_t *old_inode, *dir;
-  const char *basename;
-  size_t basename_len;
-  int err;
+	struct inode_t *old_inode, *dir;
+	const char *basename;
+	size_t basename_len;
+	int err;
 
-  /* get old inode */
-  old_inode = namei(olddirfd, NULL, oldpath, 1);
-  if (!old_inode)
-    return -ENOENT;
+	/* get old inode */
+	old_inode = namei(olddirfd, NULL, oldpath, 1);
+	if (!old_inode)
+		return -ENOENT;
 
-  /* do not allow to rename directory */
-  if (S_ISDIR(old_inode->i_mode)) {
-    iput(old_inode);
-    return -EPERM;
-  }
+	/* do not allow to rename directory */
+	if (S_ISDIR(old_inode->i_mode)) {
+		iput(old_inode);
+		return -EPERM;
+	}
 
-  /* get directory of new file */
-  dir = dir_namei(newdirfd, NULL, newpath, &basename, &basename_len);
-  if (!dir) {
-    iput(old_inode);
-    return -EACCES;
-  }
+	/* get directory of new file */
+	dir = dir_namei(newdirfd, NULL, newpath, &basename, &basename_len);
+	if (!dir) {
+		iput(old_inode);
+		return -EACCES;
+	}
 
-  /* no name to new file */
-  if (!basename_len) {
-    iput(old_inode);
-    iput(dir);
-    return -EPERM;
-  }
+	/* no name to new file */
+	if (!basename_len) {
+		iput(old_inode);
+		iput(dir);
+		return -EPERM;
+	}
 
-  /* link not implemented */
-  if (!dir->i_op || !dir->i_op->link) {
-    iput(old_inode);
-    iput(dir);
-    return -EPERM;
-  }
+	/* link not implemented */
+	if (!dir->i_op || !dir->i_op->link) {
+		iput(old_inode);
+		iput(dir);
+		return -EPERM;
+	}
 
-  /* create link */
-  dir->i_ref++;
-  err = dir->i_op->link(old_inode, dir, basename, basename_len);
+	/* create link */
+	dir->i_ref++;
+	err = dir->i_op->link(old_inode, dir, basename, basename_len);
 
-  iput(old_inode);
-  iput(dir);
-  return err;
+	iput(old_inode);
+	iput(dir);
+	return err;
 }
 
 /*
@@ -314,34 +313,34 @@ int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath
  */
 int do_symlink(const char *target, int newdirfd, const char *linkpath)
 {
-  struct inode_t *dir;
-  const char *basename;
-  size_t basename_len;
-  int err;
+	struct inode_t *dir;
+	const char *basename;
+	size_t basename_len;
+	int err;
 
-  /* get new parent directory */
-  dir = dir_namei(newdirfd, NULL, linkpath, &basename, &basename_len);
-  if (!dir)
-    return -ENOENT;
+	/* get new parent directory */
+	dir = dir_namei(newdirfd, NULL, linkpath, &basename, &basename_len);
+	if (!dir)
+		return -ENOENT;
 
-  /* check directory name */
-  if (!basename_len) {
-    iput(dir);
-    return -ENOENT;
-  }
+	/* check directory name */
+	if (!basename_len) {
+		iput(dir);
+		return -ENOENT;
+	}
 
-  /* symlink not implemented */
-  if (!dir->i_op || !dir->i_op->symlink) {
-    iput(dir);
-    return -EPERM;
-  }
+	/* symlink not implemented */
+	if (!dir->i_op || !dir->i_op->symlink) {
+		iput(dir);
+		return -EPERM;
+	}
 
-  /* create symbolic link */
-  dir->i_ref++;
-  err = dir->i_op->symlink(dir, basename, basename_len, target);
+	/* create symbolic link */
+	dir->i_ref++;
+	err = dir->i_op->symlink(dir, basename, basename_len, target);
 
-  iput(dir);
-  return err;
+	iput(dir);
+	return err;
 }
 
 /*
@@ -349,31 +348,31 @@ int do_symlink(const char *target, int newdirfd, const char *linkpath)
  */
 int do_unlink(int dirfd, const char *pathname)
 {
-  struct inode_t *dir;
-  const char *basename;
-  size_t basename_len;
-  int err;
+	struct inode_t *dir;
+	const char *basename;
+	size_t basename_len;
+	int err;
 
-  /* get parent directory */
-  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
-  if (!dir)
-    return -ENOENT;
+	/* get parent directory */
+	dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
+	if (!dir)
+		return -ENOENT;
 
-  /* check name length */
-  if (!basename_len) {
-    iput(dir);
-    return -ENOENT;
-  }
+	/* check name length */
+	if (!basename_len) {
+		iput(dir);
+		return -ENOENT;
+	}
 
-  /* unlink not implemented */
-  if (!dir->i_op || !dir->i_op->unlink) {
-    iput(dir);
-    return -EPERM;
-  }
+	/* unlink not implemented */
+	if (!dir->i_op || !dir->i_op->unlink) {
+		iput(dir);
+		return -EPERM;
+	}
 
-  /* unlink file */
-  err = dir->i_op->unlink(dir, basename, basename_len);
-  return err;
+	/* unlink file */
+	err = dir->i_op->unlink(dir, basename, basename_len);
+	return err;
 }
 
 /*
@@ -381,31 +380,31 @@ int do_unlink(int dirfd, const char *pathname)
  */
 int do_rmdir(int dirfd, const char *pathname)
 {
-  struct inode_t *dir;
-  const char *basename;
-  size_t basename_len;
-  int err;
+	struct inode_t *dir;
+	const char *basename;
+	size_t basename_len;
+	int err;
 
-  /* get parent directory */
-  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
-  if (!dir)
-    return -ENOENT;
+	/* get parent directory */
+	dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
+	if (!dir)
+		return -ENOENT;
 
-  /* check name length */
-  if (!basename_len) {
-    iput(dir);
-    return -ENOENT;
-  }
+	/* check name length */
+	if (!basename_len) {
+		iput(dir);
+		return -ENOENT;
+	}
 
-  /* rmdir not implemented */
-  if (!dir->i_op || !dir->i_op->rmdir) {
-    iput(dir);
-    return -EPERM;
-  }
+	/* rmdir not implemented */
+	if (!dir->i_op || !dir->i_op->rmdir) {
+		iput(dir);
+		return -EPERM;
+	}
 
-  /* remove directory */
-  err = dir->i_op->rmdir(dir, basename, basename_len);
-  return err;
+	/* remove directory */
+	err = dir->i_op->rmdir(dir, basename, basename_len);
+	return err;
 }
 
 /*
@@ -413,21 +412,21 @@ int do_rmdir(int dirfd, const char *pathname)
  */
 ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* get inode */
-  inode = namei(dirfd, NULL, pathname, 0);
-  if (!inode)
-    return -ENOENT;
+	/* get inode */
+	inode = namei(dirfd, NULL, pathname, 0);
+	if (!inode)
+		return -ENOENT;
 
-  /* readlink not implemented */
-  if (!inode->i_op || !inode->i_op->readlink) {
-    iput(inode);
-    return -EACCES;
-  }
+	/* readlink not implemented */
+	if (!inode->i_op || !inode->i_op->readlink) {
+		iput(inode);
+		return -EACCES;
+	}
 
-  /* read link */
-  return inode->i_op->readlink(inode, buf, bufsize);
+	/* read link */
+	return inode->i_op->readlink(inode, buf, bufsize);
 }
 
 /*
@@ -435,53 +434,51 @@ ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
  */
 int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
 {
-  const char *old_basename, *new_basename;
-  size_t old_basename_len, new_basename_len;
-  struct inode_t *old_dir, *new_dir;
+	const char *old_basename, *new_basename;
+	size_t old_basename_len, new_basename_len;
+	struct inode_t *old_dir, *new_dir;
 
-  /* get old directory */
-  old_dir = dir_namei(olddirfd, NULL, oldpath, &old_basename, &old_basename_len);
-  if (!old_dir)
-    return -ENOENT;
+	/* get old directory */
+	old_dir = dir_namei(olddirfd, NULL, oldpath, &old_basename, &old_basename_len);
+	if (!old_dir)
+		return -ENOENT;
 
-  /* do not allow to move '.' and '..' */
-  if (!old_basename_len
-      || (old_basename[0] == '.' && (old_basename_len == 1 || (old_basename[1] == '.' && old_basename_len == 2)))) {
-    iput(old_dir);
-    return -EPERM;
-  }
+	/* do not allow to move '.' and '..' */
+	if (!old_basename_len || (old_basename[0] == '.' && (old_basename_len == 1 || (old_basename[1] == '.' && old_basename_len == 2)))) {
+		iput(old_dir);
+		return -EPERM;
+	}
 
-  /* get new directory */
-  new_dir = dir_namei(newdirfd, NULL, newpath, &new_basename, &new_basename_len);
-  if (!new_dir) {
-    iput(old_dir);
-    return -ENOENT;
-  }
+	/* get new directory */
+	new_dir = dir_namei(newdirfd, NULL, newpath, &new_basename, &new_basename_len);
+	if (!new_dir) {
+		iput(old_dir);
+		return -ENOENT;
+	}
 
-  /* do not allow to move to '.' and '..' */
-  if (!new_basename_len
-      || (new_basename[0] == '.' && (new_basename_len == 1 || (new_basename[1] == '.' && new_basename_len == 2)))) {
-    iput(old_dir);
-    iput(new_dir);
-    return -EPERM;
-  }
+	/* do not allow to move to '.' and '..' */
+	if (!new_basename_len || (new_basename[0] == '.' && (new_basename_len == 1 || (new_basename[1] == '.' && new_basename_len == 2)))) {
+		iput(old_dir);
+		iput(new_dir);
+		return -EPERM;
+	}
 
-  /* do not allow to move to another device */
-  if (old_dir->i_dev != new_dir->i_dev) {
-    iput(old_dir);
-    iput(new_dir);
-    return -EPERM;
-  }
+	/* do not allow to move to another device */
+	if (old_dir->i_dev != new_dir->i_dev) {
+		iput(old_dir);
+		iput(new_dir);
+		return -EPERM;
+	}
 
-  /* rename not implemented */
-  if (!old_dir->i_op || !old_dir->i_op->rename) {
-    iput(old_dir);
-    iput(new_dir);
-    return -EPERM;
-  }
+	/* rename not implemented */
+	if (!old_dir->i_op || !old_dir->i_op->rename) {
+		iput(old_dir);
+		iput(new_dir);
+		return -EPERM;
+	}
 
-  new_dir->i_ref++;
-  return old_dir->i_op->rename(old_dir, old_basename, old_basename_len, new_dir, new_basename, new_basename_len);
+	new_dir->i_ref++;
+	return old_dir->i_op->rename(old_dir, old_basename, old_basename_len, new_dir, new_basename, new_basename_len);
 }
 
 /*
@@ -489,20 +486,20 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
  */
 int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 {
-  const char *basename;
-  size_t basename_len;
-  struct inode_t *dir;
+	const char *basename;
+	size_t basename_len;
+	struct inode_t *dir;
 
-  /* get directory */
-  dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
-  if (!dir)
-    return -ENOENT;
+	/* get directory */
+	dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
+	if (!dir)
+		return -ENOENT;
 
-  /* mknod not implemented */
-  if (!dir->i_op || !dir->i_op->mknod) {
-    iput(dir);
-    return -EPERM;
-  }
+	/* mknod not implemented */
+	if (!dir->i_op || !dir->i_op->mknod) {
+		iput(dir);
+		return -EPERM;
+	}
 
-  return dir->i_op->mknod(dir, basename, basename_len, mode, dev);
+	return dir->i_op->mknod(dir, basename, basename_len, mode, dev);
 }

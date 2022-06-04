@@ -5,5 +5,5 @@
  */
 int sys_faccessat(int dirfd, const char *pathname, int flags)
 {
-  return do_faccessat(dirfd, pathname, flags);
+	return do_faccessat(dirfd, pathname, flags);
 }

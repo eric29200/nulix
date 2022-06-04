@@ -5,5 +5,5 @@
  */
 void sys_exit_group(int status)
 {
-  sys_exit(status);
+	sys_exit(status);
 }

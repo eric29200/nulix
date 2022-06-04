@@ -6,5 +6,5 @@
  */
 int sys_munmap(void *addr, size_t length)
 {
-  return do_munmap((uint32_t) addr, length);
+	return do_munmap((uint32_t) addr, length);
 }

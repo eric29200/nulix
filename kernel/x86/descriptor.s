@@ -17,9 +17,9 @@ gdt_flush:
 	ret
 
 tss_flush:
-   mov ax, 0x2B			; load the tss structure
-   ltr ax
-   ret
+	 mov ax, 0x2B		; load the tss structure
+	 ltr ax
+	 ret
 
 idt_flush:
 	mov eax, [esp+4]	; load the idt pointer passed as parameter on stack

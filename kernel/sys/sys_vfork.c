@@ -5,5 +5,5 @@
  */
 pid_t sys_vfork()
 {
-  return sys_fork();
+	return sys_fork();
 }

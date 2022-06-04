@@ -7,11 +7,11 @@
  * Ring buffer structure.
  */
 struct ring_buffer_t {
-  size_t        head;
-  size_t        tail;
-  size_t        capacity;
-  size_t        size;
-  uint8_t       *buffer;
+	size_t		head;
+	size_t		tail;
+	size_t		capacity;
+	size_t		size;
+	uint8_t		*buffer;
 };
 
 int ring_buffer_init(struct ring_buffer_t *rb, size_t capacity);

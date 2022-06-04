@@ -6,5 +6,5 @@
  */
 int sys_rmdir(const char *pathname)
 {
-  return do_rmdir(AT_FDCWD, pathname);
+	return do_rmdir(AT_FDCWD, pathname);
 }

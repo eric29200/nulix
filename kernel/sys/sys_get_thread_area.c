@@ -6,6 +6,6 @@
  */
 int sys_get_thread_area(void *u_info)
 {
-  UNUSED(u_info);
-  return -ENOSYS;
+	UNUSED(u_info);
+	return -ENOSYS;
 }

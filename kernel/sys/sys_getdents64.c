@@ -6,5 +6,5 @@
 
 int sys_getdents64(int fd, void *dirp, size_t count)
 {
-  return do_getdents64(fd, dirp, count);
+	return do_getdents64(fd, dirp, count);
 }

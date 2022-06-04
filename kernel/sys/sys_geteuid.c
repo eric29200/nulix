@@ -5,5 +5,5 @@
  */
 uid_t sys_geteuid()
 {
-  return current_task->euid;
+	return current_task->euid;
 }

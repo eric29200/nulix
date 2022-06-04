@@ -9,33 +9,33 @@
  */
 static void do_pollfd(struct pollfd_t *fds, int *count)
 {
-  struct file_t *filp;
-  uint32_t mask = 0;
-  int fd;
+	struct file_t *filp;
+	uint32_t mask = 0;
+	int fd;
 
-  /* for each file descriptor */
-  mask = 0;
+	/* for each file descriptor */
+	mask = 0;
 
-  /* check file descriptor */
-  fd = fds->fd;
-  if (fd >= 0 && fd < NR_FILE && current_task->filp[fd]) {
-    filp = current_task->filp[fd];
+	/* check file descriptor */
+	fd = fds->fd;
+	if (fd >= 0 && fd < NR_FILE && current_task->filp[fd]) {
+		filp = current_task->filp[fd];
 
-    /* call specific poll */
-    mask = POLLNVAL;
-    if (filp->f_op && filp->f_op->poll)
-      mask = filp->f_op->poll(filp);
+		/* call specific poll */
+		mask = POLLNVAL;
+		if (filp->f_op && filp->f_op->poll)
+			mask = filp->f_op->poll(filp);
 
-    /* update mask */
-    mask &= fds->events | POLLERR | POLLHUP;
-  }
+		/* update mask */
+		mask &= fds->events | POLLERR | POLLHUP;
+	}
 
-  /* set number of events */
-  if (mask)
-    *count += 1;
+	/* set number of events */
+	if (mask)
+		*count += 1;
 
-  /* set output events */
-  fds->revents = mask;
+	/* set output events */
+	fds->revents = mask;
 }
 
 /*
@@ -43,30 +43,30 @@ static void do_pollfd(struct pollfd_t *fds, int *count)
  */
 int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 {
-  int count = 0;
-  size_t i;
+	int count = 0;
+	size_t i;
 
-  for (;;) {
-    /* poll each file */
-    for (i = 0; i < ndfs; i++)
-      do_pollfd(&fds[i], &count);
+	for (;;) {
+		/* poll each file */
+		for (i = 0; i < ndfs; i++)
+			do_pollfd(&fds[i], &count);
 
-    /* events catched or signal transmitted : break */
-    if (count || !sigisemptyset(&current_task->sigpend) || !timeout)
-      break;
+		/* events catched or signal transmitted : break */
+		if (count || !sigisemptyset(&current_task->sigpend) || !timeout)
+			break;
 
-    /* no events : sleep */
-    if (timeout > 0) {
-      task_sleep_timeout(current_task->waiting_chan, timeout);
-      timeout = 0;
-    } else if (timeout == 0) {
-      return count;
-    } else {
-      task_sleep(current_task->waiting_chan);
-    }
-  }
+		/* no events : sleep */
+		if (timeout > 0) {
+			task_sleep_timeout(current_task->waiting_chan, timeout);
+			timeout = 0;
+		} else if (timeout == 0) {
+			return count;
+		} else {
+			task_sleep(current_task->waiting_chan);
+		}
+	}
 
-  return count;
+	return count;
 }
 
 /*
@@ -74,18 +74,18 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
  */
 static int __select_check(int fd, uint16_t mask)
 {
-  struct pollfd_t pollfd;
-  int count;
+	struct pollfd_t pollfd;
+	int count;
 
-  /* set poll structure */
-  pollfd.fd = fd;
-  pollfd.events = mask;
-  pollfd.revents = 0;
+	/* set poll structure */
+	pollfd.fd = fd;
+	pollfd.events = mask;
+	pollfd.revents = 0;
 
-  /* poll file */
-  do_pollfd(&pollfd, &count);
+	/* poll file */
+	do_pollfd(&pollfd, &count);
 
-  return count;
+	return count;
 }
 
 /*
@@ -93,81 +93,81 @@ static int __select_check(int fd, uint16_t mask)
  */
 int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout)
 {
-  fd_set_t res_readfds, res_writefds, res_exceptfds;
-  int i, max = -1, count;
-  uint32_t set, j;
+	fd_set_t res_readfds, res_writefds, res_exceptfds;
+	int i, max = -1, count;
+	uint32_t set, j;
 
-  /* unused timeout */
-  UNUSED(timeout);
+	/* unused timeout */
+	UNUSED(timeout);
 
-  /* adjust number of file descriptors */
-  if (nfds < 0)
-    return -EINVAL;
-  if (nfds > NR_OPEN)
-    nfds = NR_OPEN;
+	/* adjust number of file descriptors */
+	if (nfds < 0)
+		return -EINVAL;
+	if (nfds > NR_OPEN)
+		nfds = NR_OPEN;
 
-  /* check file descriptors */
-  for (j = 0; j < FDSET_INTS; j++) {
-    i = j * NFD_BITS;
-    if (i >= nfds)
-      break;
+	/* check file descriptors */
+	for (j = 0; j < FDSET_INTS; j++) {
+		i = j * NFD_BITS;
+		if (i >= nfds)
+			break;
 
-    set = readfds->fds_bits[j] | writefds->fds_bits[j] | exceptfds->fds_bits[j];
-    for (; set; i++, set >>= 1) {
-      if (i >= nfds)
-        goto end_check;
+		set = readfds->fds_bits[j] | writefds->fds_bits[j] | exceptfds->fds_bits[j];
+		for (; set; i++, set >>= 1) {
+			if (i >= nfds)
+				goto end_check;
 
-      if (!(set & 1))
-        continue;
+			if (!(set & 1))
+				continue;
 
-      if (!current_task->filp[i] || !current_task->filp[i]->f_inode)
-        return -EBADF;
+			if (!current_task->filp[i] || !current_task->filp[i]->f_inode)
+				return -EBADF;
 
-      max = i;
-    }
-  }
+			max = i;
+		}
+	}
 
 end_check:
-  nfds = max + 1;
-  count = 0;
+	nfds = max + 1;
+	count = 0;
 
-  /* zero results */
-  memset(&res_readfds, 0, sizeof(fd_set_t));
-  memset(&res_writefds, 0, sizeof(fd_set_t));
-  memset(&res_exceptfds, 0, sizeof(fd_set_t));
+	/* zero results */
+	memset(&res_readfds, 0, sizeof(fd_set_t));
+	memset(&res_writefds, 0, sizeof(fd_set_t));
+	memset(&res_exceptfds, 0, sizeof(fd_set_t));
 
-  /* loop until events occured */
-  for (;;) {
-    for (i = 0; i < nfds; i++) {
-      /* check events */
-      if (FD_ISSET(i, readfds) && __select_check(i, POLLIN)) {
-        FD_SET(i, &res_readfds);
-        count++;
-      }
+	/* loop until events occured */
+	for (;;) {
+		for (i = 0; i < nfds; i++) {
+			/* check events */
+			if (FD_ISSET(i, readfds) && __select_check(i, POLLIN)) {
+				FD_SET(i, &res_readfds);
+				count++;
+			}
 
-      if (FD_ISSET(i, writefds) && __select_check(i, POLLOUT)) {
-        FD_SET(i, &res_writefds);
-        count++;
-      }
+			if (FD_ISSET(i, writefds) && __select_check(i, POLLOUT)) {
+				FD_SET(i, &res_writefds);
+				count++;
+			}
 
-      if (FD_ISSET(i, exceptfds) && __select_check(i, POLLIN | POLLOUT)) {
-        FD_SET(i, &res_exceptfds);
-        count++;
-      }
-    }
+			if (FD_ISSET(i, exceptfds) && __select_check(i, POLLIN | POLLOUT)) {
+				FD_SET(i, &res_exceptfds);
+				count++;
+			}
+		}
 
-    /* events catched or signal transmitted : break */
-    if (count || !sigisemptyset(&current_task->sigpend))
-      break;
+		/* events catched or signal transmitted : break */
+		if (count || !sigisemptyset(&current_task->sigpend))
+			break;
 
-    /* sleep */
-    task_sleep(current_task->waiting_chan);
-  }
+		/* sleep */
+		task_sleep(current_task->waiting_chan);
+	}
 
-  /* copy results */
-  memcpy(readfds, &res_readfds, sizeof(fd_set_t));
-  memcpy(writefds, &res_writefds, sizeof(fd_set_t));
-  memcpy(exceptfds, &res_exceptfds, sizeof(fd_set_t));
+	/* copy results */
+	memcpy(readfds, &res_readfds, sizeof(fd_set_t));
+	memcpy(writefds, &res_writefds, sizeof(fd_set_t));
+	memcpy(exceptfds, &res_exceptfds, sizeof(fd_set_t));
 
-  return count;
+	return count;
 }

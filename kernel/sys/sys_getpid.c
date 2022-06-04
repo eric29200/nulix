@@ -5,5 +5,5 @@
  */
 pid_t sys_getpid()
 {
-  return current_task->pid;
+	return current_task->pid;
 }

@@ -9,10 +9,10 @@
  */
 static int dupfd(int oldfd, int newfd)
 {
-  current_task->filp[newfd] = current_task->filp[oldfd];
-  current_task->filp[newfd]->f_ref++;
+	current_task->filp[newfd] = current_task->filp[oldfd];
+	current_task->filp[newfd]->f_ref++;
 
-  return newfd;
+	return newfd;
 }
 
 /*
@@ -20,25 +20,25 @@ static int dupfd(int oldfd, int newfd)
  */
 int do_dup2(int oldfd, int newfd)
 {
-  int ret;
+	int ret;
 
-  /* check parameters */
-  if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->filp[oldfd] || newfd < 0 || newfd >= NR_OPEN)
-    return -EBADF;
+	/* check parameters */
+	if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->filp[oldfd] || newfd < 0 || newfd >= NR_OPEN)
+		return -EBADF;
 
-  /* same fd */
-  if (oldfd == newfd)
-    return oldfd;
+	/* same fd */
+	if (oldfd == newfd)
+		return oldfd;
 
-  /* close existing file */
-  if (current_task->filp[newfd] != NULL) {
-    ret = do_close(newfd);
-    if (ret < 0)
-      return ret;
-  }
+	/* close existing file */
+	if (current_task->filp[newfd] != NULL) {
+		ret = do_close(newfd);
+		if (ret < 0)
+			return ret;
+	}
 
-  /* duplicate */
-  return dupfd(oldfd, newfd);
+	/* duplicate */
+	return dupfd(oldfd, newfd);
 }
 
 /*
@@ -46,19 +46,19 @@ int do_dup2(int oldfd, int newfd)
  */
 int do_dup(int oldfd)
 {
-  int newfd;
+	int newfd;
 
-  /* check parameter */
-  if (oldfd < 0 || oldfd >= NR_OPEN || current_task->filp[oldfd] == NULL)
-    return -EBADF;
+	/* check parameter */
+	if (oldfd < 0 || oldfd >= NR_OPEN || current_task->filp[oldfd] == NULL)
+		return -EBADF;
 
-  /* find a free slot */
-  for (newfd = 0; newfd < NR_OPEN; newfd++)
-    if (current_task->filp[newfd] == NULL)
-      return dupfd(oldfd, newfd);
+	/* find a free slot */
+	for (newfd = 0; newfd < NR_OPEN; newfd++)
+		if (current_task->filp[newfd] == NULL)
+			return dupfd(oldfd, newfd);
 
-  /* no free slot : too many files open */
-  return -EMFILE;
+	/* no free slot : too many files open */
+	return -EMFILE;
 }
 
 /*
@@ -66,15 +66,15 @@ int do_dup(int oldfd)
  */
 static int dup_after(int oldfd, int min_slot)
 {
-  int newfd;
+	int newfd;
 
-  /* find a free slot */
-  for (newfd = min_slot; newfd < NR_OPEN; newfd++)
-    if (current_task->filp[newfd] == NULL)
-      return dupfd(oldfd, newfd);
+	/* find a free slot */
+	for (newfd = min_slot; newfd < NR_OPEN; newfd++)
+		if (current_task->filp[newfd] == NULL)
+			return dupfd(oldfd, newfd);
 
-  /* no free slot : too many files open */
-  return -EMFILE;
+	/* no free slot : too many files open */
+	return -EMFILE;
 }
 
 /*
@@ -82,35 +82,35 @@ static int dup_after(int oldfd, int min_slot)
  */
 int do_fcntl(int fd, int cmd, unsigned long arg)
 {
-  struct file_t *filp;
-  int ret = 0;
+	struct file_t *filp;
+	int ret = 0;
 
-  /* check fd */
-  if (fd >= NR_OPEN || !current_task->filp[fd])
-    return -EINVAL;
+	/* check fd */
+	if (fd >= NR_OPEN || !current_task->filp[fd])
+		return -EINVAL;
 
-  filp = current_task->filp[fd];
-  switch (cmd) {
-      case F_DUPFD:
-      case F_DUPFD_CLOEXEC:
-        ret = dup_after(fd, arg);
-        break;
-      case F_GETFD:
-        ret = filp->f_flags;
-        break;
-      case F_SETFD:
-        filp->f_flags = arg;
-        break;
-      case F_GETFL:
-        ret = filp->f_mode;
-        break;
-      case F_SETFL:
-        filp->f_mode = ret;
-        break;
-      default:
-        printf("unknown fcntl command %d\n", cmd);
-        break;
-  }
+	filp = current_task->filp[fd];
+	switch (cmd) {
+		case F_DUPFD:
+		case F_DUPFD_CLOEXEC:
+			ret = dup_after(fd, arg);
+			break;
+		case F_GETFD:
+			ret = filp->f_flags;
+			break;
+		case F_SETFD:
+			filp->f_flags = arg;
+			break;
+		case F_GETFL:
+			ret = filp->f_mode;
+			break;
+		case F_SETFL:
+			filp->f_mode = ret;
+			break;
+		default:
+			printf("unknown fcntl command %d\n", cmd);
+			break;
+	}
 
-  return ret;
+	return ret;
 }

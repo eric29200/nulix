@@ -15,17 +15,17 @@ struct file_t filp_table[NR_FILE];
  */
 struct file_t *get_empty_filp()
 {
-  int i;
+	int i;
 
-  for (i = 0; i < NR_FILE; i++)
-    if (!filp_table[i].f_ref)
-      break;
+	for (i = 0; i < NR_FILE; i++)
+		if (!filp_table[i].f_ref)
+			break;
 
-  if (i >= NR_FILE)
-    return NULL;
+	if (i >= NR_FILE)
+		return NULL;
 
-  filp_table[i].f_ref = 1;
-  return &filp_table[i];
+	filp_table[i].f_ref = 1;
+	return &filp_table[i];
 }
 
 /*
@@ -33,42 +33,42 @@ struct file_t *get_empty_filp()
  */
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
-  struct inode_t *inode;
-  struct file_t *filp;
-  int fd, ret;
+	struct inode_t *inode;
+	struct file_t *filp;
+	int fd, ret;
 
-  /* find a free slot in current process */
-  for (fd = 0; fd < NR_OPEN; fd++)
-    if (!current_task->filp[fd])
-      break;
+	/* find a free slot in current process */
+	for (fd = 0; fd < NR_OPEN; fd++)
+		if (!current_task->filp[fd])
+			break;
 
-  /* no slots : exit */
-  if (fd >= NR_OPEN)
-    return -EINVAL;
+	/* no slots : exit */
+	if (fd >= NR_OPEN)
+		return -EINVAL;
 
-  /* get an empty file */
-  filp = get_empty_filp();
-  if (!filp)
-    return -EINVAL;
+	/* get an empty file */
+	filp = get_empty_filp();
+	if (!filp)
+		return -EINVAL;
 
-  /* open file */
-  ret = open_namei(dirfd, pathname, flags, mode, &inode);
-  if (ret != 0)
-    return ret;
+	/* open file */
+	ret = open_namei(dirfd, pathname, flags, mode, &inode);
+	if (ret != 0)
+		return ret;
 
-  /* set file */
-  current_task->filp[fd] = filp;
-  filp->f_mode = inode->i_mode;
-  filp->f_inode = inode;
-  filp->f_flags = flags;
-  filp->f_pos = 0;
-  filp->f_op = inode->i_op->fops;
+	/* set file */
+	current_task->filp[fd] = filp;
+	filp->f_mode = inode->i_mode;
+	filp->f_inode = inode;
+	filp->f_flags = flags;
+	filp->f_pos = 0;
+	filp->f_op = inode->i_op->fops;
 
-  /* specific open function */
-  if (filp->f_op && filp->f_op->open)
-    filp->f_op->open(filp);
+	/* specific open function */
+	if (filp->f_op && filp->f_op->open)
+		filp->f_op->open(filp);
 
-  return fd;
+	return fd;
 }
 
 /*
@@ -76,25 +76,25 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
  */
 int do_close(int fd)
 {
-  /* check file descriptor */
-  if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
-    return -EINVAL;
+	/* check file descriptor */
+	if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
+		return -EINVAL;
 
-  /* release file if not used anymore */
-  current_task->filp[fd]->f_ref--;
-  if (current_task->filp[fd]->f_ref <= 0) {
-    /* specific close operation */
-    if (current_task->filp[fd]->f_op && current_task->filp[fd]->f_op->close)
-      current_task->filp[fd]->f_op->close(current_task->filp[fd]);
+	/* release file if not used anymore */
+	current_task->filp[fd]->f_ref--;
+	if (current_task->filp[fd]->f_ref <= 0) {
+		/* specific close operation */
+		if (current_task->filp[fd]->f_op && current_task->filp[fd]->f_op->close)
+			current_task->filp[fd]->f_op->close(current_task->filp[fd]);
 
-    /* release inode */
-    iput(current_task->filp[fd]->f_inode);
-    memset(current_task->filp[fd], 0, sizeof(struct file_t));
-  }
+		/* release inode */
+		iput(current_task->filp[fd]->f_inode);
+		memset(current_task->filp[fd], 0, sizeof(struct file_t));
+	}
 
-  current_task->filp[fd] = NULL;
+	current_task->filp[fd] = NULL;
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -102,23 +102,23 @@ int do_close(int fd)
  */
 int do_chmod(const char *filename, mode_t mode)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* get inode */
-  inode = namei(AT_FDCWD, NULL, filename, 1);
-  if (!inode)
-    return -ENOSPC;
+	/* get inode */
+	inode = namei(AT_FDCWD, NULL, filename, 1);
+	if (!inode)
+		return -ENOSPC;
 
-  /* adjust mode */
-  if (mode == (mode_t) - 1)
-    mode = inode->i_mode;
+	/* adjust mode */
+	if (mode == (mode_t) - 1)
+		mode = inode->i_mode;
 
-  /* change mode */
-  inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
-  inode->i_dirt = 1;
-  iput(inode);
+	/* change mode */
+	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
+	inode->i_dirt = 1;
+	iput(inode);
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -126,24 +126,24 @@ int do_chmod(const char *filename, mode_t mode)
  */
 int do_fchmod(int fd, mode_t mode)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* check file descriptor */
-  if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
-    return -EINVAL;
+	/* check file descriptor */
+	if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
+		return -EINVAL;
 
-  /* get inode */
-  inode = current_task->filp[fd]->f_inode;
+	/* get inode */
+	inode = current_task->filp[fd]->f_inode;
 
-  /* adjust mode */
-  if (mode == (mode_t) - 1)
-    mode = inode->i_mode;
+	/* adjust mode */
+	if (mode == (mode_t) - 1)
+		mode = inode->i_mode;
 
-  /* change mode */
-  inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
-  inode->i_dirt = 1;
+	/* change mode */
+	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
+	inode->i_dirt = 1;
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -151,20 +151,20 @@ int do_fchmod(int fd, mode_t mode)
  */
 int do_chown(const char *pathname, uid_t owner, gid_t group)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* get inode */
-  inode = namei(AT_FDCWD, NULL, pathname, 1);
-  if (!inode)
-    return -ENOSPC;
+	/* get inode */
+	inode = namei(AT_FDCWD, NULL, pathname, 1);
+	if (!inode)
+		return -ENOSPC;
 
-  /* update inode */
-  inode->i_uid = owner;
-  inode->i_gid = group;
-  inode->i_dirt = 1;
-  iput(inode);
+	/* update inode */
+	inode->i_uid = owner;
+	inode->i_gid = group;
+	inode->i_dirt = 1;
+	iput(inode);
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -172,19 +172,19 @@ int do_chown(const char *pathname, uid_t owner, gid_t group)
  */
 int do_fchown(int fd, uid_t owner, gid_t group)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* check file descriptor */
-  if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
-    return -EINVAL;
+	/* check file descriptor */
+	if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd])
+		return -EINVAL;
 
-  /* update inode */
-  inode = current_task->filp[fd]->f_inode;
-  inode->i_uid = owner;
-  inode->i_gid = group;
-  inode->i_dirt = 1;
+	/* update inode */
+	inode = current_task->filp[fd]->f_inode;
+	inode->i_uid = owner;
+	inode->i_gid = group;
+	inode->i_dirt = 1;
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -192,23 +192,23 @@ int do_fchown(int fd, uid_t owner, gid_t group)
  */
 int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* get inode */
-  inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
-  if (!inode)
-    return -ENOENT;
+	/* get inode */
+	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (!inode)
+		return -ENOENT;
 
-  /* set time */
-  inode->i_time = times[0].tv_sec;
+	/* set time */
+	inode->i_time = times[0].tv_sec;
 
-  /* mark inode dirty */
-  inode->i_dirt = 1;
+	/* mark inode dirty */
+	inode->i_dirt = 1;
 
-  /* release inode */
-  iput(inode);
+	/* release inode */
+	iput(inode);
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -216,20 +216,20 @@ int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[
  */
 int do_chroot(const char *path)
 {
-  struct inode_t *inode;
+	struct inode_t *inode;
 
-  /* get inode */
-  inode = namei(AT_FDCWD, NULL, path, 1);
-  if (!inode)
-    return -ENOENT;
+	/* get inode */
+	inode = namei(AT_FDCWD, NULL, path, 1);
+	if (!inode)
+		return -ENOENT;
 
-  /* check if it's a directory */
-  if (!S_ISDIR(inode->i_mode))
-    return -ENOTDIR;
+	/* check if it's a directory */
+	if (!S_ISDIR(inode->i_mode))
+		return -ENOTDIR;
 
-  /* release current root directory and change it */
-  iput(current_task->root);
-  current_task->root = inode;
+	/* release current root directory and change it */
+	iput(current_task->root);
+	current_task->root = inode;
 
-  return 0;
+	return 0;
 }

@@ -5,5 +5,5 @@
  */
 int sys_read(int fd, char *buf, int count)
 {
-  return do_read(fd, buf, count);
+	return do_read(fd, buf, count);
 }

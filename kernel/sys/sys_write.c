@@ -6,5 +6,5 @@
  */
 int sys_write(int fd, const char *buf, int count)
 {
-  return do_write(fd, buf, count);
+	return do_write(fd, buf, count);
 }

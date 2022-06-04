@@ -4,19 +4,19 @@
 #include <fs/fs.h>
 #include <string.h>
 
-#define PROC_SUPER_MAGIC      0x9FA0
+#define PROC_SUPER_MAGIC	0x9FA0
 
-#define PROC_ROOT_INO         1
-#define PROC_UPTIME_INO       2
-#define PROC_BASE_INO         1000
+#define PROC_ROOT_INO		1
+#define PROC_UPTIME_INO		2
+#define PROC_BASE_INO		1000
 
 /*
  * Procfs dir entry.
  */
 struct proc_dir_entry_t {
-  ino_t   ino;
-  size_t  name_len;
-  char *  name;
+	ino_t	ino;
+	size_t	name_len;
+	char *	name;
 };
 
 /* read super block */
@@ -37,7 +37,7 @@ extern struct inode_operations_t proc_uptime_iops;
  */
 static inline int proc_match(const char *name, size_t len, struct proc_dir_entry_t *de)
 {
-  return len == de->name_len && strncmp(name, de->name, len) == 0;
+	return len == de->name_len && strncmp(name, de->name, len) == 0;
 }
 
 #endif

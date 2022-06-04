@@ -13,7 +13,7 @@
 #include <time.h>
 #include <dev.h>
 
-#define NB_TTYS                 4
+#define NB_TTYS		4
 
 /* global ttys */
 static struct tty_t tty_table[NB_TTYS];
@@ -25,26 +25,26 @@ static struct timer_event_t refresh_tm;
  */
 struct tty_t *tty_lookup(dev_t dev)
 {
-  int i;
+	int i;
 
-  /* current task tty */
-  if (dev == DEV_TTY) {
-    for (i = 0; i < NB_TTYS; i++)
-      if (current_task->tty == tty_table[i].dev)
-        return &tty_table[i];
+	/* current task tty */
+	if (dev == DEV_TTY) {
+		for (i = 0; i < NB_TTYS; i++)
+			if (current_task->tty == tty_table[i].dev)
+				return &tty_table[i];
 
-    return NULL;
-  }
+		return NULL;
+	}
 
-  /* current active tty */
-  if (dev == DEV_TTY0)
-    return current_tty >= 0 ? &tty_table[current_tty] : NULL;
+	/* current active tty */
+	if (dev == DEV_TTY0)
+		return current_tty >= 0 ? &tty_table[current_tty] : NULL;
 
-  /* asked tty */
-  if (minor(dev) > 0 && minor(dev) <= NB_TTYS)
-    return &tty_table[minor(dev) - 1];
+	/* asked tty */
+	if (minor(dev) > 0 && minor(dev) <= NB_TTYS)
+		return &tty_table[minor(dev) - 1];
 
-  return NULL;
+	return NULL;
 }
 
 /*
@@ -52,11 +52,11 @@ struct tty_t *tty_lookup(dev_t dev)
  */
 static int tty_open(struct file_t *filp)
 {
-  /* set current task tty */
-  if (major(filp->f_inode->i_zone[0]) == major(DEV_TTY0))
-    current_task->tty = filp->f_inode->i_zone[0];
+	/* set current task tty */
+	if (major(filp->f_inode->i_zone[0]) == major(DEV_TTY0))
+		current_task->tty = filp->f_inode->i_zone[0];
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -64,31 +64,31 @@ static int tty_open(struct file_t *filp)
  */
 static int tty_read(struct file_t *filp, char *buf, int n)
 {
-  struct tty_t *tty;
-  int count = 0;
-  uint8_t key;
-  dev_t dev;
+	struct tty_t *tty;
+	int count = 0;
+	uint8_t key;
+	dev_t dev;
 
-  /* get tty */
-  dev = filp->f_inode->i_zone[0];
-  tty = tty_lookup(dev);
-  if (!tty)
-    return -EINVAL;
+	/* get tty */
+	dev = filp->f_inode->i_zone[0];
+	tty = tty_lookup(dev);
+	if (!tty)
+		return -EINVAL;
 
-  /* read all characters */
-  while (count < n) {
-    /* read key */
-    ring_buffer_read(&tty->buffer, &key, 1);
+	/* read all characters */
+	while (count < n) {
+		/* read key */
+		ring_buffer_read(&tty->buffer, &key, 1);
 
-    /* add key to buffer */
-    ((unsigned char *) buf)[count++] = key;
+		/* add key to buffer */
+		((unsigned char *) buf)[count++] = key;
 
-    /* end of line : return */
-    if (key == '\n')
-      break;
-  }
+		/* end of line : return */
+		if (key == '\n')
+			break;
+	}
 
-  return count;
+	return count;
 }
 
 /*
@@ -96,106 +96,106 @@ static int tty_read(struct file_t *filp, char *buf, int n)
  */
 void tty_update(unsigned char c)
 {
-  struct tty_t *tty;
-  uint8_t buf[8];
-  int len;
+	struct tty_t *tty;
+	uint8_t buf[8];
+	int len;
 
-  /* no current TTY */
-  if (current_tty < 0)
-    return;
+	/* no current TTY */
+	if (current_tty < 0)
+		return;
 
-  /* get tty */
-  tty = &tty_table[current_tty];
+	/* get tty */
+	tty = &tty_table[current_tty];
 
-  /* set buffer */
-  len = 0;
+	/* set buffer */
+	len = 0;
 
-  /* handle special keys */
-  switch (c) {
-    case KEY_PAGEUP:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 53;
-      buf[3] = 126;
-      len = 4;
-      break;
-    case KEY_PAGEDOWN:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 54;
-      buf[3] = 126;
-      len = 4;
-      break;
-    case KEY_HOME:
-      buf[1] = 27;
-      buf[2] = 91;
-      buf[3] = 72;
-      len = 3;
-      break;
-    case KEY_END:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 70;
-      len = 3;
-      break;
-    case KEY_INSERT:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 50;
-      buf[3] = 126;
-      len = 4;
-      break;
-    case KEY_DELETE:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 51;
-      buf[3] = 126;
-      len = 4;
-      break;
-    case KEY_UP:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 65;
-      len = 3;
-      break;
-    case KEY_DOWN:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 66;
-      len = 3;
-      break;
-    case KEY_RIGHT:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 67;
-      len = 3;
-      break;
-    case KEY_LEFT:
-      buf[0] = 27;
-      buf[1] = 91;
-      buf[2] = 68;
-      len = 3;
-      break;
-    case 13:
-      buf[0] = '\n';
-      len = 1;
-      break;
-    default:
-      buf[0] = c;
-      len = 1;
-      break;
-  }
+	/* handle special keys */
+	switch (c) {
+		case KEY_PAGEUP:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 53;
+			buf[3] = 126;
+			len = 4;
+			break;
+		case KEY_PAGEDOWN:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 54;
+			buf[3] = 126;
+			len = 4;
+			break;
+		case KEY_HOME:
+			buf[1] = 27;
+			buf[2] = 91;
+			buf[3] = 72;
+			len = 3;
+			break;
+		case KEY_END:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 70;
+			len = 3;
+			break;
+		case KEY_INSERT:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 50;
+			buf[3] = 126;
+			len = 4;
+			break;
+		case KEY_DELETE:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 51;
+			buf[3] = 126;
+			len = 4;
+			break;
+		case KEY_UP:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 65;
+			len = 3;
+			break;
+		case KEY_DOWN:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 66;
+			len = 3;
+			break;
+		case KEY_RIGHT:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 67;
+			len = 3;
+			break;
+		case KEY_LEFT:
+			buf[0] = 27;
+			buf[1] = 91;
+			buf[2] = 68;
+			len = 3;
+			break;
+		case 13:
+			buf[0] = '\n';
+			len = 1;
+			break;
+		default:
+			buf[0] = c;
+			len = 1;
+			break;
+	}
 
-  /* store buffer */
-  if (len > 0)
-    ring_buffer_write(&tty->buffer, buf, len);
+	/* store buffer */
+	if (len > 0)
+		ring_buffer_write(&tty->buffer, buf, len);
 
-  /* echo character on device */
-  if (L_ECHO(tty) && len > 0)
-    tty->write(tty, (char *) buf, len);
+	/* echo character on device */
+	if (L_ECHO(tty) && len > 0)
+		tty->write(tty, (char *) buf, len);
 
-  /* wake up eventual process */
-  task_wakeup(tty);
+	/* wake up eventual process */
+	task_wakeup(tty);
 }
 
 /*
@@ -203,20 +203,20 @@ void tty_update(unsigned char c)
  */
 static int tty_write(struct file_t *filp, const char *buf, int n)
 {
-  struct tty_t *tty;
-  dev_t dev;
+	struct tty_t *tty;
+	dev_t dev;
 
-  /* get tty */
-  dev = filp->f_inode->i_zone[0];
-  tty = tty_lookup(dev);
-  if (!tty)
-    return -EINVAL;
+	/* get tty */
+	dev = filp->f_inode->i_zone[0];
+	tty = tty_lookup(dev);
+	if (!tty)
+		return -EINVAL;
 
-  /* write not implemented */
-  if (!tty->write)
-    return -EINVAL;
+	/* write not implemented */
+	if (!tty->write)
+		return -EINVAL;
 
-  return tty->write(tty, buf, n);
+	return tty->write(tty, buf, n);
 }
 
 /*
@@ -224,10 +224,10 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
  */
 void tty_change(int n)
 {
-  if (n >= 0 && n < NB_TTYS) {
-    current_tty = n;
-    tty_table[current_tty].fb.dirty = 1;
-  }
+	if (n >= 0 && n < NB_TTYS) {
+		current_tty = n;
+		tty_table[current_tty].fb.dirty = 1;
+	}
 }
 
 /*
@@ -235,43 +235,43 @@ void tty_change(int n)
  */
 int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 {
-  struct tty_t *tty;
-  dev_t dev;
+	struct tty_t *tty;
+	dev_t dev;
 
-  /* get tty */
-  dev = filp->f_inode->i_zone[0];
-  tty = tty_lookup(dev);
-  if (!tty)
-    return -EINVAL;
+	/* get tty */
+	dev = filp->f_inode->i_zone[0];
+	tty = tty_lookup(dev);
+	if (!tty)
+		return -EINVAL;
 
-  switch (request) {
-    case TCGETS:
-      memcpy((struct termios_t *) arg, &tty->termios, sizeof(struct termios_t));
-      break;
-    case TCSETS:
-      memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
-      break;
-    case TCSETSW:
-      memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
-      break;
-    case TCSETSF:
-      memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
-      break;
-    case TIOCGWINSZ:
-      memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
-      break;
-    case TIOCGPGRP:
-      *((pid_t *) arg) = tty->pgrp;
-      break;
-    case TIOCSPGRP:
-      tty->pgrp = *((pid_t *) arg);
-      break;
-    default:
-      printf("Unknown ioctl request (%x) on device %x\n", request, dev);
-      break;
-  }
+	switch (request) {
+		case TCGETS:
+			memcpy((struct termios_t *) arg, &tty->termios, sizeof(struct termios_t));
+			break;
+		case TCSETS:
+			memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+			break;
+		case TCSETSW:
+			memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+			break;
+		case TCSETSF:
+			memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+			break;
+		case TIOCGWINSZ:
+			memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
+			break;
+		case TIOCGPGRP:
+			*((pid_t *) arg) = tty->pgrp;
+			break;
+		case TIOCSPGRP:
+			tty->pgrp = *((pid_t *) arg);
+			break;
+		default:
+			printf("Unknown ioctl request (%x) on device %x\n", request, dev);
+			break;
+	}
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -279,24 +279,24 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
  */
 static int tty_poll(struct file_t *filp)
 {
-  struct tty_t *tty;
-  int mask = 0;
-  dev_t dev;
+	struct tty_t *tty;
+	int mask = 0;
+	dev_t dev;
 
-  /* get tty */
-  dev = filp->f_inode->i_zone[0];
-  tty = tty_lookup(dev);
-  if (!tty)
-    return -EINVAL;
+	/* get tty */
+	dev = filp->f_inode->i_zone[0];
+	tty = tty_lookup(dev);
+	if (!tty)
+		return -EINVAL;
 
-  /* set waiting channel */
-  current_task->waiting_chan = tty;
+	/* set waiting channel */
+	current_task->waiting_chan = tty;
 
-  /* check if there is some characters to read */
-  if (tty->buffer.size > 0)
-    mask |= POLLIN;
+	/* check if there is some characters to read */
+	if (tty->buffer.size > 0)
+		mask |= POLLIN;
 
-  return mask;
+	return mask;
 }
 
 /*
@@ -304,15 +304,15 @@ static int tty_poll(struct file_t *filp)
  */
 void tty_signal_group(dev_t dev, int sig)
 {
-  struct tty_t *tty;
+	struct tty_t *tty;
 
-  /* get tty */
-  tty = tty_lookup(dev);
-  if (!tty)
-    return;
+	/* get tty */
+	tty = tty_lookup(dev);
+	if (!tty)
+		return;
 
-  /* send signal */
-  task_signal_group(tty->pgrp, sig);
+	/* send signal */
+	task_signal_group(tty->pgrp, sig);
 }
 
 /*
@@ -320,11 +320,11 @@ void tty_signal_group(dev_t dev, int sig)
  */
 static void tty_refresh()
 {
-  if (current_tty >= 0 && current_tty < NB_TTYS && tty_table[current_tty].fb.dirty)
-    tty_table[current_tty].fb.update(&tty_table[current_tty].fb);
+	if (current_tty >= 0 && current_tty < NB_TTYS && tty_table[current_tty].fb.dirty)
+		tty_table[current_tty].fb.update(&tty_table[current_tty].fb);
 
-  /* reschedule timer */
-  timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
+	/* reschedule timer */
+	timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
 }
 
 /*
@@ -332,69 +332,69 @@ static void tty_refresh()
  */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 {
-  int i, ret;
+	int i, ret;
 
-  /* init each tty */
-  for (i = 0; i < NB_TTYS; i++) {
-    tty_table[i].dev = DEV_TTY0 + i + 1;
-    tty_table[i].pgrp = 0;
-    tty_table[i].write = console_write;
+	/* init each tty */
+	for (i = 0; i < NB_TTYS; i++) {
+		tty_table[i].dev = DEV_TTY0 + i + 1;
+		tty_table[i].pgrp = 0;
+		tty_table[i].write = console_write;
 
-    /* init buffer */
-    ret = ring_buffer_init(&tty_table[i].buffer, TTY_BUF_SIZE);
-    if (ret != 0)
-      return ret;
+		/* init buffer */
+		ret = ring_buffer_init(&tty_table[i].buffer, TTY_BUF_SIZE);
+		if (ret != 0)
+			return ret;
 
-    /* init frame buffer */
-    ret = init_framebuffer(&tty_table[i].fb, tag_fb);
-    if (ret != 0)
-      return ret;
+		/* init frame buffer */
+		ret = init_framebuffer(&tty_table[i].fb, tag_fb);
+		if (ret != 0)
+			return ret;
 
-    /* set winsize */
-    tty_table[i].winsize.ws_row = tty_table[i].fb.height;
-    tty_table[i].winsize.ws_col = tty_table[i].fb.width;
-    tty_table[i].winsize.ws_xpixel = 0;
-    tty_table[i].winsize.ws_ypixel = 0;
+		/* set winsize */
+		tty_table[i].winsize.ws_row = tty_table[i].fb.height;
+		tty_table[i].winsize.ws_col = tty_table[i].fb.width;
+		tty_table[i].winsize.ws_xpixel = 0;
+		tty_table[i].winsize.ws_ypixel = 0;
 
-    /* init termios */
-    tty_table[i].termios = (struct termios_t) {
-      .c_iflag    = ICRNL,
-      .c_oflag    = OPOST | ONLCR,
-      .c_cflag    = 0,
-      .c_lflag    = IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
-      .c_line     = 0,
-      .c_cc       = INIT_C_CC,
-    };
-  }
+		/* init termios */
+		tty_table[i].termios = (struct termios_t) {
+			.c_iflag	= ICRNL,
+			.c_oflag	= OPOST | ONLCR,
+			.c_cflag	= 0,
+			.c_lflag	= IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
+			.c_line		= 0,
+			.c_cc		= INIT_C_CC,
+		};
+	}
 
-  /* init ptys */
-  init_pty();
+	/* init ptys */
+	init_pty();
 
-  /* set current tty to first tty */
-  current_tty = 0;
+	/* set current tty to first tty */
+	current_tty = 0;
 
-  /* create refresh timer */
-  timer_event_init(&refresh_tm, tty_refresh, NULL, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
-  timer_event_add(&refresh_tm);
+	/* create refresh timer */
+	timer_event_init(&refresh_tm, tty_refresh, NULL, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
+	timer_event_add(&refresh_tm);
 
-  return 0;
+	return 0;
 }
 
 /*
  * Tty file operations.
  */
 static struct file_operations_t tty_fops = {
-  .open       = tty_open,
-  .read       = tty_read,
-  .write      = tty_write,
-  .poll       = tty_poll,
-  .ioctl      = tty_ioctl,
+	.open		= tty_open,
+	.read		= tty_read,
+	.write		= tty_write,
+	.poll		= tty_poll,
+	.ioctl		= tty_ioctl,
 };
 
 /*
  * Tty inode operations.
  */
 struct inode_operations_t tty_iops = {
-  .fops           = &tty_fops,
+	.fops		= &tty_fops,
 };
 

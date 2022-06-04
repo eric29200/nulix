@@ -3,49 +3,49 @@
 
 #include <fs/fs.h>
 
-#define MINIX_SUPER_MAGIC             0x2478
-#define MINIX_ROOT_INODE              1
-#define MINIX_FILENAME_LEN            30
-#define MINIX_INODES_PER_BLOCK        ((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
-#define MINIX_DIR_ENTRIES_PER_BLOCK   ((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
+#define MINIX_SUPER_MAGIC		0x2478
+#define MINIX_ROOT_INODE		1
+#define MINIX_FILENAME_LEN		30
+#define MINIX_INODES_PER_BLOCK		((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
+#define MINIX_DIR_ENTRIES_PER_BLOCK	((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
 
 /*
  * Minix super block.
  */
 struct minix_super_block_t {
-  uint16_t                s_ninodes;
-  uint16_t                s_nzones;
-  uint16_t                s_imap_blocks;
-  uint16_t                s_zmap_blocks;
-  uint16_t                s_firstdatazone;
-  uint16_t                s_log_zone_size;
-  uint32_t                s_max_size;
-  uint16_t                s_magic;
-  uint16_t                s_state;
-  uint32_t                s_zones;
+	uint16_t	s_ninodes;
+	uint16_t	s_nzones;
+	uint16_t	s_imap_blocks;
+	uint16_t	s_zmap_blocks;
+	uint16_t	s_firstdatazone;
+	uint16_t	s_log_zone_size;
+	uint32_t	s_max_size;
+	uint16_t	s_magic;
+	uint16_t	s_state;
+	uint32_t	s_zones;
 };
 
 /*
  * Minix inode.
  */
 struct minix_inode_t {
-  uint16_t                i_mode;
-  uint16_t                i_nlinks;
-  uint16_t                i_uid;
-  uint16_t                i_gid;
-  uint32_t                i_size;
-  uint32_t                i_atime;
-  uint32_t                i_mtime;
-  uint32_t                i_ctime;
-  uint32_t                i_zone[10];
+	uint16_t	i_mode;
+	uint16_t	i_nlinks;
+	uint16_t	i_uid;
+	uint16_t	i_gid;
+	uint32_t	i_size;
+	uint32_t	i_atime;
+	uint32_t	i_mtime;
+	uint32_t	i_ctime;
+	uint32_t	i_zone[10];
 };
 
 /*
  * Minix dir entry.
  */
 struct minix_dir_entry_t {
-  uint16_t  inode;
-  char      name[MINIX_FILENAME_LEN];
+	uint16_t	inode;
+	char		name[MINIX_FILENAME_LEN];
 };
 
 /* minix operations */
@@ -79,7 +79,7 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
 int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mode);
 int minix_rmdir(struct inode_t *dir, const char *name, size_t name_len);
 int minix_rename(struct inode_t *old_dir, const char *old_name, size_t old_name_len,
-                 struct inode_t *new_dir, const char *new_name, size_t new_name_len);
+								 struct inode_t *new_dir, const char *new_name, size_t new_name_len);
 int minix_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, dev_t dev);
 
 /* minix directory operations */

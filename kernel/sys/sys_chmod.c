@@ -5,5 +5,5 @@
  */
 int sys_chmod(const char *pathname, mode_t mode)
 {
-  return do_chmod(pathname, mode);
+	return do_chmod(pathname, mode);
 }

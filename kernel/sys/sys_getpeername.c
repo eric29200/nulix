@@ -5,5 +5,5 @@
  */
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
-  return do_getpeername(sockfd, addr, addrlen);
+	return do_getpeername(sockfd, addr, addrlen);
 }

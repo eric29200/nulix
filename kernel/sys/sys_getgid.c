@@ -5,5 +5,5 @@
  */
 gid_t sys_getgid()
 {
-  return current_task->gid;
+	return current_task->gid;
 }

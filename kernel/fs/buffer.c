@@ -21,18 +21,18 @@ static struct timer_event_t bsync_tm;
  */
 static int bwrite(struct buffer_head_t *bh)
 {
-  int ret;
+	int ret;
 
-  if (!bh)
-    return -EINVAL;
+	if (!bh)
+		return -EINVAL;
 
-  /* write to block device */
-  ret = ata_write(bh->b_dev, bh);
-  if (ret)
-    return ret;
+	/* write to block device */
+	ret = ata_write(bh->b_dev, bh);
+	if (ret)
+		return ret;
 
-  bh->b_dirt = 0;
-  return ret;
+	bh->b_dirt = 0;
+	return ret;
 }
 
 /*
@@ -40,29 +40,29 @@ static int bwrite(struct buffer_head_t *bh)
  */
 static struct buffer_head_t *get_empty_buffer()
 {
-  struct buffer_head_t *bh;
-  struct list_head_t *pos;
+	struct buffer_head_t *bh;
+	struct list_head_t *pos;
 
-  /* get first free entry from LRU list */
-  list_for_each(pos, &lru_buffers) {
-    bh = list_entry(pos, struct buffer_head_t, b_list);
-    if (!bh->b_ref)
-      goto found;
-  }
+	/* get first free entry from LRU list */
+	list_for_each(pos, &lru_buffers) {
+		bh = list_entry(pos, struct buffer_head_t, b_list);
+		if (!bh->b_ref)
+			goto found;
+	}
 
-  /* no free buffer : exit */
-  return NULL;
+	/* no free buffer : exit */
+	return NULL;
 
 found:
-  /* write it on disk if needed */
-  if (bh->b_dirt && bwrite(bh))
-    printf("Can't write block %d on disk\n", bh->b_blocknr);
+	/* write it on disk if needed */
+	if (bh->b_dirt && bwrite(bh))
+		printf("Can't write block %d on disk\n", bh->b_blocknr);
 
-  /* reset buffer */
-  memset(bh->b_data, 0, BLOCK_SIZE);
-  bh->b_ref = 1;
+	/* reset buffer */
+	memset(bh->b_data, 0, BLOCK_SIZE);
+	bh->b_ref = 1;
 
-  return bh;
+	return bh;
 }
 
 /*
@@ -70,39 +70,39 @@ found:
  */
 struct buffer_head_t *getblk(dev_t dev, uint32_t block)
 {
-  struct htable_link_t *node;
-  struct buffer_head_t *bh;
+	struct htable_link_t *node;
+	struct buffer_head_t *bh;
 
-  /* try to find buffer in cache */
-  node = htable_lookup(buffer_htable, block, BUFFER_HTABLE_BITS);
-  while (node) {
-    bh = htable_entry(node, struct buffer_head_t, b_htable);
-    if (bh->b_blocknr == block) {
-      bh->b_ref++;
-      goto out;
-    }
+	/* try to find buffer in cache */
+	node = htable_lookup(buffer_htable, block, BUFFER_HTABLE_BITS);
+	while (node) {
+		bh = htable_entry(node, struct buffer_head_t, b_htable);
+		if (bh->b_blocknr == block) {
+			bh->b_ref++;
+			goto out;
+		}
 
-    node = node->next;
-  }
+		node = node->next;
+	}
 
-  /* get an empty buffer */
-  bh = get_empty_buffer();
-  if (!bh)
-    return NULL;
+	/* get an empty buffer */
+	bh = get_empty_buffer();
+	if (!bh)
+		return NULL;
 
-  /* set buffer */
-  bh->b_dev = dev;
-  bh->b_blocknr = block;
-  bh->b_uptodate = 0;
+	/* set buffer */
+	bh->b_dev = dev;
+	bh->b_blocknr = block;
+	bh->b_uptodate = 0;
 
-  /* hash the new buffer */
-  htable_delete(&bh->b_htable);
-  htable_insert(buffer_htable, &bh->b_htable, block, BUFFER_HTABLE_BITS);
+	/* hash the new buffer */
+	htable_delete(&bh->b_htable);
+	htable_insert(buffer_htable, &bh->b_htable, block, BUFFER_HTABLE_BITS);
 out:
-  /* put it at the end of LRU list */
-  list_del(&bh->b_list);
-  list_add_tail(&bh->b_list, &lru_buffers);
-  return bh;
+	/* put it at the end of LRU list */
+	list_del(&bh->b_list);
+	list_add_tail(&bh->b_list, &lru_buffers);
+	return bh;
 }
 
 /*
@@ -110,21 +110,21 @@ out:
  */
 struct buffer_head_t *bread(dev_t dev, uint32_t block)
 {
-  struct buffer_head_t *bh;
+	struct buffer_head_t *bh;
 
-  /* get buffer */
-  bh = getblk(dev, block);
-  if (!bh)
-    return NULL;
+	/* get buffer */
+	bh = getblk(dev, block);
+	if (!bh)
+		return NULL;
 
-  /* read it from device */
-  if (!bh->b_uptodate && ata_read(dev, bh) != 0) {
-    brelse(bh);
-    return NULL;
-  }
+	/* read it from device */
+	if (!bh->b_uptodate && ata_read(dev, bh) != 0) {
+		brelse(bh);
+		return NULL;
+	}
 
-  bh->b_uptodate = 1;
-  return bh;
+	bh->b_uptodate = 1;
+	return bh;
 }
 
 /*
@@ -132,11 +132,11 @@ struct buffer_head_t *bread(dev_t dev, uint32_t block)
  */
 void brelse(struct buffer_head_t *bh)
 {
-  if (!bh)
-    return;
+	if (!bh)
+		return;
 
-  /* update inode reference count */
-  bh->b_ref--;
+	/* update inode reference count */
+	bh->b_ref--;
 }
 
 /*
@@ -144,15 +144,15 @@ void brelse(struct buffer_head_t *bh)
  */
 void bsync()
 {
-  int i;
+	int i;
 
-  /* write all dirty buffers */
-  for (i = 0; i < NR_BUFFER; i++) {
-    if (buffer_table[i].b_dirt && bwrite(&buffer_table[i])) {
-      printf("Can't write block %d on disk\n", buffer_table[i].b_blocknr);
-      panic("Disk error");
-    }
-  }
+	/* write all dirty buffers */
+	for (i = 0; i < NR_BUFFER; i++) {
+		if (buffer_table[i].b_dirt && bwrite(&buffer_table[i])) {
+			printf("Can't write block %d on disk\n", buffer_table[i].b_blocknr);
+			panic("Disk error");
+		}
+	}
 }
 
 /*
@@ -160,11 +160,11 @@ void bsync()
  */
 static void bsync_timer_handler()
 {
-  /* sync all buffers */
-  bsync();
+	/* sync all buffers */
+	bsync();
 
-  /* reschedule timer */
-  timer_event_mod(&bsync_tm, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
+	/* reschedule timer */
+	timer_event_mod(&bsync_tm, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
 }
 
 /*
@@ -172,36 +172,36 @@ static void bsync_timer_handler()
  */
 int binit()
 {
-  int i;
+	int i;
 
-  /* allocate buffers */
-  buffer_table = (struct buffer_head_t *) kmalloc(sizeof(struct buffer_head_t) * NR_BUFFER);
-  if (!buffer_table)
-    return -ENOMEM;
+	/* allocate buffers */
+	buffer_table = (struct buffer_head_t *) kmalloc(sizeof(struct buffer_head_t) * NR_BUFFER);
+	if (!buffer_table)
+		return -ENOMEM;
 
-  /* memzero all buffers */
-  memset(buffer_table, 0, sizeof(struct buffer_head_t) * NR_BUFFER);
+	/* memzero all buffers */
+	memset(buffer_table, 0, sizeof(struct buffer_head_t) * NR_BUFFER);
 
-  /* init Last Recently Used buffers list */
-  INIT_LIST_HEAD(&lru_buffers);
+	/* init Last Recently Used buffers list */
+	INIT_LIST_HEAD(&lru_buffers);
 
-  /* add all buffers to LRU list */
-  for (i = 0; i < NR_BUFFER; i++)
-    list_add(&buffer_table[i].b_list, &lru_buffers);
+	/* add all buffers to LRU list */
+	for (i = 0; i < NR_BUFFER; i++)
+		list_add(&buffer_table[i].b_list, &lru_buffers);
 
-  /* allocate buffers hash table */
-  buffer_htable = (struct htable_link_t **) kmalloc(sizeof(struct htable_link_t *) * NR_BUFFER);
-  if (!buffer_htable) {
-    kfree(buffer_table);
-    return -ENOMEM;
-  }
+	/* allocate buffers hash table */
+	buffer_htable = (struct htable_link_t **) kmalloc(sizeof(struct htable_link_t *) * NR_BUFFER);
+	if (!buffer_htable) {
+		kfree(buffer_table);
+		return -ENOMEM;
+	}
 
-  /* init buffers hash table */
-  htable_init(buffer_htable, BUFFER_HTABLE_BITS);
+	/* init buffers hash table */
+	htable_init(buffer_htable, BUFFER_HTABLE_BITS);
 
-  /* create sync timer */
-  timer_event_init(&bsync_tm, bsync_timer_handler, NULL, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
-  timer_event_add(&bsync_tm);
+	/* create sync timer */
+	timer_event_init(&bsync_tm, bsync_timer_handler, NULL, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
+	timer_event_add(&bsync_tm);
 
-  return 0;
+	return 0;
 }

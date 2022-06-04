@@ -8,5 +8,5 @@
  */
 int sys_dup(int oldfd)
 {
-  return do_dup(oldfd);
+	return do_dup(oldfd);
 }

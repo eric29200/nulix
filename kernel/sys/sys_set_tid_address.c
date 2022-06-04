@@ -5,6 +5,6 @@
  */
 pid_t sys_set_tid_address(int *tidptr)
 {
-  UNUSED(tidptr);
-  return current_task->pid;
+	UNUSED(tidptr);
+	return current_task->pid;
 }

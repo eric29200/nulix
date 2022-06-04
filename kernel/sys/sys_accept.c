@@ -5,5 +5,5 @@
  */
 int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 {
-  return do_accept(sockfd, addr, addrlen);
+	return do_accept(sockfd, addr, addrlen);
 }

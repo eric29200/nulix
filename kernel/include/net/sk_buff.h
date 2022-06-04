@@ -8,24 +8,24 @@
  * Socket buffer.
  */
 struct sk_buff_t {
-  struct net_device_t *       dev;
-  struct ethernet_header_t *  eth_header;
-  struct {
-    struct icmp_header_t *    icmp_header;
-    struct udp_header_t *     udp_header;
-    struct tcp_header_t *     tcp_header;
-  }                           h;
-  struct {
-    struct arp_header_t *     arp_header;
-    struct ip_header_t *      ip_header;
-  }                           nh;
-  size_t                      size;
-  size_t                      len;
-  uint8_t *                   head;
-  uint8_t *                   data;
-  uint8_t *                   tail;
-  uint8_t *                   end;
-  struct list_head_t          list;
+	struct net_device_t *		dev;
+	struct ethernet_header_t *	eth_header;
+	struct {
+		struct icmp_header_t *	icmp_header;
+		struct udp_header_t *	udp_header;
+		struct tcp_header_t *	tcp_header;
+	} h;
+	struct {
+		struct arp_header_t *	arp_header;
+		struct ip_header_t *	ip_header;
+	} nh;
+	size_t				size;
+	size_t				len;
+	uint8_t *			head;
+	uint8_t *			data;
+	uint8_t *			tail;
+	uint8_t *			end;
+	struct list_head_t		list;
 };
 
 /*
@@ -33,8 +33,8 @@ struct sk_buff_t {
  */
 static inline void skb_reserve(struct sk_buff_t *skb, size_t len)
 {
-  skb->data += len;
-  skb->tail += len;
+	skb->data += len;
+	skb->tail += len;
 }
 
 /*
@@ -42,10 +42,10 @@ static inline void skb_reserve(struct sk_buff_t *skb, size_t len)
  */
 static inline uint8_t *skb_put(struct sk_buff_t *skb, size_t len)
 {
-  uint8_t *ret = skb->tail;
-  skb->tail += len;
-  skb->len += len;
-  return ret;
+	uint8_t *ret = skb->tail;
+	skb->tail += len;
+	skb->len += len;
+	return ret;
 }
 
 /*
@@ -53,9 +53,9 @@ static inline uint8_t *skb_put(struct sk_buff_t *skb, size_t len)
  */
 static inline uint8_t *skb_push(struct sk_buff_t *skb, size_t len)
 {
-  skb->data -= len;
-  skb->len += len;
-  return skb->data;
+	skb->data -= len;
+	skb->len += len;
+	return skb->data;
 }
 
 /*
@@ -63,9 +63,9 @@ static inline uint8_t *skb_push(struct sk_buff_t *skb, size_t len)
  */
 static inline uint8_t *skb_pull(struct sk_buff_t *skb, size_t len)
 {
-  skb->data += len;
-  skb->len -= len;
-  return skb->data;
+	skb->data += len;
+	skb->len -= len;
+	return skb->data;
 }
 
 struct sk_buff_t *skb_alloc(size_t size);

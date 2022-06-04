@@ -5,5 +5,5 @@
  */
 int sys_listen(int sockfd, int backlog)
 {
-  return do_listen(sockfd, backlog);
+	return do_listen(sockfd, backlog);
 }

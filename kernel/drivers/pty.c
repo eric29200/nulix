@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stderr.h>
 
-#define NB_PTYS     4
+#define NB_PTYS		4
 
 /* global ptys */
 static struct tty_t pty_table[NB_PTYS];
@@ -17,15 +17,15 @@ static int current_pty = 1;
  */
 static int ptmx_open(struct file_t *filp)
 {
-  /* unused file */
-  UNUSED(filp);
+	/* unused file */
+	UNUSED(filp);
 
-  /* update current pty */
-  current_pty++;
-  if (current_pty > NB_PTYS)
-    current_pty = 1;
+	/* update current pty */
+	current_pty++;
+	if (current_pty > NB_PTYS)
+		current_pty = 1;
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -33,18 +33,18 @@ static int ptmx_open(struct file_t *filp)
  */
 int ptmx_ioctl(struct file_t *filp, int request, unsigned long arg)
 {
-  UNUSED(filp);
+	UNUSED(filp);
 
-  switch (request) {
-    case TIOCGPTN:
-      *((uint32_t *) arg) = current_pty;
-      break;
-    default:
-      printf("Unknown ioctl request (%x) on device %x\n", request, DEV_PTMX);
-      break;
-  }
+	switch (request) {
+		case TIOCGPTN:
+			*((uint32_t *) arg) = current_pty;
+			break;
+		default:
+			printf("Unknown ioctl request (%x) on device %x\n", request, DEV_PTMX);
+			break;
+	}
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -52,10 +52,10 @@ int ptmx_ioctl(struct file_t *filp, int request, unsigned long arg)
  */
 static struct tty_t *pty_lookup(dev_t dev)
 {
-  if (minor(dev) > 0 && minor(dev) <= NB_PTYS)
-    return &pty_table[minor(dev) - 1];
+	if (minor(dev) > 0 && minor(dev) <= NB_PTYS)
+		return &pty_table[minor(dev) - 1];
 
-  return NULL;
+	return NULL;
 }
 
 /*
@@ -63,31 +63,31 @@ static struct tty_t *pty_lookup(dev_t dev)
  */
 static int pty_read(struct file_t *filp, char *buf, int n)
 {
-  struct tty_t *pty;
-  int count = 0;
-  uint8_t key;
-  dev_t dev;
+	struct tty_t *pty;
+	int count = 0;
+	uint8_t key;
+	dev_t dev;
 
-  /* get pty */
-  dev = filp->f_inode->i_zone[0];
-  pty = pty_lookup(dev);
-  if (!pty)
-    return -EINVAL;
+	/* get pty */
+	dev = filp->f_inode->i_zone[0];
+	pty = pty_lookup(dev);
+	if (!pty)
+		return -EINVAL;
 
-  /* read all characters */
-  while (count < n) {
-    /* read key */
-    ring_buffer_read(&pty->buffer, &key, 1);
+	/* read all characters */
+	while (count < n) {
+		/* read key */
+		ring_buffer_read(&pty->buffer, &key, 1);
 
-    /* add key to buffer */
-    ((unsigned char *) buf)[count++] = key;
+		/* add key to buffer */
+		((unsigned char *) buf)[count++] = key;
 
-    /* end of line : return */
-    if (key == '\n')
-      break;
-  }
+		/* end of line : return */
+		if (key == '\n')
+			break;
+	}
 
-  return count;
+	return count;
 }
 
 /*
@@ -95,17 +95,17 @@ static int pty_read(struct file_t *filp, char *buf, int n)
  */
 static int pty_write(struct file_t *filp, const char *buf, int n)
 {
-  struct tty_t *pty;
-  dev_t dev;
+	struct tty_t *pty;
+	dev_t dev;
 
-  /* get pty */
-  dev = filp->f_inode->i_zone[0];
-  pty = pty_lookup(dev);
-  if (!pty)
-    return -EINVAL;
+	/* get pty */
+	dev = filp->f_inode->i_zone[0];
+	pty = pty_lookup(dev);
+	if (!pty)
+		return -EINVAL;
 
-  /* write to buffer */
-  return ring_buffer_write(&pty->buffer, (const uint8_t *) buf, n);
+	/* write to buffer */
+	return ring_buffer_write(&pty->buffer, (const uint8_t *) buf, n);
 }
 
 /*
@@ -113,24 +113,24 @@ static int pty_write(struct file_t *filp, const char *buf, int n)
  */
 static int pty_poll(struct file_t *filp)
 {
-  struct tty_t *pty;
-  int mask = 0;
-  dev_t dev;
+	struct tty_t *pty;
+	int mask = 0;
+	dev_t dev;
 
-  /* get pty */
-  dev = filp->f_inode->i_zone[0];
-  pty = pty_lookup(dev);
-  if (!pty)
-    return -EINVAL;
+	/* get pty */
+	dev = filp->f_inode->i_zone[0];
+	pty = pty_lookup(dev);
+	if (!pty)
+		return -EINVAL;
 
-  /* set waiting channel */
-  current_task->waiting_chan = pty;
+	/* set waiting channel */
+	current_task->waiting_chan = pty;
 
-  /* check if there is some characters to read */
-  if (pty->buffer.size > 0)
-    mask |= POLLIN;
+	/* check if there is some characters to read */
+	if (pty->buffer.size > 0)
+		mask |= POLLIN;
 
-  return mask;
+	return mask;
 }
 
 /*
@@ -138,43 +138,43 @@ static int pty_poll(struct file_t *filp)
  */
 int pty_ioctl(struct file_t *filp, int request, unsigned long arg)
 {
-  struct tty_t *pty;
-  dev_t dev;
+	struct tty_t *pty;
+	dev_t dev;
 
-  /* get tty */
-  dev = filp->f_inode->i_zone[0];
-  pty = pty_lookup(dev);
-  if (!pty)
-    return -EINVAL;
+	/* get tty */
+	dev = filp->f_inode->i_zone[0];
+	pty = pty_lookup(dev);
+	if (!pty)
+		return -EINVAL;
 
-  switch (request) {
-    case TCGETS:
-      memcpy((struct termios_t *) arg, &pty->termios, sizeof(struct termios_t));
-      break;
-    case TCSETS:
-      memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
-      break;
-    case TCSETSW:
-      memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
-      break;
-    case TCSETSF:
-      memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
-      break;
-    case TIOCGWINSZ:
-      memcpy((struct winsize_t *) arg, &pty->winsize, sizeof(struct winsize_t));
-      break;
-    case TIOCGPGRP:
-      *((pid_t *) arg) = pty->pgrp;
-      break;
-    case TIOCSPGRP:
-      pty->pgrp = *((pid_t *) arg);
-      break;
-    default:
-      printf("Unknown ioctl request (%x) on device %x\n", request, dev);
-      break;
-  }
+	switch (request) {
+		case TCGETS:
+			memcpy((struct termios_t *) arg, &pty->termios, sizeof(struct termios_t));
+			break;
+		case TCSETS:
+			memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+			break;
+		case TCSETSW:
+			memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+			break;
+		case TCSETSF:
+			memcpy(&pty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+			break;
+		case TIOCGWINSZ:
+			memcpy((struct winsize_t *) arg, &pty->winsize, sizeof(struct winsize_t));
+			break;
+		case TIOCGPGRP:
+			*((pid_t *) arg) = pty->pgrp;
+			break;
+		case TIOCSPGRP:
+			pty->pgrp = *((pid_t *) arg);
+			break;
+		default:
+			printf("Unknown ioctl request (%x) on device %x\n", request, dev);
+			break;
+	}
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -182,49 +182,49 @@ int pty_ioctl(struct file_t *filp, int request, unsigned long arg)
  */
 int init_pty()
 {
-  int i, ret;
+	int i, ret;
 
-  /* init each tty */
-  for (i = 0; i < NB_PTYS; i++) {
-    memset(&pty_table[i], 0, sizeof(struct tty_t));
-    pty_table[i].dev = mkdev(DEV_PTY_MAJOR, i + 1);
-    pty_table[i].pgrp = 0;
-    pty_table[i].write = NULL;
+	/* init each tty */
+	for (i = 0; i < NB_PTYS; i++) {
+		memset(&pty_table[i], 0, sizeof(struct tty_t));
+		pty_table[i].dev = mkdev(DEV_PTY_MAJOR, i + 1);
+		pty_table[i].pgrp = 0;
+		pty_table[i].write = NULL;
 
-    /* init buffer */
-    ret = ring_buffer_init(&pty_table[i].buffer, TTY_BUF_SIZE);
-    if (ret != 0)
-      return ret;
+		/* init buffer */
+		ret = ring_buffer_init(&pty_table[i].buffer, TTY_BUF_SIZE);
+		if (ret != 0)
+			return ret;
 
-    /* init termios */
-    pty_table[i].termios = (struct termios_t) {
-      .c_iflag    = ICRNL,
-      .c_oflag    = OPOST | ONLCR,
-      .c_cflag    = 0,
-      .c_lflag    = IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
-      .c_line     = 0,
-      .c_cc       = INIT_C_CC,
-    };
-  }
+		/* init termios */
+		pty_table[i].termios = (struct termios_t) {
+			.c_iflag	= ICRNL,
+			.c_oflag	= OPOST | ONLCR,
+			.c_cflag	= 0,
+			.c_lflag	= IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
+			.c_line		= 0,
+			.c_cc		= INIT_C_CC,
+		};
+	}
 
-  return 0;
+	return 0;
 }
 
 /*
  * Pty file operations.
  */
 static struct file_operations_t pty_fops = {
-  .read       = pty_read,
-  .write      = pty_write,
-  .poll       = pty_poll,
-  .ioctl      = pty_ioctl,
+	.read		= pty_read,
+	.write		= pty_write,
+	.poll		= pty_poll,
+	.ioctl		= pty_ioctl,
 };
 
 /*
  * Pty inode operations.
  */
 struct inode_operations_t pty_iops = {
-  .fops           = &pty_fops,
+	.fops		= &pty_fops,
 };
 
 
@@ -232,14 +232,14 @@ struct inode_operations_t pty_iops = {
  * Ptmx file operations.
  */
 static struct file_operations_t ptmx_fops = {
-  .open       = ptmx_open,
-  .ioctl      = ptmx_ioctl,
+	.open		= ptmx_open,
+	.ioctl		= ptmx_ioctl,
 };
 
 /*
  * Ptmx inode operations.
  */
 struct inode_operations_t ptmx_iops = {
-  .fops           = &ptmx_fops,
+	.fops		= &ptmx_fops,
 };
 

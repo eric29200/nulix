@@ -3,7 +3,7 @@
 
 #include <proc/task.h>
 
-#define TASK_RETURN_ADDRESS               0xFFFFFFFF
+#define TASK_RETURN_ADDRESS		0xFFFFFFFF
 
 extern struct task_t *init_task;
 extern struct task_t *current_task;

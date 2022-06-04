@@ -11,28 +11,28 @@
  */
 static char **copy_array_from_user_to_kernel(char *const src[], int len)
 {
-  char **ret;
-  int i;
+	char **ret;
+	int i;
 
-  if (len <= 0)
-    return NULL;
+	if (len <= 0)
+		return NULL;
 
-  ret = (char **) kmalloc(sizeof(char *) * len);
-  if (!ret)
-    return NULL;
+	ret = (char **) kmalloc(sizeof(char *) * len);
+	if (!ret)
+		return NULL;
 
-  for (i = 0; i < len; i++) {
-    if (!src[i]) {
-      ret[i] = NULL;
-      continue;
-    }
+	for (i = 0; i < len; i++) {
+		if (!src[i]) {
+			ret[i] = NULL;
+			continue;
+		}
 
-    ret[i] = strdup(src[i]);
-    if (!ret[i])
-      return NULL;
-  }
+		ret[i] = strdup(src[i]);
+		if (!ret[i])
+			return NULL;
+	}
 
-  return ret;
+	return ret;
 }
 
 /*
@@ -40,27 +40,27 @@ static char **copy_array_from_user_to_kernel(char *const src[], int len)
  */
 static char **copy_array_from_kernel_to_user(char **src, int len)
 {
-  int i, slen;
-  char **ret;
+	int i, slen;
+	char **ret;
 
-  ret = (char **) current_task->end_brk;
-  memset(ret, 0, sizeof(char *) * (len + 1));
-  current_task->end_brk += sizeof(char *) * (len + 1);
+	ret = (char **) current_task->end_brk;
+	memset(ret, 0, sizeof(char *) * (len + 1));
+	current_task->end_brk += sizeof(char *) * (len + 1);
 
-  for (i = 0; i < len; i++) {
-    if (!src[i]) {
-      ret[i] = NULL;
-      continue;
-    }
+	for (i = 0; i < len; i++) {
+		if (!src[i]) {
+			ret[i] = NULL;
+			continue;
+		}
 
-    ret[i] = (char *) current_task->end_brk;
-    slen = strlen(src[i]);
-    memset(ret[i], 0, slen + 1);
-    memcpy(ret[i], src[i], slen);
-    current_task->end_brk += slen + 1;
-  }
+		ret[i] = (char *) current_task->end_brk;
+		slen = strlen(src[i]);
+		memset(ret[i], 0, slen + 1);
+		memcpy(ret[i], src[i], slen);
+		current_task->end_brk += slen + 1;
+	}
 
-  return ret;
+	return ret;
 }
 
 /*
@@ -68,16 +68,16 @@ static char **copy_array_from_kernel_to_user(char **src, int len)
  */
 static void free_array(char **array, int len)
 {
-  int i;
+	int i;
 
-  if (!array)
-    return;
+	if (!array)
+		return;
 
-  for (i = 0; i < len; i++)
-    if (array[i])
-      kfree(array[i]);
+	for (i = 0; i < len; i++)
+		if (array[i])
+			kfree(array[i]);
 
-  kfree(array);
+	kfree(array);
 }
 
 /*
@@ -85,59 +85,59 @@ static void free_array(char **array, int len)
  */
 int sys_execve(const char *path, char *const argv[], char *const envp[])
 {
-  char **kernel_argv, **kernel_envp;
-  char **user_argv, **user_envp;
-  int ret, argv_len, envp_len;
-  uint32_t stack;
-  int i;
+	char **kernel_argv, **kernel_envp;
+	char **user_argv, **user_envp;
+	int ret, argv_len, envp_len;
+	uint32_t stack;
+	int i;
 
-  /* copy argv from user memory to kernel memory */
-  for (argv_len = 0; argv && argv[argv_len]; argv_len++);
-  kernel_argv = copy_array_from_user_to_kernel(argv, argv_len);
+	/* copy argv from user memory to kernel memory */
+	for (argv_len = 0; argv && argv[argv_len]; argv_len++);
+	kernel_argv = copy_array_from_user_to_kernel(argv, argv_len);
 
-  /* copy argv from user memory to kernel memory */
-  for (envp_len = 0; envp && envp[envp_len]; envp_len++);
-  kernel_envp = copy_array_from_user_to_kernel(envp, envp_len);
+	/* copy argv from user memory to kernel memory */
+	for (envp_len = 0; envp && envp[envp_len]; envp_len++);
+	kernel_envp = copy_array_from_user_to_kernel(envp, envp_len);
 
-  /* load elf binary */
-  ret = elf_load(path);
-  if (ret != 0)
-    goto out;
+	/* load elf binary */
+	ret = elf_load(path);
+	if (ret != 0)
+		goto out;
 
-  /* copy back argv and envp to user address space */
-  user_argv = copy_array_from_kernel_to_user(kernel_argv, argv_len);
-  user_envp = copy_array_from_kernel_to_user(kernel_envp, envp_len);
+	/* copy back argv and envp to user address space */
+	user_argv = copy_array_from_kernel_to_user(kernel_argv, argv_len);
+	user_envp = copy_array_from_kernel_to_user(kernel_envp, envp_len);
 
-  /* free kernel memory */
-  free_array(kernel_argv, argv_len);
-  free_array(kernel_envp, envp_len);
+	/* free kernel memory */
+	free_array(kernel_argv, argv_len);
+	free_array(kernel_envp, envp_len);
 
-  /* prepare user stack */
-  stack = current_task->user_stack;
+	/* prepare user stack */
+	stack = current_task->user_stack;
 
-  /* put envp in user stack (skip last NULL pointer) */
-  for (i = envp_len; i >= 0; i--) {
-    stack -= 4;
-    *((uint32_t *) stack) = (uint32_t) user_envp[i];
-  }
+	/* put envp in user stack (skip last NULL pointer) */
+	for (i = envp_len; i >= 0; i--) {
+		stack -= 4;
+		*((uint32_t *) stack) = (uint32_t) user_envp[i];
+	}
 
-  /* put argv in user stack (skip last NULL pointer) */
-  for (i = argv_len; i >= 0; i--) {
-    stack -= 4;
-    *((uint32_t *) stack) = (uint32_t) user_argv[i];
-  }
+	/* put argv in user stack (skip last NULL pointer) */
+	for (i = argv_len; i >= 0; i--) {
+		stack -= 4;
+		*((uint32_t *) stack) = (uint32_t) user_argv[i];
+	}
 
-  /* put argc in user stack */
-  stack -= 4;
-  *((uint32_t *) stack) = argv_len;
+	/* put argc in user stack */
+	stack -= 4;
+	*((uint32_t *) stack) = argv_len;
 
-  /* set esp and stack */
-  current_task->user_regs.eip = current_task->user_entry;
-  current_task->user_regs.useresp = stack;
+	/* set esp and stack */
+	current_task->user_regs.eip = current_task->user_entry;
+	current_task->user_regs.useresp = stack;
 
-  return 0;
+	return 0;
 out:
-  free_array(kernel_argv, argv_len);
-  free_array(kernel_envp, envp_len);
-  return ret;
+	free_array(kernel_argv, argv_len);
+	free_array(kernel_envp, envp_len);
+	return ret;
 }

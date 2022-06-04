@@ -6,5 +6,5 @@
  */
 int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode)
 {
-  return do_open(dirfd, pathname, flags, mode);
+	return do_open(dirfd, pathname, flags, mode);
 }

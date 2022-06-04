@@ -5,5 +5,5 @@
  */
 gid_t sys_getegid()
 {
-  return current_task->egid;
+	return current_task->egid;
 }

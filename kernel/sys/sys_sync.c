@@ -5,8 +5,8 @@
  */
 int sys_sync()
 {
-  /* sync all buffers */
-  bsync();
+	/* sync all buffers */
+	bsync();
 
-  return 0;
+	return 0;
 }

@@ -5,29 +5,29 @@
  * List structure.
  */
 struct list_head_t {
-  struct list_head_t *prev;
-  struct list_head_t *next;
+	struct list_head_t *prev;
+	struct list_head_t *next;
 };
 
-#define LIST_HEAD_INIT(name)                        { &(name), &(name) }
-#define LIST_HEAD(name)                             struct list_head_t name = LIST_HEAD_INIT(name)
+#define LIST_HEAD_INIT(name)				{ &(name), &(name) }
+#define LIST_HEAD(name)					struct list_head_t name = LIST_HEAD_INIT(name)
 
-#define list_entry(ptr, type, member)               container_of(ptr, type, member)
-#define list_first_entry(ptr, type, member)         list_entry((ptr)->next, type, member)
-#define list_last_entry(ptr, type, member)          list_entry((ptr)->prev, type, member)
-#define list_next_entry(pos, member)                list_entry((pos)->member.next, typeof(*(pos)), member)
-#define list_prev_entry(pos, member)                list_entry((pos)->member.prev, typeof(*(pos)), member)
+#define list_entry(ptr, type, member)			container_of(ptr, type, member)
+#define list_first_entry(ptr, type, member)		list_entry((ptr)->next, type, member)
+#define list_last_entry(ptr, type, member)		list_entry((ptr)->prev, type, member)
+#define list_next_entry(pos, member)			list_entry((pos)->member.next, typeof(*(pos)), member)
+#define list_prev_entry(pos, member)			list_entry((pos)->member.prev, typeof(*(pos)), member)
 
-#define list_for_each(pos, head)                    for (pos = (head)->next; pos != (head); pos = pos->next)
-#define list_for_each_safe(pos, n, head)            for (pos = (head)->next, n = pos->next; pos != (head); pos = n, n = pos->next)
+#define list_for_each(pos, head)			for (pos = (head)->next; pos != (head); pos = pos->next)
+#define list_for_each_safe(pos, n, head)		for (pos = (head)->next, n = pos->next; pos != (head); pos = n, n = pos->next)
 
 /*
  * Init a list head structure.
  */
 static inline void INIT_LIST_HEAD(struct list_head_t *list)
 {
-  list->next = list;
-  list->prev = list;
+	list->next = list;
+	list->prev = list;
 }
 
 /*
@@ -35,10 +35,10 @@ static inline void INIT_LIST_HEAD(struct list_head_t *list)
  */
 static inline void __list_add(struct list_head_t *new, struct list_head_t *prev, struct list_head_t *next)
 {
-  next->prev = new;
-  new->next = next;
-  new->prev = prev;
-  prev->next = new;
+	next->prev = new;
+	new->next = next;
+	new->prev = prev;
+	prev->next = new;
 }
 
 /*
@@ -46,7 +46,7 @@ static inline void __list_add(struct list_head_t *new, struct list_head_t *prev,
  */
 static inline void list_add(struct list_head_t *new, struct list_head_t *head)
 {
-  __list_add(new, head, head->next);
+	__list_add(new, head, head->next);
 }
 
 /*
@@ -54,7 +54,7 @@ static inline void list_add(struct list_head_t *new, struct list_head_t *head)
  */
 static inline void list_add_tail(struct list_head_t *new, struct list_head_t *head)
 {
-  __list_add(new, head->prev, head);
+	__list_add(new, head->prev, head);
 }
 
 /*
@@ -62,8 +62,8 @@ static inline void list_add_tail(struct list_head_t *new, struct list_head_t *he
  */
 static inline void __list_del(struct list_head_t *prev, struct list_head_t *next)
 {
-  prev->next = next;
-  next->prev = prev;
+	prev->next = next;
+	next->prev = prev;
 }
 
 /*
@@ -71,9 +71,9 @@ static inline void __list_del(struct list_head_t *prev, struct list_head_t *next
  */
 static inline void list_del(struct list_head_t *entry)
 {
-  __list_del(entry->prev, entry->next);
-  entry->prev = (void *) 0;
-  entry->next = (void *) 0;
+	__list_del(entry->prev, entry->next);
+	entry->prev = (void *) 0;
+	entry->next = (void *) 0;
 }
 
 /*
@@ -81,7 +81,7 @@ static inline void list_del(struct list_head_t *entry)
  */
 static inline int list_empty(struct list_head_t *head)
 {
-  return head->next == head;
+	return head->next == head;
 }
 
 /*
@@ -89,8 +89,7 @@ static inline int list_empty(struct list_head_t *head)
  */
 static inline int list_is_last(const struct list_head_t *list, const struct list_head_t *head)
 {
-  return list->next == head;
+	return list->next == head;
 }
-
 
 #endif

@@ -5,12 +5,12 @@
 #include <lib/list.h>
 #include <stddef.h>
 
-#define PAGE_SIZE             0x1000
-#define PAGE_MASK             (~(PAGE_SIZE - 1))
-#define PAGE_ALIGNED(addr)    (((addr) & PAGE_MASK) == 0)
-#define PAGE_ALIGN_DOWN(addr) ((addr) & PAGE_MASK)
-#define PAGE_ALIGN_UP(addr)   (((addr) + PAGE_SIZE - 1) & PAGE_MASK)
-#define ALIGN_UP(addr, size)  (((addr) + size - 1) & (~(size - 1)))
+#define PAGE_SIZE			0x1000
+#define PAGE_MASK			(~(PAGE_SIZE - 1))
+#define PAGE_ALIGNED(addr)		(((addr) & PAGE_MASK) == 0)
+#define PAGE_ALIGN_DOWN(addr)		((addr) & PAGE_MASK)
+#define PAGE_ALIGN_UP(addr)		(((addr) + PAGE_SIZE - 1) & PAGE_MASK)
+#define ALIGN_UP(addr, size)		(((addr) + size - 1) & (~(size - 1)))
 
 /* defined in paging.c */
 extern uint32_t placement_address;
@@ -22,28 +22,28 @@ extern struct page_directory_t *kernel_pgd;
  * Page structure.
  */
 struct page_t {
-  uint32_t present :1;    /* page present in memory */
-  uint32_t rw :1;         /* read only if clear */
-  uint32_t user :1;       /* supervisor level if clear */
-  uint32_t accessed :1;   /* set if the page has been accessed */
-  uint32_t dirty :1;      /* set if the page has not been written */
-  uint32_t unused :7;     /* reserved bits */
-  uint32_t frame :20;     /* frame address */
+	uint32_t present :1;		/* page present in memory */
+	uint32_t rw :1;			/* read only if clear */
+	uint32_t user :1;		/* supervisor level if clear */
+	uint32_t accessed :1;		/* set if the page has been accessed */
+	uint32_t dirty :1;		/* set if the page has not been written */
+	uint32_t unused :7;		/* reserved bits */
+	uint32_t frame :20;		/* frame address */
 };
 
 /*
  * Page table structure.
  */
 struct page_table_t {
-  struct page_t pages[1024];
+	struct page_t pages[1024];
 };
 
 /*
  * Page directory structure.
  */
 struct page_directory_t {
-  struct page_table_t *   tables[1024];               /* pointers to page tables */
-  uint32_t                tables_physical[1024];     /* pointers to page tables (physical addresses) */
+	struct page_table_t 	*tables[1024];			/* pointers to page tables */
+	uint32_t		tables_physical[1024];		/* pointers to page tables (physical addresses) */
 };
 
 void init_paging(uint32_t start, uint32_t end);

@@ -6,5 +6,5 @@
  */
 int sys_unlink(const char *pathname)
 {
-  return do_unlink(AT_FDCWD, pathname);
+	return do_unlink(AT_FDCWD, pathname);
 }

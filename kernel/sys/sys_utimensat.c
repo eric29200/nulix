@@ -7,5 +7,5 @@
  */
 int sys_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags)
 {
-  return do_utimensat(dirfd, pathname, times, flags);
+	return do_utimensat(dirfd, pathname, times, flags);
 }

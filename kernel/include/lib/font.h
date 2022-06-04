@@ -3,47 +3,47 @@
 
 #include <stddef.h>
 
-#define PSF2_MAGIC0             0x72
-#define PSF2_MAGIC1             0xb5
-#define PSF2_MAGIC2             0x4a
-#define PSF2_MAGIC3             0x86
+#define PSF2_MAGIC0			0x72
+#define PSF2_MAGIC1			0xb5
+#define PSF2_MAGIC2			0x4a
+#define PSF2_MAGIC3			0x86
 
-#define PSF2_HAS_UNICODE_TABLE  0x01
+#define PSF2_HAS_UNICODE_TABLE		0x01
 
-#define PSF2_MAXVERSION         0
+#define PSF2_MAXVERSION			0
 
-#define PSF2_SEPARATOR          0xFF
-#define PSF2_STARTSEQ           0xFE
+#define PSF2_SEPARATOR			0xFF
+#define PSF2_STARTSEQ			0xFE
 
 /*
  * Font v2 header.
  */
 struct psf2_header_t {
-  unsigned char magic[4];
-  unsigned int version;
-  unsigned int headersize;
-  unsigned int flags;
-  unsigned int length;
-  unsigned int charsize;
-  unsigned int height;
-  unsigned int width;
+	unsigned char	magic[4];
+	unsigned int	version;
+	unsigned int	headersize;
+	unsigned int	flags;
+	unsigned int	length;
+	unsigned int	charsize;
+	unsigned int	height;
+	unsigned int	width;
 };
 
-#define UC_MAP_SIZE       1024
-#define ASCII_MAP_SIZE    128
+#define UC_MAP_SIZE			 1024
+#define ASCII_MAP_SIZE		128
 
 /*
  * Font structure.
  */
 struct font_t {
-  uint32_t        height;                     /* font height */
-  uint32_t        width;                      /* font width */
-  uint32_t        char_size;                  /* glyph size in bytes */
-  int32_t         char_count;                 /* number of glyphs */
-  uint32_t        uc_size;                    /* number of unicode mappings */
-  uint32_t        uc_map[UC_MAP_SIZE];        /* unicode mapping */
-  uint32_t        ascii_map[ASCII_MAP_SIZE];  /* ascii mapping */
-  unsigned char   *data;                      /* pointer to first glyph */
+	uint32_t	height;				/* font height */
+	uint32_t	width;				/* font width */
+	uint32_t	char_size;			/* glyph size in bytes */
+	int32_t		char_count;			/* number of glyphs */
+	uint32_t	uc_size;			/* number of unicode mappings */
+	uint32_t	uc_map[UC_MAP_SIZE];		/* unicode mapping */
+	uint32_t	ascii_map[ASCII_MAP_SIZE];	/* ascii mapping */
+	unsigned char	*data;				/* pointer to first glyph */
 };
 
 struct font_t *get_default_font();

@@ -5,5 +5,5 @@
  */
 int sys_truncate64(const char *pathname, off_t length)
 {
-  return do_truncate(pathname, length);
+	return do_truncate(pathname, length);
 }

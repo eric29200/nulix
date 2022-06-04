@@ -6,5 +6,5 @@
  */
 int sys_close(int fd)
 {
-  return do_close(fd);
+	return do_close(fd);
 }
