@@ -60,6 +60,9 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	for (i = 0; i < fb_nb_pages; i++)
 		map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, 0, 1);
 
+	/* clear frame buffer */
+	memset(fb->buf, 0, fb->width * fb->height * fb->bpp / 8);
+
 	return 0;
 }
 

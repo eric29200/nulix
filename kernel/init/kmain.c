@@ -30,9 +30,9 @@ extern uint32_t kernel_end;
 static struct multiboot_tag_framebuffer *tag_fb;
 
 /* static IP address */
-static uint8_t default_ip_address[] = {192, 168, 1, 100};
-static uint8_t default_ip_netmask[] = {255, 255, 255, 0};
-static uint8_t default_ip_route[] = {192, 168, 1, 1};
+static uint8_t default_ip_address[] = { 192, 168, 1, 100 };
+static uint8_t default_ip_netmask[] = { 255, 255, 255, 0 };
+static uint8_t default_ip_route[] = { 192, 168, 1, 1 };
 
 /*
  * Parse multiboot header.
@@ -127,7 +127,7 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 	/* init serial console */
 	init_serial();
 
-	/* parse multiboot header*/
+	/* parse multiboot header */
 	ret = parse_mboot(magic, addr, &mem_upper);
 	if (ret)
 		return ret;

@@ -5,16 +5,6 @@
 #include <ipc/signal.h>
 #include <dev.h>
 
-#define KEYBOARD_PORT			0x60
-#define KEYBOARD_ACK			0x61
-#define KEYBOARD_STATUS			0x64
-#define KEYBOARD_LED_CODE		0xED
-
-#define KEYBOARD_STATUS_SHIFT		0x01
-#define KEYBOARD_STATUS_CTRL		0x02
-#define KEYBOARD_STATUS_ALT		0x04
-#define KEYBOARD_STATUS_CAPSLOCK	0x08
-
 /* keyboard status */
 static uint32_t keyboard_status = 0;
 

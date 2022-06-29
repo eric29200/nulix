@@ -55,6 +55,7 @@
 #define __NR_sigaction			67
 #define __NR_symlink			83
 #define __NR_readlink			85
+#define __NR_reboot			88
 #define __NR_mmap			90
 #define __NR_munmap			91
 #define __NR_fchmod			94
@@ -217,5 +218,6 @@ int sys_ftruncate64(int fd, off_t length);
 int sys_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags);
 int sys_sync();
 int sys_chroot(const char *path);
+int sys_reboot();
 
 #endif
