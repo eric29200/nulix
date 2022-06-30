@@ -15,9 +15,6 @@
 
 #define BSYNC_TIMER_MS			10000
 
-#define IMAP_SLOTS			8
-#define ZMAP_SLOTS			64
-
 #define PIPE_WPOS(inode)		((inode)->i_zone[0])
 #define PIPE_RPOS(inode)		((inode)->i_zone[1])
 #define PIPE_SIZE(inode)		((PIPE_WPOS(inode) - PIPE_RPOS(inode)) & (PAGE_SIZE - 1))
@@ -43,21 +40,12 @@ struct buffer_head_t {
  * Generic super block.
  */
 struct super_block_t {
+	dev_t				s_dev;
 	uint16_t			s_blocksize;
 	uint8_t				s_blocksize_bits;
-	uint32_t			s_ninodes;
-	uint32_t			s_nzones;
-	uint32_t			s_imap_blocks;
-	uint32_t			s_zmap_blocks;
-	uint32_t			s_firstdatazone;
-	uint32_t			s_log_zone_size;
-	uint32_t			s_max_size;
+	void *				s_fs_info;
 	uint16_t			s_magic;
-	struct buffer_head_t *		s_imap[IMAP_SLOTS];
-	struct buffer_head_t *		s_zmap[ZMAP_SLOTS];
-	dev_t				s_dev;
-	struct inode_t *		s_covered;
-	struct inode_t *		s_mounted;
+	struct inode_t *		s_root_inode;
 	struct super_operations_t *	s_op;
 };
 

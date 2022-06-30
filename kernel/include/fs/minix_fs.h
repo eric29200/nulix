@@ -12,43 +12,67 @@
 #define MINIX_DIR_ENTRIES_PER_BLOCK	((MINIX_BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
 
 /*
- * Minix super block.
+ * Minix on disk super block.
  */
 struct minix_super_block_t {
-	uint16_t	s_ninodes;
-	uint16_t	s_nzones;
-	uint16_t	s_imap_blocks;
-	uint16_t	s_zmap_blocks;
-	uint16_t	s_firstdatazone;
-	uint16_t	s_log_zone_size;
-	uint32_t	s_max_size;
-	uint16_t	s_magic;
-	uint16_t	s_state;
-	uint32_t	s_zones;
+	uint16_t		s_ninodes;
+	uint16_t		s_nzones;
+	uint16_t		s_imap_blocks;
+	uint16_t		s_zmap_blocks;
+	uint16_t		s_firstdatazone;
+	uint16_t		s_log_zone_size;
+	uint32_t		s_max_size;
+	uint16_t		s_magic;
+	uint16_t		s_state;
+	uint32_t		s_zones;
+};
+
+/*
+ * Minix in memory super block.
+ */
+struct minix_sb_info_t {
+	uint32_t		s_ninodes;
+	uint32_t		s_nzones;
+	uint16_t		s_imap_blocks;
+	uint16_t		s_zmap_blocks;
+	uint16_t		s_firstdatazone;
+	uint16_t		s_log_zone_size;
+	uint32_t		s_max_size;
+	struct buffer_head_t *	s_sbh;
+	struct buffer_head_t **	s_imap;
+	struct buffer_head_t **	s_zmap;
 };
 
 /*
  * Minix inode.
  */
 struct minix_inode_t {
-	uint16_t	i_mode;
-	uint16_t	i_nlinks;
-	uint16_t	i_uid;
-	uint16_t	i_gid;
-	uint32_t	i_size;
-	uint32_t	i_atime;
-	uint32_t	i_mtime;
-	uint32_t	i_ctime;
-	uint32_t	i_zone[10];
+	uint16_t		i_mode;
+	uint16_t		i_nlinks;
+	uint16_t		i_uid;
+	uint16_t		i_gid;
+	uint32_t		i_size;
+	uint32_t		i_atime;
+	uint32_t		i_mtime;
+	uint32_t		i_ctime;
+	uint32_t		i_zone[10];
 };
 
 /*
  * Minix dir entry.
  */
 struct minix_dir_entry_t {
-	uint16_t	inode;
-	char		name[MINIX_FILENAME_LEN];
+	uint16_t		inode;
+	char			name[MINIX_FILENAME_LEN];
 };
+
+/*
+ * Get minix in memory super block from generic super block.
+ */
+static inline struct minix_sb_info_t *minix_sb(struct super_block_t *sb)
+{
+	return sb->s_fs_info;
+}
 
 /* minix operations */
 extern struct super_operations_t minix_sops;

@@ -21,8 +21,8 @@ int proc_read_super(struct super_block_t *sb)
 	sb->s_op = &proc_sops;
 
 	/* get root inode */
-	sb->s_mounted = iget(sb, PROC_ROOT_INO);
-	if (!sb->s_mounted) {
+	sb->s_root_inode = iget(sb, PROC_ROOT_INO);
+	if (!sb->s_root_inode) {
 		printf("[Proc-fs] Can't get root inode\n");
 		return -EACCES;
 	}

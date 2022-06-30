@@ -61,8 +61,7 @@ int do_mount(uint16_t magic, dev_t dev, const char *mount_point)
 	}
 
 	/* set mount point */
-	sb->s_covered = dir;
-	dir->i_mount = sb->s_mounted;
+	dir->i_mount = sb->s_root_inode;
 
 	return 0;
 }
@@ -93,9 +92,8 @@ int mount_root(dev_t dev)
 	}
 
 	/* set mount point */
-	inode = root_sb->s_mounted;
+	inode = root_sb->s_root_inode;
 	inode->i_ref = 3;
-	root_sb->s_covered = inode;
 
 	/* set current task current working dir to root */
 	current_task->cwd = inode;

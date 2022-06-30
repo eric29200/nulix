@@ -1,4 +1,5 @@
 #include <fs/minix_fs.h>
+#include <mm/mm.h>
 #include <stderr.h>
 #include <stdio.h>
 
@@ -17,9 +18,14 @@ struct super_operations_t minix_sops = {
 int minix_read_super(struct super_block_t *sb, dev_t dev)
 {
 	struct minix_super_block_t *msb;
-	struct buffer_head_t *bh;
+	struct minix_sb_info_t *sbi;
 	uint32_t block;
 	int i, ret;
+
+	/* allocate minix super block */
+	sb->s_fs_info = sbi = (struct minix_sb_info_t *) kmalloc(sizeof(struct minix_sb_info_t));
+	if (!sbi)
+		return -ENOMEM;
 
 	/* set default block size */
 	sb->s_dev = dev;
@@ -27,12 +33,12 @@ int minix_read_super(struct super_block_t *sb, dev_t dev)
 	sb->s_blocksize_bits = MINIX_BLOCK_SIZE_BITS;
 
 	/* read super block */
-	bh = bread(sb, 1);
-	if (!bh)
-		goto bad_sb;
+	sbi->s_sbh = bread(sb, 1);
+	if (!sbi->s_sbh)
+		goto err_bad_sb;
 
 	/* read minix super block */
-	msb = (struct minix_super_block_t *) bh->b_data;
+	msb = (struct minix_super_block_t *) sbi->s_sbh->b_data;
 
 	/* check magic number */
 	if (msb->s_magic != MINIX_SUPER_MAGIC) {
@@ -41,44 +47,62 @@ int minix_read_super(struct super_block_t *sb, dev_t dev)
 	}
 
 	/* set root super block */
-	sb->s_ninodes = msb->s_ninodes;
-	sb->s_nzones = msb->s_zones;
-	sb->s_imap_blocks = msb->s_imap_blocks;
-	sb->s_zmap_blocks = msb->s_zmap_blocks;
-	sb->s_firstdatazone = msb->s_firstdatazone;
-	sb->s_log_zone_size = msb->s_log_zone_size;
-	sb->s_max_size = msb->s_max_size;
+	sbi->s_ninodes = msb->s_ninodes;
+	sbi->s_nzones = msb->s_zones;
+	sbi->s_imap_blocks = msb->s_imap_blocks;
+	sbi->s_zmap_blocks = msb->s_zmap_blocks;
+	sbi->s_firstdatazone = msb->s_firstdatazone;
+	sbi->s_log_zone_size = msb->s_log_zone_size;
+	sbi->s_imap = NULL;
+	sbi->s_zmap = NULL;
+	sbi->s_max_size = msb->s_max_size;
 	sb->s_magic = msb->s_magic;
+	sb->s_root_inode = NULL;
 	sb->s_op = &minix_sops;
 
-	/* reset maps */
-	for (i = 0; i < IMAP_SLOTS; i++)
-		sb->s_imap[i] = NULL;
-	for (i = 0; i < ZMAP_SLOTS; i++)
-		sb->s_zmap[i] = NULL;
+	/* allocate inodes bitmap */
+	sbi->s_imap = (struct buffer_head_t **) kmalloc(sizeof(struct buffer_head_t *) * sbi->s_imap_blocks);
+	if (!sbi->s_imap) {
+		ret = -ENOMEM;
+		goto err_no_map;
+	}
 
-	/* read imap blocks */
-	block = 2;
-	for (i = 0; i < msb->s_imap_blocks; i++, block++) {
-		sb->s_imap[i] = bread(sb, block);
-		if (!sb->s_imap[i]) {
-			ret = -ENOMEM;
+	/* reset inodes bitmap */
+	for (i = 0; i < sbi->s_imap_blocks; i++)
+		sbi->s_imap[i] = NULL;
+
+	/* read inodes bitmap */
+	for (i = 0, block = 2; i < sbi->s_imap_blocks; i++, block++) {
+		sbi->s_imap[i] = bread(sb, block);
+		if (!sbi->s_imap[i]) {
+			ret = -EIO;
 			goto err_map;
 		}
 	}
 
-	/* read zmap blocks */
-	for (i = 0; i < msb->s_zmap_blocks; i++, block++) {
-		sb->s_zmap[i] = bread(sb, block);
-		if (!sb->s_zmap[i]) {
-			ret = -ENOMEM;
+	/* allocate zones bitmap */
+	sbi->s_zmap = (struct buffer_head_t **) kmalloc(sizeof(struct buffer_head_t *) * sbi->s_zmap_blocks);
+	if (!sbi->s_zmap) {
+		ret = -ENOMEM;
+		goto err_no_map;
+	}
+
+	/* reset zones bitmap */
+	for (i = 0; i < sbi->s_zmap_blocks; i++)
+		sbi->s_zmap[i] = NULL;
+
+	/* read zones bitmap */
+	for (i = 0; i < sbi->s_zmap_blocks; i++, block++) {
+		sbi->s_zmap[i] = bread(sb, block);
+		if (!sbi->s_zmap[i]) {
+			ret = -EIO;
 			goto err_map;
 		}
 	}
 
-	/* read root inode */
-	sb->s_mounted = iget(sb, MINIX_ROOT_INODE);
-	if (!sb->s_mounted) {
+	/* get root inode */
+	sb->s_root_inode = iget(sb, MINIX_ROOT_INODE);
+	if (!sb->s_root_inode) {
 		ret = -EINVAL;
 		goto err_root_inode;
 	}
@@ -86,21 +110,37 @@ int minix_read_super(struct super_block_t *sb, dev_t dev)
 	return 0;
 err_root_inode:
 	printf("[Minix-fs] Can't read root inode\n");
-	goto release_map;
+	goto err_release_map;
 err_map:
 	printf("[Minix-fs] Can't read imap and zmap\n");
-release_map:
-	for (i = 0; i < msb->s_imap_blocks; i++)
-		brelse(sb->s_imap[i]);
-	for (i = 0; i < msb->s_zmap_blocks; i++)
-		brelse(sb->s_zmap[i]);
-	goto err;
+	goto err_release_map;
+err_no_map:
+	printf("[Minix-fs] Can't allocate imap and zmap\n");
+err_release_map:
+	if (sbi->s_imap) {
+		for (i = 0; i < msb->s_imap_blocks; i++)
+			brelse(sbi->s_imap[i]);
+
+		kfree(sbi->s_imap);
+	}
+
+	if (sbi->s_zmap) {
+		for (i = 0; i < msb->s_zmap_blocks; i++)
+			brelse(sbi->s_zmap[i]);
+
+		kfree(sbi->s_zmap);
+	}
+
+	goto err_release_sb;
 err_magic:
 	printf("[Minix-fs] Bad magic number\n");
+err_release_sb:
+	brelse(sbi->s_sbh);
 	goto err;
-bad_sb:
+err_bad_sb:
 	printf("[Minix-fs] Can't read super block\n");
 err:
+	kfree(sbi);
 	return ret;
 }
 

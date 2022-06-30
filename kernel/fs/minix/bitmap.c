@@ -30,13 +30,14 @@ static inline int minix_get_free_bitmap(struct buffer_head_t *bh)
  */
 uint32_t minix_new_block(struct super_block_t *sb)
 {
+	struct minix_sb_info_t *sbi = minix_sb(sb);
 	struct buffer_head_t *bh;
 	uint32_t block_nr, i;
 	int j;
 
 	/* find first free block in bitmap */
-	for (i = 0; i < sb->s_zmap_blocks; i++) {
-		j = minix_get_free_bitmap(sb->s_zmap[i]);
+	for (i = 0; i < sbi->s_zmap_blocks; i++) {
+		j = minix_get_free_bitmap(sbi->s_zmap[i]);
 		if (j != -1)
 			break;
 	}
@@ -46,8 +47,8 @@ uint32_t minix_new_block(struct super_block_t *sb)
 		return 0;
 
 	/* compute real block number */
-	block_nr = j + i * MINIX_BLOCK_SIZE * 8 + sb->s_firstdatazone - 1;
-	if (block_nr >= sb->s_nzones)
+	block_nr = j + i * MINIX_BLOCK_SIZE * 8 + sbi->s_firstdatazone - 1;
+	if (block_nr >= sbi->s_nzones)
 		return 0;
 
 	/* get a buffer */
@@ -62,8 +63,8 @@ uint32_t minix_new_block(struct super_block_t *sb)
 	brelse(bh);
 
 	/* set block in bitmap */
-	MINIX_SET_BITMAP(sb->s_zmap[i], j);
-	sb->s_zmap[i]->b_dirt = 1;
+	MINIX_SET_BITMAP(sbi->s_zmap[i], j);
+	sbi->s_zmap[i]->b_dirt = 1;
 
 	return block_nr;
 }
@@ -73,10 +74,11 @@ uint32_t minix_new_block(struct super_block_t *sb)
  */
 int minix_free_block(struct super_block_t *sb, uint32_t block)
 {
+	struct minix_sb_info_t *sbi = minix_sb(sb);
 	struct buffer_head_t *bh;
 
 	/* check block number */
-	if (block < sb->s_firstdatazone || block >= sb->s_nzones)
+	if (block < sbi->s_firstdatazone || block >= sbi->s_nzones)
 		return -EINVAL;
 
 	/* get buffer and clear it */
@@ -88,8 +90,8 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
 	brelse(bh);
 
 	/* update/clear block bitmap */
-	block -= sb->s_firstdatazone - 1;
-	bh = sb->s_zmap[block / (8 * MINIX_BLOCK_SIZE)];
+	block -= sbi->s_firstdatazone - 1;
+	bh = sbi->s_zmap[block / (8 * MINIX_BLOCK_SIZE)];
 	MINIX_CLEAR_BITMAP(bh, block & (MINIX_BLOCK_SIZE * 8 - 1));
 	bh->b_dirt = 1;
 
@@ -113,7 +115,7 @@ int minix_free_inode(struct inode_t *inode)
 	}
 
 	/* update/clear inode bitmap */
-	bh = inode->i_sb->s_imap[inode->i_ino >> 13];
+	bh = minix_sb(inode->i_sb)->s_imap[inode->i_ino >> 13];
 	MINIX_CLEAR_BITMAP(bh, inode->i_ino & (MINIX_BLOCK_SIZE * 8 - 1));
 	bh->b_dirt = 1;
 
@@ -128,6 +130,7 @@ int minix_free_inode(struct inode_t *inode)
  */
 struct inode_t *minix_new_inode(struct super_block_t *sb)
 {
+	struct minix_sb_info_t *sbi = minix_sb(sb);
 	struct inode_t *inode;
 	uint32_t i;
 	int j;
@@ -138,8 +141,8 @@ struct inode_t *minix_new_inode(struct super_block_t *sb)
 		return NULL;
 
 	/* find first free inode in bitmap */
-	for (i = 0; i < sb->s_imap_blocks; i++) {
-		j = minix_get_free_bitmap(sb->s_imap[i]);
+	for (i = 0; i < sbi->s_imap_blocks; i++) {
+		j = minix_get_free_bitmap(sbi->s_imap[i]);
 		if (j != -1)
 			break;
 	}
@@ -158,8 +161,8 @@ struct inode_t *minix_new_inode(struct super_block_t *sb)
 	inode->i_dev = sb->s_dev;
 
 	/* set inode in bitmap */
-	MINIX_SET_BITMAP(sb->s_imap[i], j);
-	sb->s_imap[i]->b_dirt = 1;
+	MINIX_SET_BITMAP(sbi->s_imap[i], j);
+	sbi->s_imap[i]->b_dirt = 1;
 
 	return inode;
 }
