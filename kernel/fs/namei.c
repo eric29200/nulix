@@ -464,7 +464,7 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
 	}
 
 	/* do not allow to move to another device */
-	if (old_dir->i_dev != new_dir->i_dev) {
+	if (old_dir->i_sb != new_dir->i_sb) {
 		iput(old_dir);
 		iput(new_dir);
 		return -EPERM;

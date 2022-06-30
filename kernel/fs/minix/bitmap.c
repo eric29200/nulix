@@ -158,7 +158,6 @@ struct inode_t *minix_new_inode(struct super_block_t *sb)
 	inode->i_ino = i * MINIX_BLOCK_SIZE * 8 + j;
 	inode->i_ref = 1;
 	inode->i_sb = sb;
-	inode->i_dev = sb->s_dev;
 
 	/* set inode in bitmap */
 	MINIX_SET_BITMAP(sbi->s_imap[i], j);

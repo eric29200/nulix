@@ -68,7 +68,6 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 		return NULL;
 
 	/* read inode */
-	inode->i_dev = sb->s_dev;
 	inode->i_ino = ino;
 	inode->i_sb = sb;
 	sb->s_op->read_inode(inode);

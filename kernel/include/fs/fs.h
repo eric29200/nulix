@@ -54,22 +54,21 @@ struct super_block_t {
  */
 struct inode_t {
 	uint16_t			i_mode;
+	uint8_t				i_nlinks;
 	uid_t				i_uid;
+	gid_t				i_gid;
 	uint32_t			i_size;
 	uint32_t			i_time;
-	gid_t				i_gid;
-	uint8_t				i_nlinks;
-	uint32_t			i_zone[10];
 	ino_t				i_ino;
+	struct super_block_t *		i_sb;
 	int				i_ref;
 	char				i_dirt;
+	struct inode_operations_t *	i_op;
+	uint32_t			i_zone[10];
 	char				i_pipe;
 	char				i_rwait;
 	char				i_wwait;
-	struct super_block_t *		i_sb;
-	dev_t				i_dev;
 	struct inode_t *		i_mount;
-	struct inode_operations_t *	i_op;
 };
 
 /*
