@@ -59,8 +59,8 @@ int ata_write(dev_t dev, struct buffer_head_t *bh)
 		return -EINVAL;
 
 	/* compute nb sectors */
-	nb_sectors = BLOCK_SIZE / ATA_SECTOR_SIZE;
-	sector = bh->b_blocknr * BLOCK_SIZE / ATA_SECTOR_SIZE;
+	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
+	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
 	/* set command */
 	if (device->drive == ATA_MASTER)
@@ -117,8 +117,8 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
 		return -EINVAL;
 
 	/* compute nb sectors */
-	nb_sectors = BLOCK_SIZE / ATA_SECTOR_SIZE;
-	sector = bh->b_blocknr * BLOCK_SIZE / ATA_SECTOR_SIZE;
+	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
+	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
 	/* set command */
 	if (device->drive == ATA_MASTER)

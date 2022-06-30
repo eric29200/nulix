@@ -8,33 +8,33 @@
 #include <time.h>
 #include <dev.h>
 
-#define NR_INODE		256
-#define NR_FILE			256
-#define BUFFER_HTABLE_BITS	12
-#define NR_BUFFER		(1 << BUFFER_HTABLE_BITS)
+#define NR_INODE			256
+#define NR_FILE				256
+#define BUFFER_HTABLE_BITS		12
+#define NR_BUFFER			(1 << BUFFER_HTABLE_BITS)
 
-#define BLOCK_SIZE		1024
-#define BSYNC_TIMER_MS		10000
+#define BSYNC_TIMER_MS			10000
 
-#define IMAP_SLOTS		8
-#define ZMAP_SLOTS		64
+#define IMAP_SLOTS			8
+#define ZMAP_SLOTS			64
 
-#define PIPE_WPOS(inode)	((inode)->i_zone[0])
-#define PIPE_RPOS(inode)	((inode)->i_zone[1])
-#define PIPE_SIZE(inode)	((PIPE_WPOS(inode) - PIPE_RPOS(inode)) & (PAGE_SIZE - 1))
-#define PIPE_EMPTY(inode)	(PIPE_WPOS(inode) == PIPE_RPOS(inode))
-#define PIPE_FULL(inode)	(PIPE_SIZE(inode) == (PAGE_SIZE - 1))
+#define PIPE_WPOS(inode)		((inode)->i_zone[0])
+#define PIPE_RPOS(inode)		((inode)->i_zone[1])
+#define PIPE_SIZE(inode)		((PIPE_WPOS(inode) - PIPE_RPOS(inode)) & (PAGE_SIZE - 1))
+#define PIPE_EMPTY(inode)		(PIPE_WPOS(inode) == PIPE_RPOS(inode))
+#define PIPE_FULL(inode)		(PIPE_SIZE(inode) == (PAGE_SIZE - 1))
 
 /*
  * Buffer structure.
  */
 struct buffer_head_t {
-	dev_t				b_dev;
-	char				b_data[BLOCK_SIZE];
+	uint32_t			b_block;
+	char				*b_data;
+	size_t				b_size;
 	int				b_ref;
 	char				b_dirt;
 	char				b_uptodate;
-	uint32_t			b_blocknr;
+	struct super_block_t		*b_sb;
 	struct list_head_t		b_list;
 	struct htable_link_t		b_htable;
 };
@@ -43,6 +43,8 @@ struct buffer_head_t {
  * Generic super block.
  */
 struct super_block_t {
+	uint16_t			s_blocksize;
+	uint8_t				s_blocksize_bits;
 	uint32_t			s_ninodes;
 	uint32_t			s_nzones;
 	uint32_t			s_imap_blocks;
@@ -161,11 +163,11 @@ struct file_operations_t {
 int mount_root(dev_t dev);
 
 /* buffer operations */
-struct buffer_head_t *bread(dev_t dev, uint32_t block);
+struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block);
 void brelse(struct buffer_head_t *bh);
 void bsync();
 int binit();
-struct buffer_head_t *getblk(dev_t dev, uint32_t block);
+struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block);
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);

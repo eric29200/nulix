@@ -58,8 +58,8 @@ ssize_t minix_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 	}
 
 	/* limit buffer size to block size */
-	if (bufsize > BLOCK_SIZE - 1)
-		bufsize = BLOCK_SIZE - 1;
+	if (bufsize > MINIX_BLOCK_SIZE - 1)
+		bufsize = MINIX_BLOCK_SIZE - 1;
 
 	/* check 1st block */
 	if (!inode->i_zone[0]) {

@@ -65,7 +65,7 @@ int minix_read_inode(struct inode_t *inode)
 
 	/* read minix inode block */
 	block = 2 + inode->i_sb->s_imap_blocks + inode->i_sb->s_zmap_blocks + (inode->i_ino - 1) / MINIX_INODES_PER_BLOCK;
-	bh = bread(inode->i_sb->s_dev, block);
+	bh = bread(inode->i_sb, block);
 	if (!bh) {
 		iput(inode);
 		return -EIO;
@@ -112,7 +112,7 @@ int minix_write_inode(struct inode_t *inode)
 
 	/* read minix inode block */
 	block = 2 + inode->i_sb->s_imap_blocks + inode->i_sb->s_zmap_blocks + (inode->i_ino - 1) / MINIX_INODES_PER_BLOCK;
-	bh = bread(inode->i_sb->s_dev, block);
+	bh = bread(inode->i_sb, block);
 	if (!bh)
 		return -EIO;
 
@@ -172,7 +172,7 @@ static struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int cre
 		return NULL;
 
 	/* read block from device */
-	return bread(inode->i_dev, inode->i_zone[nr]);
+	return bread(inode->i_sb, inode->i_zone[nr]);
 }
 
 /*
@@ -201,7 +201,7 @@ static struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_h
 		return NULL;
 
 	/* read block from device */
-	return bread(inode->i_dev, i);
+	return bread(inode->i_sb, i);
 }
 
 /*
@@ -212,7 +212,7 @@ struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create)
 	struct buffer_head_t *bh;
 
 	/* check block number */
-	if (block < 0 || (uint32_t) block >= inode->i_sb->s_max_size / BLOCK_SIZE)
+	if (block < 0 || (uint32_t) block >= inode->i_sb->s_max_size / MINIX_BLOCK_SIZE)
 		return NULL;
 
 	/* direct block */

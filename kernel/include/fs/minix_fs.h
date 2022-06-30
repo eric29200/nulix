@@ -6,8 +6,10 @@
 #define MINIX_SUPER_MAGIC		0x2478
 #define MINIX_ROOT_INODE		1
 #define MINIX_FILENAME_LEN		30
-#define MINIX_INODES_PER_BLOCK		((BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
-#define MINIX_DIR_ENTRIES_PER_BLOCK	((BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
+#define MINIX_BLOCK_SIZE_BITS		10
+#define MINIX_BLOCK_SIZE		(1 << MINIX_BLOCK_SIZE_BITS)
+#define MINIX_INODES_PER_BLOCK		((MINIX_BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
+#define MINIX_DIR_ENTRIES_PER_BLOCK	((MINIX_BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
 
 /*
  * Minix super block.

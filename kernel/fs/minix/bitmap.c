@@ -16,7 +16,7 @@ static inline int minix_get_free_bitmap(struct buffer_head_t *bh)
 	uint32_t *bits = (uint32_t *) bh->b_data;
 	register int i, j;
 
-	for (i = 0; i < BLOCK_SIZE / 4; i++)
+	for (i = 0; i < MINIX_BLOCK_SIZE / 4; i++)
 		if (bits[i] != 0xFFFFFFFF)
 			for (j = 0; j < 32; j++)
 				if (!(bits[i] & (0x1 << j)))
@@ -46,17 +46,17 @@ uint32_t minix_new_block(struct super_block_t *sb)
 		return 0;
 
 	/* compute real block number */
-	block_nr = j + i * BLOCK_SIZE * 8 + sb->s_firstdatazone - 1;
+	block_nr = j + i * MINIX_BLOCK_SIZE * 8 + sb->s_firstdatazone - 1;
 	if (block_nr >= sb->s_nzones)
 		return 0;
 
 	/* get a buffer */
-	bh = getblk(sb->s_dev, block_nr);
+	bh = getblk(sb, block_nr);
 	if (!bh)
 		return 0;
 
 	/* memzero buffer and release it */
-	memset(bh->b_data, 0, BLOCK_SIZE);
+	memset(bh->b_data, 0, MINIX_BLOCK_SIZE);
 	bh->b_dirt = 1;
 	bh->b_uptodate = 1;
 	brelse(bh);
@@ -80,17 +80,17 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
 		return -EINVAL;
 
 	/* get buffer and clear it */
-	bh = bread(sb->s_dev, block);
+	bh = bread(sb, block);
 	if (bh) {
 		bh->b_dirt = 1;
-		memset(bh->b_data, 0, BLOCK_SIZE);
+		memset(bh->b_data, 0, MINIX_BLOCK_SIZE);
 	}
 	brelse(bh);
 
 	/* update/clear block bitmap */
 	block -= sb->s_firstdatazone - 1;
-	bh = sb->s_zmap[block / (8 * BLOCK_SIZE)];
-	MINIX_CLEAR_BITMAP(bh, block & (BLOCK_SIZE * 8 - 1));
+	bh = sb->s_zmap[block / (8 * MINIX_BLOCK_SIZE)];
+	MINIX_CLEAR_BITMAP(bh, block & (MINIX_BLOCK_SIZE * 8 - 1));
 	bh->b_dirt = 1;
 
 	return 0;
@@ -114,7 +114,7 @@ int minix_free_inode(struct inode_t *inode)
 
 	/* update/clear inode bitmap */
 	bh = inode->i_sb->s_imap[inode->i_ino >> 13];
-	MINIX_CLEAR_BITMAP(bh, inode->i_ino & (BLOCK_SIZE * 8 - 1));
+	MINIX_CLEAR_BITMAP(bh, inode->i_ino & (MINIX_BLOCK_SIZE * 8 - 1));
 	bh->b_dirt = 1;
 
 	/* free inode */
@@ -152,7 +152,7 @@ struct inode_t *minix_new_inode(struct super_block_t *sb)
 	memset(inode, 0, sizeof(struct inode_t));
 	inode->i_time = CURRENT_TIME;
 	inode->i_nlinks = 1;
-	inode->i_ino = i * BLOCK_SIZE * 8 + j;
+	inode->i_ino = i * MINIX_BLOCK_SIZE * 8 + j;
 	inode->i_ref = 1;
 	inode->i_sb = sb;
 	inode->i_dev = sb->s_dev;

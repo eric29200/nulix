@@ -21,8 +21,13 @@ int minix_read_super(struct super_block_t *sb, dev_t dev)
 	uint32_t block;
 	int i, ret;
 
+	/* set default block size */
+	sb->s_dev = dev;
+	sb->s_blocksize = MINIX_BLOCK_SIZE;
+	sb->s_blocksize_bits = MINIX_BLOCK_SIZE_BITS;
+
 	/* read super block */
-	bh = bread(dev, 1);
+	bh = bread(sb, 1);
 	if (!bh)
 		goto bad_sb;
 
@@ -44,7 +49,6 @@ int minix_read_super(struct super_block_t *sb, dev_t dev)
 	sb->s_log_zone_size = msb->s_log_zone_size;
 	sb->s_max_size = msb->s_max_size;
 	sb->s_magic = msb->s_magic;
-	sb->s_dev = dev;
 	sb->s_op = &minix_sops;
 
 	/* reset maps */
@@ -56,7 +60,7 @@ int minix_read_super(struct super_block_t *sb, dev_t dev)
 	/* read imap blocks */
 	block = 2;
 	for (i = 0; i < msb->s_imap_blocks; i++, block++) {
-		sb->s_imap[i] = bread(dev, block);
+		sb->s_imap[i] = bread(sb, block);
 		if (!sb->s_imap[i]) {
 			ret = -ENOMEM;
 			goto err_map;
@@ -65,7 +69,7 @@ int minix_read_super(struct super_block_t *sb, dev_t dev)
 
 	/* read zmap blocks */
 	for (i = 0; i < msb->s_zmap_blocks; i++, block++) {
-		sb->s_zmap[i] = bread(dev, block);
+		sb->s_zmap[i] = bread(sb, block);
 		if (!sb->s_zmap[i]) {
 			ret = -ENOMEM;
 			goto err_map;

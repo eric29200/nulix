@@ -76,7 +76,7 @@ static struct buffer_head_t *minix_add_entry(struct inode_t *dir, const char *na
 	de = (struct minix_dir_entry_t *) bh->b_data;
 	while (1) {
 		/* read next block */
-		if ((char *) de >= bh->b_data + BLOCK_SIZE) {
+		if ((char *) de >= bh->b_data + MINIX_BLOCK_SIZE) {
 			/* release previous block */
 			brelse(bh);
 
@@ -143,7 +143,7 @@ static int minix_empty_dir(struct inode_t *inode)
 	/* go through each entry */
 	while (i < len) {
 		/* read next block */
-		if ((void *) de >= (void *) (bh->b_data + BLOCK_SIZE)) {
+		if ((void *) de >= (void *) (bh->b_data + MINIX_BLOCK_SIZE)) {
 			/* release previous block buffer */
 			brelse(bh);
 
@@ -390,7 +390,7 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
 	}
 
 	/* write file name on first block */
-	for (i = 0; target[i] && i < BLOCK_SIZE - 1; i++)
+	for (i = 0; target[i] && i < MINIX_BLOCK_SIZE - 1; i++)
 		bh->b_data[i] = target[i];
 	bh->b_data[i] = 0;
 	bh->b_dirt = 1;

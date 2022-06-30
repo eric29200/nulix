@@ -56,7 +56,7 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
 
 	/* set stat buf */
 	statbuf->stx_mask |= STATX_BASIC_STATS;
-	statbuf->stx_blksize = BLOCK_SIZE;
+	statbuf->stx_blksize = inode->i_sb->s_blocksize;
 	statbuf->stx_nlink = inode->i_nlinks;
 	statbuf->stx_uid = inode->i_uid;
 	statbuf->stx_gid = inode->i_gid;

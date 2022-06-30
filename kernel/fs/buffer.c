@@ -27,7 +27,7 @@ static int bwrite(struct buffer_head_t *bh)
 		return -EINVAL;
 
 	/* write to block device */
-	ret = ata_write(bh->b_dev, bh);
+	ret = ata_write(bh->b_sb->s_dev, bh);
 	if (ret)
 		return ret;
 
@@ -38,7 +38,7 @@ static int bwrite(struct buffer_head_t *bh)
 /*
  * Get an empty buffer.
  */
-static struct buffer_head_t *get_empty_buffer()
+static struct buffer_head_t *get_empty_buffer(struct super_block_t *sb)
 {
 	struct buffer_head_t *bh;
 	struct list_head_t *pos;
@@ -56,11 +56,27 @@ static struct buffer_head_t *get_empty_buffer()
 found:
 	/* write it on disk if needed */
 	if (bh->b_dirt && bwrite(bh))
-		printf("Can't write block %d on disk\n", bh->b_blocknr);
+		printf("Can't write block %d on disk\n", bh->b_block);
+
+	/* free data if found block is too small */
+	if (bh->b_size && bh->b_size < sb->s_blocksize) {
+		kfree(bh->b_data);
+		bh->b_size = 0;
+	}
+
+	/* allocate data if needed */
+	if (!bh->b_size) {
+		bh->b_data = (char *) kmalloc(sb->s_blocksize);
+		if (!bh->b_data)
+			return NULL;
+
+		bh->b_size = sb->s_blocksize;
+	}
 
 	/* reset buffer */
-	memset(bh->b_data, 0, BLOCK_SIZE);
 	bh->b_ref = 1;
+	bh->b_sb = sb;
+	memset(bh->b_data, 0, bh->b_size);
 
 	return bh;
 }
@@ -68,7 +84,7 @@ found:
 /*
  * Get a buffer (from cache or create one).
  */
-struct buffer_head_t *getblk(dev_t dev, uint32_t block)
+struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block)
 {
 	struct htable_link_t *node;
 	struct buffer_head_t *bh;
@@ -77,7 +93,7 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block)
 	node = htable_lookup(buffer_htable, block, BUFFER_HTABLE_BITS);
 	while (node) {
 		bh = htable_entry(node, struct buffer_head_t, b_htable);
-		if (bh->b_blocknr == block) {
+		if (bh->b_block == block && bh->b_sb == sb && bh->b_size == sb->s_blocksize) {
 			bh->b_ref++;
 			goto out;
 		}
@@ -86,13 +102,13 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block)
 	}
 
 	/* get an empty buffer */
-	bh = get_empty_buffer();
+	bh = get_empty_buffer(sb);
 	if (!bh)
 		return NULL;
 
 	/* set buffer */
-	bh->b_dev = dev;
-	bh->b_blocknr = block;
+	bh->b_sb = sb;
+	bh->b_block = block;
 	bh->b_uptodate = 0;
 
 	/* hash the new buffer */
@@ -108,17 +124,17 @@ out:
 /*
  * Read a block from a device.
  */
-struct buffer_head_t *bread(dev_t dev, uint32_t block)
+struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block)
 {
 	struct buffer_head_t *bh;
 
 	/* get buffer */
-	bh = getblk(dev, block);
+	bh = getblk(sb, block);
 	if (!bh)
 		return NULL;
 
 	/* read it from device */
-	if (!bh->b_uptodate && ata_read(dev, bh) != 0) {
+	if (!bh->b_uptodate && ata_read(sb->s_dev, bh) != 0) {
 		brelse(bh);
 		return NULL;
 	}
@@ -149,7 +165,7 @@ void bsync()
 	/* write all dirty buffers */
 	for (i = 0; i < NR_BUFFER; i++) {
 		if (buffer_table[i].b_dirt && bwrite(&buffer_table[i])) {
-			printf("Can't write block %d on disk\n", buffer_table[i].b_blocknr);
+			printf("Can't write block %d on disk\n", buffer_table[i].b_block);
 			panic("Disk error");
 		}
 	}
