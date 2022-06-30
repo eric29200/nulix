@@ -41,7 +41,6 @@ int do_stat(int dirfd, const char *filename, struct stat_t *statbuf)
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
 {
 	struct inode_t *inode;
-	dev_t dev;
 
 	/* unused mask */
 	UNUSED(mask);
@@ -71,9 +70,8 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
 
 	/* set minor/major */
 	if (S_ISCHR(inode->i_mode)) {
-		dev = inode->i_zone[0];
-		statbuf->stx_rdev_major = major(dev);
-		statbuf->stx_rdev_minor = minor(dev);
+		statbuf->stx_rdev_major = major(inode->i_cdev);
+		statbuf->stx_rdev_minor = minor(inode->i_cdev);
 	}
 
 	/* release inode */

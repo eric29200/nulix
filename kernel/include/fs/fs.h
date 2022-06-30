@@ -65,6 +65,7 @@ struct inode_t {
 	char				i_dirt;
 	struct inode_operations_t *	i_op;
 	uint32_t			i_zone[10];
+	dev_t				i_cdev;
 	char				i_pipe;
 	char				i_rwait;
 	char				i_wwait;

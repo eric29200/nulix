@@ -66,11 +66,9 @@ static int pty_read(struct file_t *filp, char *buf, int n)
 	struct tty_t *pty;
 	int count = 0;
 	uint8_t key;
-	dev_t dev;
 
 	/* get pty */
-	dev = filp->f_inode->i_zone[0];
-	pty = pty_lookup(dev);
+	pty = pty_lookup(filp->f_inode->i_cdev);
 	if (!pty)
 		return -EINVAL;
 
@@ -96,11 +94,9 @@ static int pty_read(struct file_t *filp, char *buf, int n)
 static int pty_write(struct file_t *filp, const char *buf, int n)
 {
 	struct tty_t *pty;
-	dev_t dev;
 
 	/* get pty */
-	dev = filp->f_inode->i_zone[0];
-	pty = pty_lookup(dev);
+	pty = pty_lookup(filp->f_inode->i_cdev);
 	if (!pty)
 		return -EINVAL;
 
@@ -115,11 +111,9 @@ static int pty_poll(struct file_t *filp)
 {
 	struct tty_t *pty;
 	int mask = 0;
-	dev_t dev;
 
 	/* get pty */
-	dev = filp->f_inode->i_zone[0];
-	pty = pty_lookup(dev);
+	pty = pty_lookup(filp->f_inode->i_cdev);
 	if (!pty)
 		return -EINVAL;
 
@@ -139,11 +133,9 @@ static int pty_poll(struct file_t *filp)
 int pty_ioctl(struct file_t *filp, int request, unsigned long arg)
 {
 	struct tty_t *pty;
-	dev_t dev;
 
 	/* get tty */
-	dev = filp->f_inode->i_zone[0];
-	pty = pty_lookup(dev);
+	pty = pty_lookup(filp->f_inode->i_cdev);
 	if (!pty)
 		return -EINVAL;
 
@@ -170,7 +162,7 @@ int pty_ioctl(struct file_t *filp, int request, unsigned long arg)
 			pty->pgrp = *((pid_t *) arg);
 			break;
 		default:
-			printf("Unknown ioctl request (%x) on device %x\n", request, dev);
+			printf("Unknown ioctl request (%x) on device %x\n", request, filp->f_inode->i_cdev);
 			break;
 	}
 

@@ -87,12 +87,14 @@ int minix_read_inode(struct inode_t *inode)
 	for (j = 0; j < 10; j++)
 		inode->i_zone[j] = minix_inode[i].i_zone[j];
 
-	if (S_ISDIR(inode->i_mode))
+	if (S_ISDIR(inode->i_mode)) {
 		inode->i_op = &minix_dir_iops;
-	else if (S_ISCHR(inode->i_mode))
+	} else if (S_ISCHR(inode->i_mode)) {
+		inode->i_cdev = inode->i_zone[0];
 		inode->i_op = char_get_driver(inode);
-	else
+	} else {
 		inode->i_op = &minix_file_iops;
+	}
 
 	/* free minix inode */
 	brelse(bh);
