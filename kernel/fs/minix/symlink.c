@@ -1,3 +1,4 @@
+#include <fs/fs.h>
 #include <fs/minix_fs.h>
 #include <fcntl.h>
 #include <stderr.h>
@@ -62,7 +63,7 @@ ssize_t minix_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 		bufsize = MINIX_BLOCK_SIZE - 1;
 
 	/* check 1st block */
-	if (!inode->i_zone[0]) {
+	if (!inode->u.minix_i.i_zone[0]) {
 		iput(inode);
 		return 0;
 	}

@@ -1,3 +1,4 @@
+#include <fs/fs.h>
 #include <fs/minix_fs.h>
 #include <mm/mm.h>
 #include <stderr.h>

@@ -18,14 +18,14 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 		/* no data available */
 		while (!(size = PIPE_SIZE(inode))) {
 			/* wake up writer */
-			task_wakeup(&inode->i_wwait);
+			task_wakeup(&inode->u.pipe_i.i_wwait);
 
 			/* no writer : return */
 			if (inode->i_ref != 2)
 				return read;
 
 			/* wait for some data */
-			task_sleep(&inode->i_rwait);
+			task_sleep(&inode->u.pipe_i.i_rwait);
 		}
 
 		/* compute number of characters to read */
@@ -50,7 +50,7 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 	}
 
 	/* wake up writer */
-	task_wakeup(&inode->i_wwait);
+	task_wakeup(&inode->u.pipe_i.i_wwait);
 	return read;
 }
 
@@ -66,14 +66,14 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 		/* no free space */
 		while (!(size = (PAGE_SIZE - 1) - PIPE_SIZE(inode))) {
 			/* wake up reader */
-			task_wakeup(&inode->i_rwait);
+			task_wakeup(&inode->u.pipe_i.i_rwait);
 
 			/* no reader : return */
 			if (inode->i_ref != 2)
 				return written ? written : -ENOSPC;
 
 			/* wait for free space */
-			task_sleep(&inode->i_wwait);
+			task_sleep(&inode->u.pipe_i.i_wwait);
 		}
 
 		/* compute number of characters to write */
@@ -98,7 +98,7 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 	}
 
 	/* wake up reader */
-	task_wakeup(&inode->i_rwait);
+	task_wakeup(&inode->u.pipe_i.i_rwait);
 	return written;
 }
 

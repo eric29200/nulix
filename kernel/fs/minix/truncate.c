@@ -1,3 +1,4 @@
+#include <fs/fs.h>
 #include <fs/minix_fs.h>
 #include <fcntl.h>
 
@@ -14,9 +15,9 @@ static void minix_free_direct_block(struct inode_t *inode)
 	int i;
 
 	for (i = DIRECT_BLOCK(inode); i < 7; i++) {
-		if (inode->i_zone[i]) {
-			minix_free_block(inode->i_sb, inode->i_zone[i]);
-			inode->i_zone[i] = 0;
+		if (inode->u.minix_i.i_zone[i]) {
+			minix_free_block(inode->i_sb, inode->u.minix_i.i_zone[i]);
+			inode->u.minix_i.i_zone[i] = 0;
 		}
 	}
 }
@@ -148,13 +149,13 @@ void minix_truncate(struct inode_t *inode)
 	minix_free_direct_block(inode);
 
 	/* free indirect blocks */
-	minix_free_indirect_blocks(inode, 7, &inode->i_zone[7]);
+	minix_free_indirect_blocks(inode, 7, &inode->u.minix_i.i_zone[7]);
 
 	/* free double indirect blocks */
-	minix_free_dindirect_blocks(inode, 7 + 256, &inode->i_zone[8]);
+	minix_free_dindirect_blocks(inode, 7 + 256, &inode->u.minix_i.i_zone[8]);
 
 	/* free triple indirect blocks */
-	minix_free_tindirect_blocks(inode, 7 + 256 + 256 * 256, &inode->i_zone[9]);
+	minix_free_tindirect_blocks(inode, 7 + 256 + 256 * 256, &inode->u.minix_i.i_zone[9]);
 
 	/* mark inode dirty */
 	inode->i_dirt = 1;

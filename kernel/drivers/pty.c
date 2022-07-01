@@ -3,6 +3,7 @@
 #include <drivers/termios.h>
 #include <proc/sched.h>
 #include <fs/fs.h>
+#include <dev.h>
 #include <stdio.h>
 #include <stderr.h>
 

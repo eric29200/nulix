@@ -1,12 +1,13 @@
 #ifndef _FS_H_
 #define _FS_H_
 
+#include <lib/list.h>
+#include <lib/htable.h>
 #include <fs/stat.h>
 #include <fs/poll.h>
-#include <lib/htable.h>
-#include <lib/list.h>
+#include <fs/minix_i.h>
+#include <fs/pipe_i.h>
 #include <time.h>
-#include <dev.h>
 
 #define NR_INODE			256
 #define NR_FILE				256
@@ -14,12 +15,6 @@
 #define NR_BUFFER			(1 << BUFFER_HTABLE_BITS)
 
 #define BSYNC_TIMER_MS			10000
-
-#define PIPE_WPOS(inode)		((inode)->i_zone[0])
-#define PIPE_RPOS(inode)		((inode)->i_zone[1])
-#define PIPE_SIZE(inode)		((PIPE_WPOS(inode) - PIPE_RPOS(inode)) & (PAGE_SIZE - 1))
-#define PIPE_EMPTY(inode)		(PIPE_WPOS(inode) == PIPE_RPOS(inode))
-#define PIPE_FULL(inode)		(PIPE_SIZE(inode) == (PAGE_SIZE - 1))
 
 /*
  * Buffer structure.
@@ -64,12 +59,13 @@ struct inode_t {
 	int				i_ref;
 	char				i_dirt;
 	struct inode_operations_t *	i_op;
-	uint32_t			i_zone[10];
 	dev_t				i_cdev;
 	char				i_pipe;
-	char				i_rwait;
-	char				i_wwait;
 	struct inode_t *		i_mount;
+	union {
+		struct minix_inode_info_t	minix_i;
+		struct pipe_inode_info_t	pipe_i;
+	} u;
 };
 
 /*

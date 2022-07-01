@@ -89,8 +89,8 @@ void iput(struct inode_t *inode)
 	/* special case : pipe inode */
 	if (inode->i_pipe) {
 		/* wakeup eventual readers/writers */
-		task_wakeup(&inode->i_rwait);
-		task_wakeup(&inode->i_wwait);
+		task_wakeup(&inode->u.pipe_i.i_rwait);
+		task_wakeup(&inode->u.pipe_i.i_wwait);
 
 		/* no references : free inode */
 		if (!inode->i_ref) {

@@ -5,6 +5,7 @@
 #include <drivers/pty.h>
 #include <drivers/framebuffer.h>
 #include <drivers/mouse.h>
+#include <dev.h>
 #include <fcntl.h>
 
 /*

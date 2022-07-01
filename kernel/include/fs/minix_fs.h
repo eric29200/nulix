@@ -1,7 +1,7 @@
 #ifndef _MINIX_FS_H_
 #define _MINIX_FS_H_
 
-#include <fs/fs.h>
+#include <stddef.h>
 
 #define MINIX_SUPER_MAGIC		0x2478
 #define MINIX_ROOT_INODE		1

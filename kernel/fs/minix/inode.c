@@ -1,3 +1,4 @@
+#include <fs/fs.h>
 #include <fs/minix_fs.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
@@ -85,12 +86,12 @@ int minix_read_inode(struct inode_t *inode)
 	inode->i_gid = minix_inode[i].i_gid;
 	inode->i_nlinks = minix_inode[i].i_nlinks;
 	for (j = 0; j < 10; j++)
-		inode->i_zone[j] = minix_inode[i].i_zone[j];
+		inode->u.minix_i.i_zone[j] = minix_inode[i].i_zone[j];
 
 	if (S_ISDIR(inode->i_mode)) {
 		inode->i_op = &minix_dir_iops;
 	} else if (S_ISCHR(inode->i_mode)) {
-		inode->i_cdev = inode->i_zone[0];
+		inode->i_cdev = inode->u.minix_i.i_zone[0];
 		inode->i_op = char_get_driver(inode);
 	} else {
 		inode->i_op = &minix_file_iops;
@@ -136,7 +137,7 @@ int minix_write_inode(struct inode_t *inode)
 	minix_inode[i].i_gid = inode->i_gid;
 	minix_inode[i].i_nlinks = inode->i_nlinks;
 	for (j = 0; j < 10; j++)
-		minix_inode[i].i_zone[j] = inode->i_zone[j];
+		minix_inode[i].i_zone[j] = inode->u.minix_i.i_zone[j];
 
 	/* write inode block */
 	bh->b_dirt = 1;
@@ -170,15 +171,15 @@ int minix_put_inode(struct inode_t *inode)
 static struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int create)
 {
 	/* create block if needed */
-	if (create && !inode->i_zone[nr])
-		if ((inode->i_zone[nr] = minix_new_block(inode->i_sb)))
+	if (create && !inode->u.minix_i.i_zone[nr])
+		if ((inode->u.minix_i.i_zone[nr] = minix_new_block(inode->i_sb)))
 			inode->i_dirt = 1;
 
-	if (!inode->i_zone[nr])
+	if (!inode->u.minix_i.i_zone[nr])
 		return NULL;
 
 	/* read block from device */
-	return bread(inode->i_sb, inode->i_zone[nr]);
+	return bread(inode->i_sb, inode->u.minix_i.i_zone[nr]);
 }
 
 /*

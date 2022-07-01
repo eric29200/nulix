@@ -1,3 +1,4 @@
+#include <fs/fs.h>
 #include <fs/minix_fs.h>
 #include <proc/sched.h>
 #include <drivers/tty.h>
@@ -127,7 +128,7 @@ static int minix_empty_dir(struct inode_t *inode)
 
 	/* get directory length */
 	len = inode->i_size / sizeof(struct minix_dir_entry_t);
-	if (len < 2 || !inode->i_zone[0])
+	if (len < 2 || !inode->u.minix_i.i_zone[0])
 		return 0;
 
 	/* get first zone */
@@ -372,8 +373,8 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
 	inode->i_dirt = 1;
 
 	/* create first block */
-	inode->i_zone[0] = minix_new_block(inode->i_sb);
-	if (!inode->i_zone[0]) {
+	inode->u.minix_i.i_zone[0] = minix_new_block(inode->i_sb);
+	if (!inode->u.minix_i.i_zone[0]) {
 		iput(dir);
 		inode->i_nlinks--;
 		iput(inode);
