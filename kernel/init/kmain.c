@@ -94,7 +94,7 @@ static void kinit()
 {
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
-	if (mount_root(DEV_ATA0) != 0)
+	if (mount_root(mkdev(DEV_ATA, 0)) != 0)
 		panic("Cannot mount root file system");
 
 	/* mount proc file system */

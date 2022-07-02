@@ -1,15 +1,20 @@
 #!/bin/csh
 
-set DISK		= hdd.img
+set DISK1		= hda.img
+set DISK2		= hdb.img
 set DISK_SIZE		= 512M
 
-# create disk
-dd if=/dev/zero of=$DISK bs=1 count=1 seek=$DISK_SIZE
-mkfs.minix -2 $DISK
+# create first disk
+dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE
+mkfs.minix -2 $DISK1
+
+# create second disk
+dd if=/dev/zero of=$DISK2 bs=1 count=1 seek=$DISK_SIZE
+mkfs.minix -2 $DISK2
 
 # mount disk
 mkdir tmp >& /dev/null
-sudo mount $DISK tmp
+sudo mount $DISK1 tmp
 
 # create root folders
 sudo mkdir -p tmp/bin
@@ -19,6 +24,7 @@ sudo mkdir -p tmp/usr/sbin
 sudo mkdir -p tmp/dev
 sudo mkdir -p tmp/dev/pts
 sudo mkdir -p tmp/proc
+sudo mkdir -p tmp/mnt
 
 # copy root folders
 sudo cp -Rv root/etc tmp/
@@ -47,6 +53,8 @@ sudo mknod tmp/dev/pts/2 c 136 2
 sudo mknod tmp/dev/pts/3 c 136 3
 sudo mknod tmp/dev/pts/4 c 136 4
 sudo mknod tmp/dev/mouse c 13 0
+sudo mknod tmp/dev/hda b 3 0
+sudo mknod tmp/dev/hdb b 3 1
 
 # chown root
 sudo chown -R 0.0 tmp/
