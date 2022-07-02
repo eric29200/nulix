@@ -110,6 +110,7 @@ static const void *syscalls[] = {
 	[__NR_sync]			= sys_sync,
 	[__NR_chroot]			= sys_chroot,
 	[__NR_reboot]			= sys_reboot,
+	[__NR_mount]			= sys_mount,
 };
 
 /*

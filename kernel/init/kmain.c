@@ -100,7 +100,7 @@ static void kinit()
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
-	if (do_mount(MINIX_SUPER_MAGIC, mkdev(DEV_ATA, 0), "/") != 0)
+	if (do_mount(MINIX_SUPER_MAGIC, mkdev(DEV_ATA_MAJOR, 0), "/") != 0)
 		panic("Cannot mount root file system");
 
 	/* mount proc file system */

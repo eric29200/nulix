@@ -10,7 +10,7 @@
 #define DEV_NULL		0x103		/* /dev/null device */
 #define DEV_ZERO		0x105		/* /dev/zero device */
 
-#define DEV_ATA			0x300		/* ata major number */
+#define DEV_ATA_MAJOR		3		/* ata major number */
 #define DEV_PTY_MAJOR		136		/* pseudo terminal major number */
 #define DEV_MOUSE_MAJOR		13		/* mouse major nubmer */
 

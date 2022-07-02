@@ -18,7 +18,7 @@ static struct ata_device_t ata_devices[MAX_ATA_DEVICE];
  */
 static struct ata_device_t *ata_get_device(dev_t dev)
 {
-	if (major(dev) != DEV_ATA || minor(dev) >= MAX_ATA_DEVICE)
+	if (major(dev) != DEV_ATA_MAJOR || minor(dev) >= MAX_ATA_DEVICE)
 		return NULL;
 
 	return &ata_devices[minor(dev)];

@@ -30,6 +30,7 @@
 #define __NR_chmod			15
 #define __NR_lseek			19
 #define __NR_getpid			20
+#define __NR_mount			21
 #define __NR_setuid			23
 #define __NR_getuid			24
 #define __NR_access			33
@@ -219,5 +220,6 @@ int sys_utimensat(int dirfd, const char *pathname, const struct timespec_t times
 int sys_sync();
 int sys_chroot(const char *path);
 int sys_reboot();
+int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data);
 
 #endif
