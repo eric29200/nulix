@@ -6,6 +6,9 @@
 *.bin
 *.iso
 */*.bin
+hda.img
+hdb.img
+hdc.img
 hdd.img
 musl/*
 dash/*
