@@ -15,13 +15,15 @@
 #include <drivers/framebuffer.h>
 #include <drivers/rtl8139.h>
 #include <proc/sched.h>
+#include <sys/syscall.h>
 #include <fs/minix_fs.h>
 #include <fs/proc_fs.h>
-#include <sys/syscall.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
 #include <dev.h>
+
+#define ROOT_DEV	(mkdev(DEV_ATA_MAJOR, 0))
 
 extern uint32_t loader;
 extern uint32_t kernel_stack;
@@ -93,6 +95,12 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
  */
 static void kinit()
 {
+	/* register filesystems */
+	if (init_minix_fs() != 0)
+		panic("Cannot register minix file system");
+	if (init_proc_fs() != 0)
+		panic("Cannot register proc file system");
+
 	/* init block buffers */
 	printf("[Kernel] Block buffers init\n");
 	if (binit() != 0)
@@ -100,12 +108,12 @@ static void kinit()
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
-	if (do_mount(MINIX_SUPER_MAGIC, mkdev(DEV_ATA_MAJOR, 0), "/") != 0)
+	if (do_mount_root(ROOT_DEV) != 0)
 		panic("Cannot mount root file system");
 
 	/* mount proc file system */
 	printf("[Kernel] Proc file system init\n");
-	if (do_mount(PROC_SUPER_MAGIC, 0, "/proc") != 0)
+	if (sys_mount(NULL, "/proc", "proc", 0, NULL) != 0)
 		panic("Cannot mount proc file system");
 
 	/* spawn init process */

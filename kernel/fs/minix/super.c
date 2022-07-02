@@ -16,12 +16,16 @@ struct super_operations_t minix_sops = {
 /*
  * Read super block.
  */
-int minix_read_super(struct super_block_t *sb, dev_t dev)
+static int minix_read_super(struct super_block_t *sb, void *data, int flags)
 {
 	struct minix_super_block_t *msb;
 	struct minix_sb_info_t *sbi;
 	uint32_t block;
 	int i, ret;
+
+	/* unused data/flags */
+	UNUSED(data);
+	UNUSED(flags);
 
 	/* allocate minix super block */
 	sb->s_fs_info = sbi = (struct minix_sb_info_t *) kmalloc(sizeof(struct minix_sb_info_t));
@@ -29,7 +33,6 @@ int minix_read_super(struct super_block_t *sb, dev_t dev)
 		return -ENOMEM;
 
 	/* set default block size */
-	sb->s_dev = dev;
 	sb->s_blocksize = MINIX_BLOCK_SIZE;
 	sb->s_blocksize_bits = MINIX_BLOCK_SIZE_BITS;
 
@@ -145,3 +148,19 @@ err:
 	return ret;
 }
 
+/*
+ * Minix file system.
+ */
+static struct file_system_t minix_fs = {
+	.name		= "minix",
+	.requires_dev	= 1,
+	.read_super	= minix_read_super,
+};
+
+/*
+ * Init minix file system.
+ */
+int init_minix_fs()
+{
+	return register_filesystem(&minix_fs);
+}

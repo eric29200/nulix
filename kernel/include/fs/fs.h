@@ -32,6 +32,16 @@ struct buffer_head_t {
 };
 
 /*
+ * File system structure.
+ */
+struct file_system_t {
+	char *				name;
+	int				requires_dev;
+	int				(*read_super)(struct super_block_t *, void *, int);
+	struct list_head_t		list;
+};
+
+/*
  * Generic super block.
  */
 struct super_block_t {
@@ -143,6 +153,10 @@ struct file_operations_t {
 	int (*ioctl)(struct file_t *, int, unsigned long);
 };
 
+/* super operations */
+int register_filesystem(struct file_system_t *fs);
+struct file_system_t *get_filesystem(const char *name);
+
 /* buffer operations */
 struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block);
 void brelse(struct buffer_head_t *bh);
@@ -166,7 +180,8 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
 struct inode_operations_t *char_get_driver(struct inode_t *inode);
 
 /* system calls */
-int do_mount(uint16_t magic, dev_t dev, const char *mount_point);
+int do_mount(struct file_system_t *fs, dev_t dev, const char *mount_point, void *data, int flags);
+int do_mount_root();
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(int fd);
 ssize_t do_read(int fd, char *buf, int count);

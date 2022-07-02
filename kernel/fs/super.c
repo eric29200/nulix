@@ -7,6 +7,45 @@
 #include <stderr.h>
 #include <string.h>
 #include <fcntl.h>
+#include <dev.h>
+
+/* file systems list */
+static LIST_HEAD(fs_list);
+
+/*
+ * Register a file system.
+ */
+int register_filesystem(struct file_system_t *fs)
+{
+	if (!fs)
+		return -EINVAL;
+
+	/* add file system */
+	list_add(&fs->list, &fs_list);
+
+	return 0;
+}
+
+/*
+ * Get a file system.
+ */
+struct file_system_t *get_filesystem(const char *name)
+{
+	struct file_system_t *fs;
+	struct list_head_t *pos;
+
+	if (!name)
+		return NULL;
+
+	/* search file system */
+	list_for_each(pos, &fs_list) {
+		fs = list_entry(pos, struct file_system_t, list);
+		if (strcmp(fs->name, name) == 0)
+			return fs;
+	}
+
+	return NULL;
+}
 
 /*
  * Get mount point inode.
@@ -36,53 +75,30 @@ static int get_mount_point(const char *mount_point, struct inode_t **res_inode)
 /*
  * Mount a file system.
  */
-int do_mount(uint16_t magic, dev_t dev, const char *mount_point)
+int do_mount(struct file_system_t *fs, dev_t dev, const char *mount_point, void *data, int flags)
 {
 	struct inode_t *mount_point_dir = NULL;
 	struct super_block_t *sb;
-	int err, is_root;
+	int err;
 
 	/* allocate a super block */
 	sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
 	if (!sb)
 		return -ENOMEM;
 
-	/* check if mount root */
-	is_root = mount_point != NULL && strlen(mount_point) == 1 && *mount_point == '/';
-
 	/* get mount point */
-	if (!is_root) {
-		err = get_mount_point(mount_point, &mount_point_dir);
-		if (err)
-			goto err;
-	}
+	err = get_mount_point(mount_point, &mount_point_dir);
+	if (err)
+		goto err;
 
 	/* read super block */
-	switch (magic) {
-		case MINIX_SUPER_MAGIC:
-			err = minix_read_super(sb, dev);
-			break;
-		case PROC_SUPER_MAGIC:
-			err = proc_read_super(sb);
-			break;
-		default:
-			err = -EINVAL;
-			break;
-	}
-
-	/* no way to read super block */
+	sb->s_dev = dev;
+	err = fs->read_super(sb, data, flags);
 	if (err)
 		goto err;
 
 	/* set mount point */
-	if (is_root) {
-		sb->s_root_inode->i_ref = 3;
-		current_task->cwd = sb->s_root_inode;
-		current_task->root = sb->s_root_inode;
-		strcpy(current_task->cwd_path, "/");
-	} else {
-		mount_point_dir->i_mount = sb->s_root_inode;
-	}
+	mount_point_dir->i_mount = sb->s_root_inode;
 
 	return 0;
 err:
@@ -91,4 +107,47 @@ err:
 
 	kfree(sb);
 	return err;
+}
+
+/*
+ * Mount root file system.
+ */
+int do_mount_root(dev_t dev)
+{
+	struct file_system_t *fs;
+	struct super_block_t *sb;
+	struct list_head_t *pos;
+	int err;
+
+	/* allocate a super block */
+	sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
+	if (!sb)
+		return -ENOMEM;
+
+	/* set device */
+	sb->s_dev = dev;
+
+	/* try all file systems */
+	list_for_each(pos, &fs_list) {
+		/* test only dev file systems */
+		fs = list_entry(pos, struct file_system_t, list);
+		if (!fs->requires_dev)
+			continue;
+
+		/* read super block */
+		err = fs->read_super(sb, NULL, 0);
+		if (err == 0)
+			goto found;
+	}
+
+	kfree(sb);
+	return -EINVAL;
+found:
+	/* set mount point */
+	sb->s_root_inode->i_ref = 3;
+	current_task->cwd = sb->s_root_inode;
+	current_task->root = sb->s_root_inode;
+	strcpy(current_task->cwd_path, "/");
+
+	return 0;
 }

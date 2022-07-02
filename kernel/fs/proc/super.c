@@ -14,8 +14,12 @@ static struct super_operations_t proc_sops = {
 /*
  * Read super block.
  */
-int proc_read_super(struct super_block_t *sb)
+static int proc_read_super(struct super_block_t *sb, void *data, int flags)
 {
+	/* unused data/flags */
+	UNUSED(data);
+	UNUSED(flags);
+
 	/* set super block */
 	sb->s_magic = PROC_SUPER_MAGIC;
 	sb->s_op = &proc_sops;
@@ -28,4 +32,21 @@ int proc_read_super(struct super_block_t *sb)
 	}
 
 	return 0;
+}
+
+/*
+ * Proc file system.
+ */
+static struct file_system_t proc_fs = {
+	.name		= "proc",
+	.requires_dev	= 0,
+	.read_super	= proc_read_super,
+};
+
+/*
+ * Init proc file system.
+ */
+int init_proc_fs()
+{
+	return register_filesystem(&proc_fs);
 }

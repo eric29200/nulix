@@ -19,10 +19,10 @@ struct proc_dir_entry_t {
 	char *	name;
 };
 
-/* read super block */
-int proc_read_super(struct super_block_t *sb);
+/* super operations */
+int init_proc_fs();
 
-/* super block operations */
+/* inode  operations */
 int proc_read_inode(struct inode_t *inode);
 int proc_write_inode(struct inode_t *inode);
 int proc_put_inode(struct inode_t *inode);

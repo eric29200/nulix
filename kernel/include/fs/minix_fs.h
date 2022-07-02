@@ -83,7 +83,7 @@ extern struct file_operations_t minix_file_fops;
 extern struct file_operations_t minix_dir_fops;
 
 /* minix super operations */
-int minix_read_super(struct super_block_t *sb, dev_t dev);
+int init_minix_fs();
 int minix_read_inode(struct inode_t *inode);
 int minix_write_inode(struct inode_t *inode);
 int minix_put_inode(struct inode_t *inode);

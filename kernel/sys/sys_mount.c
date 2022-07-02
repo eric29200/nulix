@@ -9,24 +9,17 @@
  */
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data)
 {
+	struct file_system_t *fs;
 	struct inode_t *inode;
-	uint16_t magic;
 	dev_t dev = 0;
 
-	/* unused flags/data */
-	UNUSED(flags);
-	UNUSED(data);
-
 	/* find file system type */
-	if (type && strcmp(type, "minix") == 0)
-		magic = MINIX_SUPER_MAGIC;
-	else if (type && strcmp(type, "proc") == 0)
-		magic = PROC_SUPER_MAGIC;
-	else
+	fs = get_filesystem(type);
+	if (!fs)
 		return -ENODEV;
 
 	/* if filesystem requires dev, find it */
-	if (magic == MINIX_SUPER_MAGIC) {
+	if (fs->requires_dev) {
 		/* find device's inode */
 		inode = namei(AT_FDCWD, NULL, dev_name, 1);
 		if (!inode)
@@ -43,5 +36,5 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 		iput(inode);
 	}
 
-	return do_mount(magic, dev, dir_name);
+	return do_mount(fs, dev, dir_name, data, flags);
 }
