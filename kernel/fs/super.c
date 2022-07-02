@@ -9,36 +9,52 @@
 #include <fcntl.h>
 
 /*
- * Mount a file system.
+ * Get mount point inode.
  */
-int do_mount(uint16_t magic, dev_t dev, const char *mount_point)
+static int get_mount_point(const char *mount_point, struct inode_t **res_inode)
 {
-	struct super_block_t *sb;
-	struct inode_t *dir;
-	int err;
-
 	/* get mount point */
-	dir = namei(AT_FDCWD, NULL, mount_point, 1);
-	if (!dir)
+	*res_inode = namei(AT_FDCWD, NULL, mount_point, 1);
+	if (!*res_inode)
 		return -EINVAL;
 
 	/* mount point busy */
-	if (dir->i_ref != 1 || dir->i_mount) {
-		iput(dir);
+	if ((*res_inode)->i_ref != 1 || (*res_inode)->i_mount) {
+		iput(*res_inode);
 		return -EBUSY;
 	}
 
 	/* mount point must be a directory */
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+	if (!S_ISDIR((*res_inode)->i_mode)) {
+		iput(*res_inode);
 		return -EPERM;
 	}
 
+	return 0;
+}
+
+/*
+ * Mount a file system.
+ */
+int do_mount(uint16_t magic, dev_t dev, const char *mount_point)
+{
+	struct inode_t *mount_point_dir = NULL;
+	struct super_block_t *sb;
+	int err, is_root;
+
 	/* allocate a super block */
 	sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
-	if (!sb) {
-		iput(dir);
+	if (!sb)
 		return -ENOMEM;
+
+	/* check if mount root */
+	is_root = mount_point != NULL && strlen(mount_point) == 1 && *mount_point == '/';
+
+	/* get mount point */
+	if (!is_root) {
+		err = get_mount_point(mount_point, &mount_point_dir);
+		if (err)
+			goto err;
 	}
 
 	/* read super block */
@@ -55,51 +71,24 @@ int do_mount(uint16_t magic, dev_t dev, const char *mount_point)
 	}
 
 	/* no way to read super block */
-	if (err) {
-		kfree(sb);
-		iput(dir);
-		return err;
-	}
+	if (err)
+		goto err;
 
 	/* set mount point */
-	dir->i_mount = sb->s_root_inode;
-
-	return 0;
-}
-
-/*
- * Mount root device.
- */
-int mount_root(dev_t dev)
-{
-	struct super_block_t *root_sb;
-	struct inode_t *inode;
-	int err;
-
-	/* init buffers */
-	if (binit())
-		panic("Cannot allocate memory for I/O buffers");
-
-	/* allocate root super block */
-	root_sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
-	if (!root_sb)
-		return -ENOMEM;
-
-	/* read super block */
-	err = minix_read_super(root_sb, dev);
-	if (err != 0) {
-		kfree(root_sb);
-		return err;
+	if (is_root) {
+		sb->s_root_inode->i_ref = 3;
+		current_task->cwd = sb->s_root_inode;
+		current_task->root = sb->s_root_inode;
+		strcpy(current_task->cwd_path, "/");
+	} else {
+		mount_point_dir->i_mount = sb->s_root_inode;
 	}
 
-	/* set mount point */
-	inode = root_sb->s_root_inode;
-	inode->i_ref = 3;
-
-	/* set current task current working dir to root */
-	current_task->cwd = inode;
-	current_task->root = inode;
-	strcpy(current_task->cwd_path, "/");
-
 	return 0;
+err:
+	if (mount_point_dir)
+		iput(mount_point_dir);
+
+	kfree(sb);
+	return err;
 }

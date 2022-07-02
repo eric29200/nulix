@@ -15,6 +15,7 @@
 #include <drivers/framebuffer.h>
 #include <drivers/rtl8139.h>
 #include <proc/sched.h>
+#include <fs/minix_fs.h>
 #include <fs/proc_fs.h>
 #include <sys/syscall.h>
 #include <stdio.h>
@@ -92,9 +93,14 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
  */
 static void kinit()
 {
+	/* init block buffers */
+	printf("[Kernel] Block buffers init\n");
+	if (binit() != 0)
+		panic("Cannot allocate memory for block buffers");
+
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
-	if (mount_root(mkdev(DEV_ATA, 0)) != 0)
+	if (do_mount(MINIX_SUPER_MAGIC, mkdev(DEV_ATA, 0), "/") != 0)
 		panic("Cannot mount root file system");
 
 	/* mount proc file system */

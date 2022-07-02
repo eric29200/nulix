@@ -143,9 +143,6 @@ struct file_operations_t {
 	int (*ioctl)(struct file_t *, int, unsigned long);
 };
 
-/* file system operations */
-int mount_root(dev_t dev);
-
 /* buffer operations */
 struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block);
 void brelse(struct buffer_head_t *bh);
