@@ -684,7 +684,7 @@ int minix_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t m
 	inode->i_gid = current_task->gid;
 	inode->i_mode = mode;
 	inode->i_time = CURRENT_TIME;
-	inode->i_cdev = dev;
+	inode->i_rdev = dev;
 	inode->i_dirt = 1;
 
 	/* set inode operations */
@@ -694,6 +694,8 @@ int minix_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t m
 		inode->i_op = &minix_dir_iops;
 	else if (S_ISCHR(inode->i_mode))
 		inode->i_op = char_get_driver(inode);
+	else
+		inode->i_op = NULL;
 
 	/* add inode to directory */
 	bh = minix_add_entry(dir, name, name_len, &de);

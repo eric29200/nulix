@@ -69,9 +69,9 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
 	statbuf->stx_mtime.tv_sec = inode->i_time;
 
 	/* set minor/major */
-	if (S_ISCHR(inode->i_mode)) {
-		statbuf->stx_rdev_major = major(inode->i_cdev);
-		statbuf->stx_rdev_minor = minor(inode->i_cdev);
+	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode)) {
+		statbuf->stx_rdev_major = major(inode->i_rdev);
+		statbuf->stx_rdev_minor = minor(inode->i_rdev);
 	}
 
 	/* release inode */

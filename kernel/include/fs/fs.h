@@ -59,7 +59,7 @@ struct inode_t {
 	int				i_ref;
 	char				i_dirt;
 	struct inode_operations_t *	i_op;
-	dev_t				i_cdev;
+	dev_t				i_rdev;
 	char				i_pipe;
 	struct inode_t *		i_mount;
 	union {

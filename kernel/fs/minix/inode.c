@@ -91,8 +91,11 @@ int minix_read_inode(struct inode_t *inode)
 	if (S_ISDIR(inode->i_mode)) {
 		inode->i_op = &minix_dir_iops;
 	} else if (S_ISCHR(inode->i_mode)) {
-		inode->i_cdev = inode->u.minix_i.i_zone[0];
+		inode->i_rdev = inode->u.minix_i.i_zone[0];
 		inode->i_op = char_get_driver(inode);
+	} else if (S_ISBLK(inode->i_mode)) {
+		inode->i_rdev = inode->u.minix_i.i_zone[0];
+		inode->i_op = NULL;
 	} else {
 		inode->i_op = &minix_file_iops;
 	}

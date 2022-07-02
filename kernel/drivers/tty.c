@@ -53,8 +53,8 @@ struct tty_t *tty_lookup(dev_t dev)
 static int tty_open(struct file_t *filp)
 {
 	/* set current task tty */
-	if (major(filp->f_inode->i_cdev) == major(DEV_TTY0))
-		current_task->tty = filp->f_inode->i_cdev;
+	if (major(filp->f_inode->i_rdev) == major(DEV_TTY0))
+		current_task->tty = filp->f_inode->i_rdev;
 
 	return 0;
 }
@@ -69,7 +69,7 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 	uint8_t key;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_cdev);
+	tty = tty_lookup(filp->f_inode->i_rdev);
 	if (!tty)
 		return -EINVAL;
 
@@ -204,7 +204,7 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 	struct tty_t *tty;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_cdev);
+	tty = tty_lookup(filp->f_inode->i_rdev);
 	if (!tty)
 		return -EINVAL;
 
@@ -234,7 +234,7 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 	struct tty_t *tty;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_cdev);
+	tty = tty_lookup(filp->f_inode->i_rdev);
 	if (!tty)
 		return -EINVAL;
 
@@ -261,7 +261,7 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 			tty->pgrp = *((pid_t *) arg);
 			break;
 		default:
-			printf("Unknown ioctl request (%x) on device %x\n", request, filp->f_inode->i_cdev);
+			printf("Unknown ioctl request (%x) on device %x\n", request, filp->f_inode->i_rdev);
 			break;
 	}
 
@@ -277,7 +277,7 @@ static int tty_poll(struct file_t *filp)
 	int mask = 0;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_cdev);
+	tty = tty_lookup(filp->f_inode->i_rdev);
 	if (!tty)
 		return -EINVAL;
 

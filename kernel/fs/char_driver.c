@@ -18,27 +18,27 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
 		return NULL;
 
 	/* null driver */
-	if (inode->i_cdev == DEV_NULL)
+	if (inode->i_rdev == DEV_NULL)
 		return &null_iops;
 
 	/* zero driver */
-	if (inode->i_cdev == DEV_ZERO)
+	if (inode->i_rdev == DEV_ZERO)
 		return &zero_iops;
 
 	/* pty multiplixer */
-	if (inode->i_cdev == DEV_PTMX)
+	if (inode->i_rdev == DEV_PTMX)
 		return &ptmx_iops;
 
 	/* pty driver */
-	if (major(inode->i_cdev) == DEV_PTY_MAJOR)
+	if (major(inode->i_rdev) == DEV_PTY_MAJOR)
 		return &pty_iops;
 
 	/* tty driver */
-	if (major(inode->i_cdev) == major(DEV_TTY) || major(inode->i_cdev) == major(DEV_TTY0))
+	if (major(inode->i_rdev) == major(DEV_TTY) || major(inode->i_rdev) == major(DEV_TTY0))
 		return &tty_iops;
 
 	/* mouse driver */
-	if (major(inode->i_cdev) == DEV_MOUSE_MAJOR)
+	if (major(inode->i_rdev) == DEV_MOUSE_MAJOR)
 		return &mouse_iops;
 
 	return NULL;
