@@ -21,12 +21,12 @@
  */
 struct buffer_head_t {
 	uint32_t			b_block;
-	char				*b_data;
+	char *				b_data;
 	size_t				b_size;
 	int				b_ref;
 	char				b_dirt;
 	char				b_uptodate;
-	struct super_block_t		*b_sb;
+	struct super_block_t *		b_sb;
 	struct list_head_t		b_list;
 	struct htable_link_t		b_htable;
 };

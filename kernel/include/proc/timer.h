@@ -10,7 +10,7 @@
 struct timer_event_t {
 	uint32_t		expires;
 	void			(*func)(void *);
-	void			*data;
+	void *			data;
 	struct list_head_t	list;
 };
 

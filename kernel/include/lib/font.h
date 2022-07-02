@@ -43,7 +43,7 @@ struct font_t {
 	uint32_t	uc_size;			/* number of unicode mappings */
 	uint32_t	uc_map[UC_MAP_SIZE];		/* unicode mapping */
 	uint32_t	ascii_map[ASCII_MAP_SIZE];	/* ascii mapping */
-	unsigned char	*data;				/* pointer to first glyph */
+	unsigned char *	data;				/* pointer to first glyph */
 };
 
 struct font_t *get_default_font();

@@ -42,7 +42,7 @@ struct page_table_t {
  * Page directory structure.
  */
 struct page_directory_t {
-	struct page_table_t 	*tables[1024];			/* pointers to page tables */
+	struct page_table_t * 	tables[1024];			/* pointers to page tables */
 	uint32_t		tables_physical[1024];		/* pointers to page tables (physical addresses) */
 };
 
