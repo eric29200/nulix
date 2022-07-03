@@ -20,7 +20,7 @@ static inline int minix_name_match(const char *name1, size_t len1, const char *n
 /*
  * Find an entry inside a directory.
  */
-static struct buffer_head_t *minix_find_entry(struct inode_t *dir, const char *name, size_t name_len, void **res_de)
+static struct buffer_head_t *minix_find_entry(struct inode_t *dir, const char *name, int name_len, void **res_de)
 {
 	struct minix_sb_info_t *sbi = minix_sb(dir->i_sb);
 	int nb_entries, nb_entries_per_block, i;
@@ -30,7 +30,7 @@ static struct buffer_head_t *minix_find_entry(struct inode_t *dir, const char *n
 	char *de, *de_name;
 
 	/* check file name length */
-	if (!name_len || name_len > sbi->s_name_len)
+	if (name_len <= 0 || name_len > sbi->s_name_len)
 		return NULL;
 
 	/* compute number of entries in directory */
@@ -75,7 +75,7 @@ static struct buffer_head_t *minix_find_entry(struct inode_t *dir, const char *n
 /*
  * Add an entry to a directory.
  */
-static int minix_add_entry(struct inode_t *dir, const char *name, size_t name_len, struct inode_t *inode)
+static int minix_add_entry(struct inode_t *dir, const char *name, int name_len, struct inode_t *inode)
 {
 	struct minix_sb_info_t *sbi = minix_sb(dir->i_sb);
 	int nb_entries, nb_entries_per_block, i;
@@ -86,7 +86,7 @@ static int minix_add_entry(struct inode_t *dir, const char *name, size_t name_le
 	ino_t de_ino;
 
 	/* check file name */
-	if (!name_len || name_len > sbi->s_name_len)
+	if (name_len <= 0 || name_len > sbi->s_name_len)
 		return -EINVAL;
 
 	/* compute number of entries in directory */

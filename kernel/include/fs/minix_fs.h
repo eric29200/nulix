@@ -67,8 +67,8 @@ struct minix_sb_info_t {
 	uint16_t		s_log_zone_size;
 	uint16_t		s_version;
 	uint16_t		s_state;
-	size_t			s_name_len;
-	size_t			s_dirsize;
+	int			s_name_len;
+	int			s_dirsize;
 	uint32_t		s_max_size;
 	struct buffer_head_t *	s_sbh;
 	struct buffer_head_t **	s_imap;

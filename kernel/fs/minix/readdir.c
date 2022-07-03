@@ -31,7 +31,7 @@ int minix_getdents64(struct file_t *filp, void *dirp, size_t count)
 	/* walk through all entries */
 	for (entries_size = 0, dirent = (struct dirent64_t *) dirp;;) {
 		/* read minix dir entry */
-		if (minix_file_read(filp, (char *) de, sbi->s_dirsize) != (int) sbi->s_dirsize)
+		if (minix_file_read(filp, (char *) de, sbi->s_dirsize) != sbi->s_dirsize)
 			goto out;
 
 		/* get inode number and file name */
