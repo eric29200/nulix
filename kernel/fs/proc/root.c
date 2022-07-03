@@ -15,6 +15,7 @@ static struct proc_dir_entry_t root_dir[] = {
 	{ PROC_ROOT_INO,	2,	".." },
 	{ PROC_UPTIME_INO,	6,	"uptime" },
 	{ PROC_FILESYSTEMS_INO,	11,	"filesystems" },
+	{ PROC_MOUNTS_INO,	6,	"mounts" },
 };
 
 /*
@@ -144,6 +145,13 @@ static int proc_root_lookup(struct inode_t *dir, const char *name, size_t name_l
 	if (ino == PROC_FILESYSTEMS_INO) {
 		(*res_inode)->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
 		(*res_inode)->i_op = &proc_filesystems_iops;
+		goto out;
+	}
+
+	/* mounts file */
+	if (ino == PROC_MOUNTS_INO) {
+		(*res_inode)->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+		(*res_inode)->i_op = &proc_mounts_iops;
 		goto out;
 	}
 

@@ -5,9 +5,9 @@
 #include <stderr.h>
 
 /*
- * Read file systems.
+ * Read file mounts.
  */
-static int proc_filesystems_read(struct file_t *filp, char *buf, int count)
+static int proc_mounts_read(struct file_t *filp, char *buf, int count)
 {
 	char *tmp_buf;
 	size_t len;
@@ -17,8 +17,8 @@ static int proc_filesystems_read(struct file_t *filp, char *buf, int count)
 	if (!tmp_buf)
 		return -ENOMEM;
 
-	/* get file systems list */
-	len = get_filesystem_list(tmp_buf, PAGE_SIZE);
+	/* get mounted file systems list */
+	len = get_vfs_mount_list(tmp_buf, PAGE_SIZE);
 
 	/* file position after end */
 	if (filp->f_pos >= len) {
@@ -40,16 +40,16 @@ out:
 }
 
 /*
- * Filesystems file operations.
+ * Mounts file operations.
  */
-struct file_operations_t proc_filesystems_fops = {
-	.read		= proc_filesystems_read,
+struct file_operations_t proc_mounts_fops = {
+	.read		= proc_mounts_read,
 };
 
 /*
- * Filesystems inode operations.
+ * Mounts inode operations.
  */
-struct inode_operations_t proc_filesystems_iops = {
-	.fops		= &proc_filesystems_fops,
+struct inode_operations_t proc_mounts_iops = {
+	.fops		= &proc_mounts_fops,
 };
 

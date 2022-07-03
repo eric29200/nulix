@@ -52,15 +52,44 @@ struct file_system_t *get_filesystem(const char *name)
 /*
  * Get file systems list.
  */
-int get_filesystem_list(char *buf)
+int get_filesystem_list(char *buf, int count)
 {
 	struct file_system_t *fs;
 	struct list_head_t *pos;
 	int len = 0;
 
 	list_for_each(pos, &fs_list) {
+		/* check overflow */
+		if (len >= count - 80)
+			break;
+
 		fs = list_entry(pos, struct file_system_t, list);
 		len += sprintf(buf + len, "%s\t%s\n", fs->requires_dev ? "" : "nodev", fs->name);
+	}
+
+	return len;
+}
+
+/*
+ * Get mounted file systems list.
+ */
+int get_vfs_mount_list(char *buf, int count)
+{
+	struct vfs_mount_t *vfs_mount;
+	struct list_head_t *pos;
+	int len = 0;
+
+	list_for_each(pos, &vfs_mounts_list) {
+		/* check overflow */
+		if (len >= count - 160)
+			break;
+
+		vfs_mount = list_entry(pos, struct vfs_mount_t, mnt_list);
+		len += sprintf(buf + len, "%s %s %s %s 0 0\n",
+			       vfs_mount->mnt_devname,
+			       vfs_mount->mnt_dirname,
+			       vfs_mount->mnt_sb->s_type->name,
+			       vfs_mount->mnt_flags & MS_RDONLY ? "ro" : "rw");
 	}
 
 	return len;

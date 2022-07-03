@@ -16,6 +16,8 @@
 
 #define BSYNC_TIMER_MS			10000
 
+#define MS_RDONLY			1
+
 /*
  * Buffer structure.
  */
@@ -157,7 +159,8 @@ struct file_operations_t {
 /* super operations */
 int register_filesystem(struct file_system_t *fs);
 struct file_system_t *get_filesystem(const char *name);
-int get_filesystem_list(char *buf);
+int get_filesystem_list(char *buf, int count);
+int get_vfs_mount_list(char *buf, int count);
 
 /* buffer operations */
 struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block);

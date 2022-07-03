@@ -113,7 +113,7 @@ static void kinit()
 
 	/* mount proc file system */
 	printf("[Kernel] Proc file system init\n");
-	if (sys_mount(NULL, "/proc", "proc", 0, NULL) != 0)
+	if (sys_mount("proc", "/proc", "proc", MS_RDONLY, NULL) != 0)
 		panic("Cannot mount proc file system");
 
 	/* spawn init process */
