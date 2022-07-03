@@ -15,7 +15,7 @@ int proc_read_inode(struct inode_t *inode)
 	inode->i_gid = 0;
 	inode->i_nlinks = 1;
 	inode->i_size = 0;
-	inode->i_time = CURRENT_TIME;
+	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 
 	/* root directory */
 	if (inode->i_ino == PROC_ROOT_INO) {

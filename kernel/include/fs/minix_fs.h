@@ -3,18 +3,27 @@
 
 #include <stddef.h>
 
-#define MINIX_SUPER_MAGIC		0x2478
+#define MINIX_V1			0x0001
+#define MINIX_V2			0x0002
+#define MINIX_V3			0x0003
+
+#define MINIX1_MAGIC1			0x137F		/* Minix V1, 14 char names */
+#define MINIX1_MAGIC2			0x138F		/* Minix V1, 30 char names */
+#define MINIX2_MAGIC1			0x2468		/* Minix V2, 14 char names */
+#define MINIX2_MAGIC2			0x2478		/* Minix V2, 14 char names */
+#define MINIX3_MAGIC			0x4D5A		/* Minix V3, 60 char names */
+
+#define MINIX_VALID_FS			0x0001
+#define MINIX_ERROR_FS			0x0002
+
 #define MINIX_ROOT_INODE		1
-#define MINIX_FILENAME_LEN		30
 #define MINIX_BLOCK_SIZE_BITS		10
 #define MINIX_BLOCK_SIZE		(1 << MINIX_BLOCK_SIZE_BITS)
-#define MINIX_INODES_PER_BLOCK		((MINIX_BLOCK_SIZE) / (sizeof(struct minix_inode_t)))
-#define MINIX_DIR_ENTRIES_PER_BLOCK	((MINIX_BLOCK_SIZE) / (sizeof(struct minix_dir_entry_t)))
 
 /*
- * Minix on disk super block.
+ * Minix V1/V2 on disk super block.
  */
-struct minix_super_block_t {
+struct minix1_super_block_t {
 	uint16_t		s_ninodes;
 	uint16_t		s_nzones;
 	uint16_t		s_imap_blocks;
@@ -25,6 +34,25 @@ struct minix_super_block_t {
 	uint16_t		s_magic;
 	uint16_t		s_state;
 	uint32_t		s_zones;
+} __attribute__((packed));
+
+/*
+ * Minix V3 super block.
+ */
+struct minix3_super_block_t {
+	uint32_t		s_ninodes;
+	uint16_t		s_pad0;
+	uint16_t		s_imap_blocks;
+	uint16_t		s_zmap_blocks;
+	uint16_t		s_firstdatazone;
+	uint16_t		s_log_zone_size;
+	uint16_t		s_pad1;
+	uint32_t		s_max_size;
+	uint32_t		s_zones;
+	uint16_t		s_magic;
+	uint16_t		s_pad2;
+	uint16_t		s_blocksize;
+	uint8_t			s_disk_version;
 };
 
 /*
@@ -37,6 +65,10 @@ struct minix_sb_info_t {
 	uint16_t		s_zmap_blocks;
 	uint16_t		s_firstdatazone;
 	uint16_t		s_log_zone_size;
+	uint16_t		s_version;
+	uint16_t		s_state;
+	size_t			s_name_len;
+	size_t			s_dirsize;
 	uint32_t		s_max_size;
 	struct buffer_head_t *	s_sbh;
 	struct buffer_head_t **	s_imap;
@@ -44,9 +76,22 @@ struct minix_sb_info_t {
 };
 
 /*
- * Minix inode.
+ * Minix V1 inode.
  */
-struct minix_inode_t {
+struct minix1_inode_t {
+	uint16_t		i_mode;
+	uint16_t		i_uid;
+	uint32_t		i_size;
+	uint32_t		i_time;
+	uint8_t			i_gid;
+	uint8_t			i_nlinks;
+	uint16_t		i_zone[10];
+};
+
+/*
+ * Minix V2/V3 inode.
+ */
+struct minix2_inode_t {
 	uint16_t		i_mode;
 	uint16_t		i_nlinks;
 	uint16_t		i_uid;
@@ -59,11 +104,19 @@ struct minix_inode_t {
 };
 
 /*
- * Minix dir entry.
+ * Minix V1/V2 dir entry.
  */
-struct minix_dir_entry_t {
-	uint16_t		inode;
-	char			name[MINIX_FILENAME_LEN];
+struct minix1_dir_entry_t {
+	uint16_t		d_inode;
+	char			d_name[0];
+};
+
+/*
+ * Minix V3 directory entry.
+ */
+struct minix3_dir_entry_t {
+	uint32_t		d_inode;
+	char			d_name[0];
 };
 
 /*

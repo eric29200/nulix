@@ -175,7 +175,7 @@ struct inode_t *minix_new_inode(struct super_block_t *sb)
 
 	/* set inode */
 	memset(inode, 0, sizeof(struct inode_t));
-	inode->i_time = CURRENT_TIME;
+	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_nlinks = 1;
 	inode->i_ino = i * MINIX_BLOCK_SIZE * 8 + j;
 	inode->i_ref = 1;

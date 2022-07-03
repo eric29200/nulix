@@ -25,9 +25,9 @@ int do_stat(int dirfd, const char *filename, struct stat_t *statbuf)
 	statbuf->st_uid = inode->i_uid;
 	statbuf->st_gid = inode->i_gid;
 	statbuf->st_size = inode->i_size;
-	statbuf->st_atime = inode->i_time;
-	statbuf->st_mtime = inode->i_time;
-	statbuf->st_ctime = inode->i_time;
+	statbuf->st_atime = inode->i_atime;
+	statbuf->st_mtime = inode->i_mtime;
+	statbuf->st_ctime = inode->i_ctime;
 
 	/* release inode */
 	iput(inode);
@@ -63,10 +63,10 @@ int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, stru
 	statbuf->stx_ino = inode->i_ino;
 	statbuf->stx_size = inode->i_size;
 	statbuf->stx_blocks = inode->i_size / 512;
-	statbuf->stx_atime.tv_sec = inode->i_time;
-	statbuf->stx_btime.tv_sec = inode->i_time;
-	statbuf->stx_ctime.tv_sec = inode->i_time;
-	statbuf->stx_mtime.tv_sec = inode->i_time;
+	statbuf->stx_atime.tv_sec = inode->i_atime;
+	statbuf->stx_btime.tv_sec = inode->i_atime;
+	statbuf->stx_ctime.tv_sec = inode->i_ctime;
+	statbuf->stx_mtime.tv_sec = inode->i_mtime;
 
 	/* set minor/major */
 	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode)) {

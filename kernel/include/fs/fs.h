@@ -50,7 +50,6 @@ struct file_system_t {
 struct super_block_t {
 	dev_t				s_dev;
 	uint16_t			s_blocksize;
-	uint8_t				s_blocksize_bits;
 	void *				s_fs_info;
 	uint16_t			s_magic;
 	struct file_system_t *		s_type;
@@ -67,7 +66,9 @@ struct inode_t {
 	uid_t				i_uid;
 	gid_t				i_gid;
 	uint32_t			i_size;
-	uint32_t			i_time;
+	time_t				i_atime;
+	time_t				i_mtime;
+	time_t				i_ctime;
 	ino_t				i_ino;
 	struct super_block_t *		i_sb;
 	int				i_ref;

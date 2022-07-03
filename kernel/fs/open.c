@@ -200,7 +200,8 @@ int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[
 		return -ENOENT;
 
 	/* set time */
-	inode->i_time = times[0].tv_sec;
+	inode->i_atime = times[0].tv_sec;
+	inode->i_mtime = times[0].tv_sec;
 
 	/* mark inode dirty */
 	inode->i_dirt = 1;
