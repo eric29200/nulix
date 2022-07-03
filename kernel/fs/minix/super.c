@@ -5,16 +5,6 @@
 #include <stdio.h>
 
 /*
- * Minix super operations.
- */
-struct super_operations_t minix_sops = {
-	.read_inode		= minix_read_inode,
-	.write_inode		= minix_write_inode,
-	.put_inode		= minix_put_inode,
-	.statfs			= minix_statfs,
-};
-
-/*
  * Read super block.
  */
 static int minix_read_super(struct super_block_t *sb, void *data, int flags)
@@ -180,7 +170,7 @@ err:
 /*
  * Get statistics on file system.
  */
-void minix_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+static void minix_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 {
 	struct minix_sb_info_t *sbi = minix_sb(sb);
 
@@ -202,6 +192,16 @@ static struct file_system_t minix_fs = {
 	.name		= "minix",
 	.requires_dev	= 1,
 	.read_super	= minix_read_super,
+};
+
+/*
+ * Minix super operations.
+ */
+struct super_operations_t minix_sops = {
+	.read_inode		= minix_read_inode,
+	.write_inode		= minix_write_inode,
+	.put_inode		= minix_put_inode,
+	.statfs			= minix_statfs,
 };
 
 /*
