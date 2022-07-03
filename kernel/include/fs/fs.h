@@ -50,6 +50,7 @@ struct super_block_t {
 	uint8_t				s_blocksize_bits;
 	void *				s_fs_info;
 	uint16_t			s_magic;
+	struct file_system_t *		s_type;
 	struct inode_t *		s_root_inode;
 	struct super_operations_t *	s_op;
 };

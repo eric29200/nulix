@@ -163,6 +163,7 @@ int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const ch
 		goto err;
 
 	/* read super block */
+	sb->s_type = fs;
 	sb->s_dev = dev;
 	err = fs->read_super(sb, data, flags);
 	if (err)
@@ -212,6 +213,7 @@ int do_mount_root(dev_t dev)
 			continue;
 
 		/* read super block */
+		sb->s_type = fs;
 		err = fs->read_super(sb, NULL, flags);
 		if (err == 0)
 			goto found;
