@@ -5,6 +5,7 @@
 #include <lib/htable.h>
 #include <fs/stat.h>
 #include <fs/poll.h>
+#include <fs/statfs.h>
 #include <fs/minix_i.h>
 #include <fs/pipe_i.h>
 #include <time.h>
@@ -122,6 +123,7 @@ struct super_operations_t {
 	int (*read_inode)(struct inode_t *);
 	int (*write_inode)(struct inode_t *);
 	int (*put_inode)(struct inode_t *);
+	void (*statfs)(struct super_block_t *, struct statfs64_t *);
 };
 
 /*
@@ -186,7 +188,7 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode);
 
 /* system calls */
 int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);
-int do_mount_root();
+int do_mount_root(dev_t dev, const char *dev_name);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(int fd);
 ssize_t do_read(int fd, char *buf, int count);
@@ -219,5 +221,6 @@ int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[
 int do_fcntl(int fd, int cmd, unsigned long arg);
 int do_dup(int oldfd);
 int do_dup2(int oldfd, int newfd);
+int do_statfs64(const char *path, struct statfs64_t *buf);
 
 #endif

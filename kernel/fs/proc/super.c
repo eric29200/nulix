@@ -9,6 +9,7 @@ static struct super_operations_t proc_sops = {
 	.read_inode		= proc_read_inode,
 	.write_inode		= proc_write_inode,
 	.put_inode		= proc_put_inode,
+	.statfs			= proc_statfs,
 };
 
 /*
@@ -32,6 +33,16 @@ static int proc_read_super(struct super_block_t *sb, void *data, int flags)
 	}
 
 	return 0;
+}
+
+/*
+ * Get statistics on file system.
+ */
+void proc_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+{
+	memset(buf, 0, sizeof(struct statfs64_t));
+	buf->f_type = sb->s_magic;
+	buf->f_bsize = sb->s_blocksize;
 }
 
 /*

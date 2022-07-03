@@ -218,7 +218,7 @@ err:
 /*
  * Mount root file system.
  */
-int do_mount_root(dev_t dev)
+int do_mount_root(dev_t dev, const char *dev_name)
 {
 	struct file_system_t *fs;
 	struct super_block_t *sb;
@@ -258,7 +258,7 @@ found:
 	strcpy(current_task->cwd_path, "/");
 
 	/* add mounted file system */
-	err = add_vfs_mount(dev, "rootfs", "/", flags, sb);
+	err = add_vfs_mount(dev, dev_name, "/", flags, sb);
 	if (err) {
 		kfree(sb);
 		return err;

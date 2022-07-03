@@ -28,6 +28,7 @@ int init_proc_fs();
 int proc_read_inode(struct inode_t *inode);
 int proc_write_inode(struct inode_t *inode);
 int proc_put_inode(struct inode_t *inode);
+void proc_statfs(struct super_block_t *sb, struct statfs64_t *buf);
 
 /* inode operations */
 extern struct inode_operations_t proc_root_iops;

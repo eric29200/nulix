@@ -87,12 +87,17 @@ int init_minix_fs();
 int minix_read_inode(struct inode_t *inode);
 int minix_write_inode(struct inode_t *inode);
 int minix_put_inode(struct inode_t *inode);
-struct inode_t *minix_new_inode(struct super_block_t *sb);
-int minix_free_inode(struct inode_t *inode);
-uint32_t minix_new_block(struct super_block_t *sb);
-int minix_free_block(struct super_block_t *sb, uint32_t block);
+void minix_statfs(struct super_block_t *sb, struct statfs64_t *buf);
 void minix_truncate(struct inode_t *inode);
 struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create);
+
+/* bitmap operations */
+struct inode_t *minix_new_inode(struct super_block_t *sb);
+int minix_free_inode(struct inode_t *inode);
+uint32_t minix_count_free_inodes(struct super_block_t *sb);
+uint32_t minix_new_block(struct super_block_t *sb);
+int minix_free_block(struct super_block_t *sb, uint32_t block);
+uint32_t minix_count_free_blocks(struct super_block_t *sb);
 
 /* minix inode operations */
 int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode);

@@ -24,6 +24,7 @@
 #include <dev.h>
 
 #define ROOT_DEV	(mkdev(DEV_ATA_MAJOR, 0))
+#define ROOT_DEV_NAME	"/dev/hda"
 
 extern uint32_t loader;
 extern uint32_t kernel_stack;
@@ -108,7 +109,7 @@ static void kinit()
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
-	if (do_mount_root(ROOT_DEV) != 0)
+	if (do_mount_root(ROOT_DEV, ROOT_DEV_NAME) != 0)
 		panic("Cannot mount root file system");
 
 	/* mount proc file system */

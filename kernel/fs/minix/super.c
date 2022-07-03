@@ -11,6 +11,7 @@ struct super_operations_t minix_sops = {
 	.read_inode		= minix_read_inode,
 	.write_inode		= minix_write_inode,
 	.put_inode		= minix_put_inode,
+	.statfs			= minix_statfs,
 };
 
 /*
@@ -146,6 +147,24 @@ err_bad_sb:
 err:
 	kfree(sbi);
 	return ret;
+}
+
+/*
+ * Get statistics on file system.
+ */
+void minix_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+{
+	struct minix_sb_info_t *sbi = minix_sb(sb);
+
+	memset(buf, 0, sizeof(struct statfs64_t));
+	buf->f_type = sb->s_magic;
+	buf->f_bsize = sb->s_blocksize;
+	buf->f_blocks = (sbi->s_nzones - sbi->s_firstdatazone) << sbi->s_log_zone_size;
+	buf->f_bfree = minix_count_free_blocks(sb);
+	buf->f_bavail = buf->f_bfree;
+	buf->f_files = sbi->s_ninodes;
+	buf->f_ffree = minix_count_free_inodes(sb);
+	buf->f_namelen = MINIX_FILENAME_LEN;
 }
 
 /*
