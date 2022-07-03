@@ -1,4 +1,5 @@
 #include <fs/fs.h>
+#include <fs/mount.h>
 #include <fs/minix_fs.h>
 #include <fs/proc_fs.h>
 #include <proc/sched.h>
@@ -9,8 +10,9 @@
 #include <fcntl.h>
 #include <dev.h>
 
-/* file systems list */
+/* file systems and mounted fs lists */
 static LIST_HEAD(fs_list);
+static LIST_HEAD(vfs_mounts_list);
 
 /*
  * Register a file system.
@@ -48,6 +50,58 @@ struct file_system_t *get_filesystem(const char *name)
 }
 
 /*
+ * Add a mounted file system.
+ */
+static int add_vfs_mount(dev_t dev, const char *dev_name, const char *dir_name, int flags, struct super_block_t *sb)
+{
+	struct vfs_mount_t *vfs_mount;
+
+	/* allocate a new mount fs */
+	vfs_mount = (struct vfs_mount_t *) kmalloc(sizeof(struct vfs_mount_t));
+	if (!vfs_mount)
+		return -ENOMEM;
+
+	/* init mount fs */
+	vfs_mount->mnt_dev = dev;
+	vfs_mount->mnt_devname = NULL;
+	vfs_mount->mnt_dirname = NULL;
+	vfs_mount->mnt_flags = flags;
+	vfs_mount->mnt_sb = sb;
+
+	/* set device name */
+	if (dev_name) {
+		vfs_mount->mnt_devname = strdup(dev_name);
+		if (!vfs_mount->mnt_devname)
+			goto err;
+	} else {
+		vfs_mount->mnt_devname = NULL;
+	}
+
+	/* set dir name */
+	if (dir_name) {
+		vfs_mount->mnt_dirname = strdup(dir_name);
+		if (!vfs_mount->mnt_dirname)
+			goto err;
+	} else {
+		vfs_mount->mnt_dirname = NULL;
+	}
+
+	/* add mounted file system */
+	list_add(&vfs_mount->mnt_list, &vfs_mounts_list);
+
+	return 0;
+err:
+	if (vfs_mount->mnt_devname)
+		kfree(vfs_mount->mnt_devname);
+
+	if (vfs_mount->mnt_dirname)
+		kfree(vfs_mount->mnt_dirname);
+
+	kfree(vfs_mount);
+	return -ENOMEM;
+}
+
+/*
  * Get mount point inode.
  */
 static int get_mount_point(const char *mount_point, struct inode_t **res_inode)
@@ -75,7 +129,7 @@ static int get_mount_point(const char *mount_point, struct inode_t **res_inode)
 /*
  * Mount a file system.
  */
-int do_mount(struct file_system_t *fs, dev_t dev, const char *mount_point, void *data, int flags)
+int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags)
 {
 	struct inode_t *mount_point_dir = NULL;
 	struct super_block_t *sb;
@@ -100,6 +154,11 @@ int do_mount(struct file_system_t *fs, dev_t dev, const char *mount_point, void 
 	/* set mount point */
 	mount_point_dir->i_mount = sb->s_root_inode;
 
+	/* add mounted file system */
+	err = add_vfs_mount(dev, dev_name, mount_point, flags, sb);
+	if (err)
+		goto err;
+
 	return 0;
 err:
 	if (mount_point_dir)
@@ -117,6 +176,7 @@ int do_mount_root(dev_t dev)
 	struct file_system_t *fs;
 	struct super_block_t *sb;
 	struct list_head_t *pos;
+	int flags = 0;
 	int err;
 
 	/* allocate a super block */
@@ -135,7 +195,7 @@ int do_mount_root(dev_t dev)
 			continue;
 
 		/* read super block */
-		err = fs->read_super(sb, NULL, 0);
+		err = fs->read_super(sb, NULL, flags);
 		if (err == 0)
 			goto found;
 	}
@@ -148,6 +208,13 @@ found:
 	current_task->cwd = sb->s_root_inode;
 	current_task->root = sb->s_root_inode;
 	strcpy(current_task->cwd_path, "/");
+
+	/* add mounted file system */
+	err = add_vfs_mount(dev, "rootfs", "/", flags, sb);
+	if (err) {
+		kfree(sb);
+		return err;
+	}
 
 	return 0;
 }

@@ -180,7 +180,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
 struct inode_operations_t *char_get_driver(struct inode_t *inode);
 
 /* system calls */
-int do_mount(struct file_system_t *fs, dev_t dev, const char *mount_point, void *data, int flags);
+int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);
 int do_mount_root();
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(int fd);

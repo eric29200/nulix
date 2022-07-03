@@ -36,5 +36,5 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 		iput(inode);
 	}
 
-	return do_mount(fs, dev, dir_name, data, flags);
+	return do_mount(fs, dev, dev_name, dir_name, data, flags);
 }
