@@ -50,6 +50,23 @@ struct file_system_t *get_filesystem(const char *name)
 }
 
 /*
+ * Get file systems list.
+ */
+int get_filesystem_list(char *buf)
+{
+	struct file_system_t *fs;
+	struct list_head_t *pos;
+	int len = 0;
+
+	list_for_each(pos, &fs_list) {
+		fs = list_entry(pos, struct file_system_t, list);
+		len += sprintf(buf + len, "%s\t%s\n", fs->requires_dev ? "" : "nodev", fs->name);
+	}
+
+	return len;
+}
+
+/*
  * Add a mounted file system.
  */
 static int add_vfs_mount(dev_t dev, const char *dev_name, const char *dir_name, int flags, struct super_block_t *sb)

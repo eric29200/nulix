@@ -156,6 +156,7 @@ struct file_operations_t {
 /* super operations */
 int register_filesystem(struct file_system_t *fs);
 struct file_system_t *get_filesystem(const char *name);
+int get_filesystem_list(char *buf);
 
 /* buffer operations */
 struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block);
