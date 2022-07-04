@@ -6,7 +6,7 @@
 /*
  * Follow a link (inode will be released).
  */
-int ext2_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode)
+int ext2_fast_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode)
 {
 	char *target;
 
@@ -40,7 +40,7 @@ int ext2_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t 
 /*
  * Read value of a symbolic link.
  */
-ssize_t ext2_readlink(struct inode_t *inode, char *buf, size_t bufsize)
+ssize_t ext2_fast_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 {
 	char *target;
 	size_t len;
@@ -65,5 +65,89 @@ ssize_t ext2_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 	/* release inode */
 	iput(inode);
 
+	return len;
+}
+
+/*
+ * Resolve a symbolic link.
+ */
+int ext2_page_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode)
+{
+	struct buffer_head_t *bh;
+
+	*res_inode = NULL;
+
+	/* null inode */
+	if (!inode) {
+		return -ENOENT;
+	}
+
+	if (!S_ISLNK(inode->i_mode)) {
+		*res_inode = inode;
+		return 0;
+	}
+
+	/* read first link block */
+	bh = ext2_bread(inode, 0, 0);
+	if (!bh) {
+		iput(inode);
+		return -EIO;
+	}
+
+	/* release link inode */
+	iput(inode);
+
+	/* resolve target inode */
+	*res_inode = namei(AT_FDCWD, dir, bh->b_data, 0);
+	if (!*res_inode) {
+		brelse(bh);
+		return -EACCES;
+	}
+
+	/* release link buffer */
+	brelse(bh);
+	return 0;
+}
+
+/*
+ * Read value of a symbolic link.
+ */
+ssize_t ext2_page_readlink(struct inode_t *inode, char *buf, size_t bufsize)
+{
+	struct buffer_head_t *bh;
+	size_t len;
+
+	/* inode must be link */
+	if (!S_ISLNK(inode->i_mode)) {
+		iput(inode);
+		return -EINVAL;
+	}
+
+	/* limit buffer size to block size */
+	if (bufsize > inode->i_sb->s_blocksize)
+		bufsize = inode->i_sb->s_blocksize - 1;
+
+	/* check 1st block */
+	if (!inode->u.ext2_i.i_data[0]) {
+		iput(inode);
+		return 0;
+	}
+
+	/* read 1st block */
+	bh = ext2_bread(inode, 0, 0);
+	if (!bh) {
+		iput(inode);
+		return 0;
+	}
+
+	/* release inode */
+	iput(inode);
+
+	/* copy target name to user buffer */
+	for (len = 0; len < bufsize; len++)
+		buf[len] = bh->b_data[len];
+
+	/* release buffer */
+	brelse(bh);
 	return len;
 }

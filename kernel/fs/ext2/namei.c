@@ -616,6 +616,34 @@ out:
 }
 
 /*
+ * Write a symbolic link on first data block.
+ */
+static int ext2_block_symlink(struct inode_t *inode, const char *target)
+{
+	struct buffer_head_t *bh;
+	int i;
+
+	/* read create first block */
+	bh = ext2_bread(inode, 0, 1);
+	if (!bh)
+		return -EIO;
+
+	/* write file name on first block */
+	for (i = 0; target[i] && i < inode->i_sb->s_blocksize - 1; i++)
+		bh->b_data[i] = target[i];
+	bh->b_data[i] = 0;
+
+	/* mark inode dirty */
+	inode->i_size = i;
+	inode->i_dirt = 1;
+
+	/* release block buffer */
+	brelse(bh);
+
+	return 0;
+}
+
+/*
  * Create a symbolic link.
  */
 int ext2_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target)
@@ -639,9 +667,16 @@ int ext2_symlink(struct inode_t *dir, const char *name, size_t name_len, const c
 	}
 
 	/* write target link */
-	inode->i_op = &ext2_symlink_iops;
-	memcpy((char *) &inode->u.ext2_i.i_data, target, target_len);
-	inode->i_size = target_len - 1;
+	if (target_len > sizeof(inode->u.ext2_i.i_data)) {
+		inode->i_op = &ext2_page_symlink_iops;
+		err = ext2_block_symlink(inode, target);
+		if (err)
+			goto err;
+	} else {
+		inode->i_op = &ext2_fast_symlink_iops;
+		memcpy((char *) &inode->u.ext2_i.i_data, target, target_len);
+		inode->i_size = target_len - 1;
+	}
 
 	/* mark inode dirty */
 	inode->i_dirt = 1;

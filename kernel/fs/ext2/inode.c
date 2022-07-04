@@ -27,11 +27,19 @@ struct inode_operations_t ext2_file_iops = {
 };
 
 /*
- * Ext2 symbolic link inode operations.
+ * Ext2 fast symbolic link inode operations.
  */
-struct inode_operations_t ext2_symlink_iops = {
-	.follow_link	= ext2_follow_link,
-	.readlink	= ext2_readlink,
+struct inode_operations_t ext2_fast_symlink_iops = {
+	.follow_link	= ext2_fast_follow_link,
+	.readlink	= ext2_fast_readlink,
+};
+
+/*
+ * Ext2 page symbolic link inode operations.
+ */
+struct inode_operations_t ext2_page_symlink_iops = {
+	.follow_link	= ext2_page_follow_link,
+	.readlink	= ext2_page_readlink,
 };
 
 /*
@@ -50,6 +58,16 @@ struct inode_operations_t ext2_dir_iops = {
 	.mknod		= ext2_mknod,
 	.truncate	= ext2_truncate,
 };
+
+/*
+ * Test whether an inode is a fast symlink.
+ */
+static inline int ext2_inode_is_fast_symlink(struct inode_t *inode)
+{
+	int ea_blocks = inode->u.ext2_i.i_file_acl ? (inode->i_sb->s_blocksize >> 9) : 0;
+
+	return S_ISLNK(inode->i_mode) && (inode->i_blocks - ea_blocks == 0);
+}
 
 /*
  * Release a Ext2 inode.
@@ -112,7 +130,7 @@ int ext2_read_inode(struct inode_t *inode)
 	inode->i_uid = le16toh(raw_inode->i_uid) | (le16toh(raw_inode->i_uid_high) << 16);
 	inode->i_gid = le16toh(raw_inode->i_gid) | (le16toh(raw_inode->i_gid_high) << 16);
 	inode->i_size = le32toh(raw_inode->i_size);
-	inode->i_blocks = le32toh(raw_inode->i_size);
+	inode->i_blocks = le32toh(raw_inode->i_blocks);
 	inode->i_atime = le32toh(raw_inode->i_atime);
 	inode->i_mtime = le32toh(raw_inode->i_mtime);
 	inode->i_ctime = le32toh(raw_inode->i_ctime);
@@ -132,7 +150,10 @@ int ext2_read_inode(struct inode_t *inode)
 	if (S_ISDIR(inode->i_mode)) {
 		inode->i_op = &ext2_dir_iops;
 	} else if (S_ISLNK(inode->i_mode)) {
-		inode->i_op = &ext2_symlink_iops;
+		if (ext2_inode_is_fast_symlink(inode))
+			inode->i_op = &ext2_fast_symlink_iops;
+		else
+			inode->i_op = &ext2_page_symlink_iops;
 	} else if (S_ISCHR(inode->i_mode)) {
 		inode->i_rdev = le32toh(raw_inode->i_block[0]);
 		inode->i_op = char_get_driver(inode);
