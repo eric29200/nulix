@@ -11,12 +11,12 @@ cd busybox
 rm -rf *
 
 # download busybox sources
-wget https://busybox.net/downloads/busybox-1.33.1.tar.bz2
-tar -xjvf busybox-1.33.1.tar.bz2
+wget https://busybox.net/downloads/busybox-1.35.0.tar.bz2
+tar -xjvf busybox-1.35.0.tar.bz2
 
 # build busybox
-cd busybox-1.33.1
+cd busybox-1.35.0
 make clean
-cp ../../config/busybox-1.33.1.config .config
+cp ../../config/busybox.config .config
 make -j8 CC=$MUSL_CC
 make -j8 install CC=$MUSL_CC
