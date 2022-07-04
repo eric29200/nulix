@@ -68,6 +68,7 @@ struct inode_t {
 	uid_t				i_uid;
 	gid_t				i_gid;
 	uint32_t			i_size;
+	uint32_t			i_blocks;
 	time_t				i_atime;
 	time_t				i_mtime;
 	time_t				i_ctime;

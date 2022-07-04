@@ -86,6 +86,7 @@ static int minix_read_inode_v1(struct inode_t *inode)
 	inode->i_atime = raw_inode->i_time;
 	inode->i_mtime = raw_inode->i_time;
 	inode->i_ctime = raw_inode->i_time;
+	inode->i_blocks = 0;
 	for (i = 0; i < 10; i++)
 		inode->u.minix_i.i_zone[i] = raw_inode->i_zone[i];
 
@@ -141,6 +142,7 @@ static int minix_read_inode_v2(struct inode_t *inode)
 	inode->i_atime = raw_inode->i_atime;
 	inode->i_ctime = raw_inode->i_ctime;
 	inode->i_mtime = raw_inode->i_mtime;
+	inode->i_blocks = 0;
 	for (i = 0; i < 10; i++)
 		inode->u.minix_i.i_zone[i] = raw_inode->i_zone[i];
 

@@ -90,6 +90,7 @@ allocated:
 	inode->i_gid = current_task->gid;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_size = 0;
+	inode->i_blocks = 0;
 	inode->i_nlinks = 1;
 	inode->i_op = NULL;
 	inode->i_ref = 1;
