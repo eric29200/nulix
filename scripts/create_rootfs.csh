@@ -5,10 +5,12 @@ set DISK2		= hdb.img
 set DISK_SIZE		= 512M
 
 # create first disk
+rm -f $DISK1
 dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE
-mkfs.minix -3 $DISK1
+mkfs.ext2 -b 4096 $DISK1
 
 # create second disk
+rm -f $DISK2
 dd if=/dev/zero of=$DISK2 bs=1 count=1 seek=$DISK_SIZE
 mkfs.minix -3 $DISK2
 

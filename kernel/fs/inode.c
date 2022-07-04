@@ -12,7 +12,7 @@ static struct inode_t inode_table[NR_INODE];
 /*
  * Get an empty inode.
  */
-struct inode_t *get_empty_inode()
+struct inode_t *get_empty_inode(struct super_block_t *sb)
 {
 	struct inode_t *inode;
 	int i;
@@ -31,6 +31,7 @@ struct inode_t *get_empty_inode()
 
 	/* reset inode */
 	memset(inode, 0, sizeof(struct inode_t));
+	inode->i_sb = sb;
 	inode->i_ref = 1;
 
 	return inode;
@@ -63,13 +64,12 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 	}
 
 	/* get an empty inode */
-	inode = get_empty_inode();
+	inode = get_empty_inode(sb);
 	if (!inode)
 		return NULL;
 
 	/* read inode */
 	inode->i_ino = ino;
-	inode->i_sb = sb;
 	sb->s_op->read_inode(inode);
 
 	return inode;

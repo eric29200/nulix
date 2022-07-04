@@ -101,7 +101,7 @@ static int minix_read_inode_v1(struct inode_t *inode)
 		inode->i_op = &minix_file_iops;
 	}
 
-	/* free minix inode */
+	/* release block buffer */
 	brelse(bh);
 
 	return 0;
@@ -156,7 +156,7 @@ static int minix_read_inode_v2(struct inode_t *inode)
 		inode->i_op = &minix_file_iops;
 	}
 
-	/* free minix inode */
+	/* release block buffer */
 	brelse(bh);
 
 	return 0;

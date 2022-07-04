@@ -19,7 +19,7 @@ static struct timer_event_t bsync_tm;
 /*
  * Write a block buffer.
  */
-static int bwrite(struct buffer_head_t *bh)
+int bwrite(struct buffer_head_t *bh)
 {
 	int ret;
 

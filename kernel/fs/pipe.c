@@ -119,7 +119,7 @@ static struct inode_t *get_pipe_inode()
 	struct inode_t *inode;
 
 	/* get an empty inode */
-	inode = get_empty_inode();
+	inode = get_empty_inode(NULL);
 	if (!inode)
 		return NULL;
 

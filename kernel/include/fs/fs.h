@@ -51,6 +51,7 @@ struct file_system_t {
 struct super_block_t {
 	dev_t				s_dev;
 	uint16_t			s_blocksize;
+	uint8_t				s_blocksize_bits;
 	void *				s_fs_info;
 	uint16_t			s_magic;
 	struct file_system_t *		s_type;
@@ -169,6 +170,7 @@ int get_vfs_mount_list(char *buf, int count);
 
 /* buffer operations */
 struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block);
+int bwrite(struct buffer_head_t *bh);
 void brelse(struct buffer_head_t *bh);
 void bsync();
 int binit();
@@ -177,7 +179,7 @@ struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block);
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
-struct inode_t *get_empty_inode();
+struct inode_t *get_empty_inode(struct super_block_t *sb);
 
 /* file operations */
 struct file_t *get_empty_filp();
@@ -225,5 +227,20 @@ int do_fcntl(int fd, int cmd, unsigned long arg);
 int do_dup(int oldfd);
 int do_dup2(int oldfd, int newfd);
 int do_statfs64(const char *path, struct statfs64_t *buf);
+
+/*
+ * Compute block size in bits from block in size in byte.
+ */
+static inline uint32_t blksize_bits(uint32_t size)
+{
+	uint32_t bits = 8;
+
+	do {
+		bits++;
+		size >>= 1;
+	} while (size > 256);
+
+	return bits;
+}
 
 #endif

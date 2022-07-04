@@ -17,6 +17,7 @@
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <fs/minix_fs.h>
+#include <fs/ext2_fs.h>
 #include <fs/proc_fs.h>
 #include <stdio.h>
 #include <string.h>
@@ -99,6 +100,8 @@ static void kinit()
 	/* register filesystems */
 	if (init_minix_fs() != 0)
 		panic("Cannot register minix file system");
+	if (init_ext2_fs() != 0)
+		panic("Cannot register ext2 file system");
 	if (init_proc_fs() != 0)
 		panic("Cannot register proc file system");
 

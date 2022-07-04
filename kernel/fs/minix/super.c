@@ -26,6 +26,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int flags)
 
 	/* set default block size */
 	sb->s_blocksize = MINIX_BLOCK_SIZE;
+	sb->s_blocksize_bits = MINIX_BLOCK_SIZE_BITS;
 
 	/* read super block */
 	sbi->s_sbh = bread(sb, 1);
@@ -79,6 +80,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int flags)
 		sbi->s_dirsize = 64;
 		sbi->s_max_size = msb3->s_max_size;
 		sb->s_blocksize = msb3->s_blocksize;
+		sb->s_blocksize_bits = blksize_bits(msb3->s_blocksize);
 	} else {
 		goto err_bad_magic;
 	}
@@ -185,14 +187,6 @@ static void minix_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 	buf->f_namelen = sbi->s_name_len;
 }
 
-/*
- * Minix file system.
- */
-static struct file_system_t minix_fs = {
-	.name		= "minix",
-	.requires_dev	= 1,
-	.read_super	= minix_read_super,
-};
 
 /*
  * Minix super operations.
@@ -204,6 +198,14 @@ struct super_operations_t minix_sops = {
 	.statfs			= minix_statfs,
 };
 
+/*
+ * Minix file system.
+ */
+static struct file_system_t minix_fs = {
+	.name			= "minix",
+	.requires_dev		= 1,
+	.read_super		= minix_read_super,
+};
 /*
  * Init minix file system.
  */

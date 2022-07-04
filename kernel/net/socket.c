@@ -41,7 +41,7 @@ static struct socket_t *sock_alloc()
 	memset(&sockets[i], 0, sizeof(struct socket_t));
 
 	/* get an empty inode */
-	sockets[i].inode = get_empty_inode();
+	sockets[i].inode = get_empty_inode(NULL);
 	if (!sockets[i].inode) {
 		sockets[i].state = SS_FREE;
 		return NULL;

@@ -2,6 +2,7 @@
 #define _EXT2_FS_H_
 
 #include <stddef.h>
+#include <x86/endian.h>
 
 #define EXT2_BLOCK_SIZE_BITS			10
 #define EXT2_BLOCK_SIZE				(1 << EXT2_BLOCK_SIZE_BITS)	/* = 1024 bytes */
@@ -185,7 +186,7 @@ int init_ext2_fs();
 /* Ext2 inode prototypes */
 int ext2_read_inode(struct inode_t *inode);
 int ext2_write_inode(struct inode_t *inode);
-void ext2_put_inode(struct inode_t *inode);
+int ext2_put_inode(struct inode_t *inode);
 struct buffer_head_t *ext2_bread(struct inode_t *inode, uint32_t block, int create);
 
 /* Ext2 inode alloc prototypes */
@@ -214,6 +215,7 @@ int ext2_unlink(struct inode_t *dir, const char *name, size_t name_len);
 int ext2_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target);
 int ext2_rename(struct inode_t *old_dir, const char *old_name, size_t old_name_len,
 		struct inode_t *new_dir, const char *new_name, size_t new_name_len);
+int ext2_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, dev_t dev);
 
 /* Ext2 file prototypes */
 int ext2_file_read(struct file_t *filp, char *buf, int count);
@@ -239,12 +241,12 @@ static inline uint32_t ext2_group_first_block_no(struct super_block_t *sb, uint3
 /*
  * Get first free bit in a bitmap block.
  */
-static inline int ext2_get_free_bitmap(struct super_block_t *sb, struct buffer_head_t *bh)
+static inline int ext2_get_free_bitmap(struct buffer_head_t *bh)
 {
 	uint32_t *bits = (uint32_t *) bh->b_data;
 	register int i, j;
 
-	for (i = 0; i < bh->b_size / 4; i++)
+	for (i = 0; i < (int) bh->b_size / 4; i++)
 		if (bits[i] != 0xFFFFFFFF)
 			for (j = 0; j < 32; j++)
 				if (!(bits[i] & (0x1 << j)))

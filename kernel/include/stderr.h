@@ -36,6 +36,7 @@
 #define EDOM		33	/* Math argument out of domain of func */
 #define ERANGE		34	/* Math result not representable */
 #define ENOSYS		35	/* Not implemented */
+#define ENAMETOOLONG	36	/* File name too long */
 #define ENOTCONN	107	/* Transport endpoint is not connected */
 #define ERESTARTSYS	512	/* Restart system call */
 

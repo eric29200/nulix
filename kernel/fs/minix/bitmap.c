@@ -158,7 +158,7 @@ struct inode_t *minix_new_inode(struct super_block_t *sb)
 	int j;
 
 	/* get an empty new inode */
-	inode = get_empty_inode();
+	inode = get_empty_inode(sb);
 	if (!inode)
 		return NULL;
 
