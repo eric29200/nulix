@@ -1,4 +1,4 @@
-CC		= ../musl/musl-1.2.2-build/bin/musl-gcc
+CC		= ../musl/musl-1.2.3-build/bin/musl-gcc
 CFLAGS		= -m32 -ffreestanding -fno-stack-protector -Wall -Wextra
 
 all: init
