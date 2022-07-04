@@ -17,21 +17,16 @@ cd musl
 
 # cleanup directories
 rm -rf *
-mkdir musl-1.2.2-build
+mkdir musl-1.2.3-build
 
 # download musl sources
-wget https://musl.libc.org/releases/musl-1.2.2.tar.gz
-tar -xzvf musl-1.2.2.tar.gz
-
-# patch musl (to disable threads, errno and force IPv4)
-patch -p0 < ../patches/musl-1.2.2-disable-threads.patch
-patch -p0 < ../patches/musl-1.2.2-errno.patch
-patch -p0 < ../patches/musl-1.2.2-force-ipv4.patch
+wget https://musl.libc.org/releases/musl-1.2.3.tar.gz
+tar -xzvf musl-1.2.3.tar.gz
 
 # build musl
-cd ./musl-1.2.2/
+cd ./musl-1.2.3/
 make clean
 make distclean
-./configure --target=$TARGET --prefix=`pwd`'/../musl-1.2.2-build'
+./configure --target=$TARGET --prefix=`pwd`'/../musl-1.2.3-build'
 make -j$NJOBS
 make install
