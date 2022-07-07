@@ -11,12 +11,7 @@ hdb.img
 hdc.img
 hdd.img
 musl/*
-dash/*
-coreutils/*
-toybox/*
-busybox/*
+ports/*
 tmp/*
 usr/init
-usr/wallpaper
-usr/xserver
 traffic.pcap
