@@ -40,6 +40,9 @@ sudo cp -P busybox/busybox-1.35.0/_install/sbin/* tmp/sbin
 sudo cp -P busybox/busybox-1.35.0/_install/usr/bin/* tmp/usr/bin
 sudo cp -P busybox/busybox-1.35.0/_install/usr/sbin/* tmp/usr/sbin
 
+# cp hello binary
+sudo cp -P hello/hello-2.12.1/hello tmp/usr/bin
+
 # create devices nodes
 sudo mknod tmp/dev/null c 1 3
 sudo mknod tmp/dev/zero c 1 5
