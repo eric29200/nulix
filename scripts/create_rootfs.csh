@@ -35,13 +35,13 @@ sudo cp -Rv root/etc tmp/
 sudo cp usr/init tmp/sbin/
 
 # cp busybox binaries
-sudo cp -P busybox/busybox-1.35.0/_install/bin/* tmp/bin
-sudo cp -P busybox/busybox-1.35.0/_install/sbin/* tmp/sbin
-sudo cp -P busybox/busybox-1.35.0/_install/usr/bin/* tmp/usr/bin
-sudo cp -P busybox/busybox-1.35.0/_install/usr/sbin/* tmp/usr/sbin
+sudo cp -P ports/busybox/busybox-1.35.0/_install/bin/* tmp/bin
+sudo cp -P ports/busybox/busybox-1.35.0/_install/sbin/* tmp/sbin
+sudo cp -P ports/busybox/busybox-1.35.0/_install/usr/bin/* tmp/usr/bin
+sudo cp -P ports/busybox/busybox-1.35.0/_install/usr/sbin/* tmp/usr/sbin
 
 # cp hello binary
-sudo cp -P hello/hello-2.12.1/hello tmp/usr/bin
+sudo cp -P ports/hello/hello-2.12.1/hello tmp/usr/bin
 
 # create devices nodes
 sudo mknod tmp/dev/null c 1 3
