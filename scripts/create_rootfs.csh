@@ -43,6 +43,9 @@ sudo cp -P ports/busybox/busybox-1.35.0/_install/usr/sbin/* tmp/usr/sbin
 # cp hello binary
 sudo cp -P ports/hello/hello-2.12.1/hello tmp/usr/bin
 
+# cp lz4 binary
+sudo cp ports/lz4/lz4-1.9.3/lz4 tmp/usr/bin
+
 # create devices nodes
 sudo mknod tmp/dev/null c 1 3
 sudo mknod tmp/dev/zero c 1 5
