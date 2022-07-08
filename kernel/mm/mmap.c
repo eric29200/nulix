@@ -40,7 +40,7 @@ static struct vm_area_t *get_unmaped_area(int flags, size_t length)
 
 	/* set new memory region */
 	vm->vm_start = vm_prev ? vm_prev->vm_end : UMAP_START;
-	vm->vm_end = vm->vm_start + length;
+	vm->vm_end = PAGE_ALIGN_UP(vm->vm_start + length);
 	vm->vm_flags = flags;
 
 	/* check memory map overflow */
@@ -68,14 +68,14 @@ static struct vm_area_t *expand_area(struct vm_area_t *vm, uint32_t addr)
 
 	/* last memory region : just expand */
 	if (list_is_last(&vm->list, &current_task->vm_list)) {
-		vm->vm_end = addr;
+		vm->vm_end = PAGE_ALIGN_UP(addr);
 		return vm;
 	}
 
 	/* no intersection with next memory region : just expand */
 	vm_next = list_next_entry(vm, list);
 	if (addr <= vm_next->vm_start) {
-		vm->vm_end = addr;
+		vm->vm_end = PAGE_ALIGN_UP(addr);
 		return vm;
 	}
 
