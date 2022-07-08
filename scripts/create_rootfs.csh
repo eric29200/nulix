@@ -46,10 +46,6 @@ sudo cp -P ports/hello/hello-2.12.1/hello tmp/usr/bin
 # cp lz4 binary
 sudo cp -P ports/lz4/lz4-1.9.3/lz4 tmp/usr/bin
 
-# cp lua binary
-sudo cp -P ports/lua/lua-5.4.4/src/luac tmp/usr/bin
-sudo cp -P ports/lua/lua-5.4.4/src/lua tmp/usr/bin
-
 # create devices nodes
 sudo mknod tmp/dev/null c 1 3
 sudo mknod tmp/dev/zero c 1 5
