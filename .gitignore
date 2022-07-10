@@ -10,6 +10,7 @@ hda.img
 hdb.img
 hdc.img
 hdd.img
+root/*
 musl/*
 ports/*
 tmp/*
