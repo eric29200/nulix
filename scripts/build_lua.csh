@@ -21,5 +21,5 @@ tar -xzvf lua-5.4.4.tar.gz
 
 # build lua
 cd lua-5.4.4
-make -j8 CC=$MUSL_CC CFLAGS="-static"
-make install CC=$MUSL_CC CFLAGS="-static" INSTALL_TOP=$INSTALL_DIR
+make -j8 CC=$MUSL_CC LDFLAGS="-static"
+make install INSTALL_TOP=$INSTALL_DIR
