@@ -22,5 +22,6 @@ tar -xzvf hello-2.12.1.tar.gz
 # build hello
 cd hello-2.12.1
 ./configure --host=i386 --prefix=$INSTALL_DIR CC=$MUSL_CC CFLAGS="-static"
+make uninstall
 make -j8
 make install

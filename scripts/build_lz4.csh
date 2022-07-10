@@ -2,7 +2,7 @@
 
 # setup environement
 setenv MUSL_CC		`pwd`"/musl/musl-1.2.3-build/bin/musl-gcc"
-setenv DESTDIR		`pwd`/root/
+setenv INSTALL_DIR	`pwd`/root
 
 # create port directory if needed
 mkdir ports >& /dev/null
@@ -21,5 +21,7 @@ tar -xzvf v1.9.3.tar.gz
 
 # build lz4
 cd lz4-1.9.3
-make uninstall DESTDIR=$DESTDIR
-make -j8 install CC=$MUSL_CC CFLAGS="-static" DESTDIR=$DESTDIR
+make uninstall DESTDIR=$INSTALL_DIR
+make -j8 CC=$MUSL_CC CFLAGS="-static"
+sudo make -j8 install DESTDIR=$INSTALL_DIR
+
