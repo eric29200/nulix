@@ -1,7 +1,8 @@
 #!/bin/csh
 
 # setup environement
-setenv MUSL_CC		`pwd`"/musl/musl-1.2.3-build/bin/musl-gcc"
+setenv SYSROOT		`pwd`/sysroot
+setenv MUSL_CC		$SYSROOT"/bin/musl-gcc"
 setenv INSTALL_DIR	`pwd`/root/
 
 # create port directory if needed

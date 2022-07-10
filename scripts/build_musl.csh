@@ -8,6 +8,7 @@ setenv LD 		i686-linux-gnu-ld
 setenv RANLIB 		i686-linux-gnu-ranlib
 
 setenv TARGET		i386
+setenv SYSROOT		`pwd`/sysroot
 setenv CFLAGS		-DSYSCALL_NO_TLS=1
 setenv NJOBS		8
 
@@ -27,6 +28,6 @@ tar -xzvf musl-1.2.3.tar.gz
 cd ./musl-1.2.3/
 make clean
 make distclean
-./configure --target=$TARGET --prefix=`pwd`'/../musl-1.2.3-build'
+./configure --target=$TARGET --prefix=$SYSROOT
 make -j$NJOBS
 make install
