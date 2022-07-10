@@ -2,6 +2,7 @@
 
 # setup environement
 setenv MUSL_CC		`pwd`"/musl/musl-1.2.3-build/bin/musl-gcc"
+setenv INSTALL_DIR	`pwd`/root/
 
 # create port directory if needed
 mkdir ports >& /dev/null
@@ -20,5 +21,6 @@ tar -xzvf hello-2.12.1.tar.gz
 
 # build hello
 cd hello-2.12.1
-./configure --host=i386 CC=$MUSL_CC CFLAGS="-static"
+./configure --host=i386 --prefix=$INSTALL_DIR CC=$MUSL_CC CFLAGS="-static"
 make -j8
+make install

@@ -19,32 +19,23 @@ mkdir tmp >& /dev/null
 sudo mount $DISK1 tmp
 
 # create root folders
-sudo mkdir -p tmp/bin
-sudo mkdir -p tmp/sbin
-sudo mkdir -p tmp/usr/bin
-sudo mkdir -p tmp/usr/sbin
+sudo mkdir -p tmp/etc
 sudo mkdir -p tmp/dev
 sudo mkdir -p tmp/dev/pts
 sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt
 
+# create config files
+sudo sh -c 'echo "root::0:" > tmp/etc/group'
+sudo sh -c 'echo "nulix" > tmp/etc/issue.net'
+sudo sh -c 'echo "root::0:0:root:/:/bin/sh" > tmp/etc/passwd'
+sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
+
 # copy root folders
-sudo cp -Rv root/etc tmp/
+sudo cp -Rv root/* tmp/
 
 # cp user binaries
 sudo cp usr/init tmp/sbin/
-
-# cp busybox binaries
-sudo cp -P ports/busybox/busybox-1.35.0/_install/bin/* tmp/bin
-sudo cp -P ports/busybox/busybox-1.35.0/_install/sbin/* tmp/sbin
-sudo cp -P ports/busybox/busybox-1.35.0/_install/usr/bin/* tmp/usr/bin
-sudo cp -P ports/busybox/busybox-1.35.0/_install/usr/sbin/* tmp/usr/sbin
-
-# cp hello binary
-sudo cp -P ports/hello/hello-2.12.1/hello tmp/usr/bin
-
-# cp lz4 binary
-sudo cp -P ports/lz4/lz4-1.9.3/lz4 tmp/usr/bin
 
 # create devices nodes
 sudo mknod tmp/dev/null c 1 3
