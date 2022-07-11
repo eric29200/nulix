@@ -119,6 +119,9 @@ void schedule()
 		}
 	}
 
+	/* disable interrupts */
+	irq_disable();
+
 	/* get next task to run */
 	prev_task = current_task;
 	current_task = get_next_task();
@@ -129,6 +132,9 @@ void schedule()
 		switch_page_directory(current_task->pgd);
 		scheduler_do_switch(&prev_task->esp, current_task->esp);
 	}
+
+	/* enable interrupts */
+	irq_enable();
 }
 
 /*
