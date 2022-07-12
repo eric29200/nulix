@@ -1,11 +1,6 @@
 #!/bin/csh
 
 # setup environement
-setenv AR 		i686-linux-gnu-ar
-setenv AS 		i686-linux-gnu-as
-setenv CC 		i686-linux-gnu-gcc
-setenv LD 		i686-linux-gnu-ld
-setenv RANLIB 		i686-linux-gnu-ranlib
 setenv TARGET		i386
 setenv SYSROOT		`pwd`/sysroot
 setenv MUSL_CC		$SYSROOT"/bin/musl-gcc"
