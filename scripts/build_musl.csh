@@ -23,6 +23,9 @@ mkdir musl-1.2.3-build
 wget https://musl.libc.org/releases/musl-1.2.3.tar.gz
 tar -xzvf musl-1.2.3.tar.gz
 
+# patch musl
+patch -p0 < ../patches/musl-1.2.3-errno.patch
+
 # build musl
 cd ./musl-1.2.3/
 make clean
