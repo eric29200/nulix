@@ -3,8 +3,12 @@
 # setup environement
 setenv TARGET		i386
 setenv SYSROOT		`pwd`/sysroot
-setenv MUSL_CC		$SYSROOT"/bin/musl-gcc"
+setenv CC		$SYSROOT"/bin/musl-gcc"
+setenv LD		$SYSROOT"/bin/musl-gcc"
 setenv INSTALL_DIR	`pwd`/root/
+setenv CFLAGS		"-static"
+setenv LDFLAGS		"-static"
+setenv NJOBS		8
 
 # create port directory if needed
 mkdir ports >& /dev/null
@@ -23,7 +27,5 @@ tar -xzvf hello-2.12.1.tar.gz
 
 # build hello
 cd hello-2.12.1
-./configure --host=$TARGET --prefix=$INSTALL_DIR CC=$MUSL_CC CFLAGS="-static"
-make uninstall
-make -j8
-make install
+./configure --host=$TARGET --prefix=$INSTALL_DIR
+make -j$NJOBS install

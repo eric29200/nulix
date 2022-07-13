@@ -1,9 +1,14 @@
 #!/bin/csh
 
 # setup environement
+setenv TARGET		i386
 setenv SYSROOT		`pwd`/sysroot
-setenv MUSL_CC		$SYSROOT"/bin/musl-gcc"
+setenv CC		$SYSROOT"/bin/musl-gcc"
+setenv LD		$SYSROOT"/bin/musl-gcc"
 setenv INSTALL_DIR	`pwd`/root/
+setenv CFLAGS		"-static"
+setenv LDFLAGS		"-static"
+setenv NJOBS		8
 
 # create port directory if needed
 mkdir ports >& /dev/null
@@ -25,4 +30,4 @@ patch -p0 < ../../patches/figlet-2.2.5.patch
 
 # build figlet
 cd figlet-2.2.5
-make install CC=$MUSL_CC LD=$MUSL_CC DESTDIR=$INSTALL_DIR LDFLAGS="-static"
+make install CC=$CC LD=$LD LDFLAGS=$LDFLAGS DESTDIR=$INSTALL_DIR

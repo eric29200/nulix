@@ -1,7 +1,7 @@
 #!/bin/csh
 
 # setup environement
-#setenv TARGET		i386
+setenv TARGET		i386
 setenv SYSROOT		`pwd`/sysroot
 setenv CC		$SYSROOT"/bin/musl-gcc"
 setenv LD		$SYSROOT"/bin/musl-gcc"
@@ -15,18 +15,17 @@ mkdir ports >& /dev/null
 cd ports
 
 # create directory if needed
-mkdir busybox >& /dev/null
-cd busybox
+mkdir bash >& /dev/null
+cd bash
 
 # cleanup directories
 rm -rf *
 
-# download busybox sources
-wget https://busybox.net/downloads/busybox-1.35.0.tar.bz2
-tar -xjvf busybox-1.35.0.tar.bz2
+# download bash sources
+wget https://ftp.gnu.org/gnu/bash/bash-5.1.16.tar.gz
+tar -xzvf bash-5.1.16.tar.gz
 
-# build busybox
-cd busybox-1.35.0
-cp ../../../config/busybox.config .config
-make -j$NJOBS CC=$CC
-make install CC=$CC
+# build bash
+cd bash-5.1.16
+./configure --host=$TARGET --disable-nls --without-gnu-malloc --prefix=$INSTALL_DIR
+make -j$NJOBS install
