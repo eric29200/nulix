@@ -12,7 +12,7 @@
 #include <uio.h>
 #include <stddef.h>
 
-#define SYSCALLS_NUM			(__NR_clock_gettime64 + 1)
+#define SYSCALLS_NUM			(__NR_faccessat2 + 1)
 
 #define __NR_exit			1
 #define __NR_fork			2
@@ -120,6 +120,7 @@
 #define __NR_recvmsg			372
 #define __NR_statx			383
 #define __NR_clock_gettime64		403
+#define __NR_faccessat2			439
 
 typedef int32_t (*syscall_f)(uint32_t nr, ...);
 
@@ -142,6 +143,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
 pid_t sys_wait4(pid_t pid, int *wstatus, int options, struct rusage_t *rusage);
 int sys_access(const char *filename, mode_t mode);
 int sys_faccessat(int dirfd, const char *pathname, int flags);
+int sys_faccessat2(int dirfd, const char *pathname, int flags);
 int sys_chdir(const char *path);
 int sys_mkdir(const char *pathname, mode_t mode);
 off_t sys_lseek(int fd, off_t offset, int whence);
