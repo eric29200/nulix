@@ -1,0 +1,74 @@
+diff -ruN musl-1.2.3/src/env/__init_tls.c musl-1.2.3-mine/src/env/__init_tls.c
+--- musl-1.2.3/src/env/__init_tls.c	2022-04-07 19:12:40.000000000 +0200
++++ musl-1.2.3-mine/src/env/__init_tls.c	2022-07-15 18:02:43.581304291 +0200
+@@ -87,6 +87,9 @@
+ 	size_t base = 0;
+ 	void *mem;
+ 
++	/* HACK : disable TLS */
++	return;
++
+ 	for (p=(void *)aux[AT_PHDR],n=aux[AT_PHNUM]; n; n--,p+=aux[AT_PHENT]) {
+ 		phdr = (void *)p;
+ 		if (phdr->p_type == PT_PHDR)
+diff -ruN musl-1.2.3/src/env/__reset_tls.c musl-1.2.3-mine/src/env/__reset_tls.c
+--- musl-1.2.3/src/env/__reset_tls.c	2022-04-07 19:12:40.000000000 +0200
++++ musl-1.2.3-mine/src/env/__reset_tls.c	2022-07-15 18:03:10.466153808 +0200
+@@ -4,6 +4,9 @@
+ 
+ void __reset_tls()
+ {
++	/* HACK : disable TLS */
++	return;
++
+ 	pthread_t self = __pthread_self();
+ 	struct tls_module *p;
+ 	size_t i, n = self->dtv[0];
+diff -ruN musl-1.2.3/src/errno/__errno_location.c musl-1.2.3-mine/src/errno/__errno_location.c
+--- musl-1.2.3/src/errno/__errno_location.c	2022-04-07 19:12:40.000000000 +0200
++++ musl-1.2.3-mine/src/errno/__errno_location.c	2022-07-15 18:04:27.060571909 +0200
+@@ -1,9 +1,12 @@
+ #include <errno.h>
+ #include "pthread_impl.h"
+ 
++int errno_global = 0;
++
+ int *__errno_location(void)
+ {
+-	return &__pthread_self()->errno_val;
++	/* HACK : disable TLS */
++	return &errno_global;
+ }
+ 
+ weak_alias(__errno_location, ___errno_location);
+diff -ruN musl-1.2.3/src/process/_Fork.c musl-1.2.3-mine/src/process/_Fork.c
+--- musl-1.2.3/src/process/_Fork.c	2022-04-07 19:12:40.000000000 +0200
++++ musl-1.2.3-mine/src/process/_Fork.c	2022-07-15 18:04:50.581313920 +0200
+@@ -22,11 +22,12 @@
+ 	ret = __syscall(SYS_clone, SIGCHLD, 0);
+ #endif
+ 	if (!ret) {
+-		pthread_t self = __pthread_self();
++		/* HACK : disable TLS */
++		/*pthread_t self = __pthread_self();
+ 		self->tid = __syscall(SYS_gettid);
+ 		self->robust_list.off = 0;
+ 		self->robust_list.pending = 0;
+-		self->next = self->prev = self;
++		self->next = self->prev = self;*/
+ 		__thread_list_lock = 0;
+ 		libc.threads_minus_1 = 0;
+ 		if (libc.need_locks) libc.need_locks = -1;
+diff -ruN musl-1.2.3/src/thread/pthread_setcancelstate.c musl-1.2.3-mine/src/thread/pthread_setcancelstate.c
+--- musl-1.2.3/src/thread/pthread_setcancelstate.c	2022-04-07 19:12:40.000000000 +0200
++++ musl-1.2.3-mine/src/thread/pthread_setcancelstate.c	2022-07-15 18:03:41.263126430 +0200
+@@ -2,6 +2,9 @@
+ 
+ int __pthread_setcancelstate(int new, int *old)
+ {
++	/* HACK : disable TLS */
++	return 0;
++
+ 	if (new > 2U) return EINVAL;
+ 	struct pthread *self = __pthread_self();
+ 	if (old) *old = self->canceldisable;

@@ -17,11 +17,13 @@ cd musl
 
 # cleanup directories
 rm -rf *
-mkdir musl-1.2.3-build
 
 # download musl sources
 wget https://musl.libc.org/releases/musl-1.2.3.tar.gz
 tar -xzvf musl-1.2.3.tar.gz
+
+# patch musl (to disable Thread Local Storage)
+patch -p0 < ../patches/musl-1.2.3-disable-tls.patch
 
 # build musl
 cd ./musl-1.2.3/
