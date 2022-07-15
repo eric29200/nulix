@@ -27,5 +27,5 @@ tar -xzvf hello-2.12.1.tar.gz
 
 # build hello
 cd hello-2.12.1
-./configure --host=$TARGET --prefix=$INSTALL_DIR
+./configure --host=$TARGET --disable-nls --prefix=$INSTALL_DIR
 make -j$NJOBS install
