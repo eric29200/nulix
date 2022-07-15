@@ -113,6 +113,7 @@ static const void *syscalls[] = {
 	[__NR_reboot]			= sys_reboot,
 	[__NR_mount]			= sys_mount,
 	[__NR_statfs64]			= sys_statfs64,
+	[__NR_pselect6]			= sys_pselect6,
 };
 
 /*

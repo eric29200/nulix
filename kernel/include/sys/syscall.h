@@ -107,6 +107,7 @@
 #define __NR_linkat			303
 #define __NR_symlinkat			304
 #define __NR_readlinkat			305
+#define __NR_pselect6			308
 #define __NR_utimensat			320
 #define __NR_socket			359
 #define __NR_bind			361
@@ -210,6 +211,7 @@ int sys_fchmod(int fd, mode_t mode);
 int sys_chmod(const char *pathname, mode_t mode);
 int sys_listen(int sockfd, int backlog);
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
+int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout, sigset_t *sigmask);
 int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
 int sys_mknod(const char *pathname, mode_t mode, dev_t dev);
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
