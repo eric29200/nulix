@@ -254,6 +254,9 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 		case TIOCGWINSZ:
 			memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
 			break;
+		case TIOCSWINSZ:
+			memcpy(&tty->winsize, (struct winsize_t *) arg, sizeof(struct winsize_t));
+			break;
 		case TIOCGPGRP:
 			*((pid_t *) arg) = tty->pgrp;
 			break;
