@@ -13,8 +13,9 @@ static void do_pollfd(struct pollfd_t *fds, int *count)
 	uint32_t mask = 0;
 	int fd;
 
-	/* for each file descriptor */
+	/* reset mask and number of events */
 	mask = 0;
+	*count = 0;
 
 	/* check file descriptor */
 	fd = fds->fd;
