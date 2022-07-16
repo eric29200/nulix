@@ -175,7 +175,7 @@ static void net_handler_thread(void *arg)
 		irq_restore(flags);
 
 		/* wait for incoming packets */
-		task_sleep_timeout(current_task->waiting_chan, NET_HANDLE_FREQ_MS);
+		task_sleep_timeout_ms(current_task->waiting_chan, NET_HANDLE_FREQ_MS);
 	}
 }
 

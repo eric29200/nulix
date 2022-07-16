@@ -27,8 +27,8 @@ extern volatile uint32_t time_offset_us;
  * Time value structure.
  */
 struct timeval_t {
-	time_t	tv_sec;			/* seconds */
-	time_t	tv_usec;		/* micro seconds */
+	long	tv_sec;			/* seconds */
+	long	tv_usec;		/* micro seconds */
 };
 
 /*
@@ -36,7 +36,7 @@ struct timeval_t {
  */
 struct timespec_t {
 	time_t	tv_sec;			/* seconds */
-	long	tv_nsec;		/* nano seconds */
+	time_t	tv_nsec;		/* nano seconds */
 };
 
 /*

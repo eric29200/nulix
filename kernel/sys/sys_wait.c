@@ -13,9 +13,6 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 	int has_children;
 	pid_t child_pid;
 
-	/* unused options flags */
-	UNUSED(options);
-
 	/* look for a terminated child */
 	for (;;) {
 		has_children = 0;

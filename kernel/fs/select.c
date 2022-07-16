@@ -58,7 +58,7 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 
 		/* no events : sleep */
 		if (timeout > 0) {
-			task_sleep_timeout(current_task->waiting_chan, timeout);
+			task_sleep_timeout_ms(current_task->waiting_chan, timeout);
 			timeout = 0;
 		} else if (timeout == 0) {
 			return count;
@@ -92,14 +92,11 @@ static int __select_check(int fd, uint16_t mask)
 /*
  * Select system call.
  */
-int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout)
+int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout)
 {
 	fd_set_t res_readfds, res_writefds, res_exceptfds;
 	int i, max = -1, count;
 	uint32_t set, j;
-
-	/* unused timeout */
-	UNUSED(timeout);
 
 	/* adjust number of file descriptors */
 	if (nfds < 0)
@@ -161,8 +158,16 @@ end_check:
 		if (count || !sigisemptyset(&current_task->sigpend))
 			break;
 
-		/* sleep */
-		task_sleep(current_task->waiting_chan);
+		/* no events : sleep */
+		if (timeout == NULL) {
+			task_sleep(current_task->waiting_chan);
+		} else if (timeout->tv_sec == 0 && timeout->tv_nsec == 0) {
+			return count;
+		} else {
+			task_sleep_timeout(current_task->waiting_chan, timeout);
+			timeout->tv_sec = 0;
+			timeout->tv_nsec = 0;
+		}
 	}
 
 	/* copy results */

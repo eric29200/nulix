@@ -156,10 +156,27 @@ void task_sleep(void *chan)
 /*
  * Sleep for a timeout in ms.
  */
-void task_sleep_timeout(void *chan, int timeout_ms)
+void task_sleep_timeout_ms(void *chan, int timeout)
 {
 	current_task->waiting_chan = chan;
-	current_task->timeout = jiffies + ms_to_jiffies(timeout_ms);
+	current_task->timeout = jiffies + ms_to_jiffies(timeout);
+	current_task->state = TASK_SLEEPING;
+
+	/* reschedule */
+	schedule();
+
+	/* reset waiting channel and timeout */
+	current_task->timeout = 0;
+	current_task->waiting_chan = NULL;
+}
+
+/*
+ * Sleep for a timeout.
+ */
+void task_sleep_timeout(void *chan, struct timespec_t *timeout)
+{
+	current_task->waiting_chan = chan;
+	current_task->timeout = jiffies + timespec_to_jiffies(timeout);
 	current_task->state = TASK_SLEEPING;
 
 	/* reschedule */

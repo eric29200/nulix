@@ -75,7 +75,7 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr,
 			break;
 
 		/* wait for response */
-		task_sleep_timeout(current_task->waiting_chan, ARP_REQUEST_WAIT_MS);
+		task_sleep_timeout_ms(current_task->waiting_chan, ARP_REQUEST_WAIT_MS);
 	}
 
 	return NULL;

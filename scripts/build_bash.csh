@@ -27,5 +27,5 @@ tar -xzvf bash-5.1.16.tar.gz
 
 # build bash
 cd bash-5.1.16
-./configure --host=$TARGET --disable-nls --disable-readline --without-gnu-malloc --prefix=$INSTALL_DIR
+./configure --host=$TARGET --disable-nls --without-gnu-malloc --prefix=$INSTALL_DIR
 make -j$NJOBS install
