@@ -15,7 +15,6 @@ run:
 	grub-mkrescue -o $(ISO) iso
 	./scripts/create_rootfs.csh
 	sudo $(QEMU)								\
-		--enable-kvm							\
 		-m $(MEM_SIZE)							\
 		-serial stdio 							\
 		-cdrom $(ISO) 							\
