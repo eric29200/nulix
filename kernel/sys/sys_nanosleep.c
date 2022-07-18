@@ -10,7 +10,7 @@ int sys_nanosleep(const struct timespec_t *req, struct timespec_t *rem)
 	uint32_t timeout;
 
 	/* check request */
-	if (req->tv_nsec >= 1000000000L || req->tv_nsec < 0 || req->tv_sec < 0)
+	if ( req->tv_nsec < 0 || req->tv_sec < 0)
 		return -EINVAL;
 
 	/* compute delay in jiffies */
