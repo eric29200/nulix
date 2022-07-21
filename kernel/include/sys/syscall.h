@@ -109,6 +109,7 @@
 #define __NR_readlinkat			305
 #define __NR_pselect6			308
 #define __NR_utimensat			320
+#define __NR_renameat2			353
 #define __NR_socket			359
 #define __NR_bind			361
 #define __NR_connect			362
@@ -198,6 +199,7 @@ int sys_clock_gettime64(clockid_t clockid, struct timespec_t *tp);
 int sys_sysinfo(struct sysinfo_t *info);
 int sys_rename(const char *oldpath, const char *newpath);
 int sys_renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+int sys_renameat2(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
 int sys_socket(int domain, int type, int protocol);
 int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
 int sys_recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen);

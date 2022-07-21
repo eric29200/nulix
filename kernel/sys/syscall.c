@@ -85,6 +85,7 @@ static const void *syscalls[] = {
 	[__NR_sysinfo]			= sys_sysinfo,
 	[__NR_rename]			= sys_rename,
 	[__NR_renameat]			= sys_renameat,
+	[__NR_renameat2]		= sys_renameat2,
 	[__NR_socket]			= sys_socket,
 	[__NR_sendto]			= sys_sendto,
 	[__NR_recvmsg]			= sys_recvmsg,
