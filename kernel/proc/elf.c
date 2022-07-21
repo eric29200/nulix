@@ -41,7 +41,6 @@ static int elf_check(struct elf_header_t *elf_header)
 static int segment_load(int fd, int off)
 {
 	struct elf_prog_header_t ph;
-	uint32_t i;
 	int ret;
 
 	/* seek to prog header */
@@ -53,17 +52,21 @@ static int segment_load(int fd, int off)
 	if (do_read(fd, (void *) &ph, sizeof(struct elf_prog_header_t)) != sizeof(struct elf_prog_header_t))
 		return -ENOSPC;
 
+	/* set start text position */
+	if (ph.p_vaddr > 0 && current_task->start_text == 0)
+		current_task->start_text = 0;
+
+	/* update end text position */
+	if (ph.p_vaddr + ph.p_filesz > current_task->end_text)
+		current_task->end_text = ph.p_vaddr + ph.p_filesz;
+
 	/* skip non relocable segments */
 	if (ph.p_type != ET_REL)
 		return 0;
 
-	/* set start text */
-	if (current_task->start_text == 0)
-		current_task->start_text = ph.p_vaddr;
-
 	/* map pages */
-	for (i = ph.p_vaddr; i < PAGE_ALIGN_UP(ph.p_vaddr + ph.p_filesz); i += PAGE_SIZE)
-		map_page(i, current_task->pgd, 0, ph.p_flags & FLAG_WRITE ? 1 : 0);
+	if (do_mmap(ph.p_vaddr, PAGE_ALIGN_UP(ph.p_filesz), 0) == NULL)
+		return -ENOMEM;
 
 	/* seek to elf segment */
 	ret = do_lseek(fd, ph.p_offset, SEEK_SET);
@@ -75,10 +78,6 @@ static int segment_load(int fd, int off)
 	if (do_read(fd, (void *) ph.p_vaddr, ph.p_filesz) != (int) ph.p_filesz)
 		return -ENOSPC;
 
-	/* update end text position */
-	if (ph.p_vaddr + ph.p_filesz > current_task->end_text)
-		current_task->end_text = ph.p_vaddr + ph.p_filesz;
-
 	return 0;
 }
 
@@ -88,7 +87,9 @@ static int segment_load(int fd, int off)
 int elf_load(const char *path)
 {
 	struct elf_header_t elf_header;
+	struct list_head_t *pos, *n;
 	char name[TASK_NAME_LEN];
+	struct vm_area_t *vm;
 	int fd, off, ret;
 	uint32_t i;
 
@@ -112,9 +113,18 @@ int elf_load(const char *path)
 	if (ret != 0)
 		goto out;
 
-	/* unmap current text pages */
-	for (i = current_task->start_text; i <= current_task->end_text; i += PAGE_SIZE)
-		unmap_page(i, current_task->pgd);
+	/* clear mapping */
+	list_for_each_safe(pos, n, &current_task->vm_list) {
+		vm = list_entry(pos, struct vm_area_t, list);
+		list_del(&vm->list);
+		kfree(vm);
+	}
+
+	/* reset text/brk section */
+	current_task->start_text = 0;
+	current_task->end_text = 0;
+	current_task->start_brk = 0;
+	current_task->end_brk = 0;
 
 	/* read each elf segment */
 	for (i = 0, off = elf_header.e_phoff; i < elf_header.e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
@@ -124,13 +134,14 @@ int elf_load(const char *path)
 	}
 
  	/* set data segment */
-	current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text + PAGE_SIZE);
-	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text + PAGE_SIZE);
+	current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text) + PAGE_SIZE;
+	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text) + PAGE_SIZE;
 
 	/* allocate at the end of process memory */
-	current_task->user_stack = USTACK_START - USTACK_SIZE;
-	for (i = 0; i <= USTACK_SIZE / PAGE_SIZE; i++)
-		map_page(current_task->user_stack + i * PAGE_SIZE, current_task->pgd, 0, 1);
+	if (do_mmap(USTACK_START - USTACK_SIZE, USTACK_SIZE, 0) == NULL) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	/* set elf entry point */
 	current_task->user_entry = elf_header.e_entry;
