@@ -35,6 +35,7 @@ sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
 sudo cp -Rv root/* tmp/
 
 # cp user binaries
+sudo mkdir -p tmp/sbin/
 sudo cp usr/init tmp/sbin/
 
 # create devices nodes
