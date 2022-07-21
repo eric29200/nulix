@@ -99,6 +99,7 @@
 #define __NR_exit_group			252
 #define __NR_set_tid_address		258
 #define __NR_statfs64			268
+#define __NR_fstatfs64			269
 #define __NR_openat			295
 #define __NR_mkdirat			296
 #define __NR_unlinkat			301
@@ -229,5 +230,6 @@ int sys_chroot(const char *path);
 int sys_reboot();
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data);
 int sys_statfs64(const char *path, size_t size, struct statfs64_t *buf);
+int sys_fstatfs64(int fd, struct statfs64_t *buf);
 
 #endif

@@ -227,7 +227,7 @@ int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[
 int do_fcntl(int fd, int cmd, unsigned long arg);
 int do_dup(int oldfd);
 int do_dup2(int oldfd, int newfd);
-int do_statfs64(const char *path, struct statfs64_t *buf);
+int do_statfs64(struct inode_t *inode, struct statfs64_t *buf);
 
 /*
  * Compute block size in bits from block in size in byte.
