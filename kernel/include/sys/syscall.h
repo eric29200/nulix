@@ -123,6 +123,7 @@
 #define __NR_sendto			369
 #define __NR_recvfrom			371
 #define __NR_recvmsg			372
+#define __NR_copy_file_range		377
 #define __NR_statx			383
 #define __NR_clock_gettime64		403
 #define __NR_faccessat2			439
@@ -235,5 +236,6 @@ int sys_statfs64(const char *path, size_t size, struct statfs64_t *buf);
 int sys_fstatfs64(int fd, struct statfs64_t *buf);
 int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flags);
 int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags);
+int sys_copy_file_range(int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, unsigned int flags);
 
 #endif

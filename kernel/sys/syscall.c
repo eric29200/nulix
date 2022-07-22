@@ -118,6 +118,7 @@ static const void *syscalls[] = {
 	[__NR_pselect6]			= sys_pselect6,
 	[__NR_fchmodat]			= sys_fchmodat,
 	[__NR_fchownat]			= sys_fchownat,
+	[__NR_copy_file_range]		= sys_copy_file_range,
 };
 
 /*
