@@ -180,6 +180,7 @@ void brelse(struct buffer_head_t *bh);
 void bsync();
 int binit();
 struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block);
+void reclaim_buffers();
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);

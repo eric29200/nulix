@@ -1,6 +1,7 @@
 #include <mm/mm.h>
 #include <mm/paging.h>
 #include <mm/heap.h>
+#include <fs/fs.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -51,6 +52,15 @@ static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
  */
 void *kmalloc(uint32_t size)
 {
+	void *ret;
+
+	/* allocate memory */
+	ret = __kmalloc(size, 0, NULL);
+	if (ret)
+		return ret;
+
+	/* on failure, reclaim memory and retry */
+	reclaim_buffers();
 	return __kmalloc(size, 0, NULL);
 }
 
