@@ -32,11 +32,11 @@ static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pa
 	int err;
 
 	/* absolute or relative path */
-	if (base) {
-		inode = base;
-	} else if (*pathname == '/') {
+	if (*pathname == '/') {
 		inode = current_task->root;
 		pathname++;
+	} else if (base) {
+		inode = base;
 	} else if (dirfd == AT_FDCWD) {
 		inode = current_task->cwd;
 	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->filp[dirfd]) {

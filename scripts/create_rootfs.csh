@@ -30,6 +30,7 @@ sudo sh -c 'echo "root::0:" > tmp/etc/group'
 sudo sh -c 'echo "nulix" > tmp/etc/issue.net'
 sudo sh -c 'echo "root::0:0:root:/:/bin/sh" > tmp/etc/passwd'
 sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
+sudo ln -s /proc/mounts tmp/etc/mtab
 
 # copy root folders
 sudo cp -Rv root/* tmp/
