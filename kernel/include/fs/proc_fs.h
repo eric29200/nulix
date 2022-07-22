@@ -10,6 +10,7 @@
 #define PROC_UPTIME_INO		2
 #define PROC_FILESYSTEMS_INO	3
 #define PROC_MOUNTS_INO		4
+#define PROC_SELF_INO		5
 #define PROC_BASE_INO		1000
 
 /*
@@ -36,6 +37,7 @@ extern struct inode_operations_t proc_base_iops;
 extern struct inode_operations_t proc_uptime_iops;
 extern struct inode_operations_t proc_filesystems_iops;
 extern struct inode_operations_t proc_mounts_iops;
+extern struct inode_operations_t proc_self_iops;
 
 /*
  * Test if a name matches a directory entry.

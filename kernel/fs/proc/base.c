@@ -12,7 +12,7 @@
  * Base process directory.
  */
 static struct proc_dir_entry_t base_dir[] = {
-		{0,			 4, "stat"},
+	{ 0,	4,	"stat" },
 };
 
 /*
