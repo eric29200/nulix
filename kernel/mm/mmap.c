@@ -49,6 +49,9 @@ static struct vm_area_t *get_unmaped_area(int flags, size_t length)
 		return NULL;
 	}
 
+	/* memzero new memory region */
+	memset((void *) vm->vm_start, 0, vm->vm_end - vm->vm_start);
+
 	/* add it to the list */
 	list_add_tail(&vm->list, &current_task->vm_list);
 
@@ -60,21 +63,19 @@ static struct vm_area_t *get_unmaped_area(int flags, size_t length)
  */
 static struct vm_area_t *expand_area(struct vm_area_t *vm, uint32_t addr)
 {
-	struct vm_area_t *vm_next;
+	struct vm_area_t *vm_next = NULL;
 
 	/* no need to expand */
 	if (vm->vm_end >= addr)
 		return vm;
 
-	/* last memory region : just expand */
-	if (list_is_last(&vm->list, &current_task->vm_list)) {
-		vm->vm_end = PAGE_ALIGN_UP(addr);
-		return vm;
-	}
+	/* get next memory region */
+	if (!list_is_last(&vm->list, &current_task->vm_list))
+		vm_next = list_next_entry(vm, list);
 
 	/* no intersection with next memory region : just expand */
-	vm_next = list_next_entry(vm, list);
-	if (addr <= vm_next->vm_start) {
+	if (!vm_next || addr <= vm_next->vm_start) {
+		memset((void *) vm->vm_end, 0, PAGE_ALIGN_UP(addr) - vm->vm_end);
 		vm->vm_end = PAGE_ALIGN_UP(addr);
 		return vm;
 	}
