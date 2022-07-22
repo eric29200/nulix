@@ -149,12 +149,12 @@ int do_fchmod(int fd, mode_t mode)
 /*
  * Chown system call.
  */
-int do_chown(const char *pathname, uid_t owner, gid_t group)
+int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags)
 {
 	struct inode_t *inode;
 
 	/* get inode */
-	inode = namei(AT_FDCWD, NULL, pathname, 1);
+	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
 	if (!inode)
 		return -ENOSPC;
 
