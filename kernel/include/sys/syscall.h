@@ -226,7 +226,7 @@ int sys_fchown(int fd, uid_t owner, gid_t group);
 int sys_setgroups(size_t size, const gid_t *list);
 int sys_truncate64(const char *path, off_t length);
 int sys_ftruncate64(int fd, off_t length);
-int sys_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags);
+int sys_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags);
 int sys_sync();
 int sys_chroot(const char *path);
 int sys_reboot();

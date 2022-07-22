@@ -5,7 +5,7 @@
 /*
  * Utimensat system call.
  */
-int sys_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags)
+int sys_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags)
 {
 	return do_utimensat(dirfd, pathname, times, flags);
 }

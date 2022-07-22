@@ -190,7 +190,7 @@ int do_fchown(int fd, uid_t owner, gid_t group)
 /*
  * Utimensat system call.
  */
-int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[2], int flags)
+int do_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags)
 {
 	struct inode_t *inode;
 
@@ -200,8 +200,10 @@ int do_utimensat(int dirfd, const char *pathname, const struct timespec_t times[
 		return -ENOENT;
 
 	/* set time */
-	inode->i_atime = times[0].tv_sec;
-	inode->i_mtime = times[0].tv_sec;
+	if (times)
+		inode->i_atime = inode->i_mtime = times[0].tv_sec;
+	else
+		inode->i_atime = inode->i_mtime = CURRENT_TIME;
 
 	/* mark inode dirty */
 	inode->i_dirt = 1;
