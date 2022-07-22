@@ -10,6 +10,8 @@
  */
 static int proc_self_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode)
 {
+	UNUSED(dir);
+
 	/* get target inode */
 	*res_inode = iget(inode->i_sb, PROC_BASE_INO + current_task->pid);
 
@@ -28,7 +30,7 @@ static int proc_self_follow_link(struct inode_t *dir, struct inode_t *inode, str
 static ssize_t proc_self_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 {
 	char tmp[32];
-	int len;
+	size_t len;
 
 	/* release inode */
 	iput(inode);
