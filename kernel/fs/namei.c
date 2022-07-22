@@ -432,11 +432,12 @@ ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
 /*
  * Rename a file.
  */
-int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
+int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags)
 {
 	const char *old_basename, *new_basename;
 	size_t old_basename_len, new_basename_len;
-	struct inode_t *old_dir, *new_dir;
+	struct inode_t *old_dir, *new_dir, *tmp;
+	int ret;
 
 	/* get old directory */
 	old_dir = dir_namei(olddirfd, NULL, oldpath, &old_basename, &old_basename_len);
@@ -475,6 +476,17 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
 		iput(old_dir);
 		iput(new_dir);
 		return -EPERM;
+	}
+
+	/* check if target already exists */
+	if (flags & RENAME_NOREPLACE) {
+		ret = new_dir->i_op->lookup(new_dir, new_basename, new_basename_len, &tmp);
+		if (ret == 0) {
+			iput(tmp);
+			iput(old_dir);
+			iput(new_dir);
+			return -EEXIST;
+		}
 	}
 
 	new_dir->i_ref++;

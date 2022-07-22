@@ -20,6 +20,10 @@
 
 #define MS_RDONLY			1
 
+#define RENAME_NOREPLACE		(1 << 0)
+#define RENAME_EXCHANGE			(1 << 1)
+#define RENAME_WHITEOUT			(1 << 2)
+
 /*
  * Buffer structure.
  */
@@ -212,7 +216,7 @@ int do_unlink(int dirfd, const char *pathname);
 int do_rmdir(int dirfd, const char *pathname);
 int do_getdents64(int fd, void *dirp, size_t count);
 int do_pipe(int pipefd[2]);
-int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
 int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout);
 int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout);
 int do_chmod(int dirfd, const char *pathname, mode_t mode);
