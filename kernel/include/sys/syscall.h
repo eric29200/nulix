@@ -103,6 +103,7 @@
 #define __NR_openat			295
 #define __NR_mkdirat			296
 #define __NR_unlinkat			301
+#define __NR_fchmodat			306
 #define __NR_faccessat			307
 #define __NR_renameat			302
 #define __NR_linkat			303
@@ -231,5 +232,6 @@ int sys_reboot();
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data);
 int sys_statfs64(const char *path, size_t size, struct statfs64_t *buf);
 int sys_fstatfs64(int fd, struct statfs64_t *buf);
+int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flags);
 
 #endif

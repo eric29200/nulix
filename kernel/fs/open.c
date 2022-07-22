@@ -100,12 +100,12 @@ int do_close(int fd)
 /*
  * Chmod system call.
  */
-int do_chmod(const char *filename, mode_t mode)
+int do_chmod(int dirfd, const char *pathname, mode_t mode)
 {
 	struct inode_t *inode;
 
 	/* get inode */
-	inode = namei(AT_FDCWD, NULL, filename, 1);
+	inode = namei(dirfd, NULL, pathname, 1);
 	if (!inode)
 		return -ENOSPC;
 
