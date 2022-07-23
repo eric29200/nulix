@@ -65,7 +65,7 @@ cd $SRC_DIR
 if ( -e "../../../$PORT/config" ) then
 	cp ../../../$PORT/config .config
 else if ( -e "./configure") then
-	./configure --host=$TARGET --prefix=$INSTALL_DIR $CONFIG_OPTIONS
+	./configure --host=$TARGET $CONFIG_OPTIONS
 endif
 
 # build
