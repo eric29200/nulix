@@ -1,0 +1,4 @@
+set URL			= "http://ftp.figlet.org/pub/figlet/program/unix/"
+set VERSION		= "2.2.5"
+set SRC_FILENAME	= "figlet-"$VERSION".tar.gz"
+set CONFIG_OPTIONS	= ""

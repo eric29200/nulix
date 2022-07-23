@@ -1,0 +1,4 @@
+set URL			= "https://ftp.gnu.org/gnu/bash/"
+set VERSION		= "5.1.16"
+set SRC_FILENAME	= "bash-"$VERSION".tar.gz"
+set CONFIG_OPTIONS	= "--disable-nls --without-gnu-malloc"

@@ -12,8 +12,8 @@ hdc.img
 hdd.img
 sysroot/*
 root/*
+ports/build/*
 musl/*
-ports/*
 tmp/*
 usr/init
 traffic.pcap

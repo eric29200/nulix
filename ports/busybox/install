@@ -1,0 +1,4 @@
+set URL			= "https://busybox.net/downloads/"
+set VERSION		= "1.35.0"
+set SRC_FILENAME	= "busybox-"$VERSION".tar.bz2"
+set CONFIG_OPTIONS	= ""
