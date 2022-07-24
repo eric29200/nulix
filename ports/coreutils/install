@@ -1,4 +1,0 @@
-set URL			= "https://ftp.gnu.org/gnu/coreutils/"
-set VERSION		= "9.1"
-set SRC_FILENAME	= "coreutils-"$VERSION".tar.xz"
-set CONFIG_OPTIONS	= "--disable-nls --disable-threads --enable-no-install-program=factor,ptx"
