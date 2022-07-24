@@ -73,10 +73,14 @@ foreach PORT ($argv)
 	if ( -e "../../../$PORT/config" ) then
 		cp ../../../$PORT/config .config
 	else if ( -e "./configure") then
-		./configure --host=$TARGET $CONFIG_OPTIONS
+		./configure --host=$TARGET --prefix=$INSTALL_DIR $CONFIG_OPTIONS
 	endif
 
 	# build
 	make -j$NJOBS CC=$CC LD=$LD CFLAGS=$CFLAGS LDFLAGS=$LDFLAGS
-	make install CC=$CC LD=$LD INSTALL_TOP=$INSTALL_DIR DESTDIR=$INSTALL_DIR
+	if ( -e "./configure") then
+		make install CC=$CC LD=$LD
+	else
+		make install CC=$CC LD=$LD INSTALL_TOP=$INSTALL_DIR DESTDIR=$INSTALL_DIR
+	endif
 end

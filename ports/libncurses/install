@@ -1,0 +1,5 @@
+set URL			= "https://ftp.gnu.org/gnu/ncurses/"
+set VERSION		= "6.3"
+set SRC_FILENAME	= "ncurses-"$VERSION".tar.gz"
+set CONFIG_OPTIONS	= "--enable-term-driver --enable-sigwinch --enable-widec --enable-pc-files --with-pkg-config=$SYSROOT/lib/pkgconfig --with-pkg-config-libdir=$SYSROOT/lib/pkgconfig"
+set INSTALL_DIR		= $SYSROOT
