@@ -12,7 +12,6 @@ hdc.img
 hdd.img
 sysroot/*
 root/*
-musl/build/*
 ports/build/*
 tmp/*
 usr/init
