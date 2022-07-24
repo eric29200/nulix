@@ -1,0 +1,5 @@
+set URL			= "https://github.com/lz4/lz4/archive/refs/tags/"
+set VERSION		= "1.9.3"
+set SRC_FILENAME	= "v"$VERSION".tar.gz"
+set CONFIG_OPTIONS	= ""
+set INSTALL_DIR		= $ROOT_DIR
