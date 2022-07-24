@@ -1,0 +1,4 @@
+set URL			= "https://distfiles.dereferenced.org/pkgconf/"
+set VERSION		= "1.8.0"
+set SRC_FILENAME	= "pkgconf-"$VERSION".tar.xz"
+set CONFIG_OPTIONS	= ""

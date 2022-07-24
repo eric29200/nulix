@@ -2,6 +2,7 @@
 
 # go to ports directory
 cd `dirname $0`
+set BASE_DIR = `pwd`
 
 # setup env
 setenv TARGET			i386
@@ -19,55 +20,63 @@ if ($#argv == 0) then
 	exit 1
 endif
 
-# get port name
-set PORT = $1
+# for each port
+foreach PORT ($argv)
+	cd $BASE_DIR
 
-# check if port is available
-if ( ! -e "$PORT/install" ) then
-	echo "Error : port $PORT is not available"
-	exit 1
-endif
+	# do not allow to build musl or pkgconf
+	if ($PORT == "musl" || $PORT == "pkgconf") then
+		echo "Error : to build musl/pkg config use 'make musl'"
+		exit 1
+	endif
 
-# get port configuration
-source $PORT"/install"
+	# check if port is available
+	if ( ! -e "$PORT/install" ) then
+		echo "Error : port $PORT is not available"
+		exit 1
+	endif
 
-# create build directory
-rm -rf build/$PORT
-mkdir -p build/$PORT
-cd build/$PORT
+	# get port configuration
+	source $PORT"/install"
 
-# download sources
-wget $URL"/"$SRC_FILENAME
+	# create build directory
+	rm -rf build/$PORT
+	mkdir -p build/$PORT
+	cd build/$PORT
 
-# extract sources
-set SRC_EXTENSION = `echo $SRC_FILENAME | awk -F '.' '{ print $(NF-1)"."$NF }'`
-if ($SRC_EXTENSION == "tar.gz") then
-	tar -xzvf $SRC_FILENAME
-	set SRC_DIR = `tar --list -zf $SRC_FILENAME | head -1`
-else if ($SRC_EXTENSION == "tar.bz2") then
-	tar -xjvf $SRC_FILENAME
-	set SRC_DIR = `tar --list -jf $SRC_FILENAME | head -1`
-else if ($SRC_EXTENSION == "tar.xz") then
-	tar -xvf $SRC_FILENAME
-	set SRC_DIR = `tar --list -f $SRC_FILENAME | head -1`
-else
-	echo "Error : cannot extract file $SRC_FILENAME"
-	exit 1
-endif
+	# download sources
+	wget $URL"/"$SRC_FILENAME
 
-# patch
-foreach PATCH (`find ../../$PORT -name "*.patch"`)
-	patch -p0 < $PATCH
+	# extract sources
+	set SRC_EXTENSION = `echo $SRC_FILENAME | awk -F '.' '{ print $(NF-1)"."$NF }'`
+	if ($SRC_EXTENSION == "tar.gz") then
+		tar -xzvf $SRC_FILENAME
+		set SRC_DIR = `tar --list -zf $SRC_FILENAME | head -1`
+	else if ($SRC_EXTENSION == "tar.bz2") then
+		tar -xjvf $SRC_FILENAME
+		set SRC_DIR = `tar --list -jf $SRC_FILENAME | head -1`
+	else if ($SRC_EXTENSION == "tar.xz") then
+		tar -xvf $SRC_FILENAME
+		set SRC_DIR = `tar --list -f $SRC_FILENAME | head -1`
+	else
+		echo "Error : cannot extract file $SRC_FILENAME"
+		exit 1
+	endif
+
+	# patch
+	foreach PATCH (`find ../../$PORT -name "*.patch"`)
+		patch -p0 < $PATCH
+	end
+
+	# configure
+	cd $SRC_DIR
+	if ( -e "../../../$PORT/config" ) then
+		cp ../../../$PORT/config .config
+	else if ( -e "./configure") then
+		./configure --host=$TARGET $CONFIG_OPTIONS
+	endif
+
+	# build
+	make -j$NJOBS CC=$CC LD=$LD CFLAGS=$CFLAGS LDFLAGS=$LDFLAGS
+	make install CC=$CC LD=$LD INSTALL_TOP=$INSTALL_DIR DESTDIR=$INSTALL_DIR
 end
-
-# configure
-cd $SRC_DIR
-if ( -e "../../../$PORT/config" ) then
-	cp ../../../$PORT/config .config
-else if ( -e "./configure") then
-	./configure --host=$TARGET $CONFIG_OPTIONS
-endif
-
-# build
-make -j$NJOBS CC=$CC LD=$LD CFLAGS=$CFLAGS LDFLAGS=$LDFLAGS
-make install CC=$CC LD=$LD INSTALL_TOP=$INSTALL_DIR DESTDIR=$INSTALL_DIR

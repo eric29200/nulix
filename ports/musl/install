@@ -1,0 +1,4 @@
+set URL			= "https://musl.libc.org/releases/"
+set VERSION		= "1.2.3"
+set SRC_FILENAME	= "musl-"$VERSION".tar.gz"
+set CONFIG_OPTIONS	= ""
