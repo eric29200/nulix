@@ -9,6 +9,9 @@ setenv TARGET			i386
 setenv SYSROOT			`realpath ../sysroot`
 setenv CC			$SYSROOT"/bin/musl-gcc"
 setenv LD			$SYSROOT"/bin/musl-gcc"
+setenv PKG_CONFIG		$SYSROOT"/bin/pkgconf"
+setenv PKG_CONFIG_PATH		$SYSROOT"/lib/pkgconfig"
+setenv PKG_CONFIG_LIBDIR	$SYSROOT"/lib/pkgconfig"
 setenv INSTALL_DIR		`realpath ../root`
 setenv CFLAGS			"-static"
 setenv LDFLAGS			"-static"
