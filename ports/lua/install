@@ -2,3 +2,5 @@ set URL			= "http://www.lua.org/ftp/"
 set VERSION		= "5.4.4"
 set SRC_FILENAME	= "lua-"$VERSION".tar.gz"
 set CONFIG_OPTIONS	= ""
+set INSTALL_DIR		= $ROOT_DIR
+

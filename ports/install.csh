@@ -12,7 +12,7 @@ setenv LD			$SYSROOT"/bin/musl-gcc"
 setenv PKG_CONFIG		$SYSROOT"/bin/pkgconf"
 setenv PKG_CONFIG_PATH		$SYSROOT"/lib/pkgconfig"
 setenv PKG_CONFIG_LIBDIR	$SYSROOT"/lib/pkgconfig"
-setenv INSTALL_DIR		`realpath ../root`
+setenv ROOT_DIR			`realpath ../root`
 setenv CFLAGS			"-static"
 setenv LDFLAGS			"-static"
 setenv NJOBS			`nproc`
@@ -23,12 +23,35 @@ if ($#argv == 0) then
 	exit 1
 endif
 
-# for each port
+# get ports list
+set PORTS = ""
+set BUILD_ALL = 0
 foreach PORT ($argv)
+	if ($PORT == "all") then
+		set BUILD_ALL = 1
+	endif
+
+	set PORTS = "$PORTS $PORT"
+end
+
+# get ports list
+if ($BUILD_ALL == 1) then
+	set PORTS = " "
+
+	foreach INSTALL_FILE (`ls */install`)
+		set PORT = `echo $INSTALL_FILE | awk -F '/' '{ print $1 }'`
+		if ($PORT != "musl" && $PORT != "pkgconf" && $PORT != "linux-headers") then
+			set PORTS = "$PORTS $PORT"
+		endif
+	end
+endif
+
+# for each port
+foreach PORT ($PORTS)
 	cd $BASE_DIR
 
 	# do not allow to build musl or pkgconf
-	if ($PORT == "musl" || $PORT == "pkgconf") then
+	if ($PORT == "musl" || $PORT == "pkgconf" || $PORT == "linux-headers") then
 		echo "Error : to build musl/pkg config use 'make musl'"
 		exit 1
 	endif

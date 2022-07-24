@@ -2,3 +2,4 @@ set URL			= "https://ftp.gnu.org/gnu/hello/"
 set VERSION		= "2.12.1"
 set SRC_FILENAME	= "hello-"$VERSION".tar.gz"
 set CONFIG_OPTIONS	= "--disable-nls"
+set INSTALL_DIR		= $ROOT_DIR

@@ -7,8 +7,6 @@ DISK2		= hdb.img
 QEMU		= qemu-system-i386
 args		= `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
-all: run
-
 run:
 	make -j$(NJOBS) -C kernel
 	make -j$(NJOBS) -C usr
