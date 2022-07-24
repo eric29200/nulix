@@ -27,6 +27,7 @@ run:
 
 musl:
 	./ports/install_musl.csh
+	./ports/install_linux-headers.csh
 	./ports/install_pkgconf.csh
 
 %:

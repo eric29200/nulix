@@ -1,6 +1,6 @@
 #!/bin/csh
 
-# go to musl directory
+# go to ports directory
 cd `dirname $0`
 
 # setup env

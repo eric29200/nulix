@@ -6,10 +6,9 @@ cd `dirname $0`
 # setup env
 setenv TARGET		i386
 setenv SYSROOT		`realpath ../sysroot`
-setenv NJOBS		`nproc`
 
 # get port name
-set PORT = "pkgconf"
+set PORT = "linux-headers"
 
 # check if port is available
 if ( ! -e "$PORT/install" ) then
@@ -49,10 +48,6 @@ foreach PATCH (`find ../../$PORT -name "*.patch"`)
 	patch -p0 < $PATCH
 end
 
-# configure
+# install
 cd $SRC_DIR
-./configure --host=$TARGET --prefix=$SYSROOT $CONFIG_OPTIONS
-
-# build
-make -j$NJOBS
-make install
+make ARCH=$TARGET prefix="" DESTDIR=$SYSROOT install
