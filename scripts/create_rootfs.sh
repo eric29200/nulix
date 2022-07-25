@@ -33,7 +33,7 @@ sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
 sudo ln -s /proc/mounts tmp/etc/mtab
 
 # copy root folders
-sudo cp -Rv root/* tmp/
+sudo cp -Rv sysroot/* tmp/
 
 # cp user binaries
 sudo mkdir -p tmp/sbin/

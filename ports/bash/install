@@ -3,7 +3,7 @@ VERSION="5.1.16"
 SRC_FILENAME="bash-"$VERSION".tar.gz"
 
 function configure_port() {
-	./configure --host=$TARGET --disable-nls --without-gnu-malloc --prefix=$ROOT_DIR CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+	./configure --host=$TARGET --disable-nls --without-gnu-malloc --prefix=$SYSROOT CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
 function build_port() {

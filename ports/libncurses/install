@@ -13,7 +13,7 @@ function configure_port() {
 		--enable-pc-files				\
 		--with-pkg-config=$PKG_CONFIG_PATH		\
 		--with-pkg-config-libdir=$PKG_CONFIG_PATH	\
-		--prefix=$ROOT_DIR				\
+		--prefix=$SYSROOT				\
 		CC=$MUSL_CC LD=$MUSL_LD
 }
 
