@@ -6,13 +6,18 @@ BASE_DIR=`pwd`
 
 # global environ
 export TARGET=i386
+export CC=i686-linux-gnu-gcc
+export LD=i686-linux-gnu-ld
+export AR=i686-linux-gnu-ar
+export AS=i686-linux-gnu-as
+export RANLIB=i686-linux-gnu-ranlib
 export SYSROOT=`realpath ../sysroot`
 export ROOT_DIR=`realpath ../root`
 export NJOBS=`nproc`
 export MUSL_CC=$SYSROOT"/bin/musl-gcc"
-export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
-export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig"
-export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig"
+export PKG_CONFIG=$ROOT_DIR"/bin/pkgconf"
+export PKG_CONFIG_PATH=$ROOT_DIR"/lib/pkgconfig"
+export PKG_CONFIG_LIBDIR=$ROOT_DIR"/lib/pkgconfig"
 
 ##############################################
 ######### check if port is available #########

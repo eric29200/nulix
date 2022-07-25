@@ -23,9 +23,6 @@ run:
 		-device rtl8139,netdev=nulix_net,id=nulix_nic			\
 		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap
 
-musl:
-	./ports/install.sh musl linux-headers pkgconf
-
 %:
 	@:
 

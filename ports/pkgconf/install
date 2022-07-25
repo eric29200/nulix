@@ -3,7 +3,7 @@ VERSION="1.8.0"
 SRC_FILENAME="pkgconf-"$VERSION".tar.xz"
 
 function configure_port() {
-	./configure --prefix=$SYSROOT
+	./configure --host=$TARGET --prefix=$ROOT_DIR CC=$MUSL_CC LD=$MUSL_CC
 }
 
 function build_port() {

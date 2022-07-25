@@ -11,5 +11,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install DESTDIR=$ROOT_DIR
+	make install prefix="/" DESTDIR=$ROOT_DIR
 }
