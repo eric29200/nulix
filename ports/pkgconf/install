@@ -1,4 +1,15 @@
-set URL			= "https://distfiles.dereferenced.org/pkgconf/"
-set VERSION		= "1.8.0"
-set SRC_FILENAME	= "pkgconf-"$VERSION".tar.xz"
-set CONFIG_OPTIONS	= ""
+URL="https://distfiles.dereferenced.org/pkgconf/"
+VERSION="1.8.0"
+SRC_FILENAME="pkgconf-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure --prefix=$SYSROOT
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}

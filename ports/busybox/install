@@ -1,6 +1,15 @@
-set URL			= "https://busybox.net/downloads/"
-set VERSION		= "1.35.0"
-set SRC_FILENAME	= "busybox-"$VERSION".tar.bz2"
-set CONFIG_OPTIONS	= ""
-set INSTALL_DIR		= $ROOT_DIR
+URL="https://busybox.net/downloads/"
+VERSION="1.35.0"
+SRC_FILENAME="busybox-"$VERSION".tar.bz2"
 
+function configure_port() {
+	cp ../../../busybox/config .config
+}
+
+function build_port() {
+	make -j$NJOBS CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+}
+
+function install_port() {
+	make install CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+}

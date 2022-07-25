@@ -1,4 +1,15 @@
-set URL			= "https://musl.libc.org/releases/"
-set VERSION		= "1.2.3"
-set SRC_FILENAME	= "musl-"$VERSION".tar.gz"
-set CONFIG_OPTIONS	= ""
+URL="https://musl.libc.org/releases/"
+VERSION="1.2.3"
+SRC_FILENAME="musl-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure --target=$TARGET --prefix=$SYSROOT CC=i686-linux-gnu-gcc LD=i686-linux-gnu-ld AR=i686-linux-gnu-ar AS=i686-linux-gnu-as RANLIB=i686-linux-gnu-ranlib
+}
+
+function build_port() {
+	make -j$NJOBS CFLAGS="-DSYSCALL_NO_TLS=1"
+}
+
+function install_port() {
+	make install
+}

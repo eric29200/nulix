@@ -1,6 +1,15 @@
-set URL			= "http://www.lua.org/ftp/"
-set VERSION		= "5.4.4"
-set SRC_FILENAME	= "lua-"$VERSION".tar.gz"
-set CONFIG_OPTIONS	= ""
-set INSTALL_DIR		= $ROOT_DIR
+URL="http://www.lua.org/ftp/"
+VERSION="5.4.4"
+SRC_FILENAME="lua-"$VERSION".tar.gz"
 
+function configure_port() {
+	:
+}
+
+function build_port() {
+	make -j$NJOBS CC=$MUSL_CC LD=$MUSL_CC LDFLAGS="-static"
+}
+
+function install_port() {
+	make install INSTALL_TOP=$ROOT_DIR
+}

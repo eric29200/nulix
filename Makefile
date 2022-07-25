@@ -12,7 +12,7 @@ run:
 	make -j$(NJOBS) -C usr
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
-	./scripts/create_rootfs.csh
+	./scripts/create_rootfs.sh
 	sudo $(QEMU)								\
 		-m $(MEM_SIZE)							\
 		-serial stdio 							\
@@ -24,15 +24,13 @@ run:
 		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap
 
 musl:
-	./ports/install_musl.csh
-	./ports/install_linux-headers.csh
-	./ports/install_pkgconf.csh
+	./ports/install.sh musl linux-headers pkgconf
 
 %:
 	@:
 
 port:
-	./ports/install.csh $(call args)
+	./ports/install.sh $(call args)
 
 clean:
 	make clean -C kernel

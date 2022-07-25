@@ -1,4 +1,15 @@
-set URL			= "http://ftp.barfooze.de/pub/sabotage/tarballs/"
-set VERSION		= "4.19.88"
-set SRC_FILENAME	= "linux-headers-"$VERSION".tar.xz"
-set CONFIG_OPTIONS	= ""
+URL="http://ftp.barfooze.de/pub/sabotage/tarballs/"
+VERSION="4.19.88"
+SRC_FILENAME="linux-headers-"$VERSION".tar.xz"
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	:
+}
+
+function install_port() {
+	make install ARCH=$TARGET prefix=$SYSROOT
+}

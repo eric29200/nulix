@@ -1,8 +1,8 @@
-#!/bin/csh
+#!/bin/bash
 
-set DISK1		= hda.img
-set DISK2		= hdb.img
-set DISK_SIZE		= 512M
+DISK1=hda.img
+DISK2=hdb.img
+DISK_SIZE=512M
 
 # create first disk
 rm -f $DISK1

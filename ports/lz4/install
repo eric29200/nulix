@@ -1,5 +1,15 @@
-set URL			= "https://github.com/lz4/lz4/archive/refs/tags/"
-set VERSION		= "1.9.3"
-set SRC_FILENAME	= "v"$VERSION".tar.gz"
-set CONFIG_OPTIONS	= ""
-set INSTALL_DIR		= $ROOT_DIR
+URL="https://github.com/lz4/lz4/archive/refs/tags/"
+VERSION="1.9.3"
+SRC_FILENAME="v"$VERSION".tar.gz"
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	make -j$NJOBS CC=$MUSL_CC LD=$MUSL_CC LDFLAGS="-static"
+}
+
+function install_port() {
+	make install DESTDIR=$ROOT_DIR
+}
