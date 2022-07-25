@@ -11,10 +11,9 @@ function configure_port() {
 		--enable-sigwinch				\
 		--enable-widec					\
 		--enable-pc-files				\
-		--with-pkg-config=$PKG_CONFIG_PATH		\
-		--with-pkg-config-libdir=$PKG_CONFIG_PATH	\
-		--prefix=$SYSROOT				\
-		CC=$MUSL_CC LD=$MUSL_LD
+		--with-pkg-config-libdir="/lib/pkgconfig"	\
+		--prefix="/"					\
+		DESTDIR=$SYSROOT CC=$MUSL_CC LD=$MUSL_LD
 }
 
 function build_port() {
