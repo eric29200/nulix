@@ -1,0 +1,25 @@
+URL="https://ftp.gnu.org/gnu/coreutils/"
+VERSION="9.1"
+SRC_FILENAME="coreutils-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--disable-nls							\
+		--disable-acl							\
+		--disable-rpath							\
+		--disable-xattr							\
+		--disable-libcap						\
+		--without-selinux						\
+		--enable-no-install-program=factor,ptx				\
+		--prefix=$SYSROOT						\
+		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}
