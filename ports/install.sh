@@ -47,13 +47,13 @@ function download_and_extract_port() {
 	SRC_EXTENSION=`echo $SRC_FILENAME | awk -F '.' '{ print $(NF-1)"."$NF }'`
 	if [[ $SRC_EXTENSION == "tar.gz" ]]; then
 		tar -xzvf $SRC_FILENAME
-		SRC_DIR=`tar --list -zf $SRC_FILENAME | head -1`
+		SRC_DIR=`tar --list -zf $SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	elif [[ $SRC_EXTENSION == "tar.bz2" ]]; then
 		tar -xjvf $SRC_FILENAME
-		SRC_DIR=`tar --list -jf $SRC_FILENAME | head -1`
+		SRC_DIR=`tar --list -jf $SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	elif [[ $SRC_EXTENSION == "tar.xz" ]]; then
 		tar -xvf $SRC_FILENAME
-		SRC_DIR=`tar --list -f $SRC_FILENAME | head -1`
+		SRC_DIR=`tar --list -f $SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	else
 		echo "Error : cannot extract file $SRC_FILENAME"
 		exit 1
