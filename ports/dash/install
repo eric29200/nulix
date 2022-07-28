@@ -1,0 +1,17 @@
+URL="http://gondor.apana.org.au/~herbert/dash/files/"
+VERSION="0.5.11.5"
+SRC_FILENAME="dash-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure --host=$TARGET --enable-static --prefix=$SYSROOT CC=$MUSL_CC LD=$MUSL_CC
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+	cd $SYSROOT/bin
+	ln -sf dash sh
+}
