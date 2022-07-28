@@ -6,21 +6,6 @@
 #define STATX_BASIC_STATS	0x000007FFU
 
 /*
- * Stat file structure.
- */
-struct stat_t {
-	ino_t		st_ino;
-	uint16_t	st_mode;
-	uint8_t		st_nlinks;
-	uid_t		st_uid;
-	gid_t		st_gid;
-	size_t		st_size;
-	time_t		st_atime;
-	time_t		st_mtime;
-	time_t		st_ctime;
-};
-
-/*
  * Statx timestamp structure.
  */
 struct statx_timestamp_t {

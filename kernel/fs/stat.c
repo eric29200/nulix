@@ -7,25 +7,6 @@
 #include <stdio.h>
 
 /*
- * Stat system call.
- */
-int do_stat(struct inode_t *inode, struct stat_t *statbuf)
-{
-	/* copy stats */
-	statbuf->st_ino = inode->i_ino;
-	statbuf->st_mode = inode->i_mode;
-	statbuf->st_nlinks = inode->i_nlinks;
-	statbuf->st_uid = inode->i_uid;
-	statbuf->st_gid = inode->i_gid;
-	statbuf->st_size = inode->i_size;
-	statbuf->st_atime = inode->i_atime;
-	statbuf->st_mtime = inode->i_mtime;
-	statbuf->st_ctime = inode->i_ctime;
-
-	return 0;
-}
-
-/*
  * Statx system call.
  */
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)

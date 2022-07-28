@@ -206,7 +206,6 @@ ssize_t do_read(int fd, char *buf, int count);
 ssize_t do_write(int fd, const char *buf, int count);
 off_t do_lseek(int fd, off_t offset, int whence);
 int do_ioctl(int fd, int request, unsigned long arg);
-int do_stat(struct inode_t *inode, struct stat_t *statbuf);
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
 int do_faccessat(int dirfd, const char *pathname, int flags);
 int do_mkdir(int dirfd, const char *pathname, mode_t mode);

@@ -61,9 +61,6 @@
 #define __NR_munmap			91
 #define __NR_fchmod			94
 #define __NR_setitimer			104
-#define __NR_stat			106
-#define __NR_lstat			107
-#define __NR_fstat			108
 #define __NR_wait4			114
 #define __NR_sysinfo			116
 #define __NR_sigreturn			119
@@ -143,9 +140,6 @@ int sys_open(const char *pathname, int flags, mode_t mode);
 int sys_close(int fd);
 uint32_t sys_brk(uint32_t addr);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);
-int sys_stat(const char *filename, struct stat_t *statbuf);
-int sys_lstat(const char *filename, struct stat_t *statbuf);
-int sys_fstat(int fd, struct stat_t *statbuf);
 int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
 int sys_dup(int oldfd);
 int sys_dup2(int oldfd, int newfd);
