@@ -9,15 +9,8 @@
 /*
  * Stat system call.
  */
-int do_stat(int dirfd, const char *filename, struct stat_t *statbuf)
+int do_stat(struct inode_t *inode, struct stat_t *statbuf)
 {
-	struct inode_t *inode;
-
-	/* get inode */
-	inode = namei(dirfd, NULL, filename, 0);
-	if (!inode)
-		return -ENOENT;
-
 	/* copy stats */
 	statbuf->st_ino = inode->i_ino;
 	statbuf->st_mode = inode->i_mode;
@@ -28,9 +21,6 @@ int do_stat(int dirfd, const char *filename, struct stat_t *statbuf)
 	statbuf->st_atime = inode->i_atime;
 	statbuf->st_mtime = inode->i_mtime;
 	statbuf->st_ctime = inode->i_ctime;
-
-	/* release inode */
-	iput(inode);
 
 	return 0;
 }
