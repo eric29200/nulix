@@ -81,6 +81,9 @@
 #define __NR_mmap2			192
 #define __NR_truncate64			193
 #define __NR_ftruncate64		194
+#define __NR_stat64			195
+#define __NR_lstat64			196
+#define __NR_fstat64			197
 #define __NR_getuid32			199
 #define __NR_getgid32			200
 #define __NR_geteuid32			201
@@ -102,6 +105,7 @@
 #define __NR_openat			295
 #define __NR_mkdirat			296
 #define __NR_fchownat			298
+#define __NR_fstatat64			300
 #define __NR_unlinkat			301
 #define __NR_fchmodat			306
 #define __NR_faccessat			307
@@ -235,5 +239,9 @@ int sys_fstatfs64(int fd, struct statfs64_t *buf);
 int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flags);
 int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags);
 int sys_copy_file_range(int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, unsigned int flags);
+int sys_stat64(const char *pathname, struct stat64_t *statbuf);
+int sys_lstat64(const char *pathname, struct stat64_t *statbuf);
+int sys_fstat64(int fd, struct stat64_t *statbuf);
+int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int flags);
 
 #endif

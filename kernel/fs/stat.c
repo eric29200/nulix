@@ -7,6 +7,32 @@
 #include <stdio.h>
 
 /*
+ * Stat64 system call.
+ */
+int do_stat64(struct inode_t *inode, struct stat64_t *statbuf)
+{
+	/* memzero statbuf */
+	memset(statbuf, 0, sizeof(struct stat64_t));
+
+	/* fill in statbuf */
+	statbuf->__st_ino = inode->i_ino;
+	statbuf->st_mode = inode->i_mode;
+	statbuf->st_nlink = inode->i_nlinks;
+	statbuf->st_uid = inode->i_uid;
+	statbuf->st_gid = inode->i_gid;
+	statbuf->st_rdev = inode->i_rdev;
+	statbuf->st_size = inode->i_size;
+	statbuf->st_blksize = inode->i_sb->s_blocksize;
+	statbuf->st_blocks = inode->i_blocks;
+	statbuf->st_atime = inode->i_atime;
+	statbuf->st_mtime = inode->i_mtime;
+	statbuf->st_ctime = inode->i_ctime;
+	statbuf->st_ino = inode->i_ino;
+
+	return 0;
+}
+
+/*
  * Statx system call.
  */
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
