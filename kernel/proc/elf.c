@@ -57,8 +57,8 @@ static int segment_load(int fd, int off)
 		current_task->start_text = 0;
 
 	/* update end text position */
-	if (ph.p_vaddr + ph.p_filesz > current_task->end_text)
-		current_task->end_text = ph.p_vaddr + ph.p_filesz;
+	if (ph.p_vaddr + ph.p_memsz > current_task->end_text)
+		current_task->end_text = ph.p_vaddr + ph.p_memsz;
 
 	/* skip non relocable segments */
 	if (ph.p_type != ET_REL)
@@ -134,8 +134,8 @@ int elf_load(const char *path)
 	}
 
  	/* set data segment */
-	current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text) + PAGE_SIZE;
-	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text) + PAGE_SIZE;
+	current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text);
+	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text);
 
 	/* allocate at the end of process memory */
 	if (do_mmap(USTACK_START - USTACK_SIZE, USTACK_SIZE, 0) == NULL) {
