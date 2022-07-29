@@ -1,4 +1,5 @@
 #include <drivers/console.h>
+#include <stdio.h>
 
 /*
  * Handle escape K sequences (delete line or part of line).
@@ -136,6 +137,16 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 						tty->pars[0]++;
 					fb_set_xy(&tty->fb, tty->fb.x - tty->pars[0], tty->fb.y);
 					break;
+				case 'G':
+					if (tty->pars[0])
+						tty->pars[0]--;
+					fb_set_xy(&tty->fb, tty->pars[0], tty->fb.y);
+					break;
+				case 'd':
+					if (tty->pars[0])
+						tty->pars[0]--;
+					fb_set_xy(&tty->fb, tty->fb.x, tty->pars[0]);
+					break;
 				case 'H':
 					if (tty->pars[0])
 						tty->pars[0]--;
@@ -150,6 +161,7 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 					csi_J(tty);
 					break;
 				default:
+					printf("console : unknown escape sequence %c\n", chars[i]);
 					break;
 			}
 
