@@ -89,11 +89,13 @@ done
 
 # get ports list
 if [[ $BUILD_ALL == 1 ]]; then
-	PORTS=()
+	PORTS=("musl" "linux-headers" "pkgconf")
 
 	for INSTALL_FILE in `ls */install`; do
 		PORT=`echo $INSTALL_FILE | awk -F '/' '{ print $1 }'`
-		PORTS+=($PORT)
+		if [[ $PORT != "musl" && $PORT != "linux-headers" && $PORT != "pkgconf" ]]; then
+			PORTS+=($PORT)
+		fi
 	done
 fi
 
