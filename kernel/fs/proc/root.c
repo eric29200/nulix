@@ -24,7 +24,7 @@ static struct proc_dir_entry_t root_dir[] = {
  */
 static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 {
-	struct dirent64_t *dirent;
+	struct dirent64_t *dirent = (struct dirent64_t *) dirp;
 	struct list_head_t *pos;
 	struct task_t *task;
 	int name_len, n;
@@ -32,7 +32,7 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 	size_t i;
 
 	/* read root dir entries */
-	for (i = filp->f_pos, n = 0, dirent = (struct dirent64_t *) dirp; i < NR_ROOT_DIRENTRY; i++, filp->f_pos++) {
+	for (i = filp->f_pos, n = 0; i < NR_ROOT_DIRENTRY; i++, filp->f_pos++) {
 		/* check buffer size */
 		name_len = root_dir[i].name_len;
 		if (count < sizeof(struct dirent64_t) + name_len + 1)
@@ -54,7 +54,7 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 	}
 
 	/* add all processes */
-	i = 2;
+	i = NR_ROOT_DIRENTRY;
 	list_for_each(pos, &tasks_list) {
 		/* skip init task */
 		task = list_entry(pos, struct task_t, list);
