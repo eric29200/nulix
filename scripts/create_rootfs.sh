@@ -24,6 +24,7 @@ sudo mkdir -p tmp/dev
 sudo mkdir -p tmp/dev/pts
 sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt
+sudo mkdir -p tmp/tmp
 
 # create config files
 sudo sh -c 'echo "root::0:" > tmp/etc/group'
