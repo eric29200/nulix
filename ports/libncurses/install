@@ -1,0 +1,25 @@
+URL="https://ftp.gnu.org/gnu/ncurses/"
+VERSION="6.3"
+SRC_FILENAME="ncurses-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure --host=$TARGET				\
+		--enable-term-driver				\
+		--without-ada					\
+		--without-cxx					\
+		--without-cxx-binding				\
+		--enable-sigwinch				\
+		--enable-widec					\
+		--enable-pc-files				\
+		--with-pkg-config-libdir="/lib/pkgconfig"	\
+		--prefix="/"					\
+		DESTDIR=$SYSROOT CC=$MUSL_CC LD=$MUSL_LD
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}
