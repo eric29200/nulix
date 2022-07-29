@@ -1,0 +1,15 @@
+URL="https://ftp.gnu.org/gnu/findutils/"
+VERSION="4.9.0"
+SRC_FILENAME="findutils-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure --host=$TARGET --disable-nls --prefix=$SYSROOT CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}
