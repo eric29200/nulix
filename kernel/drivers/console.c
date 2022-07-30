@@ -73,11 +73,6 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 			tty->state = TTY_STATE_NORMAL;
 
 			switch (chars[i]) {
-				case 'D':
-					if (!tty->pars[0])
-						tty->pars[0]++;
-					fb_set_xy(&tty->fb, tty->fb.x - tty->pars[0], tty->fb.y);
-					break;
 				case 'G':
 					if (tty->pars[0])
 						tty->pars[0]--;

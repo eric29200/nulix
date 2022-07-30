@@ -170,7 +170,6 @@ static int proc_base_lookup(struct inode_t *dir, const char *name, size_t name_l
 			break;
 	}
 
-out:
 	iput(dir);
 	return 0;
 }
