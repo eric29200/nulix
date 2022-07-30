@@ -5,11 +5,6 @@
 #include <stddef.h>
 #include <lib/font.h>
 
-#define TEXT_BLACK			0
-#define TEXT_LIGHT_GREY			7
-#define TEXT_COLOR(bg, fg)		(((bg) << 4) | (fg))
-#define TEXT_ENTRY(bg, fg, c)		((TEXT_COLOR((bg), (fg)) << 8) | (c))
-
 /*
  * Frame buffer structure.
  */
@@ -33,6 +28,7 @@ struct framebuffer_t {
 
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb);
 void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y);
-void fb_putc(struct framebuffer_t *fb, uint8_t c);
+void fb_putc(struct framebuffer_t *fb, uint8_t c, uint8_t color);
 
 #endif
+

@@ -2,6 +2,26 @@
 #include <stdio.h>
 #include <string.h>
 
+/* ansi color table */
+static uint8_t ansi_color_table[] = {
+	0,	/* black */
+	4,	/* blue */
+	2,	/* green */
+	6,	/* cyan */
+	1,	/* red */
+	5,	/* magenta */
+	3,	/* brown */
+	7,	/* light gray */
+	8,	/* dark gray */
+	12,	/* light blue */
+	10,	/* light green */
+	14,	/* light cyan */
+	9,	/* light red */
+	13,	/* light magenta */
+	11,	/* yellow */
+	15	/* white */
+};
+
 /*
  * Handle escape P sequences (delete characters).
  */
@@ -84,6 +104,31 @@ static void csi_J(struct tty_t *tty, int vpar)
 }
 
 /*
+ * Handle escape m sequences (change console attributes).
+ */
+static void csi_m(struct tty_t *tty)
+{
+	size_t i;
+
+	for (i = 0; i <= tty->npars; i++) {
+		switch (tty->pars[i]) {
+			case 0:								/* set default attributes */
+				tty_default_attr(tty);
+				break;
+			default:
+				/* set foreground color */
+				if (tty->pars[i] >= 30 && tty->pars[i] <= 37) {
+					tty->color = TEXT_COLOR(tty->color_bg, ansi_color_table[tty->pars[i] - 30]);
+					break;
+				}
+
+				printf("console : unknown escape sequence m : %d\n", tty->pars[i]);
+				break;
+		}
+	}
+}
+
+/*
  * Write to TTY.
  */
 int console_write(struct tty_t *tty, const char *buf, int n)
@@ -101,7 +146,7 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 						tty->state = TTY_STATE_ESCAPE;
 						break;
 					default:
-						fb_putc(&tty->fb, chars[i]);
+						fb_putc(&tty->fb, chars[i], tty->color);
 						break;
 				}
 
@@ -193,6 +238,9 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 					break;
 				case 'J':
 					csi_J(tty, tty->pars[0]);
+					break;
+				case 'm':
+					csi_m(tty);
 					break;
 				default:
 					printf("console : unknown escape sequence %c\n", chars[i]);

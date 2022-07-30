@@ -323,6 +323,15 @@ static void tty_refresh()
 }
 
 /*
+ * Default tty attributes.
+ */
+void tty_default_attr(struct tty_t *tty)
+{
+	tty->color_bg = TEXT_BLACK;
+	tty->color = TEXT_COLOR(tty->color_bg, TEXT_LIGHT_GREY);
+}
+
+/*
  * Init TTYs.
  */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb)
@@ -334,6 +343,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 		tty_table[i].dev = DEV_TTY0 + i + 1;
 		tty_table[i].pgrp = 0;
 		tty_table[i].write = console_write;
+		tty_default_attr(&tty_table[i]);
 
 		/* init buffer */
 		ret = ring_buffer_init(&tty_table[i].buffer, TTY_BUF_SIZE);

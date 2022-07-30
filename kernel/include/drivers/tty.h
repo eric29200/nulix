@@ -42,6 +42,11 @@
 #define O_NLRET(tty)		_O_FLAG((tty),ONLRET)
 #define O_LCUC(tty)		_O_FLAG((tty),OLCUC)
 
+#define TEXT_BLACK		0
+#define TEXT_LIGHT_GREY		7
+#define TEXT_COLOR(bg, fg)	(((bg) << 4) | (fg))
+#define TEXT_ENTRY(c, color)	(((color) << 8) | (c))
+
 /*
  * TTY structure.
  */
@@ -53,7 +58,8 @@ struct tty_t {
 	uint32_t		npars;							/* number of escaped pars */
 	int			esc_buf_size;						/* escape buffer size */
 	int			state;							/* tty state (NORMAL or ESCAPE) */
-	uint8_t			color;							/* foreground color */
+	uint8_t			color_bg;						/* background color */
+	uint8_t			color;							/* forgeground/background color */
 	struct winsize_t	winsize;						/* window size */
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */
@@ -65,6 +71,7 @@ struct tty_t *tty_lookup(dev_t dev);
 void tty_update(unsigned char c);
 void tty_change(int n);
 void tty_signal_group(dev_t dev, int sig);
+void tty_default_attr(struct tty_t *tty);
 
 extern struct inode_operations_t tty_iops;
 

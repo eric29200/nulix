@@ -38,6 +38,7 @@ sudo ln -s /proc/mounts tmp/etc/mtab
 sudo sh -c 'echo "export HOME=/root" > tmp/root/.bashrc'
 sudo sh -c 'echo "export TERM=linux" >> tmp/root/.bashrc'
 sudo sh -c 'echo "export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin" >> tmp/root/.bashrc'
+sudo sh -c 'echo "alias ls=\"ls --color\"" >> tmp/root/.bashrc'
 
 # copy root folders
 sudo cp -Rv sysroot/* tmp/

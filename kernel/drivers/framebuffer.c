@@ -11,6 +11,26 @@
 static void fb_update_text(struct framebuffer_t *fb);
 static void fb_update_rgb(struct framebuffer_t *fb);
 
+/* RGB color table */
+static uint32_t rgb_color_table[] = {
+	0x000000,	/* black */
+	0x0000AA,	/* blue */
+	0x00AA00,	/* green */
+	0x00AAAA,	/* cyan */
+	0xAA0000,	/* red */
+	0xAA00AA,	/* magenta */
+	0xAA5000,	/* brown */
+	0xAAAAAA,	/* light gray */
+	0x555555,	/* dark gray */
+	0x5555FF,	/* light blue */
+	0x55FF55,	/* light green */
+	0x55FFFF,	/* light cyan */
+	0xFF5555,	/* light red */
+	0xFF55FF,	/* light magenta */
+	0xFFFF55,	/* yellow */
+	0xFFFFFF	/* white */
+};
+
 /*
  * Init the framebuffer.
  */
@@ -69,12 +89,12 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 /*
  * Put a pixel on the screen.
  */
-static inline void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint8_t red, uint8_t green, uint8_t blue)
+static inline void fb_put_pixel(struct framebuffer_t *fb, uint32_t x, uint32_t y, uint32_t color)
 {
 	uint8_t *pixel = (uint8_t *) (fb->addr + x * fb->bpp / 8 + y * fb->pitch);
-	*pixel++ = red;
-	*pixel++ = green;
-	*pixel++ = blue;
+	*pixel++ = color & 0xFF;
+	*pixel++ = (color >> 8) & 0xFF;
+	*pixel++ = (color >> 16) & 0xFF;
 }
 
 /*
@@ -102,7 +122,7 @@ static inline void fb_put_cursor(struct framebuffer_t *fb, uint32_t pos_x, uint3
 /*
  * Print a glyph on the frame buffer.
  */
-static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, uint32_t pos_y)
+static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, uint32_t pos_y, uint32_t color_bg, uint32_t color_fg)
 {
 	uint32_t x, y;
 	uint8_t *font;
@@ -122,9 +142,9 @@ static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, ui
 	for (y = 0; y < fb->font->height; y++) {
 		for (x = 0; x < fb->font->width; x++) {
 			if (*font & bit)
-				fb_put_pixel(fb, pos_x + x, pos_y + y, fb->red, fb->green, fb->blue);
+				fb_put_pixel(fb, pos_x + x, pos_y + y, color_fg);
 			else
-				fb_put_pixel(fb, pos_x + x, pos_y + y, 0, 0, 0);
+				fb_put_pixel(fb, pos_x + x, pos_y + y, color_bg);
 
 			/* go to next glyph */
 			bit >>= 1;
@@ -159,7 +179,7 @@ static void fb_update_text(struct framebuffer_t *fb)
 
 	/* copy the buffer */
 	for (i = 0; i < fb->width * fb->height; i++)
-		fb_buf[i] = TEXT_ENTRY(TEXT_BLACK, TEXT_LIGHT_GREY, fb->buf[i]);
+		fb_buf[i] = TEXT_ENTRY(fb->buf[i], fb->buf[i] >> 8);
 
 	/* update hardware cursor */
 	pos = fb->y * fb->width + fb->x;
@@ -173,18 +193,48 @@ static void fb_update_text(struct framebuffer_t *fb)
 }
 
 /*
+ * Get RGB foreground color from ansi color.
+ */
+static uint32_t fb_get_rgb_fg_color(uint8_t color)
+{
+	int fg, bright;
+
+	fg = color & 7;
+	bright = (color & 0xF) & 8;
+
+	return rgb_color_table[bright + fg];
+}
+
+/*
+ * Get RGB background color from ansi color.
+ */
+static uint32_t fb_get_rgb_bg_color(uint8_t color)
+{
+	int bg = (color >> 4) & 7;
+
+	return rgb_color_table[bg];
+}
+
+/*
  * Update a RGB frame buffer.
  */
 static void fb_update_rgb(struct framebuffer_t *fb)
 {
+	uint32_t color_bg, color_fg;
+	uint8_t c, color;
 	uint32_t x, y;
-	uint8_t c;
 
 	/* print each glyph */
 	for (y = 0; y < fb->height; y++) {
 		for (x = 0; x < fb->width; x++) {
+			/* get character and color */
 			c = fb->buf[y * fb->width + x];
-			fb_put_glyph(fb, c ? get_glyph(fb->font, c) : -1, x * fb->font->width, y * fb->font->height);
+			color = fb->buf[y * fb->width + x] >> 8;
+			color_bg = fb_get_rgb_bg_color(color);
+			color_fg = fb_get_rgb_fg_color(color);
+
+			/* put glyph */
+			fb_put_glyph(fb, c ? get_glyph(fb->font, c) : -1, x * fb->font->width, y * fb->font->height, color_bg, color_fg);
 		}
 	}
 
@@ -198,13 +248,13 @@ static void fb_update_rgb(struct framebuffer_t *fb)
 /*
  * Print a character on the frame buffer.
  */
-void fb_putc(struct framebuffer_t *fb, uint8_t c)
+void fb_putc(struct framebuffer_t *fb, uint8_t c, uint8_t color)
 {
 	uint32_t i;
 
 	/* handle character */
 	if (c >= ' ' && c <= '~') {
-		fb->buf[fb->y * fb->width + fb->x] = c;
+		fb->buf[fb->y * fb->width + fb->x] = (color << 8) | c;
 		fb->x++;
 	} else if (c == '\t') {
 		fb->x = (fb->x + fb->bpp / 8) & ~0x03;
