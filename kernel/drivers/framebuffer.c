@@ -51,7 +51,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	}
 
 	/* allocate buffer */
-	fb->buf = (char *) kmalloc(fb->width * fb->height * fb->bpp / 8);
+	fb->buf = (uint16_t *) kmalloc(sizeof(uint16_t) * fb->width * fb->height * fb->bpp / 8);
 	if (!fb->buf)
 		return -ENOMEM;
 
@@ -61,7 +61,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 		map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, 0, 1);
 
 	/* clear frame buffer */
-	memset(fb->buf, 0, fb->width * fb->height * fb->bpp / 8);
+	memset(fb->buf, 0, sizeof(uint16_t) * fb->width * fb->height * fb->bpp / 8);
 
 	return 0;
 }
@@ -178,7 +178,7 @@ static void fb_update_text(struct framebuffer_t *fb)
 static void fb_update_rgb(struct framebuffer_t *fb)
 {
 	uint32_t x, y;
-	char c;
+	uint8_t c;
 
 	/* print each glyph */
 	for (y = 0; y < fb->height; y++) {
@@ -230,7 +230,7 @@ void fb_putc(struct framebuffer_t *fb, uint8_t c)
 			fb->buf[i] = fb->buf[i + fb->width];
 
 		/* clear last line */
-		memset(&fb->buf[i], 0, fb->width);
+		memset(&fb->buf[i], 0, fb->width * 2);
 
 		fb->y = fb->height - 1;
 	}

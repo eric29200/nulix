@@ -8,7 +8,7 @@
 static void csi_P(struct tty_t *tty, uint32_t nr)
 {
 	struct framebuffer_t *fb = &tty->fb;
-	char *p;
+	uint16_t *p;
 
 	if (nr > tty->fb.width - tty->fb.x)
 		nr = tty->fb.width - tty->fb.x;
@@ -17,8 +17,8 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
 
 	/* delete characters */
 	p = fb->buf + fb->y * fb->width + fb->x;
-	memcpy(p, p + nr, fb->width - fb->x - nr);
-	memset(p + fb->width - fb->x - nr, ' ', nr);
+	memcpy(p, p + nr, (fb->width - fb->x - nr) * 2);
+	memset(p + fb->width - fb->x - nr, 0, nr * 2);
 	fb->dirty = 1;
 }
 
@@ -27,7 +27,7 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
  */
 static void csi_K(struct tty_t *tty, int vpar)
 {
-	char *start = tty->fb.buf + tty->fb.y * tty->fb.width + tty->fb.x;
+	uint16_t *start = tty->fb.buf + tty->fb.y * tty->fb.width + tty->fb.x;
 	uint32_t count;
 	int offset;
 
@@ -49,7 +49,7 @@ static void csi_K(struct tty_t *tty, int vpar)
 	}
 
 	/* update frame buffer */
-	memset(start + offset, ' ', count);
+	memset(start + offset, 0, count * 2);
 	tty->fb.dirty = 1;
 }
 
@@ -58,8 +58,8 @@ static void csi_K(struct tty_t *tty, int vpar)
  */
 static void csi_J(struct tty_t *tty, int vpar)
 {
+	uint16_t *start;
 	size_t count;
-	char *start;
 
 	switch (vpar) {
 		case 0:								/* erase from cursor to end of display */
@@ -79,7 +79,7 @@ static void csi_J(struct tty_t *tty, int vpar)
 	}
 
 	/* update frame buffer */
-	memset(start, ' ', count);
+	memset(start, 0, count * 2);
 	tty->fb.dirty = 1;
 }
 

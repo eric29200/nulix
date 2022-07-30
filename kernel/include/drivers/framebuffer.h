@@ -26,7 +26,7 @@ struct framebuffer_t {
 	uint8_t			red;
 	uint8_t			green;
 	uint8_t			blue;
-	char *			buf;
+	uint16_t *		buf;
 	char			dirty;
 	void			(*update)(struct framebuffer_t *);
 };

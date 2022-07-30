@@ -53,6 +53,7 @@ struct tty_t {
 	uint32_t		npars;							/* number of escaped pars */
 	int			esc_buf_size;						/* escape buffer size */
 	int			state;							/* tty state (NORMAL or ESCAPE) */
+	uint8_t			color;							/* foreground color */
 	struct winsize_t	winsize;						/* window size */
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */
