@@ -137,50 +137,6 @@ static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, ui
 }
 
 /*
- * Print a character on the frame buffer.
- */
-void fb_putc(struct framebuffer_t *fb, uint8_t c)
-{
-	uint32_t i;
-
-	/* handle character */
-	if (c >= ' ' && c <= '~') {
-		fb->buf[fb->y * fb->width + fb->x] = c;
-		fb->x++;
-	} else if (c == '\t') {
-		fb->x = (fb->x + fb->bpp / 8) & ~0x03;
-	} else if (c == '\n') {
-		fb->y++;
-		fb->x = 0;
-	} else if (c == '\r') {
-		fb->x = 0;
-	} else if (c == '\b') {
-		fb->x--;
-	}
-
-	/* go to next line */
-	if (fb->x >= fb->width) {
-		fb->x = 0;
-		fb->buf[fb->y * fb->width + fb->x] = 0;
-	}
-
-	/* scroll */
-	if (fb->y >= fb->height) {
-		/* move each line up */
-		for (i = 0; i < fb->width * (fb->height - 1); i++)
-			fb->buf[i] = fb->buf[i + fb->width];
-
-		/* clear last line */
-		memset(&fb->buf[i], 0, fb->width);
-
-		fb->y = fb->height - 1;
-	}
-
-	/* mark frame buffer dirty */
-	fb->dirty = 1;
-}
-
-/*
  * Set framebuffer position.
  */
 void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y)
@@ -237,4 +193,48 @@ static void fb_update_rgb(struct framebuffer_t *fb)
 
 	/* mark frame buffer clean */
 	fb->dirty = 0;
+}
+
+/*
+ * Print a character on the frame buffer.
+ */
+void fb_putc(struct framebuffer_t *fb, uint8_t c)
+{
+	uint32_t i;
+
+	/* handle character */
+	if (c >= ' ' && c <= '~') {
+		fb->buf[fb->y * fb->width + fb->x] = c;
+		fb->x++;
+	} else if (c == '\t') {
+		fb->x = (fb->x + fb->bpp / 8) & ~0x03;
+	} else if (c == '\n') {
+		fb->y++;
+		fb->x = 0;
+	} else if (c == '\r') {
+		fb->x = 0;
+	} else if (c == '\b') {
+		fb->x--;
+	}
+
+	/* go to next line */
+	if (fb->x >= fb->width) {
+		fb->x = 0;
+		fb->buf[fb->y * fb->width + fb->x] = 0;
+	}
+
+	/* scroll */
+	if (fb->y >= fb->height) {
+		/* move each line up */
+		for (i = 0; i < fb->width * (fb->height - 1); i++)
+			fb->buf[i] = fb->buf[i + fb->width];
+
+		/* clear last line */
+		memset(&fb->buf[i], 0, fb->width);
+
+		fb->y = fb->height - 1;
+	}
+
+	/* mark frame buffer dirty */
+	fb->dirty = 1;
 }

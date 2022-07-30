@@ -1,5 +1,87 @@
 #include <drivers/console.h>
 #include <stdio.h>
+#include <string.h>
+
+/*
+ * Handle escape P sequences (delete characters).
+ */
+static void csi_P(struct tty_t *tty, uint32_t nr)
+{
+	struct framebuffer_t *fb = &tty->fb;
+	char *p;
+
+	if (nr > tty->fb.width - tty->fb.x)
+		nr = tty->fb.width - tty->fb.x;
+	else if (!nr)
+		nr = 1;
+
+	/* delete characters */
+	p = fb->buf + fb->y * fb->width + fb->x;
+	memcpy(p, p + nr, fb->width - fb->x - nr);
+	memset(p + fb->width - fb->x - nr, ' ', nr);
+	fb->dirty = 1;
+}
+
+/*
+ * Handle escape K sequences (erase line or part of line).
+ */
+static void csi_K(struct tty_t *tty, int vpar)
+{
+	char *start = tty->fb.buf + tty->fb.y * tty->fb.width + tty->fb.x;
+	uint32_t count;
+	int offset;
+
+	switch (vpar) {
+		case 0:						/* erase from cursor to end of line */
+			offset = 0;
+			count = tty->fb.width - tty->fb.x;
+			break;
+		case 1:						/* erase from start of line to cursor */
+			offset = -tty->fb.x;
+			count = tty->fb.x + 1;
+			break;
+		case 2:						/* erase whole line */
+			offset = -tty->fb.x;
+			count = tty->fb.width;
+			break;
+		default:
+			return;
+	}
+
+	/* update frame buffer */
+	memset(start + offset, ' ', count);
+	tty->fb.dirty = 1;
+}
+
+/*
+ * Handle escape J sequences (delete screen or part of the screen).
+ */
+static void csi_J(struct tty_t *tty, int vpar)
+{
+	size_t count;
+	char *start;
+
+	switch (vpar) {
+		case 0:								/* erase from cursor to end of display */
+			start = tty->fb.buf + tty->fb.y * tty->fb.width + tty->fb.x;
+			count = tty->fb.width * tty->fb.height - tty->fb.y * tty->fb.width + tty->fb.x;
+			break;
+		case 1:								/* erase from start of display to cursor */
+			start = tty->fb.buf;
+			count = tty->fb.y * tty->fb.width + tty->fb.x;
+			break;
+		case 2:								/* erase whole display */
+			start = tty->fb.buf;
+			count = tty->fb.width * tty->fb.height;
+			break;
+		default:
+			break;
+	}
+
+	/* update frame buffer */
+	memset(start, ' ', count);
+	tty->fb.dirty = 1;
+}
 
 /*
  * Write to TTY.
@@ -78,6 +160,11 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 						tty->pars[0]--;
 					fb_set_xy(&tty->fb, tty->pars[0], tty->fb.y);
 					break;
+				case 'A':
+					if (!tty->pars[0])
+						tty->pars[0]++;
+					fb_set_xy(&tty->fb, tty->fb.x, tty->fb.y - tty->pars[0]);
+					break;
 				case 'd':
 					if (tty->pars[0])
 						tty->pars[0]--;
@@ -89,6 +176,23 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 					if (tty->pars[1])
 						tty->pars[1]--;
 					fb_set_xy(&tty->fb, tty->pars[1], tty->pars[0]);
+					break;
+				case 'r':
+					if (!tty->pars[0])
+						tty->pars[0]++;
+					if (!tty->pars[1])
+						tty->pars[1] = tty->fb.height;
+					if (tty->pars[0] < tty->pars[1] && tty->pars[1] <= tty->fb.height)
+						fb_set_xy(&tty->fb, 0, 0);
+					break;
+				case 'P':
+					csi_P(tty, tty->pars[0]);
+					break;
+				case 'K':
+					csi_K(tty, tty->pars[0]);
+					break;
+				case 'J':
+					csi_J(tty, tty->pars[0]);
 					break;
 				default:
 					printf("console : unknown escape sequence %c\n", chars[i]);
