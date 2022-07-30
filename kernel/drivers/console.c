@@ -2,65 +2,6 @@
 #include <stdio.h>
 
 /*
- * Handle escape K sequences (delete line or part of line).
- */
-static void csi_K(struct tty_t *tty)
-{
-	uint32_t x;
-
-	switch (tty->pars[0]) {
-		case 0:								/* erase from cursor to end of line */
-			for (x = tty->fb.x; x < tty->fb.width; x++)
-				fb_del(&tty->fb, x, tty->fb.y);
-			break;
-		case 1:								/* erase from start of line to cursor */
-			for (x = 0; x < tty->fb.x; x++)
-				fb_del(&tty->fb, x, tty->fb.y);
-			break;
-		case 2:								/* erase whole line */
-			for (x = 0; x < tty->fb.width; x++)
-				fb_del(&tty->fb, x, tty->fb.y);
-			break;
-		default:
-			break;
-	}
-}
-
-/*
- * Handle escape J sequences (delete screen or part of the screen).
- */
-static void csi_J(struct tty_t *tty)
-{
-	uint32_t x, y;
-
-	switch (tty->pars[0]) {
-		case 0:								/* erase from cursor to end of display */
-			for (x = tty->fb.x; x < tty->fb.width; x++)
-				fb_del(&tty->fb, x, tty->fb.y);
-
-			for (y = tty->fb.y + 1; y < tty->fb.height; y++)
-				for (x = 0; x < tty->fb.width; x++)
-					fb_del(&tty->fb, x, y);
-			break;
-		case 1:								/* erase from start of display to cursor */
-			for (y = 0; y < tty->fb.y; y++)
-				for (x = 0; x < tty->fb.width; x++)
-					fb_del(&tty->fb, x, y);
-
-			for (x = 0; x <= tty->fb.x; x++)
-				fb_del(&tty->fb, x, tty->fb.y);
-			break;
-		case 2:								/* erase whole display */
-			for (y = 0; y < tty->fb.height; y++)
-				for (x = 0; x < tty->fb.width; x++)
-					fb_del(&tty->fb, x, y);
-			break;
-		default:
-			break;
-	}
-}
-
-/*
  * Write to TTY.
  */
 int console_write(struct tty_t *tty, const char *buf, int n)
@@ -153,12 +94,6 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 					if (tty->pars[1])
 						tty->pars[1]--;
 					fb_set_xy(&tty->fb, tty->pars[1], tty->pars[0]);
-					break;
-				case 'K':
-					csi_K(tty);
-					break;
-				case 'J':
-					csi_J(tty);
 					break;
 				default:
 					printf("console : unknown escape sequence %c\n", chars[i]);
