@@ -2,9 +2,22 @@
 #include <x86/io.h>
 
 /*
+ * Update a text frame buffer.
+ */
+void fb_text_update(struct framebuffer_t *fb)
+{
+	uint16_t *fb_buf = (uint16_t *) fb->addr;
+	size_t i;
+
+	/* copy the buffer */
+	for (i = 0; i < fb->width * fb->height; i++)
+		fb_buf[i] = TEXT_ENTRY(fb->buf[i], fb->buf[i] >> 8);
+}
+
+/*
  * Update cursor.
  */
-static void fb_text_update_cursor(struct framebuffer_t *fb)
+void fb_text_update_cursor(struct framebuffer_t *fb)
 {
 	uint16_t pos = fb->y * fb->width + fb->x;
 
@@ -16,20 +29,24 @@ static void fb_text_update_cursor(struct framebuffer_t *fb)
 }
 
 /*
- * Update a text frame buffer.
+ * Show/Hide cursor.
  */
-void fb_text_update(struct framebuffer_t *fb)
+void fb_text_show_cursor(struct framebuffer_t *fb, int on_off)
 {
-	uint16_t *fb_buf = (uint16_t *) fb->addr;
-	size_t i;
+	uint8_t status;
 
-	/* copy the buffer */
-	for (i = 0; i < fb->width * fb->height; i++)
-		fb_buf[i] = TEXT_ENTRY(fb->buf[i], fb->buf[i] >> 8);
+	UNUSED(fb);
 
-	/* update cursor */
-	fb_text_update_cursor(fb);
-
-	/* marke frame buffer clean */
-	fb->dirty = 0;
+	switch (on_off) {
+		case 0:
+			outb(0x03D4, 0xA);
+			status = inb(0x03D5);
+			outb(0x03D5, status | 0x20);
+			break;
+		default:
+			outb(0x03D4, 0xA);
+			status = inb(0x03D5);
+			outb(0x03D5, status & 0x1F);
+			break;
+	}
 }

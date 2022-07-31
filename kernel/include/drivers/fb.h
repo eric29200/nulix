@@ -28,13 +28,22 @@ struct framebuffer_t {
 	uint16_t *		buf;
 	char			dirty;
 	void			(*update)(struct framebuffer_t *);
+	void			(*update_cursor)(struct framebuffer_t *);
+	void			(*show_cursor)(struct framebuffer_t *, int);
 };
 
-int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb);
+int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char);
 void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y);
 
+/* text fb prototypes */
 void fb_text_update(struct framebuffer_t *fb);
+void fb_text_update_cursor(struct framebuffer_t *fb);
+void fb_text_show_cursor(struct framebuffer_t *fb, int on_off);
+
+/* rgb fb prototypes */
 void fb_rgb_update(struct framebuffer_t *fb);
+void fb_rgb_update_cursor(struct framebuffer_t *fb);
+void fb_rgb_show_cursor(struct framebuffer_t *fb, int on_off);
 
 #endif
 

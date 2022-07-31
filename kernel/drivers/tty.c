@@ -315,8 +315,15 @@ void tty_signal_group(dev_t dev, int sig)
  */
 static void tty_refresh()
 {
-	if (current_tty >= 0 && current_tty < NB_TTYS && tty_table[current_tty].fb.dirty)
+	/* update current tty */
+	if (current_tty >= 0 && current_tty < NB_TTYS && tty_table[current_tty].fb.dirty) {
 		tty_table[current_tty].fb.update(&tty_table[current_tty].fb);
+
+		if (tty_table[current_tty].deccm)
+			tty_table[current_tty].fb.update_cursor(&tty_table[current_tty].fb);
+
+		tty_table[current_tty].fb.dirty = 0;
+	}
 
 	/* reschedule timer */
 	timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
@@ -330,6 +337,7 @@ void tty_default_attr(struct tty_t *tty)
 	tty->color_bg = TEXT_BLACK;
 	tty->color = TEXT_COLOR(tty->color_bg, TEXT_LIGHT_GREY);
 	tty->erase_char = ' ' | (tty->color << 8);
+	tty->deccm = 1;
 }
 
 /*
@@ -352,7 +360,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 			return ret;
 
 		/* init frame buffer */
-		ret = init_framebuffer(&tty_table[i].fb, tag_fb);
+		ret = init_framebuffer(&tty_table[i].fb, tag_fb, tty_table[i].erase_char);
 		if (ret != 0)
 			return ret;
 

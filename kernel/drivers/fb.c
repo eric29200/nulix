@@ -6,7 +6,7 @@
 /*
  * Init the framebuffer.
  */
-int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb)
+int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char)
 {
 	uint32_t fb_nb_pages, i;
 	uint32_t width, height;
@@ -29,6 +29,8 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 			fb->width = width;
 			fb->height = height;
 			fb->update = fb_text_update;
+			fb->update_cursor = fb_text_update_cursor;
+			fb->show_cursor = fb_text_show_cursor;
 			break;
 		case MULTIBOOT_FRAMEBUFFER_TYPE_RGB:
 			fb->font = get_default_font();
@@ -37,6 +39,8 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 			fb->width = width / fb->font->width;
 			fb->height = height / fb->font->height;
 			fb->update = fb_rgb_update;
+			fb->update_cursor = fb_rgb_update_cursor;
+			fb->show_cursor = fb_rgb_show_cursor;
 			break;
 		default:
 			return -EINVAL;
@@ -51,6 +55,9 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	fb_nb_pages = div_ceil(height * fb->pitch, PAGE_SIZE);
 	for (i = 0; i < fb_nb_pages; i++)
 		map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, 0, 1);
+
+	/* clear frame buffer */
+	memsetw(fb->buf, erase_char, fb->width * fb->height * fb->bpp / 8);
 
 	return 0;
 }

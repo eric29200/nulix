@@ -56,6 +56,7 @@ struct tty_t {
 	uint8_t			color_bg;						/* background color */
 	uint8_t			color;							/* forgeground/background color */
 	uint16_t		erase_char;						/* erase character */
+	uint8_t			deccm:1;						/* cursor visible */
 	struct winsize_t	winsize;						/* window size */
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */

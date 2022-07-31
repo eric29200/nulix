@@ -129,6 +129,26 @@ static void csi_m(struct tty_t *tty)
 }
 
 /*
+ * Set console mode.
+ */
+static void console_set_mode(struct tty_t *tty, int on_off)
+{
+	size_t i;
+
+	for (i = 0; i <= tty->npars; i++) {
+		switch (tty->pars[i]) {
+			case 25:				/* cursor visible */
+				tty->deccm = on_off;
+				tty->fb.show_cursor(&tty->fb, on_off);
+				break;
+			default:
+				printf("console : unknown mode : %d\n", tty->pars[i]);
+				break;
+		}
+	}
+}
+
+/*
  * Print a character on the console.
  */
 static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
@@ -286,6 +306,12 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 					break;
 				case 'm':
 					csi_m(tty);
+					break;
+				case 'h':
+					console_set_mode(tty, 1);
+					break;
+				case 'l':
+					console_set_mode(tty, 0);
 					break;
 				default:
 					printf("console : unknown escape sequence %c\n", chars[i]);
