@@ -3,7 +3,7 @@
 #include <drivers/zero.h>
 #include <drivers/tty.h>
 #include <drivers/pty.h>
-#include <drivers/framebuffer.h>
+#include <drivers/fb.h>
 #include <drivers/mouse.h>
 #include <dev.h>
 #include <fcntl.h>

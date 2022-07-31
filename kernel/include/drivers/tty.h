@@ -1,7 +1,7 @@
 #ifndef _TTY_H_
 #define _TTY_H_
 
-#include <drivers/framebuffer.h>
+#include <drivers/fb.h>
 #include <drivers/termios.h>
 #include <lib/ring_buffer.h>
 
@@ -41,11 +41,6 @@
 #define O_CRNL(tty)		_O_FLAG((tty),OCRNL)
 #define O_NLRET(tty)		_O_FLAG((tty),ONLRET)
 #define O_LCUC(tty)		_O_FLAG((tty),OLCUC)
-
-#define TEXT_BLACK		0
-#define TEXT_LIGHT_GREY		7
-#define TEXT_COLOR(bg, fg)	(((bg) << 4) | (fg))
-#define TEXT_ENTRY(c, color)	(((color) << 8) | (c))
 
 /*
  * TTY structure.
