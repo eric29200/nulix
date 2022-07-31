@@ -2,7 +2,6 @@
 #include <drivers/null.h>
 #include <drivers/zero.h>
 #include <drivers/tty.h>
-#include <drivers/pty.h>
 #include <drivers/fb.h>
 #include <drivers/mouse.h>
 #include <dev.h>
@@ -24,14 +23,6 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
 	/* zero driver */
 	if (inode->i_rdev == DEV_ZERO)
 		return &zero_iops;
-
-	/* pty multiplixer */
-	if (inode->i_rdev == DEV_PTMX)
-		return &ptmx_iops;
-
-	/* pty driver */
-	if (major(inode->i_rdev) == DEV_PTY_MAJOR)
-		return &pty_iops;
 
 	/* tty driver */
 	if (major(inode->i_rdev) == major(DEV_TTY) || major(inode->i_rdev) == major(DEV_TTY0))

@@ -2,7 +2,6 @@
 #include <drivers/keyboard.h>
 #include <drivers/termios.h>
 #include <drivers/tty.h>
-#include <drivers/pty.h>
 #include <drivers/console.h>
 #include <drivers/pit.h>
 #include <proc/sched.h>
@@ -380,9 +379,6 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 			.c_cc		= INIT_C_CC,
 		};
 	}
-
-	/* init ptys */
-	init_pty();
 
 	/* set current tty to first tty */
 	current_tty = 0;
