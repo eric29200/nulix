@@ -24,7 +24,6 @@ static struct ata_device_t *ata_get_device(dev_t dev)
 	return &ata_devices[minor(dev)];
 }
 
-
 /*
  * Polling an ata device.
  */

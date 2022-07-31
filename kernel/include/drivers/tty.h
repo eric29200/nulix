@@ -55,6 +55,7 @@ struct tty_t {
 	int			state;							/* tty state (NORMAL or ESCAPE) */
 	uint8_t			color_bg;						/* background color */
 	uint8_t			color;							/* forgeground/background color */
+	uint16_t		erase_char;						/* erase character */
 	struct winsize_t	winsize;						/* window size */
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */

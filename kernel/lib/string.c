@@ -142,12 +142,23 @@ size_t strcspn(const char *s, const char *reject)
 /*
  * Fill memory with a constant byte.
  */
-void memset(void *s, char c, size_t n)
+void memset(void *s, char v, size_t n)
 {
 	char *sp = (char *) s;
 
 	for (; n != 0; n--)
-		*sp++ = c;
+		*sp++ = v;
+}
+
+/*
+ * Fill memory with a constant word.
+ */
+void memsetw(void *s, short v, size_t n)
+{
+	short *sp = (short *) s;
+
+	for (; n != 0; n--)
+		*sp++ = v;
 }
 
 /*

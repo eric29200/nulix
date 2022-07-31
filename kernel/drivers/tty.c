@@ -329,6 +329,7 @@ void tty_default_attr(struct tty_t *tty)
 {
 	tty->color_bg = TEXT_BLACK;
 	tty->color = TEXT_COLOR(tty->color_bg, TEXT_LIGHT_GREY);
+	tty->erase_char = ' ' | (tty->color << 8);
 }
 
 /*

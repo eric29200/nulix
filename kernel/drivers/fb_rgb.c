@@ -87,6 +87,22 @@ static uint32_t fb_rgb_bg_color(uint8_t color)
 }
 
 /*
+ * Update cursor.
+ */
+static void fb_rgb_update_cursor(struct framebuffer_t *fb)
+{
+	uint32_t color_bg, color_fg;
+	uint8_t c, color;
+
+	/* draw cursor */
+	c = fb->buf[fb->y * fb->width + fb->x];
+	color = fb->buf[fb->y * fb->width + fb->x] >> 8;
+	color_bg = fb_rgb_bg_color(color);
+	color_fg = fb_rgb_fg_color(color);
+	fb_put_glyph(fb, get_glyph(fb->font, c), fb->x * fb->font->width, fb->y * fb->font->height, color_fg, color_bg);
+}
+
+/*
  * Update a RGB frame buffer.
  */
 void fb_rgb_update(struct framebuffer_t *fb)
@@ -109,19 +125,8 @@ void fb_rgb_update(struct framebuffer_t *fb)
 		}
 	}
 
-	/* get cursor position and color */
-	c = fb->buf[fb->y * fb->width + fb->x];
-	if (c) {
-		color = fb->buf[fb->y * fb->width + fb->x] >> 8;
-	} else {
-		color = TEXT_DEF_COLOR;
-		c = ' ';
-	}
-
-	/* draw cursor */
-	color_bg = fb_rgb_bg_color(color);
-	color_fg = fb_rgb_fg_color(color);
-	fb_put_glyph(fb, get_glyph(fb->font, c), fb->x * fb->font->width, fb->y * fb->font->height, color_fg, color_bg);
+	/* update cursor */
+	fb_rgb_update_cursor(fb);
 
 	/* mark frame buffer clean */
 	fb->dirty = 0;

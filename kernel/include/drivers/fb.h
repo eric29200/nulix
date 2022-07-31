@@ -25,9 +25,6 @@ struct framebuffer_t {
 	struct font_t *		font;
 	uint32_t		x;
 	uint32_t		y;
-	uint8_t			red;
-	uint8_t			green;
-	uint8_t			blue;
 	uint16_t *		buf;
 	char			dirty;
 	void			(*update)(struct framebuffer_t *);
@@ -35,7 +32,6 @@ struct framebuffer_t {
 
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb);
 void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y);
-void fb_putc(struct framebuffer_t *fb, uint8_t c, uint8_t color);
 
 void fb_text_update(struct framebuffer_t *fb);
 void fb_rgb_update(struct framebuffer_t *fb);

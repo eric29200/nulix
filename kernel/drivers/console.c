@@ -38,7 +38,7 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
 	/* delete characters */
 	p = fb->buf + fb->y * fb->width + fb->x;
 	memcpy(p, p + nr, (fb->width - fb->x - nr) * 2);
-	memset(p + fb->width - fb->x - nr, 0, nr * 2);
+	memsetw(p + fb->width - fb->x - nr, tty->erase_char, nr);
 	fb->dirty = 1;
 }
 
@@ -69,7 +69,7 @@ static void csi_K(struct tty_t *tty, int vpar)
 	}
 
 	/* update frame buffer */
-	memset(start + offset, 0, count * 2);
+	memsetw(start + offset, tty->erase_char, count);
 	tty->fb.dirty = 1;
 }
 
@@ -99,7 +99,7 @@ static void csi_J(struct tty_t *tty, int vpar)
 	}
 
 	/* update frame buffer */
-	memset(start, 0, count * 2);
+	memsetw(start, tty->erase_char, count);
 	tty->fb.dirty = 1;
 }
 
@@ -129,6 +129,51 @@ static void csi_m(struct tty_t *tty)
 }
 
 /*
+ * Print a character on the console.
+ */
+static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
+{
+	struct framebuffer_t *fb = &tty->fb;
+	uint32_t i;
+
+	/* handle character */
+	if (c >= ' ' && c <= '~') {
+		fb->buf[fb->y * fb->width + fb->x] = (color << 8) | c;
+		fb->x++;
+	} else if (c == '\t') {
+		fb->x = (fb->x + fb->bpp / 8) & ~0x03;
+	} else if (c == '\n') {
+		fb->y++;
+		fb->x = 0;
+	} else if (c == '\r') {
+		fb->x = 0;
+	} else if (c == '\b') {
+		fb->x--;
+	}
+
+	/* go to next line */
+	if (fb->x >= fb->width) {
+		fb->x = 0;
+		fb->buf[fb->y * fb->width + fb->x] = 0;
+	}
+
+	/* scroll */
+	if (fb->y >= fb->height) {
+		/* move each line up */
+		for (i = 0; i < fb->width * (fb->height - 1); i++)
+			fb->buf[i] = fb->buf[i + fb->width];
+
+		/* clear last line */
+		memsetw(&fb->buf[i], tty->erase_char, fb->width * sizeof(uint16_t));
+
+		fb->y = fb->height - 1;
+	}
+
+	/* mark frame buffer dirty */
+	fb->dirty = 1;
+}
+
+/*
  * Write to TTY.
  */
 int console_write(struct tty_t *tty, const char *buf, int n)
@@ -146,7 +191,7 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 						tty->state = TTY_STATE_ESCAPE;
 						break;
 					default:
-						fb_putc(&tty->fb, chars[i], tty->color);
+						console_putc(tty, chars[i], tty->color);
 						break;
 				}
 
