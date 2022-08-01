@@ -138,7 +138,7 @@ static void keyboard_handler(struct registers_t *regs)
 					else if (key_code == 'z')
 						tty_signal_group(DEV_TTY0, SIGSTOP);
 
-					key_code = '\n';
+					key_code &= 0x1F;
 				} else if ((keyboard_status & KEYBOARD_STATUS_ALT) != 0) {
 					/* F keys : change tty */
 					if (scan_code >= KEY_F1 && scan_code <= KEY_F10) {

@@ -1,0 +1,15 @@
+URL="https://ftp.gnu.org/gnu/nano/"
+VERSION="6.3"
+SRC_FILENAME="nano-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure --host=$TARGET --disable-nls --disable-browser --prefix=$SYSROOT CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}
