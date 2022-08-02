@@ -4,6 +4,7 @@
 #include <grub/multiboot2.h>
 #include <stddef.h>
 #include <lib/font.h>
+#include <string.h>
 
 #define TEXT_BLACK		0
 #define TEXT_LIGHT_GREY		7
@@ -48,6 +49,20 @@ void fb_rgb_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len
 void fb_rgb_scroll(struct framebuffer_t *fb);
 void fb_rgb_update_cursor(struct framebuffer_t *fb);
 void fb_rgb_show_cursor(struct framebuffer_t *fb, int on_off);
+
+/*
+ * Optimized memcpy.
+ */
+static inline void *screen_memcpy(void *dest, void *src, size_t n)
+{
+	if (n % sizeof(uint32_t) == 0)
+		return memcpydw(dest, src, n / sizeof(uint32_t));
+
+	if (n % sizeof(uint32_t) == 0)
+		return memcpyw(dest, src, n / sizeof(uint32_t));
+
+	return memcpy(dest, src, n);
+}
 
 #endif
 

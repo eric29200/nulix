@@ -153,9 +153,20 @@ void memset(void *s, char v, size_t n)
 /*
  * Fill memory with a constant word.
  */
-void memsetw(void *s, short v, size_t n)
+void memsetw(void *s, uint16_t v, size_t n)
 {
-	short *sp = (short *) s;
+	uint16_t *sp = (uint16_t *) s;
+
+	for (; n != 0; n--)
+		*sp++ = v;
+}
+
+/*
+ * Fill memory with a constant double word.
+ */
+void memsetdw(void *s, uint32_t v, size_t n)
+{
+	uint32_t *sp = (uint32_t *) s;
 
 	for (; n != 0; n--)
 		*sp++ = v;
@@ -187,6 +198,34 @@ void *memcpy(void *dest, const void *src, size_t n)
 {
 	const char *sp = src;
 	char *dp = dest;
+
+	while (n-- > 0)
+		*dp++ = *sp++;
+
+	return dest;
+}
+
+/*
+ * Copy memory area.
+ */
+void *memcpyw(void *dest, const void *src, size_t n)
+{
+	const uint16_t *sp = src;
+	uint16_t *dp = dest;
+
+	while (n-- > 0)
+		*dp++ = *sp++;
+
+	return dest;
+}
+
+/*
+ * Copy memory area.
+ */
+void *memcpydw(void *dest, const void *src, size_t n)
+{
+	const uint32_t *sp = src;
+	uint32_t *dp = dest;
 
 	while (n-- > 0)
 		*dp++ = *sp++;

@@ -37,7 +37,7 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
 
 	/* delete characters */
 	p = fb->buf + fb->y * fb->width + fb->x;
-	memcpy(p, p + nr, (fb->width - fb->x - nr) * 2);
+	screen_memcpy(p, p + nr, (fb->width - fb->x - nr) * 2);
 	memsetw(p + fb->width - fb->x - nr, tty->erase_char, nr);
 
 	/* update region */
@@ -189,11 +189,10 @@ static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
 	/* scroll */
 	if (fb->y >= fb->height) {
 		/* move each line up */
-		for (i = 0; i < fb->width * (fb->height - 1); i++)
-			fb->buf[i] = fb->buf[i + fb->width];
+		screen_memcpy(fb->buf, fb->buf + fb->width, fb->width * (fb->height - 1));
 
 		/* clear last line */
-		memsetw(&fb->buf[i], tty->erase_char, fb->width * sizeof(uint16_t));
+		memsetw(fb->buf + fb->width * (fb->height - 1), tty->erase_char, fb->width);
 
 		/* hardware scroll */
 		fb->scroll(fb);

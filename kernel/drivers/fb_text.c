@@ -74,7 +74,7 @@ void fb_text_scroll(struct framebuffer_t *fb)
 	/* scroll up */
 	start = fb->addr + 1 * fb->width * sizeof(uint16_t);
 	end = fb->addr + fb->width * fb->height * sizeof(uint16_t);
-	memcpy((uint32_t *) fb->addr, (uint32_t *) start, end - start);
+	screen_memcpy((uint32_t *) fb->addr, (uint32_t *) start, end - start);
 
 	/* update last line */
 	fb_text_update_region(fb, (fb->height - 1) * fb->width, fb->width);
