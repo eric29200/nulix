@@ -212,7 +212,7 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 	int i;
 
 	/* remove cursor */
-	fb_rgb_update_region(&tty->fb, tty->fb.cursor_y * tty->fb.width + tty->fb.cursor_x, 1);
+	tty->fb.update_region(&tty->fb, tty->fb.cursor_y * tty->fb.width + tty->fb.cursor_x, 1);
 
 	/* parse characters */
 	chars = (const char *) buf;

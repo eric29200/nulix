@@ -48,7 +48,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	}
 
 	/* allocate buffer */
-	fb->buf = (uint16_t *) kmalloc(sizeof(uint16_t) * fb->width * fb->height * fb->bpp / 8);
+	fb->buf = (uint16_t *) kmalloc(sizeof(uint16_t) * fb->width * (fb->height + 1));
 	if (!fb->buf)
 		return -ENOMEM;
 
@@ -58,7 +58,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 		map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, 0, 1);
 
 	/* clear frame buffer */
-	memsetw(fb->buf, erase_char, fb->width * fb->height * fb->bpp / 8);
+	memsetw(fb->buf, erase_char, fb->width * (fb->height + 1));
 
 	return 0;
 }
