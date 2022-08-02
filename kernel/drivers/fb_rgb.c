@@ -1,4 +1,5 @@
 #include <drivers/fb.h>
+#include <string.h>
 
 /* RGB color table */
 static uint32_t rgb_color_table[] = {
@@ -87,30 +88,6 @@ static uint32_t fb_rgb_bg_color(uint8_t color)
 }
 
 /*
- * Update a RGB frame buffer.
- */
-void fb_rgb_update(struct framebuffer_t *fb)
-{
-	uint32_t color_bg, color_fg;
-	uint8_t c, color;
-	uint32_t x, y;
-
-	/* print each glyph */
-	for (y = 0; y < fb->height; y++) {
-		for (x = 0; x < fb->width; x++) {
-			/* get character and color */
-			c = fb->buf[y * fb->width + x];
-			color = fb->buf[y * fb->width + x] >> 8;
-			color_bg = fb_rgb_bg_color(color);
-			color_fg = fb_rgb_fg_color(color);
-
-			/* put glyph */
-			fb_put_glyph(fb, c ? get_glyph(fb->font, c) : -1, x * fb->font->width, y * fb->font->height, color_bg, color_fg);
-		}
-	}
-}
-
-/*
  * Update cursor.
  */
 void fb_rgb_update_cursor(struct framebuffer_t *fb)
@@ -124,6 +101,10 @@ void fb_rgb_update_cursor(struct framebuffer_t *fb)
 	color_bg = fb_rgb_bg_color(color);
 	color_fg = fb_rgb_fg_color(color);
 	fb_put_glyph(fb, get_glyph(fb->font, c), fb->x * fb->font->width, fb->y * fb->font->height, color_fg, color_bg);
+
+	/* set new cusor */
+	fb->cursor_x = fb->x;
+	fb->cursor_y = fb->y;
 }
 
 /*
@@ -131,6 +112,48 @@ void fb_rgb_update_cursor(struct framebuffer_t *fb)
  */
 void fb_rgb_show_cursor(struct framebuffer_t *fb, int on_off)
 {
-	UNUSED(fb);
-	UNUSED(on_off);
+	if (on_off)
+		fb_rgb_update_cursor(fb);
+	else
+		fb_rgb_update_region(fb, fb->cursor_y * fb->width + fb->cursor_x, 1);
+}
+
+/*
+ * Update a frame buffer region.
+ */
+void fb_rgb_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len)
+{
+	uint32_t color_bg, color_fg, i, x, y;
+	uint8_t c, color;
+
+	for (i = 0; i < len; i++) {
+		/* compute coordinates */
+		x = (start + i) % fb->width;
+		y = (start + i) / fb->width;
+
+		/* get character and color */
+		c = fb->buf[y * fb->width + x];
+		color = fb->buf[y * fb->width + x] >> 8;
+		color_bg = fb_rgb_bg_color(color);
+		color_fg = fb_rgb_fg_color(color);
+
+		/* put glyph */
+		fb_put_glyph(fb, c ? get_glyph(fb->font, c) : -1, x * fb->font->width, y * fb->font->height, color_bg, color_fg);
+	}
+}
+
+/*
+ * Scroll framebuffer.
+ */
+void fb_rgb_scroll(struct framebuffer_t *fb)
+{
+	uint32_t start, end;
+
+	/* scroll up */
+	start = fb->addr + 1 * fb->font->height * fb->pitch;
+	end = fb->addr + fb->height * fb->font->height * fb->pitch;
+	memcpy((uint32_t *) fb->addr, (uint32_t *) start, end - start);
+
+	/* update last line */
+	fb_rgb_update_region(fb, (fb->height - 1) * fb->width, fb->width);
 }

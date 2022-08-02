@@ -39,7 +39,9 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
 	p = fb->buf + fb->y * fb->width + fb->x;
 	memcpy(p, p + nr, (fb->width - fb->x - nr) * 2);
 	memsetw(p + fb->width - fb->x - nr, tty->erase_char, nr);
-	fb->dirty = 1;
+
+	/* update region */
+	fb->update_region(fb, fb->y * fb->width + fb->x, fb->width - fb->x);
 }
 
 /*
@@ -47,7 +49,8 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
  */
 static void csi_K(struct tty_t *tty, int vpar)
 {
-	uint16_t *start = tty->fb.buf + tty->fb.y * tty->fb.width + tty->fb.x;
+	struct framebuffer_t *fb = &tty->fb;
+	uint16_t *start = fb->buf + fb->y * fb->width + fb->x;
 	uint32_t count;
 	int offset;
 
@@ -70,7 +73,9 @@ static void csi_K(struct tty_t *tty, int vpar)
 
 	/* update frame buffer */
 	memsetw(start + offset, tty->erase_char, count);
-	tty->fb.dirty = 1;
+
+	/* update region */
+	fb->update_region(&tty->fb, start + offset - tty->fb.buf, count);
 }
 
 /*
@@ -78,21 +83,22 @@ static void csi_K(struct tty_t *tty, int vpar)
  */
 static void csi_J(struct tty_t *tty, int vpar)
 {
+	struct framebuffer_t *fb = &tty->fb;
 	uint16_t *start;
 	size_t count;
 
 	switch (vpar) {
 		case 0:								/* erase from cursor to end of display */
-			start = tty->fb.buf + tty->fb.y * tty->fb.width + tty->fb.x;
-			count = tty->fb.width * tty->fb.height - tty->fb.y * tty->fb.width + tty->fb.x;
+			start = fb->buf + fb->y * fb->width + fb->x;
+			count = fb->width * fb->height - fb->y * fb->width + fb->x;
 			break;
 		case 1:								/* erase from start of display to cursor */
-			start = tty->fb.buf;
-			count = tty->fb.y * tty->fb.width + tty->fb.x;
+			start = fb->buf;
+			count = fb->y * fb->width + fb->x;
 			break;
 		case 2:								/* erase whole display */
-			start = tty->fb.buf;
-			count = tty->fb.width * tty->fb.height;
+			start = fb->buf;
+			count = fb->width * fb->height;
 			break;
 		default:
 			break;
@@ -100,7 +106,9 @@ static void csi_J(struct tty_t *tty, int vpar)
 
 	/* update frame buffer */
 	memsetw(start, tty->erase_char, count);
-	tty->fb.dirty = 1;
+
+	/* update region */
+	fb->update_region(&tty->fb, start - tty->fb.buf, count);
 }
 
 /*
@@ -159,6 +167,7 @@ static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
 	/* handle character */
 	if (c >= ' ' && c <= '~') {
 		fb->buf[fb->y * fb->width + fb->x] = (color << 8) | c;
+		fb->update_region(fb, fb->y * fb->width + fb->x, 1);
 		fb->x++;
 	} else if (c == '\t') {
 		fb->x = (fb->x + fb->bpp / 8) & ~0x03;
@@ -174,7 +183,7 @@ static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
 	/* go to next line */
 	if (fb->x >= fb->width) {
 		fb->x = 0;
-		fb->buf[fb->y * fb->width + fb->x] = 0;
+		fb->y++;
 	}
 
 	/* scroll */
@@ -186,11 +195,12 @@ static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
 		/* clear last line */
 		memsetw(&fb->buf[i], tty->erase_char, fb->width * sizeof(uint16_t));
 
+		/* hardware scroll */
+		fb->scroll(fb);
+
+		/* update position */
 		fb->y = fb->height - 1;
 	}
-
-	/* mark frame buffer dirty */
-	fb->dirty = 1;
 }
 
 /*
@@ -200,6 +210,9 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 {
 	const char *chars;
 	int i;
+
+	/* remove cursor */
+	fb_rgb_update_region(&tty->fb, tty->fb.cursor_y * tty->fb.width + tty->fb.cursor_x, 1);
 
 	/* parse characters */
 	chars = (const char *) buf;
@@ -322,6 +335,9 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 		}
 	}
 
-	tty->fb.dirty = 1;
+	/* update cursor */
+	if (tty->deccm)
+		tty->fb.update_cursor(&tty->fb);
+
 	return n;
 }

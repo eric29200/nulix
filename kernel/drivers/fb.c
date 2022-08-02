@@ -18,9 +18,8 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	width = tag_fb->common.framebuffer_width;
 	height = tag_fb->common.framebuffer_height;
 	fb->bpp = tag_fb->common.framebuffer_bpp;
-	fb->x = 0;
-	fb->y = 0;
-	fb->dirty = 1;
+	fb->x = fb->cursor_x = 0;
+	fb->y = fb->cursor_y = 0;
 
 	/* init frame buffer */
 	switch (fb->type) {
@@ -28,7 +27,8 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 			fb->font = NULL;
 			fb->width = width;
 			fb->height = height;
-			fb->update = fb_text_update;
+			fb->update_region = fb_text_update_region;
+			fb->scroll = fb_text_scroll;
 			fb->update_cursor = fb_text_update_cursor;
 			fb->show_cursor = fb_text_show_cursor;
 			break;
@@ -38,7 +38,8 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 				return -ENOSPC;
 			fb->width = width / fb->font->width;
 			fb->height = height / fb->font->height;
-			fb->update = fb_rgb_update;
+			fb->update_region = fb_rgb_update_region;
+			fb->scroll = fb_rgb_scroll;
 			fb->update_cursor = fb_rgb_update_cursor;
 			fb->show_cursor = fb_rgb_show_cursor;
 			break;

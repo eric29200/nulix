@@ -5,7 +5,6 @@
 #include <drivers/console.h>
 #include <drivers/pit.h>
 #include <proc/sched.h>
-#include <proc/timer.h>
 #include <ipc/signal.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -17,7 +16,6 @@
 /* global ttys */
 static struct tty_t tty_table[NB_TTYS];
 static int current_tty;
-static struct timer_event_t refresh_tm;
 
 /*
  * Lookup for a tty.
@@ -219,9 +217,17 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
  */
 void tty_change(int n)
 {
+	struct framebuffer_t *fb;
+
 	if (n >= 0 && n < NB_TTYS) {
+
+		/* refresh frame buffer */
+		if (current_tty != n) {
+			fb = &tty_table[n].fb;
+			fb->update_region(fb, 0, fb->width * fb->height);
+		}
+
 		current_tty = n;
-		tty_table[current_tty].fb.dirty = 1;
 	}
 }
 
@@ -310,25 +316,6 @@ void tty_signal_group(dev_t dev, int sig)
 }
 
 /*
- * TTY update.
- */
-static void tty_refresh()
-{
-	/* update current tty */
-	if (current_tty >= 0 && current_tty < NB_TTYS && tty_table[current_tty].fb.dirty) {
-		tty_table[current_tty].fb.update(&tty_table[current_tty].fb);
-
-		if (tty_table[current_tty].deccm)
-			tty_table[current_tty].fb.update_cursor(&tty_table[current_tty].fb);
-
-		tty_table[current_tty].fb.dirty = 0;
-	}
-
-	/* reschedule timer */
-	timer_event_mod(&refresh_tm, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
-}
-
-/*
  * Default tty attributes.
  */
 void tty_default_attr(struct tty_t *tty)
@@ -382,10 +369,6 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 
 	/* set current tty to first tty */
 	current_tty = 0;
-
-	/* create refresh timer */
-	timer_event_init(&refresh_tm, tty_refresh, NULL, jiffies + ms_to_jiffies(TTY_DELAY_UPDATE_MS));
-	timer_event_add(&refresh_tm);
 
 	return 0;
 }
