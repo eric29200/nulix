@@ -204,7 +204,7 @@ static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
 /*
  * Write to TTY.
  */
-int console_write(struct tty_t *tty, const char *buf, int n)
+int console_write(struct tty_t *tty, const char *buf, int n, int do_control)
 {
 	const char *chars;
 	int i;
@@ -215,6 +215,11 @@ int console_write(struct tty_t *tty, const char *buf, int n)
 	/* parse characters */
 	chars = (const char *) buf;
 	for (i = 0; i < n; i++) {
+		if (!do_control) {
+			console_putc(tty, chars[i], tty->color);
+			continue;
+		}
+
 		/* start an escape sequence or write to frame buffer */
 		if (tty->state == TTY_STATE_NORMAL) {
 				switch (chars[i]) {

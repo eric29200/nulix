@@ -60,7 +60,7 @@ struct tty_t {
 	struct winsize_t	winsize;						/* window size */
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */
-	int			(*write)(struct tty_t *, const char *, int);		/* write function */
+	int			(*write)(struct tty_t *, const char *, int, int);	/* write function */
 };
 
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);

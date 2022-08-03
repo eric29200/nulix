@@ -3,6 +3,6 @@
 
 #include <drivers/tty.h>
 
-int console_write(struct tty_t *tty, const char *buf, int n);
+int console_write(struct tty_t *tty, const char *buf, int n, int do_control);
 
 #endif

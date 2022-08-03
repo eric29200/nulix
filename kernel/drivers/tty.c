@@ -97,7 +97,7 @@ void tty_update(struct tty_t *tty, uint8_t *buf, size_t len)
 
 	/* echo character on device */
 	if (L_ECHO(tty) && len > 0)
-		tty->write(tty, (char *) buf, len);
+		tty->write(tty, (char *) buf, len, 0);
 
 	/* wake up eventual process */
 	task_wakeup(tty);
@@ -119,7 +119,7 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 	if (!tty->write)
 		return -EINVAL;
 
-	return tty->write(tty, buf, n);
+	return tty->write(tty, buf, n, 1);
 }
 
 /*
