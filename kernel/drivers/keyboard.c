@@ -67,8 +67,8 @@ static unsigned char esc_map[] = {
 	0,		0,		0,		0,		0,		0,		0,		0,
 	0,		0,		0,		0,		0,		0,		0,		0,
 	0,		0,		0,		0,		0,		0,		0,		KEY_HOME,
-	KEY_UP,		KEY_PAGEUP,	0,		KEY_LEFT,	0,		KEY_RIGHT,	0,		KEY_END,
-	KEY_DOWN,	KEY_PAGEDOWN,	KEY_INSERT,	KEY_DELETE,	0,		0,		0,		0,
+	KEY_UP,		KEY_PAGE_UP,	0,		KEY_LEFT,	0,		KEY_RIGHT,	0,		KEY_END,
+	KEY_DOWN,	KEY_PAGE_DOWN,	KEY_INSERT,	KEY_DELETE,	0,		0,		0,		0,
 	0,		0,		0,		0,		0,		0,		0,		0,
 	0 };
 
@@ -95,9 +95,15 @@ static uint32_t scan_key()
  */
 static void keyboard_handler(struct registers_t *regs)
 {
-	uint32_t scan_code, key_code;
+	uint32_t scan_code, key_code = 0;
+	struct tty_t *tty;
 
 	UNUSED(regs);
+
+	/* get current tty */
+	tty = tty_lookup(DEV_TTY0);
+	if (!tty)
+		return;
 
 	/* get key */
 	scan_code = scan_key();
@@ -157,11 +163,49 @@ static void keyboard_handler(struct registers_t *regs)
 				/* check escape map */
 				if (!key_code)
 					key_code = esc_map[scan_code];
-
-				/* send character to tty */
-				if (key_code)
-					tty_update(key_code);
 			}
+			break;
+	}
+
+	/* send key code to tty */
+	switch (key_code) {
+		case 0:
+			break;
+		case KEY_HOME:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_HOME, strlen(KEY_ESCAPE_HOME));
+			break;
+		case KEY_END:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_END, strlen(KEY_ESCAPE_END));
+			break;
+		case KEY_UP:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_UP, strlen(KEY_ESCAPE_UP));
+			break;
+		case KEY_DOWN:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_DOWN, strlen(KEY_ESCAPE_DOWN));
+			break;
+		case KEY_LEFT:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_LEFT, strlen(KEY_ESCAPE_LEFT));
+			break;
+		case KEY_RIGHT:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_RIGHT, strlen(KEY_ESCAPE_RIGHT));
+			break;
+		case KEY_PAGE_UP:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_PAGE_UP, strlen(KEY_ESCAPE_PAGE_UP));
+			break;
+		case KEY_PAGE_DOWN:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_PAGE_DOWN, strlen(KEY_ESCAPE_PAGE_DOWN));
+			break;
+		case KEY_INSERT:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_HOME, strlen(KEY_ESCAPE_HOME));
+			break;
+		case KEY_DELETE:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_INSERT, strlen(KEY_ESCAPE_INSERT));
+			break;
+		case KEY_ENTER:
+			tty_update(tty, (uint8_t *) KEY_ESCAPE_ENTER, strlen(KEY_ESCAPE_ENTER));
+			break;
+		default:
+			tty_update(tty, (uint8_t *) &key_code, 1);
 			break;
 	}
 }

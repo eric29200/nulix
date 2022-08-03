@@ -87,100 +87,10 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 }
 
 /*
- * Write a character to tty.
+ * Write to tty.
  */
-void tty_update(unsigned char c)
+void tty_update(struct tty_t *tty, uint8_t *buf, size_t len)
 {
-	struct tty_t *tty;
-	uint8_t buf[8];
-	int len;
-
-	/* no current TTY */
-	if (current_tty < 0)
-		return;
-
-	/* get tty */
-	tty = &tty_table[current_tty];
-
-	/* set buffer */
-	len = 0;
-
-	/* handle special keys */
-	switch (c) {
-		case KEY_PAGEUP:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 53;
-			buf[3] = 126;
-			len = 4;
-			break;
-		case KEY_PAGEDOWN:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 54;
-			buf[3] = 126;
-			len = 4;
-			break;
-		case KEY_HOME:
-			buf[1] = 27;
-			buf[2] = 91;
-			buf[3] = 72;
-			len = 3;
-			break;
-		case KEY_END:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 70;
-			len = 3;
-			break;
-		case KEY_INSERT:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 50;
-			buf[3] = 126;
-			len = 4;
-			break;
-		case KEY_DELETE:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 51;
-			buf[3] = 126;
-			len = 4;
-			break;
-		case KEY_UP:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 65;
-			len = 3;
-			break;
-		case KEY_DOWN:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 66;
-			len = 3;
-			break;
-		case KEY_RIGHT:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 67;
-			len = 3;
-			break;
-		case KEY_LEFT:
-			buf[0] = 27;
-			buf[1] = 91;
-			buf[2] = 68;
-			len = 3;
-			break;
-		case 13:
-			buf[0] = '\n';
-			len = 1;
-			break;
-		default:
-			buf[0] = c;
-			len = 1;
-			break;
-	}
-
 	/* store buffer */
 	if (len > 0)
 		ring_buffer_write(&tty->buffer, buf, len);
