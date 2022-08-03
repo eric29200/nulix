@@ -162,7 +162,6 @@ static void console_set_mode(struct tty_t *tty, int on_off)
 static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
 {
 	struct framebuffer_t *fb = &tty->fb;
-	uint32_t i;
 
 	/* handle character */
 	if (c >= ' ' && c <= '~') {
