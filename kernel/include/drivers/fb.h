@@ -50,19 +50,4 @@ void fb_rgb_scroll(struct framebuffer_t *fb);
 void fb_rgb_update_cursor(struct framebuffer_t *fb);
 void fb_rgb_show_cursor(struct framebuffer_t *fb, int on_off);
 
-/*
- * Optimized memcpy.
- */
-static inline void *screen_memcpy(void *dest, void *src, size_t n)
-{
-	if (n % sizeof(uint32_t) == 0)
-		return memcpydw(dest, src, n / sizeof(uint32_t));
-
-	if (n % sizeof(uint32_t) == 0)
-		return memcpyw(dest, src, n / sizeof(uint32_t));
-
-	return memcpy(dest, src, n);
-}
-
 #endif
-

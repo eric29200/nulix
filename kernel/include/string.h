@@ -19,8 +19,7 @@ void memsetw(void *s, uint16_t v, size_t n);
 void memsetdw(void *s, uint32_t v, size_t n);
 int memcmp(const void *s1, const void *s2, size_t n);
 void *memcpy(void *dest, const void *src, size_t n);
-void *memcpyw(void *dest, const void *src, size_t n);
-void *memcpydw(void *dest, const void *src, size_t n);
+void *memcpyb(void *dest, const void *src, size_t n);
 
 int atoi(const char *s);
 

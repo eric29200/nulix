@@ -191,10 +191,11 @@ int memcmp(const void *s1, const void *s2, size_t n)
 	return 0;
 }
 
+
 /*
  * Copy memory area.
  */
-void *memcpy(void *dest, const void *src, size_t n)
+void *memcpyb(void *dest, const void *src, size_t n)
 {
 	const char *sp = src;
 	char *dp = dest;
@@ -206,29 +207,29 @@ void *memcpy(void *dest, const void *src, size_t n)
 }
 
 /*
- * Copy memory area.
+ * Optimized memcpy.
  */
-void *memcpyw(void *dest, const void *src, size_t n)
+void *memcpy(void *dest, const void *src, size_t n)
 {
-	const uint16_t *sp = src;
-	uint16_t *dp = dest;
+	uint32_t nb_dwords, nb_bytes;
+	uint32_t *dest32, *src32;
+	uint8_t *dest8,*src8;
 
-	while (n-- > 0)
-		*dp++ = *sp++;
+	/* compute number of double words */
+	nb_dwords = n / sizeof(uint32_t);
+	dest32 = (uint32_t *) dest;
+	src32 = (uint32_t *) src;
 
-	return dest;
-}
+	/* compute number of remaining bytes */
+	nb_bytes = n % sizeof(uint32_t);
+	dest8 = ((uint8_t *) dest) + nb_dwords * sizeof(uint32_t);
+	src8 = ((uint8_t *) src) + nb_dwords * sizeof(uint32_t);
 
-/*
- * Copy memory area.
- */
-void *memcpydw(void *dest, const void *src, size_t n)
-{
-	const uint32_t *sp = src;
-	uint32_t *dp = dest;
+	while (nb_dwords-- > 0)
+		*dest32++ = *src32++;
 
-	while (n-- > 0)
-		*dp++ = *sp++;
+	while (nb_bytes-- > 0)
+		*dest8++ = *src8++;
 
 	return dest;
 }

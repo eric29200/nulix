@@ -152,7 +152,7 @@ void fb_rgb_scroll(struct framebuffer_t *fb)
 	/* scroll up */
 	start = fb->addr + 1 * fb->font->height * fb->pitch;
 	end = fb->addr + fb->height * fb->font->height * fb->pitch;
-	screen_memcpy((uint32_t *) fb->addr, (uint32_t *) start, end - start);
+	memcpy((uint32_t *) fb->addr, (uint32_t *) start, end - start);
 
 	/* update last line */
 	fb_rgb_update_region(fb, (fb->height - 1) * fb->width, fb->width);
