@@ -3,7 +3,10 @@ VERSION="2.21"
 SRC_FILENAME="which-"$VERSION".tar.gz"
 
 function configure_port() {
-	./configure --host=$TARGET --prefix=$SYSROOT CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+	./configure								\
+		--host=$TARGET							\
+		--prefix=$SYSROOT						\
+		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
 function build_port() {

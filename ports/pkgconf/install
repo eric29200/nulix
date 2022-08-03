@@ -3,7 +3,9 @@ VERSION="1.8.0"
 SRC_FILENAME="pkgconf-"$VERSION".tar.xz"
 
 function configure_port() {
-	./configure --host=$TARGET --prefix=$SYSROOT
+	./configure								\
+		--host=$TARGET							\
+		--prefix=$SYSROOT
 }
 
 function build_port() {

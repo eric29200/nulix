@@ -3,7 +3,12 @@ VERSION="4.9.0"
 SRC_FILENAME="findutils-"$VERSION".tar.xz"
 
 function configure_port() {
-	./configure --host=$TARGET --disable-nls --prefix=$SYSROOT CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+	./configure 								\
+		--host=$TARGET							\
+		--disable-nls							\
+		--disable-threads						\
+		--prefix=$SYSROOT						\
+		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
 function build_port() {

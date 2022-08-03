@@ -3,7 +3,11 @@ VERSION="1.34"
 SRC_FILENAME="tar-"$VERSION".tar.xz"
 
 function configure_port() {
-	./configure --host=$TARGET --disable-nls --prefix=$SYSROOT CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+	./configure								\
+		--host=$TARGET							\
+		--disable-nls							\
+		--prefix=$SYSROOT						\
+		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
 function build_port() {

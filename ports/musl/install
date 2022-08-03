@@ -3,7 +3,9 @@ VERSION="1.2.3"
 SRC_FILENAME="musl-"$VERSION".tar.gz"
 
 function configure_port() {
-	./configure --target=$TARGET --prefix=$SYSROOT
+	./configure								\
+		--target=$TARGET						\
+		--prefix=$SYSROOT
 }
 
 function build_port() {
