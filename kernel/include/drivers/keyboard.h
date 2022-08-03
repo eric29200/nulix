@@ -26,8 +26,8 @@
 #define KEY_DELETE			0xE9
 #define KEY_ENTER			0x0D
 
-#define KEY_ESCAPE_HOME			"\033[1~"
-#define KEY_ESCAPE_END			"\033[4~"
+#define KEY_ESCAPE_HOME			"\033[H"
+#define KEY_ESCAPE_END			"\033[F"
 #define KEY_ESCAPE_UP			"\033[A"
 #define KEY_ESCAPE_DOWN			"\033[B"
 #define KEY_ESCAPE_LEFT			"\033[D"
