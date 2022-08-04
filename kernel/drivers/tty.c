@@ -8,6 +8,7 @@
 #include <ipc/signal.h>
 #include <stdio.h>
 #include <stderr.h>
+#include <ctype.h>
 #include <time.h>
 #include <dev.h>
 
@@ -87,6 +88,21 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 }
 
 /*
+ * Output/Echo a character.
+ */
+static void out_char(struct tty_t *tty, uint8_t c)
+{
+	if (ISCNTRL(c) && !ISSPACE(c) && L_ECHOCTL(tty)) {
+		ring_buffer_putc(&tty->write_queue, '^');
+		ring_buffer_putc(&tty->write_queue, c + 64);
+		tty->write(tty);
+	} else {
+		ring_buffer_putc(&tty->write_queue, c);
+		tty->write(tty);
+	}
+}
+
+/*
  * Cook input characters.
  */
 void tty_do_cook(struct tty_t *tty)
@@ -97,11 +113,17 @@ void tty_do_cook(struct tty_t *tty)
 		/* get next input character */
 		ring_buffer_read(&tty->read_queue, &c, 1);
 
+		/* convert to ascii */
+		if (I_ISTRIP(tty))
+			c = TOASCII(c);
+
+		/* lower case */
+		if (I_IUCLC(tty) && ISUPPER(c))
+			c = TOLOWER(c);
+
 		/* echo = put character on write queue */
-		if (L_ECHO(tty) && !ring_buffer_full(&tty->write_queue)) {
-			ring_buffer_write(&tty->write_queue, &c, 1);
-			tty->write(tty);
-		}
+		if (L_ECHO(tty) && !ring_buffer_full(&tty->write_queue))
+			out_char(tty, c);
 
 		/* put character in cooked queue */
 		if (!ring_buffer_full(&tty->cooked_queue))

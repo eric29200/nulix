@@ -88,3 +88,25 @@ size_t ring_buffer_write(struct ring_buffer_t *rb, const uint8_t *buf, size_t n)
 
 	return n;
 }
+
+/*
+ * Put a character in a ring buffer (does not block = if buffer is full, it fails).
+ */
+int ring_buffer_putc(struct ring_buffer_t *rb, uint8_t c)
+{
+	if (ring_buffer_full(rb))
+		return -EAGAIN;
+
+	/* write to ring buffer */
+	rb->buffer[rb->head++] = c;
+	rb->size++;
+
+	/* update position */
+	if (rb->head == rb->capacity)
+		rb->head = 0;
+
+	/* wakeup eventual readers */
+	task_wakeup(rb);
+
+	return 0;
+}
