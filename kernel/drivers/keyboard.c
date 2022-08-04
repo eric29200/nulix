@@ -216,10 +216,10 @@ static void keyboard_handler(struct registers_t *regs)
 			puts(tty, (uint8_t *) KEY_ESCAPE_PAGE_DOWN, strlen(KEY_ESCAPE_PAGE_DOWN));
 			break;
 		case KEY_INSERT:
-			puts(tty, (uint8_t *) KEY_ESCAPE_HOME, strlen(KEY_ESCAPE_HOME));
+			puts(tty, (uint8_t *) KEY_ESCAPE_INSERT, strlen(KEY_ESCAPE_INSERT));
 			break;
 		case KEY_DELETE:
-			puts(tty, (uint8_t *) KEY_ESCAPE_INSERT, strlen(KEY_ESCAPE_INSERT));
+			puts(tty, (uint8_t *) KEY_ESCAPE_DELETE, strlen(KEY_ESCAPE_DELETE));
 			break;
 		case KEY_ENTER:
 			puts(tty, (uint8_t *) KEY_ESCAPE_ENTER, strlen(KEY_ESCAPE_ENTER));
