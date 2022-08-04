@@ -120,13 +120,28 @@ static void csi_m(struct tty_t *tty)
 
 	for (i = 0; i <= tty->npars; i++) {
 		switch (tty->pars[i]) {
-			case 0:								/* set default attributes */
+			case 0:												/* set default attributes */
 				tty_default_attr(tty);
+				break;
+			case 7:												/* reverse attributes */
+				tty->reverse = 1;
+				break;
+			case 39:											/* default foreground color */
+				tty->color = TEXT_COLOR(TEXT_COLOR_BG(tty->color), TEXT_COLOR_FG(tty->def_color));
+				break;
+			case 49:											/* default background color */
+				tty->color = TEXT_COLOR(TEXT_COLOR_BG(tty->def_color), TEXT_COLOR_FG(tty->color));
 				break;
 			default:
 				/* set foreground color */
 				if (tty->pars[i] >= 30 && tty->pars[i] <= 37) {
-					tty->color = TEXT_COLOR(tty->color_bg, ansi_color_table[tty->pars[i] - 30]);
+					tty->color = TEXT_COLOR(TEXT_COLOR_BG(tty->color), ansi_color_table[tty->pars[i] - 30]);
+					break;
+				}
+
+				/* set background color */
+				if (tty->pars[i] >= 40 && tty->pars[i] <= 47) {
+					tty->color = TEXT_COLOR(ansi_color_table[tty->pars[i] - 40], TEXT_COLOR_FG(tty->color));
 					break;
 				}
 
@@ -134,6 +149,9 @@ static void csi_m(struct tty_t *tty)
 				break;
 		}
 	}
+
+	/* update attributes */
+	tty_update_attr(tty);
 }
 
 /*

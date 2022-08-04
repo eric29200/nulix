@@ -267,14 +267,32 @@ void tty_signal_group(dev_t dev, int sig)
 }
 
 /*
+ * Init tty attributes.
+ */
+static void tty_init_attr(struct tty_t *tty)
+{
+	tty->def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
+	tty->erase_char = ' ' | (tty->color << 8);
+	tty->deccm = 1;
+	tty_default_attr(tty);
+}
+
+/*
  * Default tty attributes.
  */
 void tty_default_attr(struct tty_t *tty)
 {
-	tty->color_bg = TEXT_BLACK;
-	tty->color = TEXT_COLOR(tty->color_bg, TEXT_LIGHT_GREY);
-	tty->erase_char = ' ' | (tty->color << 8);
-	tty->deccm = 1;
+	tty->reverse = 0;
+	tty->color = tty->def_color;
+}
+
+/*
+ * Update tty attributes.
+ */
+void tty_update_attr(struct tty_t *tty)
+{
+	if (tty->reverse)
+		tty->color = TEXT_COLOR(TEXT_COLOR_FG(tty->color), TEXT_COLOR_BG(tty->color));
 }
 
 /*
@@ -287,7 +305,7 @@ static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer
 	tty->dev = DEV_TTY0 + num;
 	tty->pgrp = 0;
 	tty->write = console_write;
-	tty_default_attr(tty);
+	tty_init_attr(tty);
 
 	/* init read queue */
 	ret = ring_buffer_init(&tty->read_queue, TTY_BUF_SIZE);

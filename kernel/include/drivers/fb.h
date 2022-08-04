@@ -9,9 +9,9 @@
 #define TEXT_BLACK		0
 #define TEXT_LIGHT_GREY		7
 #define TEXT_COLOR(bg, fg)	(((bg) << 4) | (fg))
-#define TEXT_DEF_COLOR		TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY)
+#define TEXT_COLOR_BG(color)	(((color) & 0xF0) >> 4)
+#define TEXT_COLOR_FG(color)	((color) & 0x0F)
 #define TEXT_ENTRY(c, color)	(((color) << 8) | (c))
-
 
 /*
  * Frame buffer structure.
