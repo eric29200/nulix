@@ -91,6 +91,26 @@ static uint32_t scan_key()
 }
 
 /*
+ * Put a character in tty read queue.
+ */
+static void putc(struct tty_t *tty, uint8_t c)
+{
+	if (!ring_buffer_full(&tty->read_queue))
+		ring_buffer_write(&tty->read_queue, &c, 1);
+}
+
+/*
+ * Put a buffer in tty read queue.
+ */
+static void puts(struct tty_t *tty, uint8_t *buf, size_t n)
+{
+	size_t i;
+
+	for (i = 0; i < n; i++)
+		putc(tty, buf[i]);
+}
+
+/*
  * Keyboard handler.
  */
 static void keyboard_handler(struct registers_t *regs)
@@ -172,42 +192,45 @@ static void keyboard_handler(struct registers_t *regs)
 		case 0:
 			break;
 		case KEY_HOME:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_HOME, strlen(KEY_ESCAPE_HOME));
+			puts(tty, (uint8_t *) KEY_ESCAPE_HOME, strlen(KEY_ESCAPE_HOME));
 			break;
 		case KEY_END:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_END, strlen(KEY_ESCAPE_END));
+			puts(tty, (uint8_t *) KEY_ESCAPE_END, strlen(KEY_ESCAPE_END));
 			break;
 		case KEY_UP:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_UP, strlen(KEY_ESCAPE_UP));
+			puts(tty, (uint8_t *) KEY_ESCAPE_UP, strlen(KEY_ESCAPE_UP));
 			break;
 		case KEY_DOWN:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_DOWN, strlen(KEY_ESCAPE_DOWN));
+			puts(tty, (uint8_t *) KEY_ESCAPE_DOWN, strlen(KEY_ESCAPE_DOWN));
 			break;
 		case KEY_LEFT:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_LEFT, strlen(KEY_ESCAPE_LEFT));
+			puts(tty, (uint8_t *) KEY_ESCAPE_LEFT, strlen(KEY_ESCAPE_LEFT));
 			break;
 		case KEY_RIGHT:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_RIGHT, strlen(KEY_ESCAPE_RIGHT));
+			puts(tty, (uint8_t *) KEY_ESCAPE_RIGHT, strlen(KEY_ESCAPE_RIGHT));
 			break;
 		case KEY_PAGE_UP:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_PAGE_UP, strlen(KEY_ESCAPE_PAGE_UP));
+			puts(tty, (uint8_t *) KEY_ESCAPE_PAGE_UP, strlen(KEY_ESCAPE_PAGE_UP));
 			break;
 		case KEY_PAGE_DOWN:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_PAGE_DOWN, strlen(KEY_ESCAPE_PAGE_DOWN));
+			puts(tty, (uint8_t *) KEY_ESCAPE_PAGE_DOWN, strlen(KEY_ESCAPE_PAGE_DOWN));
 			break;
 		case KEY_INSERT:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_HOME, strlen(KEY_ESCAPE_HOME));
+			puts(tty, (uint8_t *) KEY_ESCAPE_HOME, strlen(KEY_ESCAPE_HOME));
 			break;
 		case KEY_DELETE:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_INSERT, strlen(KEY_ESCAPE_INSERT));
+			puts(tty, (uint8_t *) KEY_ESCAPE_INSERT, strlen(KEY_ESCAPE_INSERT));
 			break;
 		case KEY_ENTER:
-			tty_update(tty, (uint8_t *) KEY_ESCAPE_ENTER, strlen(KEY_ESCAPE_ENTER));
+			puts(tty, (uint8_t *) KEY_ESCAPE_ENTER, strlen(KEY_ESCAPE_ENTER));
 			break;
 		default:
-			tty_update(tty, (uint8_t *) &key_code, 1);
+			puts(tty, (uint8_t *) &key_code, 1);
 			break;
 	}
+
+	/* cook input characters */
+	tty_do_cook(tty);
 }
 
 /*

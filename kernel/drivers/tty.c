@@ -73,7 +73,7 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 	/* read all characters */
 	while (count < n) {
 		/* read key */
-		ring_buffer_read(&tty->buffer, &key, 1);
+		ring_buffer_read(&tty->cooked_queue, &key, 1);
 
 		/* add key to buffer */
 		((unsigned char *) buf)[count++] = key;
@@ -87,17 +87,26 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 }
 
 /*
- * Write to tty.
+ * Cook input characters.
  */
-void tty_update(struct tty_t *tty, uint8_t *buf, size_t len)
+void tty_do_cook(struct tty_t *tty)
 {
-	/* store buffer */
-	if (len > 0)
-		ring_buffer_write(&tty->buffer, buf, len);
+	uint8_t c;
 
-	/* echo character on device */
-	if (L_ECHO(tty) && len > 0)
-		tty->write(tty, (char *) buf, len, 0);
+	while (tty->read_queue.size > 0) {
+		/* get next input character */
+		ring_buffer_read(&tty->read_queue, &c, 1);
+
+		/* echo = put character on write queue */
+		if (L_ECHO(tty) && !ring_buffer_full(&tty->write_queue)) {
+			ring_buffer_write(&tty->write_queue, &c, 1);
+			tty->write(tty);
+		}
+
+		/* put character in cooked queue */
+		if (!ring_buffer_full(&tty->cooked_queue))
+			ring_buffer_write(&tty->cooked_queue, &c, 1);
+	}
 
 	/* wake up eventual process */
 	task_wakeup(tty);
@@ -119,7 +128,13 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 	if (!tty->write)
 		return -EINVAL;
 
-	return tty->write(tty, buf, n, 1);
+	/* put characters in write queue */
+	ring_buffer_write(&tty->write_queue, (uint8_t *) buf, n);
+
+	/* write to tty */
+	tty->write(tty);
+
+	return n;
 }
 
 /*
@@ -203,7 +218,11 @@ static int tty_poll(struct file_t *filp)
 	current_task->waiting_chan = tty;
 
 	/* check if there is some characters to read */
-	if (tty->buffer.size > 0)
+	if (tty->cooked_queue.size > 0)
+		mask |= POLLIN;
+
+	/* check if there is some characters to write */
+	if (tty->write_queue.size > 0)
 		mask |= POLLIN;
 
 	return mask;
@@ -237,50 +256,93 @@ void tty_default_attr(struct tty_t *tty)
 }
 
 /*
+ * Init a tty.
+ */
+static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer *tag_fb)
+{
+	int ret;
+
+	tty->dev = DEV_TTY0 + num;
+	tty->pgrp = 0;
+	tty->write = console_write;
+	tty_default_attr(tty);
+
+	/* init read queue */
+	ret = ring_buffer_init(&tty->read_queue, TTY_BUF_SIZE);
+	if (ret)
+		return ret;
+
+	/* init write queue */
+	ret = ring_buffer_init(&tty->write_queue, TTY_BUF_SIZE);
+	if (ret)
+		return ret;
+
+	/* init cooked queue */
+	ret = ring_buffer_init(&tty->cooked_queue, TTY_BUF_SIZE);
+	if (ret)
+		return ret;
+
+	/* init frame buffer */
+	ret = init_framebuffer(&tty->fb, tag_fb, tty->erase_char);
+	if (ret)
+		return ret;
+
+	/* set winsize */
+	tty->winsize.ws_row = tty->fb.height;
+	tty->winsize.ws_col = tty->fb.width;
+	tty->winsize.ws_xpixel = 0;
+	tty->winsize.ws_ypixel = 0;
+
+	/* init termios */
+	tty->termios = (struct termios_t) {
+		.c_iflag	= ICRNL,
+		.c_oflag	= OPOST | ONLCR,
+		.c_cflag	= 0,
+		.c_lflag	= IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
+		.c_line		= 0,
+		.c_cc		= INIT_C_CC,
+	};
+
+	return 0;
+}
+
+/*
+ * Destroy a tty.
+ */
+static void tty_destroy(struct tty_t *tty)
+{
+	ring_buffer_destroy(&tty->read_queue);
+	ring_buffer_destroy(&tty->write_queue);
+	ring_buffer_destroy(&tty->cooked_queue);
+}
+
+/*
  * Init TTYs.
  */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 {
 	int i, ret;
 
+	/* reset ttys */
+	for (i = 0; i < NB_TTYS; i++)
+		memset(&tty_table[i], 0, sizeof(struct tty_t));
+
 	/* init each tty */
 	for (i = 0; i < NB_TTYS; i++) {
-		tty_table[i].dev = DEV_TTY0 + i + 1;
-		tty_table[i].pgrp = 0;
-		tty_table[i].write = console_write;
-		tty_default_attr(&tty_table[i]);
-
-		/* init buffer */
-		ret = ring_buffer_init(&tty_table[i].buffer, TTY_BUF_SIZE);
-		if (ret != 0)
-			return ret;
-
-		/* init frame buffer */
-		ret = init_framebuffer(&tty_table[i].fb, tag_fb, tty_table[i].erase_char);
-		if (ret != 0)
-			return ret;
-
-		/* set winsize */
-		tty_table[i].winsize.ws_row = tty_table[i].fb.height;
-		tty_table[i].winsize.ws_col = tty_table[i].fb.width;
-		tty_table[i].winsize.ws_xpixel = 0;
-		tty_table[i].winsize.ws_ypixel = 0;
-
-		/* init termios */
-		tty_table[i].termios = (struct termios_t) {
-			.c_iflag	= ICRNL,
-			.c_oflag	= OPOST | ONLCR,
-			.c_cflag	= 0,
-			.c_lflag	= IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
-			.c_line		= 0,
-			.c_cc		= INIT_C_CC,
-		};
+		ret = tty_init(&tty_table[i], i + 1, tag_fb);
+		if (ret)
+			break;
 	}
 
 	/* set current tty to first tty */
 	current_tty = 0;
 
-	return 0;
+	/* on error destroy ttys */
+	if (ret)
+		for (i = 0; i < NB_TTYS; i++)
+			tty_destroy(&tty_table[i]);
+
+	return ret;
 }
 
 /*

@@ -204,30 +204,26 @@ static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
 /*
  * Write to TTY.
  */
-int console_write(struct tty_t *tty, const char *buf, int n, int do_control)
+void console_write(struct tty_t *tty)
 {
-	const char *chars;
-	int i;
+	uint8_t c;
 
 	/* remove cursor */
 	tty->fb.update_region(&tty->fb, tty->fb.cursor_y * tty->fb.width + tty->fb.cursor_x, 1);
 
-	/* parse characters */
-	chars = (const char *) buf;
-	for (i = 0; i < n; i++) {
-		if (!do_control) {
-			console_putc(tty, chars[i], tty->color);
-			continue;
-		}
+	/* get characters from write queue */
+	while (tty->write_queue.size > 0) {
+		/* get next character */
+		ring_buffer_read(&tty->write_queue, &c, 1);
 
 		/* start an escape sequence or write to frame buffer */
 		if (tty->state == TTY_STATE_NORMAL) {
-				switch (chars[i]) {
+				switch (c) {
 					case '\033':
 						tty->state = TTY_STATE_ESCAPE;
 						break;
 					default:
-						console_putc(tty, chars[i], tty->color);
+						console_putc(tty, c, tty->color);
 						break;
 				}
 
@@ -236,7 +232,7 @@ int console_write(struct tty_t *tty, const char *buf, int n, int do_control)
 
 		/* handle escape sequence */
 		if (tty->state == TTY_STATE_ESCAPE) {
-				switch (chars[i]) {
+				switch (c) {
 					case '[':
 						tty->state = TTY_STATE_SQUARE;
 						break;
@@ -256,20 +252,20 @@ int console_write(struct tty_t *tty, const char *buf, int n, int do_control)
 			tty->npars = 0;
 
 			tty->state = TTY_STATE_GETPARS;
-			if (chars[i] == '?')
+			if (c == '?')
 				continue;
 		}
 
 		/* get pars */
 		if (tty->state == TTY_STATE_GETPARS) {
-			if (chars[i] == ';' && tty->npars < NPARS - 1) {
+			if (c == ';' && tty->npars < NPARS - 1) {
 				tty->npars++;
 				continue;
 			}
 
-			if (chars[i] >= '0' && chars[i] <= '9') {
+			if (c >= '0' && c <= '9') {
 				tty->pars[tty->npars] *= 10;
-				tty->pars[tty->npars] += chars[i] - '0';
+				tty->pars[tty->npars] += c - '0';
 				continue;
 			}
 
@@ -280,7 +276,7 @@ int console_write(struct tty_t *tty, const char *buf, int n, int do_control)
 		if (tty->state == TTY_STATE_GOTPARS) {
 			tty->state = TTY_STATE_NORMAL;
 
-			switch (chars[i]) {
+			switch (c) {
 				case 'G':
 					if (tty->pars[0])
 						tty->pars[0]--;
@@ -330,7 +326,7 @@ int console_write(struct tty_t *tty, const char *buf, int n, int do_control)
 					console_set_mode(tty, 0);
 					break;
 				default:
-					printf("console : unknown escape sequence %c\n", chars[i]);
+					printf("console : unknown escape sequence %c\n", c);
 					break;
 			}
 
@@ -341,6 +337,4 @@ int console_write(struct tty_t *tty, const char *buf, int n, int do_control)
 	/* update cursor */
 	if (tty->deccm)
 		tty->fb.update_cursor(&tty->fb);
-
-	return n;
 }
