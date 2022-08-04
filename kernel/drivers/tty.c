@@ -121,6 +121,19 @@ void tty_do_cook(struct tty_t *tty)
 		if (I_IUCLC(tty) && ISUPPER(c))
 			c = TOLOWER(c);
 
+		/* handle carriage return and new line */
+		if (c == '\r') {
+			/* ignore carriage return */
+			if (I_IGNCR(tty))
+				continue;
+
+			/* carriage return = new line */
+			if (I_ICRNL(tty))
+				c = '\n';
+		} else if (c == '\n' && I_INLCR(tty)) {
+			c = '\r';
+		}
+
 		/* echo = put character on write queue */
 		if (L_ECHO(tty) && !ring_buffer_full(&tty->write_queue))
 			out_char(tty, c);

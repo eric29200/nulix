@@ -221,9 +221,6 @@ static void keyboard_handler(struct registers_t *regs)
 		case KEY_DELETE:
 			puts(tty, (uint8_t *) KEY_ESCAPE_DELETE, strlen(KEY_ESCAPE_DELETE));
 			break;
-		case KEY_ENTER:
-			puts(tty, (uint8_t *) KEY_ESCAPE_ENTER, strlen(KEY_ESCAPE_ENTER));
-			break;
 		default:
 			puts(tty, (uint8_t *) &key_code, 1);
 			break;

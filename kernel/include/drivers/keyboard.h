@@ -24,7 +24,6 @@
 #define KEY_PAGE_DOWN			0xE7
 #define KEY_INSERT			0xE8
 #define KEY_DELETE			0xE9
-#define KEY_ENTER			0x0D
 
 #define KEY_ESCAPE_HOME			"\033[H"
 #define KEY_ESCAPE_END			"\033[F"
@@ -36,7 +35,6 @@
 #define KEY_ESCAPE_PAGE_DOWN		"\033[6~"
 #define KEY_ESCAPE_INSERT		"\033[2~"
 #define KEY_ESCAPE_DELETE		"\033[3~"
-#define KEY_ESCAPE_ENTER		"\n"
 
 void init_keyboard();
 
