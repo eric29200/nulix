@@ -272,7 +272,7 @@ void tty_signal_group(dev_t dev, int sig)
 static void tty_init_attr(struct tty_t *tty)
 {
 	tty->def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
-	tty->erase_char = ' ' | (tty->color << 8);
+	tty->erase_char = ' ' | (tty->def_color << 8);
 	tty->deccm = 1;
 	tty_default_attr(tty);
 }
