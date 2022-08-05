@@ -6,7 +6,7 @@ function configure_port() {
 	./configure								\
 		--host=$TARGET							\
 		--enable-static							\
-		--prefix=$SYSROOT						\
+		--prefix="/"							\
 		CC=$MUSL_CC LD=$MUSL_CC
 }
 
@@ -15,7 +15,7 @@ function build_port() {
 }
 
 function install_port() {
-	make install
+	make install DESTDIR=$SYSROOT
 	cd $SYSROOT/bin
 	ln -sf dash sh
 }

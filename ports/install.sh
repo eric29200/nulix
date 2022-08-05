@@ -72,46 +72,6 @@ function patch_port() {
 	done
 }
 
-############################################
-############## Get ports list ##############
-############################################
-function ports_list() {
-	# get ports list
-	PORTS=()
-	BUILD_ALL=0
-	for PORT in $1; do
-		if [[ $PORT == "all" ]]; then
-			BUILD_ALL=1
-		fi
-
-		PORTS+=($PORT)
-	done
-
-	# get ports list
-	if [[ $BUILD_ALL == 1 ]]; then
-		# add base ports first
-		PORTS=${BASE_PORTS[@]}
-
-		# get other ports
-		for INSTALL_FILE in `ls */install`; do
-			# get port
-			PORT=`echo $INSTALL_FILE | awk -F '/' '{ print $1 }'`
-
-			# check if port is in base ports
-			IN_BASE_PORT=0
-			for BASE_PORT in ${BASE_PORTS[@]}; do
-				if [[ $BASE_PORT == $PORT ]]; then
-					IN_BASE_PORT=1
-				fi
-			done
-
-			# add port if needed
-			if [[ $IN_BASE_PORT == 0 ]]; then
-				PORTS+=($PORT)
-			fi
-		done
-	fi
-}
 
 
 # check number of arguments
@@ -121,7 +81,40 @@ if [[ $# == 0 ]]; then
 fi
 
 # get ports list
-ports_list $@
+PORTS=()
+BUILD_ALL=0
+for PORT in $@; do
+	if [[ $PORT == "all" ]]; then
+		BUILD_ALL=1
+	fi
+
+	PORTS+=($PORT)
+done
+
+# get ports list
+if [[ $BUILD_ALL == 1 ]]; then
+	# add base ports first
+	PORTS=${BASE_PORTS[@]}
+
+	# get other ports
+	for INSTALL_FILE in `ls */install`; do
+		# get port
+		PORT=`echo $INSTALL_FILE | awk -F '/' '{ print $1 }'`
+
+		# check if port is in base ports
+		IN_BASE_PORT=0
+		for BASE_PORT in ${BASE_PORTS[@]}; do
+			if [[ $BASE_PORT == $PORT ]]; then
+				IN_BASE_PORT=1
+			fi
+		done
+
+		# add port if needed
+		if [[ $IN_BASE_PORT == 0 ]]; then
+			PORTS+=($PORT)
+		fi
+	done
+fi
 
 # for each port
 for PORT in ${PORTS[@]}; do

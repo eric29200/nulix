@@ -10,7 +10,6 @@ function configure_port() {
 		--disable-sysmouse						\
 		--with-tlib=ncursesw						\
 		--with-features=normal						\
-		--prefix=$SYSROOT						\
 		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
@@ -19,5 +18,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install
+	make install DESTDIR=$SYSROOT
 }

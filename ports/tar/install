@@ -6,7 +6,7 @@ function configure_port() {
 	./configure								\
 		--host=$TARGET							\
 		--disable-nls							\
-		--prefix=$SYSROOT						\
+		--prefix="/"							\
 		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
@@ -15,5 +15,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install
+	make install DESTDIR=$SYSROOT
 }

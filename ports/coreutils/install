@@ -13,7 +13,7 @@ function configure_port() {
 		--disable-libcap						\
 		--without-selinux						\
 		--enable-no-install-program=factor,ptx				\
-		--prefix=$SYSROOT						\
+		--prefix="/"							\
 		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
@@ -22,5 +22,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install
+	make install DESTDIR=$SYSROOT
 }
