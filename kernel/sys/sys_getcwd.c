@@ -106,7 +106,7 @@ int sys_getcwd(char *buf, size_t size)
 			break;
 
 		/* prepend directory entry */
-		n = preprend_dirent(buf, n, size, dirent);
+		n = preprend_dirent(buf, n, size - 1, dirent);
 
 		/* close current directory */
 		if (fd >= 0)
@@ -116,6 +116,9 @@ int sys_getcwd(char *buf, size_t size)
 		fd = parent_fd;
 		inode = current_task->filp[fd]->f_inode;
 	}
+
+	/* end path */
+	buf[n] = 0;
 
 	/* close directories */
 	if (fd > 0)
