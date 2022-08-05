@@ -129,6 +129,9 @@ static void csi_m(struct tty_t *tty)
 			case 7:												/* reverse attributes */
 				tty->reverse = 1;
 				break;
+			case 27:											/* unreverse attributes */
+				tty->reverse = 0;
+				break;
 			case 39:											/* default foreground color */
 				tty->color = TEXT_COLOR(TEXT_COLOR_BG(tty->color), TEXT_COLOR_FG(tty->def_color));
 				break;

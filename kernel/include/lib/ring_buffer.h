@@ -28,4 +28,12 @@ static inline int ring_buffer_full(struct ring_buffer_t *rb)
 	return rb->size >= rb->capacity;
 }
 
+/*
+ * Get left space in ring buffer.
+ */
+static inline int ring_buffer_left(struct ring_buffer_t *rb)
+{
+	return rb->capacity - rb->size;
+}
+
 #endif

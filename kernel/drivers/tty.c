@@ -153,6 +153,7 @@ void tty_do_cook(struct tty_t *tty)
 static int tty_write(struct file_t *filp, const char *buf, int n)
 {
 	struct tty_t *tty;
+	int i;
 
 	/* get tty */
 	tty = tty_lookup(filp->f_inode->i_rdev);
@@ -164,10 +165,14 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 		return -EINVAL;
 
 	/* put characters in write queue */
-	ring_buffer_write(&tty->write_queue, (uint8_t *) buf, n);
+	for (i = 0; i < n; i++) {
+		/* put next character */
+		ring_buffer_write(&tty->write_queue, &((uint8_t *) buf)[i], 1);
 
-	/* write to tty */
-	tty->write(tty);
+		/* write to tty */
+		if (ring_buffer_full(&tty->write_queue) || i == n - 1)
+			tty->write(tty);
+	}
 
 	return n;
 }
