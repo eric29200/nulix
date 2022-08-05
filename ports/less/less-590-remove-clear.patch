@@ -1,0 +1,29 @@
+diff -ruN less-590/screen.c less-590-mine/screen.c
+--- less-590/screen.c	2021-06-03 19:45:48.000000000 +0200
++++ less-590-mine/screen.c	2022-08-05 10:39:46.023458523 +0200
+@@ -2272,25 +2272,6 @@
+ }
+ 
+ /*
+- * Clear the screen.
+- */
+-	public void
+-clear(VOID_PARAM)
+-{
+-	assert_interactive();
+-#if !MSDOS_COMPILER
+-	ltputs(sc_clear, sc_height, putchr);
+-#else
+-	flush();
+-#if MSDOS_COMPILER==WIN32C
+-	win32_clear();
+-#else
+-	_clearscreen(_GCLEARSCREEN);
+-#endif
+-#endif
+-}
+-
+-/*
+  * Clear from the cursor to the end of the cursor's line.
+  * {{ This must not move the cursor. }}
+  */
