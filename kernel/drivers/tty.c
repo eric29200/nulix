@@ -80,7 +80,11 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 		((unsigned char *) buf)[count++] = key;
 
 		/* end of line : return */
-		if (key == '\n')
+		if (L_CANON(tty) && key == '\n')
+			break;
+
+		/* no more characters : break */
+		if (ring_buffer_empty(&tty->cooked_queue))
 			break;
 	}
 

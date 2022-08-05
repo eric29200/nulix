@@ -29,6 +29,14 @@ static inline int ring_buffer_full(struct ring_buffer_t *rb)
 }
 
 /*
+ * Test if a ring buffer is empty.
+ */
+static inline int ring_buffer_empty(struct ring_buffer_t *rb)
+{
+	return rb->size == 0;
+}
+
+/*
  * Get left space in ring buffer.
  */
 static inline int ring_buffer_left(struct ring_buffer_t *rb)
