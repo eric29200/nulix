@@ -95,6 +95,7 @@
 #define __NR_chown32			212
 #define __NR_setuid32			213
 #define __NR_setgid32			214
+#define __NR_madvise			219
 #define __NR_getdents64			220
 #define __NR_fcntl64			221
 #define __NR_gettid			224
@@ -247,5 +248,6 @@ int sys_fstat64(int fd, struct stat64_t *statbuf);
 int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int flags);
 int sys_fsync(int fd);
 int sys_fchdir(int fd);
+int sys_madvise(void *addr, size_t length, int advice);
 
 #endif
