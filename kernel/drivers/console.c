@@ -349,6 +349,8 @@ void console_write(struct tty_t *tty)
 				case 'l':
 					console_set_mode(tty, 0);
 					break;
+				case 'c':
+					break;
 				default:
 					printf("console : unknown escape sequence %c\n", c);
 					break;
