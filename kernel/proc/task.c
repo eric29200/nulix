@@ -129,10 +129,8 @@ static struct task_t *create_task(struct task_t *parent)
 	if (parent && parent->cwd) {
 		task->cwd = parent->cwd;
 		task->cwd->i_ref++;
-		memcpy(task->cwd_path, parent->cwd_path, MAX_PATH_LEN);
 	} else {
 		task->cwd = NULL;
-		memset(task->cwd_path, 0, MAX_PATH_LEN);
 	}
 
 	/* duplicate root dir */

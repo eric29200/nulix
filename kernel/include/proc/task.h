@@ -55,7 +55,6 @@ struct task_t {
 	sigset_t			sigmask;			/* masked signals */
 	struct sigaction_t		signals[NSIGS];			/* signal handlers */
 	struct inode_t *		cwd;				/* current working directory */
-	char				cwd_path[MAX_PATH_LEN];		/* current working directory path */
 	struct inode_t *		root;				/* root directory */
 	struct registers_t		user_regs;			/* saved registers at syscall entry */
 	struct registers_t		signal_regs;			/* saved registers at signal entry */

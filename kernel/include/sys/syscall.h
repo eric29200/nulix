@@ -69,6 +69,7 @@
 #define __NR_modify_ldt			123
 #define __NR_sigprocmask		126
 #define __NR_getpgid			132
+#define __NR_fchdir			133
 #define __NR_llseek			140
 #define __NR_select			142
 #define __NR_readv			145
@@ -245,5 +246,6 @@ int sys_lstat64(const char *pathname, struct stat64_t *statbuf);
 int sys_fstat64(int fd, struct stat64_t *statbuf);
 int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int flags);
 int sys_fsync(int fd);
+int sys_fchdir(int fd);
 
 #endif
