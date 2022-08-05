@@ -66,6 +66,7 @@ struct tty_t {
 	int			state;							/* tty state (NORMAL or ESCAPE) */
 	uint8_t			color;							/* forgeground/background color */
 	uint8_t			def_color;						/* default foreground/background color */
+	uint8_t			intensity;						/* foreground intensity */
 	uint8_t			reverse;						/* reverse mode */
 	uint16_t		erase_char;						/* erase character */
 	uint8_t			deccm:1;						/* cursor visible */

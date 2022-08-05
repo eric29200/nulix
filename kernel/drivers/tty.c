@@ -285,9 +285,11 @@ void tty_signal_group(dev_t dev, int sig)
 static void tty_init_attr(struct tty_t *tty)
 {
 	tty->def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
+	tty->color = tty->def_color;
+	tty->intensity = 1;
+	tty->reverse = 0;
 	tty->erase_char = ' ' | (tty->def_color << 8);
 	tty->deccm = 1;
-	tty_default_attr(tty);
 }
 
 /*
@@ -295,6 +297,7 @@ static void tty_init_attr(struct tty_t *tty)
  */
 void tty_default_attr(struct tty_t *tty)
 {
+	tty->intensity = 1;
 	tty->reverse = 0;
 	tty->color = tty->def_color;
 }
@@ -306,6 +309,11 @@ void tty_update_attr(struct tty_t *tty)
 {
 	if (tty->reverse)
 		tty->color = TEXT_COLOR(TEXT_COLOR_FG(tty->color), TEXT_COLOR_BG(tty->color));
+	if (tty->intensity == 2)
+		tty->color ^= 0x08;
+
+	/* redefine erase char */
+	tty->erase_char = ' ' | (tty->color << 8);
 }
 
 /*

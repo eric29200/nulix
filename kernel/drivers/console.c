@@ -123,6 +123,9 @@ static void csi_m(struct tty_t *tty)
 			case 0:												/* set default attributes */
 				tty_default_attr(tty);
 				break;
+			case 1:												/* bold */
+				tty->intensity = 2;
+				break;
 			case 7:												/* reverse attributes */
 				tty->reverse = 1;
 				break;
