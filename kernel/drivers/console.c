@@ -183,13 +183,13 @@ static void console_set_mode(struct tty_t *tty, int on_off)
 /*
  * Print a character on the console.
  */
-static void console_putc(struct tty_t *tty, uint8_t c, uint8_t color)
+static void console_putc(struct tty_t *tty, uint8_t c)
 {
 	struct framebuffer_t *fb = &tty->fb;
 
 	/* handle character */
 	if (c >= ' ' && c <= '~') {
-		fb->buf[fb->y * fb->width + fb->x] = (color << 8) | c;
+		fb->buf[fb->y * fb->width + fb->x] = (tty->attr << 8) | c;
 		fb->update_region(fb, fb->y * fb->width + fb->x, 1);
 		fb->x++;
 	} else if (c == '\t') {
@@ -247,7 +247,7 @@ void console_write(struct tty_t *tty)
 						tty->state = TTY_STATE_ESCAPE;
 						break;
 					default:
-						console_putc(tty, c, tty->color);
+						console_putc(tty, c);
 						break;
 				}
 

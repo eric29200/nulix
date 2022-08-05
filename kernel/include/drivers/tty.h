@@ -64,6 +64,7 @@ struct tty_t {
 	uint32_t		npars;							/* number of escaped pars */
 	int			esc_buf_size;						/* escape buffer size */
 	int			state;							/* tty state (NORMAL or ESCAPE) */
+	uint8_t			attr;							/* attributes = current color */
 	uint8_t			color;							/* forgeground/background color */
 	uint8_t			def_color;						/* default foreground/background color */
 	uint8_t			intensity;						/* foreground intensity */

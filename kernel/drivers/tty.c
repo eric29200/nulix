@@ -299,6 +299,7 @@ static void tty_init_attr(struct tty_t *tty)
 	tty->reverse = 0;
 	tty->erase_char = ' ' | (tty->def_color << 8);
 	tty->deccm = 1;
+	tty->attr = tty->color;
 }
 
 /*
@@ -316,10 +317,12 @@ void tty_default_attr(struct tty_t *tty)
  */
 void tty_update_attr(struct tty_t *tty)
 {
+	tty->attr = tty->color;
+
 	if (tty->reverse)
-		tty->color = TEXT_COLOR(TEXT_COLOR_FG(tty->color), TEXT_COLOR_BG(tty->color));
+		tty->attr = TEXT_COLOR(TEXT_COLOR_FG(tty->color), TEXT_COLOR_BG(tty->color));
 	if (tty->intensity == 2)
-		tty->color ^= 0x08;
+		tty->attr ^= 0x08;
 
 	/* redefine erase char */
 	tty->erase_char = ' ' | (tty->color << 8);
