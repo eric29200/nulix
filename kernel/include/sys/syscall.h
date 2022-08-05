@@ -63,6 +63,7 @@
 #define __NR_setitimer			104
 #define __NR_wait4			114
 #define __NR_sysinfo			116
+#define __NR_fsync			118
 #define __NR_sigreturn			119
 #define __NR_uname			122
 #define __NR_modify_ldt			123
@@ -243,5 +244,6 @@ int sys_stat64(const char *pathname, struct stat64_t *statbuf);
 int sys_lstat64(const char *pathname, struct stat64_t *statbuf);
 int sys_fstat64(int fd, struct stat64_t *statbuf);
 int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int flags);
+int sys_fsync(int fd);
 
 #endif
