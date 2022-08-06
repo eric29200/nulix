@@ -67,15 +67,15 @@ void fb_text_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t le
 /*
  * Scroll framebuffer.
  */
-void fb_text_scroll(struct framebuffer_t *fb)
+void fb_text_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom)
 {
-	uint32_t start, end;
+	uint32_t *s, *d;
 
 	/* scroll up */
-	start = fb->addr + 1 * fb->width * sizeof(uint16_t);
-	end = fb->addr + fb->width * fb->height * sizeof(uint16_t);
-	memcpy((uint32_t *) fb->addr, (uint32_t *) start, end - start);
+	d = (uint32_t *) (fb->addr + fb->width * top * sizeof(uint16_t));
+	s = (uint32_t *) (fb->addr + fb->width * (top + 1) * sizeof(uint16_t));
+	memcpy(d, s, fb->width * (bottom - top - 1) * sizeof(uint16_t));
 
 	/* update last line */
-	fb_text_update_region(fb, (fb->height - 1) * fb->width, fb->width);
+	fb_text_update_region(fb, fb->width * (bottom - 1), fb->width);
 }

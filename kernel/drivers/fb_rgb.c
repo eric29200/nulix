@@ -145,15 +145,15 @@ void fb_rgb_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len
 /*
  * Scroll framebuffer.
  */
-void fb_rgb_scroll(struct framebuffer_t *fb)
+void fb_rgb_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom)
 {
-	uint32_t start, end;
+	uint32_t *s, *d;
 
 	/* scroll up */
-	start = fb->addr + 1 * fb->font->height * fb->pitch;
-	end = fb->addr + fb->height * fb->font->height * fb->pitch;
-	memcpy((uint32_t *) fb->addr, (uint32_t *) start, end - start);
+	d = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * top);
+	s = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * (top + 1));
+	memcpy(d, s, fb->font->height * fb->pitch * (bottom - top - 1));
 
 	/* update last line */
-	fb_rgb_update_region(fb, (fb->height - 1) * fb->width, fb->width);
+	fb_rgb_update_region(fb, fb->width * (bottom - 1), fb->width);
 }

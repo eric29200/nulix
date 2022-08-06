@@ -181,6 +181,23 @@ static void console_set_mode(struct tty_t *tty, int on_off)
 }
 
 /*
+ * Scroll up from bottom to top.
+ */
+static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom)
+{
+	struct framebuffer_t *fb = &tty->fb;
+
+	/* move each line up */
+	memcpy(fb->buf + fb->width * top, fb->buf + fb->width * (top + 1), (bottom - top - 1) * fb->width * sizeof(uint16_t));
+
+	/* clear last line */
+	memsetw(fb->buf + fb->width * (bottom - 1), tty->erase_char, fb->width);
+
+	/* hardware scroll */
+	fb->scroll_up(fb, top, bottom);
+}
+
+/*
  * Print a character on the console.
  */
 static void console_putc(struct tty_t *tty, uint8_t c)
@@ -211,14 +228,8 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 
 	/* scroll */
 	if (fb->y >= fb->height) {
-		/* move each line up */
-		memcpy(fb->buf, fb->buf + fb->width, fb->width * (fb->height - 1));
-
-		/* clear last line */
-		memsetw(fb->buf + fb->width * (fb->height - 1), tty->erase_char, fb->width);
-
-		/* hardware scroll */
-		fb->scroll(fb);
+		/* scroll up */
+		console_scrup(tty, 0, fb->height);
 
 		/* update position */
 		fb->y = fb->height - 1;
