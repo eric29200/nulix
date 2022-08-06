@@ -187,6 +187,10 @@ static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom)
 {
 	struct framebuffer_t *fb = &tty->fb;
 
+	/* check top and bottom */
+	if (bottom > fb->height || top >= bottom)
+		return;
+
 	/* move each line up */
 	memcpy(fb->buf + fb->width * top, fb->buf + fb->width * (top + 1), (bottom - top - 1) * fb->width * sizeof(uint16_t));
 
@@ -195,6 +199,53 @@ static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom)
 
 	/* hardware scroll */
 	fb->scroll_up(fb, top, bottom);
+}
+
+/*
+ * Scroll down from top to bottom.
+ */
+static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom)
+{
+	struct framebuffer_t *fb = &tty->fb;
+	uint16_t *src, *dest;
+	size_t count;
+
+	/* check top and bottom */
+	if (bottom > fb->height || top >= bottom)
+		return;
+
+	/* move each line down */
+	dest = fb->buf + fb->width * bottom;
+	src = fb->buf + fb->width * (bottom - 1);
+	count = (bottom - top - 1) * fb->width;
+	while (count) {
+		*dest-- = *src--;
+		count--;
+	}
+
+	/* clear first lines */
+	count = fb->width;
+	while (count) {
+		*dest-- = tty->erase_char;
+		count--;
+	}
+
+	/* update frame buffer */
+	fb->update_region(fb, top * fb->width, (bottom - top) * fb->width);
+}
+
+/*
+ * Scroll down if needed.
+ */
+static void console_ri(struct tty_t *tty)
+{
+	struct framebuffer_t *fb = &tty->fb;
+
+	/* don't scroll if not needed */
+	if (fb->y == 0)
+		console_scrdown(tty, 0, fb->height);
+	else if (fb->y > 0)
+		fb->y--;
 }
 
 /*
@@ -267,13 +318,17 @@ void console_write(struct tty_t *tty)
 
 		/* handle escape sequence */
 		if (tty->state == TTY_STATE_ESCAPE) {
+				tty->state = TTY_STATE_NORMAL;
+
 				switch (c) {
 					case '[':
 						tty->state = TTY_STATE_SQUARE;
 						break;
+					case 'M':
+						console_ri(tty);
+						break;
 					default:
 						printf("console : unknown escape sequence %c\n", c);
-						tty->state = TTY_STATE_NORMAL;
 						break;
 				}
 
