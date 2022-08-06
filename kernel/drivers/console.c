@@ -272,6 +272,7 @@ void console_write(struct tty_t *tty)
 						tty->state = TTY_STATE_SQUARE;
 						break;
 					default:
+						printf("console : unknown escape sequence %c\n", c);
 						tty->state = TTY_STATE_NORMAL;
 						break;
 				}
@@ -368,7 +369,7 @@ void console_write(struct tty_t *tty)
 				case 'c':
 					break;
 				default:
-					printf("console : unknown escape sequence %c\n", c);
+					printf("console : unknown escape sequence %c (gotpars)\n", c);
 					break;
 			}
 
