@@ -1,6 +1,7 @@
 #ifndef _MMAP_H_
 #define _MMAP_H_
 
+#include <fs/fs.h>
 #include <lib/list.h>
 #include <stddef.h>
 
@@ -19,7 +20,7 @@ struct vm_area_t {
 	struct list_head_t	list;
 };
 
-void *do_mmap(uint32_t addr, size_t length, int flags);
+void *do_mmap(uint32_t addr, size_t length, int flags, struct file_t *filp);
 int do_munmap(uint32_t addr, size_t length);
 
 #endif

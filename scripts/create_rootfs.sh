@@ -33,6 +33,9 @@ sudo sh -c 'echo "nulix" > tmp/etc/issue.net'
 sudo sh -c 'echo "root::0:0:root:/root:/bin/bash" > tmp/etc/passwd'
 sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
 sudo ln -s /proc/mounts tmp/etc/mtab
+sudo sh -c 'echo "manpath /man" > tmp/etc/man.conf'
+sudo sh -c 'echo "manpath /share/man" >> tmp/etc/man.conf'
+sudo sh -c 'echo "manpath /usr/local/man" >> tmp/etc/man.conf'
 
 # create .bashrc
 sudo sh -c 'echo "export HOME=/root" > tmp/root/.bashrc'

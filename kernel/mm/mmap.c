@@ -95,9 +95,10 @@ static struct vm_area_t *expand_area(struct vm_area_t *vm, uint32_t addr)
 /*
  * Memory map system call.
  */
-void *do_mmap(uint32_t addr, size_t length, int flags)
+void *do_mmap(uint32_t addr, size_t length, int flags, struct file_t *filp)
 {
 	struct vm_area_t *vm;
+	size_t pos;
 
 	/* check if addr is already mapped in a region */
 	vm = find_vma(addr);
@@ -111,6 +112,13 @@ void *do_mmap(uint32_t addr, size_t length, int flags)
 	/* no way to map memory */
 	if (!vm)
 		return NULL;
+
+	/* map file */
+	if (filp) {
+		pos = filp->f_pos;
+		filp->f_op->read(filp, (char *) vm->vm_start, length);
+		filp->f_pos = pos;
+	}
 
 	return (void *) vm->vm_start;
 }

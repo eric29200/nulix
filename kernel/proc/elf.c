@@ -65,7 +65,7 @@ static int segment_load(int fd, int off)
 		return 0;
 
 	/* map pages */
-	if (do_mmap(ph.p_vaddr, PAGE_ALIGN_UP(ph.p_filesz), 0) == NULL)
+	if (do_mmap(ph.p_vaddr, PAGE_ALIGN_UP(ph.p_filesz), 0, NULL) == NULL)
 		return -ENOMEM;
 
 	/* seek to elf segment */
@@ -138,7 +138,7 @@ int elf_load(const char *path)
 	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text);
 
 	/* allocate at the end of process memory */
-	if (do_mmap(USTACK_START - USTACK_SIZE, USTACK_SIZE, 0) == NULL) {
+	if (do_mmap(USTACK_START - USTACK_SIZE, USTACK_SIZE, 0, NULL) == NULL) {
 		ret = -ENOMEM;
 		goto out;
 	}

@@ -1,0 +1,16 @@
+URL="https://zlib.net/"
+VERSION="1.2.12"
+SRC_FILENAME="zlib-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--prefix="/"
+}
+
+function build_port() {
+	make -j$NJOBS CC=$MUSL_CC
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

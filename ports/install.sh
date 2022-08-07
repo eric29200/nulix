@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("musl" "linux-headers" "pkgconf" "bash" "libncurses")
+BASE_PORTS=("musl" "linux-headers" "pkgconf" "bash" "libncurses" "zlib")
 
 # go to ports directory
 cd `dirname $0`
