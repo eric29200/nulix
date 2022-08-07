@@ -93,5 +93,5 @@ void fb_text_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom
 	memmovew(dest, src, fb->width * (bottom - top - nr));
 
 	/* update first lines */
-	fb_rgb_update_region(fb, top * fb->width, fb->width * nr);
+	fb_text_update_region(fb, top * fb->width, fb->width * nr);
 }
