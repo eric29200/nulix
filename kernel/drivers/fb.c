@@ -29,6 +29,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 			fb->height = height;
 			fb->update_region = fb_text_update_region;
 			fb->scroll_up = fb_text_scroll_up;
+			fb->scroll_down = fb_text_scroll_down;
 			fb->update_cursor = fb_text_update_cursor;
 			fb->show_cursor = fb_text_show_cursor;
 			break;
@@ -40,6 +41,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 			fb->height = height / fb->font->height;
 			fb->update_region = fb_rgb_update_region;
 			fb->scroll_up = fb_rgb_scroll_up;
+			fb->scroll_down = fb_rgb_scroll_down;
 			fb->update_cursor = fb_rgb_update_cursor;
 			fb->show_cursor = fb_rgb_show_cursor;
 			break;

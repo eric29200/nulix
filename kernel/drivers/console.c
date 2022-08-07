@@ -230,8 +230,8 @@ static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom)
 		count--;
 	}
 
-	/* update frame buffer */
-	fb->update_region(fb, top * fb->width, (bottom - top) * fb->width);
+	/* hardware scroll */
+	fb->scroll_down(fb, top, bottom);
 }
 
 /*
