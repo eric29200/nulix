@@ -23,6 +23,62 @@ static uint8_t ansi_color_table[] = {
 };
 
 /*
+ * Scroll up from bottom to top.
+ */
+static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom, size_t nr)
+{
+	struct framebuffer_t *fb = &tty->fb;
+	uint16_t *dest, *src;
+
+	/* limit to bottom */
+	if (top + nr >= bottom)
+		nr = bottom - top - 1;
+
+	/* check top and bottom */
+	if (bottom > fb->height || top >= bottom || nr < 1)
+		return;
+
+	/* move each line up */
+	dest = (uint16_t *) (fb->buf + fb->width * top);
+	src = (uint16_t *) (fb->buf + fb->width * (top + nr));
+	memmovew(dest, src, (bottom - top - nr) * fb->width);
+
+	/* clear last lines */
+	memsetw(dest + (bottom - top - nr) * fb->width, tty->erase_char, fb->width * nr);
+
+	/* hardware scroll */
+	fb->scroll_up(fb, top, bottom, nr);
+}
+
+/*
+ * Scroll down from top to bottom.
+ */
+static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom, size_t nr)
+{
+	struct framebuffer_t *fb = &tty->fb;
+	uint16_t *src, *dest;
+
+	/* limit to bottom */
+	if (top + nr >= bottom)
+		nr = bottom - top - 1;
+
+	/* check top and bottom */
+	if (bottom > fb->height || top >= bottom || nr < 1)
+		return;
+
+	/* move each line down */
+	dest = (uint16_t *) (fb->buf + fb->width * (top + nr));
+	src = (uint16_t *) (fb->buf + fb->width * top);
+	memmovew(dest, src, (bottom - top - nr) * fb->width);
+
+	/* clear first lines */
+	memsetw(src, tty->erase_char, fb->width * nr);
+
+	/* hardware scroll */
+	fb->scroll_down(fb, top, bottom, nr);
+}
+
+/*
  * Handle escape P sequences (delete characters).
  */
 static void csi_P(struct tty_t *tty, uint32_t nr)
@@ -161,6 +217,21 @@ static void csi_m(struct tty_t *tty)
 }
 
 /*
+ * Handle escape L sequences (scroll down).
+ */
+static void csi_L(struct tty_t *tty, uint32_t nr)
+{
+	struct framebuffer_t *fb = &tty->fb;
+
+	if (nr > fb->height - fb->y)
+		nr = fb->height - fb->y;
+	else if (nr == 0)
+		nr = 1;
+
+	console_scrdown(tty, fb->y, fb->height, nr);
+}
+
+/*
  * Set console mode.
  */
 static void console_set_mode(struct tty_t *tty, int on_off)
@@ -181,60 +252,6 @@ static void console_set_mode(struct tty_t *tty, int on_off)
 }
 
 /*
- * Scroll up from bottom to top.
- */
-static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom)
-{
-	struct framebuffer_t *fb = &tty->fb;
-
-	/* check top and bottom */
-	if (bottom > fb->height || top >= bottom)
-		return;
-
-	/* move each line up */
-	memcpy(fb->buf + fb->width * top, fb->buf + fb->width * (top + 1), (bottom - top - 1) * fb->width * sizeof(uint16_t));
-
-	/* clear last line */
-	memsetw(fb->buf + fb->width * (bottom - 1), tty->erase_char, fb->width);
-
-	/* hardware scroll */
-	fb->scroll_up(fb, top, bottom);
-}
-
-/*
- * Scroll down from top to bottom.
- */
-static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom)
-{
-	struct framebuffer_t *fb = &tty->fb;
-	uint16_t *src, *dest;
-	size_t count;
-
-	/* check top and bottom */
-	if (bottom > fb->height || top >= bottom)
-		return;
-
-	/* move each line down */
-	dest = fb->buf + fb->width * bottom;
-	src = fb->buf + fb->width * (bottom - 1);
-	count = (bottom - top - 1) * fb->width;
-	while (count) {
-		*dest-- = *src--;
-		count--;
-	}
-
-	/* clear first lines */
-	count = fb->width;
-	while (count) {
-		*dest-- = tty->erase_char;
-		count--;
-	}
-
-	/* hardware scroll */
-	fb->scroll_down(fb, top, bottom);
-}
-
-/*
  * Scroll down if needed.
  */
 static void console_ri(struct tty_t *tty)
@@ -243,7 +260,7 @@ static void console_ri(struct tty_t *tty)
 
 	/* don't scroll if not needed */
 	if (fb->y == 0)
-		console_scrdown(tty, 0, fb->height);
+		console_scrdown(tty, 0, fb->height, 1);
 	else if (fb->y > 0)
 		fb->y--;
 }
@@ -280,7 +297,7 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 	/* scroll */
 	if (fb->y >= fb->height) {
 		/* scroll up */
-		console_scrup(tty, 0, fb->height);
+		console_scrup(tty, 0, fb->height, 1);
 
 		/* update position */
 		fb->y = fb->height - 1;
@@ -414,6 +431,9 @@ void console_write(struct tty_t *tty)
 					break;
 				case 'm':
 					csi_m(tty);
+					break;
+				case 'L':
+					csi_L(tty, tty->pars[0]);
 					break;
 				case 'h':
 					console_set_mode(tty, 1);

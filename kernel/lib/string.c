@@ -235,6 +235,38 @@ void *memcpy(void *dest, const void *src, size_t n)
 }
 
 /*
+ * Move memory areas.
+ */
+void *memmovew(uint16_t *dest, const uint16_t *src, size_t n)
+{
+	if (dest < src)
+		return memcpy(dest, src, n * 2);
+
+	dest += n;
+	src += n;
+	while (n--)
+		*dest-- = *src--;
+
+	return dest;
+}
+
+/*
+ * Move memory areas.
+ */
+void *memmovedw(uint32_t *dest, const uint32_t *src, size_t n)
+{
+	if (dest < src)
+		return memcpy(dest, src, n * 4);
+
+	dest += n;
+	src += n;
+	while (n--)
+		*dest-- = *src--;
+
+	return dest;
+}
+
+/*
  * Convert a string to an integer.
  */
 int atoi(const char *s)

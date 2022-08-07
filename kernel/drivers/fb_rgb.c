@@ -145,36 +145,31 @@ void fb_rgb_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len
 /*
  * Scroll up from bottom to top.
  */
-void fb_rgb_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom)
+void fb_rgb_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
 {
-	uint32_t *s, *d;
+	uint32_t *src, *dest;
 
 	/* scroll up */
-	d = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * top);
-	s = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * (top + 1));
-	memcpy(d, s, fb->font->height * fb->pitch * (bottom - top - 1));
+	dest = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * top);
+	src = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * (top + nr));
+	memmovedw(dest, src, fb->font->height * fb->pitch * (bottom - top - nr) / sizeof(uint32_t));
 
-	/* update last line */
-	fb_rgb_update_region(fb, fb->width * (bottom - 1), fb->width);
+	/* update last lines */
+	fb_rgb_update_region(fb, fb->width * (bottom - top - nr), fb->width * nr);
 }
 
 /*
  * Scroll down from top to bottom.
  */
-void fb_rgb_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom)
+void fb_rgb_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
 {
-	uint32_t *s, *d;
-	size_t count;
+	uint32_t *src, *dest;
 
 	/* scroll down */
-	d = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * bottom);
-	s = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * (bottom - 1));
-	count = (bottom - top - 1) * fb->font->height * fb->pitch;
-	while (count) {
-		*d-- = *s--;
-		count--;
-	}
+	dest = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * (top + nr));
+	src = (uint32_t *) (fb->addr + fb->font->height * fb->pitch * top);
+	memmovedw(dest, src, fb->font->height * fb->pitch * (bottom - top - nr) / sizeof(uint32_t));
 
-	/* update first line */
-	fb_rgb_update_region(fb, top * fb->width, fb->width);
+	/* update first lines */
+	fb_rgb_update_region(fb, top * fb->width, fb->width * nr);
 }
