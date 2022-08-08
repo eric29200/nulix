@@ -422,7 +422,7 @@ ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
 	/* readlink not implemented */
 	if (!inode->i_op || !inode->i_op->readlink) {
 		iput(inode);
-		return -EACCES;
+		return -EINVAL;
 	}
 
 	/* read link */
