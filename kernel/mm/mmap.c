@@ -138,7 +138,7 @@ int do_munmap(uint32_t addr, size_t length)
 		return 0;
 
 	/* shrink or free memory region */
-	if (addr + length < vm->vm_end) {
+	if (vm->vm_end - vm->vm_start >= PAGE_ALIGN_UP(length)) {
 		vm->vm_end = addr;
 	} else {
 		list_del(&vm->list);
