@@ -162,17 +162,6 @@ void heap_free(struct heap_t *heap, void *p)
 		else
 			heap->last_block = block;
 	}
-
-	/* merge with left block */
-	if (block->prev && block->prev->free) {
-		block->prev->size += block->size + sizeof(struct heap_block_t);
-		block->prev->next = block->next;
-
-		if (block->next)
-			block->next->prev = block->prev;
-		else
-			heap->last_block = block->prev;
-	}
 }
 
 /*
