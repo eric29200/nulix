@@ -11,5 +11,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install PREFIX=$SYSROOT
+	make install PREFIX=$SYSROOT"/usr"
 }

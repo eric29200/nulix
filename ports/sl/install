@@ -11,5 +11,5 @@ function build_port() {
 }
 
 function install_port() {
-	cp sl $SYSROOT/bin
+	cp sl $SYSROOT/usr/bin
 }

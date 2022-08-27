@@ -11,5 +11,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install prefix=$SYSROOT
+	make install prefix=$SYSROOT"/usr"
 }

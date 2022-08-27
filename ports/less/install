@@ -5,7 +5,7 @@ SRC_FILENAME="less-"$VERSION".tar.gz"
 function configure_port() {
 	./configure								\
 		--host=$TARGET							\
-		--prefix="/"							\
+		--prefix="/usr"							\
 		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 

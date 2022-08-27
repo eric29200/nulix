@@ -7,7 +7,7 @@ function configure_port() {
 		--host=$TARGET							\
 		--disable-nls							\
 		--disable-threads						\
-		--prefix="/"							\
+		--prefix="/usr"							\
 		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 

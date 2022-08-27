@@ -5,7 +5,7 @@ SRC_FILENAME="mandoc-"$VERSION".tar.gz"
 function configure_port() {
 	echo 'HAVE_FTS=0' > configure.local
 	echo 'HAVE_FTS_COMPARE_CONST=0' >> configure.local
-	echo "PREFIX=/" >> configure.local
+	echo "PREFIX=/usr" >> configure.local
 	./configure
 }
 

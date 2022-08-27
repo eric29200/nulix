@@ -13,7 +13,7 @@ function configure_port() {
 		--disable-libcap						\
 		--without-selinux						\
 		--enable-no-install-program=factor,ptx				\
-		--prefix="/"							\
+		--prefix="/usr"							\
 		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 

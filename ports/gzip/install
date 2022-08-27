@@ -8,7 +8,7 @@ function configure_port() {
 		--disable-nls							\
 		--disable-threads						\
 		--disable-year2038						\
-		--prefix="/"							\
+		--prefix="/usr"							\
 		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
