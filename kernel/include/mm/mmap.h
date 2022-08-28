@@ -7,8 +7,8 @@
 
 #define VM_READ			0x01
 #define VM_WRITE		0x02
-#define VM_EXEC			 0x04
-#define VM_SHARED		 0x08
+#define VM_EXEC			0x04
+#define VM_SHARED		0x08
 
 /*
  * Virtual memory area structure.
@@ -17,6 +17,7 @@ struct vm_area_t {
 	uint32_t		vm_start;
 	uint32_t		vm_end;
 	uint16_t		vm_flags;
+	int			vm_free;
 	struct list_head_t	list;
 };
 

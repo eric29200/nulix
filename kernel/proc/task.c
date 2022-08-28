@@ -121,6 +121,7 @@ static struct task_t *create_task(struct task_t *parent)
 			vm_child->vm_start = vm_parent->vm_start;
 			vm_child->vm_end = vm_parent->vm_end;
 			vm_child->vm_flags = vm_parent->vm_flags;
+			vm_child->vm_free = vm_parent->vm_free;
 			list_add_tail(&vm_child->list, &task->vm_list);
 		}
 	}

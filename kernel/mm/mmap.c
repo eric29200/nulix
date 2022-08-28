@@ -23,7 +23,7 @@ static struct vm_area_t *find_vma(uint32_t addr)
 /*
  * Get an unmapped area.
  */
-static struct vm_area_t *get_unmaped_area(int flags, size_t length)
+static struct vm_area_t *get_unmaped_area(size_t length)
 {
 	struct vm_area_t *vm_prev, *vm;
 
@@ -41,16 +41,12 @@ static struct vm_area_t *get_unmaped_area(int flags, size_t length)
 	/* set new memory region */
 	vm->vm_start = vm_prev ? vm_prev->vm_end : UMAP_START;
 	vm->vm_end = PAGE_ALIGN_UP(vm->vm_start + length);
-	vm->vm_flags = flags;
 
 	/* check memory map overflow */
 	if (vm->vm_end > UMAP_END) {
 		kfree(vm);
 		return NULL;
 	}
-
-	/* memzero new memory region */
-	memset((void *) vm->vm_start, 0, vm->vm_end - vm->vm_start);
 
 	/* add it to the list */
 	list_add_tail(&vm->list, &current_task->vm_list);
@@ -59,65 +55,40 @@ static struct vm_area_t *get_unmaped_area(int flags, size_t length)
 }
 
 /*
- * Expand a memory region.
- */
-static struct vm_area_t *expand_area(struct vm_area_t *vm, uint32_t addr)
-{
-	struct vm_area_t *vm_next = NULL;
-
-	/* no need to expand */
-	if (vm->vm_end >= addr)
-		return vm;
-
-	/* get next memory region */
-	if (!list_is_last(&vm->list, &current_task->vm_list))
-		vm_next = list_next_entry(vm, list);
-
-	/* no intersection with next memory region : just expand */
-	if (!vm_next || addr <= vm_next->vm_start) {
-		memset((void *) vm->vm_end, 0, PAGE_ALIGN_UP(addr) - vm->vm_end);
-		vm->vm_end = PAGE_ALIGN_UP(addr);
-		return vm;
-	}
-
-	/* create new memory area */
-	vm_next = get_unmaped_area(vm->vm_flags, addr - vm->vm_start);
-	if (!vm_next)
-		return NULL;
-
-	/* delete old memory region */
-	list_del(&vm->list);
-	kfree(vm);
-
-	return vm_next;
-}
-
-/*
  * Memory map system call.
  */
 void *do_mmap(uint32_t addr, size_t length, int flags, struct file_t *filp)
 {
-	struct vm_area_t *vm;
-	size_t pos;
+	struct vm_area_t *vm = NULL;
+	struct list_head_t *pos;
+	size_t f_pos;
 
-	/* check if addr is already mapped in a region */
-	vm = find_vma(addr);
+	/* unused address */
+	UNUSED(addr);
 
-	/* expand area or create a new one */
-	if (vm)
-		vm = expand_area(vm, addr + length);
-	else
-		vm = get_unmaped_area(flags, length);
+	/* try to get a free region */
+	list_for_each(pos, &current_task->vm_list) {
+		vm = list_entry(pos, struct vm_area_t, list);
+		if (vm->vm_free && vm->vm_end - vm->vm_start >= length)
+			goto found;
+	}
 
-	/* no way to map memory */
+	/* create a new area */
+	vm = get_unmaped_area(length);
 	if (!vm)
 		return NULL;
 
+found:
+	/* memzero new memory region */
+	vm->vm_flags = flags;
+	vm->vm_free = 0;
+	memset((void *) vm->vm_start, 0, vm->vm_end - vm->vm_start);
+
 	/* map file */
 	if (filp) {
-		pos = filp->f_pos;
+		f_pos = filp->f_pos;
 		filp->f_op->read(filp, (char *) vm->vm_start, length);
-		filp->f_pos = pos;
+		filp->f_pos = f_pos;
 	}
 
 	return (void *) vm->vm_start;
@@ -138,12 +109,10 @@ int do_munmap(uint32_t addr, size_t length)
 		return 0;
 
 	/* shrink or free memory region */
-	if (vm->vm_end - vm->vm_start >= PAGE_ALIGN_UP(length)) {
+	if (vm->vm_end - vm->vm_start > PAGE_ALIGN_UP(length))
 		vm->vm_end = addr;
-	} else {
-		list_del(&vm->list);
-		kfree(vm);
-	}
+	else
+		vm->vm_free = 1;
 
 	return 0;
 }
