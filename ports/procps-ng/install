@@ -1,0 +1,24 @@
+URL="https://fossies.org/linux/misc/"
+VERSION="4.0.0"
+SRC_FILENAME="procps-ng-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--disable-shared						\
+		--enable-static							\
+		--disable-nls							\
+		--disable-w							\
+		--disable-numa							\
+		--without-ncurses						\
+		--prefix="/usr"							\
+		CC=$MUSL_CC LD="$MUSL_CC" CFLAGS="--static" LDFLAGS="--static" PKG_CONFIG=$PKG_CONFIG
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
