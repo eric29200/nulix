@@ -6,6 +6,7 @@
 #include <proc/timer.h>
 #include <sys/syscall.h>
 #include <lib/list.h>
+#include <kernel_stat.h>
 #include <stderr.h>
 
 LIST_HEAD(tasks_list);					/* active processes list */
@@ -13,6 +14,8 @@ static struct task_t *kinit_task;			/* kernel init task (pid = 0) */
 struct task_t *init_task;				/* user init task (pid = 1) */
 struct task_t *current_task = NULL;			/* current task */
 static pid_t next_pid = 0;				/* pid counter */
+
+struct kernel_stat_t kstat;				/* kernel statistics */
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
@@ -49,6 +52,9 @@ struct task_t *find_task(pid_t pid)
  */
 int init_scheduler(void (*kinit_func)())
 {
+	/* reset kernel stats */
+	memset(&kstat, 0, sizeof(struct kernel_stat_t));
+
 	/* create init task */
 	kinit_task = create_kernel_thread(kinit_func, NULL);
 	if (!kinit_task)
@@ -128,6 +134,7 @@ void schedule()
 
 	/* switch tasks */
 	if (prev_task != current_task) {
+		kstat.context_switch++;
 		tss_set_stack(0x10, current_task->kernel_stack);
 		switch_page_directory(current_task->pgd);
 		scheduler_do_switch(&prev_task->esp, current_task->esp);

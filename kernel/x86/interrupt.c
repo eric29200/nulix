@@ -3,6 +3,7 @@
 #include <sys/syscall.h>
 #include <proc/sched.h>
 #include <ipc/signal.h>
+#include <kernel_stat.h>
 #include <stdio.h>
 
 /*
@@ -47,6 +48,9 @@ void register_interrupt_handler(uint8_t n, isr_t handler)
 void isr_handler(struct registers_t *regs)
 {
 	isr_t handler;
+
+	/* update kernel statistics */
+	kstat.interrupts++;
 
 	/* IRQ : send ack to pic */
 	if (regs->int_no >= 32) {
