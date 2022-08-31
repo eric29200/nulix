@@ -50,14 +50,16 @@ static int proc_stat_read(struct file_t *filp, char *buf, int count)
 				"%d "							/* tty */
 				"0 0 "							/* tpgid, flags */
 				"0 0 0 0 "						/* minflt, cminflt, majflt, cmajflt */
-				"0 0 0 0 "						/* utime, stime, cutime, cstime */
+				"%d %d %d %d "						/* utime, stime, cutime, cstime */
 				"0 0 "							/* priority, nice */
 				"0 0 "							/* num_threads, itrealvalue */
-				"0 "							/* starttime */
+				"%d "							/* starttime */
 				"0 0 0 \n",						/* vsize, rss, rsslim */
 				task->pid, task->name, proc_states[task->state - 1],
 				task->parent ? task->parent->pid : task->pid,
-				(int) task->tty);
+				(int) task->tty,
+				task->utime, task->stime, task->cutime, task->cstime,
+				task->start_time);
 
 	/* file position after end */
 	if (filp->f_pos >= len)

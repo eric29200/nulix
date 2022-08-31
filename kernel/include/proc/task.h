@@ -38,6 +38,11 @@ struct task_t {
 	gid_t				sgid;				/* saved group id */
 	uint16_t			umask;				/* umask */
 	dev_t				tty;				/* attached tty */
+	uint32_t			utime;				/* amount of time that this process has been scheduled in user mode */
+	uint32_t			stime;				/* amount of time that this process has been scheduled in kernel mode */
+	uint32_t			cutime;				/* amount of time that this process's waited-for children have been scheduled in user mode */
+	uint32_t			cstime;				/* amount of time that this process's waited-for children have been scheduled in user mode */
+	uint32_t			start_time;			/* time process started after system boot */
 	int			 	exit_code;			/* exit code */
 	struct task_t *		 	parent;				/* parent process */
 	uint32_t			kernel_stack;			/* kernel stack */
