@@ -15,6 +15,8 @@ static struct proc_dir_entry_t base_dir[] = {
 	{ 0,	1,	"." },
 	{ 1,	2,	".." },
 	{ 2,	4,	"stat" },
+	{ 3,	7,	"cmdline"},
+	{ 4,	7,	"environ"},
 };
 
 /*
@@ -33,7 +35,7 @@ static char proc_states[] = {
 static int proc_stat_read(struct file_t *filp, char *buf, int count)
 {
 	struct task_t *task;
-	char tmp_buf[256];
+	char tmp_buf[1024];
 	size_t len;
 	pid_t pid;
 
@@ -90,7 +92,143 @@ struct inode_operations_t proc_stat_iops = {
 	.fops		= &proc_stat_fops,
 };
 
+/*
+ * Read process command line.
+ */
+static int proc_cmdline_read(struct file_t *filp, char *buf, int count)
+{
+	char tmp_buf[PAGE_SIZE], *p, *arg_str;
+	struct task_t *task;
+	uint32_t arg;
+	size_t len;
+	pid_t pid;
 
+	/* get process */
+	pid = filp->f_inode->i_ino >> 16;
+	task = find_task(pid);
+	if (!task)
+		return -EINVAL;
+
+	/* switch to task's pgd */
+	switch_page_directory(task->pgd);
+
+	/* get arguments */
+	for (arg = task->arg_start, p = tmp_buf; arg != task->arg_end; arg += sizeof(char *)) {
+		arg_str = *((char **) arg);
+
+		/* copy argument */
+		while (*arg_str && p - tmp_buf < PAGE_SIZE)
+			*p++ = *arg_str++;
+
+		/* overflow */
+		if (p - tmp_buf >= PAGE_SIZE)
+			break;
+
+		/* end argument */
+		*p++ = 0;
+	}
+
+	/* switch back to current's pgd */
+	switch_page_directory(current_task->pgd);
+
+	/* file position after end */
+	len = p - tmp_buf;
+	if (filp->f_pos >= len)
+		return 0;
+
+	/* update count */
+	if (filp->f_pos + count > len)
+		count = len - filp->f_pos;
+
+	/* copy content to user buffer and update file position */
+	memcpy(buf, tmp_buf + filp->f_pos, count);
+	filp->f_pos += count;
+
+	return count;
+}
+
+/*
+ * Cmdline file operations.
+ */
+struct file_operations_t proc_cmdline_fops = {
+	.read		= proc_cmdline_read,
+};
+
+/*
+ * Cmdline inode operations.
+ */
+struct inode_operations_t proc_cmdline_iops = {
+	.fops		= &proc_cmdline_fops,
+};
+
+/*
+ * Read process environ.
+ */
+static int proc_environ_read(struct file_t *filp, char *buf, int count)
+{
+	char tmp_buf[PAGE_SIZE], *p, *environ_str;
+	struct task_t *task;
+	uint32_t environ;
+	size_t len;
+	pid_t pid;
+
+	/* get process */
+	pid = filp->f_inode->i_ino >> 16;
+	task = find_task(pid);
+	if (!task)
+		return -EINVAL;
+
+	/* switch to task's pgd */
+	switch_page_directory(task->pgd);
+
+	/* get environs */
+	for (environ = task->env_start, p = tmp_buf; environ != task->env_end; environ += sizeof(char *)) {
+		environ_str = *((char **) environ);
+
+		/* copy environ */
+		while (*environ_str && p - tmp_buf < PAGE_SIZE)
+			*p++ = *environ_str++;
+
+		/* overflow */
+		if (p - tmp_buf >= PAGE_SIZE)
+			break;
+
+		/* end environ */
+		*p++ = 0;
+	}
+
+	/* switch back to current's pgd */
+	switch_page_directory(current_task->pgd);
+
+	/* file position after end */
+	len = p - tmp_buf;
+	if (filp->f_pos >= len)
+		return 0;
+
+	/* update count */
+	if (filp->f_pos + count > len)
+		count = len - filp->f_pos;
+
+	/* copy content to user buffer and update file position */
+	memcpy(buf, tmp_buf + filp->f_pos, count);
+	filp->f_pos += count;
+
+	return count;
+}
+
+/*
+ * Environ file operations.
+ */
+struct file_operations_t proc_environ_fops = {
+	.read		= proc_environ_read,
+};
+
+/*
+ * Environ inode operations.
+ */
+struct inode_operations_t proc_environ_iops = {
+	.fops		= &proc_environ_fops,
+};
 /*
  * Get directory entries.
  */
@@ -176,6 +314,14 @@ static int proc_base_lookup(struct inode_t *dir, const char *name, size_t name_l
 		case 2:
 			(*res_inode)->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
 			(*res_inode)->i_op = &proc_stat_iops;
+			break;
+		case 3:
+			(*res_inode)->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+			(*res_inode)->i_op = &proc_cmdline_iops;
+			break;
+		case 4:
+			(*res_inode)->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+			(*res_inode)->i_op = &proc_environ_iops;
 			break;
 		default:
 			break;

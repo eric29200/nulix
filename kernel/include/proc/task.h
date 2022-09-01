@@ -43,6 +43,10 @@ struct task_t {
 	uint32_t			cutime;				/* amount of time that this process's waited-for children have been scheduled in user mode */
 	uint32_t			cstime;				/* amount of time that this process's waited-for children have been scheduled in user mode */
 	uint32_t			start_time;			/* time process started after system boot */
+	uint32_t			arg_start;			/* start argument */
+	uint32_t			arg_end;			/* end argument */
+	uint32_t			env_start;			/* start environ */
+	uint32_t			env_end;			/* end environ */
 	int			 	exit_code;			/* exit code */
 	struct task_t *		 	parent;				/* parent process */
 	uint32_t			kernel_stack;			/* kernel stack */
