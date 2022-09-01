@@ -12,6 +12,7 @@
 #define PROC_MOUNTS_INO		4
 #define PROC_SELF_INO		5
 #define PROC_KSTAT_INO		6
+#define PROC_MEMINFO_INO	7
 #define PROC_BASE_INO		1000
 
 /*
@@ -40,6 +41,7 @@ extern struct inode_operations_t proc_filesystems_iops;
 extern struct inode_operations_t proc_mounts_iops;
 extern struct inode_operations_t proc_self_iops;
 extern struct inode_operations_t proc_kstat_iops;
+extern struct inode_operations_t proc_meminfo_iops;
 
 /*
  * Test if a name matches a directory entry.

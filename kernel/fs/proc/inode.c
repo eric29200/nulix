@@ -43,6 +43,10 @@ int proc_read_inode(struct inode_t *inode)
 			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
 			inode->i_op = &proc_kstat_iops;
 			break;
+		case PROC_MEMINFO_INO:
+			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+			inode->i_op = &proc_meminfo_iops;
+			break;
 		default:
 			if (inode->i_ino >= PROC_BASE_INO) {
 				inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;

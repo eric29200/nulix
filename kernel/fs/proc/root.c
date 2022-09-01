@@ -18,6 +18,7 @@ static struct proc_dir_entry_t root_dir[] = {
 	{ PROC_MOUNTS_INO,	6,	"mounts" },
 	{ PROC_KSTAT_INO, 	4,	"stat" },
 	{ PROC_SELF_INO,	4,	"self" },
+	{ PROC_MEMINFO_INO,	7,	"meminfo" },
 };
 
 /*
