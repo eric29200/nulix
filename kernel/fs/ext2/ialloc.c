@@ -117,12 +117,10 @@ allocated:
 	if (S_ISDIR(inode->i_mode))
 		gdp->bg_used_dirs_count = htole16(le16toh(gdp->bg_used_dirs_count) + 1);
 	gdp_bh->b_dirt = 1;
-	bwrite(gdp_bh);
 
 	/* update super block */
 	sbi->s_es->s_free_inodes_count = htole32(le32toh(sbi->s_es->s_free_inodes_count) - 1);
 	sbi->s_sbh->b_dirt = 1;
-	bwrite(sbi->s_sbh);
 
 	/* mark inode dirty */
 	inode->i_dirt = 1;
@@ -179,12 +177,10 @@ int ext2_free_inode(struct inode_t *inode)
 	if (S_ISDIR(inode->i_mode))
 		gdp->bg_used_dirs_count = htole16(le16toh(gdp->bg_used_dirs_count) - 1);
 	gdp_bh->b_dirt = 1;
-	bwrite(gdp_bh);
 
 	/* update super block */
 	sbi->s_es->s_free_inodes_count = htole32(le32toh(sbi->s_es->s_free_inodes_count) + 1);
 	sbi->s_sbh->b_dirt = 1;
-	bwrite(sbi->s_sbh);
 
 	return 0;
 }
