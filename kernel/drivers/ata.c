@@ -81,9 +81,6 @@ static int ata_wait(struct ata_device_t *device, int adv)
  */
 static int ata_read_sector(struct ata_device_t *device, uint32_t sector, uint16_t *buf)
 {
-	int i, errors = 0;
-
-retry:
 	/* wait for device */
 	outb(device->io_base + ATA_REG_CONTROL, 0x02);
 	ata_wait(device, 0);
@@ -98,17 +95,10 @@ retry:
 	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
 	/* wait for disk to be ready */
-	if (ata_wait(device, 1)) {
-		errors++;
-		if (errors > 4)
-			return -EIO;
-
-		goto retry;
-	}
+	ata_wait(device, 0);
 
 	/* read data */
-	for (i = 0; i < ATA_SECTOR_SIZE / 2; i++)
-		buf[i] = inw(device->io_base + ATA_REG_DATA);
+	insw(device->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
 
 	/* wait for device */
 	ata_wait(device, 0);
@@ -151,8 +141,6 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
  */
 static int ata_write_sector(struct ata_device_t *device, uint32_t sector, uint16_t *buf)
 {
-	int i;
-
 	/* wait for device */
 	outb(device->io_base + ATA_REG_CONTROL, 0x02);
 	ata_wait(device, 0);
@@ -170,8 +158,7 @@ static int ata_write_sector(struct ata_device_t *device, uint32_t sector, uint16
 	ata_wait(device, 0);
 
 	/* write data */
-	for (i = 0; i < ATA_SECTOR_SIZE / 2; i++)
-		outw(device->io_base + ATA_REG_DATA, buf[i]);
+	outsw(device->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
 
 	/* flush data */
 	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
