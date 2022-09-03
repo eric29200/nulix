@@ -121,7 +121,7 @@ retry:
  */
 int ata_read(dev_t dev, struct buffer_head_t *bh)
 {
-	uint32_t nb_sectors, sector, i;
+	uint32_t nb_sectors, sector, i, flags;
 	struct ata_device_t *device;
 	int ret;
 
@@ -135,13 +135,15 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
 	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
 	/* read each sector */
+	irq_save(flags);
 	for (i = 0; i < nb_sectors; i++) {
 		ret = ata_read_sector(device, sector + i, (uint16_t *) (bh->b_data + i * ATA_SECTOR_SIZE));
 		if (ret)
-			return ret;
+			break;
 	}
+	irq_restore(flags);
 
-	return 0;
+	return ret;
 }
 
 /*
