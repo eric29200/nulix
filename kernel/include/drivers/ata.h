@@ -25,6 +25,7 @@
 #define ATA_REG_STATUS			0x07
 #define ATA_REG_COMMAND			0x07
 #define ATA_REG_ALTSTATUS		0x0C
+#define ATA_REG_CONTROL			0x0C
 
 /* ATA commands */
 #define ATA_CMD_READ_PIO		0x20

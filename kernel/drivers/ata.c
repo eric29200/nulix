@@ -25,77 +25,93 @@ static struct ata_device_t *ata_get_device(dev_t dev)
 }
 
 /*
- * Polling an ata device.
+ * Wait for Input/Output.
  */
-static uint8_t ata_polling(struct ata_device_t *device)
+static void ata_io_wait(struct ata_device_t *device)
 {
-	uint8_t status;
-
-	while (1) {
-		status = inb(device->io_base + ATA_REG_STATUS);
-
-		if (!(status & ATA_SR_BSY) || (status & ATA_SR_DRQ))
-			return 0;
-
-		if ((status & ATA_SR_ERR) || (status & ATA_SR_DF))
-			return -ENXIO;
-	}
+	inb(device->io_base + ATA_REG_ALTSTATUS);
+	inb(device->io_base + ATA_REG_ALTSTATUS);
+	inb(device->io_base + ATA_REG_ALTSTATUS);
+	inb(device->io_base + ATA_REG_ALTSTATUS);
 }
 
 /*
- * Write from an ata device.
+ * Wait for status.
  */
-int ata_write(dev_t dev, struct buffer_head_t *bh)
+static int ata_status_wait(struct ata_device_t *device, int timeout)
 {
-	uint32_t nb_sectors, sector, i;
-	struct ata_device_t *device;
-	uint16_t *buffer;
-	uint8_t cmd;
+	int status, i = 0;
 
-	/* get ata device */
-	device = ata_get_device(dev);
-	if (!device)
-		return -EINVAL;
-
-	/* compute nb sectors */
-	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
-	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
-
-	/* set command */
-	if (device->drive == ATA_MASTER)
-		cmd = 0xE0;
+	if (timeout > 0)
+		while ((status = inb(device->io_base + ATA_REG_STATUS)) & ATA_SR_BSY && (i < timeout))
+			i++;
 	else
-		cmd = 0xF0;
+		while ((status = inb(device->io_base + ATA_REG_STATUS)) & ATA_SR_BSY);
 
-	/* wait for disk to be ready */
-	if (ata_polling(device) != 0)
-		return -ENXIO;
+	return status;
+}
 
-	/* send write command */
-	outb(device->io_base + ATA_REG_HDDEVSEL, cmd | ((sector >> 24) & 0x0F));
+/*
+ * Wait for an ATA device.
+ */
+static int ata_wait(struct ata_device_t *device, int adv)
+{
+	int status;
 
-	/* set write parameters */
-	outb(device->io_base + 1, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, nb_sectors);
+	/* wait for I/O and status */
+	ata_io_wait(device);
+	ata_status_wait(device, -1);
+
+	/* check status */
+	if (adv) {
+		status = inb(device->io_base + ATA_REG_STATUS);
+		if (status & ATA_SR_ERR)
+			return 1;
+		if (status & ATA_SR_DF)
+			return 1;
+		if (!(status & ATA_SR_DRQ))
+			return 1;
+	}
+
+	return 0;
+}
+
+/*
+ * Read a sector from an ata device.
+ */
+static int ata_read_sector(struct ata_device_t *device, uint32_t sector, uint16_t *buf)
+{
+	int i, errors = 0;
+
+retry:
+	/* wait for device */
+	outb(device->io_base + ATA_REG_CONTROL, 0x02);
+	ata_wait(device, 0);
+
+	/* set read parameters */
+	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+	outb(device->io_base + ATA_REG_FEATURES, 0x00);
+	outb(device->io_base + ATA_REG_SECCOUNT0, 1);
 	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
 	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
 	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
+	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
 	/* wait for disk to be ready */
-	if (ata_polling(device) != 0)
-		return -ENXIO;
+	if (ata_wait(device, 1)) {
+		errors++;
+		if (errors > 4)
+			return -EIO;
 
-	/* write sector and flush */
-	for (i = 0, buffer = (uint16_t *) bh->b_data; i < nb_sectors; i++, buffer += 256) {
-		/* write sector and flush */
-		outsw(device->io_base, buffer, 256);
-		outw(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
-
-		/* wait for disk to be ready */
-		if (ata_polling(device) != 0)
-			return -ENXIO;
+		goto retry;
 	}
+
+	/* read data */
+	for (i = 0; i < ATA_SECTOR_SIZE / 2; i++)
+		buf[i] = inw(device->io_base + ATA_REG_DATA);
+
+	/* wait for device */
+	ata_wait(device, 0);
 
 	return 0;
 }
@@ -107,8 +123,7 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
 {
 	uint32_t nb_sectors, sector, i;
 	struct ata_device_t *device;
-	uint16_t *buffer;
-	uint8_t cmd;
+	int ret;
 
 	/* get ata device */
 	device = ata_get_device(dev);
@@ -119,41 +134,80 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
 	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
 	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
-	/* set command */
-	if (device->drive == ATA_MASTER)
-		cmd = 0xE0;
-	else
-		cmd = 0xF0;
-
-	/* wait for disk to be ready */
-	if (ata_polling(device) != 0)
-		return -ENXIO;
-
-	/* send read command */
-	outb(device->io_base + ATA_REG_HDDEVSEL, cmd | ((sector >> 24) & 0x0F));
-
-	/* set read parameters */
-	outb(device->io_base + 1, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, nb_sectors);
-	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
-
-	/* wait for disk to be ready */
-	if (ata_polling(device) != 0)
-		return -ENXIO;
-
-	/* read all sectors */
-	for (i = 0, buffer = (uint16_t *) bh->b_data; i < nb_sectors; i++, buffer += 256) {
-		insw(device->io_base + ATA_REG_DATA, buffer, 256);
-
-		/* wait for disk to be ready */
-		if (ata_polling(device) != 0)
-			return -ENXIO;
+	/* read each sector */
+	for (i = 0; i < nb_sectors; i++) {
+		ret = ata_read_sector(device, sector + i, (uint16_t *) (bh->b_data + i * ATA_SECTOR_SIZE));
+		if (ret)
+			return ret;
 	}
 
 	return 0;
+}
+
+/*
+ * Write a sector to an ata device.
+ */
+static int ata_write_sector(struct ata_device_t *device, uint32_t sector, uint16_t *buf)
+{
+	int i;
+
+	/* wait for device */
+	outb(device->io_base + ATA_REG_CONTROL, 0x02);
+	ata_wait(device, 0);
+
+	/* set write parameters */
+	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+	outb(device->io_base + ATA_REG_FEATURES, 0x00);
+	outb(device->io_base + ATA_REG_SECCOUNT0, 1);
+	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
+	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
+	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
+
+	/* wait for disk to be ready */
+	ata_wait(device, 0);
+
+	/* write data */
+	for (i = 0; i < ATA_SECTOR_SIZE / 2; i++)
+		outw(device->io_base + ATA_REG_DATA, buf[i]);
+
+	/* flush data */
+	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
+
+	/* wait for device */
+	ata_wait(device, 0);
+
+	return 0;
+}
+
+/*
+ * Write to an ata device.
+ */
+int ata_write(dev_t dev, struct buffer_head_t *bh)
+{
+	uint32_t nb_sectors, sector, i;
+	struct ata_device_t *device;
+	int ret;
+
+	/* get ata device */
+	device = ata_get_device(dev);
+	if (!device)
+		return -EINVAL;
+
+	/* compute nb sectors */
+	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
+	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
+
+	/* write each sector */
+	irq_enable();
+	for (i = 0; i < nb_sectors; i++) {
+		ret = ata_write_sector(device, sector + i, (uint16_t *) (bh->b_data + i * ATA_SECTOR_SIZE));
+		if (ret)
+			break;
+	}
+	irq_disable();
+
+	return ret;
 }
 
 /*
