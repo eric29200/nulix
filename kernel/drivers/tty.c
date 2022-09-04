@@ -189,14 +189,16 @@ void tty_change(int n)
 	struct framebuffer_t *fb;
 
 	if (n >= 0 && n < NB_TTYS) {
-
-		/* refresh frame buffer */
 		if (current_tty != n) {
+			/* refresh frame buffer */
 			fb = &tty_table[n].fb;
 			fb->update_region(fb, 0, fb->width * fb->height);
-		}
 
-		current_tty = n;
+			/* set current tty */
+			tty_table[current_tty].fb.active = 0;
+			current_tty = n;
+			tty_table[current_tty].fb.active = 1;
+		}
 	}
 }
 
@@ -409,6 +411,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 
 	/* set current tty to first tty */
 	current_tty = 0;
+	tty_table[current_tty].fb.active = 1;
 
 	/* on error destroy ttys */
 	if (ret)

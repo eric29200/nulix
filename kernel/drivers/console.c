@@ -47,7 +47,8 @@ static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom, size
 	memsetw(dest + (bottom - top - nr) * fb->width, tty->erase_char, fb->width * nr);
 
 	/* hardware scroll */
-	fb->scroll_up(fb, top, bottom, nr);
+	if (fb->active)
+		fb->scroll_up(fb, top, bottom, nr);
 }
 
 /*
@@ -75,7 +76,8 @@ static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom, si
 	memsetw(src, tty->erase_char, fb->width * nr);
 
 	/* hardware scroll */
-	fb->scroll_down(fb, top, bottom, nr);
+	if (fb->active)
+		fb->scroll_down(fb, top, bottom, nr);
 }
 
 /*
@@ -97,7 +99,8 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
 	memsetw(p + fb->width - fb->x - nr, tty->erase_char, nr);
 
 	/* update region */
-	fb->update_region(fb, fb->y * fb->width + fb->x, fb->width - fb->x);
+	if (fb->active)
+		fb->update_region(fb, fb->y * fb->width + fb->x, fb->width - fb->x);
 }
 
 /*
@@ -131,7 +134,8 @@ static void csi_K(struct tty_t *tty, int vpar)
 	memsetw(start + offset, tty->erase_char, count);
 
 	/* update region */
-	fb->update_region(&tty->fb, start + offset - tty->fb.buf, count);
+	if (fb->active)
+		fb->update_region(&tty->fb, start + offset - tty->fb.buf, count);
 }
 
 /*
@@ -164,7 +168,8 @@ static void csi_J(struct tty_t *tty, int vpar)
 	memsetw(start, tty->erase_char, count);
 
 	/* update region */
-	fb->update_region(&tty->fb, start - tty->fb.buf, count);
+	if (fb->active)
+		fb->update_region(&tty->fb, start - tty->fb.buf, count);
 }
 
 /*
@@ -242,7 +247,8 @@ static void console_set_mode(struct tty_t *tty, int on_off)
 		switch (tty->pars[i]) {
 			case 25:				/* cursor visible */
 				tty->deccm = on_off;
-				tty->fb.show_cursor(&tty->fb, on_off);
+				if (tty->fb.active)
+					tty->fb.show_cursor(&tty->fb, on_off);
 				break;
 			default:
 				printf("console : unknown mode : %d\n", tty->pars[i]);
@@ -275,7 +281,8 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 	/* handle character */
 	if (c >= ' ' && c <= '~') {
 		fb->buf[fb->y * fb->width + fb->x] = (tty->attr << 8) | c;
-		fb->update_region(fb, fb->y * fb->width + fb->x, 1);
+		if (fb->active)
+			fb->update_region(fb, fb->y * fb->width + fb->x, 1);
 		fb->x++;
 	} else if (c == '\t') {
 		fb->x = (fb->x + fb->bpp / 8) & ~0x03;
@@ -312,7 +319,8 @@ void console_write(struct tty_t *tty)
 	uint8_t c;
 
 	/* remove cursor */
-	tty->fb.update_region(&tty->fb, tty->fb.cursor_y * tty->fb.width + tty->fb.cursor_x, 1);
+	if (tty->fb.active)
+		tty->fb.update_region(&tty->fb, tty->fb.cursor_y * tty->fb.width + tty->fb.cursor_x, 1);
 
 	/* get characters from write queue */
 	while (tty->write_queue.size > 0) {
@@ -453,6 +461,6 @@ void console_write(struct tty_t *tty)
 	}
 
 	/* update cursor */
-	if (tty->deccm)
+	if (tty->deccm && tty->fb.active)
 		tty->fb.update_cursor(&tty->fb);
 }

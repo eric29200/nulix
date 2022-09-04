@@ -29,6 +29,7 @@ struct framebuffer_t {
 	uint32_t		cursor_x;
 	uint32_t		cursor_y;
 	uint16_t *		buf;
+	int			active;
 	void			(*update_region)(struct framebuffer_t *, uint32_t, uint32_t);
 	void			(*scroll_up)(struct framebuffer_t *, uint32_t, uint32_t, size_t);
 	void			(*scroll_down)(struct framebuffer_t *, uint32_t, uint32_t, size_t);

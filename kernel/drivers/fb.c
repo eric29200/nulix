@@ -20,6 +20,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	fb->bpp = tag_fb->common.framebuffer_bpp;
 	fb->x = fb->cursor_x = 0;
 	fb->y = fb->cursor_y = 0;
+	fb->active = 0;
 
 	/* init frame buffer */
 	switch (fb->type) {
