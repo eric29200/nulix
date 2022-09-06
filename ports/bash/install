@@ -9,7 +9,7 @@ function configure_port() {
 		--disable-threads						\
 		--without-gnu-malloc						\
 		--prefix="/usr"							\
-		CFLAGS="-static" LDFLAGS="-static"
+		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
 function build_port() {

@@ -11,7 +11,7 @@ function configure_port() {
 		--with-tlib=ncursesw						\
 		--with-features=normal						\
 		--prefix="/usr"							\
-		CFLAGS="-static" LDFLAGS="-static"
+		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
 }
 
 function build_port() {

@@ -12,7 +12,7 @@ function configure_port() {
 		--disable-numa							\
 		--without-ncurses						\
 		--prefix="/usr"							\
-		CFLAGS="--static" LDFLAGS="--static" PKG_CONFIG=$PKG_CONFIG
+		CC=$MUSL_CC LD="$MUSL_CC" CFLAGS="--static" LDFLAGS="--static" PKG_CONFIG=$PKG_CONFIG
 }
 
 function build_port() {

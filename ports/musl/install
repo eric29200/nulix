@@ -1,0 +1,17 @@
+URL="https://musl.libc.org/releases/"
+VERSION="1.2.3"
+SRC_FILENAME="musl-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure								\
+		--target=$TARGET						\
+		--prefix=$SYSROOT
+}
+
+function build_port() {
+	make -j$NJOBS CFLAGS="-DSYSCALL_NO_TLS=1"
+}
+
+function install_port() {
+	make install
+}

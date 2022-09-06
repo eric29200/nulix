@@ -1,6 +1,6 @@
-URL="https://sourceware.org/pub/bzip2/"
-VERSION="1.0.8"
-SRC_FILENAME="bzip2-"$VERSION".tar.gz"
+URL="http://ftp.figlet.org/pub/figlet/program/unix/"
+VERSION="2.2.5"
+SRC_FILENAME="figlet-"$VERSION".tar.gz"
 
 function configure_port() {
 	:
@@ -11,5 +11,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install PREFIX=$SYSROOT"/usr"
+	make install DESTDIR=$SYSROOT
 }

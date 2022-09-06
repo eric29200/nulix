@@ -1,10 +1,12 @@
-URL="https://zlib.net/"
-VERSION="1.2.12"
-SRC_FILENAME="zlib-"$VERSION".tar.xz"
+URL="https://download.sourceforge.net/libpng/"
+VERSION="1.6.37"
+SRC_FILENAME="libpng-"$VERSION".tar.gz"
 
 function configure_port() {
 	./configure								\
-		--prefix="/"
+		--host=$TARGET							\
+		--prefix="/"							\
+		CC=$MUSL_CC
 }
 
 function build_port() {

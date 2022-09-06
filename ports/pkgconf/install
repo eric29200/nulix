@@ -4,8 +4,8 @@ SRC_FILENAME="pkgconf-"$VERSION".tar.xz"
 
 function configure_port() {
 	./configure								\
-		--prefix=$MUSL_DIR						\
-		CC=gcc LD=ld
+		--host=$TARGET							\
+		--prefix=$SYSROOT
 }
 
 function build_port() {

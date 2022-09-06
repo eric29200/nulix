@@ -10,7 +10,7 @@ function configure_port() {
 }
 
 function build_port() {
-	make -j$NJOBS CC=$CC LDFLAGS="-static"
+	make -j$NJOBS CC=$MUSL_CC LD=$MUSL_CC LDFLAGS="-static"
 }
 
 function install_port() {

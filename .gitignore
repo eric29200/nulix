@@ -6,8 +6,6 @@
 *.bin
 *.iso
 */*.bin
-musl/musl-build
-musl/musl-install
 hda.img
 hdb.img
 hdc.img

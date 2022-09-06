@@ -1,0 +1,15 @@
+URL="https://github.com/mtoyoda/sl/archive/refs/tags/"
+VERSION="5.02"
+SRC_FILENAME=$VERSION".tar.gz"
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	$MUSL_CC -o sl sl.c `$PKG_CONFIG --cflags --libs ncursesw` -static
+}
+
+function install_port() {
+	cp sl $SYSROOT/usr/bin
+}
