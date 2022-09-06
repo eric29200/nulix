@@ -6,8 +6,7 @@ function configure_port() {
 	./configure								\
 		--host=$TARGET							\
 		--enable-static							\
-		--prefix="/"							\
-		CC=$MUSL_CC LD=$MUSL_CC
+		--prefix="/"
 }
 
 function build_port() {

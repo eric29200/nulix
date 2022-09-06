@@ -1,4 +1,4 @@
-CC		= ../sysroot/bin/musl-gcc
+CC		= ../musl/musl-install/bin/i386-linux-musl-gcc
 CFLAGS		= -m32 -ffreestanding -fno-stack-protector -Wall -Wextra
 
 all: init
