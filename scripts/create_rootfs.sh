@@ -56,6 +56,7 @@ sudo cp usr/init tmp/sbin/
 # create devices nodes
 sudo mknod tmp/dev/null c 1 3
 sudo mknod tmp/dev/zero c 1 5
+sudo mknod tmp/dev/random c 1 8
 sudo mknod tmp/dev/tty0 c 4 0
 sudo mknod tmp/dev/tty1 c 4 1
 sudo mknod tmp/dev/tty2 c 4 2

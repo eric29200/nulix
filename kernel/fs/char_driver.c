@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <drivers/null.h>
 #include <drivers/zero.h>
+#include <drivers/random.h>
 #include <drivers/tty.h>
 #include <drivers/fb.h>
 #include <drivers/mouse.h>
@@ -23,6 +24,10 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
 	/* zero driver */
 	if (inode->i_rdev == DEV_ZERO)
 		return &zero_iops;
+
+	/* random driver */
+	if (inode->i_rdev == DEV_RANDOM)
+		return &random_iops;
 
 	/* tty driver */
 	if (major(inode->i_rdev) == major(DEV_TTY) || major(inode->i_rdev) == major(DEV_TTY0))
