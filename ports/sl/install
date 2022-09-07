@@ -7,7 +7,7 @@ function configure_port() {
 }
 
 function build_port() {
-	$MUSL_CC -o sl sl.c `$PKG_CONFIG --cflags --libs ncursesw` -static
+	$CC -o sl sl.c `$PKG_CONFIG --cflags --libs ncursesw` -static
 }
 
 function install_port() {

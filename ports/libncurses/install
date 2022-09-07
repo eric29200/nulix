@@ -13,7 +13,7 @@ function configure_port() {
 		--enable-pc-files				\
 		--with-pkg-config-libdir="/lib/pkgconfig"	\
 		--prefix="/"					\
-		DESTDIR=$SYSROOT CC=$MUSL_CC LD=$MUSL_LD
+		DESTDIR=$MUSL_DIR
 }
 
 function build_port() {
@@ -22,4 +22,7 @@ function build_port() {
 
 function install_port() {
 	make install
+	mkdir -p $SYSROOT/share
+	cp -Rv $MUSL_DIR/share/tabset $SYSROOT/share
+	cp -Rv $MUSL_DIR/share/terminfo $SYSROOT/share
 }

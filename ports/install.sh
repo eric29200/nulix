@@ -1,25 +1,27 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("musl" "linux-headers" "pkgconf" "bash" "libncurses" "zlib")
+BASE_PORTS=("pkgconf" "bash" "libncurses" "zlib" "libpng" "libfreetype")
 
 # go to ports directory
 cd `dirname $0`
 BASE_DIR=`pwd`
 
+# install musl directory
+if [[ ! -d "../musl/musl-install" ]]; then
+	cp -R ../musl/musl-build/output ../musl/musl-install
+fi
+
 # global environ
 export TARGET=i386
-export CC=i686-linux-gnu-gcc
-export LD=i686-linux-gnu-ld
-export AR=i686-linux-gnu-ar
-export AS=i686-linux-gnu-as
-export RANLIB=i686-linux-gnu-ranlib
-export SYSROOT=`realpath ../sysroot`
 export NJOBS=`nproc`
-export MUSL_CC=$SYSROOT"/bin/musl-gcc"
-export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
-export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig"
-export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig"
+export SYSROOT=`realpath ../sysroot`
+export MUSL_DIR=`realpath ../musl/musl-install/i386-linux-musl`
+export CC=`realpath ../musl/musl-install/bin/i386-linux-musl-gcc`
+export LD=`realpath ../musl/musl-install/bin/i386-linux-musl-ld`
+export PKG_CONFIG=$MUSL_DIR"/bin/pkgconf"
+export PKG_CONFIG_PATH=$MUSL_DIR"/lib/pkgconfig"
+export PKG_CONFIG_LIBDIR=$MUSL_DIR"/lib/pkgconfig"
 
 ##############################################
 ######### check if port is available #########
@@ -114,7 +116,15 @@ if [[ $BUILD_ALL == 1 ]]; then
 			PORTS+=($PORT)
 		fi
 	done
+
+	# reset musl installation directory
+	rm -rf ../musl/musl-install
+	cp -R ../musl/musl-build/output ../musl/musl-install
 fi
+
+# move installation
+rm -rf ../musl-install
+mv output ../musl-install
 
 # for each port
 for PORT in ${PORTS[@]}; do

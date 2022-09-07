@@ -6,13 +6,13 @@ function configure_port() {
 	./configure								\
 		--host=$TARGET							\
 		--prefix="/"							\
-		CC=$MUSL_CC
+		CC=$CC
 }
 
 function build_port() {
-	make -j$NJOBS CC=$MUSL_CC
+	make -j$NJOBS CC=$CC
 }
 
 function install_port() {
-	make install DESTDIR=$SYSROOT
+	make install DESTDIR=$MUSL_DIR
 }

@@ -9,7 +9,7 @@ function configure_port() {
 		--disable-threads						\
 		--disable-year2038						\
 		--prefix="/usr"							\
-		CC=$MUSL_CC LD=$MUSL_CC CFLAGS="-static" LDFLAGS="-static"
+		CFLAGS="-static" LDFLAGS="-static"
 }
 
 function build_port() {
