@@ -13,6 +13,8 @@ hdd.img
 sysroot/*
 root/*
 ports/build/*
+musl/musl-build
+musl/musl-install
 tmp/*
 usr/init
 traffic.pcap
