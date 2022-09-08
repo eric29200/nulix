@@ -34,10 +34,9 @@ int raw_handle(struct socket_t *sock, struct sk_buff_t *skb)
  */
 int raw_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 {
-	size_t len, n, count = 0;
+	size_t len, n, count = 0, i;
 	struct sockaddr_in *sin;
 	struct sk_buff_t *skb;
-	size_t i;
 
 	/* unused flags */
 	UNUSED(flags);

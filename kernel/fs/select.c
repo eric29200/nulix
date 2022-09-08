@@ -159,15 +159,12 @@ end_check:
 			break;
 
 		/* no events : sleep */
-		if (timeout == NULL) {
+		if (timeout == NULL)
 			task_sleep(current_task->waiting_chan);
-		} else if (timeout->tv_sec == 0 && timeout->tv_nsec == 0) {
+		else if (timeout->tv_sec == 0 && timeout->tv_nsec == 0)
 			return count;
-		} else {
+		else
 			task_sleep_timeout(current_task->waiting_chan, timeout);
-			timeout->tv_sec = 0;
-			timeout->tv_nsec = 0;
-		}
 	}
 
 	/* copy results */

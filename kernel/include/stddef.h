@@ -30,9 +30,8 @@ typedef unsigned long tcflag_t;
 #define FDSET_SIZE				1024
 #define FDSET_INTS				(FDSET_SIZE / NFD_BITS)
 
-#define FD_ISSET(i, fdsp)			((fdsp) && (((fdsp)->fds_bits[(i) / sizeof(uint32_t)]) & (0x1 << ((i) % sizeof(uint32_t)))))
-#define FD_SET(i, fdsp)				((fdsp)->fds_bits[(i) / sizeof(uint32_t)] |= (0x1 << ((i) % sizeof(uint32_t))))
-
+#define FD_SET(d, s)				((s)->fds_bits[(d) / (8 * sizeof(long))] |= (1UL << ((d) % (8 * sizeof(long)))))
+#define FD_ISSET(d, s)				!!((s)->fds_bits[(d) / (8 * sizeof(long))] & (1UL << ((d) % (8 * sizeof(long)))))
 
 typedef struct {
 	uint32_t fds_bits[FDSET_SIZE / (8 * sizeof(uint32_t))];
