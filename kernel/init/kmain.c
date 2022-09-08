@@ -199,6 +199,10 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 	printf("[Kernel] System calls Init\n");
 	init_syscall();
 
+	/* init direct frame buffer */
+	printf("[Kernel] Direct frame buffer Init\n");
+	init_framebuffer_direct(tag_fb);
+
 	/* init ttys */
 	printf("[Kernel] Ttys Init\n");
 	init_tty(tag_fb);

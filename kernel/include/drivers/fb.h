@@ -2,6 +2,7 @@
 #define _FB_H_
 
 #include <grub/multiboot2.h>
+#include <fs/fs.h>
 #include <stddef.h>
 #include <lib/font.h>
 #include <string.h>
@@ -22,6 +23,8 @@ struct framebuffer_t {
 	uint32_t		pitch;
 	uint32_t		width;
 	uint32_t		height;
+	uint32_t		real_width;
+	uint32_t		real_height;
 	uint8_t			bpp;
 	struct font_t *		font;
 	uint32_t		x;
@@ -37,7 +40,8 @@ struct framebuffer_t {
 	void			(*show_cursor)(struct framebuffer_t *, int);
 };
 
-int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char);
+int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct);
+int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb);
 void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y);
 
 /* text fb prototypes */
@@ -53,5 +57,8 @@ void fb_rgb_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, s
 void fb_rgb_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr);
 void fb_rgb_update_cursor(struct framebuffer_t *fb);
 void fb_rgb_show_cursor(struct framebuffer_t *fb, int on_off);
+
+/* frame buffer inode operations */
+extern struct inode_operations_t fb_iops;
 
 #endif

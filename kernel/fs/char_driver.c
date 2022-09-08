@@ -37,5 +37,9 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
 	if (major(inode->i_rdev) == DEV_MOUSE_MAJOR)
 		return &mouse_iops;
 
+	/* frame buffer driver */
+	if (major(inode->i_rdev) == DEV_FB_MAJOR)
+		return &fb_iops;
+
 	return NULL;
 }

@@ -358,7 +358,7 @@ static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer
 		return ret;
 
 	/* init frame buffer */
-	ret = init_framebuffer(&tty->fb, tag_fb, tty->erase_char);
+	ret = init_framebuffer(&tty->fb, tag_fb, tty->erase_char, 0);
 	if (ret)
 		return ret;
 

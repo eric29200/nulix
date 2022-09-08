@@ -9,6 +9,7 @@
 #define DEV_RANDOM		0x108		/* /dev/random device */
 
 #define DEV_ATA_MAJOR		3		/* ata major number */
-#define DEV_MOUSE_MAJOR		13		/* mouse major nubmer */
+#define DEV_MOUSE_MAJOR		13		/* mouse major number */
+#define DEV_FB_MAJOR		29		/* frame buffer major number */
 
 #endif
