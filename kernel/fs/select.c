@@ -59,7 +59,7 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 		/* no events : sleep */
 		if (timeout > 0) {
 			task_sleep_timeout_ms(current_task->waiting_chan, timeout);
-			timeout = 0;
+			timeout = -1;
 		} else if (timeout == 0) {
 			return count;
 		} else {
@@ -159,12 +159,14 @@ end_check:
 			break;
 
 		/* no events : sleep */
-		if (timeout == NULL)
+		if (timeout == NULL) {
 			task_sleep(current_task->waiting_chan);
-		else if (timeout->tv_sec == 0 && timeout->tv_nsec == 0)
+		} else if (timeout->tv_sec == 0 && timeout->tv_nsec == 0) {
 			return count;
-		else
+		} else {
 			task_sleep_timeout(current_task->waiting_chan, timeout);
+			timeout = NULL;
+		}
 	}
 
 	/* copy results */
