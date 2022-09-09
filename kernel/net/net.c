@@ -175,7 +175,9 @@ static void net_handler_thread(void *arg)
 		irq_restore(flags);
 
 		/* wait for incoming packets */
-		task_sleep_timeout_ms(current_task->waiting_chan, NET_HANDLE_FREQ_MS);
+		current_task->timeout = jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS);
+		task_sleep(current_task->waiting_chan);
+		current_task->timeout = 0;
 	}
 }
 

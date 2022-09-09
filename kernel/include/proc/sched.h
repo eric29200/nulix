@@ -16,8 +16,6 @@ pid_t get_next_pid();
 void schedule();
 
 void task_sleep(void *chan);
-void task_sleep_timeout_ms(void *chan, int timeout);
-void task_sleep_timeout(void *chan, struct timespec_t *timeout);
 void task_wakeup(void *chan);
 void task_wakeup_all(void *chan);
 

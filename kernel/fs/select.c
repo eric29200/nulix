@@ -47,25 +47,27 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 	int count = 0;
 	size_t i;
 
+	/* set time out */
+	if (timeout > 0)
+		current_task->timeout = jiffies + ms_to_jiffies(timeout);
+	else
+		current_task->timeout = 0;
+
 	for (;;) {
 		/* poll each file */
 		for (i = 0; i < ndfs; i++)
 			do_pollfd(&fds[i], &count);
 
 		/* events catched or signal transmitted : break */
-		if (count || !sigisemptyset(&current_task->sigpend) || !timeout)
+		if (count || !sigisemptyset(&current_task->sigpend) || !timeout || jiffies >= current_task->timeout)
 			break;
 
-		/* no events : sleep */
-		if (timeout > 0) {
-			task_sleep_timeout_ms(current_task->waiting_chan, timeout);
-			timeout = -1;
-		} else if (timeout == 0) {
-			return count;
-		} else {
-			task_sleep(current_task->waiting_chan);
-		}
+		/* no events sleep */
+		task_sleep(current_task->waiting_chan);
 	}
+
+	/* reset timeout */
+	current_task->timeout = 0;
 
 	return count;
 }
@@ -134,6 +136,12 @@ end_check:
 	memset(&res_writefds, 0, sizeof(fd_set_t));
 	memset(&res_exceptfds, 0, sizeof(fd_set_t));
 
+	/* set time out */
+	if (timeout && (timeout->tv_sec > 0 || timeout->tv_nsec > 0))
+		current_task->timeout = jiffies + timespec_to_jiffies(timeout);
+	else
+		current_task->timeout = 0;
+
 	/* loop until events occured */
 	for (;;) {
 		for (i = 0; i < nfds; i++) {
@@ -158,16 +166,16 @@ end_check:
 		if (count || !sigisemptyset(&current_task->sigpend))
 			break;
 
-		/* no events : sleep */
-		if (timeout == NULL) {
-			task_sleep(current_task->waiting_chan);
-		} else if (timeout->tv_sec == 0 && timeout->tv_nsec == 0) {
-			return count;
-		} else {
-			task_sleep_timeout(current_task->waiting_chan, timeout);
-			timeout = NULL;
-		}
+		/* timeout : break */
+		if ((timeout->tv_sec == 0 && timeout->tv_nsec == 0) || (timeout && jiffies >= current_task->timeout))
+			break;
+
+		/* no events sleep */
+		task_sleep(current_task->waiting_chan);
 	}
+
+	/* reset timeout */
+	current_task->timeout = 0;
 
 	/* copy results */
 	memcpy(readfds, &res_readfds, sizeof(fd_set_t));
