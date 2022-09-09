@@ -17,6 +17,10 @@ void icmp_receive(struct sk_buff_t *skb)
 {
 	skb->h.icmp_header = (struct icmp_header_t *) skb->data;
 	skb_pull(skb, sizeof(struct icmp_header_t));
+
+	/* recompute checksum */
+	skb->h.icmp_header->chksum = 0;
+	skb->h.icmp_header->chksum = net_checksum(skb->h.icmp_header, skb->size - sizeof(struct ethernet_header_t) - sizeof(struct ip_header_t));
 }
 
 /*
