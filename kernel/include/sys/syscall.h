@@ -164,7 +164,7 @@ int sys_unlink(const char *pathname);
 int sys_rmdir(const char *pathname);
 ssize_t sys_readv(int fd, const struct iovec_t *iov, int iovcnt);
 ssize_t sys_writev(int fd, const struct iovec_t *iov, int iovcnt);
-int sys_nanosleep(const struct timespec_t *req, struct timespec_t *rem);
+int sys_nanosleep(const struct old_timespec_t *req, struct old_timespec_t *rem);
 int sys_getdents64(int fd, void *dirp, size_t count);
 pid_t sys_getpid();
 pid_t sys_getppid();
@@ -221,7 +221,7 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
 int sys_fchmod(int fd, mode_t mode);
 int sys_chmod(const char *pathname, mode_t mode);
 int sys_listen(int sockfd, int backlog);
-int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout);
+int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval_t *timeout);
 int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout, sigset_t *sigmask);
 int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
 int sys_mknod(const char *pathname, mode_t mode, dev_t dev);

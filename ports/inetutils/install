@@ -1,0 +1,19 @@
+URL="https://ftp.gnu.org/gnu/inetutils/"
+VERSION="2.3"
+SRC_FILENAME="inetutils-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--disable-threads						\
+		--prefix="/usr"							\
+		CFLAGS="-static" LDFLAGS="-static"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

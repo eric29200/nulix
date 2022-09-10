@@ -3,7 +3,7 @@
 /*
  * Select system call.
  */
-int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timeval_t *timeout)
+int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval_t *timeout)
 {
 	struct timespec_t ts;
 
