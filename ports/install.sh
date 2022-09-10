@@ -122,10 +122,6 @@ if [[ $BUILD_ALL == 1 ]]; then
 	cp -R ../musl/musl-build/output ../musl/musl-install
 fi
 
-# move installation
-rm -rf ../musl-install
-mv output ../musl-install
-
 # for each port
 for PORT in ${PORTS[@]}; do
 	cd $BASE_DIR
