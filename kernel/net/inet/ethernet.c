@@ -1,9 +1,9 @@
-#include <net/ethernet.h>
-#include <net/net.h>
-#include <net/arp.h>
-#include <net/ip.h>
-#include <string.h>
+#include <net/inet/ethernet.h>
+#include <net/inet/net.h>
+#include <net/inet/ip.h>
+#include <net/inet/arp.h>
 #include <stderr.h>
+#include <string.h>
 
 /*
  * Build an ethernet header.

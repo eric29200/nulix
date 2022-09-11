@@ -1,15 +1,12 @@
-#include <net/net.h>
-#include <net/socket.h>
-#include <net/ethernet.h>
-#include <net/arp.h>
-#include <net/ip.h>
-#include <net/udp.h>
-#include <net/tcp.h>
-#include <net/icmp.h>
+#include <net/inet/net.h>
+#include <net/inet/sock.h>
+#include <net/inet/ethernet.h>
+#include <net/inet/arp.h>
+#include <net/inet/ip.h>
+#include <net/inet/icmp.h>
+#include <net/inet/udp.h>
+#include <net/inet/tcp.h>
 #include <proc/sched.h>
-#include <lib/list.h>
-#include <stderr.h>
-#include <string.h>
 
 /* network devices */
 static struct net_device_t net_devices[NR_NET_DEVICES];
@@ -44,21 +41,27 @@ uint16_t net_checksum(void *data, size_t size)
  */
 static void skb_deliver_to_sockets(struct sk_buff_t *skb)
 {
+	struct sock_t *sk;
 	int i, ret;
 
 	/* find matching sockets */
 	for (i = 0; i < NR_SOCKETS; i++) {
-		/* unused socket */
-		if (sockets[i].state == SS_FREE)
+		/* free or non inet socket */
+		if (sockets[i].state == SS_FREE || sockets[i].family != AF_INET)
+			continue;
+
+		/* get inet socket */
+		sk = (struct sock_t *) sockets[i].data;
+		if (!sk)
 			continue;
 
 		/* handle packet */
-		if (sockets[i].ops && sockets[i].ops->handle) {
-			ret = sockets[i].ops->handle(&sockets[i], skb);
+		if (sk->prot && sk->prot->handle) {
+			ret = sk->prot->handle(sk, skb);
 
 			/* wake up waiting processes */
 			if (ret == 0)
-				task_wakeup_all(&sockets[i].waiting_chan);
+				task_wakeup_all(&sk->sock->waiting_chan);
 		}
 	}
 }

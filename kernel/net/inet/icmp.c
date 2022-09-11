@@ -1,14 +1,12 @@
-#include <net/icmp.h>
-#include <net/ethernet.h>
-#include <net/net.h>
-#include <net/arp.h>
-#include <net/ip.h>
-#include <net/socket.h>
+#include <net/inet/icmp.h>
+#include <net/inet/net.h>
+#include <net/inet/ethernet.h>
+#include <net/inet/ip.h>
+#include <net/inet/sock.h>
 #include <proc/sched.h>
-#include <ipc/signal.h>
-#include <mm/mm.h>
-#include <string.h>
+#include <uio.h>
 #include <stderr.h>
+#include <string.h>
 
 /*
  * Receive/decode an ICMP packet.
@@ -69,12 +67,12 @@ void icmp_reply_echo(struct sk_buff_t *skb)
 /*
  * Handle an ICMP packet.
  */
-int icmp_handle(struct socket_t *sock, struct sk_buff_t *skb)
+static int icmp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 {
 	struct sk_buff_t *skb_new;
 
 	/* check protocol */
-	if (sock->protocol != skb->nh.ip_header->protocol)
+	if (sk->protocol != skb->nh.ip_header->protocol)
 		return -EINVAL;
 
 	/* clone socket buffer */
@@ -83,7 +81,7 @@ int icmp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 		return -ENOMEM;
 
 	/* push skb in socket queue */
-	list_add_tail(&skb_new->list, &sock->skb_list);
+	list_add_tail(&skb_new->list, &sk->skb_list);
 
 	return 0;
 }
@@ -91,7 +89,7 @@ int icmp_handle(struct socket_t *sock, struct sk_buff_t *skb)
 /*
  * Send an ICMP message.
  */
-int icmp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
+static int icmp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
 {
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff_t *skb;
@@ -118,11 +116,11 @@ int icmp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 
 	/* build ethernet header */
 	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
-	ethernet_build_header(skb->eth_header, sock->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	ethernet_build_header(skb->eth_header, sk->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0, IPV4_DEFAULT_TTL, IP_PROTO_ICMP, sock->dev->ip_addr, dest_ip);
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0, IPV4_DEFAULT_TTL, IP_PROTO_ICMP, sk->dev->ip_addr, dest_ip);
 
 	/* copy icmp message */
 	skb->h.icmp_header = buf = (struct icmp_header_t *) skb_put(skb, len);
@@ -136,7 +134,7 @@ int icmp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 	skb->h.icmp_header->chksum = net_checksum(skb->h.icmp_header, len);
 
 	/* transmit message */
-	net_transmit(sock->dev, skb);
+	net_transmit(sk->dev, skb);
 
 	return len;
 }
@@ -144,7 +142,7 @@ int icmp_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 /*
  * Receive an ICMP message.
  */
-int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
+static int icmp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 {
 	size_t len, n, count = 0;
 	struct sockaddr_in *sin;
@@ -161,15 +159,15 @@ int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 			return -ERESTARTSYS;
 
 		/* message received : break */
-		if (!list_empty(&sock->skb_list))
+		if (!list_empty(&sk->skb_list))
 			break;
 
 		/* sleep */
-		task_sleep(&sock->waiting_chan);
+		task_sleep(&sk->sock->waiting_chan);
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
+	skb = list_first_entry(&sk->skb_list, struct sk_buff_t, list);
 
 	/* get IP header */
 	skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
@@ -201,11 +199,10 @@ int icmp_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 }
 
 /*
- * ICMP protocol operations.
+ * ICMP protocol.
  */
-struct prot_ops icmp_prot_ops = {
+struct proto_t icmp_proto = {
 	.handle		= icmp_handle,
 	.recvmsg	= icmp_recvmsg,
 	.sendmsg	= icmp_sendmsg,
 };
-

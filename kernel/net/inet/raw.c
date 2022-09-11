@@ -1,21 +1,21 @@
-#include <net/net.h>
-#include <net/ip.h>
-#include <net/arp.h>
-#include <net/ethernet.h>
-#include <net/socket.h>
+#include <net/inet/sk_buff.h>
+#include <net/inet/sock.h>
+#include <net/inet/net.h>
+#include <net/inet/ethernet.h>
+#include <net/inet/ip.h>
 #include <proc/sched.h>
-#include <string.h>
+#include <uio.h>
 #include <stderr.h>
 
 /*
  * Handle a raw packet.
  */
-int raw_handle(struct socket_t *sock, struct sk_buff_t *skb)
+static int raw_handle(struct sock_t *sk, struct sk_buff_t *skb)
 {
 	struct sk_buff_t *skb_new;
 
 	/* check protocol */
-	if (sock->protocol != skb->nh.ip_header->protocol)
+	if (sk->protocol != skb->nh.ip_header->protocol)
 		return -EINVAL;
 
 	/* clone socket buffer */
@@ -24,7 +24,7 @@ int raw_handle(struct socket_t *sock, struct sk_buff_t *skb)
 		return -ENOMEM;
 
 	/* push skb in socket queue */
-	list_add_tail(&skb_new->list, &sock->skb_list);
+	list_add_tail(&skb_new->list, &sk->skb_list);
 
 	return 0;
 }
@@ -32,7 +32,7 @@ int raw_handle(struct socket_t *sock, struct sk_buff_t *skb)
 /*
  * Receive a rax message.
  */
-int raw_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
+static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 {
 	size_t len, n, count = 0, i;
 	struct sockaddr_in *sin;
@@ -48,15 +48,15 @@ int raw_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 			return -ERESTARTSYS;
 
 		/* message received : break */
-		if (!list_empty(&sock->skb_list))
+		if (!list_empty(&sk->skb_list))
 			break;
 
 		/* sleep */
-		task_sleep(&sock->waiting_chan);
+		task_sleep(&sk->sock->waiting_chan);
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sock->skb_list, struct sk_buff_t, list);
+	skb = list_first_entry(&sk->skb_list, struct sk_buff_t, list);
 
 	/* get IP header */
 	skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
@@ -87,7 +87,7 @@ int raw_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 /*
  * Send a raw message.
  */
-int raw_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
+static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
 {
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff_t *skb;
@@ -114,11 +114,11 @@ int raw_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 
 	/* build ethernet header */
 	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
-	ethernet_build_header(skb->eth_header, sock->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	ethernet_build_header(skb->eth_header, sk->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0, IPV4_DEFAULT_TTL, sock->protocol, sock->dev->ip_addr, dest_ip);
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0, IPV4_DEFAULT_TTL, sk->protocol, sk->dev->ip_addr, dest_ip);
 
 	/* copy ip message */
 	buf = (struct ip_header_t *) skb_put(skb, len);
@@ -128,17 +128,16 @@ int raw_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
 	}
 
 	/* send message */
-	net_transmit(sock->dev, skb);
+	net_transmit(sk->dev, skb);
 
 	return len;
 }
 
 /*
- * Raw protocol operations.
+ * Raw protocol.
  */
-struct prot_ops raw_prot_ops = {
+struct proto_t raw_proto = {
 	.handle		= raw_handle,
 	.recvmsg	= raw_recvmsg,
 	.sendmsg	= raw_sendmsg,
 };
-

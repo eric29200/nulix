@@ -1,7 +1,7 @@
 #ifndef _ETHERNET_H_
 #define _ETHERNET_H_
 
-#include <net/sk_buff.h>
+#include <net/inet/sk_buff.h>
 
 #define ETHERNET_TYPE_ARP	0x0806
 #define ETHERNET_TYPE_IP	0x0800

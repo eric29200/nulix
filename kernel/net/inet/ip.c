@@ -1,6 +1,5 @@
-#include <net/ip.h>
-#include <net/net.h>
-#include <net/socket.h>
+#include <net/inet/ip.h>
+#include <net/inet/net.h>
 #include <string.h>
 
 /*

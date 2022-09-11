@@ -1,7 +1,7 @@
 #ifndef _ICMP_H_
 #define _ICMP_H_
 
-#include <net/sk_buff.h>
+#include <net/inet/sk_buff.h>
 
 #define ICMP_TYPE_ECHO		0x08
 

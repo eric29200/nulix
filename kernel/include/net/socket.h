@@ -1,9 +1,6 @@
 #ifndef _SOCKET_H_
 #define _SOCKET_H_
 
-#include <net/net.h>
-#include <lib/list.h>
-#include <uio.h>
 #include <stddef.h>
 
 #define NR_SOCKETS		32
@@ -27,16 +24,6 @@
 struct sockaddr {
 	uint16_t		sa_family;
 	char			sa_data[14];
-};
-
-/*
- * Inet socker address.
- */
-struct sockaddr_in {
-	uint16_t		sin_family;
-	uint16_t		sin_port;
-	uint32_t		sin_addr;
-	uint8_t		 	sin_pad[8];
 };
 
 /*
@@ -68,39 +55,34 @@ typedef enum {
  * Socket structure.
  */
 struct socket_t {
-	struct net_device_t *	dev;
-	socket_state_t		state;
 	uint16_t		family;
-	uint16_t		protocol;
-	uint16_t		type;
-	struct inode_t *	inode;
-	struct sockaddr_in	src_sin;
-	struct sockaddr_in	dst_sin;
+	socket_state_t		state;
 	struct prot_ops *	ops;
 	int			waiting_chan;
-	uint32_t		seq_no;
-	uint32_t		ack_no;
-	off_t			msg_position;
-	struct list_head_t	skb_list;
+	struct inode_t *	inode;
+	void *			data;
 };
 
 /*
  * Protocol operations.
  */
 struct prot_ops {
-	int (*handle)(struct socket_t *, struct sk_buff_t *);
-	int (*recvmsg)(struct socket_t *, struct msghdr_t *, int);
-	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int);
-	int (*connect)(struct socket_t *);
-	int (*accept)(struct socket_t *, struct socket_t *);
+	int (*create)(struct socket_t *, int, int);
+	int (*dup)(struct socket_t *, struct socket_t *);
+	int (*release)(struct socket_t *);
 	int (*close)(struct socket_t *);
+	int (*poll)(struct socket_t *);
+	int (*recvmsg)(struct socket_t *, struct msghdr_t *, int flags);
+	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int flags);
+	int (*bind)(struct socket_t *, const struct sockaddr *addr);
+	int (*accept)(struct socket_t *, struct socket_t *, struct sockaddr *);
+	int (*connect)(struct socket_t *, const struct sockaddr *addr);
+	int (*getpeername)(struct socket_t *, struct sockaddr *, size_t *);
+	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
 };
 
-/* protocol operations */
-extern struct prot_ops tcp_prot_ops;
-extern struct prot_ops udp_prot_ops;
-extern struct prot_ops icmp_prot_ops;
-extern struct prot_ops raw_prot_ops;
+/* protocole operations */
+extern struct prot_ops inet_ops;
 
 /* socket system calls */
 int do_socket(int domain, int type, int protocol);

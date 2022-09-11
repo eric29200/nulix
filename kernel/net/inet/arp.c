@@ -1,9 +1,9 @@
-#include <net/arp.h>
-#include <net/net.h>
-#include <net/ethernet.h>
+#include <net/inet/arp.h>
+#include <net/inet/net.h>
+#include <net/inet/ethernet.h>
 #include <proc/sched.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 /* ARP table (relation between MAC/IP addresses) */
 static struct arp_table_entry_t arp_table[ARP_TABLE_SIZE];
@@ -81,24 +81,6 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr,
 	}
 
 	return NULL;
-}
-
-/*
- * Print an ARP entry.
- */
-void arp_entry_print(struct arp_table_entry_t *arp_entry)
-{
-	printf("ARP entry added : %x:%x:%x:%x:%x:%x -> %d.%d.%d.%d\n",
-	       arp_entry->mac_addr[0],
-	       arp_entry->mac_addr[1],
-	       arp_entry->mac_addr[2],
-	       arp_entry->mac_addr[3],
-	       arp_entry->mac_addr[4],
-	       arp_entry->mac_addr[5],
-	       arp_entry->ip_addr[0],
-	       arp_entry->ip_addr[1],
-	       arp_entry->ip_addr[2],
-	       arp_entry->ip_addr[3]);
 }
 
 /*

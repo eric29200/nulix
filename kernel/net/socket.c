@@ -1,25 +1,16 @@
 #include <net/socket.h>
-#include <drivers/rtl8139.h>
-#include <net/ip.h>
-#include <proc/sched.h>
 #include <fs/fs.h>
+#include <proc/sched.h>
 #include <sys/syscall.h>
-#include <time.h>
+#include <uio.h>
 #include <stderr.h>
+#include <string.h>
 
 /* sockets table and free port index */
 struct socket_t sockets[NR_SOCKETS];
-static uint16_t next_port = IP_START_DYN_PORT;
 
-/*
- * Get next free port.
- */
-static uint16_t get_next_free_port()
-{
-	uint16_t port = next_port;
-	next_port++;
-	return port;
-}
+/* socket file operations */
+struct file_operations_t socket_fops;
 
 /*
  * Allocate a socket.
@@ -55,150 +46,18 @@ static struct socket_t *sock_alloc()
  */
 static void sock_release(struct socket_t *sock)
 {
-	struct list_head_t *pos, *n;
-	struct sk_buff_t *skb;
-
-	/* free all remaining buffers */
-	list_for_each_safe(pos, n, &sock->skb_list) {
-		skb = list_entry(pos, struct sk_buff_t, list);
-		list_del(&skb->list);
-		skb_free(skb);
-	}
+	/* release socket */
+	if (sock->ops && sock->ops->release)
+		sock->ops->release(sock);
 
 	/* mark socket free */
 	sock->state = SS_FREE;
 }
 
 /*
- * Find socket on an inode.
- */
-static struct socket_t *sock_lookup(struct inode_t *inode)
-{
-	int i;
-
-	for (i = 0; i < NR_SOCKETS; i++)
-		if (sockets[i].inode == inode)
-			return &sockets[i];
-
-	return NULL;
-}
-
-/*
- * Close a socket.
- */
-int socket_close(struct file_t *filp)
-{
-	struct socket_t *sock;
-	int ret = 0;
-
-	/* get socket */
-	sock = sock_lookup(filp->f_inode);
-	if (!sock)
-		return -EINVAL;
-
-	/* close protocol operation */
-	if (sock->ops && sock->ops->close)
-		sock->ops->close(sock);
-
-	/* free socket */
-	sock_release(sock);
-
-	return ret;
-}
-
-/*
- * Poll on a socket.
- */
-int socket_poll(struct file_t *filp)
-{
-	struct socket_t *sock;
-	int mask = 0;
-
-	/* get socket */
-	sock = sock_lookup(filp->f_inode);
-	if (!sock)
-		return -EINVAL;
-
-	/* set waiting channel */
-	current_task->waiting_chan = &sock->waiting_chan;
-
-	/* check if there is a message in the queue */
-	if (!list_empty(&sock->skb_list))
-		mask |= POLLIN;
-
-	return mask;
-}
-
-/*
- * Socket read.
- */
-int socket_read(struct file_t *filp, char *buf, int len)
-{
-	struct socket_t *sock;
-	struct msghdr_t msg;
-	struct iovec_t iov;
-
-	/* get socket */
-	sock = sock_lookup(filp->f_inode);
-	if (!sock)
-		return -EINVAL;
-
-	/* receive message not implemented */
-	if (!sock->ops || !sock->ops->recvmsg)
-		return -EINVAL;
-
-	/* build message */
-	memset(&msg, 0, sizeof(struct msghdr_t));
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	iov.iov_base = buf;
-	iov.iov_len = len;
-
-	return sock->ops->recvmsg(sock, &msg, 0);
-}
-
-/*
- * Socket write.
- */
-int socket_write(struct file_t *filp, const char *buf, int len)
-{
-	struct socket_t *sock;
-	struct msghdr_t msg;
-	struct iovec_t iov;
-
-	/* get socket */
-	sock = sock_lookup(filp->f_inode);
-	if (!sock)
-		return -EINVAL;
-
-	/* send message not implemented */
-	if (!sock->ops || !sock->ops->sendmsg)
-		return -EINVAL;
-
-	/* build message */
-	memset(&msg, 0, sizeof(struct msghdr_t));
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	iov.iov_base = (char *) buf;
-	iov.iov_len = len;
-
-	return sock->ops->sendmsg(sock, &msg, 0);
-}
-
-/*
- * Socket file operations.
- */
-struct file_operations_t socket_fops = {
-	.read		= socket_read,
-	.write		= socket_write,
-	.poll		= socket_poll,
-	.close		= socket_close,
-};
-
-/*
  * Create a socket.
  */
-int do_socket(int domain, int type, int protocol)
+static int sock_create(int domain)
 {
 	struct prot_ops *sock_ops;
 	struct socket_t *sock;
@@ -206,43 +65,12 @@ int do_socket(int domain, int type, int protocol)
 	int fd;
 
 	/* only internet sockets */
-	if (domain != AF_INET)
-		return -EINVAL;
-
-	/* choose socket type */
-	switch (type) {
-		case SOCK_STREAM:
-			switch (protocol) {
-				case 0:
-				case IP_PROTO_TCP:
-					protocol = IP_PROTO_TCP;
-					sock_ops = &tcp_prot_ops;
-					break;
-				default:
-					return -EINVAL;
-			}
-
-			break;
-		case SOCK_DGRAM:
-			switch (protocol) {
-				case 0:
-				case IP_PROTO_UDP:
-					protocol = IP_PROTO_UDP;
-					sock_ops = &udp_prot_ops;
-					break;
-				case IP_PROTO_ICMP:
-					sock_ops = &icmp_prot_ops;
-					break;
-				default:
-					return -EINVAL;
-			}
-
-			break;
-		case SOCK_RAW:
-			sock_ops = &raw_prot_ops;
+	switch (domain) {
+		case AF_INET:
+			sock_ops = &inet_ops;
 			break;
 		default:
-			return -EINVAL;
+			return -EMFILE;
 	}
 
 	/* allocate a socket */
@@ -251,13 +79,9 @@ int do_socket(int domain, int type, int protocol)
 		return -EMFILE;
 
 	/* set socket */
-	sock->dev = rtl8139_get_net_device();
 	sock->state = SS_UNCONNECTED;
 	sock->family = domain;
-	sock->type = type;
-	sock->protocol = protocol;
 	sock->ops = sock_ops;
-	INIT_LIST_HEAD(&sock->skb_list);
 
 	/* get a new empty file */
 	filp = get_empty_filp();
@@ -291,13 +115,175 @@ int do_socket(int domain, int type, int protocol)
 }
 
 /*
+ * Find socket on an inode.
+ */
+static struct socket_t *sock_lookup(struct inode_t *inode)
+{
+	int i;
+
+	for (i = 0; i < NR_SOCKETS; i++)
+		if (sockets[i].inode == inode)
+			return &sockets[i];
+
+	return NULL;
+}
+
+/*
+ * Close a socket.
+ */
+static int sock_close(struct file_t *filp)
+{
+	struct socket_t *sock;
+	int ret = 0;
+
+	/* get socket */
+	sock = sock_lookup(filp->f_inode);
+	if (!sock)
+		return -EINVAL;
+
+	/* close protocol operation */
+	if (sock->ops && sock->ops->close)
+		ret = sock->ops->close(sock);
+
+	/* free socket */
+	sock_release(sock);
+
+	return ret;
+}
+
+/*
+ * Poll on a socket.
+ */
+static int sock_poll(struct file_t *filp)
+{
+	struct socket_t *sock;
+	int mask = 0;
+
+	/* get socket */
+	sock = sock_lookup(filp->f_inode);
+	if (!sock)
+		return -EINVAL;
+
+	/* set waiting channel */
+	current_task->waiting_chan = &sock->waiting_chan;
+
+	/* check if there is a message in the queue */
+	if (sock->ops && sock->ops->poll)
+		mask = sock->ops->poll(sock);
+
+	return mask;
+}
+
+/*
+ * Socket read.
+ */
+static int sock_read(struct file_t *filp, char *buf, int len)
+{
+	struct socket_t *sock;
+	struct msghdr_t msg;
+	struct iovec_t iov;
+
+	/* get socket */
+	sock = sock_lookup(filp->f_inode);
+	if (!sock)
+		return -EINVAL;
+
+	/* receive message not implemented */
+	if (!sock->ops || !sock->ops->recvmsg)
+		return -EINVAL;
+
+	/* build message */
+	memset(&msg, 0, sizeof(struct msghdr_t));
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	iov.iov_base = buf;
+	iov.iov_len = len;
+
+	return sock->ops->recvmsg(sock, &msg, 0);
+}
+
+/*
+ * Socket write.
+ */
+static int sock_write(struct file_t *filp, const char *buf, int len)
+{
+	struct socket_t *sock;
+	struct msghdr_t msg;
+	struct iovec_t iov;
+
+	/* get socket */
+	sock = sock_lookup(filp->f_inode);
+	if (!sock)
+		return -EINVAL;
+
+	/* send message not implemented */
+	if (!sock->ops || !sock->ops->sendmsg)
+		return -EINVAL;
+
+	/* build message */
+	memset(&msg, 0, sizeof(struct msghdr_t));
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	iov.iov_base = (char *) buf;
+	iov.iov_len = len;
+
+	return sock->ops->sendmsg(sock, &msg, 0);
+}
+
+/*
+ * Socket file operations.
+ */
+struct file_operations_t socket_fops = {
+	.read		= sock_read,
+	.write		= sock_write,
+	.poll		= sock_poll,
+	.close		= sock_close,
+};
+
+/*
+ * Create a socket.
+ */
+int do_socket(int domain, int type, int protocol)
+{
+	struct socket_t *sock;
+	int sockfd, ret;
+
+	/* create a new socket */
+	sockfd = sock_create(domain);
+	if (sockfd < 0)
+		return sockfd;
+
+	/* check socket file descriptor */
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+		return -EBADF;
+
+	/* find socket */
+	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	if (!sock)
+		return -EINVAL;
+
+	/* create not implemented */
+	if (!sock->ops || !sock->ops->create) {
+		sock_release(sock);
+		return -EINVAL;
+	}
+
+	/* create socket */
+	ret = sock->ops->create(sock, type, protocol);
+	if (ret) {
+		sock_release(sock);
+		return ret;
+	}
+
+	return sockfd;
+}
+
+/*
  * Bind system call (attach an address to a socket).
  */
 int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
-	struct sockaddr_in *src_sin;
 	struct socket_t *sock;
-	int i;
 
 	/* unused addrlen */
 	UNUSED(addrlen);
@@ -311,28 +297,11 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	if (!sock)
 		return -EINVAL;
 
-	/* get internet address */
-	src_sin = (struct sockaddr_in *) addr;
+	/* bind not implemented */
+	if (!sock->ops || !sock->ops->bind)
+		return -EINVAL;
 
-	/* check if asked port is already mapped */
-	for (i = 0; i < NR_SOCKETS; i++) {
-		/* different protocol : skip */
-		if (!sockets[i].state || sockets[i].protocol != sock->protocol)
-			continue;
-
-		/* already mapped */
-		if (src_sin->sin_port && src_sin->sin_port == sockets[i].src_sin.sin_port)
-			return -ENOSPC;
-	}
-
-	/* allocate a dynamic port */
-	if (!src_sin->sin_port)
-		src_sin->sin_port = htons(get_next_free_port());
-
-	/* copy address */
-	memcpy(&sock->src_sin, src_sin, sizeof(struct sockaddr));
-
-	return 0;
+	return sock->ops->bind(sock, addr);
 }
 
 /*
@@ -354,17 +323,11 @@ int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	if (!sock)
 		return -EINVAL;
 
-	/* allocate a dynamic port */
-	sock->src_sin.sin_port = htons(get_next_free_port());
-
-	/* copy address */
-	memcpy(&sock->dst_sin, addr, sizeof(struct sockaddr));
-
 	/* connect not implemented */
 	if (!sock->ops || !sock->ops->connect)
 		return -EINVAL;
 
-	return sock->ops->connect(sock);
+	return sock->ops->connect(sock, addr);
 }
 
 /*
@@ -412,15 +375,26 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 	if (!sock)
 		return -EINVAL;
 
-	/* create a new socket */
-	new_sockfd = do_socket(sock->family, sock->type, sock->protocol);
+	/* create new socket */
+	new_sockfd = sock_create(sock->family);
 	if (new_sockfd < 0)
 		return new_sockfd;
 
-	/* get new socket */
+	/* check socket file descriptor */
+	if (new_sockfd < 0 || new_sockfd >= NR_OPEN || current_task->filp[new_sockfd] == NULL)
+		return -EBADF;
+
+	/* find socket */
 	new_sock = sock_lookup(current_task->filp[new_sockfd]->f_inode);
 	if (!new_sock)
 		return -EINVAL;
+
+	/* duplicate socket */
+	ret = sock->ops->dup(sock, new_sock);
+	if (ret) {
+		sys_close(new_sockfd);
+		return ret;
+	}
 
 	/* accept not implemented */
 	if (!new_sock->ops || !new_sock->ops->accept) {
@@ -429,15 +403,11 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 	}
 
 	/* call accept protocol */
-	ret = new_sock->ops->accept(sock, new_sock);
+	ret = new_sock->ops->accept(sock, new_sock, addr);
 	if (ret < 0) {
 		sys_close(new_sockfd);
 		return ret;
 	}
-
-	/* set accepted address */
-	if (addr)
-		memcpy(addr, &new_sock->dst_sin, sizeof(struct sockaddr));
 
 	return new_sockfd;
 }
@@ -553,11 +523,7 @@ int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
  */
 int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
-	struct sockaddr_in *sin;
 	struct socket_t *sock;
-
-	/* unused address length */
-	UNUSED(addrlen);
 
 	/* check socket file descriptor */
 	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
@@ -568,15 +534,11 @@ int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	if (!sock)
 		return -EINVAL;
 
-	/* copy destination address */
-	memset(addr, 0, sizeof(struct sockaddr));
-	sin = (struct sockaddr_in *) addr;
-	sin->sin_family = AF_INET;
-	sin->sin_port = sock->dst_sin.sin_port;
-	sin->sin_addr = sock->dst_sin.sin_addr;
-	*addrlen = sizeof(struct sockaddr_in);
+	/* getpeername not implemented */
+	if (!sock->ops || !sock->ops->getpeername)
+		return -EINVAL;
 
-	return 0;
+	return sock->ops->getpeername(sock, addr, addrlen);
 }
 
 /*
@@ -584,11 +546,7 @@ int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
  */
 int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
-	struct sockaddr_in *sin;
 	struct socket_t *sock;
-
-	/* unused address length */
-	UNUSED(addrlen);
 
 	/* check socket file descriptor */
 	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
@@ -599,14 +557,10 @@ int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	if (!sock)
 		return -EINVAL;
 
-	/* copy destination address */
-	memset(addr, 0, sizeof(struct sockaddr));
-	sin = (struct sockaddr_in *) addr;
-	sin->sin_family = AF_INET;
-	sin->sin_port = sock->src_sin.sin_port;
-	sin->sin_addr = sock->src_sin.sin_addr;
-	*addrlen = sizeof(struct sockaddr_in);
+	/* getsockname not implemented */
+	if (!sock->ops || !sock->ops->getsockname)
+		return -EINVAL;
 
-	return 0;
+	return sock->ops->getsockname(sock, addr, addrlen);
 }
 

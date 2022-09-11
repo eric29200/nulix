@@ -1,7 +1,7 @@
 #ifndef _NET_H_
 #define _NET_H_
 
-#include <net/sk_buff.h>
+#include <net/inet/sk_buff.h>
 
 #define NR_NET_DEVICES			4
 #define NET_HANDLE_FREQ_MS		10

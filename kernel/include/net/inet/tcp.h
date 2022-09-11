@@ -1,9 +1,9 @@
 #ifndef _TCP_H_
 #define _TCP_H_
 
-#include <net/ip.h>
-#include <net/net.h>
-#include <net/sk_buff.h>
+#include <net/inet/sk_buff.h>
+#include <net/inet/ip.h>
+#include <net/inet/net.h>
 #include <stddef.h>
 
 #define TCPCB_FLAG_FIN		0x01
