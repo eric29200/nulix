@@ -3,7 +3,7 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <net/inet/net.h>
-#include <net/inet/sk_buff.h>
+#include <net/sk_buff.h>
 #include <mm/mm.h>
 #include <stderr.h>
 #include <string.h>

@@ -38,6 +38,7 @@
 #define ENOSYS		35	/* Not implemented */
 #define ENAMETOOLONG	36	/* File name too long */
 #define ENOTCONN	107	/* Transport endpoint is not connected */
+#define ECONNREFUSED	111	/* Connection refused */
 #define ERESTARTSYS	512	/* Restart system call */
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef _IP_H_
 #define _IP_H_
 
-#include <net/inet/sk_buff.h>
+#include <net/sk_buff.h>
 
 #define IP_PROTO_IP			0x00
 #define IP_PROTO_ICMP			0x01

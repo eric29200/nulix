@@ -1,6 +1,7 @@
 #ifndef _SK_BUFF_H_
 #define _SK_BUFF_H_
 
+#include <net/socket.h>
 #include <lib/list.h>
 #include <stddef.h>
 
@@ -25,6 +26,7 @@ struct sk_buff_t {
 	uint8_t *			data;
 	uint8_t *			tail;
 	uint8_t *			end;
+	struct socket_t *		sock;
 	struct list_head_t		list;
 };
 

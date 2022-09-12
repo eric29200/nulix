@@ -22,13 +22,13 @@ static uint16_t get_next_free_port()
 /*
  * Create a socket.
  */
-static int inet_create(struct socket_t *sock, int type, int protocol)
+static int inet_create(struct socket_t *sock, int protocol)
 {
 	struct proto_t *prot = NULL;
 	struct sock_t *sk;
 
 	/* choose socket type */
-	switch (type) {
+	switch (sock->type) {
 		case SOCK_STREAM:
 			switch (protocol) {
 				case 0:
@@ -72,7 +72,6 @@ static int inet_create(struct socket_t *sock, int type, int protocol)
 	memset(sk, 0, sizeof(struct sock_t));
 	sk->dev = rtl8139_get_net_device();
 	sk->protocol = protocol;
-	sk->type = type;
 	sk->sock = sock;
 	sk->prot = prot;
 	INIT_LIST_HEAD(&sk->skb_list);
@@ -92,7 +91,7 @@ static int inet_dup(struct socket_t *sock, struct socket_t *sock_new)
 	if (!sk)
 		return 0;
 
-	return inet_create(sock_new, sk->type, sk->protocol);
+	return inet_create(sock_new, sk->protocol);
 }
 
 /*
@@ -202,11 +201,14 @@ static int inet_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int f
 /*
  * Bind system call (attach an address to a socket).
  */
-static int inet_bind(struct socket_t *sock, const struct sockaddr *addr)
+static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_in *src_sin;
 	struct sock_t *sk, *sk_tmp;
 	int i;
+
+	/* unused address length */
+	UNUSED(addrlen);
 
 	/* get inet socket */
 	sk = (struct sock_t *) sock->data;

@@ -6,7 +6,7 @@
 #include <stderr.h>
 #include <string.h>
 
-/* sockets table and free port index */
+/* sockets table */
 struct socket_t sockets[NR_SOCKETS];
 
 /* socket file operations */
@@ -57,7 +57,7 @@ static void sock_release(struct socket_t *sock)
 /*
  * Create a socket.
  */
-static int sock_create(int domain)
+static int sock_create(int domain, int type)
 {
 	struct prot_ops *sock_ops;
 	struct socket_t *sock;
@@ -69,8 +69,11 @@ static int sock_create(int domain)
 		case AF_INET:
 			sock_ops = &inet_ops;
 			break;
+		case AF_UNIX:
+			sock_ops = &unix_ops;
+			break;
 		default:
-			return -EMFILE;
+			return -EINVAL;
 	}
 
 	/* allocate a socket */
@@ -81,6 +84,7 @@ static int sock_create(int domain)
 	/* set socket */
 	sock->state = SS_UNCONNECTED;
 	sock->family = domain;
+	sock->type = type;
 	sock->ops = sock_ops;
 
 	/* get a new empty file */
@@ -249,7 +253,7 @@ int do_socket(int domain, int type, int protocol)
 	int sockfd, ret;
 
 	/* create a new socket */
-	sockfd = sock_create(domain);
+	sockfd = sock_create(domain, type);
 	if (sockfd < 0)
 		return sockfd;
 
@@ -269,7 +273,7 @@ int do_socket(int domain, int type, int protocol)
 	}
 
 	/* create socket */
-	ret = sock->ops->create(sock, type, protocol);
+	ret = sock->ops->create(sock, protocol);
 	if (ret) {
 		sock_release(sock);
 		return ret;
@@ -285,9 +289,6 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock;
 
-	/* unused addrlen */
-	UNUSED(addrlen);
-
 	/* check socket file descriptor */
 	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
 		return -EBADF;
@@ -301,7 +302,7 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	if (!sock->ops || !sock->ops->bind)
 		return -EINVAL;
 
-	return sock->ops->bind(sock, addr);
+	return sock->ops->bind(sock, addr, addrlen);
 }
 
 /*
@@ -376,7 +377,7 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 		return -EINVAL;
 
 	/* create new socket */
-	new_sockfd = sock_create(sock->family);
+	new_sockfd = sock_create(sock->family, sock->type);
 	if (new_sockfd < 0)
 		return new_sockfd;
 

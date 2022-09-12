@@ -1,4 +1,4 @@
-#include <net/inet/sk_buff.h>
+#include <net/sk_buff.h>
 #include <mm/mm.h>
 #include <string.h>
 

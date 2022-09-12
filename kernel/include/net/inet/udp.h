@@ -1,7 +1,7 @@
 #ifndef _UDP_H_
 #define _UDP_H_
 
-#include <net/inet/sk_buff.h>
+#include <net/sk_buff.h>
 
 /*
  * UDP header.

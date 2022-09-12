@@ -1,7 +1,7 @@
 #ifndef _ARP_H_
 #define _ARP_H_
 
-#include <net/inet/sk_buff.h>
+#include <net/sk_buff.h>
 
 #define ARP_REQUEST		1
 #define ARP_REPLY		2

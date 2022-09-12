@@ -1,7 +1,7 @@
 #ifndef _SOCK_H_
 #define _SOCK_H_
 
-#include <net/inet/sk_buff.h>
+#include <net/sk_buff.h>
 #include <net/socket.h>
 
 /*
@@ -20,7 +20,6 @@ struct sockaddr_in {
 struct sock_t {
 	struct net_device_t *	dev;
 	uint16_t		protocol;
-	uint16_t		type;
 	struct sockaddr_in	src_sin;
 	struct sockaddr_in	dst_sin;
 	uint32_t		seq_no;

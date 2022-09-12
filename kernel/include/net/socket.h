@@ -56,6 +56,7 @@ typedef enum {
  */
 struct socket_t {
 	uint16_t		family;
+	uint16_t		type;
 	socket_state_t		state;
 	struct prot_ops *	ops;
 	int			waiting_chan;
@@ -67,22 +68,23 @@ struct socket_t {
  * Protocol operations.
  */
 struct prot_ops {
-	int (*create)(struct socket_t *, int, int);
+	int (*create)(struct socket_t *, int);
 	int (*dup)(struct socket_t *, struct socket_t *);
 	int (*release)(struct socket_t *);
 	int (*close)(struct socket_t *);
 	int (*poll)(struct socket_t *);
 	int (*recvmsg)(struct socket_t *, struct msghdr_t *, int flags);
 	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int flags);
-	int (*bind)(struct socket_t *, const struct sockaddr *addr);
+	int (*bind)(struct socket_t *, const struct sockaddr *, size_t);
 	int (*accept)(struct socket_t *, struct socket_t *, struct sockaddr *);
-	int (*connect)(struct socket_t *, const struct sockaddr *addr);
+	int (*connect)(struct socket_t *, const struct sockaddr *);
 	int (*getpeername)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
 };
 
 /* protocole operations */
 extern struct prot_ops inet_ops;
+extern struct prot_ops unix_ops;
 
 /* socket system calls */
 int do_socket(int domain, int type, int protocol);

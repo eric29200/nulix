@@ -1,4 +1,4 @@
-#include <net/inet/sk_buff.h>
+#include <net/sk_buff.h>
 #include <net/inet/sock.h>
 #include <net/inet/net.h>
 #include <net/inet/ethernet.h>
