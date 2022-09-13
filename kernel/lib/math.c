@@ -1,47 +1,60 @@
+#include <proc/sched.h>
 #include <math.h>
 
-static uint32_t rseed = 1;
+#define MAX(a, b)		((a) >= (b) ? (a) : (b))
+
+static int rand_initialized = 0;
+static uint32_t z[4];
 
 /*
- * Generate a random number.
+ * Init random.
  */
-static uint32_t rand_r(uint32_t *seed)
+static int random_init(const unsigned char *seed, size_t seed_siz)
 {
-	uint32_t next = *seed;
-	int result;
+	unsigned char *dst = (unsigned char *) z;
+	size_t i, j, k;
 
-	next *= 1103515245;
-	next += 12345;
-	result = (uint32_t) (next / 65536) % 2048;
+	if (seed_siz == 0)
+		return -1;
 
-	next *= 1103515245;
-	next += 12345;
-	result <<= 10;
-	result ^= (uint32_t) (next / 65536) % 2048;
+	for (i = 0, j = 0, k = 0; k < MAX(sizeof(z), seed_siz); k++) {
+		dst[i] ^= seed[j];
+		i++;
 
-	next *= 1103515245;
-	next += 12345;
-	result <<= 10;
-	result ^= (uint32_t) (next / 65536) % 2048;
+		if (i >= sizeof(z))
+	    		i = 0;
 
-	*seed = next;
+		j++;
+		if (j >= seed_siz)
+	    		j = 0;
+	}
 
-	return result;
+	rand_initialized = 1;
+	return 0;
 }
 
 /*
- * Generate a random number.
+ * Get a random number.
  */
 uint32_t rand()
 {
-	return rand_r(&rseed);
-}
+	uint32_t r;
 
-/*
- * Generate a random number.
- */
-uint32_t srand(uint32_t seed)
-{
-	rseed = seed;
-	return rand_r(&rseed);
+	/* init random */
+	if (rand_initialized == 0)
+		if (random_init((const unsigned char *) &jiffies, sizeof(jiffies)) < 0)
+			return -1;
+
+	/* generate random number */
+	r = ((z[0] << 6) ^ z[0]) >> 13;
+	z[0] = ((z[0] & 4294967294UL) << 18) ^ r;
+	r = ((z[1] << 2) ^ z[1]) >> 27;
+	z[1] = ((z[1] & 4294967288UL) << 2) ^ r;
+	r = ((z[2] << 13) ^ z[2]) >> 21;
+	z[2] = ((z[2] & 4294967280UL) << 7) ^ r;
+	r = ((z[3] << 3) ^ z[3]) >> 12;
+	z[3] = ((z[3] & 4294967168UL) << 13) ^ r;
+	r = z[0] ^ z[1] ^ z[2] ^ z[3];
+
+	return r;
 }
