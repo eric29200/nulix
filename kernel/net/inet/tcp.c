@@ -182,6 +182,28 @@ static int tcp_reply_ack(struct sock_t *sk, struct sk_buff_t *skb, uint16_t flag
 }
 
 /*
+ * Reset a TCP connection.
+ */
+static int tcp_reset(struct sock_t *sk, uint32_t seq_no)
+{
+	struct sk_buff_t *skb;
+
+	/* set sequence number */
+	sk->seq_no = ntohl(seq_no);
+	sk->ack_no = 0;
+
+	/* create a RST packet */
+	skb = tcp_create_skb(sk, TCPCB_FLAG_RST, NULL, 0);
+	if (!skb)
+		return -EINVAL;
+
+	/* transmit SYN message */
+	net_transmit(sk->dev, skb);
+
+	return 0;
+}
+
+/*
  * Handle a TCP packet.
  */
 static int tcp_handle(struct sock_t *sk, struct sk_buff_t *skb)
@@ -231,8 +253,14 @@ static int tcp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 			break;
 		case SS_CONNECTING:
 			/* find SYN | ACK message */
-			if (skb->h.tcp_header->syn && skb->h.tcp_header->ack)
+			if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
 				sk->sock->state = SS_CONNECTED;
+				goto out;
+			}
+
+			/* else reset TCP connection and release socket */
+			tcp_reset(sk, skb->h.tcp_header->ack_seq);
+			sk->sock->state = SS_DEAD;
 
 			break;
 		case SS_CONNECTED:
@@ -256,6 +284,7 @@ static int tcp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 			break;
 	}
 
+out:
 	/* wake up eventual processes */
 	task_wakeup(&sk->sock->waiting_chan);
 
@@ -277,6 +306,10 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 
 	/* sleep until we receive a packet */
 	for (;;) {
+		/* dead socket */
+		if (sk->sock->state == SS_DEAD)
+			return -ENOTCONN;
+
 		/* signal received : restart system call */
 		if (!sigisemptyset(&current_task->sigpend))
 			return -ERESTARTSYS;
@@ -346,6 +379,10 @@ static int tcp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
 
 	/* sleep until connected */
 	for (;;) {
+		/* dead socket */
+		if (sk->sock->state == SS_DEAD)
+			return -ENOTCONN;
+
 		/* signal received : restart system call */
 		if (!sigisemptyset(&current_task->sigpend))
 			return -ERESTARTSYS;
@@ -381,7 +418,7 @@ static int tcp_connect(struct sock_t *sk)
 	struct sk_buff_t *skb;
 
 	/* generate sequence */
-	sk->seq_no = rand();
+	sk->seq_no = ntohl(rand());
 	sk->ack_no = 0;
 
 	/* create SYN message */
@@ -432,7 +469,7 @@ static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 			sk_new->dst_sin.sin_family = AF_INET;
 			sk_new->dst_sin.sin_port = skb->h.tcp_header->src_port;
 			sk_new->dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
-			sk_new->seq_no = 1;
+			sk_new->seq_no = ntohl(1);
 			sk_new->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
 
 			/* free socket buffer */

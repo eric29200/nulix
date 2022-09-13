@@ -48,7 +48,8 @@ typedef enum {
 	SS_LISTENING,
 	SS_CONNECTING,
 	SS_CONNECTED,
-	SS_DISCONNECTING
+	SS_DISCONNECTING,
+	SS_DEAD
 } socket_state_t;
 
 /*
