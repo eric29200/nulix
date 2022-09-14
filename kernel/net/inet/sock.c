@@ -238,6 +238,10 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 			return -ENOSPC;
 	}
 
+	/* set default address */
+	if (!src_sin->sin_addr)
+		src_sin->sin_addr = inet_iton(sk->dev->ip_addr);
+
 	/* allocate a dynamic port */
 	if (!src_sin->sin_port)
 		src_sin->sin_port = htons(get_next_free_port());
