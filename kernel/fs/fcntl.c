@@ -96,16 +96,16 @@ int do_fcntl(int fd, int cmd, unsigned long arg)
 			ret = dup_after(fd, arg);
 			break;
 		case F_GETFD:
-			ret = filp->f_flags;
-			break;
-		case F_SETFD:
-			filp->f_flags = arg;
-			break;
-		case F_GETFL:
 			ret = filp->f_mode;
 			break;
+		case F_SETFD:
+			filp->f_mode = arg;
+			break;
+		case F_GETFL:
+			ret = filp->f_flags;
+			break;
 		case F_SETFL:
-			filp->f_mode = ret;
+			filp->f_flags = arg;
 			break;
 		default:
 			printf("unknown fcntl command %d\n", cmd);
