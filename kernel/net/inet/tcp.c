@@ -248,7 +248,8 @@ static int tcp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 				return -ENOMEM;
 
 			/* add buffer to socket */
-			list_add_tail(&skb_new->list, &sk->skb_list);
+			if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin)
+				list_add_tail(&skb_new->list, &sk->skb_list);
 
 			break;
 		case SS_CONNECTING:
@@ -440,7 +441,7 @@ static int tcp_connect(struct sock_t *sk)
  */
 static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 {
-	struct list_head_t *pos;
+	struct list_head_t *pos, *n;
 	struct sk_buff_t *skb;
 
 	for (;;) {
@@ -475,6 +476,21 @@ static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 			/* free socket buffer */
 			list_del(&skb->list);
 			skb_free(skb);
+
+			/* move buffers to new socket */
+			list_for_each_safe(pos, n, &sk->skb_list) {
+				/* decode socket buffer */
+				skb = list_entry(pos, struct sk_buff_t, list);
+				skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+				skb->h.tcp_header = (struct tcp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
+
+				/* move socket buffer */
+				if (sk_new->dst_sin.sin_port == skb->h.tcp_header->src_port
+				    && sk_new->dst_sin.sin_addr == inet_iton(skb->nh.ip_header->src_addr)) {
+					list_del(&skb->list);
+					list_add_tail(&skb->list, &sk_new->skb_list);
+				}
+			}
 
 			return 0;
 		}
