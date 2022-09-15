@@ -1,0 +1,14 @@
+diff -ruN musl-1.2.3/src/network/lookup_name.c musl-1.2.3-mine/src/network/lookup_name.c
+--- musl-1.2.3/src/network/lookup_name.c	2022-04-07 19:12:40.000000000 +0200
++++ musl-1.2.3-mine/src/network/lookup_name.c	2022-09-15 11:14:20.261755891 +0200
+@@ -297,6 +297,10 @@
+ {
+ 	int cnt = 0, i, j;
+ 
++	/* HACK : if family is not specified, force to IPv4 */
++	if (family == AF_UNSPEC)
++		family = AF_INET;
++
+ 	*canon = 0;
+ 	if (name) {
+ 		/* reject empty name and check len so it fits into temp bufs */
