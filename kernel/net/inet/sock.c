@@ -4,9 +4,10 @@
 #include <drivers/rtl8139.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
+#include <math.h>
 #include <stderr.h>
 
-static uint16_t next_port = IP_START_DYN_PORT;
+static uint16_t dyn_port = 0;
 extern struct socket_t sockets[NR_SOCKETS];
 
 /*
@@ -14,9 +15,15 @@ extern struct socket_t sockets[NR_SOCKETS];
  */
 static uint16_t get_next_free_port()
 {
-	uint16_t port = next_port;
-	next_port++;
-	return port;
+	/* choose first dynamic port */
+	if (!dyn_port) {
+		dyn_port = IP_START_DYN_PORT + rand() % 4096;
+		return dyn_port;
+	}
+
+	/* else get next free port */
+	dyn_port++;
+	return dyn_port;
 }
 
 /*
