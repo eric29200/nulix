@@ -13,10 +13,10 @@
  * Pipefs in memory inode.
  */
 struct pipe_inode_info_t {
-	uint32_t	i_rpos;
-	uint32_t	i_wpos;
-	char		i_rwait;
-	char		i_wwait;
+	uint32_t		i_rpos;
+	uint32_t		i_wpos;
+	struct wait_queue_t *	i_rwait;
+	struct wait_queue_t *	i_wwait;
 };
 
 #endif

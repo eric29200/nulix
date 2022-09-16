@@ -148,7 +148,7 @@ void tty_do_cook(struct tty_t *tty)
 	}
 
 	/* wake up eventual process */
-	task_wakeup(tty);
+	task_wakeup(&tty->wait);
 }
 
 /*
@@ -250,7 +250,7 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 /*
  * Poll a tty.
  */
-static int tty_poll(struct file_t *filp)
+static int tty_poll(struct file_t *filp, struct select_table_t *wait)
 {
 	struct tty_t *tty;
 	int mask = 0;
@@ -260,9 +260,6 @@ static int tty_poll(struct file_t *filp)
 	if (!tty)
 		return -EINVAL;
 
-	/* set waiting channel */
-	current_task->waiting_chan = tty;
-
 	/* check if there is some characters to read */
 	if (tty->cooked_queue.size > 0)
 		mask |= POLLIN;
@@ -270,6 +267,9 @@ static int tty_poll(struct file_t *filp)
 	/* check if there is some characters to write */
 	if (tty->write_queue.size > 0)
 		mask |= POLLIN;
+
+	/* add wait queue to select table */
+	select_wait(&tty->wait, wait);
 
 	return mask;
 }
@@ -339,6 +339,7 @@ static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer
 
 	tty->dev = DEV_TTY0 + num;
 	tty->pgrp = 0;
+	tty->wait = NULL;
 	tty->write = console_write;
 	tty_init_attr(tty);
 

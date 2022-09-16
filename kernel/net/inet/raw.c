@@ -52,7 +52,7 @@ static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 			break;
 
 		/* sleep */
-		task_sleep(&sk->sock->waiting_chan);
+		task_sleep(&sk->sock->wait);
 	}
 
 	/* get first message */

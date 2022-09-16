@@ -1,13 +1,28 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
 #include <ipc/signal.h>
+#include <mm/mm.h>
 #include <stderr.h>
 #include <time.h>
 
 /*
+ * Free a select table.
+ */
+static void free_wait(struct select_table_t *st)
+{
+	struct select_table_entry_t *entry = st->entry + st->nr;
+
+	while (st->nr > 0) {
+		st->nr--;
+		entry--;
+		remove_wait_queue(entry->wait_address, &entry->wait);
+	}
+}
+
+/*
  * Poll a list of file descriptors.
  */
-static void do_pollfd(struct pollfd_t *fds, int *count)
+static void do_pollfd(struct pollfd_t *fds, int *count, struct select_table_t *wait)
 {
 	struct file_t *filp;
 	uint32_t mask = 0;
@@ -25,7 +40,7 @@ static void do_pollfd(struct pollfd_t *fds, int *count)
 		/* call specific poll */
 		mask = POLLNVAL;
 		if (filp->f_op && filp->f_op->poll)
-			mask = filp->f_op->poll(filp);
+			mask = filp->f_op->poll(filp, wait);
 
 		/* update mask */
 		mask &= fds->events | POLLERR | POLLHUP;
@@ -44,8 +59,20 @@ static void do_pollfd(struct pollfd_t *fds, int *count)
  */
 int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 {
+	struct select_table_t wait_table, *wait;
+	struct select_table_entry_t *entry;
 	int count = 0;
 	size_t i;
+
+	/* allocate table entry */
+	entry = (struct select_table_entry_t *) kmalloc(PAGE_SIZE);
+	if (!entry)
+		return -ENOMEM;
+
+	/* set wait table */
+	wait_table.nr = 0;
+	wait_table.entry = entry;
+	wait = &wait_table;
 
 	/* set time out */
 	if (timeout > 0)
@@ -56,18 +83,24 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 	for (;;) {
 		/* poll each file */
 		for (i = 0; i < ndfs; i++)
-			do_pollfd(&fds[i], &count);
+			do_pollfd(&fds[i], &count, wait);
+		wait = NULL;
 
 		/* events catched or signal transmitted : break */
 		if (count || !sigisemptyset(&current_task->sigpend) || !timeout || jiffies >= current_task->timeout)
 			break;
 
 		/* no events sleep */
-		task_sleep(current_task->waiting_chan);
+		current_task->state = TASK_SLEEPING;
+		schedule();
 	}
 
 	/* reset timeout */
 	current_task->timeout = 0;
+
+	/* free wait table */
+	free_wait(&wait_table);
+	kfree(entry);
 
 	return count;
 }
@@ -75,7 +108,7 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 /*
  * Check events on a file.
  */
-static int __select_check(int fd, uint16_t mask)
+static int __select_check(int fd, uint16_t mask, struct select_table_t *wait)
 {
 	struct pollfd_t pollfd;
 	int count;
@@ -86,7 +119,7 @@ static int __select_check(int fd, uint16_t mask)
 	pollfd.revents = 0;
 
 	/* poll file */
-	do_pollfd(&pollfd, &count);
+	do_pollfd(&pollfd, &count, wait);
 
 	return count;
 }
@@ -97,6 +130,8 @@ static int __select_check(int fd, uint16_t mask)
 int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout)
 {
 	fd_set_t res_readfds, res_writefds, res_exceptfds;
+	struct select_table_t wait_table, *wait;
+	struct select_table_entry_t *entry;
 	int i, max = -1, count;
 	uint32_t set, j;
 
@@ -131,6 +166,16 @@ end_check:
 	nfds = max + 1;
 	count = 0;
 
+	/* allocate table entry */
+	entry = (struct select_table_entry_t *) kmalloc(PAGE_SIZE);
+	if (!entry)
+		return -ENOMEM;
+
+	/* set wait table */
+	wait_table.nr = 0;
+	wait_table.entry = entry;
+	wait = &wait_table;
+
 	/* zero results */
 	memset(&res_readfds, 0, sizeof(fd_set_t));
 	memset(&res_writefds, 0, sizeof(fd_set_t));
@@ -146,21 +191,22 @@ end_check:
 	for (;;) {
 		for (i = 0; i < nfds; i++) {
 			/* check events */
-			if (FD_ISSET(i, readfds) && __select_check(i, POLLIN)) {
+			if (FD_ISSET(i, readfds) && __select_check(i, POLLIN, wait)) {
 				FD_SET(i, &res_readfds);
 				count++;
 			}
 
-			if (FD_ISSET(i, writefds) && __select_check(i, POLLOUT)) {
+			if (FD_ISSET(i, writefds) && __select_check(i, POLLOUT, wait)) {
 				FD_SET(i, &res_writefds);
 				count++;
 			}
 
-			if (FD_ISSET(i, exceptfds) && __select_check(i, POLLIN | POLLOUT)) {
+			if (FD_ISSET(i, exceptfds) && __select_check(i, POLLIN | POLLOUT, wait)) {
 				FD_SET(i, &res_exceptfds);
 				count++;
 			}
 		}
+		wait = NULL;
 
 		/* events catched or signal transmitted : break */
 		if (count || !sigisemptyset(&current_task->sigpend))
@@ -171,7 +217,8 @@ end_check:
 			break;
 
 		/* no events sleep */
-		task_sleep(current_task->waiting_chan);
+		current_task->state = TASK_SLEEPING;
+		schedule();
 	}
 
 	/* reset timeout */
@@ -181,6 +228,10 @@ end_check:
 	memcpy(readfds, &res_readfds, sizeof(fd_set_t));
 	memcpy(writefds, &res_writefds, sizeof(fd_set_t));
 	memcpy(exceptfds, &res_exceptfds, sizeof(fd_set_t));
+
+	/* free wait table */
+	free_wait(&wait_table);
+	kfree(entry);
 
 	return count;
 }

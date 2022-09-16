@@ -131,7 +131,7 @@ static int unix_close(struct socket_t *sock)
 /*
  * Poll on a socket.
  */
-static int unix_poll(struct socket_t *sock)
+static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
 {
 	struct unix_sock_t *sk;
 	int mask = 0;
@@ -144,6 +144,9 @@ static int unix_poll(struct socket_t *sock)
 	/* check if there is a message in the queue */
 	if (!list_empty(&sk->skb_list))
 		mask |= POLLIN;
+
+	/* add wait queue to select table */
+	select_wait(&sock->wait, wait);
 
 	return mask;
 }
@@ -177,7 +180,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 			break;
 
 		/* sleep */
-		task_sleep(&sk->sock->waiting_chan);
+		task_sleep(&sk->sock->wait);
 	}
 
 	/* get first message */
@@ -262,7 +265,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int f
 	list_add_tail(&skb->list, &other->skb_list);
 
 	/* wake up eventual readers */
-	task_wakeup_all(&other->sock->waiting_chan);
+	task_wakeup_all(&other->sock->wait);
 
 	return len;
 }
@@ -355,7 +358,7 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 			return 0;
 
 		/* sleep */
-		task_sleep(&sock->waiting_chan);
+		task_sleep(&sock->wait);
 	}
 
 	return 0;
@@ -398,7 +401,7 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr)
 	list_add_tail(&skb->list, &other->skb_list);
 
 	/* wake up eventual reader */
-	task_wakeup(&other->sock->waiting_chan);
+	task_wakeup(&other->sock->wait);
 
 	/* set socket */
 	sk->other = other;

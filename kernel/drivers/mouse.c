@@ -135,7 +135,7 @@ static void mouse_handler(struct registers_t *regs)
 	}
 
 	/* wake up readers */
-	task_wakeup_all(&mouse_event);
+	task_wakeup_all(&mouse_event.wait);
 }
 
 /*
@@ -167,18 +167,18 @@ static int mouse_read(struct file_t *filp, char *buf, int n)
 /*
  * Poll a mouse.
  */
-static int mouse_poll(struct file_t *filp)
+static int mouse_poll(struct file_t *filp, struct select_table_t *wait)
 {
 	int mask = 0;
 
 	UNUSED(filp);
 
-	/* set waiting channel = mouse event */
-	current_task->waiting_chan = &mouse_event;
-
 	/* check if an event is queued */
 	if (mouse_event.x || mouse_event.y || mouse_event.buttons || mouse_event.state)
 		mask |= POLLIN;
+
+	/* add wait queue to select table */
+	select_wait(&mouse_event.wait, wait);
 
 	return mask;
 }

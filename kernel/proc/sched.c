@@ -145,51 +145,137 @@ void schedule()
 }
 
 /*
- * Sleep on a channel.
+ * Add to a wait queue.
  */
-void task_sleep(void *chan)
+void add_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait)
 {
-	/* sleep on channel */
-	current_task->waiting_chan = chan;
+	/* first element */
+	if (!*wq) {
+		wait->next = wait;
+		*wq = wait;
+		return;
+	}
+
+	wait->next = (*wq)->next;
+	(*wq)->next = wait;
+}
+
+/*
+ * Remove from a wait queue.
+ */
+void remove_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait)
+{
+	struct wait_queue_t *tmp;
+
+	/* first element */
+	if (*wq == wait) {
+		*wq = wait->next;
+		if (*wq == wait)
+			*wq = NULL;
+
+		return;
+	}
+
+	/* else find position */
+	tmp = wait;
+	while (tmp->next != wait)
+		tmp = tmp->next;
+	tmp->next = wait->next;
+
+	/* reset next element */
+	wait->next = NULL;
+}
+
+/*
+ * Add wait queue to select table.
+ */
+void select_wait(struct wait_queue_t **wait_address, struct select_table_t *st)
+{
+	struct select_table_entry_t *entry;
+
+	if (!st || !wait_address)
+		return;
+
+	if (st->nr >= MAX_SELECT_TABLE_ENTRIES)
+		return;
+
+	/* set new select entry */
+	entry = st->entry + st->nr;
+	entry->wait_address = wait_address;
+	entry->wait.task = current_task;
+	entry->wait.next = NULL;
+	st->nr++;
+
+	/* add wait queue */
+	add_wait_queue(wait_address, &entry->wait);
+}
+
+/*
+ * Sleep on a wait queue.
+ */
+void task_sleep(struct wait_queue_t **wq)
+{
+	struct wait_queue_t wait = { current_task, NULL };
+
+	/* set task's state */
 	current_task->state = TASK_SLEEPING;
+
+	/* add to wait queue */
+	add_wait_queue(wq, &wait);
 
 	/* reschedule */
 	schedule();
 
-	/* reset waiting channel */
-	current_task->waiting_chan = NULL;
+	/* remove from wait queue */
+	remove_wait_queue(wq, &wait);
 }
 
 /*
- * Wake up one task sleeping on channel.
+ * Wake up one task sleeping on a wait queue.
  */
-void task_wakeup(void *chan)
+void task_wakeup(struct wait_queue_t **wq)
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct wait_queue_t *tmp;
 
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task_t, list);
-		if (task->waiting_chan == chan && task->state == TASK_SLEEPING) {
-			task->state = TASK_RUNNING;
+	/* check first task */
+	if (!wq)
+		return;
+	tmp = *wq;
+	if (!tmp)
+		return;
+
+	/* wake up first sleeping task */
+	do {
+		if (tmp->task->state == TASK_SLEEPING) {
+			tmp->task->state = TASK_RUNNING;
 			break;
 		}
-	}
+
+		tmp = tmp->next;
+	} while (tmp != *wq);
 }
 
 /*
- * Wake up all tasks sleeping on channel.
+ * Wake up all tasks sleeping on a wait queue.
  */
-void task_wakeup_all(void *chan)
+void task_wakeup_all(struct wait_queue_t **wq)
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct wait_queue_t *tmp;
 
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task_t, list);
-		if (task->waiting_chan == chan && task->state == TASK_SLEEPING)
-			task->state = TASK_RUNNING;
-	}
+	if (!wq)
+		return;
+
+	tmp = *wq;
+	if (!tmp)
+		return;
+
+	/* wakt up all tasks */
+	do {
+		if (tmp->task->state == TASK_SLEEPING)
+			tmp->task->state = TASK_RUNNING;
+
+		tmp = tmp->next;
+	} while (tmp != *wq);
 }
 
 /*
@@ -326,7 +412,7 @@ int do_signal(struct registers_t *regs)
 			case SIGSTOP: case SIGTSTP:
 				current_task->state = TASK_STOPPED;
 				current_task->exit_code = sig;
-				task_wakeup_all(current_task->parent);
+				task_wakeup_all(&current_task->parent->wait_child_exit);
 				return 0;
 			default:
 				sys_exit(sig);

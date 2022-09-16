@@ -2,6 +2,7 @@
 #include <net/inet/ip.h>
 #include <net/inet/net.h>
 #include <drivers/rtl8139.h>
+#include <proc/sched.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
 #include <math.h>
@@ -150,7 +151,7 @@ static int inet_close(struct socket_t *sock)
 /*
  * Poll on a socket.
  */
-static int inet_poll(struct socket_t *sock)
+static int inet_poll(struct socket_t *sock, struct select_table_t *wait)
 {
 	struct sock_t *sk;
 	int mask = 0;
@@ -163,6 +164,9 @@ static int inet_poll(struct socket_t *sock)
 	/* check if there is a message in the queue */
 	if (!list_empty(&sk->skb_list))
 		mask |= POLLIN;
+
+	/* add wait queue to select table */
+	select_wait(&sock->wait, wait);
 
 	return mask;
 }

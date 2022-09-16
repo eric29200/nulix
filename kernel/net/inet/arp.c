@@ -76,7 +76,8 @@ struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr,
 
 		/* wait for response */
 		current_task->timeout = jiffies + ms_to_jiffies(ARP_REQUEST_WAIT_MS);
-		task_sleep(current_task->waiting_chan);
+		current_task->state = TASK_SLEEPING;
+		schedule();
 		current_task->timeout = 0;
 	}
 

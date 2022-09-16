@@ -1,17 +1,19 @@
 #ifndef _RING_BUFFER_H_
 #define _RING_BUFFER_H_
 
+#include <proc/wait.h>
 #include <stddef.h>
 
 /*
  * Ring buffer structure.
  */
 struct ring_buffer_t {
-	size_t		head;
-	size_t		tail;
-	size_t		capacity;
-	size_t		size;
-	uint8_t *	buffer;
+	size_t			head;
+	size_t			tail;
+	size_t			capacity;
+	size_t			size;
+	uint8_t *		buffer;
+	struct wait_queue_t *	wait;
 };
 
 int ring_buffer_init(struct ring_buffer_t *rb, size_t capacity);

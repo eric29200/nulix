@@ -62,6 +62,6 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 			return 0;
 
 		/* else wait for child */
-		task_sleep(current_task);
+		task_sleep(&current_task->wait_child_exit);
 	}
 }

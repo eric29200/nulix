@@ -28,7 +28,7 @@ void sys_exit(int status)
 	current_task->exit_code = status;
 
 	/* wakeup parent */
-	task_wakeup_all(current_task->parent);
+	task_wakeup_all(&current_task->parent->wait_child_exit);
 
 	/* give children to init */
 	list_for_each(pos, &current_task->list) {
@@ -36,7 +36,7 @@ void sys_exit(int status)
 		if (child->parent == current_task) {
 			child->parent = init_task;
 			if (child->state == TASK_ZOMBIE)
-				task_wakeup_all(init_task);
+				task_wakeup_all(&init_task->wait_child_exit);
 		}
 	}
 

@@ -158,7 +158,7 @@ static int sock_close(struct file_t *filp)
 /*
  * Poll on a socket.
  */
-static int sock_poll(struct file_t *filp)
+static int sock_poll(struct file_t *filp, struct select_table_t *wait)
 {
 	struct socket_t *sock;
 	int mask = 0;
@@ -168,12 +168,9 @@ static int sock_poll(struct file_t *filp)
 	if (!sock)
 		return -EINVAL;
 
-	/* set waiting channel */
-	current_task->waiting_chan = &sock->waiting_chan;
-
 	/* check if there is a message in the queue */
 	if (sock->ops && sock->ops->poll)
-		mask = sock->ops->poll(sock);
+		mask = sock->ops->poll(sock, wait);
 
 	return mask;
 }

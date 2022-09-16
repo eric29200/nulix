@@ -1,6 +1,7 @@
 #ifndef _SOCKET_H_
 #define _SOCKET_H_
 
+#include <proc/wait.h>
 #include <stddef.h>
 
 #define NR_SOCKETS		32
@@ -60,7 +61,7 @@ struct socket_t {
 	uint16_t		type;
 	socket_state_t		state;
 	struct prot_ops *	ops;
-	int			waiting_chan;
+	struct wait_queue_t *	wait;
 	struct inode_t *	inode;
 	void *			data;
 };
@@ -73,7 +74,7 @@ struct prot_ops {
 	int (*dup)(struct socket_t *, struct socket_t *);
 	int (*release)(struct socket_t *);
 	int (*close)(struct socket_t *);
-	int (*poll)(struct socket_t *);
+	int (*poll)(struct socket_t *, struct select_table_t *);
 	int (*recvmsg)(struct socket_t *, struct msghdr_t *, int flags);
 	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int flags);
 	int (*bind)(struct socket_t *, const struct sockaddr *, size_t);

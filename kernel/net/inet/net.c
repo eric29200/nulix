@@ -61,7 +61,7 @@ static void skb_deliver_to_sockets(struct sk_buff_t *skb)
 
 			/* wake up waiting processes */
 			if (ret == 0)
-				task_wakeup_all(&sk->sock->waiting_chan);
+				task_wakeup_all(&sk->sock->wait);
 		}
 	}
 }
@@ -179,7 +179,7 @@ static void net_handler_thread(void *arg)
 
 		/* wait for incoming packets */
 		current_task->timeout = jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS);
-		task_sleep(current_task->waiting_chan);
+		task_sleep(&net_dev->wait);
 		current_task->timeout = 0;
 	}
 }
@@ -198,6 +198,7 @@ struct net_device_t *register_net_device(uint32_t io_base)
 	/* set net device */
 	net_dev = &net_devices[nb_net_devices++];
 	net_dev->io_base = io_base;
+	net_dev->wait = NULL;
 	INIT_LIST_HEAD(&net_dev->skb_input_list);
 	INIT_LIST_HEAD(&net_dev->skb_output_list);
 
@@ -221,7 +222,7 @@ void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb)
 	list_add_tail(&skb->list, &net_dev->skb_input_list);
 
 	/* wake up handler */
-	task_wakeup_all(net_dev->thread->waiting_chan);
+	task_wakeup_all(&net_dev->wait);
 }
 
 /*
@@ -236,5 +237,5 @@ void net_transmit(struct net_device_t *net_dev, struct sk_buff_t *skb)
 	list_add_tail(&skb->list, &net_dev->skb_output_list);
 
 	/* wake up handler */
-	task_wakeup_all(net_dev->thread->waiting_chan);
+	task_wakeup_all(&net_dev->wait);
 }

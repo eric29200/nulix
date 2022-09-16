@@ -58,7 +58,6 @@ struct task_t {
 	uint32_t			start_brk;			/* user data segment start */
 	uint32_t			end_brk;			/* user data segment end */
 	struct list_head_t		vm_list;			/* virtual memory areas */
-	void *				waiting_chan;			/* waiting channel */
 	uint32_t			timeout;			/* timeout (used by sleep) */
 	sigset_t			sigpend;			/* pending signals */
 	sigset_t			sigmask;			/* masked signals */
@@ -68,8 +67,9 @@ struct task_t {
 	struct registers_t		user_regs;			/* saved registers at syscall entry */
 	struct registers_t		signal_regs;			/* saved registers at signal entry */
 	struct page_directory_t *	pgd;				/* page directory */
-	struct file_t *			 filp[NR_OPEN];			/* opened files */
+	struct file_t *			filp[NR_OPEN];			/* opened files */
 	struct timer_event_t		sig_tm;				/* signal timer */
+	struct wait_queue_t *		wait_child_exit;		/* wait queue for child exit */
 	struct list_head_t		list;				/* next process */
 };
 

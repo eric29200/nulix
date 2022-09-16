@@ -78,12 +78,12 @@ static struct task_t *create_task(struct task_t *parent)
 	task->start_brk = parent ? parent->start_brk : 0;
 	task->end_brk = parent ? parent->end_brk : 0;
 	task->timeout = 0;
-	task->waiting_chan = NULL;
 	task->utime = 0;
 	task->stime = 0;
 	task->cutime = 0;
 	task->cstime = 0;
 	task->start_time = jiffies;
+	task->wait_child_exit = NULL;
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->vm_list);
 

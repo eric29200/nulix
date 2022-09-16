@@ -4,6 +4,7 @@
 #include <drivers/fb.h>
 #include <drivers/termios.h>
 #include <lib/ring_buffer.h>
+#include <proc/wait.h>
 
 #define TTY_BUF_SIZE		1024
 #define TTY_ESC_BUF_SIZE	16
@@ -74,6 +75,7 @@ struct tty_t {
 	struct winsize_t	winsize;						/* window size */
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */
+	struct wait_queue_t *	wait;							/* wait queue */
 	void			(*write)(struct tty_t *);				/* write function */
 };
 

@@ -22,6 +22,7 @@ struct net_device_t {
 	uint8_t			ip_netmask[4];
 	uint8_t			ip_route[4];
 	struct task_t *		thread;
+	struct wait_queue_t *	wait;
 	struct list_head_t	skb_input_list;
 	struct list_head_t	skb_output_list;
 	void			(*send_packet)(struct sk_buff_t *);

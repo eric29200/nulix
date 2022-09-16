@@ -9,6 +9,7 @@
 #include <fs/minix_i.h>
 #include <fs/ext2_i.h>
 #include <fs/pipe_i.h>
+#include <proc/wait.h>
 #include <time.h>
 
 #define NR_INODE			256
@@ -163,7 +164,7 @@ struct file_operations_t {
 	int (*read)(struct file_t *, char *, int);
 	int (*write)(struct file_t *, const char *, int);
 	int (*getdents64)(struct file_t *, void *, size_t);
-	int (*poll)(struct file_t *);
+	int (*poll)(struct file_t *, struct select_table_t *);
 	int (*ioctl)(struct file_t *, int, unsigned long);
 };
 
