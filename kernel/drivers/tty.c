@@ -80,8 +80,10 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 		((unsigned char *) buf)[count++] = key;
 
 		/* end of line : return */
-		if (L_CANON(tty) && key == '\n')
+		if (L_CANON(tty) && key == '\n') {
+			tty->canon_data--;
 			break;
+		}
 
 		/* no more characters : break */
 		if (ring_buffer_empty(&tty->cooked_queue))
@@ -145,6 +147,10 @@ void tty_do_cook(struct tty_t *tty)
 		/* put character in cooked queue */
 		if (!ring_buffer_full(&tty->cooked_queue))
 			ring_buffer_write(&tty->cooked_queue, &c, 1);
+
+		/* update canon data */
+		if (L_CANON(tty) && c == '\n')
+			tty->canon_data++;
 	}
 
 	/* wake up eventual process */
@@ -219,13 +225,10 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 			memcpy((struct termios_t *) arg, &tty->termios, sizeof(struct termios_t));
 			break;
 		case TCSETS:
-			memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
-			break;
 		case TCSETSW:
-			memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
-			break;
 		case TCSETSF:
 			memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+			tty->canon_data = 0;
 			break;
 		case TIOCGWINSZ:
 			memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
@@ -248,6 +251,17 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 }
 
 /*
+ * Check if there is some data to read.
+ */
+static int tty_input_available(struct tty_t *tty)
+{
+	if (L_CANON(tty))
+		return tty->canon_data > 0;
+
+	return tty->cooked_queue.size > 0;
+}
+
+/*
  * Poll a tty.
  */
 static int tty_poll(struct file_t *filp, struct select_table_t *wait)
@@ -261,7 +275,7 @@ static int tty_poll(struct file_t *filp, struct select_table_t *wait)
 		return -EINVAL;
 
 	/* check if there is some characters to read */
-	if (tty->cooked_queue.size > 0)
+	if (tty_input_available(tty))
 		mask |= POLLIN;
 
 	/* check if there is some characters to write */
