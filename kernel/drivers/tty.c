@@ -265,7 +265,7 @@ static int tty_poll(struct file_t *filp, struct select_table_t *wait)
 		mask |= POLLIN;
 
 	/* check if there is some characters to write */
-	if (tty->write_queue.size > 0)
+	if (!ring_buffer_full(&tty->write_queue))
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */
