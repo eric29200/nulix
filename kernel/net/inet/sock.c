@@ -165,6 +165,10 @@ static int inet_poll(struct socket_t *sock, struct select_table_t *wait)
 	if (!list_empty(&sk->skb_list))
 		mask |= POLLIN;
 
+	/* check if socket can write */
+	if (sk->sock->state != SS_DEAD)
+		mask |= POLLOUT;
+
 	/* add wait queue to select table */
 	select_wait(&sock->wait, wait);
 
