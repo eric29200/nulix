@@ -147,7 +147,14 @@ int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptf
 		if (i >= nfds)
 			break;
 
-		set = readfds->fds_bits[j] | writefds->fds_bits[j] | exceptfds->fds_bits[j];
+		set = 0;
+		if (readfds)
+			set |= readfds->fds_bits[j];
+		if (writefds)
+			set |= writefds->fds_bits[j];
+		if (exceptfds)
+			set |= exceptfds->fds_bits[j];
+
 		for (; set; i++, set >>= 1) {
 			if (i >= nfds)
 				goto end_check;
@@ -191,17 +198,17 @@ end_check:
 	for (;;) {
 		for (i = 0; i < nfds; i++) {
 			/* check events */
-			if (FD_ISSET(i, readfds) && __select_check(i, POLLIN, wait)) {
+			if (readfds && FD_ISSET(i, readfds) && __select_check(i, POLLIN, wait)) {
 				FD_SET(i, &res_readfds);
 				count++;
 			}
 
-			if (FD_ISSET(i, writefds) && __select_check(i, POLLOUT, wait)) {
+			if (writefds && FD_ISSET(i, writefds) && __select_check(i, POLLOUT, wait)) {
 				FD_SET(i, &res_writefds);
 				count++;
 			}
 
-			if (FD_ISSET(i, exceptfds) && __select_check(i, POLLPRI, wait)) {
+			if (exceptfds && FD_ISSET(i, exceptfds) && __select_check(i, POLLPRI, wait)) {
 				FD_SET(i, &res_exceptfds);
 				count++;
 			}
@@ -225,9 +232,12 @@ end_check:
 	current_task->timeout = 0;
 
 	/* copy results */
-	memcpy(readfds, &res_readfds, sizeof(fd_set_t));
-	memcpy(writefds, &res_writefds, sizeof(fd_set_t));
-	memcpy(exceptfds, &res_exceptfds, sizeof(fd_set_t));
+	if (readfds)
+		memcpy(readfds, &res_readfds, sizeof(fd_set_t));
+	if (writefds)
+		memcpy(writefds, &res_writefds, sizeof(fd_set_t));
+	if (exceptfds)
+		memcpy(exceptfds, &res_exceptfds, sizeof(fd_set_t));
 
 	/* free wait table */
 	free_wait(&wait_table);

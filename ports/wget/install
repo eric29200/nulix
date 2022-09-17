@@ -1,0 +1,21 @@
+URL="https://ftp.gnu.org/gnu/wget/"
+VERSION="1.21"
+SRC_FILENAME="wget-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--disable-nls							\
+		--disable-threads						\
+		--with-ssl=no							\
+		--prefix="/usr"							\
+		CFLAGS="-static" LDFLAGS="-static"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
