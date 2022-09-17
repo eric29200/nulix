@@ -19,6 +19,10 @@
 #define SOCK_DGRAM		2
 #define SOCK_RAW		3
 
+/* flags for send/recv */
+#define MSG_OOB			1
+#define MSG_PEEK		2
+
 /*
  * Socket address.
  */

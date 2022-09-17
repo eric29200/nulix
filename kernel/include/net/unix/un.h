@@ -24,6 +24,7 @@ struct unix_sock_t {
 	struct inode_t *	inode;
 	struct socket_t *	sock;
 	struct unix_sock_t *	other;
+	off_t			msg_position;
 	struct list_head_t	skb_list;
 };
 

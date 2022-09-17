@@ -190,15 +190,16 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 	/* get first message */
 	skb = list_first_entry(&sk->skb_list, struct sk_buff_t, list);
 
-	/* set buffer */
-	len = skb->len;
-	buf = skb->head;
+	/* get message */
+	buf = skb->head + sk->msg_position;
+	len = skb->len - sk->msg_position;
 
 	/* copy message */
 	for (i = 0; i < msg->msg_iovlen; i++) {
 		n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
 		memcpy(msg->msg_iov[i].iov_base, buf, n);
 		count += n;
+		len -= n;
 	}
 
 	/* set source address */
@@ -207,9 +208,16 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 		memcpy(msg->msg_name, &from->sunaddr, from->sunaddr_len);
 	}
 
-	/* remove and free socket buffer */
-	list_del(&skb->list);
-	skb_free(skb);
+	/* remove and free socket buffer or remember position packet */
+	if (!(flags & MSG_PEEK)) {
+		if (len <= 0) {
+			list_del(&skb->list);
+			skb_free(skb);
+			sk->msg_position = 0;
+		} else {
+			sk->msg_position = count;
+		}
+	}
 
 	return count;
 }

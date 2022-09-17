@@ -302,9 +302,6 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 	struct sk_buff_t *skb;
 	void *buf;
 
-	/* unused flags */
-	UNUSED(flags);
-
 	/* sleep until we receive a packet */
 	for (;;) {
 		/* dead socket */
@@ -348,20 +345,22 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 		len -= n;
 	}
 
-	/* remove and free socket buffer or remember position packet */
-	if (len <= 0) {
-		list_del(&skb->list);
-		skb_free(skb);
-		sk->msg_position = 0;
-	} else {
-		sk->msg_position = count;
-	}
-
 	/* set source address */
 	sin = (struct sockaddr_in *) msg->msg_name;
 	sin->sin_family = AF_INET;
 	sin->sin_port = skb->h.tcp_header->src_port;
 	sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+
+	/* remove and free socket buffer or remember position packet */
+	if (!(flags & MSG_PEEK)) {
+		if (len <= 0) {
+			list_del(&skb->list);
+			skb_free(skb);
+			sk->msg_position = 0;
+		} else {
+			sk->msg_position = count;
+		}
+	}
 
 	return count;
 }

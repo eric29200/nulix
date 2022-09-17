@@ -118,9 +118,6 @@ static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 	struct sk_buff_t *skb;
 	void *buf;
 
-	/* unused flags */
-	UNUSED(flags);
-
 	/* sleep until we receive a packet */
 	for (;;) {
 		/* signal received : restart system call */
@@ -145,9 +142,7 @@ static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 	skb->h.udp_header = (struct udp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
 
 	/* get message */
-	buf = (void *) skb->h.udp_header + sizeof(struct udp_header_t);
-
-	/* compute message length */
+	buf = (void *) skb->h.udp_header + sizeof(struct udp_header_t) + sk->msg_position;
 	len = (void *) skb->end - buf;
 
 	/* copy message */
@@ -155,6 +150,7 @@ static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 		n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
 		memcpy(msg->msg_iov[i].iov_base, buf, n);
 		count += n;
+		len -= n;
 	}
 
 	/* set source address */
@@ -163,9 +159,16 @@ static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 	sin->sin_port = skb->h.udp_header->src_port;
 	sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
 
-	/* remove and free socket buffer */
-	list_del(&skb->list);
-	skb_free(skb);
+	/* remove and free socket buffer or remember position packet */
+	if (!(flags & MSG_PEEK)) {
+		if (len <= 0) {
+			list_del(&skb->list);
+			skb_free(skb);
+			sk->msg_position = 0;
+		} else {
+			sk->msg_position = count;
+		}
+	}
 
 	return count;
 }

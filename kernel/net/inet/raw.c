@@ -37,9 +37,7 @@ static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 	size_t len, n, count = 0, i;
 	struct sockaddr_in *sin;
 	struct sk_buff_t *skb;
-
-	/* unused flags */
-	UNUSED(flags);
+	void *buf;
 
 	/* sleep until we receive a packet */
 	for (;;) {
@@ -61,14 +59,16 @@ static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 	/* get IP header */
 	skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
 
-	/* compute message length */
-	len = skb->size - sizeof(struct ethernet_header_t);
+	/* get message */
+	buf = skb->nh.ip_header + sk->msg_position;
+	len = (void *) skb->end - buf;
 
 	/* copy message */
 	for (i = 0; i < msg->msg_iovlen; i++) {
 		n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
-		memcpy(msg->msg_iov[i].iov_base, skb->nh.ip_header, n);
+		memcpy(msg->msg_iov[i].iov_base, buf, n);
 		count += n;
+		len -= n;
 	}
 
 	/* set source address */
@@ -77,9 +77,16 @@ static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 	sin->sin_port = 0;
 	sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
 
-	/* remove and free socket buffer */
-	list_del(&skb->list);
-	skb_free(skb);
+	/* remove and free socket buffer or remember position packet */
+	if (!(flags & MSG_PEEK)) {
+		if (len <= 0) {
+			list_del(&skb->list);
+			skb_free(skb);
+			sk->msg_position = 0;
+		} else {
+			sk->msg_position = count;
+		}
+	}
 
 	return count;
 }
