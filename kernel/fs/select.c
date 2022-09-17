@@ -201,7 +201,7 @@ end_check:
 				count++;
 			}
 
-			if (FD_ISSET(i, exceptfds) && __select_check(i, POLLIN | POLLOUT, wait)) {
+			if (FD_ISSET(i, exceptfds) && __select_check(i, POLLPRI, wait)) {
 				FD_SET(i, &res_exceptfds);
 				count++;
 			}
