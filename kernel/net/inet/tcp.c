@@ -266,7 +266,7 @@ static int tcp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 			break;
 		case SS_CONNECTED:
 				/* add message */
-				if (data_len > 0) {
+				if (data_len > 0 || skb->h.tcp_header->fin) {
 					/* clone socket buffer */
 					skb_new = skb_clone(skb);
 					if (!skb_new)
