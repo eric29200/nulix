@@ -116,7 +116,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	stack = current_task->user_stack;
 
 	/* put envp in user stack (skip last NULL pointer) */
-	current_task->env_end = stack;
+	current_task->env_end = stack - 4;
 	for (i = envp_len; i >= 0; i--) {
 		stack -= 4;
 		*((uint32_t *) stack) = (uint32_t) user_envp[i];
@@ -124,7 +124,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	current_task->env_start = stack;
 
 	/* put argv in user stack (skip last NULL pointer) */
-	current_task->arg_end = stack;
+	current_task->arg_end = stack - 4;
 	for (i = argv_len; i >= 0; i--) {
 		stack -= 4;
 		*((uint32_t *) stack) = (uint32_t) user_argv[i];
