@@ -10,7 +10,6 @@ function configure_port() {
 		--disable-nls							\
 		--disable-w							\
 		--disable-numa							\
-		--without-ncurses						\
 		--prefix="/usr"							\
 		CFLAGS="--static -D__thread=''" LDFLAGS="--static" PKG_CONFIG=$PKG_CONFIG
 }

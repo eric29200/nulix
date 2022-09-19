@@ -6,10 +6,9 @@ function configure_port() {
 	./configure --host=$TARGET				\
 		--enable-term-driver				\
 		--without-ada					\
-		--without-cxx					\
-		--without-cxx-binding				\
 		--enable-sigwinch				\
 		--enable-widec					\
+		--enable-overwrite				\
 		--enable-pc-files				\
 		--with-pkg-config-libdir="/lib/pkgconfig"	\
 		--prefix="/"					\
@@ -25,4 +24,7 @@ function install_port() {
 	mkdir -p $SYSROOT/share
 	cp -Rv $MUSL_DIR/share/tabset $SYSROOT/share
 	cp -Rv $MUSL_DIR/share/terminfo $SYSROOT/share
+
+	cd $MUSL_DIR/lib/pkgconfig/
+	ln -s ncursesw.pc ncurses.pc
 }
