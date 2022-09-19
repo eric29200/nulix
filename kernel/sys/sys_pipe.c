@@ -5,5 +5,5 @@
  */
 int sys_pipe(int pipefd[2])
 {
-	return do_pipe(pipefd);
+	return do_pipe(pipefd, 0);
 }

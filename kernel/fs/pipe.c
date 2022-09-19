@@ -142,12 +142,15 @@ static struct inode_t *get_pipe_inode()
 /*
  * Pipe system call.
  */
-int do_pipe(int pipefd[2])
+int do_pipe(int pipefd[2], int flags)
 {
 	struct file_t *filps[2];
 	struct inode_t *inode;
 	int fd[2];
 	int i, j;
+
+	/* unused flags */
+	UNUSED(flags);
 
 	/* find 2 file descriptors in global table */
 	for (i = 0, j = 0; i < NR_FILE && j < 2; i++)

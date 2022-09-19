@@ -118,6 +118,7 @@
 #define __NR_readlinkat			305
 #define __NR_pselect6			308
 #define __NR_utimensat			320
+#define __NR_pipe2			331
 #define __NR_renameat2			353
 #define __NR_socket			359
 #define __NR_bind			361
@@ -204,6 +205,7 @@ ssize_t sys_readlink(const char *pathname, char *buf, size_t bufsize);
 ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsize);
 int sys_uname(struct utsname_t *buf);
 int sys_pipe(int pipefd[2]);
+int sys_pipe2(int pipefd[2], int flags);
 int sys_clock_gettime64(clockid_t clockid, struct timespec_t *tp);
 int sys_sysinfo(struct sysinfo_t *info);
 int sys_rename(const char *oldpath, const char *newpath);
