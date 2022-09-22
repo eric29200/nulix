@@ -22,13 +22,13 @@ extern struct page_directory_t *kernel_pgd;
  * Page structure.
  */
 struct page_t {
-	uint32_t present :1;		/* page present in memory */
-	uint32_t rw :1;			/* read only if clear */
-	uint32_t user :1;		/* supervisor level if clear */
-	uint32_t accessed :1;		/* set if the page has been accessed */
-	uint32_t dirty :1;		/* set if the page has not been written */
-	uint32_t unused :7;		/* reserved bits */
-	uint32_t frame :20;		/* frame address */
+	uint32_t present:1;		/* page present in memory */
+	uint32_t rw:1;			/* read only if clear */
+	uint32_t user:1;		/* supervisor level if clear */
+	uint32_t accessed:1;		/* set if the page has been accessed */
+	uint32_t dirty:1;		/* set if the page has not been written */
+	uint32_t unused:7;		/* reserved bits */
+	uint32_t frame:20;		/* frame address */
 };
 
 /*

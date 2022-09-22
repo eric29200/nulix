@@ -131,7 +131,7 @@ static int task_copy_files(struct task_t *task, struct task_t *parent)
 /*
  * Copy thread.
  */
-static int task_copy_thread(struct task_t *task, struct task_t *parent)
+static int task_copy_thread(struct task_t *task, struct task_t *parent, uint32_t user_sp)
 {
 	/* duplicate parent registers */
 	if (parent) {
@@ -139,13 +139,17 @@ static int task_copy_thread(struct task_t *task, struct task_t *parent)
 		task->user_regs.eax = 0;
 	}
 
+	/* set user stack */
+	if (user_sp)
+		task->user_regs.useresp = user_sp;
+
 	return 0;
 }
 
 /*
  * Create and init a task.
  */
-static struct task_t *create_task(struct task_t *parent)
+static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 {
 	struct task_t *task;
 	void *stack;
@@ -212,7 +216,7 @@ static struct task_t *create_task(struct task_t *parent)
 		goto err;
 	if (task_copy_signals(task, parent))
 		goto err;
-	if (task_copy_thread(task, parent))
+	if (task_copy_thread(task, parent, user_sp))
 		goto err;
 
 	return task;
@@ -230,7 +234,7 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(NULL);
+	task = create_task(NULL, 0);
 	if (!task)
 		return NULL;
 
@@ -252,13 +256,13 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 /*
  * Fork a task.
  */
-struct task_t *fork_task(struct task_t *parent)
+struct task_t *fork_task(struct task_t *parent, uint32_t user_sp)
 {
 	struct task_registers_t *regs;
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(parent);
+	task = create_task(parent, user_sp);
 	if (!task)
 		return NULL;
 
@@ -282,7 +286,7 @@ struct task_t *create_init_task(struct task_t *parent)
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(parent);
+	task = create_task(parent, 0);
 	if (!task)
 		return NULL;
 
@@ -311,6 +315,8 @@ void destroy_task(struct task_t *task)
 
 	if (!task)
 		return;
+
+	return;
 
 	/* remove task */
 	list_del(&task->list);

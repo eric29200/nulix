@@ -87,7 +87,7 @@ struct task_registers_t {
 
 struct task_t *create_kernel_thread(void (*func)(void *), void *arg);
 struct task_t *create_init_task(struct task_t *parent);
-struct task_t *fork_task(struct task_t *parent);
+struct task_t *fork_task(struct task_t *parent, uint32_t user_sp);
 void destroy_task(struct task_t *task);
 struct task_t *get_task(pid_t pid);
 

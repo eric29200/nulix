@@ -1,18 +1,18 @@
 #include <sys/syscall.h>
-#include <proc/sched.h>
-#include <proc/task.h>
-#include <stddef.h>
 #include <stderr.h>
 
 /*
- * Fork system call.
+ * Clone system call.
  */
-pid_t sys_fork()
+int sys_clone(uint32_t flags, uint32_t newsp)
 {
 	struct task_t *child;
 
+	/* unused dlags */
+	UNUSED(flags);
+
 	/* create child */
-	child = fork_task(current_task, 0);
+	child = fork_task(current_task, newsp);
 	if (!child)
 		return -ENOMEM;
 

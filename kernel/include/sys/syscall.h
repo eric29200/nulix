@@ -65,6 +65,7 @@
 #define __NR_sysinfo			116
 #define __NR_fsync			118
 #define __NR_sigreturn			119
+#define __NR_clone			120
 #define __NR_uname			122
 #define __NR_modify_ldt			123
 #define __NR_sigprocmask		126
@@ -251,5 +252,6 @@ int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int
 int sys_fsync(int fd);
 int sys_fchdir(int fd);
 int sys_madvise(void *addr, size_t length, int advice);
+int sys_clone(uint32_t flags, uint32_t newsp);
 
 #endif

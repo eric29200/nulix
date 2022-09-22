@@ -126,6 +126,7 @@ static const void *syscalls[] = {
 	[__NR_fsync]			= sys_fsync,
 	[__NR_fchdir]			= sys_fchdir,
 	[__NR_madvise]			= sys_madvise,
+	[__NR_clone]			= sys_clone,
 };
 
 /*

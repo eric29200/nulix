@@ -52,6 +52,7 @@ sudo cp -Rv sysroot/* tmp/
 # cp user binaries
 sudo mkdir -p tmp/sbin/
 sudo cp usr/init tmp/sbin/
+sudo cp usr/test_clone tmp/sbin/
 
 # create devices nodes
 sudo mknod tmp/dev/null c 1 3
