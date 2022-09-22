@@ -13,21 +13,24 @@ LIST_HEAD(tasks_list);					/* active processes list */
 static struct task_t *kinit_task;			/* kernel init task (pid = 0) */
 struct task_t *init_task;				/* user init task (pid = 1) */
 struct task_t *current_task = NULL;			/* current task */
-static pid_t next_pid = 0;				/* pid counter */
+static pid_t next_pid = 0;				/* next pid */
+pid_t last_pid = 0;					/* last pid */
 
 struct kernel_stat_t kstat;				/* kernel statistics */
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
 
+/* average run */
+unsigned long avenrun[3] = { 0, 0, 0 };
+
 /*
- * Get next tid.
+ * Get next pid.
  */
 pid_t get_next_pid()
 {
-	pid_t ret;
-	ret = next_pid++;
-	return ret;
+	last_pid = next_pid++;
+	return last_pid;
 }
 
 /*
