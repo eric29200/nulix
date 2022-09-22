@@ -140,6 +140,10 @@ void schedule()
 		scheduler_do_switch(&prev_task->esp, current_task->esp);
 	}
 
+	/* update task time */
+	if (current_task)
+		current_task->utime++;
+
 	/* enable interrupts */
 	irq_enable();
 }

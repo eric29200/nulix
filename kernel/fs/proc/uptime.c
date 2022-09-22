@@ -9,11 +9,15 @@
  */
 static int proc_uptime_read(struct file_t *filp, char *buf, int count)
 {
+	struct task_t *init_task;
 	char tmp_buf[256];
 	size_t len;
 
+	/* get init task */
+	init_task = list_first_entry(&tasks_list, struct task_t, list);
+
 	/* print uptime in temporary buffer */
-	len = sprintf(tmp_buf, "%d.%d\n", jiffies / HZ, jiffies % HZ);
+	len = sprintf(tmp_buf, "%d.%d %d.%d\n", jiffies / HZ, jiffies % HZ, init_task->utime / HZ, init_task->utime % HZ);
 
 	/* file position after end */
 	if (filp->f_pos >= len)
