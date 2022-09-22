@@ -316,8 +316,6 @@ void destroy_task(struct task_t *task)
 	if (!task)
 		return;
 
-	return;
-
 	/* remove task */
 	list_del(&task->list);
 
