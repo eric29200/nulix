@@ -378,8 +378,8 @@ static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer
 		return ret;
 
 	/* set winsize */
-	tty->winsize.ws_row = tty->fb.height;
-	tty->winsize.ws_col = tty->fb.width;
+	tty->winsize.ws_row = tty->fb.height - 1;
+	tty->winsize.ws_col = tty->fb.width - 1;
 	tty->winsize.ws_xpixel = 0;
 	tty->winsize.ws_ypixel = 0;
 
