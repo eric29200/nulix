@@ -32,15 +32,123 @@ static void init_entry(struct task_t *task)
 }
 
 /*
+ * Copy signal handlers.
+ */
+static int task_copy_signals(struct task_t *task, struct task_t *parent)
+{
+	/* init signals */
+	sigemptyset(&task->sigpend);
+	sigemptyset(&task->sigmask);
+
+	/* copy signals */
+	if (parent)
+		memcpy(task->signals, parent->signals, sizeof(task->signals));
+
+	return 0;
+}
+
+/*
+ * Copy page directory.
+ */
+static int task_copy_pgd(struct task_t *task, struct task_t *parent)
+{
+	/* clone page directory */
+	task->pgd = clone_page_directory(parent ? parent->pgd : kernel_pgd);
+	if (!task->pgd)
+		return -ENOMEM;
+
+	return 0;
+}
+
+/*
+ * Copy memory areas.
+ */
+static int task_copy_mm(struct task_t *task, struct task_t *parent)
+{
+	struct vm_area_t *vm_parent, *vm_child;
+	struct list_head_t *pos;
+
+	/* copy virtual memory areas */
+	if (parent) {
+		list_for_each(pos, &parent->vm_list) {
+			vm_parent = list_entry(pos, struct vm_area_t, list);
+			vm_child = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
+			if (!vm_child)
+				return -ENOMEM;
+
+			vm_child->vm_start = vm_parent->vm_start;
+			vm_child->vm_end = vm_parent->vm_end;
+			vm_child->vm_flags = vm_parent->vm_flags;
+			vm_child->vm_free = vm_parent->vm_free;
+			list_add_tail(&vm_child->list, &task->vm_list);
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Copy file system informations.
+ */
+static int task_copy_fs(struct task_t *task, struct task_t *parent)
+{
+	/* duplicate current working dir */
+	if (parent && parent->cwd) {
+		task->cwd = parent->cwd;
+		task->cwd->i_ref++;
+	} else {
+		task->cwd = NULL;
+	}
+
+	/* duplicate root dir */
+	if (parent && parent->root) {
+		task->root = parent->root;
+		task->root->i_ref++;
+	} else {
+		task->root = NULL;
+	}
+
+	return 0;
+}
+
+/*
+ * Copy files.
+ */
+static int task_copy_files(struct task_t *task, struct task_t *parent)
+{
+	int i;
+
+	/* copy open files */
+	for (i = 0; i < NR_OPEN; i++) {
+		task->filp[i] = parent ? parent->filp[i] : NULL;
+		if (task->filp[i])
+			task->filp[i]->f_ref++;
+	}
+
+	return 0;
+}
+
+/*
+ * Copy thread.
+ */
+static int task_copy_thread(struct task_t *task, struct task_t *parent)
+{
+	/* duplicate parent registers */
+	if (parent) {
+		memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers_t));
+		task->user_regs.eax = 0;
+	}
+
+	return 0;
+}
+
+/*
  * Create and init a task.
  */
 static struct task_t *create_task(struct task_t *parent)
 {
-	struct vm_area_t *vm_parent, *vm_child;
-	struct list_head_t *pos;
 	struct task_t *task;
 	void *stack;
-	int i;
 
 	/* create task */
 	task = (struct task_t *) kmalloc(sizeof(struct task_t));
@@ -93,68 +201,24 @@ static struct task_t *create_task(struct task_t *parent)
 	else
 		memset(task->name, 0, TASK_NAME_LEN);
 
-	/* init signals */
-	sigemptyset(&task->sigpend);
-	sigemptyset(&task->sigmask);
-	if (parent)
-		memcpy(task->signals, parent->signals, sizeof(task->signals));
-
-	/* clone page directory */
-	task->pgd = clone_page_directory(parent ? parent->pgd : kernel_pgd);
-	if (!task->pgd) {
-		kfree(stack);
-		kfree(task);
-		return NULL;
-	}
-
-	/* duplicate parent registers */
-	if (parent) {
-		memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers_t));
-		task->user_regs.eax = 0;
-	}
-
-	/* copy virtual memory areas */
-	if (parent) {
-		list_for_each(pos, &parent->vm_list) {
-			vm_parent = list_entry(pos, struct vm_area_t, list);
-			vm_child = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
-			if (!vm_child) {
-				destroy_task(task);
-				return NULL;
-			}
-
-			vm_child->vm_start = vm_parent->vm_start;
-			vm_child->vm_end = vm_parent->vm_end;
-			vm_child->vm_flags = vm_parent->vm_flags;
-			vm_child->vm_free = vm_parent->vm_free;
-			list_add_tail(&vm_child->list, &task->vm_list);
-		}
-	}
-
-	/* duplicate current working dir */
-	if (parent && parent->cwd) {
-		task->cwd = parent->cwd;
-		task->cwd->i_ref++;
-	} else {
-		task->cwd = NULL;
-	}
-
-	/* duplicate root dir */
-	if (parent && parent->root) {
-		task->root = parent->root;
-		task->root->i_ref++;
-	} else {
-		task->root = NULL;
-	}
-
-	/* copy open files */
-	for (i = 0; i < NR_OPEN; i++) {
-		task->filp[i] = parent ? parent->filp[i] : NULL;
-		if (task->filp[i])
-			task->filp[i]->f_ref++;
-	}
+	/* copy task */
+	if (task_copy_pgd(task, parent))
+		goto err;
+	if (task_copy_mm(task, parent))
+		goto err;
+	if (task_copy_fs(task, parent))
+		goto err;
+	if (task_copy_files(task, parent))
+		goto err;
+	if (task_copy_signals(task, parent))
+		goto err;
+	if (task_copy_thread(task, parent))
+		goto err;
 
 	return task;
+err:
+	destroy_task(task);
+	return NULL;
 }
 
 /*
