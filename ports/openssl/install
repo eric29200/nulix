@@ -1,0 +1,26 @@
+URL="https://github.com/openssl/openssl/archive/refs/tags/"
+VERSION="3.0.5"
+SRC_FILENAME="openssl-"$VERSION".tar.gz"
+
+function configure_port() {
+	./Configure								\
+		-m32								\
+		linux-generic32							\
+		no-sse2								\
+		no-threads							\
+		-latomic							\
+		-static								\
+		--prefix=/							\
+		--openssldir=/etc/ssl
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$MUSL_DIR
+	cp $MUSL_DIR/bin/openssl $SYSROOT/usr/bin/
+	rm -rf $SYSROOT/etc/ssl/
+	cp -Rv $MUSL_DIR/etc/ssl $SYSROOT/etc/
+}
