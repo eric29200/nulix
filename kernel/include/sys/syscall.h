@@ -121,6 +121,7 @@
 #define __NR_utimensat			320
 #define __NR_pipe2			331
 #define __NR_renameat2			353
+#define __NR_getrandom			355
 #define __NR_socket			359
 #define __NR_bind			361
 #define __NR_connect			362
@@ -253,5 +254,6 @@ int sys_fsync(int fd);
 int sys_fchdir(int fd);
 int sys_madvise(void *addr, size_t length, int advice);
 int sys_clone(uint32_t flags, uint32_t newsp);
+int sys_getrandom(void *buf, size_t buflen, unsigned int flags);
 
 #endif
