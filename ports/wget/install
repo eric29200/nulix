@@ -7,7 +7,7 @@ function configure_port() {
 		--host=$TARGET							\
 		--disable-nls							\
 		--disable-threads						\
-		--with-ssl=no							\
+		--with-ssl=openssl						\
 		--prefix="/usr"							\
 		CFLAGS="-static" LDFLAGS="-static"
 }
