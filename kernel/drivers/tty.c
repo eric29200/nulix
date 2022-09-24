@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <dev.h>
+#include <kd.h>
 
 #define NB_TTYS		4
 
@@ -241,6 +242,9 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 			break;
 		case TIOCSPGRP:
 			tty->pgrp = *((pid_t *) arg);
+			break;
+		case KDGKBTYPE:
+			*((char *) arg) = KB_101;
 			break;
 		default:
 			printf("Unknown ioctl request (%x) on device %x\n", request, filp->f_inode->i_rdev);
