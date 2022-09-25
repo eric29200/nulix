@@ -283,20 +283,28 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 	struct framebuffer_t *fb = &tty->fb;
 
 	/* handle character */
-	if (c >= ' ' && c <= '~') {
-		fb->buf[fb->y * fb->width + fb->x] = (tty->attr << 8) | c;
-		if (fb->active)
-			fb->update_region(fb, fb->y * fb->width + fb->x, 1);
-		fb->x++;
-	} else if (c == '\t') {
-		fb->x = (fb->x + fb->bpp / 8) & ~0x03;
-	} else if (c == '\n') {
-		fb->y++;
-		fb->x = 0;
-	} else if (c == '\r') {
-		fb->x = 0;
-	} else if (c == '\b') {
-		fb->x--;
+	switch (c) {
+		case 7:
+			break;
+		case '\t':
+			fb->x = (fb->x + fb->bpp / 8) & ~0x03;
+			break;
+		case '\n':
+			fb->y++;
+			fb->x = 0;
+			break;
+		case '\r':
+			fb->x = 0;
+			break;
+		case '\b':
+			fb->x--;
+			break;
+		default:
+			fb->buf[fb->y * fb->width + fb->x] = (tty->attr << 8) | c;
+			if (fb->active)
+				fb->update_region(fb, fb->y * fb->width + fb->x, 1);
+			fb->x++;
+			break;
 	}
 
 	/* go to next line */

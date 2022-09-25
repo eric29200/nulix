@@ -62,7 +62,7 @@ int get_glyph(struct font_t *font, uint16_t unicode)
 
 	/* use ascii direct mapping */
 	if (unicode < ASCII_MAP_SIZE)
-			return (font->ascii_map[unicode] & 0xFFFF0000) >> 16;
+		return (font->ascii_map[unicode] & 0xFFFF0000) >> 16;
 
 	for (s = 0; s < font->uc_size; s++)
 		if (unicode == (font->uc_map[s] & 0xFFFF))
