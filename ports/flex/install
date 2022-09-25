@@ -1,0 +1,19 @@
+URL="https://github.com/westes/flex/files/981163/"
+VERSION="2.6.4"
+SRC_FILENAME="flex-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--disable-nls							\
+		--prefix="/"							\
+		CC=gcc LD=ld AR=ar RANLIB=ranlib
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$MUSL_DIR
+}

@@ -482,9 +482,11 @@ void console_write(struct tty_t *tty)
  */
 int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 {
+	int i, new_func_len, old_func_len;
+	struct kbsentry_t *kbse;
 	struct kbentry_t *kbe;
 	uint16_t *key_map;
-	int i;
+	char *old_func;
 
 	/* unused tty */
 	UNUSED(tty);
@@ -496,6 +498,8 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 		case KDSKBENT:
 			/* check keyboard entry */
 			kbe = (struct kbentry_t *) arg;
+			if (!kbe)
+				return -EINVAL;
 			if (KTYP(kbe->kb_value) >= NR_TYPES)
 				return -EINVAL;
 			if (KVAL(kbe->kb_value) > max_vals[KTYP(kbe->kb_value)])
@@ -515,6 +519,31 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 
 		 	/* set key */
 			key_maps[kbe->kb_table][kbe->kb_index] = U(kbe->kb_value);
+			return 0;
+		case KDSKBSENT:
+			/* get function entry */
+			kbse = (struct kbsentry_t *) arg;
+			if (!kbse)
+				return -EINVAL;
+
+			/* get functions */
+			old_func = (char *) func_table[kbse->kb_func];
+			old_func_len = old_func ? strlen(old_func) : 0;
+			new_func_len = kbse->kb_string ? strlen((char *) kbse->kb_string) : 0;
+
+			/* free old entry */
+			if (old_func_len && (new_func_len == 0 || new_func_len > old_func_len)
+          && func_table[kbse->kb_func] >= (uint8_t *) KHEAP_START)
+				kfree(func_table[kbse->kb_func]);
+
+			/* set new function */
+			if (new_func_len == 0)
+				func_table[kbse->kb_func] = NULL;
+			else if (old_func_len >= new_func_len)
+				strcpy((char *) func_table[kbse->kb_func], (char *) kbse->kb_string);
+			else
+				func_table[kbse->kb_func] = (uint8_t *) strdup((char *) kbse->kb_string);
+
 			return 0;
 		default:
 			break;

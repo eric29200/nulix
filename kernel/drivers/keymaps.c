@@ -230,8 +230,8 @@ uint8_t *func_table[MAX_NR_FUNCS] = {
 	func_buf + 135,
 	func_buf + 140,
 	func_buf + 145,
-	0,
-	0,
+	NULL,
+	NULL,
 	func_buf + 149,
-	0,
+	NULL,
 };

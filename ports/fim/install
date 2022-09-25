@@ -1,0 +1,23 @@
+URL="http://download.savannah.nongnu.org/releases/fbi-improved/"
+VERSION="0.6-trunk"
+SRC_FILENAME="fim-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--prefix="/usr"							\
+		--disable-readline						\
+		--disable-exif							\
+		CFLAGS="-static" LDFLAGS="-static"
+}
+
+function build_port() {
+	make
+	#make -j$NJOBS
+	:
+}
+
+function install_port() {
+	#make install DESTDIR=$SYSROOT
+	:
+}
