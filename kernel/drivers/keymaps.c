@@ -144,6 +144,28 @@ uint16_t *key_maps[MAX_NR_KEYMAPS] = {
 };
 
 /*
+ * E0 keys.
+ */
+uint8_t e0_keys[128] = {
+  0, 0, 0, 0, 0, 0, 0, 0,			      			/* 0x00-0x07 */
+  0, 0, 0, 0, 0, 0, 0, 0,			      			/* 0x08-0x0f */
+  0, 0, 0, 0, 0, 0, 0, 0,			      			/* 0x10-0x17 */
+  0, 0, 0, 0, E0_KPENTER, E0_RCTRL, 0, 0,	      			/* 0x18-0x1f */
+  0, 0, 0, 0, 0, 0, 0, 0,			      			/* 0x20-0x27 */
+  0, 0, 0, 0, 0, 0, 0, 0,			      			/* 0x28-0x2f */
+  0, 0, 0, 0, 0, E0_KPSLASH, 0, E0_PRSCR,	      			/* 0x30-0x37 */
+  E0_RALT, 0, 0, 0, 0, E0_F13, E0_F14, E0_HELP,	      			/* 0x38-0x3f */
+  E0_DO, E0_F17, 0, 0, 0, 0, E0_BREAK, E0_HOME,	      			/* 0x40-0x47 */
+  E0_UP, E0_PGUP, 0, E0_LEFT, E0_OK, E0_RIGHT, E0_KPMINPLUS, E0_END,	/* 0x48-0x4f */
+  E0_DOWN, E0_PGDN, E0_INS, E0_DEL, 0, 0, 0, 0,	  			/* 0x50-0x57 */
+  0, 0, 0, E0_MSLW, E0_MSRW, E0_MSTM, 0, 0,	      			/* 0x58-0x5f */
+  0, 0, 0, 0, 0, 0, 0, 0,			      			/* 0x60-0x67 */
+  0, 0, 0, 0, 0, 0, 0, E0_MACRO,		      			/* 0x68-0x6f */
+  0, 0, 0, 0, 0, 0, 0, 0,			      			/* 0x70-0x77 */
+  0, 0, 0, 0, 0, 0, 0, 0			      			/* 0x78-0x7f */
+};
+
+/*
  * Functions buffer.
  */
 uint8_t func_buf[] = {

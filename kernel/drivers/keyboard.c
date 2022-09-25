@@ -14,6 +14,7 @@ static uint8_t k_down[NR_SHIFT] = { 0, };
 static int shift_state = 0;
 static int capslock_state = 0;
 static int numlock_state = 0;
+static uint8_t prev_scan_code = 0;
 
 typedef void (*k_hand)(struct tty_t *tty, uint8_t value, char up_flag);
 typedef void (k_handfn)(struct tty_t *tty, uint8_t value, char up_flag);
@@ -488,10 +489,45 @@ static void keyboard_handler(struct registers_t *regs)
 	if (!tty)
 		return;
 
-	/* get key */
+	/* get scan code */
 	scan_code = scan_key();
+	if (scan_code == 0xE0 || scan_code == 0xE1) {
+		prev_scan_code = scan_code;
+		return;
+	}
+
+	/* convert scan code to key code */
 	up_flag = scan_code & 0200;
-	key_code = scan_code & 0x7F;
+	scan_code &= 0x7F;
+
+	/* handle e0/e1 key */
+	if (prev_scan_code) {
+		if (prev_scan_code != 0xE0) {
+			/* pause key */
+			if (prev_scan_code == 0xE1 && scan_code == 0x1D) {
+				prev_scan_code = (uint8_t) 0x100;
+				return;
+			} else if (prev_scan_code == (uint8_t) 0x100 && scan_code == 0x45) {
+				key_code = E1_PAUSE;
+				prev_scan_code = 0;
+			} else {
+				prev_scan_code = 0;
+				return;
+			}
+		} else {
+			prev_scan_code = 0;
+
+			if (scan_code == 0x2A || scan_code == 0x36)
+				return;
+
+			if (e0_keys[scan_code])
+				key_code = e0_keys[scan_code];
+			else
+				return;
+		}
+	} else {
+		key_code = scan_code;
+	}
 
 	/* get key map */
 	shift_final = shift_state ^ capslock_state;
