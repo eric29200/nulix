@@ -28,7 +28,7 @@ static uint32_t calibrate_tsc()
 {
 	uint32_t start_low, start_high;
 	uint32_t end_low, end_high;
-	uint32_t count;
+	uint32_t count = 0;
 
 	/* set the gate high, disable speaker */
 	outb(0x61, (inb(0x61) & ~0x02) | 0x01);

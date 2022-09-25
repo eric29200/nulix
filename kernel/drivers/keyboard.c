@@ -5,79 +5,460 @@
 #include <ipc/signal.h>
 #include <dev.h>
 
-/* keyboard status */
-static uint32_t keyboard_status = 0;
+#define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))
 
-/* normal key map */
-static unsigned char key_map[] = {
-	0,	27,	'&',	233,	'"',	'\'',	'(',	'-',
-	232,	'_',	231,	224,	')',	'=',	127,	9,
-	'a',	'z',	'e',	'r',	't',	'y',	'u',	'i',
-	'o',	'p',	'^',	'$',	 13,	0,	'q',	's',
-	'd',	'f',	'g',	'h',	'j',	'k',	'l',	'm',
-	249,	178,	0,	 42,	'w',	'x',	'c',	'v',
-	'b',	'n',	',',	';',	':',	'!',	0,	'*',
-	0,	32,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	'-',	0,	0,	0,	'+',	0,
-	0,	0,	0,	0,	0,	0,	'<',	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0 };
+/* shift state counters */
+static uint8_t k_down[NR_SHIFT] = { 0, };
 
-/* shift key map */
-static unsigned char shift_map[] = {
-	0,	 27,	'1',	'2',	'3',	'4',	'5',	'6',
-	'7',	'8',	'9',	'0',	176,	'+',	127,	9,
-	'A',	'Z',	'E',	'R',	'T',	'Y',	'U',	'I',
-	'O',	'P',	168,	163,	 13,	0,	'Q',	'S',
-	'D',	'F',	'G',	'H',	'J',	'K',	'L',	'M',
-	'%',	0,	0,	181,	'W',	'X',	'C',	'V',
-	'B',	'N',	'?',	'.',	'/',	167,	0,	'*',
-	0,	 32,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	'-',	0,	0,	0,	'+',	0,
-	0,	0,	0,	0,	0,	0,	'>',	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0 };
+/* keyboard state */
+static int shift_state = 0;
+static int capslock_state = 0;
+static int numlock_state = 0;
 
-/* alt key map */
-static unsigned char alt_map[] = {
-	0,	0,	0,	'~',	'#',	'{',	'[',	'|',
-	'`',	'\\',	 '^',	'@',	']',	'}',	0,	0,
-	'@',	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	164,	13,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0,	0,	0,	0,	0,	0,	'|',	0,
-	0,	0,	0,	0,	0,	0,	0,	0,
-	0 };
+typedef void (*k_hand)(struct tty_t *tty, uint8_t value, char up_flag);
+typedef void (k_handfn)(struct tty_t *tty, uint8_t value, char up_flag);
+typedef void (*void_fnp)(struct tty_t *tty);
+typedef void (void_fn)(struct tty_t *tty);
 
-/* escape map */
-static unsigned char esc_map[] = {
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		KEY_HOME,
-	KEY_UP,		KEY_PAGE_UP,	0,		KEY_LEFT,	0,		KEY_RIGHT,	0,		KEY_END,
-	KEY_DOWN,	KEY_PAGE_DOWN,	KEY_INSERT,	KEY_DELETE,	0,		0,		0,		0,
-	0,		0,		0,		0,		0,		0,		0,		0,
-	0 };
+/*
+ * Key handlers functions.
+ */
+static k_handfn
+	do_self,	do_fn,		do_spec,	do_pad,
+	do_dead,	do_cons,	do_cur,		do_shift,
+	do_meta,	do_ascii,	do_lock,	do_lowercase,
+	do_slock,	do_ignore;
+
+/*
+ * Key handlers.
+ */
+static k_hand key_handler[] = {
+	do_self,	do_fn,		do_spec,	do_pad,
+	do_dead,	do_cons,	do_cur,		do_shift,
+	do_meta,	do_ascii,	do_lock,	do_lowercase,
+	do_slock,	do_ignore,	do_ignore,	do_ignore
+};
+
+/*
+ * Key functions handlers functions.
+ */
+static void_fn
+	fn_null,		fn_enter,		fn_show_ptregs,		fn_show_mem,
+	fn_show_state,		fn_send_intr,		fn_lastcons,		fn_caps_toggle,
+	fn_num,			fn_hold,		fn_scroll_forw,		fn_scroll_back,
+	fn_boot_it,		fn_caps_on,		fn_compose,		fn_SAK,
+	fn_decr_console,	fn_incr_console,	fn_spawn_console, 	fn_bare_num;
+
+/*
+ * Key functions handlers.
+ */
+static void_fnp spec_fn_table[] = {
+	fn_null,	fn_enter,		fn_show_ptregs,		fn_show_mem,		fn_show_state,
+	fn_send_intr,	fn_lastcons,		fn_caps_toggle,		fn_num,			fn_hold,
+	fn_scroll_forw,	fn_scroll_back, 	fn_boot_it,		fn_caps_on,		fn_compose,
+	fn_SAK, 	fn_decr_console,	fn_incr_console,	fn_spawn_console, 	fn_bare_num
+};
+
+/* maximum values each key_handler can handle */
+const int max_vals[] = {
+	255, ARRAY_SIZE(func_table) - 1, ARRAY_SIZE(spec_fn_table) - 1, NR_PAD - 1,
+	NR_DEAD - 1, 255, 3, NR_SHIFT - 1, 255, NR_ASCII - 1, NR_LOCK - 1,
+	255, NR_LOCK - 1, 255, NR_BRL - 1
+};
+
+const int NR_TYPES = ARRAY_SIZE(max_vals);
+
+/*
+ * Put a character in tty read queue.
+ */
+static void putc(struct tty_t *tty, uint8_t c)
+{
+	if (!ring_buffer_full(&tty->read_queue))
+		ring_buffer_write(&tty->read_queue, &c, 1);
+}
+
+/*
+ * Put a string in tty read queue.
+ */
+static void puts(struct tty_t *tty, uint8_t *s)
+{
+	while (*s) {
+		putc(tty, *s);
+		s++;
+	}
+}
+
+/*
+ * Null function.
+ */
+static void fn_null(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Enter function.
+ */
+static void fn_enter(struct tty_t *tty)
+{
+	putc(tty, 13);
+}
+
+/*
+ * Show registers function.
+ */
+static void fn_show_ptregs(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Show memory function.
+ */
+static void fn_show_mem(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Show state function.
+ */
+static void fn_show_state(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Send interrupt function.
+ */
+static void fn_send_intr(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Last console function.
+ */
+static void fn_lastcons(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Caps toggle function.
+ */
+static void fn_caps_toggle(struct tty_t *tty)
+{
+	UNUSED(tty);
+	capslock_state ^= 1;
+}
+
+/*
+ * Num function.
+ */
+static void fn_num(struct tty_t *tty)
+{
+	UNUSED(tty);
+	numlock_state ^= 1;
+}
+
+/*
+ * Hold function.
+ */
+static void fn_hold(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Scroll forward function.
+ */
+static void fn_scroll_forw(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Scroll back function.
+ */
+static void fn_scroll_back(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Boot it function.
+ */
+static void fn_boot_it(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Caps on function.
+ */
+static void fn_caps_on(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Compose function.
+ */
+static void fn_compose(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * SAK function.
+ */
+static void fn_SAK(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Decrement console function.
+ */
+static void fn_decr_console(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Increment console function.
+ */
+static void fn_incr_console(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Spawn console function.
+ */
+static void fn_spawn_console(struct tty_t *tty)
+{
+	UNUSED(tty);
+}
+
+/*
+ * Bare num function.
+ */
+static void fn_bare_num(struct tty_t *tty)
+{
+	UNUSED(tty);
+	numlock_state ^= 1;
+}
+
+/*
+ * Handle normal key.
+ */
+static void do_self(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	if (up_flag)
+		return;
+
+	putc(tty, value);
+}
+
+/*
+ * Handle function keys.
+ */
+static void do_fn(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	if (up_flag)
+		return;
+
+	/* get function */
+	if (func_table[value])
+		puts(tty, func_table[value]);
+}
+
+/*
+ * Handle special key.
+ */
+static void do_spec(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	if (up_flag)
+		return;
+
+	if (value >= ARRAY_SIZE(spec_fn_table))
+		return;
+
+	spec_fn_table[value](tty);
+}
+
+/*
+ * Handle pad key.
+ */
+static void do_pad(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	static const char *pad_chars = "0123456789+-*/\015,.?";
+
+	if (up_flag)
+		return;
+
+	/* when numlock is down, handle function keys */
+	if (!numlock_state) {
+		switch (value) {
+			case KVAL(K_PCOMMA):
+			case KVAL(K_PDOT):
+				do_fn(tty, KVAL(K_REMOVE), 0);
+				return;
+			case KVAL(K_P0):
+				do_fn(tty, KVAL(K_INSERT), 0);
+				return;
+			case KVAL(K_P1):
+				do_fn(tty, KVAL(K_SELECT), 0);
+				return;
+			case KVAL(K_P2):
+				do_cur(tty, KVAL(K_DOWN), 0);
+				return;
+			case KVAL(K_P3):
+				do_fn(tty, KVAL(K_PGDN), 0);
+				return;
+			case KVAL(K_P4):
+				do_cur(tty, KVAL(K_LEFT), 0);
+				return;
+			case KVAL(K_P6):
+				do_cur(tty, KVAL(K_RIGHT), 0);
+				return;
+			case KVAL(K_P7):
+				do_fn(tty, KVAL(K_FIND), 0);
+				return;
+			case KVAL(K_P8):
+				do_cur(tty, KVAL(K_UP), 0);
+				return;
+			case KVAL(K_P9):
+				do_fn(tty, KVAL(K_PGUP), 0);
+				return;
+		}
+	}
+
+	/* just print pad character */
+	putc(tty, pad_chars[value]);
+}
+
+/*
+ * Handle dead key.
+ */
+static void do_dead(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
+
+/*
+ * Handle cons key.
+ */
+static void do_cons(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
+
+/*
+ * Handle cur key.
+ */
+static void do_cur(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
+
+/*
+ * Handle shift key.
+ */
+static void do_shift(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	/* unused tty */
+	UNUSED(tty);
+
+	/* update shift counters */
+	if (up_flag) {
+		if (k_down[value])
+			k_down[value]--;
+	} else {
+		k_down[value]++;
+	}
+
+	/* update shift state */
+	if (k_down[value])
+		shift_state |= (1 << value);
+	else
+		shift_state &= ~(1 << value);
+}
+
+/*
+ * Handle meta key.
+ */
+static void do_meta(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
+
+/*
+ * Handle ascii key.
+ */
+static void do_ascii(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
+
+/*
+ * Handle lock key.
+ */
+static void do_lock(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
+
+/*
+ * Handle lower case key.
+ */
+static void do_lowercase(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
+
+/*
+ * Handle slock key.
+ */
+static void do_slock(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
+
+/*
+ * Ignore key.
+ */
+static void do_ignore(struct tty_t *tty, uint8_t value, char up_flag)
+{
+	UNUSED(tty);
+	UNUSED(value);
+	UNUSED(up_flag);
+}
 
 /*
  * Scan keyboard key.
  */
-static uint32_t scan_key()
+static uint8_t scan_key()
 {
-	uint32_t code, value;
+	uint8_t code, value;
 
 	/* get code and value */
 	code = inb(KEYBOARD_PORT);
@@ -91,32 +472,14 @@ static uint32_t scan_key()
 }
 
 /*
- * Put a character in tty read queue.
- */
-static void putc(struct tty_t *tty, uint8_t c)
-{
-	if (!ring_buffer_full(&tty->read_queue))
-		ring_buffer_write(&tty->read_queue, &c, 1);
-}
-
-/*
- * Put a buffer in tty read queue.
- */
-static void puts(struct tty_t *tty, uint8_t *buf, size_t n)
-{
-	size_t i;
-
-	for (i = 0; i < n; i++)
-		putc(tty, buf[i]);
-}
-
-/*
  * Keyboard handler.
  */
 static void keyboard_handler(struct registers_t *regs)
 {
-	uint32_t scan_code, key_code = 0;
+	uint8_t scan_code, key_code = 0, type, shift_final;
+	uint16_t *key_map, key_sym;
 	struct tty_t *tty;
+	char up_flag;
 
 	UNUSED(regs);
 
@@ -127,106 +490,31 @@ static void keyboard_handler(struct registers_t *regs)
 
 	/* get key */
 	scan_code = scan_key();
+	up_flag = scan_code & 0200;
+	key_code = scan_code & 0x7F;
 
-	switch (scan_code) {
-		case 0x2A:
-		case 0x36:
-			keyboard_status |= KEYBOARD_STATUS_SHIFT;
-			break;
-		case 0xAA:
-		case 0xB6:
-			keyboard_status &= ~KEYBOARD_STATUS_SHIFT;
-			break;
-		case 0x1D:
-			keyboard_status |= KEYBOARD_STATUS_CTRL;
-			break;
-		case 0x9D:
-			keyboard_status &= ~KEYBOARD_STATUS_CTRL;
-			break;
-		case 0x38:
-			keyboard_status |= KEYBOARD_STATUS_ALT;
-			break;
-		case 0xB8:
-			keyboard_status &= ~KEYBOARD_STATUS_ALT;
-			break;
-		case 0x3A:
-			keyboard_status ^= KEYBOARD_STATUS_CAPSLOCK;
-			break;
-		default:
-			/* on key down, send char to current tty */
-			if ((scan_code & 0x80) == 0) {
-				if ((keyboard_status & KEYBOARD_STATUS_CTRL) != 0) {
-					key_code = key_map[scan_code];
+	/* get key map */
+	shift_final = shift_state ^ capslock_state;
+	key_map = key_maps[shift_final];
 
-					/* SIGINT/SIGSTOP signals */
-					if (key_code == 'c')
-						tty_signal_group(DEV_TTY0, SIGINT);
-					else if (key_code == 'z')
-						tty_signal_group(DEV_TTY0, SIGSTOP);
+	/* handle key */
+	if (key_map) {
+		/* get key sym/type */
+		key_sym = key_map[key_code];
+		type = KTYP(key_sym);
 
-					key_code &= 0x1F;
-				} else if ((keyboard_status & KEYBOARD_STATUS_ALT) != 0) {
-					/* F keys : change tty */
-					if (scan_code >= KEY_F1 && scan_code <= KEY_F10) {
-						tty_change(scan_code - KEY_F1);
-						return;
-					}
-
-					key_code = alt_map[scan_code];
-				} else if ((((keyboard_status & KEYBOARD_STATUS_SHIFT) != 0)
-					    ^ ((keyboard_status & KEYBOARD_STATUS_CAPSLOCK) != 0)) != 0) {
-					key_code = shift_map[scan_code];
-				} else {
-					key_code = key_map[scan_code];
-				}
-
-				/* check escape map */
-				if (!key_code)
-					key_code = esc_map[scan_code];
+		if (type >= 0xF0) {
+			type -= 0xF0;
+			if (type == KT_LETTER) {
+				type = KT_LATIN;
 			}
-			break;
+
+			/* handle key */
+			(*key_handler[type])(tty, key_sym & 0xFF, up_flag);
+		}
 	}
 
-	/* send key code to tty */
-	switch (key_code) {
-		case 0:
-			break;
-		case KEY_HOME:
-			puts(tty, (uint8_t *) KEY_ESCAPE_HOME, strlen(KEY_ESCAPE_HOME));
-			break;
-		case KEY_END:
-			puts(tty, (uint8_t *) KEY_ESCAPE_END, strlen(KEY_ESCAPE_END));
-			break;
-		case KEY_UP:
-			puts(tty, (uint8_t *) KEY_ESCAPE_UP, strlen(KEY_ESCAPE_UP));
-			break;
-		case KEY_DOWN:
-			puts(tty, (uint8_t *) KEY_ESCAPE_DOWN, strlen(KEY_ESCAPE_DOWN));
-			break;
-		case KEY_LEFT:
-			puts(tty, (uint8_t *) KEY_ESCAPE_LEFT, strlen(KEY_ESCAPE_LEFT));
-			break;
-		case KEY_RIGHT:
-			puts(tty, (uint8_t *) KEY_ESCAPE_RIGHT, strlen(KEY_ESCAPE_RIGHT));
-			break;
-		case KEY_PAGE_UP:
-			puts(tty, (uint8_t *) KEY_ESCAPE_PAGE_UP, strlen(KEY_ESCAPE_PAGE_UP));
-			break;
-		case KEY_PAGE_DOWN:
-			puts(tty, (uint8_t *) KEY_ESCAPE_PAGE_DOWN, strlen(KEY_ESCAPE_PAGE_DOWN));
-			break;
-		case KEY_INSERT:
-			puts(tty, (uint8_t *) KEY_ESCAPE_INSERT, strlen(KEY_ESCAPE_INSERT));
-			break;
-		case KEY_DELETE:
-			puts(tty, (uint8_t *) KEY_ESCAPE_DELETE, strlen(KEY_ESCAPE_DELETE));
-			break;
-		default:
-			puts(tty, (uint8_t *) &key_code, 1);
-			break;
-	}
-
-	/* cook input characters */
+	/* do cook */
 	tty_do_cook(tty);
 }
 

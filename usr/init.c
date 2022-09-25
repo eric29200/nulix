@@ -7,11 +7,26 @@
 #include <unistd.h>
 
 #define NTTYS		4
+#define KEY_MAP		"/usr/share/keymaps/i386/azerty/fr-latin1.map.gz"
+
+/*
+ * Load key map.
+ */
+static void load_keymap()
+{
+	pid_t pid;
+
+	pid = fork();
+	if (pid == 0)
+		execl("/usr/bin/loadkeys", "loadkeys", KEY_MAP, NULL, NULL);
+	else
+		waitpid(pid, NULL, 0);
+}
 
 /*
  * Spwan a shell on tty.
  */
-pid_t spawn_shell(int tty_num)
+static pid_t spawn_shell(int tty_num)
 {
 	char tty[32];
 	pid_t pid;
@@ -54,6 +69,9 @@ int main(void)
 
 	/* go to root dir */
 	chdir("/");
+
+	/* load key map */
+	load_keymap();
 
 	/* spawn a shell on each tty */
 	for (i = 0; i < NTTYS; i++)

@@ -1,6 +1,10 @@
 #include <drivers/console.h>
+#include <drivers/keyboard.h>
+#include <mm/mm.h>
 #include <stdio.h>
 #include <string.h>
+#include <stderr.h>
+#include <kd.h>
 
 /* ansi color table */
 static uint8_t ansi_color_table[] = {
@@ -463,4 +467,50 @@ void console_write(struct tty_t *tty)
 	/* update cursor */
 	if (tty->deccm && tty->fb.active)
 		tty->fb.update_cursor(&tty->fb);
+}
+
+/*
+ * Console ioctl.
+ */
+int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
+{
+	struct kbentry_t *kbe;
+	uint16_t *key_map;
+	int i;
+
+	/* unused tty */
+	UNUSED(tty);
+
+	switch (request) {
+		case KDGKBTYPE:
+			*((char *) arg) = KB_101;
+			return 0;
+		case KDSKBENT:
+			/* check keyboard entry */
+			kbe = (struct kbentry_t *) arg;
+			if (KTYP(kbe->kb_value) >= NR_TYPES)
+				return -EINVAL;
+			if (KVAL(kbe->kb_value) > max_vals[KTYP(kbe->kb_value)])
+				return -EINVAL;
+
+			/* get or create key_map */
+			key_map = key_maps[kbe->kb_table];
+			if (!key_map) {
+				key_map = (uint16_t *) kmalloc(sizeof(plain_map));
+				if (!key_map)
+					return -ENOMEM;
+				key_maps[kbe->kb_table] = key_map;
+				key_map[0] = U(K_ALLOCATED);
+				for (i = 1; i < NR_KEYS; i++)
+					key_map[i] = U(K_HOLE);
+			}
+
+		 	/* set key */
+			key_maps[kbe->kb_table][kbe->kb_index] = U(kbe->kb_value);
+			return 0;
+		default:
+			break;
+	}
+
+	return -ENOIOCTLCMD;
 }

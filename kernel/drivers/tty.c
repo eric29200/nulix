@@ -11,7 +11,6 @@
 #include <ctype.h>
 #include <time.h>
 #include <dev.h>
-#include <kd.h>
 
 #define NB_TTYS		4
 
@@ -141,6 +140,24 @@ void tty_do_cook(struct tty_t *tty)
 			c = '\r';
 		}
 
+		/* handle signals */
+		if (L_ISIG(tty)) {
+			if (c == tty->termios.c_cc[VINTR]) {
+				task_signal_group(tty->pgrp, SIGINT);
+				continue;
+			}
+
+			if (c == tty->termios.c_cc[VQUIT]) {
+				task_signal_group(tty->pgrp, SIGQUIT);
+				continue;
+			}
+
+			if (c == tty->termios.c_cc[VSUSP]) {
+				task_signal_group(tty->pgrp, SIGSTOP);
+				continue;
+			}
+		}
+
 		/* echo = put character on write queue */
 		if (L_ECHO(tty) && !ring_buffer_full(&tty->write_queue))
 			out_char(tty, c);
@@ -215,6 +232,7 @@ void tty_change(int n)
 int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 {
 	struct tty_t *tty;
+	int ret;
 
 	/* get tty */
 	tty = tty_lookup(filp->f_inode->i_rdev);
@@ -243,10 +261,13 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 		case TIOCSPGRP:
 			tty->pgrp = *((pid_t *) arg);
 			break;
-		case KDGKBTYPE:
-			*((char *) arg) = KB_101;
-			break;
 		default:
+			if (tty->ioctl) {
+				ret = tty->ioctl(tty, request, arg);
+				if (ret != -ENOIOCTLCMD)
+					return ret;
+			}
+
 			printf("Unknown ioctl request (%x) on device %x\n", request, filp->f_inode->i_rdev);
 			break;
 	}
@@ -290,22 +311,6 @@ static int tty_poll(struct file_t *filp, struct select_table_t *wait)
 	select_wait(&tty->wait, wait);
 
 	return mask;
-}
-
-/*
- * Signal foreground processes group.
- */
-void tty_signal_group(dev_t dev, int sig)
-{
-	struct tty_t *tty;
-
-	/* get tty */
-	tty = tty_lookup(dev);
-	if (!tty)
-		return;
-
-	/* send signal */
-	task_signal_group(tty->pgrp, sig);
 }
 
 /*
@@ -359,6 +364,7 @@ static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer
 	tty->pgrp = 0;
 	tty->wait = NULL;
 	tty->write = console_write;
+	tty->ioctl = console_ioctl;
 	tty_init_attr(tty);
 
 	/* init read queue */
