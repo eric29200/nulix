@@ -90,6 +90,18 @@ static void puts(struct tty_t *tty, uint8_t *s)
 }
 
 /*
+ * Apply a key.
+ */
+static void applkey(struct tty_t *tty, int key, char mode)
+{
+	static uint8_t buf[] = { 0x1b, 'O', 0x00, 0x00 };
+
+	buf[1] = (mode ? 'O' : '[');
+	buf[2] = key;
+	puts(tty, buf);
+}
+
+/*
  * Null function.
  */
 static void fn_null(struct tty_t *tty)
@@ -362,13 +374,16 @@ static void do_cons(struct tty_t *tty, uint8_t value, char up_flag)
 }
 
 /*
- * Handle cur key.
+ * Handle cursor key.
  */
 static void do_cur(struct tty_t *tty, uint8_t value, char up_flag)
 {
-	UNUSED(tty);
-	UNUSED(value);
-	UNUSED(up_flag);
+	static const char *cur_chars = "BDCA";
+
+	if (up_flag)
+		return;
+
+	applkey(tty, cur_chars[value], 0);
 }
 
 /*
