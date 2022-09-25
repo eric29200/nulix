@@ -529,7 +529,7 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			/* get functions */
 			old_func = (char *) func_table[kbse->kb_func];
 			old_func_len = old_func ? strlen(old_func) : 0;
-			new_func_len = kbse->kb_string ? strlen((char *) kbse->kb_string) : 0;
+			new_func_len = strlen((char *) kbse->kb_string);
 
 			/* free old entry */
 			if (old_func_len && (new_func_len == 0 || new_func_len > old_func_len)
