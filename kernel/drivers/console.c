@@ -286,20 +286,25 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 	switch (c) {
 		case 7:
 			break;
-		case '\t':
+		case 8:
+			fb->x--;
+			break;
+		case 9:
 			fb->x = (fb->x + fb->bpp / 8) & ~0x03;
 			break;
-		case '\n':
+		case 10:
 			fb->y++;
 			fb->x = 0;
 			break;
-		case '\r':
+		case 13:
 			fb->x = 0;
 			break;
-		case '\b':
-			fb->x--;
+		case 14:
+			break;
+		case 15:
 			break;
 		default:
+			printf("%d\n", c);
 			fb->buf[fb->y * fb->width + fb->x] = (tty->attr << 8) | c;
 			if (fb->active)
 				fb->update_region(fb, fb->y * fb->width + fb->x, 1);
