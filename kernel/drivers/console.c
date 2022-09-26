@@ -495,6 +495,12 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 		case KDGKBTYPE:
 			*((char *) arg) = KB_101;
 			return 0;
+		case KDGETMODE:
+			*((char *) arg) = KD_TEXT;
+			return 0;
+		case KDGKBMODE:
+			*((char *) arg) = K_UNICODE;
+			return 0;
 		case KDSKBENT:
 			/* check keyboard entry */
 			kbe = (struct kbentry_t *) arg;
