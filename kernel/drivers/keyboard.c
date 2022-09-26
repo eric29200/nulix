@@ -364,13 +364,18 @@ static void do_dead(struct tty_t *tty, uint8_t value, char up_flag)
 }
 
 /*
- * Handle cons key.
+ * Handle console key.
  */
 static void do_cons(struct tty_t *tty, uint8_t value, char up_flag)
 {
+	/* unused tty */
 	UNUSED(tty);
-	UNUSED(value);
-	UNUSED(up_flag);
+
+	if (up_flag)
+		return;
+
+	/* change tty */
+	tty_change(value);
 }
 
 /*
