@@ -501,6 +501,24 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 		case KDGKBMODE:
 			*((char *) arg) = K_UNICODE;
 			return 0;
+		case KDGKBENT:
+			kbe = (struct kbentry_t *) arg;
+			if (!kbe)
+				return -EINVAL;
+
+			/* get key entry */
+			key_map = key_maps[kbe->kb_table];
+			if (key_map) {
+				kbe->kb_value = U(key_map[kbe->kb_index]);
+				if (KTYP(kbe->kb_value) >= NR_TYPES)
+					kbe->kb_value = K_HOLE;
+			} else if (kbe->kb_index) {
+				kbe->kb_value = K_HOLE;
+			} else {
+				kbe->kb_value = K_NOSUCHMAP;
+			}
+
+			return 0;
 		case KDSKBENT:
 			/* check keyboard entry */
 			kbe = (struct kbentry_t *) arg;
