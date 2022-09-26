@@ -37,6 +37,7 @@ function check_port() {
 	fi
 
 	# load port environ
+	URL_GIT=0
 	source $PORT"/install"
 }
 
@@ -50,7 +51,13 @@ function download_and_extract_port() {
 	cd build/$PORT
 
 	# download sources
-	wget $URL"/"$SRC_FILENAME
+	if [[ $URL_GIT == 1 ]]; then
+		SRC_DIR=$SRC_FILENAME
+		git clone $URL
+		return
+	else
+		wget $URL"/"$SRC_FILENAME
+	fi
 
 	# extract sources
 	SRC_EXTENSION=`echo $SRC_FILENAME | awk -F '.' '{ print $(NF-1)"."$NF }'`
