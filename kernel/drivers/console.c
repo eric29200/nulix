@@ -304,7 +304,6 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 		case 15:
 			break;
 		default:
-			printf("%d\n", c);
 			fb->buf[fb->y * fb->width + fb->x] = (tty->attr << 8) | c;
 			if (fb->active)
 				fb->update_region(fb, fb->y * fb->width + fb->x, 1);
