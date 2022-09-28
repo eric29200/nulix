@@ -46,10 +46,6 @@ static int segment_load(struct elf_prog_header_t *ph, int fd)
 	if (ph->p_type != ET_REL)
 		return 0;
 
-	/* map pages */
-	if (do_mmap(ph->p_vaddr, PAGE_ALIGN_UP(ph->p_filesz), 0, NULL) == NULL)
-		return -ENOMEM;
-
 	/* seek to elf segment */
 	ret = do_lseek(fd, ph->p_offset, SEEK_SET);
 	if (ret < 0)
@@ -133,12 +129,6 @@ int elf_load(const char *path)
  	/* set data segment */
 	current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text);
 	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text);
-
-	/* allocate at the end of process memory */
-	if (do_mmap(USTACK_START - USTACK_SIZE, USTACK_SIZE, 0, NULL) == NULL) {
-		ret = -ENOMEM;
-		goto out;
-	}
 
 	/* set elf entry point */
 	current_task->user_entry = elf_header->e_entry;
