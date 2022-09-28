@@ -38,44 +38,26 @@ static int elf_check(struct elf_header_t *elf_header)
 /*
  * Load an ELF segment in memory.
  */
-static int segment_load(int fd, int off)
+static int segment_load(struct elf_prog_header_t *ph, int fd)
 {
-	struct elf_prog_header_t ph;
 	int ret;
 
-	/* seek to prog header */
-	ret = do_lseek(fd, off, SEEK_SET);
-	if (ret < 0)
-		return ret;
-
-	/* read prog header */
-	if (do_read(fd, (void *) &ph, sizeof(struct elf_prog_header_t)) != sizeof(struct elf_prog_header_t))
-		return -ENOSPC;
-
-	/* set start text position */
-	if (ph.p_vaddr > 0 && current_task->start_text == 0)
-		current_task->start_text = 0;
-
-	/* update end text position */
-	if (ph.p_vaddr + ph.p_memsz > current_task->end_text)
-		current_task->end_text = ph.p_vaddr + ph.p_memsz;
-
 	/* skip non relocable segments */
-	if (ph.p_type != ET_REL)
+	if (ph->p_type != ET_REL)
 		return 0;
 
 	/* map pages */
-	if (do_mmap(ph.p_vaddr, PAGE_ALIGN_UP(ph.p_filesz), 0, NULL) == NULL)
+	if (do_mmap(ph->p_vaddr, PAGE_ALIGN_UP(ph->p_filesz), 0, NULL) == NULL)
 		return -ENOMEM;
 
 	/* seek to elf segment */
-	ret = do_lseek(fd, ph.p_offset, SEEK_SET);
+	ret = do_lseek(fd, ph->p_offset, SEEK_SET);
 	if (ret < 0)
 		return ret;
 
 	/* load segment in memory */
-	memset((void *) ph.p_vaddr, 0, ph.p_memsz);
-	if (do_read(fd, (void *) ph.p_vaddr, ph.p_filesz) != (int) ph.p_filesz)
+	memset((void *) ph->p_vaddr, 0, ph->p_memsz);
+	if (do_read(fd, (void *) ph->p_vaddr, ph->p_filesz) != (int) ph->p_filesz)
 		return -ENOSPC;
 
 	return 0;
@@ -86,9 +68,10 @@ static int segment_load(int fd, int off)
  */
 int elf_load(const char *path)
 {
-	struct elf_header_t elf_header;
+	struct elf_header_t *elf_header;
+	char name[TASK_NAME_LEN], *buf;
+	struct elf_prog_header_t *ph;
 	struct list_head_t *pos, *n;
-	char name[TASK_NAME_LEN];
 	struct vm_area_t *vm;
 	int fd, off, ret;
 	uint32_t i;
@@ -102,14 +85,22 @@ int elf_load(const char *path)
 	strncpy(name, path, TASK_NAME_LEN - 1);
 	name[TASK_NAME_LEN - 1] = 0;
 
-	/* read elf header */
-	if ((size_t) do_read(fd, (void *) &elf_header, sizeof(struct elf_header_t)) != sizeof(struct elf_header_t)) {
+	/* allocate a buffer */
+	buf = (char *) kmalloc(PAGE_SIZE);
+	if (!buf) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	/* read first block */
+	if ((size_t) do_read(fd, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
 		do_close(fd);
 		return -EINVAL;
 	}
 
 	/* check elf header */
-	ret = elf_check(&elf_header);
+	elf_header = (struct elf_header_t *) buf;
+	ret = elf_check(elf_header);
 	if (ret != 0)
 		goto out;
 
@@ -127,10 +118,16 @@ int elf_load(const char *path)
 	current_task->end_brk = 0;
 
 	/* read each elf segment */
-	for (i = 0, off = elf_header.e_phoff; i < elf_header.e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
-		ret = segment_load(fd, off);
+	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
+		/* load segment */
+		ph = (struct elf_prog_header_t *) (buf + off);
+		ret = segment_load(ph, fd);
 		if (ret != 0)
 			goto out;
+
+		/* update end text position */
+		if (ph->p_vaddr + ph->p_memsz > current_task->end_text)
+			current_task->end_text = ph->p_vaddr + ph->p_memsz;
 	}
 
  	/* set data segment */
@@ -144,7 +141,7 @@ int elf_load(const char *path)
 	}
 
 	/* set elf entry point */
-	current_task->user_entry = elf_header.e_entry;
+	current_task->user_entry = elf_header->e_entry;
 	current_task->user_stack = USTACK_START;
 
 	/* change task name */
@@ -153,5 +150,6 @@ int elf_load(const char *path)
 	ret = 0;
 out:
 	do_close(fd);
+	kfree(buf);
 	return ret;
 }
