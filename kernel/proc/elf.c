@@ -66,8 +66,8 @@ int elf_load(const char *path)
 
 	/* read first block */
 	if ((size_t) do_read(fd, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
-		do_close(fd);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	/* check elf header */
@@ -98,12 +98,14 @@ int elf_load(const char *path)
 			/* seek to elf segment */
 			ret = do_lseek(fd, ph->p_offset, SEEK_SET);
 			if (ret < 0)
-				return ret;
+				goto out;
 
 			/* load segment in memory */
 			memset((void *) ph->p_vaddr, 0, ph->p_memsz);
-			if (do_read(fd, (void *) ph->p_vaddr, ph->p_filesz) != (int) ph->p_filesz)
-				return -ENOSPC;
+			if (do_read(fd, (void *) ph->p_vaddr, ph->p_filesz) != (int) ph->p_filesz) {
+				ret = -ENOSPC;
+				goto out;
+			}
 
 			/* update end text position */
 			if (ph->p_vaddr + ph->p_memsz > current_task->end_text)
