@@ -36,30 +36,6 @@ static int elf_check(struct elf_header_t *elf_header)
 }
 
 /*
- * Load an ELF segment in memory.
- */
-static int segment_load(struct elf_prog_header_t *ph, int fd)
-{
-	int ret;
-
-	/* skip non relocable segments */
-	if (ph->p_type != ET_REL)
-		return 0;
-
-	/* seek to elf segment */
-	ret = do_lseek(fd, ph->p_offset, SEEK_SET);
-	if (ret < 0)
-		return ret;
-
-	/* load segment in memory */
-	memset((void *) ph->p_vaddr, 0, ph->p_memsz);
-	if (do_read(fd, (void *) ph->p_vaddr, ph->p_filesz) != (int) ph->p_filesz)
-		return -ENOSPC;
-
-	return 0;
-}
-
-/*
  * Load an ELF file in memory.
  */
 int elf_load(const char *path)
@@ -117,13 +93,22 @@ int elf_load(const char *path)
 	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
 		/* load segment */
 		ph = (struct elf_prog_header_t *) (buf + off);
-		ret = segment_load(ph, fd);
-		if (ret != 0)
-			goto out;
+		/* load segment */
+		if (ph->p_type == PT_LOAD) {
+			/* seek to elf segment */
+			ret = do_lseek(fd, ph->p_offset, SEEK_SET);
+			if (ret < 0)
+				return ret;
 
-		/* update end text position */
-		if (ph->p_vaddr + ph->p_memsz > current_task->end_text)
-			current_task->end_text = ph->p_vaddr + ph->p_memsz;
+			/* load segment in memory */
+			memset((void *) ph->p_vaddr, 0, ph->p_memsz);
+			if (do_read(fd, (void *) ph->p_vaddr, ph->p_filesz) != (int) ph->p_filesz)
+				return -ENOSPC;
+
+			/* update end text position */
+			if (ph->p_vaddr + ph->p_memsz > current_task->end_text)
+				current_task->end_text = ph->p_vaddr + ph->p_memsz;
+		}
 	}
 
  	/* set data segment */

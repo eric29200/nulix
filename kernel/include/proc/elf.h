@@ -43,6 +43,18 @@
 #define ET_DYN		3	/* share object file */
 #define ET_CORE		4	/* core file */
 
+/* segment type */
+#define PT_NULL		0
+#define PT_LOAD		1
+#define PT_DYNAMIC	2
+#define PT_INTERP	3
+#define PT_NOTE		4
+#define PT_SHLIB	5
+#define PT_PHDR		6
+#define PT_NUM		7
+#define PT_LOPROC	0x70000000
+#define PT_HIPROC	0x7fffffff
+
 /* machine */
 #define EM_NONE		0	/* no machine */
 #define EM_386		3	/* intel 80386 */
