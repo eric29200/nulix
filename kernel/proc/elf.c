@@ -40,9 +40,9 @@ static int elf_check(struct elf_header_t *elf_header)
  */
 int elf_load(const char *path)
 {
+	struct elf_prog_header_t *ph, *last_ph = NULL;
 	struct elf_header_t *elf_header;
 	char name[TASK_NAME_LEN], *buf;
-	struct elf_prog_header_t *ph;
 	struct list_head_t *pos, *n;
 	struct vm_area_t *vm;
 	int fd, off, ret;
@@ -101,19 +101,27 @@ int elf_load(const char *path)
 				goto out;
 
 			/* load segment in memory */
-			memset((void *) ph->p_vaddr, 0, ph->p_memsz);
 			if (do_read(fd, (void *) ph->p_vaddr, ph->p_filesz) != (int) ph->p_filesz) {
 				ret = -ENOSPC;
 				goto out;
 			}
 
-			/* update end text position */
-			if (ph->p_vaddr + ph->p_memsz > current_task->end_text)
-				current_task->end_text = ph->p_vaddr + ph->p_memsz;
+			/* remember last segment */
+			last_ph = ph;
 		}
 	}
 
- 	/* set data segment */
+	/* no segment */
+	if (!last_ph) {
+		ret = -ENOEXEC;
+		goto out;
+	}
+
+	/* setup BSS section */
+	memset((void *) (last_ph->p_vaddr + last_ph->p_filesz), 0, last_ph->p_memsz - last_ph->p_filesz);
+
+	/* setup HEAP section */
+	current_task->end_text = last_ph->p_vaddr + last_ph->p_memsz;
 	current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text);
 	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text);
 
