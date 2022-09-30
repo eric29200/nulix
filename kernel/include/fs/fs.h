@@ -163,6 +163,7 @@ struct file_operations_t {
 	int (*close)(struct file_t *file);
 	int (*read)(struct file_t *, char *, int);
 	int (*write)(struct file_t *, const char *, int);
+	int (*lseek)(struct file_t *, off_t, int);
 	int (*getdents64)(struct file_t *, void *, size_t);
 	int (*poll)(struct file_t *, struct select_table_t *);
 	int (*ioctl)(struct file_t *, int, unsigned long);
@@ -190,6 +191,7 @@ struct inode_t *get_empty_inode(struct super_block_t *sb);
 
 /* file operations */
 struct file_t *get_empty_filp();
+off_t generic_lseek(struct file_t *filp, off_t offset, int whence);
 
 /* name operations */
 struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int follow_links);

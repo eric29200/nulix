@@ -46,6 +46,7 @@ int elf_load(const char *path)
 	struct list_head_t *pos, *n;
 	struct vm_area_t *vm;
 	int fd, off, ret;
+	void *load_addr;
 	uint32_t i;
 
 	/* open file */
@@ -88,21 +89,22 @@ int elf_load(const char *path)
 	current_task->end_text = 0;
 	current_task->start_brk = 0;
 	current_task->end_brk = 0;
+	current_task->user_entry = elf_header->e_entry;
+	current_task->user_stack = USTACK_START;
 
 	/* read each elf segment */
 	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
 		/* load segment */
 		ph = (struct elf_prog_header_t *) (buf + off);
-		/* load segment */
 		if (ph->p_type == PT_LOAD) {
-			/* seek to elf segment */
-			ret = do_lseek(fd, ph->p_offset, SEEK_SET);
-			if (ret < 0)
-				goto out;
-
-			/* load segment in memory */
-			if (do_read(fd, (void *) ph->p_vaddr, ph->p_filesz) != (int) ph->p_filesz) {
-				ret = -ENOSPC;
+			/* map elf segment */
+			load_addr = do_mmap(ph->p_vaddr & PAGE_MASK,
+					    ph->p_filesz + (ph->p_vaddr & (PAGE_SIZE - 1)),
+					    MAP_FIXED,
+					    current_task->filp[fd],
+					    ph->p_offset & PAGE_MASK);
+			if (!load_addr) {
+				ret = -ENOMEM;
 				goto out;
 			}
 
@@ -124,10 +126,6 @@ int elf_load(const char *path)
 	current_task->end_text = last_ph->p_vaddr + last_ph->p_memsz;
 	current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text);
 	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text);
-
-	/* set elf entry point */
-	current_task->user_entry = elf_header->e_entry;
-	current_task->user_stack = USTACK_START;
 
 	/* change task name */
 	memcpy(current_task->name, name, TASK_NAME_LEN);

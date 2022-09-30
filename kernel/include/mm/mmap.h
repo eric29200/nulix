@@ -10,6 +10,12 @@
 #define VM_EXEC			0x04
 #define VM_SHARED		0x08
 
+#define MAP_SHARED       	1
+#define MAP_PRIVATE      	2
+#define MAP_TYPE         	0xF
+#define MAP_FIXED        	0x10
+#define MAP_ANONYMOUS    	0x20
+
 /*
  * Virtual memory area structure.
  */
@@ -17,11 +23,10 @@ struct vm_area_t {
 	uint32_t		vm_start;
 	uint32_t		vm_end;
 	uint16_t		vm_flags;
-	int			vm_free;
 	struct list_head_t	list;
 };
 
-void *do_mmap(uint32_t addr, size_t length, int flags, struct file_t *filp);
+void *do_mmap(uint32_t addr, size_t length, int flags, struct file_t *filp, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
 
 #endif

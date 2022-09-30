@@ -2,6 +2,7 @@
 #include <mm/mm.h>
 #include <proc/sched.h>
 #include <stderr.h>
+#include <fcntl.h>
 
 /*
  * Find a memory region.
@@ -21,20 +22,13 @@ static struct vm_area_t *find_vma(uint32_t addr)
 }
 
 /*
- * Get an unmapped area.
+ * Generic mmap.
  */
-static struct vm_area_t *get_unmaped_area(size_t length)
+static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, struct file_t *filp, off_t offset)
 {
-	uint32_t addr = UMAP_START;
-	struct list_head_t *pos;
 	struct vm_area_t *vm;
-
-	/* find last memory region */
-	list_for_each(pos, &current_task->vm_list) {
-		vm = list_entry(pos, struct vm_area_t, list);
-		if (vm->vm_end >= addr)
-			addr = vm->vm_end;
-	}
+	size_t f_pos;
+	int ret;
 
 	/* create new memory region */
 	vm = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
@@ -43,56 +37,74 @@ static struct vm_area_t *get_unmaped_area(size_t length)
 
 	/* set new memory region */
 	vm->vm_start = addr;
-	vm->vm_end = PAGE_ALIGN_UP(vm->vm_start + length);
+	vm->vm_end = addr + len;
+	vm->vm_flags = flags;
 
-	/* check memory map overflow */
-	if (vm->vm_end > UMAP_END) {
-		kfree(vm);
-		return NULL;
-	}
+	/* unmap existing pages */
+	unmap_pages(vm->vm_start, vm->vm_end, current_task->pgd);
+
+	/* map pages */
+	ret = map_pages(vm->vm_start, vm->vm_end, current_task->pgd, 0, 1);
+	if (ret)
+		goto err;
+
+	/* memzero new memory region */
+	memset((void *) vm->vm_start, 0, vm->vm_end - vm->vm_start);
 
 	/* add it to the list */
 	list_add_tail(&vm->list, &current_task->vm_list);
 
+	/* map file */
+	if (filp) {
+		f_pos = filp->f_pos;
+
+		if (generic_lseek(filp, offset, SEEK_SET) < 0)
+			goto err;
+
+		if (filp->f_op->read(filp, (char *) vm->vm_start, len) < 0)
+			goto err;
+
+		filp->f_pos = f_pos;
+	}
+
 	return vm;
+err:
+	unmap_pages(vm->vm_start, vm->vm_end, current_task->pgd);
+	kfree(vm);
+	return NULL;
 }
 
 /*
  * Memory map system call.
  */
-void *do_mmap(uint32_t addr, size_t length, int flags, struct file_t *filp)
+void *do_mmap(uint32_t addr, size_t len, int flags, struct file_t *filp, off_t offset)
 {
 	struct vm_area_t *vm = NULL;
 	struct list_head_t *pos;
-	size_t f_pos;
 
-	/* unused address */
-	UNUSED(addr);
+	/* get address */
+	if (flags & MAP_FIXED) {
+		if (addr & ~PAGE_MASK)
+			return NULL;
+	} else {
+		addr = UMAP_START;
 
-	/* try to get a free region */
-	list_for_each(pos, &current_task->vm_list) {
-		vm = list_entry(pos, struct vm_area_t, list);
-		if (vm->vm_free && vm->vm_end - vm->vm_start >= length)
-			goto found;
+		/* find last memory region */
+		list_for_each(pos, &current_task->vm_list) {
+			vm = list_entry(pos, struct vm_area_t, list);
+			if (vm->vm_end >= addr)
+				addr = PAGE_ALIGN_UP(vm->vm_end);
+		}
+
+		/* check memory map overflow */
+		if (addr >= UMAP_END)
+			return NULL;
 	}
 
 	/* create a new area */
-	vm = get_unmaped_area(length);
+	vm = generic_mmap(addr, len, flags, filp, offset);
 	if (!vm)
 		return NULL;
-
-found:
-	/* memzero new memory region */
-	vm->vm_flags = flags;
-	vm->vm_free = 0;
-	memset((void *) vm->vm_start, 0, vm->vm_end - vm->vm_start);
-
-	/* map file */
-	if (filp) {
-		f_pos = filp->f_pos;
-		filp->f_op->read(filp, (char *) vm->vm_start, length);
-		filp->f_pos = f_pos;
-	}
 
 	return (void *) vm->vm_start;
 }
@@ -100,7 +112,7 @@ found:
 /*
  * Memory unmap system call.
  */
-int do_munmap(uint32_t addr, size_t length)
+int do_munmap(uint32_t addr, size_t len)
 {
 	struct vm_area_t *vm;
 
@@ -111,11 +123,16 @@ int do_munmap(uint32_t addr, size_t length)
 	if (!vm || addr > vm->vm_start)
 		return 0;
 
-	/* shrink or free memory region */
-	if (vm->vm_end - vm->vm_start > PAGE_ALIGN_UP(length))
+	/* shrink memory region */
+	if (vm->vm_end - vm->vm_start > PAGE_ALIGN_UP(len)) {
 		vm->vm_end = addr;
-	else
-		vm->vm_free = 1;
+		return 0;
+	}
+
+	/* free memory region */
+	unmap_pages(vm->vm_start, vm->vm_end, current_task->pgd);
+	list_del(&vm->list);
+	kfree(vm);
 
 	return 0;
 }

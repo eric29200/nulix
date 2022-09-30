@@ -121,7 +121,7 @@ int map_pages(uint32_t start_address, uint32_t end_address, struct page_director
 	uint32_t address;
 	int ret;
 
-	for (address = start_address; address <= end_address; address += PAGE_SIZE) {
+	for (address = start_address; address < end_address; address += PAGE_SIZE) {
 		ret = map_page(address, pgd, kernel, write);
 		if (ret)
 			return ret;
@@ -181,12 +181,8 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_direc
 {
 	uint32_t address;
 
-	/* align addresses */
-	start_address = PAGE_ALIGN_DOWN(start_address);
-	end_address = PAGE_ALIGN_UP(end_address);
-
 	/* unmap all pages */
-	for (address = start_address; address <= end_address; address += PAGE_SIZE)
+	for (address = start_address; address < end_address; address += PAGE_SIZE)
 		unmap_page(address, pgd);
 }
 

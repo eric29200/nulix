@@ -57,19 +57,13 @@ ssize_t do_write(int fd, const char *buf, int count)
 }
 
 /*
- * Lseek system call.
+ * Generic lseek.
  */
-off_t do_lseek(int fd, off_t offset, int whence)
+off_t generic_lseek(struct file_t *filp, off_t offset, int whence)
 {
-	struct file_t *filp;
 	off_t new_offset;
 
-	/* check fd */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->filp[fd])
-		return -EBADF;
-
 	/* compute new offset */
-	filp = current_task->filp[fd];
 	switch (whence) {
 		case SEEK_SET:
 			new_offset = offset;
@@ -92,4 +86,23 @@ off_t do_lseek(int fd, off_t offset, int whence)
 	/* change offset */
 	filp->f_pos = new_offset;
 	return filp->f_pos;
+}
+
+/*
+ * Lseek system call.
+ */
+off_t do_lseek(int fd, off_t offset, int whence)
+{
+	struct file_t *filp;
+
+	/* check fd */
+	if (fd >= NR_OPEN || fd < 0 || !current_task->filp[fd])
+		return -EBADF;
+
+	/* specific lseek */
+	filp = current_task->filp[fd];
+	if (filp->f_op && filp->f_op->lseek)
+		return filp->f_op->lseek(filp, offset, whence);
+
+	return generic_lseek(filp, offset, whence);
 }

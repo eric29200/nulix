@@ -9,10 +9,7 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off
 {
 	struct file_t *filp = NULL;
 
-	if (offset > 0) {
-		printf("Unknown mmap system call : fd = %d, prot = %x, offset = %d\n", fd, prot, offset);
-		return NULL;
-	}
+	UNUSED(prot);
 
 	/* get file */
 	if (fd >= 0) {
@@ -22,5 +19,5 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off
 		filp = current_task->filp[fd];
 	}
 
-	return do_mmap((uint32_t) addr, length, flags, filp);
+	return do_mmap((uint32_t) addr, length, flags, filp, offset);
 }
