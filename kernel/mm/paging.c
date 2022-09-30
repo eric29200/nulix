@@ -114,6 +114,23 @@ int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uin
 }
 
 /*
+ * Map pages.
+ */
+int map_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
+{
+	uint32_t address;
+	int ret;
+
+	for (address = start_address; address <= end_address; address += PAGE_SIZE) {
+		ret = map_page(address, pgd, kernel, write);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+/*
  * Map a page to a physical address.
  */
 int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
@@ -169,7 +186,7 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_direc
 	end_address = PAGE_ALIGN_UP(end_address);
 
 	/* unmap all pages */
-	for (address = start_address; address < end_address; address += PAGE_SIZE)
+	for (address = start_address; address <= end_address; address += PAGE_SIZE)
 		unmap_page(address, pgd);
 }
 

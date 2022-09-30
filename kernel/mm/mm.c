@@ -94,8 +94,6 @@ void kfree(void *p)
  */
 void init_mem(uint32_t start, uint32_t end)
 {
-	uint32_t i;
-
 	/* set placement address */
 	placement_address = start;
 
@@ -109,8 +107,7 @@ void init_mem(uint32_t start, uint32_t end)
 	memset(kernel_pgd, 0, sizeof(struct page_directory_t));
 
 	/* allocate kernel frames/pages */
-	for (i = 0; i < KMEM_SIZE; i += PAGE_SIZE)
-		map_page(i, kernel_pgd, 0, 0);
+	map_pages(0, KMEM_SIZE, kernel_pgd, 0, 0);
 
 	/* register page fault handler */
 	register_interrupt_handler(14, page_fault_handler);
@@ -119,8 +116,7 @@ void init_mem(uint32_t start, uint32_t end)
 	switch_page_directory(kernel_pgd);
 
 	/* allocate heap frames */
-	for (i = KHEAP_START; i < KHEAP_START + KHEAP_SIZE; i += PAGE_SIZE)
-		map_page(i, kernel_pgd, 0, 0);
+	map_pages(KHEAP_START, KHEAP_START + KHEAP_SIZE, kernel_pgd, 0, 0);
 
 	/* init heap */
 	kheap = heap_create(KHEAP_START, KHEAP_SIZE);
