@@ -25,13 +25,16 @@ static struct vm_area_t *find_vma(uint32_t addr)
  */
 static struct vm_area_t *get_unmaped_area(size_t length)
 {
-	struct vm_area_t *vm_prev, *vm;
+	uint32_t addr = UMAP_START;
+	struct list_head_t *pos;
+	struct vm_area_t *vm;
 
 	/* find last memory region */
-	if (list_empty(&current_task->vm_list))
-		vm_prev = NULL;
-	else
-		vm_prev = list_last_entry(&current_task->vm_list, struct vm_area_t, list);
+	list_for_each(pos, &current_task->vm_list) {
+		vm = list_entry(pos, struct vm_area_t, list);
+		if (vm->vm_end >= addr)
+			addr = vm->vm_end;
+	}
 
 	/* create new memory region */
 	vm = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
@@ -39,7 +42,7 @@ static struct vm_area_t *get_unmaped_area(size_t length)
 		return NULL;
 
 	/* set new memory region */
-	vm->vm_start = vm_prev ? vm_prev->vm_end : UMAP_START;
+	vm->vm_start = addr;
 	vm->vm_end = PAGE_ALIGN_UP(vm->vm_start + length);
 
 	/* check memory map overflow */
