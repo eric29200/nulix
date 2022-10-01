@@ -44,10 +44,10 @@ int elf_load(const char *path)
 	struct elf_header_t *elf_header;
 	char name[TASK_NAME_LEN], *buf;
 	struct list_head_t *pos, *n;
+	uint32_t start, end, i;
 	struct vm_area_t *vm;
 	int fd, off, ret;
 	void *load_addr;
-	uint32_t i;
 
 	/* open file */
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
@@ -119,13 +119,27 @@ int elf_load(const char *path)
 		goto out;
 	}
 
+	/* memzero fractionnale page of data section */
+	start = last_ph->p_vaddr + last_ph->p_filesz;
+	end = PAGE_ALIGN_UP(start);
+	memset((void *) start, 0, end - start);
+
 	/* setup BSS section */
-	memset((void *) (last_ph->p_vaddr + last_ph->p_filesz), 0, last_ph->p_memsz - last_ph->p_filesz);
+	start = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_filesz);
+	end = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
+	if (!do_mmap(start, end - start, MAP_FIXED, NULL, 0)) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	/* setup HEAP section */
-	current_task->end_text = last_ph->p_vaddr + last_ph->p_memsz;
-	current_task->start_brk = PAGE_ALIGN_UP(current_task->end_text);
-	current_task->end_brk = PAGE_ALIGN_UP(current_task->end_text);
+	current_task->end_text = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
+	current_task->start_brk = current_task->end_text;
+	current_task->end_brk = current_task->end_text + PAGE_SIZE;
+	if (!do_mmap(current_task->start_brk, current_task->end_brk - current_task->start_brk, MAP_FIXED, NULL, 0)) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	/* change task name */
 	memcpy(current_task->name, name, TASK_NAME_LEN);
