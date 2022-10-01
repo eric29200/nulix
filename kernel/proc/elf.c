@@ -145,12 +145,6 @@ int elf_load(const char *path, struct binargs_t *bargs)
 		kfree(vm);
 	}
 
-	/* reset text/brk section */
-	current_task->start_text = 0;
-	current_task->end_text = 0;
-	current_task->start_brk = 0;
-	current_task->end_brk = 0;
-
 	/* read each elf segment */
 	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
 		/* load segment */
@@ -211,6 +205,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	}
 
 	/* setup HEAP section */
+	current_task->start_text = 0;
 	current_task->end_text = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
 	current_task->start_brk = current_task->end_text;
 	current_task->end_brk = current_task->end_text + PAGE_SIZE;
@@ -218,9 +213,6 @@ int elf_load(const char *path, struct binargs_t *bargs)
 		ret = -ENOMEM;
 		goto out;
 	}
-
-	/* change task name */
-	memcpy(current_task->name, name, TASK_NAME_LEN);
 
 	/* setup stack */
 	sp = USTACK_START - 4;
@@ -230,10 +222,13 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
 	sp -= (1 + (bargs->argc + 1) + (bargs->envc + 1)) * sizeof(uint32_t);
 
-	/* create ELF table */
+	/* create ELF tables */
 	ret = elf_create_tables(bargs, (uint32_t *) sp, (char *) args_str, elf_header, load_addr);
 	if (ret)
 		goto out;
+
+	/* change task name */
+	memcpy(current_task->name, name, TASK_NAME_LEN);
 
 	/* setup task entry and stack pointer */
 	current_task->user_regs.eip = current_task->user_entry = elf_header->e_entry;
