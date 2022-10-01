@@ -85,6 +85,17 @@ struct task_registers_t {
 	uint32_t parameter3;
 };
 
+/*
+ * Binary arguments.
+ */
+struct binargs_t {
+	char	*buf;
+	int	argc;
+	int	argv_len;
+	int	envc;
+	int	envp_len;
+};
+
 struct task_t *create_kernel_thread(void (*func)(void *), void *arg);
 struct task_t *create_init_task(struct task_t *parent);
 struct task_t *fork_task(struct task_t *parent, uint32_t user_sp);

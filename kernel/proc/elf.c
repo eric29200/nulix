@@ -90,7 +90,6 @@ int elf_load(const char *path)
 	current_task->start_brk = 0;
 	current_task->end_brk = 0;
 	current_task->user_entry = elf_header->e_entry;
-	current_task->user_stack = USTACK_START;
 
 	/* read each elf segment */
 	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
