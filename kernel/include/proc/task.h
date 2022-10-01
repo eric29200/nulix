@@ -1,7 +1,6 @@
 #ifndef _TASK_H_
 #define _TASK_H_
 
-#include <proc/elf.h>
 #include <proc/timer.h>
 #include <mm/paging.h>
 #include <mm/mmap.h>

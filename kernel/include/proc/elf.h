@@ -1,7 +1,7 @@
 #ifndef _ELF_H_
 #define _ELF_H_
 
-#include <stddef.h>
+#include <proc/task.h>
 
 /* e_ident */
 #define EI_MAG0		0
@@ -98,6 +98,6 @@ struct elf_prog_header_t {
 		uint32_t	p_align;		/* segment alignment */
 };
 
-int elf_load(const char *path);
+int elf_load(const char *path, struct binargs_t *bargs);
 
 #endif

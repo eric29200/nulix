@@ -68,9 +68,8 @@ static int bargs_init(struct binargs_t *bargs, char *const argv[], char *const e
  */
 int sys_execve(const char *path, char *const argv[], char *const envp[])
 {
-	uint32_t args_str, stack;
 	struct binargs_t bargs;
-	int ret, i;
+	int ret;
 
 	/* init binary arguments */
 	ret = bargs_init(&bargs, argv, envp);
@@ -81,51 +80,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	copy_strings(&bargs, argv, envp);
 
 	/* load elf binary */
-	ret = elf_load(path);
-	if (ret != 0)
-		goto out;
-
-	/* put string arguments at the end of the stack */
-	args_str = USTACK_START - bargs.argv_len - bargs.envp_len;
-	memcpy((void *) args_str, bargs.buf, bargs.argv_len + bargs.envp_len);
-
-	/* set stack base pointer */
-	current_task->user_regs.useresp = stack = args_str - (1 + (bargs.argc + 1) + (bargs.envc + 1)) * sizeof(uint32_t);
-
-	/* put argc */
-	*((uint32_t *) stack) = bargs.argc;
-	stack += 4;
-
-	/* put argv */
-	current_task->arg_start = stack;
-	for (i = 0; i < bargs.argc; i++) {
-		*((uint32_t *) stack) = args_str;
-		stack += 4;
-		args_str += strlen((char *) args_str) + 1;
-	}
-
-	/* finish argv with NULL pointer */
-	current_task->arg_end = stack;
-	*((uint32_t *) stack) = 0;
-	stack += 4;
-
-	/* put envp */
-	current_task->env_start = stack;
-	for (i = 0; i < bargs.envc; i++) {
-		*((uint32_t *) stack) = args_str;
-		stack += 4;
-		args_str += strlen((char *) args_str) + 1;
-	}
-
-	/* finish envp with NULL pointer */
-	current_task->env_end = stack;
-	*((uint32_t *) stack) = 0;
-	stack += 4;
-
-	/* set esp and stack */
-	current_task->user_regs.eip = current_task->user_entry;
-
-	ret = 0;
+	ret = elf_load(path, &bargs);
 out:
 	kfree(bargs.buf);
 	return ret;

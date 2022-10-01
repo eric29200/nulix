@@ -26,8 +26,16 @@ static void task_user_entry(struct task_t *task)
  */
 static void init_entry(struct task_t *task)
 {
+	struct binargs_t bargs = {
+		.buf		= NULL,
+		.argc		= 0,
+		.argv_len	= 0,
+		.envc		= 0,
+		.envp_len	= 0,
+	};
+
 	/* load elf header */
-	if (elf_load("/sbin/init") == 0)
+	if (elf_load("/sbin/init", &bargs) == 0)
 		enter_user_mode(task->user_stack, task->user_entry, TASK_RETURN_ADDRESS);
 }
 

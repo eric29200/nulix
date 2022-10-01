@@ -36,9 +36,57 @@ static int elf_check(struct elf_header_t *elf_header)
 }
 
 /*
+ * Create ELF table.
+ */
+static int elf_create_tables(struct binargs_t *bargs)
+{
+	uint32_t *stack;
+	char *args_str;
+	int i;
+
+	/* put string arguments at the end of the stack */
+	args_str = (char *) (USTACK_START - bargs->argv_len - bargs->envp_len);
+	memcpy((void *) args_str, bargs->buf, bargs->argv_len + bargs->envp_len);
+
+	/* set stack base pointer */
+	current_task->user_regs.useresp = (uint32_t) (args_str - (1 + (bargs->argc + 1) + (bargs->envc + 1)) * sizeof(uint32_t));
+	stack = (uint32_t *) current_task->user_regs.useresp;
+
+	/* put argc */
+	*stack++ = bargs->argc;
+
+	/* put argv */
+	current_task->arg_start = (uint32_t) stack;
+	for (i = 0; i < bargs->argc; i++) {
+		*stack++ = (uint32_t) args_str;
+		args_str += strlen((char *) args_str) + 1;
+	}
+
+	/* finish argv with NULL pointer */
+	current_task->arg_end = (uint32_t) stack;
+	*stack++ = 0;
+
+	/* put envp */
+	current_task->env_start = (uint32_t) stack;
+	for (i = 0; i < bargs->envc; i++) {
+		*stack++ = (uint32_t) args_str;
+		args_str += strlen((char *) args_str) + 1;
+	}
+
+	/* finish envp with NULL pointer */
+	current_task->env_end = (uint32_t) stack;
+	*stack++ = 0;
+
+	/* set esp and stack */
+	current_task->user_regs.eip = current_task->user_entry;
+
+	return 0;
+}
+
+/*
  * Load an ELF file in memory.
  */
-int elf_load(const char *path)
+int elf_load(const char *path, struct binargs_t *bargs)
 {
 	struct elf_prog_header_t *ph, *last_ph = NULL;
 	struct elf_header_t *elf_header;
@@ -143,7 +191,8 @@ int elf_load(const char *path)
 	/* change task name */
 	memcpy(current_task->name, name, TASK_NAME_LEN);
 
-	ret = 0;
+	/* create ELF table */
+	ret = elf_create_tables(bargs);
 out:
 	do_close(fd);
 	kfree(buf);
