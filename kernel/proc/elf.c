@@ -197,7 +197,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	elf_header->e_entry += load_bias;
 	last_ph->p_vaddr += load_bias;
 
-	/* memzero fractionnale page of data section */
+	/* memzero fractionnal page of data section */
 	start = last_ph->p_vaddr + last_ph->p_filesz;
 	end = PAGE_ALIGN_UP(start);
 	memset((void *) start, 0, end - start);
