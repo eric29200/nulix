@@ -6,6 +6,13 @@
 #include <stderr.h>
 #include <string.h>
 
+#define ELF_MIN_ALIGN		PAGE_SIZE
+#define ELF_PAGESTART(_v)	((_v) & ~(uint32_t)(ELF_MIN_ALIGN - 1))
+#define ELF_PAGEOFFSET(_v)	((_v) & (ELF_MIN_ALIGN - 1))
+#define ELF_PAGEALIGN(_v)	(((_v) + ELF_MIN_ALIGN - 1) & ~(ELF_MIN_ALIGN - 1))
+
+#define DLINFO_ITEMS		12
+
 /*
  * Check header file
  */
@@ -29,7 +36,8 @@ static int elf_check(struct elf_header_t *elf_header)
 	if (elf_header->e_machine != EM_386)
 		return -ENOEXEC;
 
-	if (elf_header->e_type != ET_EXEC)
+	if (elf_header->e_type != ET_EXEC
+	    && elf_header->e_type != ET_DYN)
 		return -ENOEXEC;
 
 	return 0;
@@ -38,7 +46,7 @@ static int elf_check(struct elf_header_t *elf_header)
 /*
  * Create ELF table.
  */
-static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_str)
+static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_str, struct elf_header_t *elf_header, uint32_t load_addr)
 {
 	int i;
 
@@ -70,8 +78,20 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
 	current_task->env_end = (uint32_t) sp;
 	*sp++ = 0;
 
-	/* set esp and stack */
-	current_task->user_regs.eip = current_task->user_entry;
+#define AUX_ENT(id, val)	*sp++ = id; *sp++ = val;
+	AUX_ENT(AT_PAGESZ, PAGE_SIZE);
+	AUX_ENT(AT_PHDR, load_addr + elf_header->e_phoff);
+	AUX_ENT(AT_PHENT, sizeof(struct elf_prog_header_t));
+	AUX_ENT(AT_PHNUM, elf_header->e_phnum);
+	AUX_ENT(AT_BASE, 0);
+	AUX_ENT(AT_FLAGS, 0);
+	AUX_ENT(AT_ENTRY, elf_header->e_entry);
+	AUX_ENT(AT_UID, current_task->uid);
+	AUX_ENT(AT_EUID, current_task->euid);
+	AUX_ENT(AT_GID, current_task->gid);
+	AUX_ENT(AT_EGID, current_task->egid);
+	AUX_ENT(AT_NULL, 0);
+#undef AUX_ENT
 
 	return 0;
 }
@@ -81,14 +101,14 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
  */
 int elf_load(const char *path, struct binargs_t *bargs)
 {
+	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0;
+	int fd, off, ret, elf_flags, load_addr_set = 0;
 	struct elf_prog_header_t *ph, *last_ph = NULL;
-	uint32_t start, end, i, sp, args_str;
 	struct elf_header_t *elf_header;
 	char name[TASK_NAME_LEN], *buf;
 	struct list_head_t *pos, *n;
 	struct vm_area_t *vm;
-	int fd, off, ret;
-	void *load_addr;
+	void *buf_mmap;
 
 	/* open file */
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
@@ -130,22 +150,36 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	current_task->end_text = 0;
 	current_task->start_brk = 0;
 	current_task->end_brk = 0;
-	current_task->user_entry = elf_header->e_entry;
 
 	/* read each elf segment */
 	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
 		/* load segment */
 		ph = (struct elf_prog_header_t *) (buf + off);
 		if (ph->p_type == PT_LOAD) {
+			/* set mmap flags */
+			elf_flags = 0;
+			if (elf_header->e_type == ET_EXEC || load_addr_set)
+				elf_flags |= MAP_FIXED;
+
 			/* map elf segment */
-			load_addr = do_mmap(ph->p_vaddr & PAGE_MASK,
-					    ph->p_filesz + (ph->p_vaddr & (PAGE_SIZE - 1)),
-					    MAP_FIXED,
-					    current_task->filp[fd],
-					    ph->p_offset & PAGE_MASK);
-			if (!load_addr) {
+			buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_bias),
+					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
+					   elf_flags,
+					   current_task->filp[fd],
+					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
+			if (!buf_mmap) {
 				ret = -ENOMEM;
 				goto out;
+			}
+
+			/* set load address */
+			if (!load_addr_set) {
+				load_addr_set = 1;
+				load_addr = ph->p_vaddr - ph->p_offset;
+				if (elf_header->e_type == ET_DYN) {
+					load_bias = (uint32_t) buf_mmap - ELF_PAGESTART(ph->p_vaddr);
+					load_addr += load_bias;
+				}
 			}
 
 			/* remember last segment */
@@ -158,6 +192,10 @@ int elf_load(const char *path, struct binargs_t *bargs)
 		ret = -ENOEXEC;
 		goto out;
 	}
+
+	/* apply load bias */
+	elf_header->e_entry += load_bias;
+	last_ph->p_vaddr += load_bias;
 
 	/* memzero fractionnale page of data section */
 	start = last_ph->p_vaddr + last_ph->p_filesz;
@@ -189,16 +227,16 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	sp -= (bargs->argv_len + bargs->envp_len);
 	args_str = sp;
 	sp &= 3;
-	sp -= 2 * sizeof(uint32_t);
+	sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
 	sp -= (1 + (bargs->argc + 1) + (bargs->envc + 1)) * sizeof(uint32_t);
 
 	/* create ELF table */
-	ret = elf_create_tables(bargs, (uint32_t *) sp, (char *) args_str);
+	ret = elf_create_tables(bargs, (uint32_t *) sp, (char *) args_str, elf_header, load_addr);
 	if (ret)
 		goto out;
 
 	/* setup task entry and stack pointer */
-	current_task->user_regs.eip = current_task->user_entry;
+	current_task->user_regs.eip = current_task->user_entry = elf_header->e_entry;
 	current_task->user_regs.useresp = sp;
 out:
 	do_close(fd);
