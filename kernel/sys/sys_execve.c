@@ -47,7 +47,7 @@ static int bargs_init(struct binargs_t *bargs, char *const argv[], char *const e
 	bargs->argc = i;
 
 	/* get envc */
-	for (i = 0; envp[i]; i++)
+	for (i = 0; envp && envp[i]; i++)
 		bargs->envp_len += strlen(envp[i]) + 1;
 	bargs->envc = i;
 
