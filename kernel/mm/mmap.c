@@ -100,34 +100,50 @@ err:
 }
 
 /*
+ * Get an unmapped area.
+ */
+static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
+{
+	struct list_head_t *pos;
+	struct vm_area_t *vm;
+
+	/* fixed address */
+	if (flags & MAP_FIXED) {
+		if (*addr & ~PAGE_MASK)
+			return -EINVAL;
+		return 0;
+	}
+
+	/* find a memory region */
+	*addr = UMAP_START;
+	list_for_each(pos, &current_task->vm_list) {
+		vm = list_entry(pos, struct vm_area_t, list);
+		if (*addr + len <= vm->vm_start)
+			break;
+		if (vm->vm_end > *addr)
+			*addr = vm->vm_end;
+	}
+
+	/* check memory map overflow */
+	if (*addr + len >= UMAP_END)
+		return -ENOMEM;
+
+	return 0;
+}
+
+/*
  * Memory map system call.
  */
 void *do_mmap(uint32_t addr, size_t len, int flags, struct file_t *filp, off_t offset)
 {
 	struct vm_area_t *vm = NULL;
-	struct list_head_t *pos;
 
 	/* adjust length */
 	len = PAGE_ALIGN_UP(len);
 
-	/* get address */
-	if (flags & MAP_FIXED) {
-		if (addr & ~PAGE_MASK)
-			return NULL;
-	} else {
-		addr = UMAP_START;
-
-		/* find last memory region */
-		list_for_each(pos, &current_task->vm_list) {
-			vm = list_entry(pos, struct vm_area_t, list);
-			if (vm->vm_end >= addr)
-				addr = vm->vm_end;
-		}
-
-		/* check memory map overflow */
-		if (addr >= UMAP_END)
-			return NULL;
-	}
+	/* get unmapped area */
+	if (get_unmapped_area(&addr, len, flags))
+		return NULL;
 
 	/* create a new area */
 	vm = generic_mmap(addr, len, flags, filp, offset);
