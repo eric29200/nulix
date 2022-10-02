@@ -75,13 +75,8 @@ off_t generic_lseek(struct file_t *filp, off_t offset, int whence)
 			new_offset = filp->f_inode->i_size + offset;
 			break;
 		default:
-			new_offset = -1;
-			break;
+			return -EINVAL;
 	}
-
-	/* bad offset */
-	if (new_offset < 0)
-		return -EINVAL;
 
 	/* change offset */
 	filp->f_pos = new_offset;

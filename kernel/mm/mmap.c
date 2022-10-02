@@ -104,14 +104,30 @@ err:
  */
 static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 {
+	struct vm_area_t *vm, *vm_prev, *vm_next;
 	struct list_head_t *pos;
-	struct vm_area_t *vm;
 
 	/* fixed address */
 	if (flags & MAP_FIXED) {
 		if (*addr & ~PAGE_MASK)
 			return -EINVAL;
 		return 0;
+	}
+
+	/* try to use addr */
+	if (*addr) {
+		*addr = PAGE_ALIGN_UP(*addr);
+
+		/* find previous and next vm */
+		vm_prev = find_vma_prev(*addr);
+		if (vm_prev)
+			vm_next = list_next_entry(vm_prev, list);
+		else
+			vm_next = list_first_entry(&current_task->vm_list, struct vm_area_t, list);
+
+		/* addr is available */
+		if (!vm_next || *addr + len <= vm_next->vm_start)
+			return 0;
 	}
 
 	/* find a memory region */
