@@ -5,6 +5,25 @@
 #include <fcntl.h>
 
 /*
+ * Find previous memory region.
+ */
+static struct vm_area_t *find_vma_prev(uint32_t addr)
+{
+	struct vm_area_t *vm, *vm_prev = NULL;
+	struct list_head_t *pos;
+
+	list_for_each(pos, &current_task->vm_list) {
+		vm = list_entry(pos, struct vm_area_t, list);
+		if (addr < vm->vm_end)
+			break;
+
+		vm_prev = vm;
+	}
+
+	return vm_prev;
+}
+
+/*
  * Find a memory region.
  */
 static struct vm_area_t *find_vma(uint32_t addr)
@@ -14,7 +33,9 @@ static struct vm_area_t *find_vma(uint32_t addr)
 
 	list_for_each(pos, &current_task->vm_list) {
 		vm = list_entry(pos, struct vm_area_t, list);
-		if (addr >= vm->vm_start && addr < vm->vm_end)
+		if (addr < vm->vm_start)
+			break;
+		if (addr < vm->vm_end)
 			return vm;
 	}
 
@@ -26,7 +47,7 @@ static struct vm_area_t *find_vma(uint32_t addr)
  */
 static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, struct file_t *filp, off_t offset)
 {
-	struct vm_area_t *vm;
+	struct vm_area_t *vm, *vm_prev;
 	size_t f_pos;
 	int ret;
 
@@ -52,7 +73,11 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, stru
 	memset((void *) vm->vm_start, 0, vm->vm_end - vm->vm_start);
 
 	/* add it to the list */
-	list_add_tail(&vm->list, &current_task->vm_list);
+	vm_prev = find_vma_prev(vm->vm_start);
+	if (vm_prev)
+		list_add(&vm->list, &vm_prev->list);
+	else
+		list_add(&vm->list, &current_task->vm_list);
 
 	/* map file */
 	if (filp) {
