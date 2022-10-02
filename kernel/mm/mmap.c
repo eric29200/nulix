@@ -43,6 +43,27 @@ static struct vm_area_t *find_vma(uint32_t addr)
 }
 
 /*
+ * Find first vm intersecting start <-> end.
+ */
+struct vm_area_t *find_vma_intersection(struct task_t *task, uint32_t start, uint32_t end)
+{
+	struct vm_area_t *vm_prev, *vm_next = NULL;
+
+	/* find previous and next vma */
+	vm_prev = find_vma_prev(start);
+	if (vm_prev)
+		vm_next = list_next_entry_or_null(vm_prev, &task->vm_list, list);
+	else if (!list_empty(&task->vm_list))
+		vm_next = list_first_entry(&task->vm_list, struct vm_area_t, list);
+
+	/* check next vma */
+	if (vm_next && end > vm_next->vm_start)
+		return vm_next;
+
+	return NULL;
+}
+
+/*
  * Generic mmap.
  */
 static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, struct file_t *filp, off_t offset)
@@ -104,7 +125,7 @@ err:
  */
 static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 {
-	struct vm_area_t *vm, *vm_prev, *vm_next;
+	struct vm_area_t *vm, *vm_prev, *vm_next = NULL;
 	struct list_head_t *pos;
 
 	/* fixed address */
@@ -121,8 +142,8 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 		/* find previous and next vm */
 		vm_prev = find_vma_prev(*addr);
 		if (vm_prev)
-			vm_next = list_next_entry(vm_prev, list);
-		else
+			vm_next = list_next_entry_or_null(vm_prev, &current_task->vm_list, list);
+		else if (!list_empty(&current_task->vm_list))
 			vm_next = list_first_entry(&current_task->vm_list, struct vm_area_t, list);
 
 		/* addr is available */
