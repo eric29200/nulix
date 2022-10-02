@@ -82,6 +82,9 @@ void *do_mmap(uint32_t addr, size_t len, int flags, struct file_t *filp, off_t o
 	struct vm_area_t *vm = NULL;
 	struct list_head_t *pos;
 
+	/* adjust length */
+	len = PAGE_ALIGN_UP(len);
+
 	/* get address */
 	if (flags & MAP_FIXED) {
 		if (addr & ~PAGE_MASK)
@@ -93,7 +96,7 @@ void *do_mmap(uint32_t addr, size_t len, int flags, struct file_t *filp, off_t o
 		list_for_each(pos, &current_task->vm_list) {
 			vm = list_entry(pos, struct vm_area_t, list);
 			if (vm->vm_end >= addr)
-				addr = PAGE_ALIGN_UP(vm->vm_end);
+				addr = vm->vm_end;
 		}
 
 		/* check memory map overflow */
@@ -116,15 +119,20 @@ int do_munmap(uint32_t addr, size_t len)
 {
 	struct vm_area_t *vm;
 
+	/* add must be page aligned */
+	if (addr & ~PAGE_MASK)
+		return -EINVAL;
+
+	/* adjust length */
+	len = PAGE_ALIGN_UP(len);
+
 	/* find memory region */
 	vm = find_vma(addr);
-
-	/* addr does not match start of memory region : break */
 	if (!vm || addr > vm->vm_start)
 		return 0;
 
 	/* shrink memory region */
-	if (vm->vm_end - vm->vm_start > PAGE_ALIGN_UP(len)) {
+	if (vm->vm_end - vm->vm_start > len) {
 		vm->vm_end = addr;
 		return 0;
 	}
