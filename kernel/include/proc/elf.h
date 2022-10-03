@@ -84,6 +84,10 @@
 #define AT_HWCAP  	16    	/* arch dependent hints at CPU capabilities */
 #define AT_CLKTCK 	17	/* frequency at which times() increments */
 
+
+/* relocate ET_DYN program at 2 GB (needed to make sure brk can grow without intersecting vmas) */
+#define ELF_ET_DYN_BASE		(UMAP_END / 2)
+
 /*
  * ELF header.
  */

@@ -154,6 +154,8 @@ int elf_load(const char *path, struct binargs_t *bargs)
 			elf_flags = 0;
 			if (elf_header->e_type == ET_EXEC || load_addr_set)
 				elf_flags |= MAP_FIXED;
+			else if (elf_header->e_type == ET_DYN)
+				load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - ph->p_vaddr);
 
 			/* map elf segment */
 			buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_bias),
@@ -171,7 +173,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 				load_addr_set = 1;
 				load_addr = ph->p_vaddr - ph->p_offset;
 				if (elf_header->e_type == ET_DYN) {
-					load_bias = (uint32_t) buf_mmap - ELF_PAGESTART(ph->p_vaddr);
+					load_bias += (uint32_t) buf_mmap - ELF_PAGESTART(load_bias + ph->p_vaddr);
 					load_addr += load_bias;
 				}
 			}
