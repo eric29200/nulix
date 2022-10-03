@@ -68,6 +68,7 @@
 #define __NR_clone			120
 #define __NR_uname			122
 #define __NR_modify_ldt			123
+#define __NR_mprotect			125
 #define __NR_sigprocmask		126
 #define __NR_getpgid			132
 #define __NR_fchdir			133
@@ -255,5 +256,6 @@ int sys_fchdir(int fd);
 int sys_madvise(void *addr, size_t length, int advice);
 int sys_clone(uint32_t flags, uint32_t newsp);
 int sys_getrandom(void *buf, size_t buflen, unsigned int flags);
+int sys_mprotect(void *addr, size_t len, int prot);
 
 #endif
