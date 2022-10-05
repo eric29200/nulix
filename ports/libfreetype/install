@@ -14,5 +14,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install DESTDIR=$SYSROOT
+	make install DESTDIR=$MUSL_DIR
 }

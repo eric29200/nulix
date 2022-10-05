@@ -7,8 +7,7 @@ function configure_port() {
 		--host=$TARGET							\
 		--prefix="/usr"							\
 		--disable-readline						\
-		--disable-exif							\
-		CFLAGS="-static" LDFLAGS="-static"
+		--disable-exif
 }
 
 function build_port() {

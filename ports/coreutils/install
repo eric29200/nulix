@@ -13,8 +13,7 @@ function configure_port() {
 		--disable-libcap						\
 		--without-selinux						\
 		--enable-no-install-program=factor,ptx				\
-		--prefix="/usr"							\
-		CFLAGS="-static" LDFLAGS="-static"
+		--prefix="/usr"
 }
 
 function build_port() {

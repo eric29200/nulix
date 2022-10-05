@@ -9,7 +9,6 @@ function configure_port() {
 		no-sse2								\
 		no-threads							\
 		-latomic							\
-		-static								\
 		--prefix=/							\
 		--openssldir=/etc/ssl
 }
@@ -20,9 +19,14 @@ function build_port() {
 
 function install_port() {
 	# install
-	make install DESTDIR=$SYSROOT
+	make install DESTDIR=$MUSL_DIR
 
 	# patch libcrypto.pc
-	sed 's/-lcrypto/-lcrypto -ldl -latomic/' $SYSROOT/lib/pkgconfig/libcrypto.pc > $SYSROOT/lib/pkgconfig/libcrypto.pc.tmp
-	mv $SYSROOT/lib/pkgconfig/libcrypto.pc.tmp $SYSROOT/lib/pkgconfig/libcrypto.pc
+	sed 's/-lcrypto/-lcrypto -ldl -latomic/' $MUSL_DIR/lib/pkgconfig/libcrypto.pc > $MUSL_DIR/lib/pkgconfig/libcrypto.pc.tmp
+	mv $MUSL_DIR/lib/pkgconfig/libcrypto.pc.tmp $MUSL_DIR/lib/pkgconfig/libcrypto.pc
+
+	# deploy binaries and config on sysroot
+	cp $MUSL_DIR/bin/openssl $SYSROOT/usr/bin/
+	rm -rf $SYSROOT/etc/ssl/
+	cp -Rv $MUSL_DIR/etc/ssl $SYSROOT/etc/
 }

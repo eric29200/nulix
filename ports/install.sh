@@ -3,28 +3,19 @@
 # base ports, needed to build other ports
 BASE_PORTS=("pkgconf" "bash" "libncurses" "zlib" "libpng" "libfreetype" "openssl")
 
-# go to ports directory
-cd `dirname $0`
-BASE_DIR=`pwd`
-
-# install musl directory
-if [[ ! -d "../musl/musl-install" ]]; then
+################################
+######### install musl #########
+################################
+function install_musl() {
+	# create musl install directory
+	rm -rf ../musl/musl-install
 	cp -R ../musl/musl-build/output ../musl/musl-install
-fi
 
-# global environ
-export TARGET=i386
-export NJOBS=`nproc`
-export SYSROOT=`realpath ../musl/musl-install/i386-linux-musl`
-export CC=`realpath ../musl/musl-install/bin/i386-linux-musl-gcc`
-export CXX=`realpath ../musl/musl-install/bin/i386-linux-musl-g++`
-export LD=`realpath ../musl/musl-install/bin/i386-linux-musl-ld`
-export AR=`realpath ../musl/musl-install/bin/i386-linux-musl-ar`
-export AS=`realpath ../musl/musl-install/bin/i386-linux-musl-as`
-export RANLIB=`realpath ../musl/musl-install/bin/i386-linux-musl-ranlib`
-export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
-export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig"
-export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig"
+	# copy libraries to sysroot
+	echo $SYSROOT
+	mkdir -p $SYSROOT/lib/
+	cp -Rv ../musl/musl-install/i386-linux-musl/lib/* $SYSROOT/lib/
+}
 
 ##############################################
 ######### check if port is available #########
@@ -92,6 +83,31 @@ if [[ $# == 0 ]]; then
 	exit 1
 fi
 
+# go to ports directory
+cd `dirname $0`
+BASE_DIR=`pwd`
+
+export SYSROOT=`realpath ../sysroot`
+
+# install musl directory
+if [[ ! -d "../musl/musl-install" ]]; then
+	install_musl
+fi
+
+# global environ
+export TARGET=i386
+export NJOBS=`nproc`
+export MUSL_DIR=`realpath ../musl/musl-install/i386-linux-musl`
+export CC=`realpath ../musl/musl-install/bin/i386-linux-musl-gcc`
+export CXX=`realpath ../musl/musl-install/bin/i386-linux-musl-g++`
+export LD=`realpath ../musl/musl-install/bin/i386-linux-musl-ld`
+export AR=`realpath ../musl/musl-install/bin/i386-linux-musl-ar`
+export AS=`realpath ../musl/musl-install/bin/i386-linux-musl-as`
+export RANLIB=`realpath ../musl/musl-install/bin/i386-linux-musl-ranlib`
+export PKG_CONFIG=$MUSL_DIR"/bin/pkgconf"
+export PKG_CONFIG_PATH=$MUSL_DIR"/lib/pkgconfig"
+export PKG_CONFIG_LIBDIR=$MUSL_DIR"/lib/pkgconfig"
+
 # get ports list
 PORTS=()
 BUILD_ALL=0
@@ -128,8 +144,7 @@ if [[ $BUILD_ALL == 1 ]]; then
 	done
 
 	# reset musl installation directory
-	rm -rf ../musl/musl-install
-	cp -R ../musl/musl-build/output ../musl/musl-install
+	install_musl
 fi
 
 # for each port

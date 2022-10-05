@@ -8,8 +8,7 @@ function configure_port() {
 		--disable-nls							\
 		--disable-threads						\
 		--disable-year2038						\
-		--prefix="/usr"							\
-		CFLAGS="-static" LDFLAGS="-static"
+		--prefix="/usr"
 }
 
 function build_port() {

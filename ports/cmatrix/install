@@ -7,7 +7,7 @@ function configure_port() {
 }
 
 function build_port() {
-	$CC -o cmatrix cmatrix.c -DEXCLUDE_CONFIG_H -DHAVE_NCURSES_H -DHAVE_UNISTD_H -DHAVE_SYS_IOCTL_H -DVERSION=2.0 `$PKG_CONFIG --cflags --libs ncurses` -static
+	$CC -o cmatrix cmatrix.c -DEXCLUDE_CONFIG_H -DHAVE_NCURSES_H -DHAVE_UNISTD_H -DHAVE_SYS_IOCTL_H -DVERSION=2.0 `$PKG_CONFIG --cflags --libs ncurses`
 }
 
 function install_port() {

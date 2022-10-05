@@ -6,8 +6,7 @@ function configure_port() {
 	./configure								\
 		--host=$TARGET							\
 		--disable-threads						\
-		--prefix="/usr"							\
-		CFLAGS="-static" LDFLAGS="-static"
+		--prefix="/usr"
 }
 
 function build_port() {

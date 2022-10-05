@@ -5,7 +5,6 @@ SRC_FILENAME="dash-"$VERSION".tar.gz"
 function configure_port() {
 	./configure								\
 		--host=$TARGET							\
-		--enable-static							\
 		--prefix="/"
 }
 
