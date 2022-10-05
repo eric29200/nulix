@@ -12,7 +12,7 @@ function configure_port() {
 		--enable-pc-files				\
 		--with-pkg-config-libdir="/lib/pkgconfig"	\
 		--prefix="/"					\
-		DESTDIR=$MUSL_DIR
+		DESTDIR=$SYSROOT
 }
 
 function build_port() {
@@ -21,10 +21,6 @@ function build_port() {
 
 function install_port() {
 	make install
-	mkdir -p $SYSROOT/share
-	cp -Rv $MUSL_DIR/share/tabset $SYSROOT/share
-	cp -Rv $MUSL_DIR/share/terminfo $SYSROOT/share
-
-	cd $MUSL_DIR/lib/pkgconfig/
+	cd $SYSROOT/lib/pkgconfig/
 	ln -s ncursesw.pc ncurses.pc
 }

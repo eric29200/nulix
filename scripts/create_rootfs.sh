@@ -47,7 +47,7 @@ sudo sh -c 'echo "alias ls=\"ls --color\"" >> tmp/root/.bashrc'
 sudo sh -c 'echo "alias vi=\"vim\"" >> tmp/root/.bashrc'
 
 # copy root folders
-sudo cp -Rv sysroot/* tmp/
+sudo cp -Rv musl/musl-install/i386-linux-musl/* tmp/
 
 # cp user binaries
 sudo mkdir -p tmp/sbin/
