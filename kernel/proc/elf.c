@@ -46,7 +46,8 @@ static int elf_check(struct elf_header_t *elf_header)
 /*
  * Create ELF table.
  */
-static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_str, struct elf_header_t *elf_header, uint32_t load_addr)
+static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_str, struct elf_header_t *elf_header,
+			     uint32_t load_addr, uint32_t load_bias, uint32_t interp_load_addr)
 {
 	int i;
 
@@ -83,9 +84,9 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
 	AUX_ENT(AT_PHDR, load_addr + elf_header->e_phoff);
 	AUX_ENT(AT_PHENT, sizeof(struct elf_prog_header_t));
 	AUX_ENT(AT_PHNUM, elf_header->e_phnum);
-	AUX_ENT(AT_BASE, 0);
+	AUX_ENT(AT_BASE, interp_load_addr);
 	AUX_ENT(AT_FLAGS, 0);
-	AUX_ENT(AT_ENTRY, elf_header->e_entry);
+	AUX_ENT(AT_ENTRY, load_bias + elf_header->e_entry);
 	AUX_ENT(AT_UID, current_task->uid);
 	AUX_ENT(AT_EUID, current_task->euid);
 	AUX_ENT(AT_GID, current_task->gid);
@@ -97,15 +98,112 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
 }
 
 /*
+ * Load an ELF interpreter in memory.
+ */
+int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t *elf_entry)
+{
+	int fd, ret, off, elf_flags, load_addr_set = 0;
+	struct elf_prog_header_t *ph, *last_ph;
+	uint32_t i, load_addr = 0, start, end;
+	struct elf_header_t *elf_header;
+	char *buf, *buf_mmap;
+
+	/* open file */
+	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
+	if (fd < 0)
+		return fd;
+
+	/* allocate a buffer */
+	buf = (char *) kmalloc(PAGE_SIZE);
+	if (!buf) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	/* read first block */
+	if ((size_t) do_read(fd, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	/* check elf header */
+	elf_header = (struct elf_header_t *) buf;
+	ret = elf_check(elf_header);
+	if (ret != 0)
+		goto out;
+
+	/* read each elf segment */
+	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
+		/* load segment */
+		ph = (struct elf_prog_header_t *) (buf + off);
+		if (ph->p_type == PT_LOAD) {
+			/* set mmap flags */
+			elf_flags = 0;
+			if (elf_header->e_type == ET_EXEC || load_addr_set)
+				elf_flags |= MAP_FIXED;
+
+			/* map elf segment */
+			buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_addr),
+					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
+					   elf_flags,
+					   current_task->filp[fd],
+					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
+			if (!buf_mmap) {
+				ret = -ENOMEM;
+				goto out;
+			}
+
+			/* set load address */
+			if (!load_addr_set && elf_header->e_type == ET_DYN) {
+				load_addr = (uint32_t) buf_mmap - ELF_PAGESTART(ph->p_vaddr);
+				load_addr_set = 1;
+			}
+
+			/* remember last header header */
+			last_ph = ph;
+		}
+	}
+
+	/* no segment */
+	if (!last_ph) {
+		ret = -ENOEXEC;
+		goto out;
+	}
+
+	/* apply load bias */
+	last_ph->p_vaddr += load_addr;
+	*interp_load_addr = load_addr;
+	*elf_entry = load_addr + elf_header->e_entry;
+
+	/* memzero fractionnal page of data section */
+	start = last_ph->p_vaddr + last_ph->p_filesz;
+	end = PAGE_ALIGN_UP(start);
+	memset((void *) start, 0, end - start);
+
+	/* setup BSS section */
+	start = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_filesz);
+	end = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
+	if (!do_mmap(start, end - start, MAP_FIXED, NULL, 0)) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	ret = 0;
+out:
+	do_close(fd);
+	kfree(buf);
+	return ret;
+}
+/*
  * Load an ELF file in memory.
  */
 int elf_load(const char *path, struct binargs_t *bargs)
 {
-	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0;
+	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
+	char name[TASK_NAME_LEN], *buf, *elf_intepreter = NULL;
 	int fd, off, ret, elf_flags, load_addr_set = 0;
 	struct elf_prog_header_t *ph, *last_ph = NULL;
 	struct elf_header_t *elf_header;
-	char name[TASK_NAME_LEN], *buf;
 	struct list_head_t *pos, *n;
 	struct vm_area_t *vm;
 	void *buf_mmap;
@@ -143,6 +241,38 @@ int elf_load(const char *path, struct binargs_t *bargs)
 		vm = list_entry(pos, struct vm_area_t, list);
 		list_del(&vm->list);
 		kfree(vm);
+	}
+
+	/* reset code */
+	current_task->start_text = 0;
+	current_task->end_text = 0;
+	elf_entry = elf_header->e_entry;
+
+	/* check if an ELF interpreter is needed */
+	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
+		/* load segment */
+		ph = (struct elf_prog_header_t *) (buf + off);
+		if (ph->p_type == PT_INTERP) {
+			/* allocate interpreter path */
+			elf_intepreter = (char *) kmalloc(ph->p_filesz);
+			if (!elf_intepreter) {
+				ret = -ENOMEM;
+				goto out;
+			}
+
+			/* seek to interpreter path */
+			ret = do_lseek(fd, ph->p_offset, SEEK_SET);
+			if (ret < 0)
+				goto out;
+
+			/* read interpreter path */
+			if ((size_t) do_read(fd, elf_intepreter, ph->p_filesz) != ph->p_filesz) {
+				ret = -EINVAL;
+				goto out;
+			}
+
+			break;
+		}
 	}
 
 	/* read each elf segment */
@@ -190,7 +320,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	}
 
 	/* apply load bias */
-	elf_header->e_entry += load_bias;
+	elf_entry += load_bias;
 	last_ph->p_vaddr += load_bias;
 
 	/* memzero fractionnal page of data section */
@@ -207,13 +337,19 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	}
 
 	/* setup HEAP section */
-	current_task->start_text = 0;
 	current_task->end_text = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
 	current_task->start_brk = current_task->end_text;
 	current_task->end_brk = current_task->end_text + PAGE_SIZE;
 	if (!do_mmap(current_task->start_brk, current_task->end_brk - current_task->start_brk, MAP_FIXED, NULL, 0)) {
 		ret = -ENOMEM;
 		goto out;
+	}
+
+	/* load ELF interpreter */
+	if (elf_intepreter) {
+		ret = elf_load_interpreter(elf_intepreter, &interp_load_addr, &elf_entry);
+		if (ret)
+			goto out;
 	}
 
 	/* setup stack */
@@ -225,7 +361,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	sp -= (1 + (bargs->argc + 1) + (bargs->envc + 1)) * sizeof(uint32_t);
 
 	/* create ELF tables */
-	ret = elf_create_tables(bargs, (uint32_t *) sp, (char *) args_str, elf_header, load_addr);
+	ret = elf_create_tables(bargs, (uint32_t *) sp, (char *) args_str, elf_header, load_addr, load_bias, interp_load_addr);
 	if (ret)
 		goto out;
 
@@ -233,10 +369,11 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	memcpy(current_task->name, name, TASK_NAME_LEN);
 
 	/* setup task entry and stack pointer */
-	current_task->user_regs.eip = current_task->user_entry = elf_header->e_entry;
+	current_task->user_regs.eip = current_task->user_entry = elf_entry;
 	current_task->user_regs.useresp = sp;
 out:
 	do_close(fd);
+	kfree(elf_intepreter);
 	kfree(buf);
 	return ret;
 }
