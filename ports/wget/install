@@ -1,5 +1,5 @@
 URL="https://ftp.gnu.org/gnu/wget/"
-VERSION="1.21"
+VERSION="1.21.3"
 SRC_FILENAME="wget-"$VERSION".tar.gz"
 
 function configure_port() {
@@ -7,9 +7,9 @@ function configure_port() {
 		--host=$TARGET							\
 		--disable-nls							\
 		--disable-threads						\
+		--disable-ipv6							\
 		--with-ssl=openssl						\
-		--prefix="/usr"							\
-		CFLAGS="-static" LDFLAGS="-static"
+		--prefix="/usr"
 }
 
 function build_port() {
