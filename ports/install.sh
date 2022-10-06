@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("pkgconf" "bash" "libncurses" "zlib" "openssl")
+BASE_PORTS=("pkgconf" "bash" "libncurses" "zlib")
 
 ################################
 ######### install musl #########
