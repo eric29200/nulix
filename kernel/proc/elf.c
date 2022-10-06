@@ -91,7 +91,6 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
 	AUX_ENT(AT_EUID, current_task->euid);
 	AUX_ENT(AT_GID, current_task->gid);
 	AUX_ENT(AT_EGID, current_task->egid);
-	AUX_ENT(AT_NULL, 0);
 #undef AUX_ENT
 
 	return 0;
