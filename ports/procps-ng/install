@@ -11,11 +11,11 @@ function configure_port() {
 		--disable-w							\
 		--disable-numa							\
 		--prefix="/usr"							\
-		CFLAGS="--static -D__thread=''" LDFLAGS="--static" PKG_CONFIG=$PKG_CONFIG
+		CFLAGS="-D__thread=''" PKG_CONFIG=$PKG_CONFIG
 }
 
 function build_port() {
-	make -j$NJOBS
+	make -j$NJOBS V=1
 }
 
 function install_port() {
