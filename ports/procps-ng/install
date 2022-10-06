@@ -6,7 +6,6 @@ function configure_port() {
 	./configure								\
 		--host=$TARGET							\
 		--disable-shared						\
-		--enable-static							\
 		--disable-nls							\
 		--disable-w							\
 		--disable-numa							\
