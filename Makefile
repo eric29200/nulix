@@ -12,7 +12,6 @@ run:
 	make -j$(NJOBS) -C usr
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
-	./scripts/create_rootfs.sh
 	sudo $(QEMU)								\
 		-m $(MEM_SIZE)							\
 		-serial stdio 							\
@@ -27,7 +26,9 @@ run:
 	@:
 
 port:
+	make -C usr
 	./ports/install.sh $(call args)
+	./scripts/create_rootfs.sh
 
 clean:
 	make clean -C kernel
