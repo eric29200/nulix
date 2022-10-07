@@ -482,10 +482,16 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
 	if (flags & RENAME_NOREPLACE) {
 		ret = new_dir->i_op->lookup(new_dir, new_basename, new_basename_len, &tmp);
 		if (ret == 0) {
+			/* do not allow to replace directory */
+			if (S_ISDIR(tmp->i_mode)) {
+				iput(tmp);
+				iput(old_dir);
+				iput(new_dir);
+				return -EEXIST;
+			}
+
+			/* release inode */
 			iput(tmp);
-			iput(old_dir);
-			iput(new_dir);
-			return -EEXIST;
 		}
 	}
 
