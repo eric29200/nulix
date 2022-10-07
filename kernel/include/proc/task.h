@@ -7,6 +7,7 @@
 #include <fs/fs.h>
 #include <ipc/signal.h>
 #include <lib/list.h>
+#include <x86/tls.h>
 #include <stddef.h>
 
 #define STACK_SIZE		0x2000
@@ -66,6 +67,7 @@ struct task_t {
 	struct registers_t		user_regs;			/* saved registers at syscall entry */
 	struct registers_t		signal_regs;			/* saved registers at signal entry */
 	struct page_directory_t *	pgd;				/* page directory */
+	struct user_desc_t		tls;				/* Thread Local Storage address */
 	struct file_t *			filp[NR_OPEN];			/* opened files */
 	struct timer_event_t		sig_tm;				/* signal timer */
 	struct wait_queue_t *		wait_child_exit;		/* wait queue for child exit */

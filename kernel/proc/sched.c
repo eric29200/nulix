@@ -139,6 +139,7 @@ void schedule()
 	if (prev_task != current_task) {
 		kstat.context_switch++;
 		tss_set_stack(0x10, current_task->kernel_stack);
+		load_tls();
 		switch_page_directory(current_task->pgd);
 		scheduler_do_switch(&prev_task->esp, current_task->esp);
 	}

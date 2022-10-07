@@ -7,6 +7,7 @@
 #include <sys/sysinfo.h>
 #include <net/socket.h>
 #include <proc/sched.h>
+#include <x86/tls.h>
 #include <time.h>
 #include <resource.h>
 #include <uio.h>
@@ -194,8 +195,8 @@ void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pg
 int sys_munmap(void *addr, size_t length);
 int sys_modify_ldt(int func, void *ptr, unsigned long bytecount);
 pid_t sys_gettid();
-int sys_get_thread_area(void *u_info);
-int sys_set_thread_area(void *u_info);
+int sys_get_thread_area(struct user_desc_t *u_info);
+int sys_set_thread_area(struct user_desc_t *u_info);
 pid_t sys_set_tid_address(int *tidptr);
 void sys_exit_group(int status);
 int sys_mkdirat(int dirfd, const char *pathname, mode_t mode);

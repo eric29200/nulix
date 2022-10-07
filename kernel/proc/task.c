@@ -206,11 +206,14 @@ static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->vm_list);
 
-	/* set task name */
-	if (parent)
+	/* copy task name and TLS */
+	if (parent) {
 		memcpy(task->name, parent->name, TASK_NAME_LEN);
-	else
+		memcpy(&task->tls, &parent->tls, sizeof(struct user_desc_t));
+	} else {
 		memset(task->name, 0, TASK_NAME_LEN);
+		memset(&task->tls, 0, sizeof(struct user_desc_t));
+	}
 
 	/* copy task */
 	if (task_copy_pgd(task, parent))
