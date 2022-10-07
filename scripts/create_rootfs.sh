@@ -4,6 +4,11 @@ DISK1=hda.img
 DISK2=hdb.img
 DISK_SIZE=512M
 
+if [[ `basename $PWD` != "nulix" ]]; then
+	echo "This script must be run from main/root directory"
+	exit 1
+fi
+
 # create first disk
 rm -f $DISK1
 dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE

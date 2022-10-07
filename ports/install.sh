@@ -3,6 +3,11 @@
 # base ports, needed to build other ports
 BASE_PORTS=("pkgconf" "bash" "libncurses" "zlib")
 
+if [[ `basename $PWD` != "nulix" ]]; then
+	echo "This script must be run from main/root directory"
+	exit 1
+fi
+
 ################################
 ######### install musl #########
 ################################
