@@ -224,6 +224,7 @@ static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 	task->wait_child_exit = NULL;
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->vm_list);
+	INIT_LIST_HEAD(&task->sig_tm.list);
 
 	/* copy task name and TLS */
 	if (parent) {
