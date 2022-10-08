@@ -26,8 +26,8 @@ run:
 	@:
 
 port:
-	make -C usr
 	./ports/install.sh $(call args)
+	make -C usr
 	./scripts/create_rootfs.sh
 
 clean:
