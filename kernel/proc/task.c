@@ -154,6 +154,25 @@ static int task_copy_thread(struct task_t *task, struct task_t *parent, uint32_t
 }
 
 /*
+ * Clear memory areas.
+ */
+void task_clear_mm(struct task_t *task)
+{
+	struct list_head_t *pos, *n;
+	struct vm_area_t *vm_area;
+
+	/* free memory regions */
+	list_for_each_safe(pos, n, &task->vm_list) {
+		vm_area = list_entry(pos, struct vm_area_t, list);
+		if (vm_area) {
+			unmap_pages(vm_area->vm_start, vm_area->vm_end, task->pgd);
+			list_del(&vm_area->list);
+			kfree(vm_area);
+		}
+	}
+}
+
+/*
  * Create and init a task.
  */
 static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
@@ -320,9 +339,6 @@ struct task_t *create_init_task(struct task_t *parent)
  */
 void destroy_task(struct task_t *task)
 {
-	struct list_head_t *pos, *n;
-	struct vm_area_t *vm_area;
-
 	if (!task)
 		return;
 
@@ -333,14 +349,7 @@ void destroy_task(struct task_t *task)
 	kfree((void *) (task->kernel_stack - STACK_SIZE));
 
 	/* free memory regions */
-	list_for_each_safe(pos, n, &task->vm_list) {
-		vm_area = list_entry(pos, struct vm_area_t, list);
-		if (vm_area) {
-			unmap_pages(vm_area->vm_start, vm_area->vm_end, task->pgd);
-			list_del(&vm_area->list);
-			kfree(vm_area);
-		}
-	}
+	task_clear_mm(task);
 
 	/* free page directory */
 	if (task->pgd != kernel_pgd)

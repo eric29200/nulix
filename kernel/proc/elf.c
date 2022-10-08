@@ -203,8 +203,6 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	int fd, off, ret, elf_flags, load_addr_set = 0;
 	struct elf_prog_header_t *ph, *last_ph = NULL;
 	struct elf_header_t *elf_header;
-	struct list_head_t *pos, *n;
-	struct vm_area_t *vm;
 	void *buf_mmap;
 
 	/* open file */
@@ -236,11 +234,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 		goto out;
 
 	/* clear mapping */
-	list_for_each_safe(pos, n, &current_task->vm_list) {
-		vm = list_entry(pos, struct vm_area_t, list);
-		list_del(&vm->list);
-		kfree(vm);
-	}
+	task_clear_mm(current_task);
 
 	/* reset code */
 	current_task->start_text = 0;
