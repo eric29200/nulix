@@ -16,8 +16,7 @@
 #define UMAP_START			0x40000000				/* user memory map : from 1 GB to 4 GB */
 #define UMAP_END			0xF0000000
 
-#define USTACK_START			0xF8000000				/* user stack : 3 KB at 4 GB */
-#define USTACK_SIZE			0x8000
+#define USTACK_SIZE			0x2000
 
 void init_mem(uint32_t start, uint32_t end);
 void *kmalloc(uint32_t size);
