@@ -103,6 +103,7 @@ static int alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
 int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
 {
 	struct page_t *page;
+	int ret;
 
 	/* get page */
 	page = get_page(address, 1, pgd);
@@ -110,7 +111,14 @@ int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uin
 		return -ENOMEM;
 
 	/* alloc frame */
-	return alloc_frame(page, kernel, write);
+	ret = alloc_frame(page, kernel, write);
+	if (ret)
+		return ret;
+
+	/* flush TLB */
+	flush_tlb(address);
+
+	return 0;
 }
 
 /*

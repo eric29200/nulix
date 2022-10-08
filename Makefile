@@ -13,6 +13,7 @@ run:
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
 	sudo $(QEMU)								\
+		--enable-kvm							\
 		-m $(MEM_SIZE)							\
 		-serial stdio 							\
 		-cdrom $(ISO) 							\
