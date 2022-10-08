@@ -91,7 +91,6 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
 	AUX_ENT(AT_EUID, current_task->euid);
 	AUX_ENT(AT_GID, current_task->gid);
 	AUX_ENT(AT_EGID, current_task->egid);
-	AUX_ENT(AT_NULL, 0);
 #undef AUX_ENT
 
 	return 0;
@@ -204,7 +203,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	int fd, off, ret, elf_flags, load_addr_set = 0;
 	struct elf_prog_header_t *ph, *last_ph = NULL;
 	struct elf_header_t *elf_header;
-	void *buf_mmap, *stack;
+	void *buf_mmap;
 
 	/* open file */
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
@@ -346,15 +345,8 @@ int elf_load(const char *path, struct binargs_t *bargs)
 			goto out;
 	}
 
-	/* allocate stack */
-	stack = do_mmap(0, USTACK_SIZE, 0, NULL, 0);
-	if (!stack) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
 	/* setup stack */
-	sp = (uint32_t) stack + USTACK_SIZE - 4;
+	sp = USTACK_START - 4;
 	sp -= (bargs->argv_len + bargs->envp_len);
 	args_str = sp;
 	sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
