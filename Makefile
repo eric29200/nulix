@@ -4,7 +4,7 @@ NJOBS		= 8
 MEM_SIZE	= 512M
 DISK1		= hda.img
 DISK2		= hdb.img
-QEMU		= qemu-system-i386
+QEMU		= kvm
 args		= `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
 run:
@@ -13,7 +13,6 @@ run:
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
 	sudo $(QEMU)								\
-		--enable-kvm							\
 		-m $(MEM_SIZE)							\
 		-serial stdio 							\
 		-cdrom $(ISO) 							\
