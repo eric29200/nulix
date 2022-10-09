@@ -125,7 +125,7 @@ static struct sk_buff_t *tcp_create_skb(struct sock_t *sk, uint16_t flags, void 
 	/* update sequence */
 	if (len)
 		sk->seq_no += len;
-	else if (flags & TCPCB_FLAG_SYN)
+	else if ((flags & TCPCB_FLAG_SYN) || (flags & TCPCB_FLAG_FIN))
 		sk->seq_no += 1;
 
 	return skb;
@@ -232,7 +232,7 @@ static int tcp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 	ack_flags = TCPCB_FLAG_ACK;
 	if (skb->h.tcp_header->syn && !skb->h.tcp_header->ack)
 		ack_flags |= TCPCB_FLAG_SYN;
-	else if (skb->h.tcp_header->fin)
+	else if (skb->h.tcp_header->fin && !skb->h.tcp_header->ack)
 		ack_flags |= TCPCB_FLAG_FIN;
 
 	/* send ACK message */
@@ -358,7 +358,7 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 			skb_free(skb);
 			sk->msg_position = 0;
 		} else {
-			sk->msg_position = count;
+			sk->msg_position += count;
 		}
 	}
 
@@ -516,6 +516,10 @@ static int tcp_close(struct sock_t *sk)
 	skb = tcp_create_skb(sk, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, NULL, 0);
 	if (skb)
 		net_transmit(sk->dev, skb);
+
+	/* wait for ACK message */
+	while (sk->sock->state != SS_DISCONNECTING)
+		task_sleep(&sk->sock->wait);
 
 	return 0;
 }
