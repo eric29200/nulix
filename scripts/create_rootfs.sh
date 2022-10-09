@@ -9,6 +9,9 @@ if [[ `basename $PWD` != "nulix" ]]; then
 	exit 1
 fi
 
+# compile user programs
+make -C usr/
+
 # create first disk
 rm -f $DISK1
 dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE
