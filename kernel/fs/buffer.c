@@ -13,9 +13,6 @@ static struct buffer_head_t *buffer_table = NULL;
 static struct htable_link_t **buffer_htable = NULL;
 static LIST_HEAD(lru_buffers);
 
-/* sync timer */
-static struct timer_event_t bsync_tm;
-
 /*
  * Write a block buffer.
  */
@@ -156,38 +153,6 @@ void brelse(struct buffer_head_t *bh)
 }
 
 /*
- * Reclaim all free buffers.
- */
-void reclaim_buffers()
-{
-	int i;
-
-	/* sync dirty buffers */
-	bsync();
-
-	/* try to free buffers */
-	for (i = 0; i < NR_BUFFER; i++) {
-		/* used buffer */
-		if (buffer_table[i].b_ref || buffer_table[i].b_dirt)
-			continue;
-
-		/* free data */
-		if (buffer_table[i].b_data)
-			kfree(buffer_table[i].b_data);
-
-		/* remove it from lists */
-		htable_delete(&buffer_table[i].b_htable);
-		list_del(&buffer_table[i].b_list);
-
-		/* reset buffer */
-		memset(&buffer_table[i], 0, sizeof(struct buffer_head_t));
-
-		/* add it to LRU buffers list */
-		list_add(&buffer_table[i].b_list, &lru_buffers);
-	}
-}
-
-/*
  * Write all dirty buffers on disk.
  */
 void bsync()
@@ -201,18 +166,6 @@ void bsync()
 			panic("Disk error");
 		}
 	}
-}
-
-/*
- * Bsync timer handler.
- */
-static void bsync_timer_handler()
-{
-	/* sync all buffers */
-	bsync();
-
-	/* reschedule timer */
-	timer_event_mod(&bsync_tm, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
 }
 
 /*
@@ -246,10 +199,6 @@ int binit()
 
 	/* init buffers hash table */
 	htable_init(buffer_htable, BUFFER_HTABLE_BITS);
-
-	/* create sync timer */
-	timer_event_init(&bsync_tm, bsync_timer_handler, NULL, jiffies + ms_to_jiffies(BSYNC_TIMER_MS));
-	timer_event_add(&bsync_tm);
 
 	return 0;
 }
