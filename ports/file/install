@@ -1,0 +1,17 @@
+URL="http://ftp.astron.com/pub/file/"
+VERSION="5.41"
+SRC_FILENAME="file-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
