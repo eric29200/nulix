@@ -101,3 +101,39 @@ off_t do_lseek(int fd, off_t offset, int whence)
 
 	return generic_lseek(filp, offset, whence);
 }
+
+int do_pread64(int fd, void *buf, size_t count, off_t offset)
+{
+	struct file_t *filp;
+	off_t offset_ori;
+	int ret;
+
+	/* check input args */
+	if (fd >= NR_OPEN || fd < 0 || !current_task->filp[fd])
+		return -EBADF;
+
+	/* no data to read */
+	if (!count)
+		return 0;
+
+	/* get current file */
+	filp = current_task->filp[fd];
+	offset_ori = filp->f_pos;
+
+	/* read not implemented */
+	if (!filp->f_op || !filp->f_op->read)
+		return -EPERM;
+
+	/* seek to offset */
+	ret = do_lseek(fd, offset, SEEK_SET);
+	if (ret)
+		return ret;
+
+	/* read data */
+	ret = filp->f_op->read(filp, buf, count);
+
+	/* restore initial position */
+	filp->f_pos = offset_ori;
+
+	return ret;
+}

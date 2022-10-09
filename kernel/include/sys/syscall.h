@@ -81,6 +81,7 @@
 #define __NR_poll			168
 #define __NR_rt_sigaction		174
 #define __NR_rt_sigprocmask		175
+#define __NR_pread64			180
 #define __NR_getcwd			183
 #define __NR_vfork			190
 #define __NR_mmap2			192
@@ -258,5 +259,6 @@ int sys_madvise(void *addr, size_t length, int advice);
 int sys_clone(uint32_t flags, uint32_t newsp);
 int sys_getrandom(void *buf, size_t buflen, unsigned int flags);
 int sys_mprotect(void *addr, size_t len, int prot);
+int sys_pread64(int fd, void *buf, size_t count, off_t offset);
 
 #endif

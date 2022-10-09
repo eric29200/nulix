@@ -129,6 +129,7 @@ static const void *syscalls[] = {
 	[__NR_clone]			= sys_clone,
 	[__NR_getrandom]		= sys_getrandom,
 	[__NR_mprotect]			= sys_mprotect,
+	[__NR_pread64]			= sys_pread64,
 };
 
 /*
