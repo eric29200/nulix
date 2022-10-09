@@ -13,7 +13,7 @@ static int proc_self_follow_link(struct inode_t *dir, struct inode_t *inode, str
 	UNUSED(dir);
 
 	/* get target inode */
-	*res_inode = iget(inode->i_sb, PROC_BASE_INO + current_task->pid);
+	*res_inode = iget(inode->i_sb, (current_task->pid << 16) + PROC_PID_INO);
 
 	/* release inode */
 	iput(inode);

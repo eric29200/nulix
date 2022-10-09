@@ -74,7 +74,7 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 			return n;
 
 		/* set dir entry */
-		dirent->d_inode = task->pid + PROC_BASE_INO;
+		dirent->d_inode = (task->pid << 16) + PROC_PID_INO;
 		dirent->d_type = 0;
 		memcpy(dirent->d_name, pid_s, name_len);
 		dirent->d_name[name_len] = 0;
@@ -128,7 +128,8 @@ static int proc_root_lookup(struct inode_t *dir, const char *name, size_t name_l
 			iput(dir);
 			return -ENOENT;
 		}
-		ino = PROC_BASE_INO + task->pid;
+
+		ino = (task->pid << 16) + PROC_PID_INO;
 	}
 
 	/* get inode */

@@ -34,7 +34,7 @@ static void do_pollfd(struct pollfd_t *fds, int *count, struct select_table_t *w
 
 	/* check file descriptor */
 	fd = fds->fd;
-	if (fd >= 0 && fd < NR_FILE && current_task->filp[fd]) {
+	if (fd >= 0 && fd < NR_OPEN && current_task->filp[fd]) {
 		filp = current_task->filp[fd];
 
 		/* call specific poll */
