@@ -361,8 +361,8 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	memcpy(current_task->name, name, TASK_NAME_LEN);
 
 	/* setup task entry and stack pointer */
-	current_task->user_regs.eip = current_task->user_entry = elf_entry;
-	current_task->user_regs.useresp = current_task->mm->user_stack = sp;
+	current_task->user_regs.eip = elf_entry;
+	current_task->user_regs.useresp = sp;
 out:
 	do_close(fd);
 	kfree(elf_intepreter);

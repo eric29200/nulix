@@ -36,7 +36,7 @@ static void init_entry(struct task_t *task)
 
 	/* load elf header */
 	if (elf_load("/sbin/init", &bargs) == 0)
-		enter_user_mode(task->mm->user_stack, task->user_entry, TASK_RETURN_ADDRESS);
+		enter_user_mode(task->user_regs.useresp, task->user_regs.eip, TASK_RETURN_ADDRESS);
 }
 
 /*
@@ -100,7 +100,6 @@ static int task_copy_mm(struct task_t *task, struct task_t *parent)
 		return -ENOMEM;
 
 	/* copy text/brk start/end */
-	task->mm->user_stack = parent ? parent->mm->user_stack : 0;
 	task->mm->start_text = parent ? parent->mm->start_text : 0;
 	task->mm->end_text = parent ? parent->mm->end_text : 0;
 	task->mm->start_brk = parent ? parent->mm->start_brk : 0;

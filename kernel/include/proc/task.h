@@ -31,7 +31,6 @@ struct mm_struct {
 	struct page_directory_t *	pgd;				/* page directory */
 	uint32_t			kernel_stack;			/* kernel stack */
 	uint32_t			esp;				/* kernel stack pointer */
-	uint32_t			user_stack;			/* user stack */
 	uint32_t			start_text;			/* user text segment start */
 	uint32_t			end_text;			/* user text segment end */
 	uint32_t			start_brk;			/* user data segment start */
@@ -90,7 +89,6 @@ struct task_t {
 	uint32_t			start_time;			/* time process started after system boot */
 	int			 	exit_code;			/* exit code */
 	struct task_t *		 	parent;				/* parent process */
-	uint32_t			user_entry;			/* user entry point */
 	uint32_t			timeout;			/* timeout (used by sleep) */
 	sigset_t			sigpend;			/* pending signals */
 	sigset_t			sigmask;			/* masked signals */
