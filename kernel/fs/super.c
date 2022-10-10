@@ -253,8 +253,8 @@ int do_mount_root(dev_t dev, const char *dev_name)
 found:
 	/* set mount point */
 	sb->s_root_inode->i_ref = 3;
-	current_task->cwd = sb->s_root_inode;
-	current_task->root = sb->s_root_inode;
+	current_task->fs->cwd = sb->s_root_inode;
+	current_task->fs->root = sb->s_root_inode;
 
 	/* add mounted file system */
 	err = add_vfs_mount(dev, dev_name, "/", flags, sb);

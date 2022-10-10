@@ -14,7 +14,7 @@ ssize_t do_read(int fd, char *buf, int count)
 	struct file_t *filp;
 
 	/* check input args */
-	if (fd >= NR_OPEN || fd < 0 || count < 0 || !current_task->filp[fd])
+	if (fd >= NR_OPEN || fd < 0 || count < 0 || !current_task->files->filp[fd])
 		return -EBADF;
 
 	/* no data to read */
@@ -22,7 +22,7 @@ ssize_t do_read(int fd, char *buf, int count)
 		return 0;
 
 	/* get current file */
-	filp = current_task->filp[fd];
+	filp = current_task->files->filp[fd];
 
 	/* read not implemented */
 	if (!filp->f_op || !filp->f_op->read)
@@ -39,7 +39,7 @@ ssize_t do_write(int fd, const char *buf, int count)
 	struct file_t *filp;
 
 	/* check input args */
-	if (fd >= NR_OPEN || fd < 0 || count < 0 || !current_task->filp[fd])
+	if (fd >= NR_OPEN || fd < 0 || count < 0 || !current_task->files->filp[fd])
 		return -EBADF;
 
 	/* no data to write */
@@ -47,7 +47,7 @@ ssize_t do_write(int fd, const char *buf, int count)
 		return 0;
 
 	/* get current file */
-	filp = current_task->filp[fd];
+	filp = current_task->files->filp[fd];
 
 	/* write not implemented */
 	if (!filp->f_op || !filp->f_op->write)
@@ -91,11 +91,11 @@ off_t do_lseek(int fd, off_t offset, int whence)
 	struct file_t *filp;
 
 	/* check fd */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->filp[fd])
+	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
 		return -EBADF;
 
 	/* specific lseek */
-	filp = current_task->filp[fd];
+	filp = current_task->files->filp[fd];
 	if (filp->f_op && filp->f_op->lseek)
 		return filp->f_op->lseek(filp, offset, whence);
 
@@ -109,7 +109,7 @@ int do_pread64(int fd, void *buf, size_t count, off_t offset)
 	int ret;
 
 	/* check input args */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->filp[fd])
+	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
 		return -EBADF;
 
 	/* no data to read */
@@ -117,7 +117,7 @@ int do_pread64(int fd, void *buf, size_t count, off_t offset)
 		return 0;
 
 	/* get current file */
-	filp = current_task->filp[fd];
+	filp = current_task->files->filp[fd];
 	offset_ori = filp->f_pos;
 
 	/* read not implemented */

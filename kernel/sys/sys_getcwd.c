@@ -83,7 +83,7 @@ int sys_getcwd(char *buf, size_t size)
 		return -EINVAL;
 
 	/* root directory : return "/" */
-	if (current_task->cwd == current_task->root) {
+	if (current_task->fs->cwd == current_task->fs->root) {
 		strncpy(buf, "/", 1);
 		return 1;
 	}
@@ -94,7 +94,7 @@ int sys_getcwd(char *buf, size_t size)
 		return -ENOMEM;
 
 	/* walk up until root directory */
-	for (fd = AT_FDCWD, inode = current_task->cwd; inode != current_task->root;) {
+	for (fd = AT_FDCWD, inode = current_task->fs->cwd; inode != current_task->fs->root;) {
 		/* open parent directory */
 		parent_fd = do_open(fd, "..", O_RDONLY, 0);
 		if (parent_fd < 0)
@@ -114,7 +114,7 @@ int sys_getcwd(char *buf, size_t size)
 
 		/* go to parent directory */
 		fd = parent_fd;
-		inode = current_task->filp[fd]->f_inode;
+		inode = current_task->files->filp[fd]->f_inode;
 	}
 
 	/* end path */

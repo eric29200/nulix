@@ -1,7 +1,8 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
-#include <stderr.h>
 #include <mm/mm.h>
+#include <stderr.h>
+#include <fcntl.h>
 
 /* global file table (defined in open.c) */
 extern struct file_t filp_table[NR_FILE];
@@ -167,16 +168,16 @@ int do_pipe(int pipefd[2], int flags)
 
 	/* find 2 file descriptors in current task */
 	for (i = 0, j = 0; i < NR_OPEN && j < 2; i++) {
-		if (!current_task->filp[i]) {
+		if (!current_task->files->filp[i]) {
 			fd[j] = i;
-			current_task->filp[i] = filps[j++];
+			current_task->files->filp[i] = filps[j++];
 		}
 	}
 
 	/* not enough available slots */
 	if (j < 2) {
 		if (j == 1)
-			current_task->filp[fd[0]] = NULL;
+			current_task->files->filp[fd[0]] = NULL;
 
 		filps[0]->f_ref = 0;
 		filps[1]->f_ref = 0;
@@ -186,8 +187,8 @@ int do_pipe(int pipefd[2], int flags)
 	/* get a pipe inode */
 	inode = get_pipe_inode();
 	if (!inode) {
-		current_task->filp[fd[0]] = NULL;
-		current_task->filp[fd[1]] = NULL;
+		current_task->files->filp[fd[0]] = NULL;
+		current_task->files->filp[fd[1]] = NULL;
 		filps[0]->f_ref = 0;
 		filps[1]->f_ref = 0;
 		return -ENOSPC;
@@ -196,14 +197,14 @@ int do_pipe(int pipefd[2], int flags)
 	/* set 1st file descriptor as read channel */
 	filps[0]->f_inode = inode;
 	filps[0]->f_pos = 0;
-	filps[0]->f_mode = 1;
+	filps[0]->f_mode = O_RDONLY;
 	filps[0]->f_op = &pipe_fops;
 	pipefd[0] = fd[0];
 
 	/* set 2nd file descriptor as write channel */
 	filps[1]->f_inode = inode;
 	filps[1]->f_pos = 0;
-	filps[1]->f_mode = 2;
+	filps[1]->f_mode = O_WRONLY;
 	filps[1]->f_op = &pipe_fops;
 	pipefd[1] = fd[1];
 

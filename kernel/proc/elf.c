@@ -58,25 +58,25 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
 	*sp++ = bargs->argc;
 
 	/* put argv */
-	current_task->arg_start = (uint32_t) sp;
+	current_task->mm->arg_start = (uint32_t) sp;
 	for (i = 0; i < bargs->argc; i++) {
 		*sp++ = (uint32_t) args_str;
 		args_str += strlen((char *) args_str) + 1;
 	}
 
 	/* finish argv with NULL pointer */
-	current_task->arg_end = (uint32_t) sp;
+	current_task->mm->arg_end = (uint32_t) sp;
 	*sp++ = 0;
 
 	/* put envp */
-	current_task->env_start = (uint32_t) sp;
+	current_task->mm->env_start = (uint32_t) sp;
 	for (i = 0; i < bargs->envc; i++) {
 		*sp++ = (uint32_t) args_str;
 		args_str += strlen((char *) args_str) + 1;
 	}
 
 	/* finish envp with NULL pointer */
-	current_task->env_end = (uint32_t) sp;
+	current_task->mm->env_end = (uint32_t) sp;
 	*sp++ = 0;
 
 #define AUX_ENT(id, val)	*sp++ = id; *sp++ = val;
@@ -145,7 +145,7 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 			buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_addr),
 					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
 					   elf_flags,
-					   current_task->filp[fd],
+					   current_task->files->filp[fd],
 					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
 			if (!buf_mmap) {
 				ret = -ENOMEM;
@@ -237,8 +237,8 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	task_clear_mm(current_task);
 
 	/* reset code */
-	current_task->start_text = 0;
-	current_task->end_text = 0;
+	current_task->mm->start_text = 0;
+	current_task->mm->end_text = 0;
 	elf_entry = elf_header->e_entry;
 
 	/* check if an ELF interpreter is needed */
@@ -284,7 +284,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 			buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_bias),
 					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
 					   elf_flags,
-					   current_task->filp[fd],
+					   current_task->files->filp[fd],
 					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
 			if (!buf_mmap) {
 				ret = -ENOMEM;
@@ -330,10 +330,10 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	}
 
 	/* setup HEAP section */
-	current_task->end_text = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
-	current_task->start_brk = current_task->end_text;
-	current_task->end_brk = current_task->end_text + PAGE_SIZE;
-	if (!do_mmap(current_task->start_brk, current_task->end_brk - current_task->start_brk, MAP_FIXED, NULL, 0)) {
+	current_task->mm->end_text = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
+	current_task->mm->start_brk = current_task->mm->end_text;
+	current_task->mm->end_brk = current_task->mm->end_text + PAGE_SIZE;
+	if (!do_mmap(current_task->mm->start_brk, current_task->mm->end_brk - current_task->mm->start_brk, MAP_FIXED, NULL, 0)) {
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -362,7 +362,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 
 	/* setup task entry and stack pointer */
 	current_task->user_regs.eip = current_task->user_entry = elf_entry;
-	current_task->user_regs.useresp = current_task->user_stack = sp;
+	current_task->user_regs.useresp = current_task->mm->user_stack = sp;
 out:
 	do_close(fd);
 	kfree(elf_intepreter);

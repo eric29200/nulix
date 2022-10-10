@@ -23,10 +23,10 @@ int sys_chdir(const char *path)
 	}
 
 	/* release current working dir */
-	iput(current_task->cwd);
+	iput(current_task->fs->cwd);
 
 	/* set current working dir */
-	current_task->cwd = inode;
+	current_task->fs->cwd = inode;
 
 	return 0;
 }

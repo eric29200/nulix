@@ -10,17 +10,17 @@ uint32_t sys_brk(uint32_t brk)
 	uint32_t newbrk, oldbrk;
 
 	/* current brk is asked */
-	if (brk < current_task->end_text)
+	if (brk < current_task->mm->end_text)
 		goto out;
 
 	/* grow brk, without new page */
 	newbrk = PAGE_ALIGN_UP(brk);
-	oldbrk = PAGE_ALIGN_UP(current_task->end_brk);
+	oldbrk = PAGE_ALIGN_UP(current_task->mm->end_brk);
 	if (oldbrk == newbrk)
 		goto set_brk;
 
 	/* shrink brk */
-	if (brk <= current_task->end_brk) {
+	if (brk <= current_task->mm->end_brk) {
 		if (do_munmap(newbrk, oldbrk - newbrk) == 0)
 			goto set_brk;
 		goto out;
@@ -35,7 +35,7 @@ uint32_t sys_brk(uint32_t brk)
 		goto out;
 
 set_brk:
-	current_task->end_brk = brk;
+	current_task->mm->end_brk = brk;
 out:
-	return current_task->end_brk;
+	return current_task->mm->end_brk;
 }

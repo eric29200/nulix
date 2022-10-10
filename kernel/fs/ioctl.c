@@ -10,11 +10,11 @@ int do_ioctl(int fd, int request, unsigned long arg)
 	struct file_t *filp;
 
 	/* check input args */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->filp[fd])
+	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
 		return -EBADF;
 
 	/* get current file */
-	filp = current_task->filp[fd];
+	filp = current_task->files->filp[fd];
 
 	/* ioctl not implemented */
 	if (!filp->f_op || !filp->f_op->ioctl)

@@ -34,8 +34,8 @@ static void do_pollfd(struct pollfd_t *fds, int *count, struct select_table_t *w
 
 	/* check file descriptor */
 	fd = fds->fd;
-	if (fd >= 0 && fd < NR_OPEN && current_task->filp[fd]) {
-		filp = current_task->filp[fd];
+	if (fd >= 0 && fd < NR_OPEN && current_task->files->filp[fd]) {
+		filp = current_task->files->filp[fd];
 
 		/* call specific poll */
 		mask = POLLNVAL;
@@ -162,7 +162,7 @@ int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptf
 			if (!(set & 1))
 				continue;
 
-			if (!current_task->filp[i] || !current_task->filp[i]->f_inode)
+			if (!current_task->files->filp[i] || !current_task->files->filp[i]->f_inode)
 				return -EBADF;
 
 			max = i;

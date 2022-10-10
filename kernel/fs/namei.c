@@ -33,14 +33,14 @@ static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pa
 
 	/* absolute or relative path */
 	if (*pathname == '/') {
-		inode = current_task->root;
+		inode = current_task->fs->root;
 		pathname++;
 	} else if (base) {
 		inode = base;
 	} else if (dirfd == AT_FDCWD) {
-		inode = current_task->cwd;
-	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->filp[dirfd]) {
-		inode = current_task->filp[dirfd]->f_inode;
+		inode = current_task->fs->cwd;
+	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->files->filp[dirfd]) {
+		inode = current_task->files->filp[dirfd]->f_inode;
 	}
 
 	if (!inode)
@@ -105,11 +105,11 @@ struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int
 
 	/* use directly dir fd */
 	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
-		if (dirfd >= NR_OPEN || !current_task->filp[dirfd])
+		if (dirfd >= NR_OPEN || !current_task->files->filp[dirfd])
 			return NULL;
 
-		current_task->filp[dirfd]->f_inode->i_ref++;
-		return current_task->filp[dirfd]->f_inode;
+		current_task->files->filp[dirfd]->f_inode->i_ref++;
+		return current_task->files->filp[dirfd]->f_inode;
 	}
 
 	/* find directory */
@@ -173,7 +173,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
 	}
 
 	/* set mode (needed if new file is created) */
-	mode &= ~current_task->umask & 0777;
+	mode &= ~current_task->fs->umask & 0777;
 	mode |= S_IFREG;
 
 	/* lookup not implemented */

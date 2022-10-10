@@ -16,12 +16,12 @@ void sys_exit(int status)
 
 	/* close opened files */
 	for (i = 0; i < NR_OPEN; i++)
-		if (current_task->filp[i])
+		if (current_task->files->filp[i])
 			sys_close(i);
 
 	/* release current working dir and root dir */
-	iput(current_task->cwd);
-	iput(current_task->root);
+	iput(current_task->fs->cwd);
+	iput(current_task->fs->root);
 
 	/* mark task terminated and reschedule */
 	current_task->state = TASK_ZOMBIE;

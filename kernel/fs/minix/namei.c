@@ -440,7 +440,7 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
 	inode->i_uid = current_task->uid;
 	inode->i_gid = current_task->gid;
 	inode->i_op = &minix_file_iops;
-	inode->i_mode = S_IFLNK | (0777 & ~current_task->umask);
+	inode->i_mode = S_IFLNK | (0777 & ~current_task->fs->umask);
 	inode->i_dirt = 1;
 
 	/* read/create first block */
@@ -521,7 +521,7 @@ int minix_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t m
 	inode->i_uid = current_task->uid;
 	inode->i_gid = current_task->gid;
 	inode->i_op = &minix_dir_iops;
-	inode->i_mode = S_IFDIR | (mode & ~current_task->umask & 0777);
+	inode->i_mode = S_IFDIR | (mode & ~current_task->fs->umask & 0777);
 	inode->i_nlinks = 2;
 	inode->i_size = sbi->s_dirsize * 2;
 	inode->i_dirt = 1;

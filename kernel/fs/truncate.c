@@ -37,11 +37,11 @@ int do_ftruncate(int fd, off_t length)
 	struct inode_t *inode;
 
 	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->filp[fd])
+	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
 		return -EBADF;
 
 	/* get inode */
-	inode = current_task->filp[fd]->f_inode;
+	inode = current_task->files->filp[fd]->f_inode;
 
 	/* set new size */
 	inode->i_size = length;

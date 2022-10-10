@@ -110,10 +110,10 @@ static int proc_cmdline_read(struct file_t *filp, char *buf, int count)
 		return -EINVAL;
 
 	/* switch to task's pgd */
-	switch_page_directory(task->pgd);
+	switch_page_directory(task->mm->pgd);
 
 	/* get arguments */
-	for (arg = task->arg_start, p = tmp_buf; arg != task->arg_end; arg += sizeof(char *)) {
+	for (arg = task->mm->arg_start, p = tmp_buf; arg != task->mm->arg_end; arg += sizeof(char *)) {
 		arg_str = *((char **) arg);
 
 		/* copy argument */
@@ -129,7 +129,7 @@ static int proc_cmdline_read(struct file_t *filp, char *buf, int count)
 	}
 
 	/* switch back to current's pgd */
-	switch_page_directory(current_task->pgd);
+	switch_page_directory(current_task->mm->pgd);
 
 	/* file position after end */
 	len = p - tmp_buf;
@@ -179,10 +179,10 @@ static int proc_environ_read(struct file_t *filp, char *buf, int count)
 		return -EINVAL;
 
 	/* switch to task's pgd */
-	switch_page_directory(task->pgd);
+	switch_page_directory(task->mm->pgd);
 
 	/* get environs */
-	for (environ = task->env_start, p = tmp_buf; environ != task->env_end; environ += sizeof(char *)) {
+	for (environ = task->mm->env_start, p = tmp_buf; environ != task->mm->env_end; environ += sizeof(char *)) {
 		environ_str = *((char **) environ);
 
 		/* copy environ */
@@ -198,7 +198,7 @@ static int proc_environ_read(struct file_t *filp, char *buf, int count)
 	}
 
 	/* switch back to current's pgd */
-	switch_page_directory(current_task->pgd);
+	switch_page_directory(current_task->mm->pgd);
 
 	/* file position after end */
 	len = p - tmp_buf;
@@ -285,7 +285,7 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 	/* add all files descriptors */
 	for (fd = 0, i = 2; fd < NR_OPEN; fd++) {
 		/* skip empty slots */
-		if (!task->filp[fd])
+		if (!task->files->filp[fd])
 			continue;
 
 		/* skip files before offset */
@@ -349,7 +349,7 @@ static int proc_fd_lookup(struct inode_t *dir, const char *name, size_t name_len
 
 	/* try to find matching file descriptor */
 	fd = atoi(name);
-	if (fd < 0 || fd >= NR_OPEN || !current_task->filp[fd]) {
+	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd]) {
 		iput(dir);
 		return -ENOENT;
 	}
@@ -405,8 +405,8 @@ static int proc_fd_follow_link(struct inode_t *dir, struct inode_t *inode, struc
 
 	/* get file descriptor */
 	fd = inode->i_ino & 0xFF;
-	if (fd >= 0 && fd < NR_OPEN && task->filp[fd])
-		*res_inode = task->filp[fd]->f_inode;
+	if (fd >= 0 && fd < NR_OPEN && task->files->filp[fd])
+		*res_inode = task->files->filp[fd]->f_inode;
 
 	/* release link inode */
 	iput(inode);

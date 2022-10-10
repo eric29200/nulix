@@ -23,6 +23,52 @@
 #define MAX_PATH_LEN		1024
 
 /*
+ * Task's memory structure.
+ */
+struct mm_struct {
+	int				count;				/* reference counter */
+	struct list_head_t		vm_list;			/* virtual memory areas */
+	struct page_directory_t *	pgd;				/* page directory */
+	uint32_t			kernel_stack;			/* kernel stack */
+	uint32_t			esp;				/* kernel stack pointer */
+	uint32_t			user_stack;			/* user stack */
+	uint32_t			start_text;			/* user text segment start */
+	uint32_t			end_text;			/* user text segment end */
+	uint32_t			start_brk;			/* user data segment start */
+	uint32_t			end_brk;			/* user data segment end */
+	uint32_t			arg_start;			/* start argument */
+	uint32_t			arg_end;			/* end argument */
+	uint32_t			env_start;			/* start environ */
+	uint32_t			env_end;			/* end environ */
+};
+
+/*
+ * Task's file structure.
+ */
+struct files_struct {
+	int				count;				/* reference counter */
+	struct file_t *			filp[NR_OPEN];			/* opened files */
+};
+
+/*
+ * Task's file system structure.
+ */
+struct fs_struct {
+	int				count;				/* reference counter */
+	uint16_t			umask;				/* umask */
+	struct inode_t *		cwd;				/* current working directory */
+	struct inode_t *		root;				/* root directory */
+};
+
+/*
+ * Task's signal structure.
+ */
+struct signal_struct {
+	int				count;				/* reference counter */
+	struct sigaction_t		action[NSIGS];			/* signal handlers */
+};
+
+/*
  * Kernel task structure.
  */
 struct task_t {
@@ -36,41 +82,27 @@ struct task_t {
 	gid_t				gid;				/* group id */
 	gid_t				egid;				/* effective group id */
 	gid_t				sgid;				/* saved group id */
-	uint16_t			umask;				/* umask */
 	dev_t				tty;				/* attached tty */
 	uint32_t			utime;				/* amount of time that this process has been scheduled in user mode */
 	uint32_t			stime;				/* amount of time that this process has been scheduled in kernel mode */
 	uint32_t			cutime;				/* amount of time that this process's waited-for children have been scheduled in user mode */
 	uint32_t			cstime;				/* amount of time that this process's waited-for children have been scheduled in user mode */
 	uint32_t			start_time;			/* time process started after system boot */
-	uint32_t			arg_start;			/* start argument */
-	uint32_t			arg_end;			/* end argument */
-	uint32_t			env_start;			/* start environ */
-	uint32_t			env_end;			/* end environ */
 	int			 	exit_code;			/* exit code */
 	struct task_t *		 	parent;				/* parent process */
-	uint32_t			kernel_stack;			/* kernel stack */
-	uint32_t			esp;				/* kernel stack pointer */
 	uint32_t			user_entry;			/* user entry point */
-	uint32_t			user_stack;			/* user stack */
-	uint32_t			start_text;			/* user text segment start */
-	uint32_t			end_text;			/* user text segment end */
-	uint32_t			start_brk;			/* user data segment start */
-	uint32_t			end_brk;			/* user data segment end */
-	struct list_head_t		vm_list;			/* virtual memory areas */
 	uint32_t			timeout;			/* timeout (used by sleep) */
 	sigset_t			sigpend;			/* pending signals */
 	sigset_t			sigmask;			/* masked signals */
-	struct sigaction_t		signals[NSIGS];			/* signal handlers */
-	struct inode_t *		cwd;				/* current working directory */
-	struct inode_t *		root;				/* root directory */
 	struct registers_t		user_regs;			/* saved registers at syscall entry */
 	struct registers_t		signal_regs;			/* saved registers at signal entry */
-	struct page_directory_t *	pgd;				/* page directory */
 	struct user_desc_t		tls;				/* Thread Local Storage address */
-	struct file_t *			filp[NR_OPEN];			/* opened files */
 	struct timer_event_t		sig_tm;				/* signal timer */
 	struct wait_queue_t *		wait_child_exit;		/* wait queue for child exit */
+	struct fs_struct *		fs;				/* file system stuff */
+	struct files_struct *		files;				/* opened files */
+	struct mm_struct *		mm;				/* memory regions */
+	struct signal_struct *		sig;				/* signals */
 	struct list_head_t		list;				/* next process */
 };
 

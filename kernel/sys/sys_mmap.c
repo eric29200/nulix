@@ -13,10 +13,10 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off
 
 	/* get file */
 	if (fd >= 0) {
-		if (fd >= NR_OPEN || !current_task->filp[fd])
+		if (fd >= NR_OPEN || !current_task->files->filp[fd])
 			return NULL;
 
-		filp = current_task->filp[fd];
+		filp = current_task->files->filp[fd];
 	}
 
 	return do_mmap((uint32_t) addr, length, flags, filp, offset);

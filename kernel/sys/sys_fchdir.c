@@ -10,19 +10,19 @@ int sys_fchdir(int fd)
 	struct inode_t *inode;
 
 	/* check fd */
-	if (fd >= NR_OPEN || !current_task->filp[fd])
+	if (fd >= NR_OPEN || !current_task->files->filp[fd])
 		return -EINVAL;
 
 	/* fd must be a directory */
-	inode = current_task->filp[fd]->f_inode;
+	inode = current_task->files->filp[fd]->f_inode;
 	if (!S_ISDIR(inode->i_mode))
 		return -ENOTDIR;
 
 	/* release current working dir */
-	iput(current_task->cwd);
+	iput(current_task->fs->cwd);
 
 	/* set current working dir */
-	current_task->cwd = inode;
+	current_task->fs->cwd = inode;
 
 	return 0;
 }

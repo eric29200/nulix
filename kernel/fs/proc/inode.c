@@ -103,7 +103,7 @@ int proc_read_inode(struct inode_t *inode)
 			if (task) {
 				/* get file descriptor */
 				fd = ino & 0xFF;
-				if (fd >= 0 && fd < NR_OPEN && task->filp[fd]) {
+				if (fd >= 0 && fd < NR_OPEN && task->files->filp[fd]) {
 					inode->i_mode = S_IFLNK | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
 					inode->i_op = &proc_fd_link_iops;
 					return 0;

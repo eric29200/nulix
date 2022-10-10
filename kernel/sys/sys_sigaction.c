@@ -15,10 +15,10 @@ int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t 
 
 	/* save old action */
 	if (oldact)
-		*oldact = current_task->signals[signum - 1];
+		*oldact = current_task->sig->action[signum - 1];
 
 	/* set new action */
-	current_task->signals[signum - 1] = *act;
+	current_task->sig->action[signum - 1] = *act;
 
 	return 0;
 }

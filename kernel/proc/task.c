@@ -17,7 +17,7 @@ extern void return_user_mode(struct registers_t *regs);
 static void task_user_entry(struct task_t *task)
 {
 	/* return to user mode */
-	tss_set_stack(0x10, task->kernel_stack);
+	tss_set_stack(0x10, task->mm->kernel_stack);
 	return_user_mode(&task->user_regs);
 }
 
@@ -36,7 +36,7 @@ static void init_entry(struct task_t *task)
 
 	/* load elf header */
 	if (elf_load("/sbin/init", &bargs) == 0)
-		enter_user_mode(task->user_stack, task->user_entry, TASK_RETURN_ADDRESS);
+		enter_user_mode(task->mm->user_stack, task->user_entry, TASK_RETURN_ADDRESS);
 }
 
 /*
@@ -44,26 +44,24 @@ static void init_entry(struct task_t *task)
  */
 static int task_copy_signals(struct task_t *task, struct task_t *parent)
 {
+	/* allocate signal structure */
+	task->sig = (struct signal_struct *) kmalloc(sizeof(struct signal_struct));
+	if (!task->sig)
+		return -ENOMEM;
+
+	/* init signal structure */
+	memset(task->sig, 0, sizeof(struct signal_struct));
+	task->mm->count = 1;
+
 	/* init signals */
 	sigemptyset(&task->sigpend);
 	sigemptyset(&task->sigmask);
 
 	/* copy signals */
 	if (parent)
-		memcpy(task->signals, parent->signals, sizeof(task->signals));
-
-	return 0;
-}
-
-/*
- * Copy page directory.
- */
-static int task_copy_pgd(struct task_t *task, struct task_t *parent)
-{
-	/* clone page directory */
-	task->pgd = clone_page_directory(parent ? parent->pgd : kernel_pgd);
-	if (!task->pgd)
-		return -ENOMEM;
+		memcpy(task->sig->action, parent->sig->action, sizeof(task->sig->action));
+	else
+		memset(task->sig->action, 0, sizeof(task->sig->action));
 
 	return 0;
 }
@@ -75,10 +73,43 @@ static int task_copy_mm(struct task_t *task, struct task_t *parent)
 {
 	struct vm_area_t *vm_parent, *vm_child;
 	struct list_head_t *pos;
+	void *stack;
+
+	/* allocate memory structure */
+	task->mm = (struct mm_struct *) kmalloc(sizeof(struct mm_struct));
+	if (!task->mm)
+		return -ENOMEM;
+
+	/* init memory structure */
+	memset(task->mm, 0, sizeof(struct mm_struct));
+	task->mm->count = 1;
+
+	/* allocate stack */
+	stack = kmalloc_align(STACK_SIZE);
+	if (!stack)
+		return -ENOMEM;
+
+	/* set stack */
+	memset(stack, 0, STACK_SIZE);
+	task->mm->kernel_stack = (uint32_t) stack + STACK_SIZE;
+	task->mm->esp = task->mm->kernel_stack - sizeof(struct task_registers_t);
+
+	/* clone page directory */
+	task->mm->pgd = clone_page_directory(parent ? parent->mm->pgd : kernel_pgd);
+	if (!task->mm->pgd)
+		return -ENOMEM;
+
+	/* copy text/brk start/end */
+	task->mm->user_stack = parent ? parent->mm->user_stack : 0;
+	task->mm->start_text = parent ? parent->mm->start_text : 0;
+	task->mm->end_text = parent ? parent->mm->end_text : 0;
+	task->mm->start_brk = parent ? parent->mm->start_brk : 0;
+	task->mm->end_brk = parent ? parent->mm->end_brk : 0;
 
 	/* copy virtual memory areas */
+	INIT_LIST_HEAD(&task->mm->vm_list);
 	if (parent) {
-		list_for_each(pos, &parent->vm_list) {
+		list_for_each(pos, &parent->mm->vm_list) {
 			vm_parent = list_entry(pos, struct vm_area_t, list);
 			vm_child = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
 			if (!vm_child)
@@ -87,7 +118,7 @@ static int task_copy_mm(struct task_t *task, struct task_t *parent)
 			vm_child->vm_start = vm_parent->vm_start;
 			vm_child->vm_end = vm_parent->vm_end;
 			vm_child->vm_flags = vm_parent->vm_flags;
-			list_add_tail(&vm_child->list, &task->vm_list);
+			list_add_tail(&vm_child->list, &task->mm->vm_list);
 		}
 	}
 
@@ -99,20 +130,32 @@ static int task_copy_mm(struct task_t *task, struct task_t *parent)
  */
 static int task_copy_fs(struct task_t *task, struct task_t *parent)
 {
+	/* allocate file system structure */
+	task->fs = (struct fs_struct *) kmalloc(sizeof(struct fs_struct));
+	if (!task->fs)
+		return -ENOMEM;
+
+	/* init file system structure */
+	memset(task->fs, 0, sizeof(struct fs_struct));
+	task->fs->count = 1;
+
+	/* set umask */
+	task->fs->umask = parent ? parent->fs->umask : 0022;
+
 	/* duplicate current working dir */
-	if (parent && parent->cwd) {
-		task->cwd = parent->cwd;
-		task->cwd->i_ref++;
+	if (parent && parent->fs->cwd) {
+		task->fs->cwd = parent->fs->cwd;
+		task->fs->cwd->i_ref++;
 	} else {
-		task->cwd = NULL;
+		task->fs->cwd = NULL;
 	}
 
 	/* duplicate root dir */
-	if (parent && parent->root) {
-		task->root = parent->root;
-		task->root->i_ref++;
+	if (parent && parent->fs->root) {
+		task->fs->root = parent->fs->root;
+		task->fs->root->i_ref++;
 	} else {
-		task->root = NULL;
+		task->fs->root = NULL;
 	}
 
 	return 0;
@@ -125,11 +168,20 @@ static int task_copy_files(struct task_t *task, struct task_t *parent)
 {
 	int i;
 
+	/* allocate file structure */
+	task->files = (struct files_struct *) kmalloc(sizeof(struct files_struct));
+	if (!task->files)
+		return -ENOMEM;
+
+	/* init files structure */
+	memset(task->files, 0, sizeof(struct files_struct));
+	task->files->count = 1;
+
 	/* copy open files */
 	for (i = 0; i < NR_OPEN; i++) {
-		task->filp[i] = parent ? parent->filp[i] : NULL;
-		if (task->filp[i])
-			task->filp[i]->f_ref++;
+		task->files->filp[i] = parent ? parent->files->filp[i] : NULL;
+		if (task->files->filp[i])
+			task->files->filp[i]->f_ref++;
 	}
 
 	return 0;
@@ -162,10 +214,10 @@ void task_clear_mm(struct task_t *task)
 	struct vm_area_t *vm_area;
 
 	/* free memory regions */
-	list_for_each_safe(pos, n, &task->vm_list) {
+	list_for_each_safe(pos, n, &task->mm->vm_list) {
 		vm_area = list_entry(pos, struct vm_area_t, list);
 		if (vm_area) {
-			unmap_pages(vm_area->vm_start, vm_area->vm_end, task->pgd);
+			unmap_pages(vm_area->vm_start, vm_area->vm_end, task->mm->pgd);
 			list_del(&vm_area->list);
 			kfree(vm_area);
 		}
@@ -178,24 +230,11 @@ void task_clear_mm(struct task_t *task)
 static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 {
 	struct task_t *task;
-	void *stack;
 
 	/* create task */
 	task = (struct task_t *) kmalloc(sizeof(struct task_t));
 	if (!task)
 		return NULL;
-
-	/* allocate stack */
-	stack = (void *) kmalloc(STACK_SIZE);
-	if (!stack) {
-		kfree(task);
-		return NULL;
-	}
-
-	/* set stack */
-	memset(stack, 0, STACK_SIZE);
-	task->kernel_stack = (uint32_t) stack + STACK_SIZE;
-	task->esp = task->kernel_stack - sizeof(struct task_registers_t);
 
 	/* init task */
 	task->pid = get_next_pid();
@@ -208,13 +247,7 @@ static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 	task->gid = parent ? parent->gid : 0;
 	task->egid = parent ? parent->egid : 0;
 	task->sgid = parent ? parent->sgid : 0;
-	task->umask = parent ? parent->umask : 0022;
 	task->tty = parent ? parent->tty : 0;
-	task->user_stack = parent ? parent->user_stack : 0;
-	task->start_text = parent ? parent->start_text : 0;
-	task->end_text = parent ? parent->end_text : 0;
-	task->start_brk = parent ? parent->start_brk : 0;
-	task->end_brk = parent ? parent->end_brk : 0;
 	task->timeout = 0;
 	task->utime = 0;
 	task->stime = 0;
@@ -223,7 +256,6 @@ static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 	task->start_time = jiffies;
 	task->wait_child_exit = NULL;
 	INIT_LIST_HEAD(&task->list);
-	INIT_LIST_HEAD(&task->vm_list);
 	INIT_LIST_HEAD(&task->sig_tm.list);
 
 	/* copy task name and TLS */
@@ -236,8 +268,6 @@ static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 	}
 
 	/* copy task */
-	if (task_copy_pgd(task, parent))
-		goto err;
 	if (task_copy_mm(task, parent))
 		goto err;
 	if (task_copy_fs(task, parent))
@@ -269,7 +299,7 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->esp;
+	regs = (struct task_registers_t *) task->mm->esp;
 	memset(regs, 0, sizeof(struct task_registers_t));
 
 	/* set eip to function */
@@ -297,7 +327,7 @@ struct task_t *fork_task(struct task_t *parent, uint32_t user_sp)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->esp;
+	regs = (struct task_registers_t *) task->mm->esp;
 	memset(regs, 0, sizeof(struct task_registers_t));
 
 	/* set eip to function */
@@ -321,7 +351,7 @@ struct task_t *create_init_task(struct task_t *parent)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->esp;
+	regs = (struct task_registers_t *) task->mm->esp;
 	memset(regs, 0, sizeof(struct task_registers_t));
 
 	/* set eip */
@@ -347,14 +377,20 @@ void destroy_task(struct task_t *task)
 	list_del(&task->list);
 
 	/* free kernel stack */
-	kfree((void *) (task->kernel_stack - STACK_SIZE));
+	kfree((void *) (task->mm->kernel_stack - STACK_SIZE));
 
 	/* free memory regions */
 	task_clear_mm(task);
 
 	/* free page directory */
-	if (task->pgd != kernel_pgd)
-		free_page_directory(task->pgd);
+	if (task->mm->pgd != kernel_pgd)
+		free_page_directory(task->mm->pgd);
+
+	/* free structures */
+	kfree(task->mm);
+	kfree(task->fs);
+	kfree(task->files);
+	kfree(task->sig);
 
 	/* free task */
 	kfree(task);

@@ -9,8 +9,8 @@
  */
 static int dupfd(int oldfd, int newfd)
 {
-	current_task->filp[newfd] = current_task->filp[oldfd];
-	current_task->filp[newfd]->f_ref++;
+	current_task->files->filp[newfd] = current_task->files->filp[oldfd];
+	current_task->files->filp[newfd]->f_ref++;
 
 	return newfd;
 }
@@ -23,7 +23,7 @@ int do_dup2(int oldfd, int newfd)
 	int ret;
 
 	/* check parameters */
-	if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->filp[oldfd] || newfd < 0 || newfd >= NR_OPEN)
+	if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->files->filp[oldfd] || newfd < 0 || newfd >= NR_OPEN)
 		return -EBADF;
 
 	/* same fd */
@@ -31,7 +31,7 @@ int do_dup2(int oldfd, int newfd)
 		return oldfd;
 
 	/* close existing file */
-	if (current_task->filp[newfd] != NULL) {
+	if (current_task->files->filp[newfd] != NULL) {
 		ret = do_close(newfd);
 		if (ret < 0)
 			return ret;
@@ -49,12 +49,12 @@ int do_dup(int oldfd)
 	int newfd;
 
 	/* check parameter */
-	if (oldfd < 0 || oldfd >= NR_OPEN || current_task->filp[oldfd] == NULL)
+	if (oldfd < 0 || oldfd >= NR_OPEN || current_task->files->filp[oldfd] == NULL)
 		return -EBADF;
 
 	/* find a free slot */
 	for (newfd = 0; newfd < NR_OPEN; newfd++)
-		if (current_task->filp[newfd] == NULL)
+		if (current_task->files->filp[newfd] == NULL)
 			return dupfd(oldfd, newfd);
 
 	/* no free slot : too many files open */
@@ -70,7 +70,7 @@ static int dup_after(int oldfd, int min_slot)
 
 	/* find a free slot */
 	for (newfd = min_slot; newfd < NR_OPEN; newfd++)
-		if (current_task->filp[newfd] == NULL)
+		if (current_task->files->filp[newfd] == NULL)
 			return dupfd(oldfd, newfd);
 
 	/* no free slot : too many files open */
@@ -86,10 +86,10 @@ int do_fcntl(int fd, int cmd, unsigned long arg)
 	int ret = 0;
 
 	/* check fd */
-	if (fd >= NR_OPEN || !current_task->filp[fd])
+	if (fd >= NR_OPEN || !current_task->files->filp[fd])
 		return -EINVAL;
 
-	filp = current_task->filp[fd];
+	filp = current_task->files->filp[fd];
 	switch (cmd) {
 		case F_DUPFD:
 		case F_DUPFD_CLOEXEC:

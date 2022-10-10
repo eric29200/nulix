@@ -12,7 +12,7 @@ static struct vm_area_t *find_vma_prev(uint32_t addr)
 	struct vm_area_t *vm, *vm_prev = NULL;
 	struct list_head_t *pos;
 
-	list_for_each(pos, &current_task->vm_list) {
+	list_for_each(pos, &current_task->mm->vm_list) {
 		vm = list_entry(pos, struct vm_area_t, list);
 		if (addr < vm->vm_end)
 			break;
@@ -31,7 +31,7 @@ static struct vm_area_t *find_vma(uint32_t addr)
 	struct list_head_t *pos;
 	struct vm_area_t *vm;
 
-	list_for_each(pos, &current_task->vm_list) {
+	list_for_each(pos, &current_task->mm->vm_list) {
 		vm = list_entry(pos, struct vm_area_t, list);
 		if (addr < vm->vm_start)
 			break;
@@ -52,9 +52,9 @@ struct vm_area_t *find_vma_intersection(struct task_t *task, uint32_t start, uin
 	/* find previous and next vma */
 	vm_prev = find_vma_prev(start);
 	if (vm_prev)
-		vm_next = list_next_entry_or_null(vm_prev, &task->vm_list, list);
-	else if (!list_empty(&task->vm_list))
-		vm_next = list_first_entry(&task->vm_list, struct vm_area_t, list);
+		vm_next = list_next_entry_or_null(vm_prev, &task->mm->vm_list, list);
+	else if (!list_empty(&task->mm->vm_list))
+		vm_next = list_first_entry(&task->mm->vm_list, struct vm_area_t, list);
 
 	/* check next vma */
 	if (vm_next && end > vm_next->vm_start)
@@ -83,10 +83,10 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, stru
 	vm->vm_flags = flags;
 
 	/* unmap existing pages */
-	unmap_pages(vm->vm_start, vm->vm_end, current_task->pgd);
+	unmap_pages(vm->vm_start, vm->vm_end, current_task->mm->pgd);
 
 	/* map pages */
-	ret = map_pages(vm->vm_start, vm->vm_end, current_task->pgd, 0, 1);
+	ret = map_pages(vm->vm_start, vm->vm_end, current_task->mm->pgd, 0, 1);
 	if (ret)
 		goto err;
 
@@ -98,7 +98,7 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, stru
 	if (vm_prev)
 		list_add(&vm->list, &vm_prev->list);
 	else
-		list_add(&vm->list, &current_task->vm_list);
+		list_add(&vm->list, &current_task->mm->vm_list);
 
 	/* map file */
 	if (filp) {
@@ -115,7 +115,7 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, stru
 
 	return vm;
 err:
-	unmap_pages(vm->vm_start, vm->vm_end, current_task->pgd);
+	unmap_pages(vm->vm_start, vm->vm_end, current_task->mm->pgd);
 	kfree(vm);
 	return NULL;
 }
@@ -142,9 +142,9 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 		/* find previous and next vm */
 		vm_prev = find_vma_prev(*addr);
 		if (vm_prev)
-			vm_next = list_next_entry_or_null(vm_prev, &current_task->vm_list, list);
-		else if (!list_empty(&current_task->vm_list))
-			vm_next = list_first_entry(&current_task->vm_list, struct vm_area_t, list);
+			vm_next = list_next_entry_or_null(vm_prev, &current_task->mm->vm_list, list);
+		else if (!list_empty(&current_task->mm->vm_list))
+			vm_next = list_first_entry(&current_task->mm->vm_list, struct vm_area_t, list);
 
 		/* addr is available */
 		if (!vm_next || *addr + len <= vm_next->vm_start)
@@ -153,7 +153,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 
 	/* find a memory region */
 	*addr = UMAP_START;
-	list_for_each(pos, &current_task->vm_list) {
+	list_for_each(pos, &current_task->mm->vm_list) {
 		vm = list_entry(pos, struct vm_area_t, list);
 		if (*addr + len <= vm->vm_start)
 			break;
@@ -216,7 +216,7 @@ int do_munmap(uint32_t addr, size_t len)
 	}
 
 	/* free memory region */
-	unmap_pages(vm->vm_start, vm->vm_end, current_task->pgd);
+	unmap_pages(vm->vm_start, vm->vm_end, current_task->mm->pgd);
 	list_del(&vm->list);
 	kfree(vm);
 

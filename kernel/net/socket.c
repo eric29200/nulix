@@ -2,6 +2,7 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
+#include <fcntl.h>
 #include <uio.h>
 #include <stderr.h>
 #include <string.h>
@@ -96,7 +97,7 @@ static int sock_create(int domain, int type)
 
 	/* find a free file slot */
 	for (fd = 0; fd < NR_FILE; fd++)
-		if (!current_task->filp[fd])
+		if (!current_task->files->filp[fd])
 			break;
 
 	/* no free slot */
@@ -107,13 +108,13 @@ static int sock_create(int domain, int type)
 	}
 
 	/* set file */
-	current_task->filp[fd] = filp;
-	current_task->filp[fd]->f_mode = 3;
-	current_task->filp[fd]->f_flags = 0;
-	current_task->filp[fd]->f_pos = 0;
-	current_task->filp[fd]->f_ref = 1;
-	current_task->filp[fd]->f_inode = sock->inode;
-	current_task->filp[fd]->f_op = &socket_fops;
+	current_task->files->filp[fd] = filp;
+	current_task->files->filp[fd]->f_mode = O_RDWR;
+	current_task->files->filp[fd]->f_flags = 0;
+	current_task->files->filp[fd]->f_pos = 0;
+	current_task->files->filp[fd]->f_ref = 1;
+	current_task->files->filp[fd]->f_inode = sock->inode;
+	current_task->files->filp[fd]->f_op = &socket_fops;
 
 	return fd;
 }
@@ -255,11 +256,11 @@ int do_socket(int domain, int type, int protocol)
 		return sockfd;
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -287,11 +288,11 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	struct socket_t *sock;
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -313,11 +314,11 @@ int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	UNUSED(addrlen);
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -339,11 +340,11 @@ int do_listen(int sockfd, int backlog)
 	UNUSED(backlog);
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -365,11 +366,11 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 	UNUSED(addrlen);
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -379,11 +380,11 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 		return new_sockfd;
 
 	/* check socket file descriptor */
-	if (new_sockfd < 0 || new_sockfd >= NR_OPEN || current_task->filp[new_sockfd] == NULL)
+	if (new_sockfd < 0 || new_sockfd >= NR_OPEN || current_task->files->filp[new_sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	new_sock = sock_lookup(current_task->filp[new_sockfd]->f_inode);
+	new_sock = sock_lookup(current_task->files->filp[new_sockfd]->f_inode);
 	if (!new_sock)
 		return -EINVAL;
 
@@ -423,11 +424,11 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
 	UNUSED(addrlen);
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -465,11 +466,11 @@ int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct socka
 	UNUSED(addrlen);
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -501,11 +502,11 @@ int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 	struct socket_t *sock;
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -524,11 +525,11 @@ int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	struct socket_t *sock;
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -547,11 +548,11 @@ int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	struct socket_t *sock;
 
 	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->filp[sockfd] == NULL)
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->filp[sockfd]->f_inode);
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
 	if (!sock)
 		return -EINVAL;
 
