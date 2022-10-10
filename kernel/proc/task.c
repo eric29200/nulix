@@ -17,7 +17,7 @@ extern void return_user_mode(struct registers_t *regs);
 static void task_user_entry(struct task_t *task)
 {
 	/* return to user mode */
-	tss_set_stack(0x10, task->mm->kernel_stack);
+	tss_set_stack(0x10, task->kernel_stack);
 	return_user_mode(&task->user_regs);
 }
 
@@ -73,7 +73,6 @@ static int task_copy_mm(struct task_t *task, struct task_t *parent)
 {
 	struct vm_area_t *vm_parent, *vm_child;
 	struct list_head_t *pos;
-	void *stack;
 
 	/* allocate memory structure */
 	task->mm = (struct mm_struct *) kmalloc(sizeof(struct mm_struct));
@@ -83,16 +82,6 @@ static int task_copy_mm(struct task_t *task, struct task_t *parent)
 	/* init memory structure */
 	memset(task->mm, 0, sizeof(struct mm_struct));
 	task->mm->count = 1;
-
-	/* allocate stack */
-	stack = kmalloc_align(STACK_SIZE);
-	if (!stack)
-		return -ENOMEM;
-
-	/* set stack */
-	memset(stack, 0, STACK_SIZE);
-	task->mm->kernel_stack = (uint32_t) stack + STACK_SIZE;
-	task->mm->esp = task->mm->kernel_stack - sizeof(struct task_registers_t);
 
 	/* clone page directory */
 	task->mm->pgd = clone_page_directory(parent ? parent->mm->pgd : kernel_pgd);
@@ -229,11 +218,24 @@ void task_clear_mm(struct task_t *task)
 static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 {
 	struct task_t *task;
+	void *stack;
 
 	/* create task */
 	task = (struct task_t *) kmalloc(sizeof(struct task_t));
 	if (!task)
 		return NULL;
+
+	/* allocate stack */
+	stack = (void *) kmalloc(STACK_SIZE);
+	if (!stack) {
+		kfree(task);
+		return NULL;
+	}
+
+	/* set stack */
+	memset(stack, 0, STACK_SIZE);
+	task->kernel_stack = (uint32_t) stack + STACK_SIZE;
+	task->esp = task->kernel_stack - sizeof(struct task_registers_t);
 
 	/* init task */
 	task->pid = get_next_pid();
@@ -298,7 +300,7 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->mm->esp;
+	regs = (struct task_registers_t *) task->esp;
 	memset(regs, 0, sizeof(struct task_registers_t));
 
 	/* set eip to function */
@@ -326,7 +328,7 @@ struct task_t *fork_task(struct task_t *parent, uint32_t user_sp)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->mm->esp;
+	regs = (struct task_registers_t *) task->esp;
 	memset(regs, 0, sizeof(struct task_registers_t));
 
 	/* set eip to function */
@@ -350,7 +352,7 @@ struct task_t *create_init_task(struct task_t *parent)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->mm->esp;
+	regs = (struct task_registers_t *) task->esp;
 	memset(regs, 0, sizeof(struct task_registers_t));
 
 	/* set eip */
@@ -376,7 +378,7 @@ void destroy_task(struct task_t *task)
 	list_del(&task->list);
 
 	/* free kernel stack */
-	kfree((void *) (task->mm->kernel_stack - STACK_SIZE));
+	kfree((void *) (task->kernel_stack - STACK_SIZE));
 
 	/* free memory regions */
 	task_clear_mm(task);

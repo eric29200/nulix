@@ -138,10 +138,10 @@ void schedule()
 	/* switch tasks */
 	if (prev_task != current_task) {
 		kstat.context_switch++;
-		tss_set_stack(0x10, current_task->mm->kernel_stack);
+		tss_set_stack(0x10, current_task->kernel_stack);
 		load_tls();
 		switch_page_directory(current_task->mm->pgd);
-		scheduler_do_switch(&prev_task->mm->esp, current_task->mm->esp);
+		scheduler_do_switch(&prev_task->esp, current_task->esp);
 	}
 
 	/* update task time */
