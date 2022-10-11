@@ -8,20 +8,16 @@ void sys_exit(int status)
 {
 	struct list_head_t *pos;
 	struct task_t *child;
-	int i;
 
 	/* delete timer */
 	if (current_task->sig_tm.list.next)
 		timer_event_del(&current_task->sig_tm);
 
-	/* close opened files */
-	for (i = 0; i < NR_OPEN; i++)
-		if (current_task->files->filp[i])
-			sys_close(i);
-
-	/* release current working dir and root dir */
-	iput(current_task->fs->cwd);
-	iput(current_task->fs->root);
+	/* free resources */
+	task_exit_signals(current_task);
+	task_exit_files(current_task);
+	task_exit_fs(current_task);
+	task_exit_mmap(current_task->mm);
 
 	/* mark task terminated and reschedule */
 	current_task->state = TASK_ZOMBIE;

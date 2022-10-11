@@ -1,5 +1,6 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
+#include <sys/syscall.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -32,7 +33,7 @@ int do_dup2(int oldfd, int newfd)
 
 	/* close existing file */
 	if (current_task->files->filp[newfd] != NULL) {
-		ret = do_close(newfd);
+		ret = sys_close(newfd);
 		if (ret < 0)
 			return ret;
 	}

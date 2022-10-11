@@ -194,20 +194,96 @@ static int task_copy_thread(struct task_t *task, struct task_t *parent, uint32_t
 }
 
 /*
- * Clear memory areas.
+ * Exit signals.
  */
-void task_clear_mm(struct task_t *task)
+void task_exit_signals(struct task_t *task)
+{
+	struct signal_struct *sig = task->sig;
+
+	if (sig) {
+		task->sig = NULL;
+
+		if (--sig->count <= 0)
+			kfree(sig);
+	}
+}
+
+/*
+ * Exit file system.
+ */
+void task_exit_fs(struct task_t *task)
+{
+	struct fs_struct *fs = task->fs;
+
+	if (fs) {
+		task->fs = NULL;
+
+		if (--fs->count <= 0) {
+			iput(fs->root);
+			iput(fs->cwd);
+			kfree(fs);
+		}
+	}
+}
+
+/*
+ * Exit opened files.
+ */
+void task_exit_files(struct task_t *task)
+{
+	struct files_struct *files = task->files;
+	int i;
+
+	if (files) {
+		task->files = NULL;
+
+		if (--files->count <= 0) {
+			for (i = 0; i < NR_OPEN; i++)
+				if (files->filp[i])
+					do_close(files->filp[i]);
+
+			kfree(files);
+		}
+	}
+}
+
+/*
+ * Exit mmap.
+ */
+void task_exit_mmap(struct mm_struct *mm)
 {
 	struct list_head_t *pos, *n;
 	struct vm_area_t *vm_area;
 
 	/* free memory regions */
-	list_for_each_safe(pos, n, &task->mm->vm_list) {
+	list_for_each_safe(pos, n, &mm->vm_list) {
 		vm_area = list_entry(pos, struct vm_area_t, list);
 		if (vm_area) {
-			unmap_pages(vm_area->vm_start, vm_area->vm_end, task->mm->pgd);
+			unmap_pages(vm_area->vm_start, vm_area->vm_end, mm->pgd);
 			list_del(&vm_area->list);
 			kfree(vm_area);
+		}
+	}
+}
+
+/*
+ * Exit memory.
+ */
+void task_exit_mm(struct task_t *task)
+{
+	struct mm_struct *mm = task->mm;
+
+	if (mm) {
+		task->mm = NULL;
+
+		if (--mm->count <= 0) {
+			task_exit_mmap(mm);
+
+			/* free page directory */
+			if (mm->pgd != kernel_pgd)
+				free_page_directory(mm->pgd);
+
+			kfree(mm);
 		}
 	}
 }
@@ -227,10 +303,8 @@ static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 
 	/* allocate stack */
 	stack = (void *) kmalloc(STACK_SIZE);
-	if (!stack) {
-		kfree(task);
-		return NULL;
-	}
+	if (!stack)
+		goto err_stack;
 
 	/* set stack */
 	memset(stack, 0, STACK_SIZE);
@@ -270,19 +344,29 @@ static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 
 	/* copy task */
 	if (task_copy_mm(task, parent))
-		goto err;
+		goto err_mm;
 	if (task_copy_fs(task, parent))
-		goto err;
+		goto err_fs;
 	if (task_copy_files(task, parent))
-		goto err;
+		goto err_files;
 	if (task_copy_signals(task, parent))
-		goto err;
+		goto err_signals;
 	if (task_copy_thread(task, parent, user_sp))
-		goto err;
+		goto err_thread;
 
 	return task;
-err:
-	destroy_task(task);
+err_thread:
+	task_exit_signals(task);
+err_signals:
+	task_exit_files(task);
+err_files:
+	task_exit_fs(task);
+err_fs:
+	task_exit_mm(task);
+err_mm:
+	kfree(stack);
+err_stack:
+	kfree(task);
 	return NULL;
 }
 
@@ -380,18 +464,8 @@ void destroy_task(struct task_t *task)
 	/* free kernel stack */
 	kfree((void *) (task->kernel_stack - STACK_SIZE));
 
-	/* free memory regions */
-	task_clear_mm(task);
-
-	/* free page directory */
-	if (task->mm->pgd != kernel_pgd)
-		free_page_directory(task->mm->pgd);
-
-	/* free structures */
-	kfree(task->mm);
-	kfree(task->fs);
-	kfree(task->files);
-	kfree(task->sig);
+	/* exit memory */
+	task_exit_mm(task);
 
 	/* free task */
 	kfree(task);

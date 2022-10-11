@@ -203,7 +203,7 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode);
 int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);
 int do_mount_root(dev_t dev, const char *dev_name);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
-int do_close(int fd);
+int do_close(struct file_t *filp);
 ssize_t do_read(int fd, char *buf, int count);
 ssize_t do_write(int fd, const char *buf, int count);
 off_t do_lseek(int fd, off_t offset, int whence);

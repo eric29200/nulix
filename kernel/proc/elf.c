@@ -2,6 +2,7 @@
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
+#include <sys/syscall.h>
 #include <fcntl.h>
 #include <stderr.h>
 #include <string.h>
@@ -189,7 +190,7 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 
 	ret = 0;
 out:
-	do_close(fd);
+	sys_close(fd);
 	kfree(buf);
 	return ret;
 }
@@ -234,7 +235,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 		goto out;
 
 	/* clear mapping */
-	task_clear_mm(current_task);
+	task_exit_mmap(current_task->mm);
 
 	/* reset code */
 	current_task->mm->start_text = 0;
@@ -364,7 +365,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	current_task->user_regs.eip = elf_entry;
 	current_task->user_regs.useresp = sp;
 out:
-	do_close(fd);
+	sys_close(fd);
 	kfree(elf_intepreter);
 	kfree(buf);
 	return ret;

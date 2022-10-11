@@ -74,16 +74,9 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 /*
  * Close system call.
  */
-int do_close(int fd)
+int do_close(struct file_t *filp)
 {
-	struct file_t *filp;
-
-	/* check file descriptor */
-	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd])
-		return -EINVAL;
-
 	/* release file if not used anymore */
-	filp = current_task->files->filp[fd];
 	filp->f_ref--;
 	if (filp->f_ref <= 0) {
 		/* specific close operation */
@@ -94,8 +87,6 @@ int do_close(int fd)
 		iput(filp->f_inode);
 		memset(filp, 0, sizeof(struct file_t));
 	}
-
-	current_task->files->filp[fd] = NULL;
 
 	return 0;
 }

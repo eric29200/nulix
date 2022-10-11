@@ -132,6 +132,10 @@ struct task_t *create_init_task(struct task_t *parent);
 struct task_t *fork_task(struct task_t *parent, uint32_t user_sp);
 void destroy_task(struct task_t *task);
 struct task_t *get_task(pid_t pid);
-void task_clear_mm(struct task_t *task);
+void task_exit_signals(struct task_t *task);
+void task_exit_fs(struct task_t *task);
+void task_exit_files(struct task_t *task);
+void task_exit_mmap(struct mm_struct *mm);
+void task_exit_mm(struct task_t *task);
 
 #endif
