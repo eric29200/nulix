@@ -17,6 +17,7 @@ void sys_exit(int status)
 	task_exit_signals(current_task);
 	task_exit_files(current_task);
 	task_exit_fs(current_task);
+	task_release_mmap(current_task);
 	task_exit_mmap(current_task->mm);
 
 	/* mark task terminated and reschedule */

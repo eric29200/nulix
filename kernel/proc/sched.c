@@ -260,7 +260,7 @@ void task_wakeup(struct wait_queue_t **wq)
 		}
 
 		tmp = tmp->next;
-	} while (tmp != *wq);
+	} while (tmp != *wq && tmp != NULL);
 }
 
 /*

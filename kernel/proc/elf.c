@@ -203,6 +203,7 @@ static void clear_old_exec()
 	int fd;
 
 	/* clear all memory regions */
+	task_release_mmap(current_task);
 	task_exit_mmap(current_task->mm);
 
 	/* close files marked close on exec */

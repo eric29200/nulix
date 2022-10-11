@@ -70,6 +70,7 @@ struct signal_struct {
  * Kernel task structure.
  */
 struct task_t {
+	uint32_t			flags;				/* process flags */
 	pid_t				pid;				/* process id */
 	pid_t				pgid;				/* process group id */
 	uint8_t				state;				/* process state */
@@ -102,6 +103,7 @@ struct task_t {
 	struct files_struct *		files;				/* opened files */
 	struct mm_struct *		mm;				/* memory regions */
 	struct signal_struct *		sig;				/* signals */
+	struct semaphore_t *		vfork_sem;			/* vfork semaphore */
 	struct list_head_t		list;				/* next process */
 };
 
@@ -130,7 +132,7 @@ struct binargs_t {
 
 struct task_t *create_kernel_thread(void (*func)(void *), void *arg);
 struct task_t *create_init_task(struct task_t *parent);
-struct task_t *fork_task(struct task_t *parent, uint32_t user_sp);
+int do_fork(uint32_t clone_flags, uint32_t user_sp);
 void destroy_task(struct task_t *task);
 struct task_t *get_task(pid_t pid);
 void task_exit_signals(struct task_t *task);
@@ -138,5 +140,6 @@ void task_exit_fs(struct task_t *task);
 void task_exit_files(struct task_t *task);
 void task_exit_mmap(struct mm_struct *mm);
 void task_exit_mm(struct task_t *task);
+void task_release_mmap(struct task_t *task);
 
 #endif

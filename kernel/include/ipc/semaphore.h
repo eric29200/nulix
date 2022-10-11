@@ -2,7 +2,6 @@
 #ifndef _SEMAPHORE_H_
 #define _SEMAPHORE_H_
 
-#include <proc/wait.h>
 #include <proc/sched.h>
 
 /*

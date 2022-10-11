@@ -4,6 +4,7 @@
 #include <proc/task.h>
 #include <proc/sched.h>
 #include <proc/elf.h>
+#include <ipc/semaphore.h>
 #include <string.h>
 #include <stderr.h>
 
@@ -37,6 +38,26 @@ static void init_entry(struct task_t *task)
 	/* load elf header */
 	if (elf_load("/sbin/init", &bargs) == 0)
 		enter_user_mode(task->user_regs.useresp, task->user_regs.eip, TASK_RETURN_ADDRESS);
+}
+
+/*
+ * Copy flags.
+ */
+static int task_copy_flags(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
+{
+	uint32_t new_flags = parent ? parent->flags : 0;
+
+	/* clear flags */
+	new_flags &= ~(CLONE_VFORK);
+
+	/* set vfork */
+	if (clone_flags & CLONE_VFORK)
+		new_flags |= CLONE_VFORK;
+
+	/* set new flags */
+	task->flags = new_flags;
+
+	return 0;
 }
 
 /*
@@ -293,9 +314,18 @@ void task_exit_mm(struct task_t *task)
 }
 
 /*
+ * Release mmap : wake up parent sleeping on vfork semaphore.
+ */
+void task_release_mmap(struct task_t *task)
+{
+	if (task->flags & CLONE_VFORK)
+		up(task->vfork_sem);
+}
+
+/*
  * Create and init a task.
  */
-static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
+static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, uint32_t user_sp)
 {
 	struct task_t *task;
 	void *stack;
@@ -347,6 +377,8 @@ static struct task_t *create_task(struct task_t *parent, uint32_t user_sp)
 	}
 
 	/* copy task */
+	if (task_copy_flags(task, parent, clone_flags))
+		goto err_flags;
 	if (task_copy_mm(task, parent))
 		goto err_mm;
 	if (task_copy_fs(task, parent))
@@ -368,6 +400,7 @@ err_files:
 err_fs:
 	task_exit_mm(task);
 err_mm:
+err_flags:
 	kfree(stack);
 err_stack:
 	kfree(task);
@@ -383,7 +416,7 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(NULL, 0);
+	task = create_task(NULL, 0, 0);
 	if (!task)
 		return NULL;
 
@@ -405,15 +438,20 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 /*
  * Fork a task.
  */
-struct task_t *fork_task(struct task_t *parent, uint32_t user_sp)
+int do_fork(uint32_t clone_flags, uint32_t user_sp)
 {
 	struct task_registers_t *regs;
+	struct semaphore_t sem;
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(parent, user_sp);
+	task = create_task(current_task, clone_flags, user_sp);
 	if (!task)
-		return NULL;
+		return -EINVAL;
+
+	/* lock vfork semaphore */
+	init_semaphore(&sem, 0);
+	task->vfork_sem = &sem;
 
 	/* set registers */
 	regs = (struct task_registers_t *) task->esp;
@@ -424,7 +462,14 @@ struct task_t *fork_task(struct task_t *parent, uint32_t user_sp)
 	regs->return_address = TASK_RETURN_ADDRESS;
 	regs->eip = (uint32_t) task_user_entry;
 
-	return task;
+	/* add new task */
+	list_add(&task->list, &current_task->list);
+
+	/* vfork : sleep on semaphore */
+	if (clone_flags & CLONE_VFORK)
+		down(&sem);
+
+	return task->pid;
 }
 /*
  * Create init process.
@@ -435,7 +480,7 @@ struct task_t *create_init_task(struct task_t *parent)
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(parent, 0);
+	task = create_task(parent, 0, 0);
 	if (!task)
 		return NULL;
 
