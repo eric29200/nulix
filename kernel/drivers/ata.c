@@ -188,13 +188,11 @@ int ata_write(dev_t dev, struct buffer_head_t *bh)
 	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
 	/* write each sector */
-	irq_enable();
 	for (i = 0; i < nb_sectors; i++) {
 		ret = ata_write_sector(device, sector + i, (uint16_t *) (bh->b_data + i * ATA_SECTOR_SIZE));
 		if (ret)
 			break;
 	}
-	irq_disable();
 
 	return ret;
 }
