@@ -93,14 +93,21 @@ int do_fcntl(int fd, int cmd, unsigned long arg)
 	filp = current_task->files->filp[fd];
 	switch (cmd) {
 		case F_DUPFD:
-		case F_DUPFD_CLOEXEC:
 			ret = dup_after(fd, arg);
 			break;
+		case F_DUPFD_CLOEXEC:
+			ret = dup_after(fd, arg);
+			if (ret >= 0)
+				FD_SET(ret, &current_task->files->close_on_exec);
+			break;
 		case F_GETFD:
-			ret = filp->f_mode;
+			ret = FD_ISSET(fd, &current_task->files->close_on_exec);
 			break;
 		case F_SETFD:
-			filp->f_mode = arg;
+			if (arg & 1)
+				FD_SET(fd, &current_task->files->close_on_exec);
+			else
+				FD_CLR(fd, &current_task->files->close_on_exec);
 			break;
 		case F_GETFL:
 			ret = filp->f_flags;

@@ -30,6 +30,7 @@ typedef unsigned long tcflag_t;
 #define FDSET_SIZE				1024
 #define FDSET_INTS				(FDSET_SIZE / NFD_BITS)
 
+#define FD_CLR(d, s)				((s)->fds_bits[(d) / (8 * sizeof(long))] &= ~(1UL << ((d) % (8 * sizeof(long)))))
 #define FD_SET(d, s)				((s)->fds_bits[(d) / (8 * sizeof(long))] |= (1UL << ((d) % (8 * sizeof(long)))))
 #define FD_ISSET(d, s)				!!((s)->fds_bits[(d) / (8 * sizeof(long))] & (1UL << ((d) % (8 * sizeof(long)))))
 

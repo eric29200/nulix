@@ -109,6 +109,7 @@ static int sock_create(int domain, int type)
 
 	/* set file */
 	current_task->files->filp[fd] = filp;
+	FD_CLR(fd, &current_task->files->close_on_exec);
 	current_task->files->filp[fd]->f_mode = O_RDWR;
 	current_task->files->filp[fd]->f_flags = 0;
 	current_task->files->filp[fd]->f_pos = 0;

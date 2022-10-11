@@ -44,6 +44,7 @@ struct mm_struct {
  */
 struct files_struct {
 	int				count;				/* reference counter */
+	fd_set_t			close_on_exec;			/* close on exec bitmap */
 	struct file_t *			filp[NR_OPEN];			/* opened files */
 };
 

@@ -18,6 +18,7 @@ int sys_close(int fd)
 	if (ret)
 		return ret;
 
+	FD_CLR(fd, &current_task->files->close_on_exec);
 	current_task->files->filp[fd] = NULL;
 	return 0;
 }

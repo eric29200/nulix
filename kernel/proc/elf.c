@@ -194,6 +194,26 @@ out:
 	kfree(buf);
 	return ret;
 }
+
+/*
+ * Clear current executable.
+ */
+static void clear_old_exec()
+{
+	int fd;
+
+	/* clear all memory regions */
+	task_exit_mmap(current_task->mm);
+
+	/* close files marked close on exec */
+	for (fd = 0; fd < NR_OPEN; fd++) {
+		if (FD_ISSET(fd, &current_task->files->close_on_exec)) {
+			sys_close(fd);
+			FD_CLR(fd, &current_task->files->close_on_exec);
+		}
+	}
+}
+
 /*
  * Load an ELF file in memory.
  */
@@ -234,8 +254,8 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	if (ret != 0)
 		goto out;
 
-	/* clear mapping */
-	task_exit_mmap(current_task->mm);
+	/* clear current executable */
+	clear_old_exec();
 
 	/* reset code */
 	current_task->mm->start_text = 0;

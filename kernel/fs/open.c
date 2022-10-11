@@ -58,6 +58,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 
 	/* set file */
 	current_task->files->filp[fd] = filp;
+	FD_CLR(fd, &current_task->files->close_on_exec);
 	filp->f_mode = inode->i_mode;
 	filp->f_inode = inode;
 	filp->f_flags = flags;

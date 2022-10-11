@@ -165,6 +165,10 @@ static int task_copy_files(struct task_t *task, struct task_t *parent)
 	memset(task->files, 0, sizeof(struct files_struct));
 	task->files->count = 1;
 
+	/* copy close on exec bitmap */
+	if (parent)
+		memcpy(&task->files->close_on_exec, &parent->files->close_on_exec, sizeof(fd_set_t));
+
 	/* copy open files */
 	for (i = 0; i < NR_OPEN; i++) {
 		task->files->filp[i] = parent ? parent->files->filp[i] : NULL;
