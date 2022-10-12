@@ -146,7 +146,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 err:
 	if (mm_new->pgd && mm_new->pgd != kernel_pgd)
 		free_page_directory(mm_new->pgd);
-	task_exit_mmap(mm);
+	task_exit_mmap(mm_new);
 	kfree(mm_new);
 	return NULL;
 }
