@@ -135,11 +135,11 @@ struct task_t *create_init_task(struct task_t *parent);
 int do_fork(uint32_t clone_flags, uint32_t user_sp);
 void destroy_task(struct task_t *task);
 struct task_t *get_task(pid_t pid);
+struct mm_struct *task_dup_mm(struct mm_struct *mm);
 void task_exit_signals(struct task_t *task);
 void task_exit_fs(struct task_t *task);
 void task_exit_files(struct task_t *task);
 void task_exit_mmap(struct mm_struct *mm);
-void task_exit_mm(struct task_t *task);
 void task_release_mmap(struct task_t *task);
 
 #endif

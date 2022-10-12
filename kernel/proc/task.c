@@ -88,48 +88,77 @@ static int task_copy_signals(struct task_t *task, struct task_t *parent)
 }
 
 /*
- * Copy memory areas.
+ * Duplicate a memory structure.
  */
-static int task_copy_mm(struct task_t *task, struct task_t *parent)
+struct mm_struct *task_dup_mm(struct mm_struct *mm)
 {
 	struct vm_area_t *vm_parent, *vm_child;
+	struct mm_struct *mm_new;
 	struct list_head_t *pos;
 
 	/* allocate memory structure */
-	task->mm = (struct mm_struct *) kmalloc(sizeof(struct mm_struct));
-	if (!task->mm)
-		return -ENOMEM;
+	mm_new = (struct mm_struct *) kmalloc(sizeof(struct mm_struct));
+	if (!mm_new)
+		return NULL;
 
 	/* init memory structure */
-	memset(task->mm, 0, sizeof(struct mm_struct));
-	task->mm->count = 1;
+	memset(mm_new, 0, sizeof(struct mm_struct));
+	mm_new->count = 1;
+	INIT_LIST_HEAD(&mm_new->vm_list);
 
 	/* clone page directory */
-	task->mm->pgd = clone_page_directory(parent ? parent->mm->pgd : kernel_pgd);
-	if (!task->mm->pgd)
-		return -ENOMEM;
+	mm_new->pgd = clone_page_directory(mm ? mm->pgd : kernel_pgd);
+	if (!mm_new->pgd)
+		goto err;
 
 	/* copy text/brk start/end */
-	task->mm->start_text = parent ? parent->mm->start_text : 0;
-	task->mm->end_text = parent ? parent->mm->end_text : 0;
-	task->mm->start_brk = parent ? parent->mm->start_brk : 0;
-	task->mm->end_brk = parent ? parent->mm->end_brk : 0;
+	mm_new->start_text = mm ? mm->start_text : 0;
+	mm_new->end_text = mm ? mm->end_text : 0;
+	mm_new->start_brk = mm ? mm->start_brk : 0;
+	mm_new->end_brk = mm ? mm->end_brk : 0;
 
 	/* copy virtual memory areas */
-	INIT_LIST_HEAD(&task->mm->vm_list);
-	if (parent) {
-		list_for_each(pos, &parent->mm->vm_list) {
+	if (mm) {
+		list_for_each(pos, &mm->vm_list) {
 			vm_parent = list_entry(pos, struct vm_area_t, list);
 			vm_child = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
 			if (!vm_child)
-				return -ENOMEM;
+				goto err;
 
 			vm_child->vm_start = vm_parent->vm_start;
 			vm_child->vm_end = vm_parent->vm_end;
 			vm_child->vm_flags = vm_parent->vm_flags;
-			list_add_tail(&vm_child->list, &task->mm->vm_list);
+			list_add_tail(&vm_child->list, &mm_new->vm_list);
 		}
 	}
+
+	return mm_new;
+err:
+	if (mm_new->pgd && mm_new->pgd != kernel_pgd)
+		free_page_directory(mm_new->pgd);
+	task_exit_mmap(mm);
+	kfree(mm_new);
+	return NULL;
+}
+/*
+ * Copy memory areas.
+ */
+static int task_copy_mm(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
+{
+	/* clone mm struct */
+	if (clone_flags & CLONE_VM) {
+		if (!parent)
+			return -EINVAL;
+
+		task->mm = parent->mm;
+		task->mm->count++;
+		return 0;
+	}
+
+	/* duplicate mm struct */
+	task->mm = task_dup_mm(parent ? parent->mm : NULL);
+	if (!task->mm)
+		return -ENOMEM;
 
 	return 0;
 }
@@ -147,6 +176,8 @@ static int task_copy_fs(struct task_t *task, struct task_t *parent)
 	/* init file system structure */
 	memset(task->fs, 0, sizeof(struct fs_struct));
 	task->fs->count = 1;
+	task->fs->cwd = NULL;
+	task->fs->root = NULL;
 
 	/* set umask */
 	task->fs->umask = parent ? parent->fs->umask : 0022;
@@ -155,16 +186,12 @@ static int task_copy_fs(struct task_t *task, struct task_t *parent)
 	if (parent && parent->fs->cwd) {
 		task->fs->cwd = parent->fs->cwd;
 		task->fs->cwd->i_ref++;
-	} else {
-		task->fs->cwd = NULL;
 	}
 
 	/* duplicate root dir */
 	if (parent && parent->fs->root) {
 		task->fs->root = parent->fs->root;
 		task->fs->root->i_ref++;
-	} else {
-		task->fs->root = NULL;
 	}
 
 	return 0;
@@ -294,7 +321,7 @@ void task_exit_mmap(struct mm_struct *mm)
 /*
  * Exit memory.
  */
-void task_exit_mm(struct task_t *task)
+static void task_exit_mm(struct task_t *task)
 {
 	struct mm_struct *mm = task->mm;
 
@@ -305,7 +332,7 @@ void task_exit_mm(struct task_t *task)
 			task_exit_mmap(mm);
 
 			/* free page directory */
-			if (mm->pgd != kernel_pgd)
+			if (mm->pgd && mm->pgd != kernel_pgd)
 				free_page_directory(mm->pgd);
 
 			kfree(mm);
@@ -379,7 +406,7 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 	/* copy task */
 	if (task_copy_flags(task, parent, clone_flags))
 		goto err_flags;
-	if (task_copy_mm(task, parent))
+	if (task_copy_mm(task, parent, clone_flags))
 		goto err_mm;
 	if (task_copy_fs(task, parent))
 		goto err_fs;

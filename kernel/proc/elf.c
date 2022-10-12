@@ -198,13 +198,31 @@ out:
 /*
  * Clear current executable.
  */
-static void clear_old_exec()
+static int clear_old_exec()
 {
+	struct mm_struct *mm_new;
 	int fd;
 
 	/* clear all memory regions */
-	task_release_mmap(current_task);
-	task_exit_mmap(current_task->mm);
+	if (current_task->mm->count == 1) {
+		task_release_mmap(current_task);
+		task_exit_mmap(current_task->mm);
+	} else {
+		/* duplicate mm struct */
+		mm_new = task_dup_mm(current_task->mm);
+		if (!mm_new)
+			return -ENOMEM;
+
+		/* decrement old mm count and set new mm struct */
+		current_task->mm->count--;
+		current_task->mm = mm_new;
+
+		/* switch to new page directory */
+		switch_page_directory(current_task->mm->pgd);
+
+		/* release mapping */
+		task_release_mmap(current_task);
+	}
 
 	/* close files marked close on exec */
 	for (fd = 0; fd < NR_OPEN; fd++) {
@@ -213,6 +231,8 @@ static void clear_old_exec()
 			FD_CLR(fd, &current_task->files->close_on_exec);
 		}
 	}
+
+	return 0;
 }
 
 /*
@@ -256,7 +276,9 @@ int elf_load(const char *path, struct binargs_t *bargs)
 		goto out;
 
 	/* clear current executable */
-	clear_old_exec();
+	ret = clear_old_exec();
+	if (ret)
+		goto out;
 
 	/* reset code */
 	current_task->mm->start_text = 0;
