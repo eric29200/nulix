@@ -196,12 +196,30 @@ out:
 }
 
 /*
- * Clear current executable.
+ * Clear current executable (clear memory, signals and files).
  */
 static int clear_old_exec()
 {
+	struct signal_struct *sig_new = NULL, *sig_old;
 	struct mm_struct *mm_new;
-	int fd;
+	int fd, i, ret;
+
+	/* make sig private */
+	sig_old = current_task->sig;
+	if (current_task->sig->count > 1) {
+		/* allocate a private sig */
+		sig_new = (struct signal_struct *) kmalloc(sizeof(struct signal_struct));
+		if (!sig_new) {
+			ret = -ENOMEM;
+			goto err_sig;
+		}
+
+		/* copy actions */
+		sig_new->count = 1;
+		memcpy(sig_new->action, current_task->sig->action, sizeof(sig_new->action));
+		current_task->sig = sig_new;
+	}
+
 
 	/* clear all memory regions */
 	if (current_task->mm->count == 1) {
@@ -210,8 +228,10 @@ static int clear_old_exec()
 	} else {
 		/* duplicate mm struct */
 		mm_new = task_dup_mm(current_task->mm);
-		if (!mm_new)
-			return -ENOMEM;
+		if (!mm_new) {
+			ret = -ENOMEM;
+			goto err_mm;
+		}
 
 		/* decrement old mm count and set new mm struct */
 		current_task->mm->count--;
@@ -224,6 +244,19 @@ static int clear_old_exec()
 		task_release_mmap(current_task);
 	}
 
+	/* release old signals */
+	if (current_task->sig != sig_old)
+		sig_old->count--;
+
+	/* clear signal handlers */
+	for (i = 0; i < NSIGS; i++) {
+		if (current_task->sig->action[i].sa_handler != SIG_IGN)
+			current_task->sig->action[i].sa_handler = SIG_DFL;
+
+		current_task->sig->action[i].sa_flags = 0;
+		sigemptyset(&current_task->sig->action[i].sa_mask);
+	}
+
 	/* close files marked close on exec */
 	for (fd = 0; fd < NR_OPEN; fd++) {
 		if (FD_ISSET(fd, &current_task->files->close_on_exec)) {
@@ -233,6 +266,12 @@ static int clear_old_exec()
 	}
 
 	return 0;
+err_mm:
+	if (sig_new)
+		kfree(sig_new);
+err_sig:
+	current_task->sig = sig_old;
+	return ret;
 }
 
 /*
