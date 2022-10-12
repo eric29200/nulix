@@ -63,8 +63,18 @@ static int task_copy_flags(struct task_t *task, struct task_t *parent, uint32_t 
 /*
  * Copy signal handlers.
  */
-static int task_copy_signals(struct task_t *task, struct task_t *parent)
+static int task_copy_signals(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
 {
+	/* clone files */
+	if (clone_flags & CLONE_SIGHAND) {
+		if (!parent)
+			return -EINVAL;
+
+		task->sig = parent->sig;
+		task->sig->count++;
+		return 0;
+	}
+
 	/* allocate signal structure */
 	task->sig = (struct signal_struct *) kmalloc(sizeof(struct signal_struct));
 	if (!task->sig)
@@ -166,8 +176,18 @@ static int task_copy_mm(struct task_t *task, struct task_t *parent, uint32_t clo
 /*
  * Copy file system informations.
  */
-static int task_copy_fs(struct task_t *task, struct task_t *parent)
+static int task_copy_fs(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
 {
+	/* clone fs */
+	if (clone_flags & CLONE_FS) {
+		if (!parent)
+			return -EINVAL;
+
+		task->fs = parent->fs;
+		task->fs->count++;
+		return 0;
+	}
+
 	/* allocate file system structure */
 	task->fs = (struct fs_struct *) kmalloc(sizeof(struct fs_struct));
 	if (!task->fs)
@@ -200,9 +220,19 @@ static int task_copy_fs(struct task_t *task, struct task_t *parent)
 /*
  * Copy files.
  */
-static int task_copy_files(struct task_t *task, struct task_t *parent)
+static int task_copy_files(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
 {
 	int i;
+
+	/* clone files */
+	if (clone_flags & CLONE_FILES) {
+		if (!parent)
+			return -EINVAL;
+
+		task->files = parent->files;
+		task->fs->count++;
+		return 0;
+	}
 
 	/* allocate file structure */
 	task->files = (struct files_struct *) kmalloc(sizeof(struct files_struct));
@@ -408,11 +438,11 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 		goto err_flags;
 	if (task_copy_mm(task, parent, clone_flags))
 		goto err_mm;
-	if (task_copy_fs(task, parent))
+	if (task_copy_fs(task, parent, clone_flags))
 		goto err_fs;
-	if (task_copy_files(task, parent))
+	if (task_copy_files(task, parent, clone_flags))
 		goto err_files;
-	if (task_copy_signals(task, parent))
+	if (task_copy_signals(task, parent, clone_flags))
 		goto err_signals;
 	if (task_copy_thread(task, parent, user_sp))
 		goto err_thread;
