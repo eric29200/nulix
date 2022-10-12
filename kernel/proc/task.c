@@ -72,7 +72,7 @@ static int task_copy_signals(struct task_t *task, struct task_t *parent)
 
 	/* init signal structure */
 	memset(task->sig, 0, sizeof(struct signal_struct));
-	task->mm->count = 1;
+	task->sig->count = 1;
 
 	/* init signals */
 	sigemptyset(&task->sigpend);
