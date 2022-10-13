@@ -141,7 +141,7 @@ static void syscall_handler(struct registers_t *regs)
 
 	/* system call not handled */
 	if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL) {
-		printf("Unknown system call : %d\n", regs->eax);
+		printf("Unknown system call : %d (process %d @ %x)\n", regs->eax, current_task->pid, regs->eip);
 		return;
 	}
 
