@@ -1,4 +1,5 @@
 #include <drivers/ata.h>
+#include <drivers/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>
@@ -11,6 +12,7 @@
 
 /*
  * ata devices */
+static struct pci_device_t *pci_device = NULL;
 static struct ata_device_t ata_devices[MAX_ATA_DEVICE];
 
 /*
@@ -25,83 +27,42 @@ static struct ata_device_t *ata_get_device(dev_t dev)
 }
 
 /*
- * Wait for Input/Output.
- */
-static void ata_io_wait(struct ata_device_t *device)
-{
-	inb(device->io_base + ATA_REG_ALTSTATUS);
-	inb(device->io_base + ATA_REG_ALTSTATUS);
-	inb(device->io_base + ATA_REG_ALTSTATUS);
-	inb(device->io_base + ATA_REG_ALTSTATUS);
-}
-
-/*
- * Wait for status.
- */
-static int ata_status_wait(struct ata_device_t *device, int timeout)
-{
-	int status, i = 0;
-
-	if (timeout > 0)
-		while ((status = inb(device->io_base + ATA_REG_STATUS)) & ATA_SR_BSY && (i < timeout))
-			i++;
-	else
-		while ((status = inb(device->io_base + ATA_REG_STATUS)) & ATA_SR_BSY);
-
-	return status;
-}
-
-/*
- * Wait for an ATA device.
- */
-static int ata_wait(struct ata_device_t *device, int adv)
-{
-	int status;
-
-	/* wait for I/O and status */
-	ata_io_wait(device);
-	ata_status_wait(device, -1);
-
-	/* check status */
-	if (adv) {
-		status = inb(device->io_base + ATA_REG_STATUS);
-		if (status & ATA_SR_ERR)
-			return 1;
-		if (status & ATA_SR_DF)
-			return 1;
-		if (!(status & ATA_SR_DRQ))
-			return 1;
-	}
-
-	return 0;
-}
-
-/*
  * Read a sector from an ata device.
  */
 static int ata_read_sector(struct ata_device_t *device, uint32_t sector, uint16_t *buf)
 {
-	/* wait for device */
-	outb(device->io_base + ATA_REG_CONTROL, 0x02);
-	ata_wait(device, 0);
+	int status, dstatus;
 
-	/* set read parameters */
+	/* prepare DMA transfert */
+	outb(device->bar4, 0);
+	outl(device->bar4 + 0x04, device->prdt_phys);
+	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
+
+	/* select sector */
+	outb(device->io_base + ATA_REG_CONTROL, 0x00);
 	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
 	outb(device->io_base + ATA_REG_FEATURES, 0x00);
 	outb(device->io_base + ATA_REG_SECCOUNT0, 1);
 	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
 	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
 	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 
-	/* wait for disk to be ready */
-	ata_wait(device, 0);
+	/* issue read DMA command */
+	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_DMA);
+	outb(device->bar4, 0x8 | 0x1);
 
-	/* read data */
-	insw(device->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
+	/* wait for completion */
+	for (;;) {
+		status = inb(device->bar4 + 2);
+		dstatus = inb(device->io_base + ATA_REG_STATUS);
+		if (!(status & 0x04))
+			continue;
+		if (!(dstatus & ATA_SR_BSY))
+			break;
+	}
 
-	/* wait for device */
-	ata_wait(device, 0);
+	/* copy buffer */
+	memcpy(buf, device->buf, ATA_SECTOR_SIZE);
 
 	return 0;
 }
@@ -111,7 +72,7 @@ static int ata_read_sector(struct ata_device_t *device, uint32_t sector, uint16_
  */
 int ata_read(dev_t dev, struct buffer_head_t *bh)
 {
-	uint32_t nb_sectors, sector, i, flags;
+	uint32_t nb_sectors, sector, i;
 	struct ata_device_t *device;
 	int ret;
 
@@ -125,13 +86,11 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
 	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
 	/* read each sector */
-	irq_save(flags);
 	for (i = 0; i < nb_sectors; i++) {
 		ret = ata_read_sector(device, sector + i, (uint16_t *) (bh->b_data + i * ATA_SECTOR_SIZE));
 		if (ret)
 			break;
 	}
-	irq_restore(flags);
 
 	return ret;
 }
@@ -141,30 +100,38 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
  */
 static int ata_write_sector(struct ata_device_t *device, uint32_t sector, uint16_t *buf)
 {
-	/* wait for device */
-	outb(device->io_base + ATA_REG_CONTROL, 0x02);
-	ata_wait(device, 0);
+	int status, dstatus;
 
-	/* set write parameters */
+	/* copy buffer */
+	memcpy(device->buf, buf, ATA_SECTOR_SIZE);
+
+	/* prepare DMA transfert */
+	outb(device->bar4, 0);
+	outl(device->bar4 + 0x04, device->prdt_phys);
+	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
+
+	/* select sector */
+	outb(device->io_base + ATA_REG_CONTROL, 0x00);
 	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
 	outb(device->io_base + ATA_REG_FEATURES, 0x00);
 	outb(device->io_base + ATA_REG_SECCOUNT0, 1);
 	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
 	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
 	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
 
-	/* wait for disk to be ready */
-	ata_wait(device, 0);
+	/* issue write DMA command */
+	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
+	outb(device->bar4, 0x1);
 
-	/* write data */
-	outsw(device->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
-
-	/* flush data */
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);
-
-	/* wait for device */
-	ata_wait(device, 0);
+	/* wait for completion */
+	for (;;) {
+		status = inb(device->bar4 + 2);
+		dstatus = inb(device->io_base + ATA_REG_STATUS);
+		if (!(status & 0x04))
+			continue;
+		if (!(dstatus & ATA_SR_BSY))
+			break;
+	}
 
 	return 0;
 }
@@ -200,8 +167,9 @@ int ata_write(dev_t dev, struct buffer_head_t *bh)
 /*
  * Identify a device.
  */
-static uint8_t ata_identify(struct ata_device_t *device)
+static int ata_identify(struct ata_device_t *device)
 {
+	uint32_t cmd_reg;
 	uint8_t status;
 	int i;
 
@@ -244,6 +212,39 @@ static uint8_t ata_identify(struct ata_device_t *device)
 	for (i = 0; i < 256; i += 2)
 		inw(device->io_base + ATA_REG_DATA);
 
+	/* allocate prdt */
+	device->prdt = kmalloc_align_phys(sizeof(struct ata_prdt_t), &device->prdt_phys);
+	if (!device->prdt)
+		return -ENOMEM;
+
+	/* allocate buffer */
+	device->buf = kmalloc_align_phys(PAGE_SIZE, &device->buf_phys);
+	if (!device->buf) {
+		kfree(device->prdt);
+		return -ENOMEM;
+	}
+
+	/* clear prdt and buffer */
+	memset(device->prdt, 0, sizeof(struct ata_prdt_t));
+	memset(device->buf, 0, PAGE_SIZE);
+
+	/* set prdt */
+	device->prdt[0].buffer_phys = device->buf_phys;
+	device->prdt[0].transfert_size = ATA_SECTOR_SIZE;
+	device->prdt[0].mark_end = 0x8000;
+
+	/* activate pci */
+	cmd_reg = pci_read_field(pci_device->address, PCI_CMD);
+	if (!(cmd_reg & (1 << 2))) {
+		cmd_reg |= (1 << 2);
+		pci_write_field(pci_device->address, PCI_CMD, cmd_reg);
+	}
+
+	/* get BAR4 from pci device */
+	device->bar4 = pci_read_field(pci_device->address, PCI_BAR4);
+	if (device->bar4 & 0x00000001)
+		device->bar4 &= 0xFFFFFFFC;
+
 	return 0;
 }
 
@@ -264,8 +265,6 @@ static int ata_detect(int id, uint16_t bus, uint8_t drive)
 
 	/* identify device */
 	ret = ata_identify(&ata_devices[id]);
-
-	/* reset device on error */
 	if (ret)
 		memset(&ata_devices[id], 0, sizeof(struct ata_device_t));
 
@@ -283,8 +282,13 @@ static void ata_irq_handler(struct registers_t *regs)
 /*
  * Init ata devices.
  */
-void init_ata()
+int init_ata()
 {
+	/* get PCI device */
+	pci_device = pci_get_device(ATA_VENDOR_ID, ATA_DEVICE_ID);
+	if (!pci_device)
+		return -EINVAL;
+
 	/* reset ata devices */
 	memset(ata_devices, 0, sizeof(ata_devices));
 
@@ -301,4 +305,6 @@ void init_ata()
 		printf("[Kernel] Secondary ATA master drive detected\n");
 	if (ata_detect(3, ATA_SECONDARY, ATA_SLAVE) == 0)
 		printf("[Kernel] Secondary ATA slave drive detected\n");
+
+	return 0;
 }

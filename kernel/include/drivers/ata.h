@@ -62,16 +62,33 @@
 #define ATA_ER_TK0NF			0x02
 #define ATA_ER_AMNF			0x01
 
+#define ATA_VENDOR_ID			0x8086
+#define ATA_DEVICE_ID			0x7010
+
+/*
+ * ATA Physical Region Descriptor Table.
+ */
+struct ata_prdt_t {
+	uint32_t	buffer_phys;
+	uint16_t	transfert_size;
+	uint16_t	mark_end;
+} __attribute__((packed));
+
 /*
  * ATA device.
  */
 struct ata_device_t {
-	uint8_t		bus;
-	uint8_t		drive;
-	uint16_t	io_base;
+	uint8_t			bus;
+	uint8_t			drive;
+	uint16_t		io_base;
+	struct ata_prdt_t	*prdt;
+	uint32_t		prdt_phys;
+	uint8_t *		buf;
+	uint32_t		buf_phys;
+	uint32_t		bar4;
 };
 
-void init_ata();
+int init_ata();
 int ata_read(dev_t dev, struct buffer_head_t *bh);
 int ata_write(dev_t dev, struct buffer_head_t *bh);
 

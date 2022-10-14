@@ -188,7 +188,8 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 
 	/* init ata devices */
 	printf("[Kernel] ATA devices Init\n");
-	init_ata();
+	if (init_ata())
+		printf("[Kernel] ATA devices Init error\n");
 
 	/* init realtek 8139 device */
 	printf("[Kernel] Realtek 8139 card Init\n");
