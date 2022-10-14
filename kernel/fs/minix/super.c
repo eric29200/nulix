@@ -7,7 +7,7 @@
 /*
  * Read super block.
  */
-static int minix_read_super(struct super_block_t *sb, void *data, int flags)
+static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 {
 	struct minix1_super_block_t *msb1;
 	struct minix3_super_block_t *msb3;
@@ -15,9 +15,8 @@ static int minix_read_super(struct super_block_t *sb, void *data, int flags)
 	uint32_t block;
 	int i, ret;
 
-	/* unused data/flags */
+	/* unused data */
 	UNUSED(data);
-	UNUSED(flags);
 
 	/* allocate minix super block */
 	sb->s_fs_info = sbi = (struct minix_sb_info_t *) kmalloc(sizeof(struct minix_sb_info_t));
@@ -134,13 +133,16 @@ static int minix_read_super(struct super_block_t *sb, void *data, int flags)
 
 	return 0;
 err_root_inode:
-	printf("[Minix-fs] Can't read root inode\n");
+	if (!silent)
+		printf("[Minix-fs] Can't read root inode\n");
 	goto err_release_map;
 err_map:
-	printf("[Minix-fs] Can't read imap and zmap\n");
+	if (!silent)
+		printf("[Minix-fs] Can't read imap and zmap\n");
 	goto err_release_map;
 err_no_map:
-	printf("[Minix-fs] Can't allocate imap and zmap\n");
+	if (!silent)
+		printf("[Minix-fs] Can't allocate imap and zmap\n");
 err_release_map:
 	if (sbi->s_imap) {
 		for (i = 0; i < sbi->s_imap_blocks; i++)
@@ -158,12 +160,14 @@ err_release_map:
 
 	goto err_release_sb;
 err_bad_magic:
-	printf("[Minix-fs] Bad magic number\n");
+	if (!silent)
+		printf("[Minix-fs] Bad magic number\n");
 err_release_sb:
 	brelse(sbi->s_sbh);
 	goto err;
 err_bad_sb:
-	printf("[Minix-fs] Can't read super block\n");
+	if (!silent)
+		printf("[Minix-fs] Can't read super block\n");
 err:
 	kfree(sbi);
 	return ret;

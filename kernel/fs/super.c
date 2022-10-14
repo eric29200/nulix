@@ -194,7 +194,7 @@ int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const ch
 	/* read super block */
 	sb->s_type = fs;
 	sb->s_dev = dev;
-	err = fs->read_super(sb, data, flags);
+	err = fs->read_super(sb, data, 0);
 	if (err)
 		goto err;
 
@@ -223,7 +223,6 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	struct file_system_t *fs;
 	struct super_block_t *sb;
 	struct list_head_t *pos;
-	int flags = 0;
 	int err;
 
 	/* allocate a super block */
@@ -243,7 +242,7 @@ int do_mount_root(dev_t dev, const char *dev_name)
 
 		/* read super block */
 		sb->s_type = fs;
-		err = fs->read_super(sb, NULL, flags);
+		err = fs->read_super(sb, NULL, 1);
 		if (err == 0)
 			goto found;
 	}
@@ -257,7 +256,7 @@ found:
 	current_task->fs->root = sb->s_root_inode;
 
 	/* add mounted file system */
-	err = add_vfs_mount(dev, dev_name, "/", flags, sb);
+	err = add_vfs_mount(dev, dev_name, "/", 0, sb);
 	if (err) {
 		kfree(sb);
 		return err;

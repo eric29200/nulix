@@ -15,11 +15,10 @@ static struct super_operations_t proc_sops = {
 /*
  * Read super block.
  */
-static int proc_read_super(struct super_block_t *sb, void *data, int flags)
+static int proc_read_super(struct super_block_t *sb, void *data, int silent)
 {
-	/* unused data/flags */
+	/* unused data */
 	UNUSED(data);
-	UNUSED(flags);
 
 	/* set super block */
 	sb->s_magic = PROC_SUPER_MAGIC;
@@ -28,7 +27,9 @@ static int proc_read_super(struct super_block_t *sb, void *data, int flags)
 	/* get root inode */
 	sb->s_root_inode = iget(sb, PROC_ROOT_INO);
 	if (!sb->s_root_inode) {
-		printf("[Proc-fs] Can't get root inode\n");
+		if (!silent)
+			printf("[Proc-fs] Can't get root inode\n");
+
 		return -EACCES;
 	}
 

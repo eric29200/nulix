@@ -7,16 +7,15 @@
 /*
  * Read a Ext2 super block.
  */
-static int ext2_read_super(struct super_block_t *sb, void *data, int flags)
+static int ext2_read_super(struct super_block_t *sb, void *data, int silent)
 {
 	uint32_t block, sb_block = 1, offset = 0, logic_sb_block = 1;
 	int err = -ENOSPC, blocksize;
 	struct ext2_sb_info_t *sbi;
 	uint32_t i;
 
-	/* unused data/flags */
+	/* unused data */
 	UNUSED(data);
-	UNUSED(flags);
 
 	/* allocate Ext2 in memory super block */
 	sb->s_fs_info = sbi = (struct ext2_sb_info_t *) kmalloc(sizeof(struct ext2_sb_info_t));
@@ -137,31 +136,38 @@ static int ext2_read_super(struct super_block_t *sb, void *data, int flags)
 
 	return 0;
 err_root_inode:
-	printf("[Ext2-fs] Can't get root inode\n");
+	if (!silent)
+		printf("[Ext2-fs] Can't get root inode\n");
 	goto err_release_gdb;
 err_read_gdb:
-	printf("[Ext2-fs] Can't read group descriptors\n");
+	if (!silent)
+		printf("[Ext2-fs] Can't read group descriptors\n");
 	goto err_release_gdb;
 err_no_gdb:
-	printf("[Ext2-fs] Can't allocate group descriptors\n");
+	if (!silent)
+		printf("[Ext2-fs] Can't allocate group descriptors\n");
 err_release_gdb:
 	for (i = 0; i < sbi->s_gdb_count; i++)
 		brelse(sbi->s_group_desc[i]);
 	kfree(sbi->s_group_desc);
 	goto err_release_sb;
 err_bad_blocksize:
-	printf("[Ext2-fs] Wrong block size (only 1024, 2048 and 4096 supported)\n");
+	if (!silent)
+		printf("[Ext2-fs] Wrong block size (only 1024, 2048 and 4096 supported)\n");
 	goto err_release_sb;
 err_bad_rev:
-	printf("[Ext2-fs] Wrong revision level\n");
+	if (!silent)
+		printf("[Ext2-fs] Wrong revision level\n");
 	goto err_release_sb;
 err_bad_magic:
-	printf("[Ext2-fs] Wrong magic number\n");
+	if (!silent)
+		printf("[Ext2-fs] Wrong magic number\n");
 err_release_sb:
 	brelse(sbi->s_sbh);
 	goto err;
 err_bad_sb:
-	printf("[Ext2-fs] Can't read super block\n");
+	if (!silent)
+		printf("[Ext2-fs] Can't read super block\n");
 err:
 	kfree(sbi);
 	return err;
