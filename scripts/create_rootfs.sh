@@ -15,7 +15,7 @@ make -C usr/
 # create first disk
 rm -f $DISK1
 dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE
-mkfs.ext2 -b 4096 $DISK1
+mkfs.minix -3 $DISK1
 
 # create second disk
 rm -f $DISK2
