@@ -27,11 +27,14 @@ static struct ata_device_t *ata_get_device(dev_t dev)
 }
 
 /*
- * Read a sector from an ata device.
+ * Read sectors from an ata device.
  */
-static int ata_read_sector(struct ata_device_t *device, uint32_t sector, uint16_t *buf)
+static int ata_read_sectors(struct ata_device_t *device, uint32_t sector, uint32_t nb_sectors, char *buf)
 {
 	int status, dstatus;
+
+	/* set transfert size */
+	device->prdt[0].transfert_size = nb_sectors * ATA_SECTOR_SIZE;
 
 	/* prepare DMA transfert */
 	outb(device->bar4, 0);
@@ -42,7 +45,7 @@ static int ata_read_sector(struct ata_device_t *device, uint32_t sector, uint16_
 	outb(device->io_base + ATA_REG_CONTROL, 0x00);
 	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
 	outb(device->io_base + ATA_REG_FEATURES, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, 1);
+	outb(device->io_base + ATA_REG_SECCOUNT0, nb_sectors);
 	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
 	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
 	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
@@ -62,7 +65,7 @@ static int ata_read_sector(struct ata_device_t *device, uint32_t sector, uint16_
 	}
 
 	/* copy buffer */
-	memcpy(buf, device->buf, ATA_SECTOR_SIZE);
+	memcpy(buf, device->buf, nb_sectors * ATA_SECTOR_SIZE);
 
 	return 0;
 }
@@ -72,9 +75,8 @@ static int ata_read_sector(struct ata_device_t *device, uint32_t sector, uint16_
  */
 int ata_read(dev_t dev, struct buffer_head_t *bh)
 {
-	uint32_t nb_sectors, sector, i;
+	uint32_t nb_sectors, sector;
 	struct ata_device_t *device;
-	int ret;
 
 	/* get ata device */
 	device = ata_get_device(dev);
@@ -85,25 +87,22 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
 	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
 	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
-	/* read each sector */
-	for (i = 0; i < nb_sectors; i++) {
-		ret = ata_read_sector(device, sector + i, (uint16_t *) (bh->b_data + i * ATA_SECTOR_SIZE));
-		if (ret)
-			break;
-	}
-
-	return ret;
+	/* read sectors */
+	return ata_read_sectors(device, sector, nb_sectors, bh->b_data);
 }
 
 /*
- * Write a sector to an ata device.
+ * Write sectors to an ata device.
  */
-static int ata_write_sector(struct ata_device_t *device, uint32_t sector, uint16_t *buf)
+static int ata_write_sectors(struct ata_device_t *device, uint32_t sector, uint32_t nb_sectors, char *buf)
 {
 	int status, dstatus;
 
 	/* copy buffer */
-	memcpy(device->buf, buf, ATA_SECTOR_SIZE);
+	memcpy(device->buf, buf, nb_sectors * ATA_SECTOR_SIZE);
+
+	/* set transfert size */
+	device->prdt[0].transfert_size = nb_sectors * ATA_SECTOR_SIZE;
 
 	/* prepare DMA transfert */
 	outb(device->bar4, 0);
@@ -114,7 +113,7 @@ static int ata_write_sector(struct ata_device_t *device, uint32_t sector, uint16
 	outb(device->io_base + ATA_REG_CONTROL, 0x00);
 	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
 	outb(device->io_base + ATA_REG_FEATURES, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, 1);
+	outb(device->io_base + ATA_REG_SECCOUNT0, nb_sectors);
 	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
 	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
 	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
@@ -141,9 +140,8 @@ static int ata_write_sector(struct ata_device_t *device, uint32_t sector, uint16
  */
 int ata_write(dev_t dev, struct buffer_head_t *bh)
 {
-	uint32_t nb_sectors, sector, i;
+	uint32_t nb_sectors, sector;
 	struct ata_device_t *device;
-	int ret;
 
 	/* get ata device */
 	device = ata_get_device(dev);
@@ -154,14 +152,8 @@ int ata_write(dev_t dev, struct buffer_head_t *bh)
 	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
 	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
-	/* write each sector */
-	for (i = 0; i < nb_sectors; i++) {
-		ret = ata_write_sector(device, sector + i, (uint16_t *) (bh->b_data + i * ATA_SECTOR_SIZE));
-		if (ret)
-			break;
-	}
-
-	return ret;
+	/* write sectors */
+	return ata_write_sectors(device, sector, nb_sectors, bh->b_data);
 }
 
 /*
