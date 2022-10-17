@@ -10,9 +10,6 @@
 #define KHEAP_SIZE			0xF00000
 #define KMEM_SIZE			(KHEAP_START + KHEAP_SIZE)
 
-#define UHEAP_START			0				 	/* user heap : just after text section */
-#define UHEAP_END			0x40000000				/* can grow until UMAP_START */
-
 #define UMAP_START			0x40000000				/* user memory map : from 1 GB to 4 GB */
 #define UMAP_END			0xF0000000
 
