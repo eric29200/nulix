@@ -88,23 +88,8 @@ void init_mem(uint32_t start, uint32_t end)
 	/* set placement address */
 	placement_address = start;
 
-	/* set frames */
-	nb_frames = end / PAGE_SIZE;
-	frames = (uint32_t *) kmalloc(nb_frames / 32);
-	memset(frames, 0, nb_frames / 32);
-
-	/* allocate kernel page directory */
-	kernel_pgd = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), NULL);
-	memset(kernel_pgd, 0, sizeof(struct page_directory_t));
-
-	/* allocate kernel frames/pages */
-	map_pages(0, KMEM_SIZE, kernel_pgd, 0, 0);
-
-	/* register page fault handler */
-	register_interrupt_handler(14, page_fault_handler);
-
-	/* enable paging */
-	switch_page_directory(kernel_pgd);
+	/* init paging */
+	init_paging(start, end);
 
 	/* allocate heap frames */
 	map_pages(KHEAP_START, KHEAP_START + KHEAP_SIZE, kernel_pgd, 0, 0);

@@ -32,18 +32,27 @@ struct page_t {
 };
 
 /*
- * Page table structure.
- */
-struct page_table_t {
-	struct page_t pages[1024];
-};
-
-/*
  * Page directory structure.
  */
 struct page_directory_t {
 	struct page_table_t * 	tables[1024];			/* pointers to page tables */
 	uint32_t		tables_physical[1024];		/* pointers to page tables (physical addresses) */
+};
+
+/*
+ * Page table structure.
+ */
+struct page_table_t {
+	struct page_t pages[1024];				/* pages */
+};
+
+/*
+ * Kernel page structure.
+ */
+struct kernel_page_t {
+	struct page_t *		page;				/* page */
+	uint32_t		address;			/* virtual address */
+	struct list_head_t	list;				/* next page */
 };
 
 void init_paging(uint32_t start, uint32_t end);

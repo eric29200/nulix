@@ -125,7 +125,7 @@ static struct inode_t *get_pipe_inode()
 		return NULL;
 
 	/* allocate some memory for data */
-	inode->i_size = (uint32_t) kmalloc(PAGE_SIZE);
+	inode->i_size = (uint32_t) get_free_page();
 	if (!inode->i_size) {
 		inode->i_ref = 0;
 		return NULL;

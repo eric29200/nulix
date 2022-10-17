@@ -12,7 +12,7 @@
 #include <proc/wait.h>
 #include <time.h>
 
-#define NR_INODE			256
+#define NR_INODE			1024
 #define NR_FILE				256
 #define BUFFER_HTABLE_BITS		9
 #define NR_BUFFER			(1 << BUFFER_HTABLE_BITS)

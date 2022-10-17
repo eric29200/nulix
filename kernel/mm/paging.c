@@ -13,6 +13,10 @@ uint32_t nb_frames;
 /* page directories */
 struct page_directory_t *kernel_pgd = 0;
 
+/* kernel pages */
+static struct kernel_page_t *kernel_pages;
+static struct list_head_t kernel_free_pages;
+
 /* copy phsyical page (defined in x86/paging.s) */
 extern void copy_page_physical(uint32_t src, uint32_t dst);
 
@@ -396,4 +400,101 @@ void free_page_directory(struct page_directory_t *pgd)
 
 	/* free page directory */
 	kfree(pgd);
+}
+
+/*
+ * Get a free page.
+ */
+void *get_free_page()
+{
+	struct kernel_page_t *page;
+	int ret;
+
+	/* no more free pages */
+	if (list_empty(&kernel_free_pages))
+		return NULL;
+
+	/* get first free page */
+	page = list_first_entry(&kernel_free_pages, struct kernel_page_t, list);
+
+	/* alloc frame */
+	ret = alloc_frame(page->page, 1, 1);
+	if (ret)
+		return NULL;
+
+	/* flush TLB */
+	flush_tlb(page->address);
+
+	/* remove page from list */
+	list_del(&page->list);
+
+	return (void *) page->address;
+}
+
+/*
+ * Free a page.
+ */
+void free_page(void *address)
+{
+	struct kernel_page_t *page;
+	int page_nr;
+
+	/* get kernel page */
+	page_nr = ((uint32_t) address - KPAGE_START) / PAGE_SIZE;
+	page = &kernel_pages[page_nr];
+
+	/* unmap page */
+	unmap_page((uint32_t) address, kernel_pgd);
+
+	/* add page to free list */
+	list_add(&page->list, &kernel_free_pages);
+}
+
+/*
+ * Init paging.
+ */
+void init_paging(uint32_t start, uint32_t end)
+{
+	int nb_kernel_pages, i;
+	uint32_t address;
+
+	/* unused start address */
+	UNUSED(start);
+
+	/* reset frames */
+	nb_frames = end / PAGE_SIZE;
+	frames = (uint32_t *) kmalloc(nb_frames / 32);
+	memset(frames, 0, nb_frames / 32);
+
+	/* allocate kernel page directory */
+	kernel_pgd = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), NULL);
+	memset(kernel_pgd, 0, sizeof(struct page_directory_t));
+
+	/* map kernel pages (kernel code + kernel heap) */
+	map_pages(0, KMEM_SIZE, kernel_pgd, 0, 0);
+
+	/* compute number of kernel pages (limit to 1/3 of total memory) */
+	if (KPAGE_END - KPAGE_START > end / 3)
+		nb_kernel_pages = end / (PAGE_SIZE * 3);
+	else
+		nb_kernel_pages = (KPAGE_END - KPAGE_START) / PAGE_SIZE;
+
+	/* create kernel pages tables */
+	for (i = 0, address = KPAGE_START; i < nb_kernel_pages; i++, address += PAGE_SIZE)
+		get_page(address, 1, kernel_pgd);
+
+	/* create kernel pages */
+	INIT_LIST_HEAD(&kernel_free_pages);
+	kernel_pages = (struct kernel_page_t *) kmalloc_align_phys(sizeof(struct kernel_page_t) * nb_kernel_pages, NULL);
+	for (i = 0, address = KPAGE_START; i < nb_kernel_pages; i++, address += PAGE_SIZE) {
+		kernel_pages[i].page = get_page(address, 0, kernel_pgd);
+		kernel_pages[i].address = address;
+		list_add_tail(&kernel_pages[i].list, &kernel_free_pages);
+	}
+
+	/* register page fault handler */
+	register_interrupt_handler(14, page_fault_handler);
+
+	/* enable paging */
+	switch_page_directory(kernel_pgd);
 }

@@ -65,7 +65,7 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 	size_t i;
 
 	/* allocate table entry */
-	entry = (struct select_table_entry_t *) kmalloc(PAGE_SIZE);
+	entry = (struct select_table_entry_t *) get_free_page();
 	if (!entry)
 		return -ENOMEM;
 
@@ -100,7 +100,7 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 
 	/* free wait table */
 	free_wait(&wait_table);
-	kfree(entry);
+	free_page(entry);
 
 	return count;
 }
@@ -174,7 +174,7 @@ end_check:
 	count = 0;
 
 	/* allocate table entry */
-	entry = (struct select_table_entry_t *) kmalloc(PAGE_SIZE);
+	entry = (struct select_table_entry_t *) get_free_page();
 	if (!entry)
 		return -ENOMEM;
 
@@ -241,7 +241,7 @@ end_check:
 
 	/* free wait table */
 	free_wait(&wait_table);
-	kfree(entry);
+	free_page(entry);
 
 	return count;
 }

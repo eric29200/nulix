@@ -10,7 +10,10 @@
 #define KHEAP_SIZE			0xF00000
 #define KMEM_SIZE			(KHEAP_START + KHEAP_SIZE)
 
-#define UMAP_START			0x40000000				/* user memory map : from 1 GB to 4 GB */
+#define KPAGE_START			0x40000000				/* kernel pages : from 1 GB to 2 GB */
+#define KPAGE_END			0x80000000
+
+#define UMAP_START			0x80000000				/* user memory map : from 2 GB to 4 GB */
 #define UMAP_END			0xF0000000
 
 #define USTACK_START			0xF8000000
@@ -20,5 +23,7 @@ void *kmalloc(uint32_t size);
 void *kmalloc_align(uint32_t size);
 void *kmalloc_align_phys(uint32_t size, uint32_t *phys);
 void kfree(void *p);
+void *get_free_page();
+void free_page(void *address);
 
 #endif

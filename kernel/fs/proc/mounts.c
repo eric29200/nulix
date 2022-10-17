@@ -13,7 +13,7 @@ static int proc_mounts_read(struct file_t *filp, char *buf, int count)
 	size_t len;
 
 	/* allocate temp buffer */
-	tmp_buf = (char *) kmalloc(PAGE_SIZE);
+	tmp_buf = (char *) get_free_page();
 	if (!tmp_buf)
 		return -ENOMEM;
 
@@ -35,7 +35,7 @@ static int proc_mounts_read(struct file_t *filp, char *buf, int count)
 	filp->f_pos += count;
 
 out:
-	kfree(tmp_buf);
+	free_page(tmp_buf);
 	return count;
 }
 

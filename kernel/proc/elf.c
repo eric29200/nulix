@@ -113,8 +113,8 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 	if (fd < 0)
 		return fd;
 
-	/* allocate a buffer */
-	buf = (char *) kmalloc(PAGE_SIZE);
+	/* get a free page */
+	buf = (char *) get_free_page();
 	if (!buf) {
 		ret = -ENOMEM;
 		goto out;
@@ -191,7 +191,7 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 	ret = 0;
 out:
 	sys_close(fd);
-	kfree(buf);
+	free_page(buf);
 	return ret;
 }
 
@@ -295,8 +295,8 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	strncpy(name, path, TASK_NAME_LEN - 1);
 	name[TASK_NAME_LEN - 1] = 0;
 
-	/* allocate a buffer */
-	buf = (char *) kmalloc(PAGE_SIZE);
+	/* get a free page */
+	buf = (char *) get_free_page();
 	if (!buf) {
 		ret = -ENOMEM;
 		goto out;
@@ -449,6 +449,6 @@ int elf_load(const char *path, struct binargs_t *bargs)
 out:
 	sys_close(fd);
 	kfree(elf_intepreter);
-	kfree(buf);
+	free_page(buf);
 	return ret;
 }
