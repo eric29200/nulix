@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stderr.h>
 
-/* bit frames */
+/* page frames */
 uint32_t *frames;
 uint32_t nb_frames;
 
