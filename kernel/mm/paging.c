@@ -14,6 +14,7 @@ uint32_t nb_frames;
 struct page_directory_t *kernel_pgd = 0;
 
 /* kernel pages */
+int nb_kernel_pages;
 static struct kernel_page_t *kernel_pages;
 static struct list_head_t kernel_free_pages;
 
@@ -89,8 +90,15 @@ static int alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
 
 	/* get a new frame */
 	frame_idx = get_first_free_frame();
-	if (frame_idx < 0)
-		return -ENOMEM;
+	if (frame_idx < 0) {
+		/* no more frames : reclaim buffers */
+		reclaim_buffers();
+
+		/* and retyrn */
+		frame_idx = get_first_free_frame();
+		if (frame_idx < 0)
+			return -ENOMEM;
+	}
 
 	set_frame(PAGE_SIZE * frame_idx);
 	page->present = 1;
@@ -455,8 +463,8 @@ void free_page(void *address)
  */
 int init_paging(uint32_t start, uint32_t end)
 {
-	int nb_kernel_pages, ret, i;
 	uint32_t address;
+	int ret, i;
 
 	/* unused start address */
 	UNUSED(start);

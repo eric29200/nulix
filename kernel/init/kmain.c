@@ -105,11 +105,6 @@ static void kinit()
 	if (init_proc_fs() != 0)
 		panic("Cannot register proc file system");
 
-	/* init block buffers */
-	printf("[Kernel] Block buffers init\n");
-	if (binit() != 0)
-		panic("Cannot allocate memory for block buffers");
-
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
 	if (do_mount_root(ROOT_DEV, ROOT_DEV_NAME) != 0)
@@ -165,6 +160,11 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 	/* init memory */
 	printf("[Kernel] Memory Init\n");
 	init_mem((uint32_t) &kernel_end, mem_upper);
+
+	/* init block buffers */
+	printf("[Kernel] Block buffers init\n");
+	if (binit() != 0)
+		panic("Cannot allocate memory for block buffers");
 
 	/* init PIT */
 	printf("[Kernel] PIT Init\n");

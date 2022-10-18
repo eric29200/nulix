@@ -14,8 +14,6 @@
 
 #define NR_INODE			1024
 #define NR_FILE				256
-#define BUFFER_HTABLE_BITS		9
-#define NR_BUFFER			(1 << BUFFER_HTABLE_BITS)
 
 #define BSYNC_TIMER_MS			10000
 
@@ -182,6 +180,7 @@ void brelse(struct buffer_head_t *bh);
 void bsync();
 int binit();
 struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block);
+void reclaim_buffers();
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);

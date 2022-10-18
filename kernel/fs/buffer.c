@@ -9,9 +9,14 @@
 #include <time.h>
 
 /* global buffer table */
+static int nr_buffer = 0;
+static int buffer_htable_bits = 0;
 static struct buffer_head_t *buffer_table = NULL;
 static struct htable_link_t **buffer_htable = NULL;
 static LIST_HEAD(lru_buffers);
+
+/* number of kernel pages (defined in mm/mm.c) */
+extern int nb_kernel_pages;
 
 /*
  * Write a block buffer.
@@ -55,15 +60,9 @@ found:
 	if (bh->b_dirt && bwrite(bh))
 		printf("Can't write block %d on disk\n", bh->b_block);
 
-	/* free data if found block is too small */
-	if (bh->b_size && bh->b_size < sb->s_blocksize) {
-		kfree(bh->b_data);
-		bh->b_size = 0;
-	}
-
 	/* allocate data if needed */
 	if (!bh->b_size) {
-		bh->b_data = (char *) kmalloc(sb->s_blocksize);
+		bh->b_data = (char *) get_free_page();
 		if (!bh->b_data)
 			return NULL;
 
@@ -87,7 +86,7 @@ struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block)
 	struct buffer_head_t *bh;
 
 	/* try to find buffer in cache */
-	node = htable_lookup(buffer_htable, block, BUFFER_HTABLE_BITS);
+	node = htable_lookup(buffer_htable, block, buffer_htable_bits);
 	while (node) {
 		bh = htable_entry(node, struct buffer_head_t, b_htable);
 		if (bh->b_block == block && bh->b_sb == sb && bh->b_size == sb->s_blocksize) {
@@ -110,7 +109,7 @@ struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block)
 
 	/* hash the new buffer */
 	htable_delete(&bh->b_htable);
-	htable_insert(buffer_htable, &bh->b_htable, block, BUFFER_HTABLE_BITS);
+	htable_insert(buffer_htable, &bh->b_htable, block, buffer_htable_bits);
 out:
 	/* put it at the end of LRU list */
 	list_del(&bh->b_list);
@@ -153,6 +152,34 @@ void brelse(struct buffer_head_t *bh)
 }
 
 /*
+ * Reclaim buffers cache.
+ */
+void reclaim_buffers()
+{
+	int i;
+
+	for (i = 0; i < nr_buffer; i++) {
+		/* used buffer */
+		if (buffer_table[i].b_ref || buffer_table[i].b_dirt)
+			continue;
+
+		/* free data */
+		if (buffer_table[i].b_data)
+			free_page(buffer_table[i].b_data);
+
+		/* remove it from lists */
+		htable_delete(&buffer_table[i].b_htable);
+		list_del(&buffer_table[i].b_list);
+
+		/* reset buffer */
+		memset(&buffer_table[i], 0, sizeof(struct buffer_head_t));
+
+		/* add it to LRU buffers list */
+		list_add(&buffer_table[i].b_list, &lru_buffers);
+	}
+}
+
+/*
  * Write all dirty buffers on disk.
  */
 void bsync()
@@ -160,7 +187,7 @@ void bsync()
 	int i;
 
 	/* write all dirty buffers */
-	for (i = 0; i < NR_BUFFER; i++) {
+	for (i = 0; i < nr_buffer; i++) {
 		if (buffer_table[i].b_dirt && bwrite(&buffer_table[i])) {
 			printf("Can't write block %d on disk\n", buffer_table[i].b_block);
 			panic("Disk error");
@@ -173,32 +200,54 @@ void bsync()
  */
 int binit()
 {
-	int i;
+	void *addr;
+	int nr, i;
+
+	/* number of buffers = number of kernel pages / 2 */
+	nr_buffer = 1 << blksize_bits(nb_kernel_pages / 2);
+	buffer_htable_bits = blksize_bits(nr_buffer);
 
 	/* allocate buffers */
-	buffer_table = (struct buffer_head_t *) kmalloc(sizeof(struct buffer_head_t) * NR_BUFFER);
-	if (!buffer_table)
-		return -ENOMEM;
+	nr = nr_buffer * sizeof(struct buffer_head_t) / PAGE_SIZE;
+	for (i = 0; i < nr; i++) {
+		/* get a free page */
+		addr = get_free_page();
+		if (!addr)
+			return -ENOMEM;
 
-	/* memzero all buffers */
-	memset(buffer_table, 0, sizeof(struct buffer_head_t) * NR_BUFFER);
+		/* reset page */
+		memset(addr, 0, PAGE_SIZE);
+
+		/* set buffer table */
+		if (i == 0)
+			buffer_table = addr;
+	}
+
+	/* allocate buffers hash table */
+	nr = nr_buffer * sizeof(struct htable_link_t *) / PAGE_SIZE;
+	for (i = 0; i < nr; i++) {
+		/* get a free page */
+		addr = get_free_page();
+		if (!addr)
+			return -ENOMEM;
+
+		/* reset page */
+		memset(addr, 0, PAGE_SIZE);
+
+		/* set buffer hash table */
+		if (i == 0)
+			buffer_htable = addr;
+	}
 
 	/* init Last Recently Used buffers list */
 	INIT_LIST_HEAD(&lru_buffers);
 
 	/* add all buffers to LRU list */
-	for (i = 0; i < NR_BUFFER; i++)
+	for (i = 0; i < nr_buffer; i++)
 		list_add(&buffer_table[i].b_list, &lru_buffers);
 
-	/* allocate buffers hash table */
-	buffer_htable = (struct htable_link_t **) kmalloc(sizeof(struct htable_link_t *) * NR_BUFFER);
-	if (!buffer_htable) {
-		kfree(buffer_table);
-		return -ENOMEM;
-	}
-
 	/* init buffers hash table */
-	htable_init(buffer_htable, BUFFER_HTABLE_BITS);
+	htable_init(buffer_htable, buffer_htable_bits);
 
 	return 0;
 }
