@@ -453,9 +453,9 @@ void free_page(void *address)
 /*
  * Init paging.
  */
-void init_paging(uint32_t start, uint32_t end)
+int init_paging(uint32_t start, uint32_t end)
 {
-	int nb_kernel_pages, i;
+	int nb_kernel_pages, ret, i;
 	uint32_t address;
 
 	/* unused start address */
@@ -471,7 +471,9 @@ void init_paging(uint32_t start, uint32_t end)
 	memset(kernel_pgd, 0, sizeof(struct page_directory_t));
 
 	/* map kernel pages (kernel code + kernel heap) */
-	map_pages(0, KMEM_SIZE, kernel_pgd, 0, 0);
+	ret = map_pages(0, KMEM_SIZE, kernel_pgd, 0, 0);
+	if (ret)
+		return ret;
 
 	/* compute number of kernel pages (limit to 1/3 of total memory) */
 	if (KPAGE_END - KPAGE_START > end / 3)
@@ -497,4 +499,6 @@ void init_paging(uint32_t start, uint32_t end)
 
 	/* enable paging */
 	switch_page_directory(kernel_pgd);
+
+	return 0;
 }

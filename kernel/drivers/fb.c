@@ -20,6 +20,7 @@ int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct)
 {
 	uint32_t fb_nb_pages, i;
+	int ret;
 
 	/* set frame buffer */
 	fb->addr = tag_fb->common.framebuffer_addr;
@@ -71,13 +72,19 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 
 	/* identity map frame buffer */
 	fb_nb_pages = div_ceil(fb->real_height * fb->pitch, PAGE_SIZE);
-	for (i = 0; i < fb_nb_pages; i++)
-		map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, 0, 1);
+	for (i = 0; i < fb_nb_pages; i++) {
+		ret = map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, 0, 1);
+		if (ret)
+			goto err;
+	}
 
 	/* clear frame buffer */
 	memsetw(fb->buf, erase_char, fb->width * (fb->height + 1));
 
 	return 0;
+err:
+	kfree(fb->buf);
+	return ret;
 }
 
 /*

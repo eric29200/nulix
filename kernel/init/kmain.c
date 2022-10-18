@@ -202,11 +202,13 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 
 	/* init direct frame buffer */
 	printf("[Kernel] Direct frame buffer Init\n");
-	init_framebuffer_direct(tag_fb);
+	if (init_framebuffer_direct(tag_fb))
+		panic("Cannot init direct frame buffer\n");
 
 	/* init ttys */
 	printf("[Kernel] Ttys Init\n");
-	init_tty(tag_fb);
+	if (init_tty(tag_fb))
+		panic("Cannot init ttys\n");
 
 	/* init processes */
 	printf("[Kernel] Processes Init\n");

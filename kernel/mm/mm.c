@@ -85,14 +85,15 @@ void kfree(void *p)
  */
 void init_mem(uint32_t start, uint32_t end)
 {
+	int ret;
+
 	/* set placement address */
 	placement_address = start;
 
 	/* init paging */
-	init_paging(start, end);
-
-	/* allocate heap frames */
-	map_pages(KHEAP_START, KHEAP_START + KHEAP_SIZE, kernel_pgd, 0, 0);
+	ret = init_paging(start, end);
+	if (ret)
+		panic("Cannot init paging");
 
 	/* init heap */
 	kheap = heap_create(KHEAP_START, KHEAP_SIZE);
