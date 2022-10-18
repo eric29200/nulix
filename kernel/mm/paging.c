@@ -483,9 +483,9 @@ int init_paging(uint32_t start, uint32_t end)
 	if (ret)
 		return ret;
 
-	/* compute number of kernel pages (limit to 1/3 of total memory) */
-	if (KPAGE_END - KPAGE_START > end / 3)
-		nb_kernel_pages = end / (PAGE_SIZE * 3);
+	/* compute number of kernel pages (limit to 1/4 of total memory) */
+	if (KPAGE_END - KPAGE_START > end / 4)
+		nb_kernel_pages = end / (PAGE_SIZE * 4);
 	else
 		nb_kernel_pages = (KPAGE_END - KPAGE_START) / PAGE_SIZE;
 

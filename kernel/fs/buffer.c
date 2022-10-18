@@ -208,7 +208,7 @@ int binit()
 	buffer_htable_bits = blksize_bits(nr_buffer);
 
 	/* allocate buffers */
-	nr = nr_buffer * sizeof(struct buffer_head_t) / PAGE_SIZE;
+	nr = 1 + nr_buffer * sizeof(struct buffer_head_t) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
 		addr = get_free_page();
@@ -224,7 +224,7 @@ int binit()
 	}
 
 	/* allocate buffers hash table */
-	nr = nr_buffer * sizeof(struct htable_link_t *) / PAGE_SIZE;
+	nr = 1 + nr_buffer * sizeof(struct htable_link_t *) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
 		addr = get_free_page();
