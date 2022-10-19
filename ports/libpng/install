@@ -1,0 +1,17 @@
+URL="https://download.sourceforge.net/libpng/"
+VERSION="1.6.37"
+SRC_FILENAME="libpng-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure						\
+		--host=$TARGET					\
+		--prefix="/"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$MUSL_DIR
+}
