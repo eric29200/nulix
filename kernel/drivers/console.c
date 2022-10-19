@@ -419,10 +419,20 @@ void console_write(struct tty_t *tty)
 						tty->pars[0]++;
 					fb_set_xy(&tty->fb, tty->fb.x, tty->fb.y - tty->pars[0]);
 					break;
+				case 'B':
+					if (!tty->pars[0])
+						tty->pars[0]++;
+					fb_set_xy(&tty->fb, tty->fb.x, tty->fb.y + tty->pars[0]);
+					break;
 				case 'C':
 					if (!tty->pars[0])
 						tty->pars[0]++;
 					fb_set_xy(&tty->fb, tty->fb.x + tty->pars[0], tty->fb.y);
+					break;
+				case 'D':
+					if (!tty->pars[0])
+						tty->pars[0]++;
+					fb_set_xy(&tty->fb, tty->fb.x - tty->pars[0], tty->fb.y);
 					break;
 				case 'd':
 					if (tty->pars[0])

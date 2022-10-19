@@ -1,0 +1,17 @@
+URL="https://github.com/vicgeralds/vitetris/archive/refs/tags/"
+VERSION="0.59.1"
+SRC_FILENAME="v"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

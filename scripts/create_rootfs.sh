@@ -1,8 +1,7 @@
 #!/bin/bash
 
 DISK1=hda.img
-DISK2=hdb.img
-DISK_SIZE=512M
+DISK_SIZE=2048M
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
@@ -16,11 +15,6 @@ make -C usr/
 rm -f $DISK1
 dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE
 mkfs.minix -3 $DISK1
-
-# create second disk
-rm -f $DISK2
-dd if=/dev/zero of=$DISK2 bs=1 count=1 seek=$DISK_SIZE
-mkfs.minix -3 $DISK2
 
 # mount disk
 mkdir tmp >& /dev/null
