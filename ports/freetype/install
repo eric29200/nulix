@@ -1,6 +1,6 @@
-URL="https://download.sourceforge.net/libpng/"
-VERSION="1.6.37"
-SRC_FILENAME="libpng-"$VERSION".tar.gz"
+URL="https://downloads.sourceforge.net/freetype/"
+VERSION="2.12.1"
+SRC_FILENAME="freetype-"$VERSION".tar.xz"
 
 function configure_port() {
 	./configure						\

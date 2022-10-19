@@ -1,0 +1,20 @@
+URL="https://www.freedesktop.org/software/fontconfig/release/"
+VERSION="2.13.96"
+SRC_FILENAME="fontconfig-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure						\
+		--host=$TARGET					\
+		--enable-shared					\
+		--disable-docs					\
+		--disable-nls					\
+		--prefix=$MUSL_DIR
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}

@@ -1,5 +1,5 @@
 URL="https://zlib.net/"
-VERSION="1.2.12"
+VERSION="1.2.13"
 SRC_FILENAME="zlib-"$VERSION".tar.xz"
 
 function configure_port() {
@@ -13,4 +13,7 @@ function build_port() {
 
 function install_port() {
 	make install DESTDIR=$MUSL_DIR
+
+	mkdir -p $SYSROOT/lib
+	cp -P libz.* $SYSROOT/lib/
 }
