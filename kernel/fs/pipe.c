@@ -134,6 +134,10 @@ static struct inode_t *get_pipe_inode()
 	/* set pipe inode (2 references = reader + writer) */
 	inode->i_ref = 2;
 	inode->i_pipe = 1;
+	inode->i_mode = S_IFIFO | S_IRUSR | S_IWUSR;
+	inode->i_uid = current_task->uid;
+	inode->i_gid = current_task->gid;
+	inode->i_atime = inode->i_ctime = inode->i_mtime = CURRENT_TIME;
 	PIPE_RPOS(inode) = 0;
 	PIPE_WPOS(inode) = 0;
 
