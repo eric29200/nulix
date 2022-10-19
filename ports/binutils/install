@@ -1,0 +1,22 @@
+URL="https://ftp.gnu.org/gnu/binutils/"
+VERSION="2.39"
+SRC_FILENAME="binutils-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--target=$TARGET"-elf"						\
+		--host=$TARGET							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+
+	cd $SYSROOT/usr/bin
+	for x in $(ls -1 i386-elf-*); do rm -f `echo $x | sed 's/i386-elf-//g'`; done
+	for x in $(ls -1 i386-elf-*); do ln -s $x `echo $x | sed 's/i386-elf-//g'`; done
+}
