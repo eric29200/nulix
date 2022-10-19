@@ -1,0 +1,17 @@
+URL="https://www.cairographics.org/releases/"
+VERSION="0.42.0"
+SRC_FILENAME="pixman-"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure						\
+		--host=$TARGET					\
+		--prefix=$MUSL_DIR
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}
