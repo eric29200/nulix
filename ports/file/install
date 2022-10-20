@@ -5,11 +5,12 @@ SRC_FILENAME="file-"$VERSION".tar.gz"
 function configure_port() {
 	./configure								\
 		--host=$TARGET							\
-		--prefix="/usr"
+		--prefix="/usr"							\
+		CFLAGS="--static" LDFLAGS="--static"
 }
 
 function build_port() {
-	make -j$NJOBS
+	make -j$NJOBS V=1
 }
 
 function install_port() {
