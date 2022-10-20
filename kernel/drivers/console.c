@@ -191,8 +191,14 @@ static void csi_m(struct tty_t *tty)
 			case 1:												/* bold */
 				tty->intensity = 2;
 				break;
+			case 4:												/* underline */
+				tty->underline = 1;
+				break;
 			case 7:												/* reverse attributes */
 				tty->reverse = 1;
+				break;
+			case 24:											/* not underline */
+				tty->underline = 0;
 				break;
 			case 27:											/* unreverse attributes */
 				tty->reverse = 0;
