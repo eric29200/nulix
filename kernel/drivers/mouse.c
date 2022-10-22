@@ -19,6 +19,7 @@
 static struct mouse_event_t mouse_event;
 static uint8_t mouse_byte[4];
 static int mouse_cycle = 0;
+static struct wait_queue_t *mouse_wq = NULL;
 
 /*
  * Wait for mouse device.
@@ -135,7 +136,7 @@ static void mouse_handler(struct registers_t *regs)
 	}
 
 	/* wake up readers */
-	task_wakeup_all(&mouse_event.wait);
+	task_wakeup_all(&mouse_wq);
 }
 
 /*
@@ -178,7 +179,7 @@ static int mouse_poll(struct file_t *filp, struct select_table_t *wait)
 		mask |= POLLIN;
 
 	/* add wait queue to select table */
-	select_wait(&mouse_event.wait, wait);
+	select_wait(&mouse_wq, wait);
 
 	return mask;
 }
