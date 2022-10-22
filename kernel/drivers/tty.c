@@ -27,6 +27,9 @@ struct tty_t *tty_lookup(dev_t dev)
 
 	/* current task tty */
 	if (dev == DEV_TTY) {
+		if (current_task->tty == DEV_TTY0)
+			return current_tty >= 0 ? &tty_table[current_tty] : NULL;
+
 		for (i = 0; i < NB_TTYS; i++)
 			if (current_task->tty == tty_table[i].dev)
 				return &tty_table[i];
