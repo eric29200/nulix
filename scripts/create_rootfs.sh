@@ -27,33 +27,14 @@ sudo mkdir -p tmp/dev/pts
 sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt
 sudo mkdir -p tmp/tmp
-sudo mkdir -p tmp/root
+sudo mkdir -p tmp/sbin
 
 # create config files
-sudo sh -c 'echo "root::0:" > tmp/etc/group'
-sudo sh -c 'echo "nulix" > tmp/etc/issue.net'
-sudo sh -c 'echo "root::0:0:root:/root:/bin/bash" > tmp/etc/passwd'
-sudo sh -c 'echo "nameserver 192.168.1.1" > tmp/etc/resolv.conf'
-sudo ln -s /proc/mounts tmp/etc/mtab
-sudo sh -c 'echo "manpath /man" > tmp/etc/man.conf'
-sudo sh -c 'echo "manpath /usr/man" > tmp/etc/man.conf'
-sudo sh -c 'echo "manpath /usr/share/man" > tmp/etc/man.conf'
-sudo sh -c 'echo "manpath /share/man" >> tmp/etc/man.conf'
-sudo sh -c 'echo "manpath /usr/local/man" >> tmp/etc/man.conf'
-
-# create .bashrc
-sudo sh -c 'echo "export HOME=/root" > tmp/root/.bashrc'
-sudo sh -c 'echo "export TERM=linux" >> tmp/root/.bashrc'
-sudo sh -c 'echo "export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin" >> tmp/root/.bashrc'
-sudo sh -c 'echo "alias ls=\"ls --color\"" >> tmp/root/.bashrc'
-sudo sh -c 'echo "alias vi=\"vim\"" >> tmp/root/.bashrc'
-
-# copy root folders
+sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R sysroot/* tmp/
-
-# cp user binaries
-sudo mkdir -p tmp/sbin/
+sudo cp -R rootbase/root tmp/
 sudo cp usr/init tmp/sbin/
+sudo ln -s /proc/mounts tmp/etc/mtab
 
 # create devices nodes
 sudo mknod tmp/dev/null c 1 3
