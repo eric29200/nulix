@@ -5,7 +5,7 @@
 /*
  * Update cursor.
  */
-void fb_text_update_cursor(struct framebuffer_t *fb)
+static void fb_text_update_cursor(struct framebuffer_t *fb)
 {
 	uint16_t pos = fb->y * fb->width + fb->x;
 
@@ -19,7 +19,7 @@ void fb_text_update_cursor(struct framebuffer_t *fb)
 /*
  * Show/Hide cursor.
  */
-void fb_text_show_cursor(struct framebuffer_t *fb, int on_off)
+static void fb_text_show_cursor(struct framebuffer_t *fb, int on_off)
 {
 	uint8_t status;
 
@@ -40,22 +40,9 @@ void fb_text_show_cursor(struct framebuffer_t *fb, int on_off)
 }
 
 /*
- * Update a text frame buffer.
- */
-void fb_text_update(struct framebuffer_t *fb)
-{
-	uint16_t *fb_buf = (uint16_t *) fb->addr;
-	size_t i;
-
-	/* copy the buffer */
-	for (i = 0; i < fb->width * fb->height; i++)
-		fb_buf[i] = TEXT_ENTRY(fb->buf[i], fb->buf[i] >> 8);
-}
-
-/*
  * Update a frame buffer region.
  */
-void fb_text_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len)
+static void fb_text_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len)
 {
 	uint16_t *fb_buf = (uint16_t *) fb->addr;
 	uint32_t i;
@@ -67,7 +54,7 @@ void fb_text_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t le
 /*
  * Scroll framebuffer.
  */
-void fb_text_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
+static void fb_text_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
 {
 	uint16_t *src, *dest;
 
@@ -83,7 +70,7 @@ void fb_text_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, 
 /*
  * Scroll down from top to bottom.
  */
-void fb_text_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
+static void fb_text_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
 {
 	uint16_t *src, *dest;
 
@@ -95,3 +82,27 @@ void fb_text_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom
 	/* update first lines */
 	fb_text_update_region(fb, top * fb->width, fb->width * nr);
 }
+
+/*
+ * Init framebuffer.
+ */
+static int fb_text_init(struct framebuffer_t *fb)
+{
+	fb->font = NULL;
+	fb->width = fb->real_width;
+	fb->height = fb->real_height;
+
+	return 0;
+}
+
+/*
+ * Text frame buffer operations.
+ */
+struct framebuffer_ops_t fb_text_ops = {
+	.init			= fb_text_init,
+	.update_region		= fb_text_update_region,
+	.scroll_up		= fb_text_scroll_up,
+	.scroll_down		= fb_text_scroll_down,
+	.update_cursor		= fb_text_update_cursor,
+	.show_cursor		= fb_text_show_cursor,
+};

@@ -216,7 +216,7 @@ void tty_change(int n)
 		if (current_tty != n) {
 			/* refresh frame buffer */
 			fb = &tty_table[n].fb;
-			fb->update_region(fb, 0, fb->width * fb->height);
+			fb->ops->update_region(fb, 0, fb->width * fb->height);
 
 			/* set current tty */
 			tty_table[current_tty].fb.active = 0;

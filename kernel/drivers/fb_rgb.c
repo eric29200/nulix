@@ -1,5 +1,6 @@
 #include <drivers/fb.h>
 #include <string.h>
+#include <stderr.h>
 
 /* RGB color table */
 static uint32_t rgb_color_table[] = {
@@ -90,7 +91,7 @@ static uint32_t fb_rgb_bg_color(uint8_t color)
 /*
  * Update cursor.
  */
-void fb_rgb_update_cursor(struct framebuffer_t *fb)
+static void fb_rgb_update_cursor(struct framebuffer_t *fb)
 {
 	uint32_t color_bg, color_fg;
 	uint8_t c, color;
@@ -108,20 +109,9 @@ void fb_rgb_update_cursor(struct framebuffer_t *fb)
 }
 
 /*
- * Show/Hide cursor.
- */
-void fb_rgb_show_cursor(struct framebuffer_t *fb, int on_off)
-{
-	if (on_off)
-		fb_rgb_update_cursor(fb);
-	else
-		fb_rgb_update_region(fb, fb->cursor_y * fb->width + fb->cursor_x, 1);
-}
-
-/*
  * Update a frame buffer region.
  */
-void fb_rgb_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len)
+static void fb_rgb_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len)
 {
 	uint32_t color_bg, color_fg, i, x, y;
 	uint8_t c, color;
@@ -143,9 +133,20 @@ void fb_rgb_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len
 }
 
 /*
+ * Show/Hide cursor.
+ */
+static void fb_rgb_show_cursor(struct framebuffer_t *fb, int on_off)
+{
+	if (on_off)
+		fb_rgb_update_cursor(fb);
+	else
+		fb_rgb_update_region(fb, fb->cursor_y * fb->width + fb->cursor_x, 1);
+}
+
+/*
  * Scroll up from bottom to top.
  */
-void fb_rgb_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
+static void fb_rgb_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
 {
 	uint32_t *src, *dest;
 
@@ -161,7 +162,7 @@ void fb_rgb_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, s
 /*
  * Scroll down from top to bottom.
  */
-void fb_rgb_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
+static void fb_rgb_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
 {
 	uint32_t *src, *dest;
 
@@ -173,3 +174,73 @@ void fb_rgb_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom,
 	/* update first lines */
 	fb_rgb_update_region(fb, top * fb->width, fb->width * nr);
 }
+
+/*
+ * Init framebuffer.
+ */
+static int fb_rgb_init(struct framebuffer_t *fb)
+{
+	/* get font */
+	fb->font = get_default_font();
+	if (!fb->font)
+		return -ENOSPC;
+
+	fb->width = fb->real_width / fb->font->width;
+	fb->height = fb->real_height / fb->font->height;
+
+	return 0;
+}
+
+/*
+ * Get frame buffer fix informations.
+ */
+static int fb_rgb_get_fix(struct framebuffer_t *fb, struct fb_fix_screeninfo *fix)
+{
+	/* reset informations */
+	memset(fix, 0, sizeof(struct fb_fix_screeninfo));
+
+	/* set informations */
+	strcpy(fix->id, "VESA VGA");
+	fix->smem_start = fb->addr;
+	fix->smem_len = fb->real_height * fb->pitch;
+	fix->type = FB_TYPE_PACKED_PIXELS;
+	fix->visual = FB_VISUAL_TRUECOLOR;
+	fix->xpanstep = 0;
+	fix->ypanstep = 0;
+	fix->ywrapstep = 0;
+	fix->line_length = fb->real_width;
+
+	return 0;
+}
+
+/*
+ * Get framebuffer variable informations.
+ */
+static int fb_rgb_get_var(struct framebuffer_t *fb, struct fb_var_screeninfo *var)
+{
+	/* reset informations */
+	memset(var, 0, sizeof(struct fb_var_screeninfo));
+
+	/* set informations */
+	var->xres = fb->real_width;
+	var->yres = fb->real_height;
+	var->xres_virtual = fb->real_width;
+	var->yres_virtual = fb->real_height;
+	var->bits_per_pixel = fb->bpp;
+
+	return 0;
+}
+
+/*
+ * RGB frame buffer operations.
+ */
+struct framebuffer_ops_t fb_rgb_ops = {
+	.init			= fb_rgb_init,
+	.update_region		= fb_rgb_update_region,
+	.scroll_up		= fb_rgb_scroll_up,
+	.scroll_down		= fb_rgb_scroll_down,
+	.update_cursor		= fb_rgb_update_cursor,
+	.show_cursor		= fb_rgb_show_cursor,
+	.get_fix		= fb_rgb_get_fix,
+	.get_var		= fb_rgb_get_var,
+};

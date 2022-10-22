@@ -2,6 +2,7 @@
 #include <mm/mm.h>
 #include <string.h>
 #include <stderr.h>
+#include <stdio.h>
 
 /* direct frame buffer */
 static struct framebuffer_t direct_fb;
@@ -33,37 +34,26 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	fb->y = fb->cursor_y = 0;
 	fb->active = 0;
 
-	/* direct frame buffer */
-	if (direct == 1)
-		return 0;
-
 	/* init frame buffer */
 	switch (fb->type) {
 		case MULTIBOOT_FRAMEBUFFER_TYPE_EGA_TEXT:
-			fb->font = NULL;
-			fb->width = fb->real_width;
-			fb->height = fb->real_height;
-			fb->update_region = fb_text_update_region;
-			fb->scroll_up = fb_text_scroll_up;
-			fb->scroll_down = fb_text_scroll_down;
-			fb->update_cursor = fb_text_update_cursor;
-			fb->show_cursor = fb_text_show_cursor;
+			fb->ops = &fb_text_ops;
 			break;
 		case MULTIBOOT_FRAMEBUFFER_TYPE_RGB:
-			fb->font = get_default_font();
-			if (!fb->font)
-				return -ENOSPC;
-			fb->width = fb->real_width / fb->font->width;
-			fb->height = fb->real_height / fb->font->height;
-			fb->update_region = fb_rgb_update_region;
-			fb->scroll_up = fb_rgb_scroll_up;
-			fb->scroll_down = fb_rgb_scroll_down;
-			fb->update_cursor = fb_rgb_update_cursor;
-			fb->show_cursor = fb_rgb_show_cursor;
+			fb->ops = &fb_rgb_ops;
 			break;
 		default:
 			return -EINVAL;
 	}
+
+	/* init framebuffer */
+	ret = fb->ops->init(fb);
+	if (ret)
+		return ret;
+
+	/* direct frame buffer */
+	if (direct == 1)
+		return 0;
 
 	/* allocate buffer */
 	fb->buf = (uint16_t *) kmalloc(sizeof(uint16_t) * fb->width * (fb->height + 1));
@@ -144,12 +134,41 @@ static int fb_write(struct file_t *filp, const char *buf, int n)
 }
 
 /*
+ * Framebuffer ioctl.
+ */
+int fb_ioctl(struct file_t *filp, int request, unsigned long arg)
+{
+	struct framebuffer_t *fb = &direct_fb;
+	int ret = 0;
+
+	switch (request) {
+		case FBIOGET_FSCREENINFO:
+			if (!fb->ops || !fb->ops->get_fix)
+				return -EINVAL;
+
+			ret = fb->ops->get_fix(fb, (struct fb_fix_screeninfo *) arg);
+			break;
+		case FBIOGET_VSCREENINFO:
+			if (!fb->ops || !fb->ops->get_var)
+				return -EINVAL;
+
+			ret = fb->ops->get_var(fb, (struct fb_var_screeninfo *) arg);
+			break;
+		default:
+			printf("Unknown ioctl request (%x) on device %x\n", request, filp->f_inode->i_rdev);
+			break;
+	}
+
+	return ret;
+}
+/*
  * Framebuffer file operations.
  */
 static struct file_operations_t fb_fops = {
 	.open	= fb_open,
 	.read	= fb_read,
 	.write	= fb_write,
+	.ioctl	= fb_ioctl,
 };
 
 /*
