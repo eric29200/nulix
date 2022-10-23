@@ -504,9 +504,10 @@ void console_write(struct tty_t *tty)
 int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 {
 	int i, new_func_len, old_func_len;
+	uint16_t *key_map, mask;
 	struct kbsentry_t *kbse;
+	struct vt_stat *vtstat;
 	struct kbentry_t *kbe;
-	uint16_t *key_map;
 	struct kbd_t *kbd;
 	char *old_func;
 
@@ -623,6 +624,12 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 				  default:
 					return -EINVAL;
 			}
+			return 0;
+		case VT_GETSTATE:
+			vtstat = (struct vt_stat *) arg;
+			vtstat->v_active = current_tty;
+			for (i = 0, mask = 1, vtstat->v_state = 0; i < NR_TTYS; i++, mask <<= 1)
+				vtstat->v_state |= mask;
 			return 0;
 		default:
 			break;

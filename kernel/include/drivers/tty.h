@@ -91,5 +91,6 @@ void tty_default_attr(struct tty_t *tty);
 void tty_update_attr(struct tty_t *tty);
 
 extern struct inode_operations_t tty_iops;
+extern int current_tty;
 
 #endif

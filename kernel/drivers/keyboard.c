@@ -13,7 +13,6 @@ static uint8_t k_down[NR_SHIFT] = { 0, };
 /* keyboards table */
 struct kbd_t kbd_table[NR_TTYS];
 static struct tty_t *tty = NULL;
-extern int current_tty;
 
 /* keyboard state */
 static int shift_state = 0;
