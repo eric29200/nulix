@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
+#include <dev.h>
 #include <kd.h>
 
 /* ansi color table */
@@ -506,10 +507,11 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 	struct kbsentry_t *kbse;
 	struct kbentry_t *kbe;
 	uint16_t *key_map;
+	struct kbd_t *kbd;
 	char *old_func;
 
-	/* unused tty */
-	UNUSED(tty);
+	/* get keyboard */
+	kbd = &kbd_table[tty->dev - DEV_TTY0 - 1];
 
 	switch (request) {
 		case KDGKBTYPE:
@@ -517,9 +519,6 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			return 0;
 		case KDGETMODE:
 			*((char *) arg) = KD_TEXT;
-			return 0;
-		case KDGKBMODE:
-			*((char *) arg) = K_UNICODE;
 			return 0;
 		case KDGKBENT:
 			kbe = (struct kbentry_t *) arg;
@@ -588,6 +587,42 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			else
 				func_table[kbse->kb_func] = (uint8_t *) strdup((char *) kbse->kb_string);
 
+			return 0;
+		case KDGKBMODE:
+			switch(kbd->kbdmode) {
+				  case VC_RAW:
+					*((int *) arg) = K_RAW;
+					break;
+				  case VC_MEDIUMRAW:
+					*((int *) arg) = K_MEDIUMRAW;
+					break;
+				  case VC_XLATE:
+					*((int *) arg) = K_XLATE;
+					break;
+				  case VC_UNICODE:
+					*((int *) arg) = K_UNICODE;
+					break;
+				  default:
+					break;
+			}
+			return 0;
+		case KDSKBMODE:
+			switch(arg) {
+				  case K_RAW:
+					kbd->kbdmode = VC_RAW;
+					break;
+				  case K_MEDIUMRAW:
+					kbd->kbdmode = VC_MEDIUMRAW;
+					break;
+				  case K_XLATE:
+					kbd->kbdmode = VC_XLATE;
+					break;
+				  case K_UNICODE:
+					kbd->kbdmode = VC_UNICODE;
+					break;
+				  default:
+					return -EINVAL;
+			}
 			return 0;
 		default:
 			break;

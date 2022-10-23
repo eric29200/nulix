@@ -1,6 +1,7 @@
 #ifndef _KEYBOARD_H_
 #define _KEYBOARD_H_
 
+#include <drivers/tty.h>
 #include <stddef.h>
 
 #define NR_KEYS				256
@@ -381,6 +382,19 @@ extern const int max_vals[];
 
 #define E1_PAUSE   			119
 
+#define VC_XLATE			0	/* translate keycodes using keymap */
+#define VC_MEDIUMRAW			1	/* medium raw (keycode) mode */
+#define VC_RAW				2	/* raw (scancode) mode */
+#define VC_UNICODE			3	/* unicode mode */
+
+/*
+ * Keyboard structure.
+ */
+struct kbd_t {
+	uint8_t		kbdmode;
+};
+
+extern struct kbd_t kbd_table[NR_TTYS];
 extern uint16_t *key_maps[MAX_NR_KEYMAPS];
 extern uint16_t plain_map[NR_KEYS];
 extern uint8_t *func_table[MAX_NR_FUNCS];

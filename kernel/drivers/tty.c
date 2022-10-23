@@ -12,11 +12,9 @@
 #include <time.h>
 #include <dev.h>
 
-#define NB_TTYS		4
-
 /* global ttys */
-static struct tty_t tty_table[NB_TTYS];
-static int current_tty;
+static struct tty_t tty_table[NR_TTYS];
+int current_tty;
 
 /*
  * Lookup for a tty.
@@ -30,7 +28,7 @@ struct tty_t *tty_lookup(dev_t dev)
 		if (current_task->tty == DEV_TTY0)
 			return current_tty >= 0 ? &tty_table[current_tty] : NULL;
 
-		for (i = 0; i < NB_TTYS; i++)
+		for (i = 0; i < NR_TTYS; i++)
 			if (current_task->tty == tty_table[i].dev)
 				return &tty_table[i];
 
@@ -42,7 +40,7 @@ struct tty_t *tty_lookup(dev_t dev)
 		return current_tty >= 0 ? &tty_table[current_tty] : NULL;
 
 	/* asked tty */
-	if (minor(dev) > 0 && minor(dev) <= NB_TTYS)
+	if (minor(dev) > 0 && minor(dev) <= NR_TTYS)
 		return &tty_table[minor(dev) - 1];
 
 	return NULL;
@@ -215,7 +213,7 @@ void tty_change(int n)
 {
 	struct framebuffer_t *fb;
 
-	if (n >= 0 && n < NB_TTYS) {
+	if (n >= 0 && n < NR_TTYS) {
 		if (current_tty != n) {
 			/* refresh frame buffer */
 			fb = &tty_table[n].fb;
@@ -427,11 +425,11 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 	int i, ret;
 
 	/* reset ttys */
-	for (i = 0; i < NB_TTYS; i++)
+	for (i = 0; i < NR_TTYS; i++)
 		memset(&tty_table[i], 0, sizeof(struct tty_t));
 
 	/* init each tty */
-	for (i = 0; i < NB_TTYS; i++) {
+	for (i = 0; i < NR_TTYS; i++) {
 		ret = tty_init(&tty_table[i], i + 1, tag_fb);
 		if (ret)
 			break;
@@ -443,7 +441,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 
 	/* on error destroy ttys */
 	if (ret)
-		for (i = 0; i < NB_TTYS; i++)
+		for (i = 0; i < NR_TTYS; i++)
 			tty_destroy(&tty_table[i]);
 
 	return ret;

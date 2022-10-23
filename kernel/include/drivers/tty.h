@@ -6,6 +6,7 @@
 #include <lib/ring_buffer.h>
 #include <proc/wait.h>
 
+#define NR_TTYS			4
 #define TTY_BUF_SIZE		1024
 #define TTY_ESC_BUF_SIZE	16
 #define TTY_DELAY_UPDATE_MS	20
