@@ -70,7 +70,6 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, stru
 {
 	struct vm_area_t *vm, *vm_prev;
 	size_t f_pos;
-	int ret;
 
 	/* create new memory region */
 	vm = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
@@ -84,14 +83,6 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int flags, stru
 
 	/* unmap existing pages */
 	unmap_pages(vm->vm_start, vm->vm_end, current_task->mm->pgd);
-
-	/* map pages */
-	ret = map_pages(vm->vm_start, vm->vm_end, current_task->mm->pgd, 0, 1);
-	if (ret)
-		goto err;
-
-	/* memzero new memory region */
-	memset((void *) vm->vm_start, 0, vm->vm_end - vm->vm_start);
 
 	/* add it to the list */
 	vm_prev = find_vma_prev(vm->vm_start);

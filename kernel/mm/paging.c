@@ -181,14 +181,25 @@ int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd,
  */
 void unmap_page(uint32_t address, struct page_directory_t *pgd)
 {
+	uint32_t page_nr, table_idx;
 	struct page_t *page;
 
+	/* get page table */
+	page_nr = address / PAGE_SIZE;
+	table_idx = page_nr / 1024;
+	if (!pgd->tables[table_idx])
+		return;
+
 	/* get page */
-	page = get_page(address, 0, pgd);
+	page = &pgd->tables[table_idx]->pages[page_nr % 1024];
+	if (!page)
+		return;
 
 	/* free frame */
-	if (page)
-		free_frame(page);
+	free_frame(page);
+
+	/* reset page */
+	memset(page, 0, sizeof(struct page_t));
 
 	/* flush tlb */
 	flush_tlb(address);
