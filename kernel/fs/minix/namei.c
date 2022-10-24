@@ -195,7 +195,6 @@ static int minix_empty_dir(struct inode_t *dir)
  */
 int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
 {
-	struct minix_sb_info_t *sbi;
 	struct buffer_head_t *bh;
 	ino_t ino;
 	void *de;
@@ -218,7 +217,6 @@ int minix_lookup(struct inode_t *dir, const char *name, size_t name_len, struct 
 	}
 
 	/* get inode number */
-	sbi = minix_sb(dir->i_sb);
 	ino = ((struct minix3_dir_entry_t *) de)->d_inode;
 
 	/* release block buffer */
