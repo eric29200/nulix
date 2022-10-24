@@ -61,17 +61,16 @@ found:
 		printf("Can't write block %d on disk\n", bh->b_block);
 
 	/* allocate data if needed */
-	if (!bh->b_size) {
+	if (!bh->b_data) {
 		bh->b_data = (char *) get_free_page();
 		if (!bh->b_data)
 			return NULL;
-
-		bh->b_size = sb->s_blocksize;
 	}
 
 	/* reset buffer */
 	bh->b_ref = 1;
 	bh->b_sb = sb;
+	bh->b_size = sb->s_blocksize;
 	memset(bh->b_data, 0, bh->b_size);
 
 	return bh;
