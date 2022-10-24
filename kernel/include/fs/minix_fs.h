@@ -21,22 +21,6 @@
 #define MINIX_BLOCK_SIZE		(1 << MINIX_BLOCK_SIZE_BITS)
 
 /*
- * Minix V1/V2 on disk super block.
- */
-struct minix1_super_block_t {
-	uint16_t		s_ninodes;
-	uint16_t		s_nzones;
-	uint16_t		s_imap_blocks;
-	uint16_t		s_zmap_blocks;
-	uint16_t		s_firstdatazone;
-	uint16_t		s_log_zone_size;
-	uint32_t		s_max_size;
-	uint16_t		s_magic;
-	uint16_t		s_state;
-	uint32_t		s_zones;
-} __attribute__((packed));
-
-/*
  * Minix V3 super block.
  */
 struct minix3_super_block_t {
@@ -76,19 +60,6 @@ struct minix_sb_info_t {
 };
 
 /*
- * Minix V1 inode.
- */
-struct minix1_inode_t {
-	uint16_t		i_mode;
-	uint16_t		i_uid;
-	uint32_t		i_size;
-	uint32_t		i_time;
-	uint8_t			i_gid;
-	uint8_t			i_nlinks;
-	uint16_t		i_zone[10];
-};
-
-/*
  * Minix V2/V3 inode.
  */
 struct minix2_inode_t {
@@ -101,14 +72,6 @@ struct minix2_inode_t {
 	uint32_t		i_mtime;
 	uint32_t		i_ctime;
 	uint32_t		i_zone[10];
-};
-
-/*
- * Minix V1/V2 dir entry.
- */
-struct minix1_dir_entry_t {
-	uint16_t		d_inode;
-	char			d_name[0];
 };
 
 /*

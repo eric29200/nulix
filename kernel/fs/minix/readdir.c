@@ -10,7 +10,6 @@
 int minix_getdents64(struct file_t *filp, void *dirp, size_t count)
 {
 	struct minix_sb_info_t *sbi = minix_sb(filp->f_inode->i_sb);
-	struct minix1_dir_entry_t *de1;
 	struct minix3_dir_entry_t *de3;
 	struct dirent64_t *dirent;
 	int entries_size;
@@ -25,7 +24,6 @@ int minix_getdents64(struct file_t *filp, void *dirp, size_t count)
 		return -ENOMEM;
 
 	/* set minix directory entries pointer */
-	de1 = de;
 	de3 = de;
 
 	/* walk through all entries */
@@ -35,13 +33,8 @@ int minix_getdents64(struct file_t *filp, void *dirp, size_t count)
 			goto out;
 
 		/* get inode number and file name */
-		if (sbi->s_version == MINIX_V3) {
-			ino = de3->d_inode;
-			name = de3->d_name;
-		} else {
-			ino = de1->d_inode;
-			name = de1->d_name;
-		}
+		ino = de3->d_inode;
+		name = de3->d_name;
 
 		/* skip null entries */
 		if (ino == 0)
