@@ -10,6 +10,7 @@
 #include <fs/ext2_i.h>
 #include <fs/pipe_i.h>
 #include <proc/wait.h>
+#include <mm/mm.h>
 #include <time.h>
 
 #define NR_INODE			1024
@@ -165,6 +166,7 @@ struct file_operations_t {
 	int (*getdents64)(struct file_t *, void *, size_t);
 	int (*poll)(struct file_t *, struct select_table_t *);
 	int (*ioctl)(struct file_t *, int, unsigned long);
+	int (*mmap)(struct inode_t *, struct vm_area_t *);
 };
 
 /* super operations */
@@ -203,10 +205,10 @@ int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const ch
 int do_mount_root(dev_t dev, const char *dev_name);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(struct file_t *filp);
-ssize_t do_read(int fd, char *buf, int count);
-ssize_t do_write(int fd, const char *buf, int count);
-off_t do_lseek(int fd, off_t offset, int whence);
-int do_pread64(int fd, void *buf, size_t count, off_t offset);
+ssize_t do_read(struct file_t *filp, char *buf, int count);
+ssize_t do_write(struct file_t *filp, const char *buf, int count);
+off_t do_lseek(struct file_t *filp, off_t offset, int whence);
+int do_pread64(struct file_t *filp, void *buf, size_t count, off_t offset);
 int do_ioctl(int fd, int request, unsigned long arg);
 int do_stat64(struct inode_t *inode, struct stat64_t *statbuf);
 int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);

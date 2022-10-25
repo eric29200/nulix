@@ -31,7 +31,7 @@ uint32_t sys_brk(uint32_t brk)
 		goto out;
 
 	/* map new pages */
-	if (do_mmap(oldbrk, newbrk - oldbrk, MAP_FIXED, NULL, 0) != (void *) oldbrk)
+	if (do_mmap(oldbrk, newbrk - oldbrk, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0) != (void *) oldbrk)
 		goto out;
 
 set_brk:

@@ -9,8 +9,6 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off
 {
 	struct file_t *filp = NULL;
 
-	UNUSED(prot);
-
 	/* get file */
 	if (fd >= 0) {
 		if (fd >= NR_OPEN || !current_task->files->filp[fd])
@@ -19,5 +17,5 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off
 		filp = current_task->files->filp[fd];
 	}
 
-	return do_mmap((uint32_t) addr, length, flags, filp, offset);
+	return do_mmap((uint32_t) addr, length, prot, flags, filp, offset);
 }

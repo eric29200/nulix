@@ -218,10 +218,33 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_direc
 }
 
 /*
+ * Handle a no page fault.
+ */
+static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t address)
+{
+	int ret = 0;
+
+	/* map page */
+	ret = map_page(address, task->mm->pgd, 0, 1);
+	if (ret)
+		return ret;
+
+	/* memzero page */
+	memset((void *) PAGE_ALIGN_DOWN(address), 0, PAGE_SIZE);
+
+	/* handle no page */
+	if (vma && vma->vm_ops && vma->vm_ops->nopage)
+		ret = vma->vm_ops->nopage(vma, address);
+
+	return ret;
+}
+
+/*
  * Page fault handler.
  */
 void page_fault_handler(struct registers_t *regs)
 {
+	struct vm_area_t *vma;
 	uint32_t fault_addr;
 
 	/* faulting address is stored in CR2 register */
@@ -240,16 +263,17 @@ void page_fault_handler(struct registers_t *regs)
 	int reserved = regs->err_code & 0x8 ? 1 : 0;
 	int id = regs->err_code & 0x10 ? 1 : 0;
 
-	/* user page fault : try to allocate a new page if address is in user space memory */
-	if (fault_addr >= KMEM_SIZE && map_page(fault_addr, current_task->mm->pgd, 0, 1) == 0) {
-		/* memzero page */
-		memset((void *) PAGE_ALIGN_DOWN(fault_addr), 0, PAGE_SIZE);
+	/* get memory region */
+	vma = find_vma(current_task, fault_addr);
+
+	/* user page fault : handle it */
+	if (fault_addr >= KMEM_SIZE && do_no_page(current_task, vma, fault_addr) == 0)
 		return;
-	}
 
 	/* output message */
 	printf("Page fault at address=%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d (process %d at %x)\n",
 	       fault_addr, present, write, user, reserved, id, current_task->pid, regs->eip);
+	for (;;);
 
 	/* user mode : exit process */
 	if (user)

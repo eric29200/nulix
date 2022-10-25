@@ -1,5 +1,6 @@
 #include <drivers/fb.h>
 #include <mm/mm.h>
+#include <mm/paging.h>
 #include <string.h>
 #include <stderr.h>
 #include <stdio.h>

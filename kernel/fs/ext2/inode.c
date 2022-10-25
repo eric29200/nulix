@@ -9,6 +9,7 @@
 struct file_operations_t ext2_file_fops = {
 	.read		= ext2_file_read,
 	.write		= ext2_file_write,
+	.mmap		= generic_file_mmap,
 };
 
 /*

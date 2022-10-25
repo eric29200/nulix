@@ -1,6 +1,7 @@
 #ifndef _MM_HEAP_H_
 #define _MM_HEAP_H_
 
+#include <mm/paging.h>
 #include <stddef.h>
 
 #define HEAP_MAGIC		0xAEA0

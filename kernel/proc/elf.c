@@ -102,16 +102,18 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
  */
 int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t *elf_entry)
 {
-	int fd, ret, off, elf_flags, load_addr_set = 0;
+	int fd, ret, off, elf_type, elf_prot, load_addr_set = 0;
 	struct elf_prog_header_t *ph, *last_ph;
 	uint32_t i, load_addr = 0, start, end;
 	struct elf_header_t *elf_header;
 	char *buf, *buf_mmap;
+	struct file_t *filp;
 
 	/* open file */
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
+	filp = current_task->files->filp[fd];
 
 	/* get a free page */
 	buf = (char *) get_free_page();
@@ -121,7 +123,7 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 	}
 
 	/* read first block */
-	if ((size_t) do_read(fd, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
+	if ((size_t) do_read(filp, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -137,15 +139,26 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 		/* load segment */
 		ph = (struct elf_prog_header_t *) (buf + off);
 		if (ph->p_type == PT_LOAD) {
-			/* set mmap flags */
-			elf_flags = 0;
+			elf_type = MAP_PRIVATE;
+			elf_prot = 0;
+
+			/* set mmap protocol */
+			if (ph->p_flags & FLAG_READ)
+				elf_prot |= PROT_READ;
+			if (ph->p_flags & FLAG_WRITE)
+				elf_prot |= PROT_WRITE;
+			if (ph->p_flags & FLAG_READ)
+				elf_prot |= PROT_EXEC;
+
+			/* set mmap type */
 			if (elf_header->e_type == ET_EXEC || load_addr_set)
-				elf_flags |= MAP_FIXED;
+				elf_type |= MAP_FIXED;
 
 			/* map elf segment */
 			buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_addr),
 					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
-					   elf_flags,
+					   elf_prot,
+					   elf_type,
 					   current_task->files->filp[fd],
 					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
 			if (!buf_mmap) {
@@ -183,7 +196,7 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 	/* setup BSS section */
 	start = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_filesz);
 	end = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
-	if (!do_mmap(start, end - start, MAP_FIXED, NULL, 0)) {
+	if (!do_mmap(start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0)) {
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -280,16 +293,18 @@ err_sig:
 int elf_load(const char *path, struct binargs_t *bargs)
 {
 	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
+	int fd, off, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *buf, *elf_intepreter = NULL;
-	int fd, off, ret, elf_flags, load_addr_set = 0;
 	struct elf_prog_header_t *ph, *last_ph = NULL;
 	struct elf_header_t *elf_header;
+	struct file_t *filp;
 	void *buf_mmap;
 
 	/* open file */
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
+	filp = current_task->files->filp[fd];
 
 	/* save path */
 	strncpy(name, path, TASK_NAME_LEN - 1);
@@ -303,7 +318,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	}
 
 	/* read first block */
-	if ((size_t) do_read(fd, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
+	if ((size_t) do_read(filp, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -337,12 +352,12 @@ int elf_load(const char *path, struct binargs_t *bargs)
 			}
 
 			/* seek to interpreter path */
-			ret = do_lseek(fd, ph->p_offset, SEEK_SET);
+			ret = do_lseek(filp, ph->p_offset, SEEK_SET);
 			if (ret < 0)
 				goto out;
 
 			/* read interpreter path */
-			if ((size_t) do_read(fd, elf_intepreter, ph->p_filesz) != ph->p_filesz) {
+			if ((size_t) do_read(filp, elf_intepreter, ph->p_filesz) != ph->p_filesz) {
 				ret = -EINVAL;
 				goto out;
 			}
@@ -356,17 +371,28 @@ int elf_load(const char *path, struct binargs_t *bargs)
 		/* load segment */
 		ph = (struct elf_prog_header_t *) (buf + off);
 		if (ph->p_type == PT_LOAD) {
-			/* set mmap flags */
-			elf_flags = 0;
+			elf_type = MAP_PRIVATE;
+			elf_prot = 0;
+
+			/* set mmap protocol */
+			if (ph->p_flags & FLAG_READ)
+				elf_prot |= PROT_READ;
+			if (ph->p_flags & FLAG_WRITE)
+				elf_prot |= PROT_WRITE;
+			if (ph->p_flags & FLAG_READ)
+				elf_prot |= PROT_EXEC;
+
+			/* set mmap type */
 			if (elf_header->e_type == ET_EXEC || load_addr_set)
-				elf_flags |= MAP_FIXED;
+				elf_type |= MAP_FIXED;
 			else if (elf_header->e_type == ET_DYN)
 				load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - ph->p_vaddr);
 
 			/* map elf segment */
 			buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_bias),
 					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
-					   elf_flags,
+					   elf_prot,
+					   elf_type,
 					   current_task->files->filp[fd],
 					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
 			if (!buf_mmap) {
@@ -407,7 +433,7 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	/* setup BSS section */
 	start = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_filesz);
 	end = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
-	if (!do_mmap(start, end - start, MAP_FIXED, NULL, 0)) {
+	if (!do_mmap(start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0)) {
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -416,7 +442,8 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	current_task->mm->end_text = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
 	current_task->mm->start_brk = current_task->mm->end_text;
 	current_task->mm->end_brk = current_task->mm->end_text + PAGE_SIZE;
-	if (!do_mmap(current_task->mm->start_brk, current_task->mm->end_brk - current_task->mm->start_brk, MAP_FIXED, NULL, 0)) {
+	if (!do_mmap(current_task->mm->start_brk, current_task->mm->end_brk - current_task->mm->start_brk,
+		     PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0)) {
 		ret = -ENOMEM;
 		goto out;
 	}

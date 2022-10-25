@@ -138,6 +138,11 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vm_child->vm_start = vm_parent->vm_start;
 			vm_child->vm_end = vm_parent->vm_end;
 			vm_child->vm_flags = vm_parent->vm_flags;
+			vm_child->vm_offset = vm_parent->vm_offset;
+			vm_child->vm_inode = vm_parent->vm_inode;
+			vm_child->vm_ops = vm_parent->vm_ops;
+			if (vm_child->vm_inode)
+				vm_child->vm_inode->i_ref++;
 			list_add_tail(&vm_child->list, &mm_new->vm_list);
 		}
 	}
@@ -341,7 +346,14 @@ void task_exit_mmap(struct mm_struct *mm)
 	list_for_each_safe(pos, n, &mm->vm_list) {
 		vm_area = list_entry(pos, struct vm_area_t, list);
 		if (vm_area) {
+			/* release inode */
+			if (vm_area->vm_inode)
+				iput(vm_area->vm_inode);
+
+			/* unmap pages */
 			unmap_pages(vm_area->vm_start, vm_area->vm_end, mm->pgd);
+
+			/* free memory region */
 			list_del(&vm_area->list);
 			kfree(vm_area);
 		}
