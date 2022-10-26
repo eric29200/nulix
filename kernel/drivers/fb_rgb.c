@@ -208,7 +208,7 @@ static int fb_rgb_get_fix(struct framebuffer_t *fb, struct fb_fix_screeninfo *fi
 	fix->xpanstep = 0;
 	fix->ypanstep = 0;
 	fix->ywrapstep = 0;
-	fix->line_length = fb->real_width;
+	fix->line_length = fb->pitch;
 
 	return 0;
 }
