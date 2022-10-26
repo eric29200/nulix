@@ -29,8 +29,9 @@
 
 void *do_mmap(uint32_t addr, size_t length, int prot, int flags, struct file_t *filp, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
-struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr);
 struct vm_area_t *find_vma(struct task_t *task, uint32_t addr);
+struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr);
+struct vm_area_t *find_vma_next(struct task_t *task, uint32_t addr);
 struct vm_area_t *find_vma_intersection(struct task_t *task, uint32_t start, uint32_t end);
 
 #endif

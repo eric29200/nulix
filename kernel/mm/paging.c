@@ -265,15 +265,27 @@ void page_fault_handler(struct registers_t *regs)
 
 	/* get memory region */
 	vma = find_vma(current_task, fault_addr);
+	if (vma)
+		goto good_area;
 
+	/* maybe stack needs to be grown ? */
+	vma = find_vma_next(current_task, fault_addr);
+	if (vma && (vma->vm_flags & VM_GROWSDOWN))
+		goto expand_stack;
+
+	/* else bad page fault */
+	goto bad_area;
+expand_stack:
+	vma->vm_start = fault_addr & PAGE_MASK;
+	return;
+good_area:
 	/* user page fault : handle it */
-	if (fault_addr >= KMEM_SIZE && do_no_page(current_task, vma, fault_addr) == 0)
+	if (do_no_page(current_task, vma, fault_addr) == 0)
 		return;
-
+bad_area:
 	/* output message */
 	printf("Page fault at address=%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d (process %d at %x)\n",
 	       fault_addr, present, write, user, reserved, id, current_task->pid, regs->eip);
-	for (;;);
 
 	/* user mode : exit process */
 	if (user)

@@ -456,11 +456,19 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	}
 
 	/* setup stack */
-	sp = USTACK_START - 4;
-	sp -= (bargs->argv_len + bargs->envp_len);
+	sp = USTACK_START;
+	sp -= bargs->argv_len + bargs->envp_len;
 	args_str = sp;
 	sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
 	sp -= (1 + (bargs->argc + 1) + (bargs->envc + 1)) * sizeof(uint32_t);
+
+	/* map initial stack */
+	start = PAGE_ALIGN_DOWN(sp);
+	end = USTACK_START;
+	if (!do_mmap(start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | VM_GROWSDOWN, NULL, 0)) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	/* create ELF tables */
 	ret = elf_create_tables(bargs, (uint32_t *) sp, (char *) args_str, elf_header, load_addr, load_bias, interp_load_addr);

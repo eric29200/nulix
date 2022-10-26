@@ -5,6 +5,25 @@
 #include <fcntl.h>
 
 /*
+ * Find a memory region.
+ */
+struct vm_area_t *find_vma(struct task_t *task, uint32_t addr)
+{
+	struct list_head_t *pos;
+	struct vm_area_t *vm;
+
+	list_for_each(pos, &task->mm->vm_list) {
+		vm = list_entry(pos, struct vm_area_t, list);
+		if (addr < vm->vm_start)
+			break;
+		if (addr < vm->vm_end)
+			return vm;
+	}
+
+	return NULL;
+}
+
+/*
  * Find previous memory region.
  */
 struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr)
@@ -24,9 +43,9 @@ struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr)
 }
 
 /*
- * Find a memory region.
+ * Find next memory region.
  */
-struct vm_area_t *find_vma(struct task_t *task, uint32_t addr)
+struct vm_area_t *find_vma_next(struct task_t *task, uint32_t addr)
 {
 	struct list_head_t *pos;
 	struct vm_area_t *vm;
@@ -34,14 +53,11 @@ struct vm_area_t *find_vma(struct task_t *task, uint32_t addr)
 	list_for_each(pos, &task->mm->vm_list) {
 		vm = list_entry(pos, struct vm_area_t, list);
 		if (addr < vm->vm_start)
-			break;
-		if (addr < vm->vm_end)
 			return vm;
 	}
 
 	return NULL;
 }
-
 /*
  * Find first vm intersecting start <-> end.
  */
