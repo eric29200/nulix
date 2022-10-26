@@ -112,7 +112,7 @@ static int alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
 /*
  * Map a page.
  */
-int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
+static int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
 {
 	struct page_t *page;
 	int ret;
@@ -179,7 +179,7 @@ int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd,
 /*
  * Unmap a page.
  */
-void unmap_page(uint32_t address, struct page_directory_t *pgd)
+static void unmap_page(uint32_t address, struct page_directory_t *pgd)
 {
 	uint32_t page_nr, table_idx;
 	struct page_t *page;
