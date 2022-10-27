@@ -24,6 +24,7 @@ sudo mount $DISK1 tmp
 sudo mkdir -p tmp/etc
 sudo mkdir -p tmp/dev
 sudo mkdir -p tmp/dev/pts
+sudo mkdir -p tmp/dev/input
 sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt
 sudo mkdir -p tmp/tmp
@@ -55,6 +56,7 @@ sudo mknod tmp/dev/mouse c 13 0
 sudo mknod tmp/dev/fb0 c 29 0
 sudo mknod tmp/dev/hda b 3 0
 sudo mknod tmp/dev/hdb b 3 1
+sudo ln -s ../mouse tmp/dev/input/mice
 
 # chown root
 sudo chown -R 0.0 tmp/
