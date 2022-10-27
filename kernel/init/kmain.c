@@ -180,7 +180,8 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 
 	/* init mouse */
 	printf("[Kernel] Mouse Init\n");
-	init_mouse();
+	if (init_mouse() != 0)
+		printf("[Kernel] Cannot init mouse\n");
 
 	/* init pci devices */
 	printf("[Kernel] PCI devices Init\n");

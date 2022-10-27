@@ -2,63 +2,101 @@
 #include <x86/interrupt.h>
 #include <proc/sched.h>
 #include <x86/io.h>
+#include <lib/ring_buffer.h>
 #include <fs/fs.h>
+#include <stderr.h>
+
+#define MOUSE_BUF_SIZE		2048
+#define MOUSE_EVENT_SIZE	3
 
 #define MOUSE_PORT		0x60
 #define MOUSE_STATUS		0x64
+#define MOUSE_COMMAND		0x64
+
+#define MOUSE_CMD_WRITE		0x60
+#define MOUSE_MAGIC_WRITE	0xD4
 
 #define MOUSE_BBIT		0x01
 #define MOUSE_FBIT		0x20
 #define MOUSE_VBIT		0x08
+#define MOUSE_BUTTON_LEFT	0x01
+#define MOUSE_BUTTON_RIGHT	0x02
+#define MOUSE_BUTTON_MIDDLE	0x04
 
-#define BUTTON_LEFT		0x01
-#define BUTTON_RIGHT		0x02
-#define BUTTON_MIDDLE		0x04
+#define MOUSE_OBUF_FULL		0x21
+#define MOUSE_INTS_ON		0x47
+#define MOUSE_INTS_OFF		0x65
+#define MOUSE_DISABLE		0xA7
+#define MOUSE_ENABLE		0xA8
+#define MOUSE_SET_RES		0xE8
+#define MOUSE_SET_SCALE11	0xE6
+#define MOUSE_SET_SCALE21	0xE7
+#define MOUSE_SET_SAMPLE	0xF3
+#define MOUSE_ENABLE_DEV	0xF4
 
-/* mouse event */
-static struct mouse_event_t mouse_event;
-static uint8_t mouse_byte[4];
+/* mouse static variables */
+static struct ring_buffer_t mouse_rb;
+static uint8_t mouse_byte[MOUSE_EVENT_SIZE];
 static int mouse_cycle = 0;
-static struct wait_queue_t *mouse_wq = NULL;
 
 /*
- * Wait for mouse device.
+ * Wait for mouse.
  */
-static void mouse_wait(int type)
+static void mouse_poll_status_no_sleep()
 {
-	if (type)
-		while ((inb(MOUSE_STATUS) & 2) != 0);
-	else
-		while ((inb(MOUSE_STATUS) & 1) != 1);
+	while (inb(MOUSE_STATUS) & 0x03)
+		if ((inb(MOUSE_STATUS) & MOUSE_OBUF_FULL) == MOUSE_OBUF_FULL)
+			inb(MOUSE_PORT);
 }
 
 /*
- * Output a value a to mouse device.
+ * Write to mouse and handle ack.
  */
-static void mouse_output(uint8_t value)
+static int mouse_write_ack(int value)
 {
-	mouse_wait(1);
-	outb(MOUSE_STATUS, 0xD4);
-	mouse_wait(1);
+	/* write value */
+	mouse_poll_status_no_sleep();
+	outb(MOUSE_COMMAND, MOUSE_MAGIC_WRITE);
+	mouse_poll_status_no_sleep();
+	outb(MOUSE_PORT, value);
+	mouse_poll_status_no_sleep();
+
+	/* handle ack */
+	if ((inb(MOUSE_STATUS & MOUSE_OBUF_FULL)) == MOUSE_OBUF_FULL)
+		return inb(MOUSE_PORT);
+
+	return 0;
+}
+
+/*
+ * Write a command to mouse.
+ */
+static void mouse_write_cmd(int value)
+{
+	mouse_poll_status_no_sleep();
+	outb(MOUSE_COMMAND, MOUSE_CMD_WRITE);
+	mouse_poll_status_no_sleep();
 	outb(MOUSE_PORT, value);
 }
 
 /*
- * Read a value from mouse device.
+ * Write to mouse.
  */
-static uint8_t mouse_input()
+static void mouse_write_dev(int value)
 {
-	mouse_wait(0);
-	return inb(MOUSE_PORT);
+	mouse_poll_status_no_sleep();
+	outb(MOUSE_COMMAND, MOUSE_MAGIC_WRITE);
+	mouse_poll_status_no_sleep();
+	outb(MOUSE_PORT, value);
 }
 
 /*
- * Update mouse position.
+ * Compute mouse event.
  */
-static void mouse_update_position()
+static void mouse_compute_event()
 {
-	int move_x, move_y;
-	uint8_t state;
+	uint8_t state, event[MOUSE_EVENT_SIZE];
+	int move_x, move_y, buttons;
 
 	/* reset mouse cycle */
 	mouse_cycle = 0;
@@ -82,18 +120,22 @@ static void mouse_update_position()
 		move_y = 0;
 	}
 
-	/* set mouse event */
-	mouse_event.x = move_x;
-	mouse_event.y = move_y;
-	mouse_event.state = mouse_event.buttons;
-
 	/* set mouse event button */
-	if (state & BUTTON_LEFT)
-		mouse_event.buttons |= BUTTON_LEFT;
-	if (state & BUTTON_RIGHT)
-		mouse_event.buttons |= BUTTON_RIGHT;
-	if (state & BUTTON_MIDDLE)
-		mouse_event.buttons |= BUTTON_MIDDLE;
+	buttons = 0;
+	if (state & MOUSE_BUTTON_LEFT)
+		buttons |= MOUSE_BUTTON_LEFT;
+	if (state & MOUSE_BUTTON_RIGHT)
+		buttons |= MOUSE_BUTTON_RIGHT;
+	if (state & MOUSE_BUTTON_MIDDLE)
+		buttons |= MOUSE_BUTTON_MIDDLE;
+
+	/* put mouse event in ring buffer */
+	if (ring_buffer_left(&mouse_rb) >= MOUSE_EVENT_SIZE) {
+		event[0] = buttons;
+		event[1] = move_x;
+		event[2] = move_y;
+		ring_buffer_write(&mouse_rb, event, MOUSE_EVENT_SIZE);
+	}
 }
 
 /*
@@ -101,13 +143,17 @@ static void mouse_update_position()
  */
 static void mouse_handler(struct registers_t *regs)
 {
-	uint8_t status, value;
+	int status, value;
 
+	/* unused registers */
 	UNUSED(regs);
 
-	/* get mouse status */
+	/* check status */
 	status = inb(MOUSE_STATUS);
+	if ((status & MOUSE_OBUF_FULL) != MOUSE_OBUF_FULL)
+		return;
 
+	/* handle data */
 	if ((status & MOUSE_BBIT) && (status & MOUSE_FBIT)) {
 		value = inb(MOUSE_PORT);
 
@@ -127,16 +173,13 @@ static void mouse_handler(struct registers_t *regs)
 				/* get mouse y */
 				mouse_byte[2] = value;
 
-				/* update position */
-				mouse_update_position();
+				/* compute event */
+				mouse_compute_event();
 				break;
 			default:
 				break;
 		}
 	}
-
-	/* wake up readers */
-	task_wakeup_all(&mouse_wq);
 }
 
 /*
@@ -153,16 +196,31 @@ static int mouse_open(struct file_t *filp)
  */
 static int mouse_read(struct file_t *filp, char *buf, int n)
 {
+	/* unused filp */
 	UNUSED(filp);
 
-	/* copy mouse event */
-	if (n >= (int) sizeof(struct mouse_event_t))
-		memcpy(buf, &mouse_event, sizeof(struct mouse_event_t));
+	/* user must read at least 3 characters = mouse event size */
+	if (n < MOUSE_EVENT_SIZE)
+		return -EINVAL;
 
-	/* reset mouse event */
-	memset(&mouse_event, 0, sizeof(struct mouse_event_t));
+	/* read only one event */
+	return ring_buffer_read(&mouse_rb, (uint8_t *) buf, MOUSE_EVENT_SIZE);
+}
 
-	return 0;
+/*
+ * Writ to a mouse.
+ */
+static int mouse_write(struct file_t *filp, const char *buf, int n)
+{
+	int i;
+
+	/* unused filp */
+	UNUSED(filp);
+
+	for (i = 0; i < n; i++)
+		mouse_write_dev(buf[i]);
+
+	return n;
 }
 
 /*
@@ -170,16 +228,17 @@ static int mouse_read(struct file_t *filp, char *buf, int n)
  */
 static int mouse_poll(struct file_t *filp, struct select_table_t *wait)
 {
-	int mask = 0;
+	int mask = POLLOUT;
 
+	/* unused filp */
 	UNUSED(filp);
 
-	/* check if an event is queued */
-	if (mouse_event.x || mouse_event.y || mouse_event.buttons || mouse_event.state)
+	/* check if there is some characters to read */
+	if (ring_buffer_left(&mouse_rb) > 0)
 		mask |= POLLIN;
 
-	/* add wait queue to select table */
-	select_wait(&mouse_wq, wait);
+	/* add wait wait queue to select table */
+	select_wait(&mouse_rb.wait, wait);
 
 	return mask;
 }
@@ -187,42 +246,38 @@ static int mouse_poll(struct file_t *filp, struct select_table_t *wait)
 /*
  * Init mouse.
  */
-void init_mouse()
+int init_mouse()
 {
-	uint8_t status;
+	int ret;
+
+	/* create mouse buffer */
+	ret = ring_buffer_init(&mouse_rb, MOUSE_BUF_SIZE);
+	if (ret)
+		return ret;
 
 	/* register interrupt handler */
 	register_interrupt_handler(44, mouse_handler);
-
-	/* init mouse event */
-	mouse_event.x = 0;
-	mouse_event.y = 0;
-	mouse_event.buttons = 0;
-	mouse_event.state = 0;
 
 	/* empty mouse input buffer */
 	while (inb(MOUSE_STATUS) & 0x01)
 		inb(MOUSE_PORT);
 
-	/* activate mouse */
-	mouse_wait(1);
-	outb(MOUSE_STATUS, 0xA8);
-	mouse_wait(1);
-	outb(MOUSE_STATUS, 0x20);
-	mouse_wait(0);
-	status = inb(MOUSE_PORT) | 3;
-	mouse_wait(1);
-	outb(MOUSE_STATUS, 0x60);
-	mouse_wait(1);
-	outb(MOUSE_PORT, status);
+	/* setup mouse */
+	outb(MOUSE_COMMAND, MOUSE_ENABLE);
+	mouse_write_ack(MOUSE_SET_SAMPLE);
+	mouse_write_ack(100);
+	mouse_write_ack(MOUSE_SET_RES);
+	mouse_write_ack(3);
+	mouse_write_ack(MOUSE_SET_SCALE21);
+	mouse_poll_status_no_sleep();
 
-	/* set mouse rate */
-	mouse_output(0xF6);
-	mouse_input();
+	/* enable mouse */
+	outb(MOUSE_COMMAND, MOUSE_ENABLE);
+	mouse_write_dev(MOUSE_ENABLE_DEV);
+	mouse_write_cmd(MOUSE_INTS_ON);
+	mouse_poll_status_no_sleep();
 
-	/* start mouse */
-	mouse_output(0xF4);
-	mouse_input();
+	return 0;
 }
 
 /*
@@ -231,6 +286,7 @@ void init_mouse()
 static struct file_operations_t mouse_fops = {
 	.open		= mouse_open,
 	.read		= mouse_read,
+	.write		= mouse_write,
 	.poll		= mouse_poll,
 };
 
