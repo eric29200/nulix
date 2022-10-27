@@ -1,9 +1,13 @@
 #include <drivers/fb.h>
 #include <mm/mm.h>
 #include <mm/paging.h>
+#include <mm/mmap.h>
+#include <proc/sched.h>
+#include <fcntl.h>
 #include <string.h>
 #include <stderr.h>
 #include <stdio.h>
+#include <dev.h>
 
 /* direct frame buffer */
 static struct framebuffer_t direct_fb;
@@ -162,14 +166,64 @@ int fb_ioctl(struct file_t *filp, int request, unsigned long arg)
 
 	return ret;
 }
+
+/*
+ * Handle a page fault.
+ */
+static int fb_nopage(struct vm_area_t *vma, uint32_t address)
+{
+	struct framebuffer_t *fb = &direct_fb;
+	off_t offset;
+
+	/* page align address */
+	address = PAGE_ALIGN_DOWN(address);
+
+	/* compute offset */
+	offset = address - vma->vm_start + vma->vm_offset;
+	if (offset >= fb->real_height * fb->pitch)
+		return -EINVAL;
+
+	/* map address to physical framebuffer */
+	return map_page_phys(address, fb->addr + offset, current_task->mm->pgd, 0, 1);
+}
+
+/*
+ * Framebuffer virtual memory operations.
+ */
+static struct vm_operations_t fb_vm_ops = {
+	.nopage		= fb_nopage,
+};
+
+/*
+ * Framebuffer mmap.
+ */
+static int fb_mmap(struct inode_t *inode, struct vm_area_t *vma)
+{
+	/* offset must be page aligned */
+	if (vma->vm_offset & (PAGE_SIZE - 1))
+		return -EINVAL;
+
+	/* update inode */
+	inode->i_atime = CURRENT_TIME;
+	inode->i_dirt = 1;
+	inode->i_ref++;
+
+	/* set memory region */
+	vma->vm_inode = inode;
+	vma->vm_ops = &fb_vm_ops;
+
+	return 0;
+}
+
 /*
  * Framebuffer file operations.
  */
 static struct file_operations_t fb_fops = {
-	.open	= fb_open,
-	.read	= fb_read,
-	.write	= fb_write,
-	.ioctl	= fb_ioctl,
+	.open		= fb_open,
+	.read		= fb_read,
+	.write		= fb_write,
+	.ioctl		= fb_ioctl,
+	.mmap		= fb_mmap,
 };
 
 /*

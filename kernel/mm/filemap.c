@@ -14,10 +14,21 @@ static int filemap_nopage(struct vm_area_t *vma, uint32_t address)
 	off_t offset;
 	int ret;
 
+	/* page align address */
+	address = PAGE_ALIGN_DOWN(address);
+
 	/* compute offset */
-	offset = PAGE_ALIGN_DOWN(address) - vma->vm_start + vma->vm_offset;
+	offset = address - vma->vm_start + vma->vm_offset;
 	if (offset >= inode->i_size)
 		return -EINVAL;
+
+	/* just map page */
+	ret = map_page(address, current_task->mm->pgd, 0, 1);
+	if (ret)
+		return ret;
+
+	/* memzero page */
+	memset((void *) PAGE_ALIGN_DOWN(address), 0, PAGE_SIZE);
 
 	/* set temporary file */
 	filp.f_mode = O_RDONLY;
@@ -28,7 +39,7 @@ static int filemap_nopage(struct vm_area_t *vma, uint32_t address)
 	filp.f_op = inode->i_op->fops;
 
 	/* read page */
-	ret = do_read(&filp, (char *) PAGE_ALIGN_DOWN(address), PAGE_SIZE);
+	ret = do_read(&filp, (char *) address, PAGE_SIZE);
 	if (ret < 0)
 		return ret;
 

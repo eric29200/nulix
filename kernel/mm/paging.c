@@ -112,7 +112,7 @@ static int alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
 /*
  * Map a page.
  */
-static int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
+int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
 {
 	struct page_t *page;
 	int ret;
@@ -222,9 +222,13 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_direc
  */
 static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t address)
 {
-	int ret = 0;
+	int ret;
 
-	/* map page */
+	/* handle no page */
+	if (vma && vma->vm_ops && vma->vm_ops->nopage)
+		return vma->vm_ops->nopage(vma, address);
+
+	/* else just map page */
 	ret = map_page(address, task->mm->pgd, 0, 1);
 	if (ret)
 		return ret;
@@ -232,11 +236,7 @@ static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 	/* memzero page */
 	memset((void *) PAGE_ALIGN_DOWN(address), 0, PAGE_SIZE);
 
-	/* handle no page */
-	if (vma && vma->vm_ops && vma->vm_ops->nopage)
-		ret = vma->vm_ops->nopage(vma, address);
-
-	return ret;
+	return 0;
 }
 
 /*
