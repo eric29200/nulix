@@ -166,7 +166,7 @@ static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 			skb_free(skb);
 			sk->msg_position = 0;
 		} else {
-			sk->msg_position = count;
+			sk->msg_position += count;
 		}
 	}
 
