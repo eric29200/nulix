@@ -362,6 +362,10 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 			list_del(&skb->list);
 			skb_free(skb);
 
+			/* set other socket connected and wake up eventual clients connecting */
+			sk_new->other->sock->state = SS_CONNECTED;
+			task_wakeup_all(&sk_new->other->sock->wait);
+
 			return 0;
 		}
 
@@ -413,11 +417,15 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr)
 	list_add_tail(&skb->list, &other->skb_list);
 
 	/* wake up eventual reader */
-	task_wakeup(&other->sock->wait);
+	task_wakeup_all(&other->sock->wait);
 
 	/* set socket */
 	sk->other = other;
 	sock->state = SS_CONNECTING;
+
+	/* wait for an accept */
+	while (sock->state == SS_CONNECTING)
+		task_sleep(&sock->wait);
 
 	return 0;
 }
