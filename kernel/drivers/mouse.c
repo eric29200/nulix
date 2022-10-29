@@ -191,17 +191,20 @@ static int mouse_open(struct file_t *filp)
 	return 0;
 }
 
+#include <fcntl.h>
+
 /*
  * Read a mouse.
  */
 static int mouse_read(struct file_t *filp, char *buf, int n)
 {
-	/* unused filp */
-	UNUSED(filp);
-
 	/* user must read at least 3 characters = mouse event size */
 	if (n < MOUSE_EVENT_SIZE)
 		return -EINVAL;
+
+	/* check if enough characters is available */
+	if ((filp->f_flags & O_NONBLOCK) && mouse_rb.size < MOUSE_EVENT_SIZE)
+		return -EAGAIN;
 
 	/* read only one event */
 	return ring_buffer_read(&mouse_rb, (uint8_t *) buf, MOUSE_EVENT_SIZE);
