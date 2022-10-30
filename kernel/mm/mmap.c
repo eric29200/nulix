@@ -102,7 +102,7 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int prot, int f
 	vm->vm_ops = NULL;
 
 	/* unmap existing pages */
-	unmap_pages(vm->vm_start, vm->vm_end, current_task->mm->pgd);
+	do_munmap(addr, len);
 
 	/* add it to the list */
 	vm_prev = find_vma_prev(current_task, vm->vm_start);
@@ -194,6 +194,8 @@ void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file_t *fil
 
 	/* adjust length */
 	len = PAGE_ALIGN_UP(len);
+	if (len == 0)
+		return (void *) addr;
 
 	/* get unmapped area */
 	if (get_unmapped_area(&addr, len, flags))
@@ -208,11 +210,62 @@ void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file_t *fil
 }
 
 /*
+ * Unmap a region (create a hole if needed).
+ */
+static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
+{
+	struct vm_area_t *vm_new;
+
+	/* unmap the whole area */
+	if (addr == vm->vm_start && addr + len == vm->vm_end) {
+		list_del(&vm->list);
+		kfree(vm);
+		return 0;
+	}
+
+	/* shrink area */
+	if (addr >= vm->vm_start && addr + len == vm->vm_end)
+		vm->vm_end = addr;
+	if (addr == vm->vm_start && addr + len <= vm->vm_end) {
+		vm->vm_offset += (addr + len - vm->vm_start);
+		vm->vm_start = addr + len;
+	}
+
+	/* unmap a hole */
+	if (addr > vm->vm_start && addr + len < vm->vm_end) {
+		/* create new memory region */
+		vm_new = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
+		if (!vm_new)
+			return -ENOMEM;
+
+		/* set new memory region = after the hole */
+		vm_new->vm_start = addr + len;
+		vm_new->vm_end = vm->vm_end;
+		vm_new->vm_flags = vm->vm_flags;
+		vm_new->vm_offset = vm->vm_offset + (addr + len - vm->vm_start);
+		vm_new->vm_inode = vm->vm_inode;
+		if (vm_new->vm_inode)
+			vm_new->vm_inode->i_ref++;
+		vm_new->vm_ops = vm->vm_ops;
+
+		/* add new memory region after old one */
+		list_add(&vm_new->list, &vm->list);
+
+		/* update old memory region */
+		vm->vm_end = addr;
+	}
+
+	return 0;
+}
+
+/*
  * Memory unmap system call.
  */
 int do_munmap(uint32_t addr, size_t len)
 {
+	struct list_head_t *pos, *n;
 	struct vm_area_t *vm;
+	uint32_t start, end;
 
 	/* add must be page aligned */
 	if (addr & ~PAGE_MASK)
@@ -221,21 +274,24 @@ int do_munmap(uint32_t addr, size_t len)
 	/* adjust length */
 	len = PAGE_ALIGN_UP(len);
 
-	/* find memory region */
-	vm = find_vma(current_task, addr);
-	if (!vm || addr > vm->vm_start)
-		return 0;
+	/* find regions to unmap */
+	list_for_each_safe(pos, n, &current_task->mm->vm_list) {
+		vm = list_entry(pos, struct vm_area_t, list);
+		if (addr >= vm->vm_end)
+			continue;
+		if (addr + len <= vm->vm_start)
+			break;
 
-	/* shrink memory region */
-	if (vm->vm_end - vm->vm_start > len) {
-		vm->vm_end = addr;
-		return 0;
+		/* compute area to unmap */
+		start = addr < vm->vm_start ? vm->vm_start : addr;
+		end = addr + len > vm->vm_end ? vm->vm_end : addr + len;
+
+		/* unmap it */
+		unmap_fixup(vm, start, end - start);
 	}
 
-	/* free memory region */
-	unmap_pages(vm->vm_start, vm->vm_end, current_task->mm->pgd);
-	list_del(&vm->list);
-	kfree(vm);
+	/* unmap region */
+	unmap_pages(addr, addr + len, current_task->mm->pgd);
 
 	return 0;
 }
