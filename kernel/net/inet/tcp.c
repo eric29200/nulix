@@ -343,13 +343,16 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 		memcpy(msg->msg_iov[i].iov_base, buf, n);
 		count += n;
 		len -= n;
+		buf += n;
 	}
 
 	/* set source address */
 	sin = (struct sockaddr_in *) msg->msg_name;
-	sin->sin_family = AF_INET;
-	sin->sin_port = skb->h.tcp_header->src_port;
-	sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+	if (sin) {
+		sin->sin_family = AF_INET;
+		sin->sin_port = skb->h.tcp_header->src_port;
+		sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+	}
 
 	/* remove and free socket buffer or remember position packet */
 	if (!(flags & MSG_PEEK)) {

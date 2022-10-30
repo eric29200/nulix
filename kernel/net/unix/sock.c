@@ -200,6 +200,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 		memcpy(msg->msg_iov[i].iov_base, buf, n);
 		count += n;
 		len -= n;
+		buf += n;
 	}
 
 	/* set source address */
