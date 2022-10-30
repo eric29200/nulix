@@ -8,8 +8,7 @@ function configure_port() {
 		--disable-nls							\
 		--disable-threads						\
 		--disable-browser						\
-		--prefix="/usr"							\
-		LDFLAGS="-static"
+		--prefix="/usr"
 }
 
 function build_port() {

@@ -8,7 +8,7 @@ function configure_port() {
 }
 
 function build_port() {
-	make -j$NJOBS CC=$CC CXX=$CXX LD=$LD AR=$AR AS=$AS RANLIB=$RANLIB CFLAGS="-static" LDFLAGS="-static"
+	make -j$NJOBS CC=$CC CXX=$CXX LD=$LD AR=$AR AS=$AS RANLIB=$RANLIB
 }
 
 function install_port() {
