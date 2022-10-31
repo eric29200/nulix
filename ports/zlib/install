@@ -12,8 +12,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install DESTDIR=$MUSL_DIR
-
-	mkdir -p $SYSROOT/lib
-	cp -P libz.* $SYSROOT/lib/
+	make install DESTDIR=$SYSROOT
 }

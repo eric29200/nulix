@@ -15,11 +15,6 @@ function install_musl() {
 	# create musl install directory
 	rm -rf ../musl/musl-install
 	cp -R ../musl/musl-build/output ../musl/musl-install
-
-	# copy libraries to sysroot
-	echo $SYSROOT
-	mkdir -p $SYSROOT/lib/
-	cp -Rv ../musl/musl-install/i386-linux-musl/lib/* $SYSROOT/lib/
 }
 
 ##############################################
@@ -92,8 +87,6 @@ fi
 cd `dirname $0`
 BASE_DIR=`pwd`
 
-export SYSROOT=`realpath ../sysroot`
-
 # install musl directory
 if [[ ! -d "../musl/musl-install" ]]; then
 	install_musl
@@ -102,16 +95,16 @@ fi
 # global environ
 export TARGET=i386
 export NJOBS=`nproc`
-export MUSL_DIR=`realpath ../musl/musl-install/i386-linux-musl`
+export SYSROOT=`realpath ../musl/musl-install/i386-linux-musl`
 export CC=`realpath ../musl/musl-install/bin/i386-linux-musl-gcc`
 export CXX=`realpath ../musl/musl-install/bin/i386-linux-musl-g++`
 export LD=`realpath ../musl/musl-install/bin/i386-linux-musl-ld`
 export AR=`realpath ../musl/musl-install/bin/i386-linux-musl-ar`
 export AS=`realpath ../musl/musl-install/bin/i386-linux-musl-as`
 export RANLIB=`realpath ../musl/musl-install/bin/i386-linux-musl-ranlib`
-export PKG_CONFIG=$MUSL_DIR"/bin/pkgconf"
-export PKG_CONFIG_PATH=$MUSL_DIR"/lib/pkgconfig"
-export PKG_CONFIG_LIBDIR=$MUSL_DIR"/lib/pkgconfig"
+export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
+export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig"
+export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig"
 
 # get ports list
 PORTS=()

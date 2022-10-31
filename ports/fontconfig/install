@@ -8,7 +8,7 @@ function configure_port() {
 		--enable-shared					\
 		--disable-docs					\
 		--disable-nls					\
-		--prefix=$MUSL_DIR
+		--prefix=$SYSROOT
 }
 
 function build_port() {

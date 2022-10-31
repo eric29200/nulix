@@ -5,7 +5,7 @@ SRC_FILENAME="freetype-"$VERSION".tar.xz"
 function configure_port() {
 	./configure						\
 		--host=$TARGET					\
-		--prefix=$MUSL_DIR
+		--prefix=$SYSROOT
 }
 
 function build_port() {

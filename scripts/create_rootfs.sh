@@ -30,11 +30,18 @@ sudo mkdir -p tmp/mnt
 sudo mkdir -p tmp/tmp
 sudo mkdir -p tmp/sbin
 
-# create config files
+# populate disk
+sudo cp -R musl/musl-install/i386-linux-musl/lib tmp/
+sudo cp -R musl/musl-install/i386-linux-musl/share tmp/
+sudo cp -R musl/musl-install/i386-linux-musl/usr tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
-sudo cp -R sysroot/* tmp/
 sudo cp -R rootbase/root tmp/
 sudo cp usr/init tmp/sbin/
+
+# create links
+mkdir -p tmp/bin
+sudo ln -s /usr/bin/dash tmp/bin/sh
+sudo ln -s /lib/libc.so tmp/lib/ld-musl-i386.so.1
 sudo ln -s /proc/mounts tmp/etc/mtab
 
 # create devices nodes

@@ -6,7 +6,7 @@ function configure_port() {
 	autoreconf -i
 	./configure						\
 		--host=$TARGET					\
-		--prefix=$MUSL_DIR
+		--prefix=$SYSROOT
 }
 
 function build_port() {
