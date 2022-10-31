@@ -495,7 +495,7 @@ static void keyboard_handler(struct registers_t *regs)
 
 	if (scan_code == 0xE0 || scan_code == 0xE1) {
 		prev_scan_code = scan_code;
-		return;
+		goto end;
 	}
 
 	/* convert scan code to key code */
@@ -508,24 +508,24 @@ static void keyboard_handler(struct registers_t *regs)
 			/* pause key */
 			if (prev_scan_code == 0xE1 && scan_code == 0x1D) {
 				prev_scan_code = (uint8_t) 0x100;
-				return;
+				goto end;
 			} else if (prev_scan_code == (uint8_t) 0x100 && scan_code == 0x45) {
 				key_code = E1_PAUSE;
 				prev_scan_code = 0;
 			} else {
 				prev_scan_code = 0;
-				return;
+				goto end;
 			}
 		} else {
 			prev_scan_code = 0;
 
 			if (scan_code == 0x2A || scan_code == 0x36)
-				return;
+				goto end;
 
 			if (e0_keys[scan_code])
 				key_code = e0_keys[scan_code];
 			else
-				return;
+				goto end;
 		}
 	} else {
 		key_code = scan_code;
@@ -533,10 +533,10 @@ static void keyboard_handler(struct registers_t *regs)
 
 	/* raw mode */
 	if (kbd->kbdmode == VC_RAW) {
-		return;
+		goto end;
 	} else if (kbd->kbdmode == VC_MEDIUMRAW) {
 		putc(key_code + up_flag);
-		return;
+		goto end;
 	}
 
 	/* get key map */
@@ -560,6 +560,7 @@ static void keyboard_handler(struct registers_t *regs)
 		}
 	}
 
+end:
 	/* do cook */
 	tty_do_cook(tty);
 }

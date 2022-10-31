@@ -57,7 +57,7 @@ static int tty_open(struct file_t *filp)
 
 	return 0;
 }
-
+#include <fcntl.h>
 /*
  * Read TTY.
  */
@@ -74,6 +74,10 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 
 	/* read all characters */
 	while (count < n) {
+		/* non blocking mode : returns if no characters in cooked queue */
+		if ((filp->f_flags & O_NONBLOCK) && ring_buffer_empty(&tty->cooked_queue))
+			return -EAGAIN;
+
 		/* read key */
 		ring_buffer_read(&tty->cooked_queue, &key, 1);
 

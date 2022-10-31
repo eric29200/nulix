@@ -202,7 +202,7 @@ static int mouse_read(struct file_t *filp, char *buf, int n)
 	if (n < MOUSE_EVENT_SIZE)
 		return -EINVAL;
 
-	/* check if enough characters is available */
+	/* check if enough characters are available */
 	if ((filp->f_flags & O_NONBLOCK) && mouse_rb.size < MOUSE_EVENT_SIZE)
 		return -EAGAIN;
 
