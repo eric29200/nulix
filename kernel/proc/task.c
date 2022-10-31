@@ -117,7 +117,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	INIT_LIST_HEAD(&mm_new->vm_list);
 
 	/* clone page directory */
-	mm_new->pgd = clone_page_directory(mm ? mm->pgd : kernel_pgd);
+	mm_new->pgd = mm ? clone_page_directory(mm->pgd) : kernel_pgd;
 	if (!mm_new->pgd)
 		goto err;
 
