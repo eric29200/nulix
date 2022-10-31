@@ -631,6 +631,11 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			for (i = 0, mask = 1, vtstat->v_state = 0; i < NR_TTYS; i++, mask <<= 1)
 				vtstat->v_state |= mask;
 			return 0;
+		case VT_ACTIVATE:
+			if (arg >= NR_TTYS)
+				return -ENXIO;
+			tty_change(arg);
+			return 0;
 		default:
 			break;
 	}

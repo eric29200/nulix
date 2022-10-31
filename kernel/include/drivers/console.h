@@ -5,6 +5,7 @@
 
 /* ioctls */
 #define VT_GETSTATE		0x5603
+#define VT_ACTIVATE		0x5606
 
 /*
  * Console status.
