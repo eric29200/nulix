@@ -15,7 +15,6 @@
 
 /* current jiffies */
 volatile uint32_t jiffies = 0;
-volatile uint32_t time_offset_us = 0;
 
 /* time stamp counter */
 uint32_t last_tsc_low = 0;
@@ -85,9 +84,6 @@ static void pit_handler(struct registers_t *regs)
 
 	/* update jiffies */
 	jiffies++;
-
-	/* get time offset in micro second */
-	time_offset_us = get_time_offset();
 
 	/* schedule tasks */
 	schedule();
