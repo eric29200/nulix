@@ -503,6 +503,26 @@ void console_write(struct tty_t *tty)
 }
 
 /*
+ * Wait for a console activation.
+ */
+static int vt_waitactive(int n)
+{
+	for (;;) {
+		/* vt == current tty : exit */
+		if (n == current_tty)
+			break;
+
+		/* pending signals : exit */
+		if (!sigisemptyset(&current_task->sigpend))
+			return -EINTR;
+
+		/* sleep on waiting queue */
+		task_sleep(&vt_activate_wq);
+	}
+
+	return 0;
+}
+/*
  * Console ioctl.
  */
 int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
@@ -675,10 +695,8 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			if (arg == 0 || arg > NR_TTYS)
 				return -ENXIO;
 
-			if ((int) (arg - 1) != current_tty)
-				task_sleep(&vt_activate_wq);
-
-			return 0;
+			/* wait for console activation */
+			return vt_waitactive(arg - 1);
 		default:
 			break;
 	}
