@@ -8,6 +8,9 @@
 #include <dev.h>
 #include <kd.h>
 
+/* processes waiting for console activation */
+struct wait_queue_t *vt_activate_wq = NULL;
+
 /* ansi color table */
 static uint8_t ansi_color_table[] = {
 	0,	/* black */
@@ -504,7 +507,7 @@ void console_write(struct tty_t *tty)
  */
 int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 {
-	int i, new_func_len, old_func_len;
+	int i, new_func_len, old_func_len, newvt;
 	uint16_t *key_map, mask;
 	struct kbsentry_t *kbse;
 	struct vt_stat *vtstat;
@@ -645,9 +648,36 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			tty->vt_newvt = -1;
 			return 0;
 		case VT_ACTIVATE:
-			if (arg >= NR_TTYS)
+			if (arg == 0 || arg > NR_TTYS)
 				return -ENXIO;
-			tty_change(arg);
+			tty_change(arg - 1);
+			return 0;
+		case VT_RELDISP:
+			if (tty->vt_mode.mode != VT_PROCESS)
+				return -EINVAL;
+
+			/* change tty */
+			if (tty->vt_newvt >= 0) {
+				if (arg == 0) {
+					tty->vt_newvt = -1;
+					return 0;
+				}
+
+				newvt = tty->vt_newvt;
+				tty->vt_newvt = -1;
+				tty_complete_change(newvt);
+			} else if (arg != VT_ACKACQ) {
+				return -EINVAL;
+			}
+
+			return 0;
+		case VT_WAITACTIVE:
+			if (arg == 0 || arg > NR_TTYS)
+				return -ENXIO;
+
+			if ((int) (arg - 1) != current_tty)
+				task_sleep(&vt_activate_wq);
+
 			return 0;
 		default:
 			break;

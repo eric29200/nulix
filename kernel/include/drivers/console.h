@@ -9,6 +9,7 @@
 #define VT_GETSTATE		0x5603
 #define VT_RELDISP		0x5605
 #define VT_ACTIVATE		0x5606
+#define VT_WAITACTIVE		0x5607
 
 #define	VT_AUTO			0x00	/* auto vt switching */
 #define	VT_PROCESS		0x01	/* process controls switching */
@@ -34,5 +35,7 @@ struct vt_mode {
 	uint16_t	acqsig;		/* signal to raise on acquisition */
 	uint16_t	frsig;		/* unused (set to 0) */
 };
+
+extern struct wait_queue_t *vt_activate_wq;
 
 #endif

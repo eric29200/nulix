@@ -213,22 +213,70 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 /*
  * Change current tty.
  */
-void tty_change(int n)
+void tty_complete_change(int n)
 {
 	struct framebuffer_t *fb;
+	struct tty_t *tty_new;
 
-	if (n >= 0 && n < NR_TTYS) {
-		if (current_tty != n) {
-			/* refresh frame buffer */
-			fb = &tty_table[n].fb;
-			fb->ops->update_region(fb, 0, fb->width * fb->height);
+	/* check tty */
+	if (n < 0 || n >= NR_TTYS || n == current_tty)
+		return;
 
-			/* set current tty */
-			tty_table[current_tty].fb.active = 0;
-			current_tty = n;
-			tty_table[current_tty].fb.active = 1;
-		}
+	/* get current tty */
+	tty_new = &tty_table[n];
+
+	/* if new console is in process mode, acquire it */
+	if (tty_new->vt_mode.mode == VT_PROCESS) {
+		/* send acquire signal */
+		if (task_signal(tty_new->vt_pid, tty_new->vt_mode.acqsig) != 0)
+			reset_vc(tty_new);
 	}
+
+	/* refresh frame buffer */
+	fb = &tty_new->fb;
+	fb->ops->update_region(fb, 0, fb->width * fb->height);
+	fb->active = 1;
+
+	/* set current tty */
+	tty_table[current_tty].fb.active = 0;
+	current_tty = n;
+
+	/* wake up eventual processes */
+	task_wakeup(&vt_activate_wq);
+}
+
+/*
+ * Change current tty.
+ */
+void tty_change(int n)
+{
+	struct tty_t *tty;
+
+	/* check tty */
+	if (n < 0 || n >= NR_TTYS || n == current_tty)
+		return;
+
+	/* get current tty */
+	tty = &tty_table[current_tty];
+
+	/* in process mode, handshake realase/acquire */
+	if (tty->vt_mode.mode == VT_PROCESS) {
+		/* send release signal */
+		if (task_signal(tty->vt_pid, tty->vt_mode.relsig) == 0) {
+			tty->vt_newvt = n;
+			return;
+		}
+
+		/* on error reset console */
+		reset_vc(tty);
+	}
+
+	/* ignore switches in KD_GRAPHICS mode */
+	if (tty->mode == KD_GRAPHICS)
+		return;
+
+	/* change tty */
+	tty_complete_change(n);
 }
 
 /*

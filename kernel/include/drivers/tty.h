@@ -93,6 +93,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb);
 struct tty_t *tty_lookup(dev_t dev);
 void tty_do_cook(struct tty_t *tty);
 void tty_change(int n);
+void tty_complete_change(int n);
 void tty_default_attr(struct tty_t *tty);
 void tty_update_attr(struct tty_t *tty);
 
