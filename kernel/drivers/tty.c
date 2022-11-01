@@ -232,13 +232,16 @@ void tty_complete_change(int n)
 			reset_vc(tty_new);
 	}
 
-	/* refresh frame buffer */
+	/* disable current frame buffer */
+	tty_table[current_tty].fb.active = 0;
+
+	/* refresh new frame buffer */
 	fb = &tty_new->fb;
-	fb->ops->update_region(fb, 0, fb->width * fb->height);
 	fb->active = 1;
+	if (tty_new->mode == KD_TEXT)
+		fb->ops->update_region(fb, 0, fb->width * fb->height);
 
 	/* set current tty */
-	tty_table[current_tty].fb.active = 0;
 	current_tty = n;
 
 	/* wake up eventual processes */
