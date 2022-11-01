@@ -580,5 +580,4 @@ void init_keyboard()
 	memset(&kbd, 0, sizeof(struct kbd_t));
 	for (i = 0; i < NR_TTYS; i++)
 		kbd_table[i] = kbd;
-
 }

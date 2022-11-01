@@ -1,5 +1,6 @@
 #include <drivers/console.h>
 #include <drivers/keyboard.h>
+#include <proc/sched.h>
 #include <mm/mm.h>
 #include <stdio.h>
 #include <string.h>
@@ -634,6 +635,15 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			for (i = 0, mask = 1, vtstat->v_state = 0; i < NR_TTYS; i++, mask <<= 1)
 				vtstat->v_state |= mask;
 			return 0;
+		case VT_GETMODE:
+			*((struct vt_mode *) arg) = tty->vt_mode;
+			return 0;
+		case VT_SETMODE:
+			tty->vt_mode = *((struct vt_mode *) arg);
+			tty->vt_mode.frsig = 0;
+			tty->vt_pid = current_task->pid;
+			tty->vt_newvt = -1;
+			return 0;
 		case VT_ACTIVATE:
 			if (arg >= NR_TTYS)
 				return -ENXIO;
@@ -645,3 +655,20 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 
 	return -ENOIOCTLCMD;
 }
+
+/*
+ * Reset a virtual console.
+ */
+void reset_vc(struct tty_t *tty)
+{
+	tty->mode = KD_TEXT;
+	kbd_table[tty->dev - DEV_TTY0 - 1].kbdmode = VC_XLATE;
+	tty->vt_mode.mode = VT_AUTO;
+	tty->vt_mode.waitv = 0;
+	tty->vt_mode.relsig = 0;
+	tty->vt_mode.acqsig = 0;
+	tty->vt_mode.frsig = 0;
+	tty->vt_pid = -1;
+	tty->vt_newvt = -1;
+}
+

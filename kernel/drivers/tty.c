@@ -2,7 +2,6 @@
 #include <drivers/keyboard.h>
 #include <drivers/termios.h>
 #include <drivers/tty.h>
-#include <drivers/console.h>
 #include <drivers/pit.h>
 #include <proc/sched.h>
 #include <ipc/signal.h>
@@ -369,9 +368,9 @@ static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer
 	tty->dev = DEV_TTY0 + num;
 	tty->pgrp = 0;
 	tty->wait = NULL;
-	tty->mode = KD_TEXT;
 	tty->write = console_write;
 	tty->ioctl = console_ioctl;
+	reset_vc(tty);
 	tty_init_attr(tty);
 
 	/* init read queue */

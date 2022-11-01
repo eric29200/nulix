@@ -3,6 +3,7 @@
 
 #include <drivers/fb.h>
 #include <drivers/termios.h>
+#include <drivers/console.h>
 #include <lib/ring_buffer.h>
 #include <proc/wait.h>
 
@@ -76,6 +77,9 @@ struct tty_t {
 	uint8_t			deccm:1;						/* cursor visible */
 	int			canon_data;						/* canon data */
 	uint8_t			mode;							/* console mode (KD_TEXT or KD_GRAPHICS) */
+	struct vt_mode		vt_mode;						/* vt mode (AUTO or PROCESS) */
+	pid_t			vt_pid;							/* vt pid */
+	int			vt_newvt;						/* new asked vt */
 	struct winsize_t	winsize;						/* window size */
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */
@@ -84,12 +88,18 @@ struct tty_t {
 	int			(*ioctl)(struct tty_t *, int, unsigned long);		/* ioctl function */
 };
 
+/* tty functions */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
 struct tty_t *tty_lookup(dev_t dev);
 void tty_do_cook(struct tty_t *tty);
 void tty_change(int n);
 void tty_default_attr(struct tty_t *tty);
 void tty_update_attr(struct tty_t *tty);
+
+/* console functions */
+void console_write(struct tty_t *tty);
+int console_ioctl(struct tty_t *tty, int request, unsigned long arg);
+void reset_vc(struct tty_t *tty);
 
 extern struct inode_operations_t tty_iops;
 extern int current_tty;
