@@ -23,7 +23,8 @@ void sys_exit(int status)
 	current_task->state = TASK_ZOMBIE;
 	current_task->exit_code = status;
 
-	/* wakeup parent */
+	/* notify parent */
+	task_signal(current_task->parent->pid, SIGCHLD);
 	task_wakeup_all(&current_task->parent->wait_child_exit);
 
 	/* give children to init */

@@ -55,7 +55,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 
 		/* no children : return error */
 		if (!has_children)
-			return -ESRCH;
+			return -ECHILD;
 
 		/* no wait : return */
 		if (options & WNOHANG)
