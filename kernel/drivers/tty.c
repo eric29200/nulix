@@ -236,10 +236,11 @@ void tty_complete_change(int n)
 	tty_table[current_tty].fb.active = 0;
 
 	/* refresh new frame buffer */
-	fb = &tty_new->fb;
-	fb->active = 1;
-	if (tty_new->mode == KD_TEXT)
+	if (tty_new->mode == KD_TEXT) {
+		fb = &tty_new->fb;
+		fb->active = 1;
 		fb->ops->update_region(fb, 0, fb->width * fb->height);
+	}
 
 	/* set current tty */
 	current_tty = n;
