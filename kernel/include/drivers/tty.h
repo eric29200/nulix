@@ -75,6 +75,7 @@ struct tty_t {
 	uint16_t		erase_char;						/* erase character */
 	uint8_t			deccm:1;						/* cursor visible */
 	int			canon_data;						/* canon data */
+	uint8_t			mode;							/* console mode (KD_TEXT or KD_GRAPHICS) */
 	struct winsize_t	winsize;						/* window size */
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */

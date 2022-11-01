@@ -519,7 +519,10 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			*((char *) arg) = KB_101;
 			return 0;
 		case KDGETMODE:
-			*((char *) arg) = KD_TEXT;
+			*((uint8_t *) arg) = tty->mode;
+			return 0;
+		case KDSETMODE:
+			tty->mode = *((uint8_t *) arg);
 			return 0;
 		case KDGKBENT:
 			kbe = (struct kbentry_t *) arg;

@@ -17,6 +17,7 @@
 #define KD_GRAPHICS		0x01
 
 #define KDGKBTYPE		0x4B33
+#define KDSETMODE		0x4B3A
 #define KDGETMODE		0x4B3B
 #define KDGKBMODE		0x4B44
 #define KDSKBMODE		0x4B45
