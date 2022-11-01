@@ -634,8 +634,8 @@ int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			return 0;
 		case VT_GETSTATE:
 			vtstat = (struct vt_stat *) arg;
-			vtstat->v_active = current_tty;
-			for (i = 0, mask = 1, vtstat->v_state = 0; i < NR_TTYS; i++, mask <<= 1)
+			vtstat->v_active = current_tty + 1;
+			for (i = 0, mask = 2, vtstat->v_state = 1; i < NR_TTYS; i++, mask <<= 1)
 				vtstat->v_state |= mask;
 			return 0;
 		case VT_GETMODE:
