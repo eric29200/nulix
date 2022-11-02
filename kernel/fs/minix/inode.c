@@ -148,8 +148,11 @@ int minix_write_inode(struct inode_t *inode)
 	raw_inode->i_ctime = inode->i_ctime;
 	raw_inode->i_gid = inode->i_gid;
 	raw_inode->i_nlinks = inode->i_nlinks;
-	for (i = 0; i < 10; i++)
-		raw_inode->i_zone[i] = inode->u.minix_i.i_zone[i];
+	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
+		raw_inode->i_zone[0] = inode->i_rdev;
+	else
+		for (i = 0; i < 10; i++)
+			raw_inode->i_zone[i] = inode->u.minix_i.i_zone[i];
 
 	/* write inode block */
 	bh->b_dirt = 1;
