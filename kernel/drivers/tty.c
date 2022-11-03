@@ -8,12 +8,14 @@
 #include <stdio.h>
 #include <stderr.h>
 #include <ctype.h>
+#include <fcntl.h>
 #include <time.h>
 #include <dev.h>
 #include <kd.h>
 
 /* global ttys */
-static struct tty_t tty_table[NR_TTYS];
+struct tty_t tty_table[NR_TTYS];
+struct tty_t pty_table[NR_PTYS];
 int current_tty;
 
 /*
@@ -28,9 +30,21 @@ struct tty_t *tty_lookup(dev_t dev)
 		if (current_task->tty == DEV_TTY0)
 			return current_tty >= 0 ? &tty_table[current_tty] : NULL;
 
-		for (i = 0; i < NR_TTYS; i++)
-			if (current_task->tty == tty_table[i].dev)
-				return &tty_table[i];
+		/* find current task tty or pty */
+		switch (major(current_task->tty)) {
+			case major(DEV_TTY0):
+				for (i = 0; i < NR_TTYS; i++)
+					if (current_task->tty == tty_table[i].dev)
+						return &tty_table[i];
+				break;
+			case DEV_PTS_MAJOR:
+				for (i = 0; i < NR_PTYS; i++)
+					if (current_task->tty == pty_table[i].dev)
+						return &pty_table[i];
+				break;
+			default:
+				break;
+		}
 
 		return NULL;
 	}
@@ -39,9 +53,13 @@ struct tty_t *tty_lookup(dev_t dev)
 	if (dev == DEV_TTY0)
 		return current_tty >= 0 ? &tty_table[current_tty] : NULL;
 
-	/* asked tty */
-	if (minor(dev) > 0 && minor(dev) <= NR_TTYS)
+	/* tty */
+	if (major(dev) == major(DEV_TTY0) && minor(dev) > 0 && minor(dev) <= NR_TTYS)
 		return &tty_table[minor(dev) - 1];
+
+	/* pty */
+	if (major(dev) == DEV_PTS_MAJOR && minor(dev) < NR_PTYS)
+		return &pty_table[minor(dev)];
 
 	return NULL;
 }
@@ -51,13 +69,33 @@ struct tty_t *tty_lookup(dev_t dev)
  */
 static int tty_open(struct file_t *filp)
 {
+	struct tty_t *tty;
+
+	/* get tty */
+	tty = tty_lookup(filp->f_inode->i_rdev);
+	if (!tty)
+		return -EINVAL;
+
+	/* attach tty to file */
+	filp->f_private = tty;
+
 	/* set current task tty */
-	if (major(filp->f_inode->i_rdev) == major(DEV_TTY0))
-		current_task->tty = filp->f_inode->i_rdev;
+	switch (major(filp->f_inode->i_rdev)) {
+		case major(DEV_TTY0):
+		case DEV_PTS_MAJOR:
+			/* set current's task tty */
+			current_task->tty = filp->f_inode->i_rdev;
+
+			/* set tty process group */
+			tty->pgrp = current_task->pgid;
+			break;
+		default:
+			break;
+	}
 
 	return 0;
 }
-#include <fcntl.h>
+
 /*
  * Read TTY.
  */
@@ -65,10 +103,10 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 {
 	struct tty_t *tty;
 	int count = 0;
-	uint8_t key;
+	uint8_t c;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_rdev);
+	tty = filp->f_private;
 	if (!tty)
 		return -EINVAL;
 
@@ -78,14 +116,14 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 		if ((filp->f_flags & O_NONBLOCK) && ring_buffer_empty(&tty->cooked_queue))
 			return -EAGAIN;
 
-		/* read key */
-		ring_buffer_read(&tty->cooked_queue, &key, 1);
+		/* read char */
+		ring_buffer_read(&tty->cooked_queue, &c, 1);
 
-		/* add key to buffer */
-		((unsigned char *) buf)[count++] = key;
+		/* add char to buffer */
+		((unsigned char *) buf)[count++] = c;
 
 		/* end of line : return */
-		if (L_CANON(tty) && key == '\n') {
+		if (L_CANON(tty) && c == '\n') {
 			tty->canon_data--;
 			break;
 		}
@@ -106,10 +144,10 @@ static void out_char(struct tty_t *tty, uint8_t c)
 	if (ISCNTRL(c) && !ISSPACE(c) && L_ECHOCTL(tty)) {
 		ring_buffer_putc(&tty->write_queue, '^');
 		ring_buffer_putc(&tty->write_queue, c + 64);
-		tty->write(tty);
+		tty->driver->write(tty);
 	} else {
 		ring_buffer_putc(&tty->write_queue, c);
-		tty->write(tty);
+		tty->driver->write(tty);
 	}
 }
 
@@ -189,12 +227,12 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 	int i;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_rdev);
+	tty = filp->f_private;
 	if (!tty)
 		return -EINVAL;
 
 	/* write not implemented */
-	if (!tty->write)
+	if (!tty->driver->write)
 		return -EINVAL;
 
 	/* put characters in write queue */
@@ -204,7 +242,7 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 
 		/* write to tty */
 		if (ring_buffer_full(&tty->write_queue) || i == n - 1)
-			tty->write(tty);
+			tty->driver->write(tty);
 	}
 
 	return n;
@@ -292,7 +330,7 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 	int ret;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_rdev);
+	tty = filp->f_private;
 	if (!tty)
 		return -EINVAL;
 
@@ -319,13 +357,13 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 			tty->pgrp = *((pid_t *) arg);
 			break;
 		default:
-			if (tty->ioctl) {
-				ret = tty->ioctl(tty, request, arg);
+			if (tty->driver->ioctl) {
+				ret = tty->driver->ioctl(tty, request, arg);
 				if (ret != -ENOIOCTLCMD)
 					return ret;
 			}
 
-			printf("Unknown ioctl request (%x) on device %x\n", request, filp->f_inode->i_rdev);
+			printf("Unknown ioctl request (%x) on device %x\n", request, (int) filp->f_inode->i_rdev);
 			break;
 	}
 
@@ -352,7 +390,7 @@ static int tty_poll(struct file_t *filp, struct select_table_t *wait)
 	int mask = 0;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_rdev);
+	tty = filp->f_private;
 	if (!tty)
 		return -EINVAL;
 
@@ -413,15 +451,15 @@ void tty_update_attr(struct tty_t *tty)
 /*
  * Init a tty.
  */
-static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer *tag_fb)
+int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver, struct multiboot_tag_framebuffer *tag_fb)
 {
 	int ret;
 
-	tty->dev = DEV_TTY0 + num;
+	tty->dev = dev;
 	tty->pgrp = 0;
 	tty->wait = NULL;
-	tty->write = console_write;
-	tty->ioctl = console_ioctl;
+	tty->link = NULL;
+	tty->driver = driver;
 	reset_vc(tty);
 	tty_init_attr(tty);
 
@@ -441,15 +479,15 @@ static int tty_init(struct tty_t *tty, int num, struct multiboot_tag_framebuffer
 		return ret;
 
 	/* init frame buffer */
-	ret = init_framebuffer(&tty->fb, tag_fb, tty->erase_char, 0);
-	if (ret)
-		return ret;
+	if (tag_fb) {
+		ret = init_framebuffer(&tty->fb, tag_fb, tty->erase_char, 0);
+		if (ret)
+			return ret;
 
-	/* set winsize */
-	tty->winsize.ws_row = tty->fb.height - 1;
-	tty->winsize.ws_col = tty->fb.width - 1;
-	tty->winsize.ws_xpixel = 0;
-	tty->winsize.ws_ypixel = 0;
+		/* set winsize */
+		tty->winsize.ws_row = tty->fb.height - 1;
+		tty->winsize.ws_col = tty->fb.width - 1;
+	}
 
 	/* init termios */
 	tty->termios = (struct termios_t) {
@@ -485,22 +523,25 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 	for (i = 0; i < NR_TTYS; i++)
 		memset(&tty_table[i], 0, sizeof(struct tty_t));
 
-	/* init each tty */
+	/* init consoles */
 	for (i = 0; i < NR_TTYS; i++) {
-		ret = tty_init(&tty_table[i], i + 1, tag_fb);
+		ret = tty_init_dev(&tty_table[i], DEV_TTY0 + i + 1, &console_driver, tag_fb);
 		if (ret)
-			break;
+			goto err;
 	}
 
 	/* set current tty to first tty */
 	current_tty = 0;
 	tty_table[current_tty].fb.active = 1;
 
-	/* on error destroy ttys */
-	if (ret)
-		for (i = 0; i < NR_TTYS; i++)
-			tty_destroy(&tty_table[i]);
+	/* init ptys */
+	init_pty();
 
+	return 0;
+err:
+	/* destroy ttys */
+	for (i = 0; i < NR_TTYS; i++)
+		tty_destroy(&tty_table[i]);
 	return ret;
 }
 
@@ -521,4 +562,3 @@ static struct file_operations_t tty_fops = {
 struct inode_operations_t tty_iops = {
 	.fops		= &tty_fops,
 };
-

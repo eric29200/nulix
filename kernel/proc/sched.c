@@ -277,7 +277,7 @@ void task_wakeup_all(struct wait_queue_t **wq)
 	if (!tmp)
 		return;
 
-	/* wakt up all tasks */
+	/* wake up all tasks */
 	do {
 		if (tmp->task->state == TASK_SLEEPING)
 			tmp->task->state = TASK_RUNNING;

@@ -341,8 +341,9 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 /*
  * Write to TTY.
  */
-void console_write(struct tty_t *tty)
+static ssize_t console_write(struct tty_t *tty)
 {
+	ssize_t count = 0;
 	uint8_t c;
 
 	/* remove cursor */
@@ -353,6 +354,7 @@ void console_write(struct tty_t *tty)
 	while (tty->write_queue.size > 0) {
 		/* get next character */
 		ring_buffer_read(&tty->write_queue, &c, 1);
+		count++;
 
 		/* start an escape sequence or write to frame buffer */
 		if (tty->state == TTY_STATE_NORMAL) {
@@ -500,6 +502,8 @@ void console_write(struct tty_t *tty)
 	/* update cursor */
 	if (tty->deccm && tty->fb.active)
 		tty->fb.ops->update_cursor(&tty->fb);
+
+	return count;
 }
 
 /*
@@ -525,7 +529,7 @@ static int vt_waitactive(int n)
 /*
  * Console ioctl.
  */
-int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
+static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 {
 	int i, new_func_len, old_func_len, newvt;
 	uint16_t *key_map, mask;
@@ -719,4 +723,12 @@ void reset_vc(struct tty_t *tty)
 	tty->vt_pid = -1;
 	tty->vt_newvt = -1;
 }
+
+/*
+ * Console driver.
+ */
+struct tty_driver_t console_driver = {
+	.write		= console_write,
+	.ioctl		= console_ioctl,
+};
 

@@ -30,8 +30,20 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
 		return &random_iops;
 
 	/* tty driver */
-	if (major(inode->i_rdev) == major(DEV_TTY) || major(inode->i_rdev) == major(DEV_TTY0))
+	if (major(inode->i_rdev) == major(DEV_TTY0))
 		return &tty_iops;
+
+	/* console driver */
+	if (inode->i_rdev == DEV_TTY)
+		return &tty_iops;
+
+	/* ptmx driver */
+	if (inode->i_rdev == DEV_PTMX)
+		return &ptm_iops;
+
+	/* pty driver */
+	if (major(inode->i_rdev) == DEV_PTS_MAJOR)
+		return &pts_iops;
 
 	/* mouse driver */
 	if (major(inode->i_rdev) == DEV_MOUSE_MAJOR)

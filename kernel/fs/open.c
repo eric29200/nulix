@@ -54,7 +54,13 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	/* open file */
 	ret = open_namei(dirfd, pathname, flags, mode, &inode);
 	if (ret != 0)
-		return ret;
+		goto err;
+
+	/* check inode operations */
+	if (!inode->i_op) {
+		ret = -EINVAL;
+		goto err;
+	}
 
 	/* set file */
 	current_task->files->filp[fd] = filp;
@@ -66,10 +72,16 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	filp->f_op = inode->i_op->fops;
 
 	/* specific open function */
-	if (filp->f_op && filp->f_op->open)
-		filp->f_op->open(filp);
+	if (filp->f_op && filp->f_op->open) {
+		ret = filp->f_op->open(filp);
+		if (ret)
+			goto err;
+	}
 
 	return fd;
+err:
+	memset(filp, 0, sizeof(struct file_t));
+	return ret;
 }
 
 /*

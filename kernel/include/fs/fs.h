@@ -100,6 +100,7 @@ struct file_t {
 	size_t				f_pos;
 	int				f_ref;
 	struct inode_t *		f_inode;
+	void *				f_private;
 	struct file_operations_t *	f_op;
 };
 

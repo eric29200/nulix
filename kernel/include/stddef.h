@@ -53,8 +53,8 @@ typedef struct {
 #define div_floor(x, y)				((x) / (y))
 #define div_ceil(x, y)				(((x) / (y)) + (((x) % (y)) > 0 ? 1 : 0))
 
-#define major(dev)				((unsigned short) ((dev) >> 8))
-#define minor(dev)				((unsigned short) ((dev) & 0xFF))
+#define major(dev)				((dev) >> 8)
+#define minor(dev)				((dev) & 0xFF)
 #define mkdev(major, minor)		 	(((major) << 8) | (minor))
 
 #endif

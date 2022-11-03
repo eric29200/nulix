@@ -8,6 +8,7 @@
 #include <proc/wait.h>
 
 #define NR_TTYS			4
+#define NR_PTYS			16
 #define TTY_BUF_SIZE		1024
 #define TTY_ESC_BUF_SIZE	16
 #define TTY_DELAY_UPDATE_MS	20
@@ -55,6 +56,15 @@
 #define O_LCUC(tty)		_O_FLAG((tty),OLCUC)
 
 /*
+ * TTY driver.
+ */
+struct tty_t;
+struct tty_driver_t {
+	ssize_t			(*write)(struct tty_t *);				/* write function */
+	int			(*ioctl)(struct tty_t *, int, unsigned long);		/* ioctl function */
+};
+
+/*
  * TTY structure.
  */
 struct tty_t {
@@ -84,12 +94,13 @@ struct tty_t {
 	struct termios_t	termios;						/* terminal i/o */
 	struct framebuffer_t	fb;							/* framebuffer of the tty */
 	struct wait_queue_t *	wait;							/* wait queue */
-	void			(*write)(struct tty_t *);				/* write function */
-	int			(*ioctl)(struct tty_t *, int, unsigned long);		/* ioctl function */
+	struct tty_t *		link;							/* linked tty */
+	struct tty_driver_t *	driver;							/* tty driver */
 };
 
 /* tty functions */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
+int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver, struct multiboot_tag_framebuffer *tag_fb);
 struct tty_t *tty_lookup(dev_t dev);
 void tty_do_cook(struct tty_t *tty);
 void tty_change(int n);
@@ -98,11 +109,22 @@ void tty_default_attr(struct tty_t *tty);
 void tty_update_attr(struct tty_t *tty);
 
 /* console functions */
-void console_write(struct tty_t *tty);
-int console_ioctl(struct tty_t *tty, int request, unsigned long arg);
 void reset_vc(struct tty_t *tty);
 
+/* ptys functions */
+void init_pty();
+
+/* drivers */
+extern struct tty_driver_t console_driver;
+
+/* inode operations */
 extern struct inode_operations_t tty_iops;
+extern struct inode_operations_t ptm_iops;
+extern struct inode_operations_t pts_iops;
+
+/* global ttys table */
+extern struct tty_t tty_table[NR_TTYS];
+extern struct tty_t pty_table[NR_PTYS];
 extern int current_tty;
 
 #endif
