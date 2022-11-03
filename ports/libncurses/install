@@ -11,7 +11,7 @@ function configure_port() {
 		--enable-overwrite				\
 		--enable-pc-files				\
 		--with-pkg-config-libdir="/lib/pkgconfig"	\
-		--prefix="/"					\
+		--prefix="/usr"					\
 		DESTDIR=$SYSROOT
 }
 

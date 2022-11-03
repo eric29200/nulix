@@ -20,6 +20,4 @@ function build_port() {
 
 function install_port() {
 	make install DESTDIR=$SYSROOT
-	cd $SYSROOT/bin
-	ln -sf vim vi
 }
