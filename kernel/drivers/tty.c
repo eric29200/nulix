@@ -70,6 +70,8 @@ struct tty_t *tty_lookup(dev_t dev)
 static int tty_open(struct file_t *filp)
 {
 	struct tty_t *tty;
+	int noctty;
+	dev_t dev;
 
 	/* get tty */
 	tty = tty_lookup(filp->f_inode->i_rdev);
@@ -79,18 +81,18 @@ static int tty_open(struct file_t *filp)
 	/* attach tty to file */
 	filp->f_private = tty;
 
-	/* set current task tty */
-	switch (major(filp->f_inode->i_rdev)) {
-		case major(DEV_TTY0):
-		case DEV_PTS_MAJOR:
-			/* set current's task tty */
-			current_task->tty = filp->f_inode->i_rdev;
+	/* get tty device number */
+	dev = filp->f_inode->i_rdev;
 
-			/* set tty process group */
-			tty->pgrp = current_task->pgid;
-			break;
-		default:
-			break;
+	/* check if tty must be associated to process */
+	noctty = filp->f_flags & O_NOCTTY;
+	if (dev == DEV_TTY || dev == DEV_TTY0 || dev == DEV_PTMX)
+		noctty = 1;
+
+	/* associate tty */
+	if (!noctty && current_task->leader) {
+		current_task->tty = filp->f_inode->i_rdev;
+		tty->pgrp = current_task->pgid;
 	}
 
 	return 0;
@@ -532,10 +534,10 @@ int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver, stru
 
 	/* init termios */
 	tty->termios = (struct termios_t) {
-		.c_iflag	= ICRNL,
+		.c_iflag	= ICRNL | IXON,
 		.c_oflag	= OPOST | ONLCR,
-		.c_cflag	= 0,
-		.c_lflag	= IXON | ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,
+		.c_cflag	= B38400 | CS8 | CREAD | HUPCL,
+		.c_lflag	= ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN,
 		.c_line		= 0,
 		.c_cc		= INIT_C_CC,
 	};

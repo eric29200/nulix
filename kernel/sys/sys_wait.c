@@ -17,6 +17,10 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 	for (;;) {
 		has_children = 0;
 
+		/* process interruption */
+		if (!sigisemptyset(&current_task->sigpend))
+			return -ERESTARTSYS;
+
 		/* search zombie child */
 		list_for_each(pos, &current_task->list) {
 			task = list_entry(pos, struct task_t, list);

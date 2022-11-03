@@ -1,5 +1,6 @@
 #include <sys/syscall.h>
 #include <proc/sched.h>
+#include <drivers/tty.h>
 
 /*
  * Exit a task.
@@ -8,6 +9,7 @@ void sys_exit(int status)
 {
 	struct list_head_t *pos;
 	struct task_t *child;
+	struct tty_t *tty;
 
 	/* delete timer */
 	if (current_task->sig_tm.list.next)
@@ -35,6 +37,13 @@ void sys_exit(int status)
 			if (child->state == TASK_ZOMBIE)
 				task_wakeup_all(&init_task->wait_child_exit);
 		}
+	}
+
+	/* leader process : send signal to processes attached to tty */
+	if (current_task->leader) {
+		tty = tty_lookup(current_task->tty);
+		if (tty)
+			task_signal_group(tty->pgrp, SIGHUP);
 	}
 
 	/* call scheduler */

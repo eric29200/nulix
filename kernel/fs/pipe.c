@@ -18,6 +18,10 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 	while (count > 0) {
 		/* no data available */
 		while (!(size = PIPE_SIZE(inode))) {
+			/* process interruption */
+			if (!sigisemptyset(&current_task->sigpend))
+				return read;
+
 			/* wake up writer */
 			task_wakeup(&inode->u.pipe_i.i_wwait);
 
@@ -66,6 +70,10 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 	while (count > 0) {
 		/* no free space */
 		while (!(size = (PAGE_SIZE - 1) - PIPE_SIZE(inode))) {
+			/* process interruption */
+			if (!sigisemptyset(&current_task->sigpend))
+				return written;
+
 			/* wake up reader */
 			task_wakeup(&inode->u.pipe_i.i_rwait);
 

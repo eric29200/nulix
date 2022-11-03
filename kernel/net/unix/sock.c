@@ -425,8 +425,14 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr)
 	sock->state = SS_CONNECTING;
 
 	/* wait for an accept */
-	while (sock->state == SS_CONNECTING)
+	while (sock->state == SS_CONNECTING) {
+		/* signal received : restart system call */
+		if (!sigisemptyset(&current_task->sigpend))
+			return -ERESTARTSYS;
+
+		/* sleep */
 		task_sleep(&sock->wait);
+	}
 
 	return 0;
 }

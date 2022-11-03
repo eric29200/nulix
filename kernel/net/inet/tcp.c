@@ -521,8 +521,14 @@ static int tcp_close(struct sock_t *sk)
 		net_transmit(sk->dev, skb);
 
 	/* wait for ACK message */
-	while (sk->sock->state != SS_DISCONNECTING)
+	while (sk->sock->state != SS_DISCONNECTING) {
+		/* signal received : restart system call */
+		if (!sigisemptyset(&current_task->sigpend))
+			return -ERESTARTSYS;
+
+		/* sleep */
 		task_sleep(&sk->sock->wait);
+	}
 
 	return 0;
 }

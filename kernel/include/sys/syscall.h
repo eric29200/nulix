@@ -54,6 +54,7 @@
 #define __NR_chroot			61
 #define __NR_dup2			63
 #define __NR_getppid			64
+#define __NR_setsid			66
 #define __NR_sigaction			67
 #define __NR_symlink			83
 #define __NR_readlink			85
@@ -77,6 +78,7 @@
 #define __NR_select			142
 #define __NR_readv			145
 #define __NR_writev			146
+#define __NR_getsid			147
 #define __NR_nanosleep			162
 #define __NR_poll			168
 #define __NR_rt_sigaction		174
@@ -260,5 +262,7 @@ int sys_clone(uint32_t flags, uint32_t newsp);
 int sys_getrandom(void *buf, size_t buflen, unsigned int flags);
 int sys_mprotect(void *addr, size_t len, int prot);
 int sys_pread64(int fd, void *buf, size_t count, off_t offset);
+int sys_getsid(pid_t pid);
+int sys_setsid();
 
 #endif
