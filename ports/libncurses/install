@@ -4,11 +4,9 @@ SRC_FILENAME="ncurses-"$VERSION".tar.gz"
 
 function configure_port() {
 	./configure --host=$TARGET				\
-		--enable-term-driver				\
 		--without-ada					\
 		--enable-sigwinch				\
 		--enable-widec					\
-		--enable-overwrite				\
 		--enable-pc-files				\
 		--with-pkg-config-libdir="/lib/pkgconfig"	\
 		--prefix="/usr"					\
@@ -24,4 +22,9 @@ function install_port() {
 
 	cd $SYSROOT/lib/pkgconfig/
 	ln -s ncursesw.pc ncurses.pc
+	ln -s ncursesw.pc curses.pc
+
+	cd $SYSROOT/usr/lib/
+	ln -s libncursesw.a libncurses.a
+	ln -s libncursesw.a libcurses.a
 }
