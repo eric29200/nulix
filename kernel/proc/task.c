@@ -416,7 +416,7 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 
 	/* init task */
 	task->pid = get_next_pid();
-	task->pgid = parent ? parent->pgid : task->pid;
+	task->pgrp = parent ? parent->pgrp : task->pid;
 	task->session = parent ? parent->session : task->pid;
 	task->leader = 0;
 	task->state = TASK_RUNNING;

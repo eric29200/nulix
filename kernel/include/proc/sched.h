@@ -50,7 +50,7 @@ void task_wakeup(struct wait_queue_t **wq);
 void task_wakeup_all(struct wait_queue_t **wq);
 
 int task_signal(pid_t pid, int sig);
-int task_signal_group(pid_t pgid, int sig);
+int task_signal_group(pid_t pgrp, int sig);
 int task_signal_all(int sig);
 
 int do_signal(struct registers_t *regs);

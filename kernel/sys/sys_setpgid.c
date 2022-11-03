@@ -19,9 +19,9 @@ int sys_setpgid(pid_t pid, pid_t pgid)
 
 	/* set process group id (if pgid = 0, set task process group id to its pid */
 	if (pgid == 0)
-		task->pgid = task->pid;
+		task->pgrp = task->pid;
 	else
-		task->pgid = pgid;
+		task->pgrp = pgid;
 
 	return 0;
 }

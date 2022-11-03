@@ -72,7 +72,7 @@ struct signal_struct {
 struct task_t {
 	uint32_t			flags;				/* process flags */
 	pid_t				pid;				/* process id */
-	pid_t				pgid;				/* process group id */
+	pid_t				pgrp;				/* process group id */
 	pid_t				session;			/* process session id */
 	int				leader;				/* 1 if this process is the leader of the session */
 	uint8_t				state;				/* process state */

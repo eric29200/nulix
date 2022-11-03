@@ -18,5 +18,5 @@ pid_t sys_getpgid(pid_t pid)
 		return -1;
 
 	/* get process group id */
-	return task->pgid;
+	return task->pgrp;
 }

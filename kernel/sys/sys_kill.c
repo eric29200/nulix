@@ -22,7 +22,7 @@ int sys_kill(pid_t pid, int sig)
 		if (!task)
 			return -EINVAL;
 
-		return task_signal_group(task->pgid, sig);
+		return task_signal_group(task->pgrp, sig);
 	}
 
 	/* send signal to all processes (except init) */

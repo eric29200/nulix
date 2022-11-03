@@ -92,7 +92,7 @@ static int tty_open(struct file_t *filp)
 	/* associate tty */
 	if (!noctty && current_task->leader) {
 		current_task->tty = filp->f_inode->i_rdev;
-		tty->pgrp = current_task->pgid;
+		tty->pgrp = current_task->pgrp;
 	}
 
 	return 0;

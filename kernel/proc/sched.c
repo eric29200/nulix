@@ -341,14 +341,14 @@ int task_signal(pid_t pid, int sig)
 /*
  * Send a signal to all tasks in a group.
  */
-int task_signal_group(pid_t pgid, int sig)
+int task_signal_group(pid_t pgrp, int sig)
 {
 	struct list_head_t *pos;
 	struct task_t *task;
 
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task_t, list);
-		if (task->pgid == pgid)
+		if (task->pgrp == pgrp)
 			__task_signal(task, sig);
 	}
 
