@@ -315,8 +315,8 @@ static void __task_signal(struct task_t *task, int sig)
 	/* add to pending signals */
 	sigaddset(&task->sigpend, sig);
 
-	/* wakeup process if sleeping and sig is not masked */
-	if (!sigismember(&task->sigmask, sig) && (task->state == TASK_SLEEPING || task->state == TASK_STOPPED))
+	/* wakeup process if sleeping */
+	if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)
 		task->state = TASK_RUNNING;
 }
 

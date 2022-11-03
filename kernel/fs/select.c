@@ -215,9 +215,15 @@ end_check:
 		}
 		wait = NULL;
 
-		/* events catched or signal transmitted : break */
-		if (count || !sigisemptyset(&current_task->sigpend))
+		/* events catched : break */
+		if (count)
 			break;
+
+		/* signal catched : break */
+		if (!sigisemptyset(&current_task->sigpend)) {
+			count = -ERESTARTNOHAND;
+			break;
+		}
 
 		/* timeout : break */
 		if ((timeout->tv_sec == 0 && timeout->tv_nsec == 0) || (timeout && jiffies >= current_task->timeout))
