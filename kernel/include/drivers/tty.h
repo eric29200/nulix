@@ -51,6 +51,7 @@
 
 #define O_POST(tty)		_O_FLAG((tty),OPOST)
 #define O_NLCR(tty)		_O_FLAG((tty),ONLCR)
+#define O_NOCR(tty)		_O_FLAG((tty),ONOCR)
 #define O_CRNL(tty)		_O_FLAG((tty),OCRNL)
 #define O_NLRET(tty)		_O_FLAG((tty),ONLRET)
 #define O_LCUC(tty)		_O_FLAG((tty),OLCUC)

@@ -137,16 +137,57 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 }
 
 /*
+ * Post a character to tty.
+ */
+static int opost(struct tty_t *tty, uint8_t c)
+{
+	int space;
+
+	/* write queue is full */
+	space = ring_buffer_left(&tty->write_queue);
+	if (!space)
+		return -EINVAL;
+
+	/* handle special characters */
+	if (O_POST(tty)) {
+		switch (c) {
+			case '\n':
+				if (O_NLCR(tty)) {
+					if (space < 2)
+						return -EINVAL;
+
+					ring_buffer_putc(&tty->write_queue, '\r');
+				}
+				break;
+			case '\r':
+				if (O_NOCR(tty))
+					return 0;
+				if (O_CRNL(tty))
+					c = '\n';
+				break;
+			default:
+				if (O_LCUC(tty))
+					c = TOUPPER(c);
+				break;
+		}
+	}
+
+	/* post character */
+	ring_buffer_putc(&tty->write_queue, c);
+	return 0;
+}
+
+/*
  * Output/Echo a character.
  */
 static void out_char(struct tty_t *tty, uint8_t c)
 {
 	if (ISCNTRL(c) && !ISSPACE(c) && L_ECHOCTL(tty)) {
-		ring_buffer_putc(&tty->write_queue, '^');
-		ring_buffer_putc(&tty->write_queue, c + 64);
+		opost(tty, '^');
+		opost(tty, c + 64);
 		tty->driver->write(tty);
 	} else {
-		ring_buffer_putc(&tty->write_queue, c);
+		opost(tty, c);
 		tty->driver->write(tty);
 	}
 }
@@ -235,10 +276,10 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 	if (!tty->driver->write)
 		return -EINVAL;
 
-	/* put characters in write queue */
+	/* pos characters */
 	for (i = 0; i < n; i++) {
 		/* put next character */
-		ring_buffer_write(&tty->write_queue, &((uint8_t *) buf)[i], 1);
+		opost(tty, buf[i]);
 
 		/* write to tty */
 		if (ring_buffer_full(&tty->write_queue) || i == n - 1)
