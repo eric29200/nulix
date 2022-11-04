@@ -237,7 +237,7 @@ static int mouse_poll(struct file_t *filp, struct select_table_t *wait)
 	UNUSED(filp);
 
 	/* check if there is some characters to read */
-	if (ring_buffer_left(&mouse_rb) > 0)
+	if (!ring_buffer_empty(&mouse_rb))
 		mask |= POLLIN;
 
 	/* add wait wait queue to select table */
