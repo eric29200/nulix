@@ -99,6 +99,19 @@ static int tty_open(struct file_t *filp)
 }
 
 /*
+ * Close a TTY.
+ */
+static int tty_close(struct file_t *filp)
+{
+	struct tty_t *tty = filp->f_private;
+
+	if (tty->driver && tty->driver->close)
+		return tty->driver->close(tty);
+
+	return 0;
+}
+
+/*
  * Read TTY.
  */
 static int tty_read(struct file_t *filp, char *buf, int n)
@@ -593,6 +606,7 @@ err:
  */
 static struct file_operations_t tty_fops = {
 	.open		= tty_open,
+	.close		= tty_close,
 	.read		= tty_read,
 	.write		= tty_write,
 	.poll		= tty_poll,

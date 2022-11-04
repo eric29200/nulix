@@ -63,6 +63,7 @@ struct tty_t;
 struct tty_driver_t {
 	ssize_t			(*write)(struct tty_t *);				/* write function */
 	int			(*ioctl)(struct tty_t *, int, unsigned long);		/* ioctl function */
+	int			(*close)(struct tty_t *);				/* close function */
 };
 
 /*

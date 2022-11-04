@@ -46,7 +46,7 @@ static struct tty_driver_t pts_driver = {
 };
 
 /*
- * Pty master ioctl.
+ * Master pty ioctl.
  */
 static int ptm_ioctl(struct tty_t *tty, int request, unsigned long arg)
 {
@@ -64,11 +64,45 @@ static int ptm_ioctl(struct tty_t *tty, int request, unsigned long arg)
 }
 
 /*
+ * Master pty close.
+ */
+static int ptm_close(struct tty_t *tty)
+{
+	char name[PTY_NAME_LEN];
+	struct list_head_t *pos;
+	struct task_t *task;
+	int ret;
+
+	if (!tty->link)
+		return 0;
+
+	/* get device node */
+	sprintf(name, "/dev/pts/%d", tty->link->dev - mkdev(DEV_PTS_MAJOR, 0));
+
+	/* delete device node */
+	ret = do_unlink(AT_FDCWD, name);
+	if (ret)
+		return ret;
+
+	/* send SIGHUP signal to processes attached to slave pty */
+	list_for_each(pos, &current_task->list) {
+		task = list_entry(pos, struct task_t, list);
+		if (task->tty == tty->link->dev) {
+			task_signal(task->pid, SIGHUP);
+			task_signal(task->pid, SIGCONT);
+		}
+	}
+
+	return 0;
+}
+
+/*
  * Master pty driver.
  */
 static struct tty_driver_t ptm_driver = {
 	.write		= pty_write,
 	.ioctl		= ptm_ioctl,
+	.close		= ptm_close,
 };
 
 /*
