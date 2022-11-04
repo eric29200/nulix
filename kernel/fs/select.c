@@ -220,10 +220,8 @@ end_check:
 			break;
 
 		/* signal catched : break */
-		if (!sigisemptyset(&current_task->sigpend)) {
-			count = -ERESTARTNOHAND;
+		if (!sigisemptyset(&current_task->sigpend))
 			break;
-		}
 
 		/* timeout : break */
 		if ((timeout->tv_sec == 0 && timeout->tv_nsec == 0) || (timeout && jiffies >= current_task->timeout))
