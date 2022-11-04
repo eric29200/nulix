@@ -125,7 +125,7 @@ extern struct inode_operations_t pts_iops;
 
 /* global ttys table */
 extern struct tty_t tty_table[NR_TTYS];
-extern struct tty_t pty_table[NR_PTYS];
+extern struct tty_t pty_table[NR_PTYS * 2];
 extern int current_tty;
 
 #endif

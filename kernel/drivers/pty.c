@@ -78,21 +78,19 @@ static int ptmx_open(struct file_t *filp)
 {
 	struct tty_t *ptm = NULL, *pts = NULL;
 	char name[PTY_NAME_LEN];
-	int ret, i, j;
+	int ret, i;
 
-	/* find 2 free ptys (master and slave) */
-	for (i = 0, j = -1; i < NR_PTYS; i++)
-		if (pty_table[i].dev == 0 && j == -1)
-			j = i;
-		else if (pty_table[i].dev == 0)
+	/* find a free slave pty */
+	for (i = 0; i < NR_PTYS; i++)
+		if (pty_table[i].dev == 0)
 			break;
 
-	/* no free ptys : exit */
+	/* no free pty : exit */
 	if (i >= NR_PTYS)
 		return -ENOMEM;
 
 	/* create master pty */
-	ptm = &pty_table[j];
+	ptm = &pty_table[NR_PTYS + i];
 	memset(ptm, 0, sizeof(struct tty_t));
 	ret = tty_init_dev(ptm, DEV_PTMX, &ptm_driver, NULL);
 	if (ret)
@@ -137,7 +135,7 @@ err:
 void init_pty()
 {
 	/* memzero pty table */
-	memset(&pty_table, 0, sizeof(struct tty_t) * NR_PTYS);
+	memset(&pty_table, 0, sizeof(struct tty_t) * NR_PTYS * 2);
 
 	/* install master pty operations */
 	ptm_iops.fops = &ptm_fops;

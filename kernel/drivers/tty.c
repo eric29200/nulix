@@ -15,7 +15,7 @@
 
 /* global ttys */
 struct tty_t tty_table[NR_TTYS];
-struct tty_t pty_table[NR_PTYS];
+struct tty_t pty_table[NR_PTYS * 2];
 int current_tty;
 
 /*
