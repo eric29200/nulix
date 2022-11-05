@@ -242,8 +242,8 @@ void *memmovew(uint16_t *dest, const uint16_t *src, size_t n)
 	if (dest < src)
 		return memcpy(dest, src, n * 2);
 
-	dest += n;
-	src += n;
+	dest += n - 1;
+	src += n - 1;
 	while (n--)
 		*dest-- = *src--;
 
@@ -258,8 +258,8 @@ void *memmovedw(uint32_t *dest, const uint32_t *src, size_t n)
 	if (dest < src)
 		return memcpy(dest, src, n * 4);
 
-	dest += n;
-	src += n;
+	dest += n - 1;
+	src += n - 1;
 	while (n--)
 		*dest-- = *src--;
 
