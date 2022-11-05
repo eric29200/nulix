@@ -542,8 +542,8 @@ int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver, stru
 			return ret;
 
 		/* set winsize */
-		tty->winsize.ws_row = tty->fb.height - 1;
-		tty->winsize.ws_col = tty->fb.width - 1;
+		tty->winsize.ws_row = tty->fb.height;
+		tty->winsize.ws_col = tty->fb.width;
 	}
 
 	/* init termios */
