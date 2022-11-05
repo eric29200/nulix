@@ -132,7 +132,8 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 			return -EAGAIN;
 
 		/* read char */
-		ring_buffer_read(&tty->cooked_queue, &c, 1);
+		if (!ring_buffer_read(&tty->cooked_queue, &c, 1))
+			return count ? count : -EINTR;
 
 		/* add char to buffer */
 		((unsigned char *) buf)[count++] = c;
