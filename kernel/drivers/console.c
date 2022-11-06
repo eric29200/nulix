@@ -356,7 +356,7 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 	}
 
 	/* go to next line */
-	if (fb->x > fb->width) {
+	if (fb->x >= fb->width) {
 		fb->x = 0;
 		fb->y++;
 	}
