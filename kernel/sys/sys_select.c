@@ -5,12 +5,10 @@
  */
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval_t *timeout)
 {
-	struct timespec_t ts;
+	struct kernel_timeval_t tv;
 
-	if (timeout) {
-		ts.tv_sec = timeout->tv_sec;
-		ts.tv_nsec = timeout->tv_usec * 1000L;
-	}
+	if (timeout)
+		old_timeval_to_kernel_timeval(timeout, &tv);
 
-	return do_select(nfds, readfds, writefds, exceptfds, timeout ? &ts : NULL);
+	return do_select(nfds, readfds, writefds, exceptfds, timeout ? &tv : NULL);
 }

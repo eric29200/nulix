@@ -127,7 +127,7 @@ static int __select_check(int fd, uint16_t mask, struct select_table_t *wait)
 /*
  * Select system call.
  */
-int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout)
+int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct kernel_timeval_t *timeout)
 {
 	fd_set_t res_readfds, res_writefds, res_exceptfds;
 	struct select_table_t wait_table, *wait;
@@ -190,7 +190,7 @@ end_check:
 
 	/* set time out */
 	if (timeout && (timeout->tv_sec > 0 || timeout->tv_nsec > 0))
-		current_task->timeout = jiffies + timespec_to_jiffies(timeout);
+		current_task->timeout = jiffies + kernel_timeval_to_jiffies(timeout);
 	else
 		current_task->timeout = 0;
 

@@ -224,7 +224,7 @@ int do_getdents64(int fd, void *dirp, size_t count);
 int do_pipe(int pipefd[2], int flags);
 int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
 int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout);
-int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout);
+int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct kernel_timeval_t *timeout);
 int do_chmod(int dirfd, const char *pathname, mode_t mode);
 int do_chroot(const char *path);
 int do_fchmod(int fd, mode_t mode);
@@ -233,7 +233,7 @@ int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned
 int do_fchown(int fd, uid_t owner, gid_t group);
 int do_truncate(const char *pathname, off_t length);
 int do_ftruncate(int fd, off_t length);
-int do_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags);
+int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t *times, int flags);
 int do_fcntl(int fd, int cmd, unsigned long arg);
 int do_dup(int oldfd);
 int do_dup2(int oldfd, int newfd);

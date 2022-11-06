@@ -197,7 +197,7 @@ int do_fchown(int fd, uid_t owner, gid_t group)
 /*
  * Utimensat system call.
  */
-int do_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags)
+int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t *times, int flags)
 {
 	struct inode_t *inode;
 
