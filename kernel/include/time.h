@@ -79,7 +79,7 @@ static inline uint32_t ms_to_jiffies(uint32_t ms)
  */
 static inline uint32_t timespec_to_jiffies(const struct timespec_t *ts)
 {
-	uint32_t nsec = ts->tv_nsec;
+	uint32_t nsec = ts->tv_nsec & 0xFFFFFFFF00000000;
 
 	/* convert nano seconds to jiffies */
 	nsec += 1000000000L / HZ - 1;
