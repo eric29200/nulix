@@ -90,6 +90,24 @@ static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom, si
 }
 
 /*
+ * Insert a character at current position.
+ */
+static void insert_char(struct tty_t *tty)
+{
+	struct framebuffer_t *fb = &tty->fb;
+	uint16_t *src, *dest;
+
+	/* move each character of current line to right */
+	src = (uint16_t *) (fb->buf + fb->y * fb->width + fb->x);
+	dest = (uint16_t *) (fb->buf + fb->y * fb->width + fb->x + 1);
+	memmovew(dest, src, fb->width - fb->x);
+
+	/* update region */
+	if (fb->active)
+		fb->ops->update_region(fb, fb->y * fb->width + fb->x, fb->width - fb->x);
+}
+
+/*
  * Handle escape P sequences (delete characters).
  */
 static void csi_P(struct tty_t *tty, uint32_t nr)
@@ -249,6 +267,21 @@ static void csi_L(struct tty_t *tty, uint32_t nr)
 		nr = 1;
 
 	console_scrdown(tty, fb->y, fb->height, nr);
+}
+
+/*
+ * Insert characters at current position.
+ */
+static void csi_at(struct tty_t *tty, uint32_t nr)
+{
+	struct framebuffer_t *fb = &tty->fb;
+
+	if (nr > fb->width)
+		nr = fb->width;
+	else if (nr == 0)
+		nr = 1;
+
+	insert_char(tty);
 }
 
 /*
@@ -481,6 +514,9 @@ static ssize_t console_write(struct tty_t *tty)
 					break;
 				case 'L':
 					csi_L(tty, tty->pars[0]);
+					break;
+				case '@':
+					csi_at(tty, tty->pars[0]);
 					break;
 				case 'h':
 					console_set_mode(tty, 1);
