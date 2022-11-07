@@ -279,95 +279,6 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 }
 
 /*
- * Reset a virtual console.
- */
-static void reset_vc(struct tty_t *tty)
-{
-	tty->mode = KD_TEXT;
-	kbd_table[tty->dev - DEV_TTY0 - 1].kbdmode = VC_XLATE;
-	tty->vt_mode.mode = VT_AUTO;
-	tty->vt_mode.waitv = 0;
-	tty->vt_mode.relsig = 0;
-	tty->vt_mode.acqsig = 0;
-	tty->vt_mode.frsig = 0;
-	tty->vt_pid = -1;
-	tty->vt_newvt = -1;
-}
-
-/*
- * Change current tty.
- */
-void tty_complete_change(int n)
-{
-	struct framebuffer_t *fb;
-	struct tty_t *tty_new;
-
-	/* check tty */
-	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
-		return;
-
-	/* get current tty */
-	tty_new = &console_table[n];
-
-	/* if new console is in process mode, acquire it */
-	if (tty_new->vt_mode.mode == VT_PROCESS) {
-		/* send acquire signal */
-		if (task_signal(tty_new->vt_pid, tty_new->vt_mode.acqsig) != 0)
-			reset_vc(tty_new);
-	}
-
-	/* disable current frame buffer */
-	console_table[fg_console].fb.active = 0;
-
-	/* refresh new frame buffer */
-	if (tty_new->mode == KD_TEXT) {
-		fb = &tty_new->fb;
-		fb->active = 1;
-		fb->ops->update_region(fb, 0, fb->width * fb->height);
-	}
-
-	/* set current tty */
-	fg_console = n;
-
-	/* wake up eventual processes */
-	task_wakeup(&vt_activate_wq);
-}
-
-/*
- * Change current tty.
- */
-void tty_change(int n)
-{
-	struct tty_t *tty;
-
-	/* check tty */
-	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
-		return;
-
-	/* get current tty */
-	tty = &console_table[fg_console];
-
-	/* in process mode, handshake realase/acquire */
-	if (tty->vt_mode.mode == VT_PROCESS) {
-		/* send release signal */
-		if (task_signal(tty->vt_pid, tty->vt_mode.relsig) == 0) {
-			tty->vt_newvt = n;
-			return;
-		}
-
-		/* on error reset console */
-		reset_vc(tty);
-	}
-
-	/* ignore switches in KD_GRAPHICS mode */
-	if (tty->mode == KD_GRAPHICS)
-		return;
-
-	/* change tty */
-	tty_complete_change(n);
-}
-
-/*
  * TTY ioctl.
  */
 int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
@@ -464,7 +375,6 @@ int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver)
 	memset(tty, 0, sizeof(struct tty_t));
 	tty->dev = dev;
 	tty->driver = driver;
-	reset_vc(tty);
 
 	/* init read queue */
 	ret = ring_buffer_init(&tty->read_queue, TTY_BUF_SIZE);

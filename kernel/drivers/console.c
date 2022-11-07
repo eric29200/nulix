@@ -36,6 +36,95 @@ static uint8_t ansi_color_table[] = {
 };
 
 /*
+ * Reset a virtual console.
+ */
+static void reset_vc(struct tty_t *tty)
+{
+	tty->vc_mode = KD_TEXT;
+	kbd_table[tty->dev - DEV_TTY0 - 1].kbdmode = VC_XLATE;
+	tty->vt_mode.mode = VT_AUTO;
+	tty->vt_mode.waitv = 0;
+	tty->vt_mode.relsig = 0;
+	tty->vt_mode.acqsig = 0;
+	tty->vt_mode.frsig = 0;
+	tty->vt_pid = -1;
+	tty->vt_newvt = -1;
+}
+
+/*
+ * Change current console.
+ */
+static void console_complete_change(int n)
+{
+	struct framebuffer_t *fb;
+	struct tty_t *tty_new;
+
+	/* check tty */
+	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
+		return;
+
+	/* get current tty */
+	tty_new = &console_table[n];
+
+	/* if new console is in process mode, acquire it */
+	if (tty_new->vt_mode.mode == VT_PROCESS) {
+		/* send acquire signal */
+		if (task_signal(tty_new->vt_pid, tty_new->vt_mode.acqsig) != 0)
+			reset_vc(tty_new);
+	}
+
+	/* disable current frame buffer */
+	console_table[fg_console].fb.active = 0;
+
+	/* refresh new frame buffer */
+	if (tty_new->vc_mode == KD_TEXT) {
+		fb = &tty_new->fb;
+		fb->active = 1;
+		fb->ops->update_region(fb, 0, fb->width * fb->height);
+	}
+
+	/* set current tty */
+	fg_console = n;
+
+	/* wake up eventual processes */
+	task_wakeup(&vt_activate_wq);
+}
+
+/*
+ * Change current console.
+ */
+void console_change(int n)
+{
+	struct tty_t *tty;
+
+	/* check tty */
+	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
+		return;
+
+	/* get current tty */
+	tty = &console_table[fg_console];
+
+	/* in process mode, handshake realase/acquire */
+	if (tty->vt_mode.mode == VT_PROCESS) {
+		/* send release signal */
+		if (task_signal(tty->vt_pid, tty->vt_mode.relsig) == 0) {
+			tty->vt_newvt = n;
+			return;
+		}
+
+		/* on error reset console */
+		reset_vc(tty);
+	}
+
+	/* ignore switches in KD_GRAPHICS mode */
+	if (tty->vc_mode == KD_GRAPHICS)
+		return;
+
+	/* change console */
+	console_complete_change(n);
+}
+
+/*
  * Init console attributes.
  */
 static void console_init_attr(struct tty_t *tty)
@@ -684,10 +773,10 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			*((char *) arg) = KB_101;
 			return 0;
 		case KDGETMODE:
-			*((uint8_t *) arg) = tty->mode;
+			*((uint8_t *) arg) = tty->vc_mode;
 			return 0;
 		case KDSETMODE:
-			tty->mode = *((uint8_t *) arg);
+			tty->vc_mode = *((uint8_t *) arg);
 			return 0;
 		case KDGKBENT:
 			kbe = (struct kbentry_t *) arg;
@@ -811,7 +900,7 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 		case VT_ACTIVATE:
 			if (arg == 0 || arg > NR_CONSOLES)
 				return -ENXIO;
-			tty_change(arg - 1);
+			console_change(arg - 1);
 			return 0;
 		case VT_RELDISP:
 			if (tty->vt_mode.mode != VT_PROCESS)
@@ -826,7 +915,7 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 
 				newvt = tty->vt_newvt;
 				tty->vt_newvt = -1;
-				tty_complete_change(newvt);
+				console_complete_change(newvt);
 			} else if (arg != VT_ACKACQ) {
 				return -EINVAL;
 			}
@@ -885,6 +974,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 
 		/* init console attributes */
 		console_init_attr(tty);
+		reset_vc(tty);
 	}
 
 	/* set current tty to first tty */

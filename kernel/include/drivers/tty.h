@@ -67,7 +67,11 @@ struct tty_t {
 	struct ring_buffer_t	write_queue;						/* write queue */
 	struct ring_buffer_t	cooked_queue;						/* cooked queue */
 	int			canon_data;						/* canon data */
-	uint8_t			mode;							/* console mode (KD_TEXT or KD_GRAPHICS) */
+	struct winsize_t	winsize;						/* window size */
+	struct termios_t	termios;						/* terminal i/o */
+	struct wait_queue_t *	wait;							/* wait queue */
+	struct tty_t *		link;							/* linked tty */
+	struct tty_driver_t *	driver;							/* tty driver */
 	uint32_t		vc_pars[NPARS];						/* escaped pars */
 	uint32_t		vc_npars;						/* number of escaped pars */
 	int			vc_state;						/* tty state (NORMAL or ESCAPE) */
@@ -79,16 +83,12 @@ struct tty_t {
 	uint8_t			vc_reverse;						/* reverse mode */
 	uint16_t		vc_erase_char;						/* erase character */
 	uint8_t			vc_deccm:1;						/* cursor visible */
+	uint8_t			vc_mode;						/* console mode (KD_TEXT or KD_GRAPHICS) */
 	struct vt_mode		vt_mode;						/* vt mode (AUTO or PROCESS) */
 	char			vt_need_wrap;						/* 1 if vt need to be wrapped */
 	pid_t			vt_pid;							/* vt pid */
 	int			vt_newvt;						/* new asked vt */
-	struct winsize_t	winsize;						/* window size */
-	struct termios_t	termios;						/* terminal i/o */
-	struct framebuffer_t	fb;							/* framebuffer of the tty */
-	struct wait_queue_t *	wait;							/* wait queue */
-	struct tty_t *		link;							/* linked tty */
-	struct tty_driver_t *	driver;							/* tty driver */
+	struct framebuffer_t	fb;							/* framebuffer */
 };
 
 /* tty functions */

@@ -355,8 +355,8 @@ static void do_cons(uint8_t value, char up_flag)
 	if (up_flag)
 		return;
 
-	/* change tty */
-	tty_change(value);
+	/* change console */
+	console_change(value);
 }
 
 /*

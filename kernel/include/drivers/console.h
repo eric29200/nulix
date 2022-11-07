@@ -25,7 +25,6 @@
 #define	VT_PROCESS		0x01	/* process controls switching */
 #define	VT_ACKACQ		0x02	/* acknowledge switch */
 
-
 /*
  * Console status.
  */
@@ -49,5 +48,6 @@ struct vt_mode {
 extern struct wait_queue_t *vt_activate_wq;
 
 int init_console();
+void console_change(int n);
 
 #endif
