@@ -3,6 +3,16 @@
 
 #include <stddef.h>
 
+#define NR_CONSOLES		4
+
+#define TTY_STATE_NORMAL	0
+#define TTY_STATE_ESCAPE	1
+#define TTY_STATE_SQUARE	2
+#define TTY_STATE_GETPARS	3
+#define TTY_STATE_GOTPARS	4
+
+#define NPARS			16
+
 /* ioctls */
 #define VT_GETMODE		0x5601
 #define VT_SETMODE		0x5602
@@ -37,5 +47,7 @@ struct vt_mode {
 };
 
 extern struct wait_queue_t *vt_activate_wq;
+
+int init_console();
 
 #endif

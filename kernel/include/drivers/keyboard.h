@@ -394,7 +394,7 @@ struct kbd_t {
 	uint8_t		kbdmode;
 };
 
-extern struct kbd_t kbd_table[NR_TTYS];
+extern struct kbd_t kbd_table[NR_CONSOLES];
 extern uint16_t *key_maps[MAX_NR_KEYMAPS];
 extern uint16_t plain_map[NR_KEYS];
 extern uint8_t *func_table[MAX_NR_FUNCS];

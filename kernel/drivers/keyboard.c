@@ -11,7 +11,7 @@
 static uint8_t k_down[NR_SHIFT] = { 0, };
 
 /* keyboards table */
-struct kbd_t kbd_table[NR_TTYS];
+struct kbd_t kbd_table[NR_CONSOLES];
 static struct tty_t *tty = NULL;
 
 /* keyboard state */
@@ -480,13 +480,9 @@ static void keyboard_handler(struct registers_t *regs)
 	/* unused registers */
 	UNUSED(regs);
 
-	/* get current tty */
-	tty = tty_lookup(DEV_TTY0);
-	if (!tty)
-		return;
-
-	/* get keyboard */
-	kbd = &kbd_table[tty->dev - DEV_TTY0 - 1];
+	/* get current console and keyboard */
+	tty = &console_table[fg_console];
+	kbd = &kbd_table[fg_console];
 
 	/* get scan code */
 	scan_code = scan_key();
@@ -578,6 +574,6 @@ void init_keyboard()
 
 	/* set keyboards table */
 	memset(&kbd, 0, sizeof(struct kbd_t));
-	for (i = 0; i < NR_TTYS; i++)
+	for (i = 0; i < NR_CONSOLES; i++)
 		kbd_table[i] = kbd;
 }

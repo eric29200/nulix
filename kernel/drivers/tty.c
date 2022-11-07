@@ -13,27 +13,22 @@
 #include <dev.h>
 #include <kd.h>
 
-/* global ttys */
-struct tty_t tty_table[NR_TTYS];
-struct tty_t pty_table[NR_PTYS * 2];
-int current_tty;
-
 /*
  * Lookup for a tty.
  */
-struct tty_t *tty_lookup(dev_t dev)
+static struct tty_t *tty_lookup(dev_t dev)
 {
 	/* current task tty */
 	if (dev == DEV_TTY)
 		return current_task->tty;
 
-	/* current active tty */
+	/* current active console */
 	if (dev == DEV_TTY0)
-		return current_tty >= 0 ? &tty_table[current_tty] : NULL;
+		return fg_console >= 0 ? &console_table[fg_console] : NULL;
 
-	/* tty */
-	if (major(dev) == major(DEV_TTY0) && minor(dev) > 0 && minor(dev) <= NR_TTYS)
-		return &tty_table[minor(dev) - 1];
+	/* console */
+	if (major(dev) == major(DEV_TTY0) && minor(dev) > 0 && minor(dev) <= NR_CONSOLES)
+		return &console_table[minor(dev) - 1];
 
 	/* pty */
 	if (major(dev) == DEV_PTS_MAJOR && minor(dev) < NR_PTYS)
@@ -284,6 +279,22 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 }
 
 /*
+ * Reset a virtual console.
+ */
+static void reset_vc(struct tty_t *tty)
+{
+	tty->mode = KD_TEXT;
+	kbd_table[tty->dev - DEV_TTY0 - 1].kbdmode = VC_XLATE;
+	tty->vt_mode.mode = VT_AUTO;
+	tty->vt_mode.waitv = 0;
+	tty->vt_mode.relsig = 0;
+	tty->vt_mode.acqsig = 0;
+	tty->vt_mode.frsig = 0;
+	tty->vt_pid = -1;
+	tty->vt_newvt = -1;
+}
+
+/*
  * Change current tty.
  */
 void tty_complete_change(int n)
@@ -292,11 +303,11 @@ void tty_complete_change(int n)
 	struct tty_t *tty_new;
 
 	/* check tty */
-	if (n < 0 || n >= NR_TTYS || n == current_tty)
+	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
 		return;
 
 	/* get current tty */
-	tty_new = &tty_table[n];
+	tty_new = &console_table[n];
 
 	/* if new console is in process mode, acquire it */
 	if (tty_new->vt_mode.mode == VT_PROCESS) {
@@ -306,7 +317,7 @@ void tty_complete_change(int n)
 	}
 
 	/* disable current frame buffer */
-	tty_table[current_tty].fb.active = 0;
+	console_table[fg_console].fb.active = 0;
 
 	/* refresh new frame buffer */
 	if (tty_new->mode == KD_TEXT) {
@@ -316,7 +327,7 @@ void tty_complete_change(int n)
 	}
 
 	/* set current tty */
-	current_tty = n;
+	fg_console = n;
 
 	/* wake up eventual processes */
 	task_wakeup(&vt_activate_wq);
@@ -330,11 +341,11 @@ void tty_change(int n)
 	struct tty_t *tty;
 
 	/* check tty */
-	if (n < 0 || n >= NR_TTYS || n == current_tty)
+	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
 		return;
 
 	/* get current tty */
-	tty = &tty_table[current_tty];
+	tty = &console_table[fg_console];
 
 	/* in process mode, handshake realase/acquire */
 	if (tty->vt_mode.mode == VT_PROCESS) {
@@ -444,59 +455,16 @@ static int tty_poll(struct file_t *filp, struct select_table_t *wait)
 }
 
 /*
- * Init tty attributes.
- */
-static void tty_init_attr(struct tty_t *tty)
-{
-	tty->def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
-	tty->color = tty->def_color;
-	tty->intensity = 1;
-	tty->reverse = 0;
-	tty->erase_char = ' ' | (tty->def_color << 8);
-	tty->deccm = 1;
-	tty->attr = tty->color;
-}
-
-/*
- * Default tty attributes.
- */
-void tty_default_attr(struct tty_t *tty)
-{
-	tty->intensity = 1;
-	tty->reverse = 0;
-	tty->color = tty->def_color;
-}
-
-/*
- * Update tty attributes.
- */
-void tty_update_attr(struct tty_t *tty)
-{
-	tty->attr = tty->color;
-
-	if (tty->reverse)
-		tty->attr = TEXT_COLOR(TEXT_COLOR_FG(tty->color), TEXT_COLOR_BG(tty->color));
-	if (tty->intensity == 2)
-		tty->attr ^= 0x08;
-
-	/* redefine erase char */
-	tty->erase_char = ' ' | (tty->color << 8);
-}
-
-/*
  * Init a tty.
  */
-int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver, struct multiboot_tag_framebuffer *tag_fb)
+int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver)
 {
 	int ret;
 
+	memset(tty, 0, sizeof(struct tty_t));
 	tty->dev = dev;
-	tty->pgrp = 0;
-	tty->wait = NULL;
-	tty->link = NULL;
 	tty->driver = driver;
 	reset_vc(tty);
-	tty_init_attr(tty);
 
 	/* init read queue */
 	ret = ring_buffer_init(&tty->read_queue, TTY_BUF_SIZE);
@@ -512,17 +480,6 @@ int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver, stru
 	ret = ring_buffer_init(&tty->cooked_queue, TTY_BUF_SIZE);
 	if (ret)
 		return ret;
-
-	/* init frame buffer */
-	if (tag_fb) {
-		ret = init_framebuffer(&tty->fb, tag_fb, tty->erase_char, 0);
-		if (ret)
-			return ret;
-
-		/* set winsize */
-		tty->winsize.ws_row = tty->fb.height;
-		tty->winsize.ws_col = tty->fb.width;
-	}
 
 	/* init termios */
 	tty->termios = (struct termios_t) {
@@ -540,7 +497,7 @@ int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver, stru
 /*
  * Destroy a tty.
  */
-static void tty_destroy(struct tty_t *tty)
+void tty_destroy(struct tty_t *tty)
 {
 	ring_buffer_destroy(&tty->read_queue);
 	ring_buffer_destroy(&tty->write_queue);
@@ -552,32 +509,17 @@ static void tty_destroy(struct tty_t *tty)
  */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 {
-	int i, ret;
-
-	/* reset ttys */
-	for (i = 0; i < NR_TTYS; i++)
-		memset(&tty_table[i], 0, sizeof(struct tty_t));
+	int ret;
 
 	/* init consoles */
-	for (i = 0; i < NR_TTYS; i++) {
-		ret = tty_init_dev(&tty_table[i], DEV_TTY0 + i + 1, &console_driver, tag_fb);
-		if (ret)
-			goto err;
-	}
-
-	/* set current tty to first tty */
-	current_tty = 0;
-	tty_table[current_tty].fb.active = 1;
+	ret = init_console(tag_fb);
+	if (ret)
+		return ret;
 
 	/* init ptys */
 	init_pty();
 
 	return 0;
-err:
-	/* destroy ttys */
-	for (i = 0; i < NR_TTYS; i++)
-		tty_destroy(&tty_table[i]);
-	return ret;
 }
 
 /*

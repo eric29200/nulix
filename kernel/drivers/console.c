@@ -8,6 +8,10 @@
 #include <dev.h>
 #include <kd.h>
 
+/* consoles table */
+struct tty_t console_table[NR_CONSOLES];
+int fg_console;
+
 /* processes waiting for console activation */
 struct wait_queue_t *vt_activate_wq = NULL;
 
@@ -32,6 +36,46 @@ static uint8_t ansi_color_table[] = {
 };
 
 /*
+ * Init console attributes.
+ */
+static void console_init_attr(struct tty_t *tty)
+{
+	tty->vc_def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
+	tty->vc_color = tty->vc_def_color;
+	tty->vc_intensity = 1;
+	tty->vc_reverse = 0;
+	tty->vc_erase_char = ' ' | (tty->vc_def_color << 8);
+	tty->vc_deccm = 1;
+	tty->vc_attr = tty->vc_color;
+}
+
+/*
+ * Default console attributes.
+ */
+static void console_default_attr(struct tty_t *tty)
+{
+	tty->vc_intensity = 1;
+	tty->vc_reverse = 0;
+	tty->vc_color = tty->vc_def_color;
+}
+
+/*
+ * Update console attributes.
+ */
+static void console_update_attr(struct tty_t *tty)
+{
+	tty->vc_attr = tty->vc_color;
+
+	if (tty->vc_reverse)
+		tty->vc_attr = TEXT_COLOR(TEXT_COLOR_FG(tty->vc_color), TEXT_COLOR_BG(tty->vc_color));
+	if (tty->vc_intensity == 2)
+		tty->vc_attr ^= 0x08;
+
+	/* redefine erase char */
+	tty->vc_erase_char = ' ' | (tty->vc_color << 8);
+}
+
+/*
  * Scroll up from bottom to top.
  */
 static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom, size_t nr)
@@ -53,7 +97,7 @@ static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom, size
 	memmovew(dest, src, (bottom - top - nr) * fb->width);
 
 	/* clear last lines */
-	memsetw(dest + (bottom - top - nr) * fb->width, tty->erase_char, fb->width * nr);
+	memsetw(dest + (bottom - top - nr) * fb->width, tty->vc_erase_char, fb->width * nr);
 
 	/* hardware scroll */
 	if (fb->active)
@@ -82,7 +126,7 @@ static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom, si
 	memmovew(dest, src, (bottom - top - nr) * fb->width);
 
 	/* clear first lines */
-	memsetw(src, tty->erase_char, fb->width * nr);
+	memsetw(src, tty->vc_erase_char, fb->width * nr);
 
 	/* hardware scroll */
 	if (fb->active)
@@ -123,7 +167,7 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
 	/* delete characters */
 	p = fb->buf + fb->y * fb->width + fb->x;
 	memcpy(p, p + nr, (fb->width - fb->x - nr) * 2);
-	memsetw(p + fb->width - fb->x - nr, tty->erase_char, nr);
+	memsetw(p + fb->width - fb->x - nr, tty->vc_erase_char, nr);
 
 	/* update region */
 	if (fb->active)
@@ -158,7 +202,7 @@ static void csi_K(struct tty_t *tty, int vpar)
 	}
 
 	/* update frame buffer */
-	memsetw(start + offset, tty->erase_char, count);
+	memsetw(start + offset, tty->vc_erase_char, count);
 
 	/* update region */
 	if (fb->active)
@@ -192,7 +236,7 @@ static void csi_J(struct tty_t *tty, int vpar)
 	}
 
 	/* update frame buffer */
-	memsetw(start, tty->erase_char, count);
+	memsetw(start, tty->vc_erase_char, count);
 
 	/* update region */
 	if (fb->active)
@@ -206,52 +250,52 @@ static void csi_m(struct tty_t *tty)
 {
 	size_t i;
 
-	for (i = 0; i <= tty->npars; i++) {
-		switch (tty->pars[i]) {
+	for (i = 0; i <= tty->vc_npars; i++) {
+		switch (tty->vc_pars[i]) {
 			case 0:												/* set default attributes */
-				tty_default_attr(tty);
+				console_default_attr(tty);
 				break;
 			case 1:												/* bold */
-				tty->intensity = 2;
+				tty->vc_intensity = 2;
 				break;
 			case 4:												/* underline */
-				tty->underline = 1;
+				tty->vc_underline = 1;
 				break;
 			case 7:												/* reverse attributes */
-				tty->reverse = 1;
+				tty->vc_reverse = 1;
 				break;
 			case 24:											/* not underline */
-				tty->underline = 0;
+				tty->vc_underline = 0;
 				break;
 			case 27:											/* unreverse attributes */
-				tty->reverse = 0;
+				tty->vc_reverse = 0;
 				break;
 			case 39:											/* default foreground color */
-				tty->color = TEXT_COLOR(TEXT_COLOR_BG(tty->color), TEXT_COLOR_FG(tty->def_color));
+				tty->vc_color = TEXT_COLOR(TEXT_COLOR_BG(tty->vc_color), TEXT_COLOR_FG(tty->vc_def_color));
 				break;
 			case 49:											/* default background color */
-				tty->color = TEXT_COLOR(TEXT_COLOR_BG(tty->def_color), TEXT_COLOR_FG(tty->color));
+				tty->vc_color = TEXT_COLOR(TEXT_COLOR_BG(tty->vc_def_color), TEXT_COLOR_FG(tty->vc_color));
 				break;
 			default:
 				/* set foreground color */
-				if (tty->pars[i] >= 30 && tty->pars[i] <= 37) {
-					tty->color = TEXT_COLOR(TEXT_COLOR_BG(tty->color), ansi_color_table[tty->pars[i] - 30]);
+				if (tty->vc_pars[i] >= 30 && tty->vc_pars[i] <= 37) {
+					tty->vc_color = TEXT_COLOR(TEXT_COLOR_BG(tty->vc_color), ansi_color_table[tty->vc_pars[i] - 30]);
 					break;
 				}
 
 				/* set background color */
-				if (tty->pars[i] >= 40 && tty->pars[i] <= 47) {
-					tty->color = TEXT_COLOR(ansi_color_table[tty->pars[i] - 40], TEXT_COLOR_FG(tty->color));
+				if (tty->vc_pars[i] >= 40 && tty->vc_pars[i] <= 47) {
+					tty->vc_color = TEXT_COLOR(ansi_color_table[tty->vc_pars[i] - 40], TEXT_COLOR_FG(tty->vc_color));
 					break;
 				}
 
-				printf("console : unknown escape sequence m : %d\n", tty->pars[i]);
+				printf("console : unknown escape sequence m : %d\n", tty->vc_pars[i]);
 				break;
 		}
 	}
 
 	/* update attributes */
-	tty_update_attr(tty);
+	console_update_attr(tty);
 }
 
 /*
@@ -291,15 +335,15 @@ static void console_set_mode(struct tty_t *tty, int on_off)
 {
 	size_t i;
 
-	for (i = 0; i <= tty->npars; i++) {
-		switch (tty->pars[i]) {
+	for (i = 0; i <= tty->vc_npars; i++) {
+		switch (tty->vc_pars[i]) {
 			case 25:				/* cursor visible */
-				tty->deccm = on_off;
+				tty->vc_deccm = on_off;
 				if (tty->fb.active)
 					tty->fb.ops->show_cursor(&tty->fb, on_off);
 				break;
 			default:
-				printf("console : unknown mode : %d\n", tty->pars[i]);
+				printf("console : unknown mode : %d\n", tty->vc_pars[i]);
 				break;
 		}
 	}
@@ -394,7 +438,7 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 			}
 
 			/* add character */
-			fb->buf[fb->y * fb->width + fb->x] = (tty->attr << 8) | c;
+			fb->buf[fb->y * fb->width + fb->x] = (tty->vc_attr << 8) | c;
 			if (fb->active)
 				fb->ops->update_region(fb, fb->y * fb->width + fb->x, 1);
 
@@ -447,10 +491,10 @@ static ssize_t console_write(struct tty_t *tty)
 		count++;
 
 		/* start an escape sequence or write to frame buffer */
-		if (tty->state == TTY_STATE_NORMAL) {
+		if (tty->vc_state == TTY_STATE_NORMAL) {
 				switch (c) {
 					case '\033':
-						tty->state = TTY_STATE_ESCAPE;
+						tty->vc_state = TTY_STATE_ESCAPE;
 						break;
 					default:
 						console_putc(tty, c);
@@ -461,12 +505,12 @@ static ssize_t console_write(struct tty_t *tty)
 		}
 
 		/* handle escape sequence */
-		if (tty->state == TTY_STATE_ESCAPE) {
-				tty->state = TTY_STATE_NORMAL;
+		if (tty->vc_state == TTY_STATE_ESCAPE) {
+				tty->vc_state = TTY_STATE_NORMAL;
 
 				switch (c) {
 					case '[':
-						tty->state = TTY_STATE_SQUARE;
+						tty->vc_state = TTY_STATE_SQUARE;
 						break;
 					case 'M':
 						console_ri(tty);
@@ -480,100 +524,100 @@ static ssize_t console_write(struct tty_t *tty)
 		}
 
 		/* handle escape sequence */
-		if (tty->state == TTY_STATE_SQUARE) {
+		if (tty->vc_state == TTY_STATE_SQUARE) {
 			/* reset npars */
-			for (tty->npars = 0; tty->npars < NPARS; tty->npars++)
-				tty->pars[tty->npars] = 0;
-			tty->npars = 0;
+			for (tty->vc_npars = 0; tty->vc_npars < NPARS; tty->vc_npars++)
+				tty->vc_pars[tty->vc_npars] = 0;
+			tty->vc_npars = 0;
 
-			tty->state = TTY_STATE_GETPARS;
+			tty->vc_state = TTY_STATE_GETPARS;
 			if (c == '?')
 				continue;
 		}
 
 		/* get pars */
-		if (tty->state == TTY_STATE_GETPARS) {
-			if (c == ';' && tty->npars < NPARS - 1) {
-				tty->npars++;
+		if (tty->vc_state == TTY_STATE_GETPARS) {
+			if (c == ';' && tty->vc_npars < NPARS - 1) {
+				tty->vc_npars++;
 				continue;
 			}
 
 			if (c >= '0' && c <= '9') {
-				tty->pars[tty->npars] *= 10;
-				tty->pars[tty->npars] += c - '0';
+				tty->vc_pars[tty->vc_npars] *= 10;
+				tty->vc_pars[tty->vc_npars] += c - '0';
 				continue;
 			}
 
-			tty->state = TTY_STATE_GOTPARS;
+			tty->vc_state = TTY_STATE_GOTPARS;
 		}
 
 		/* handle pars */
-		if (tty->state == TTY_STATE_GOTPARS) {
-			tty->state = TTY_STATE_NORMAL;
+		if (tty->vc_state == TTY_STATE_GOTPARS) {
+			tty->vc_state = TTY_STATE_NORMAL;
 
 			switch (c) {
 				case 'G':
-					if (tty->pars[0])
-						tty->pars[0]--;
-					console_gotoxy(tty, tty->pars[0], tty->fb.y);
+					if (tty->vc_pars[0])
+						tty->vc_pars[0]--;
+					console_gotoxy(tty, tty->vc_pars[0], tty->fb.y);
 					break;
 				case 'A':
-					if (!tty->pars[0])
-						tty->pars[0]++;
-					console_gotoxy(tty, tty->fb.x, tty->fb.y - tty->pars[0]);
+					if (!tty->vc_pars[0])
+						tty->vc_pars[0]++;
+					console_gotoxy(tty, tty->fb.x, tty->fb.y - tty->vc_pars[0]);
 					break;
 				case 'B':
-					if (!tty->pars[0])
-						tty->pars[0]++;
-					console_gotoxy(tty, tty->fb.x, tty->fb.y + tty->pars[0]);
+					if (!tty->vc_pars[0])
+						tty->vc_pars[0]++;
+					console_gotoxy(tty, tty->fb.x, tty->fb.y + tty->vc_pars[0]);
 					break;
 				case 'C':
-					if (!tty->pars[0])
-						tty->pars[0]++;
-					console_gotoxy(tty, tty->fb.x + tty->pars[0], tty->fb.y);
+					if (!tty->vc_pars[0])
+						tty->vc_pars[0]++;
+					console_gotoxy(tty, tty->fb.x + tty->vc_pars[0], tty->fb.y);
 					break;
 				case 'D':
-					if (!tty->pars[0])
-						tty->pars[0]++;
-					console_gotoxy(tty, tty->fb.x - tty->pars[0], tty->fb.y);
+					if (!tty->vc_pars[0])
+						tty->vc_pars[0]++;
+					console_gotoxy(tty, tty->fb.x - tty->vc_pars[0], tty->fb.y);
 					break;
 				case 'd':
-					if (tty->pars[0])
-						tty->pars[0]--;
-					console_gotoxy(tty, tty->fb.x, tty->pars[0]);
+					if (tty->vc_pars[0])
+						tty->vc_pars[0]--;
+					console_gotoxy(tty, tty->fb.x, tty->vc_pars[0]);
 					break;
 				case 'H':
-					if (tty->pars[0])
-						tty->pars[0]--;
-					if (tty->pars[1])
-						tty->pars[1]--;
-					console_gotoxy(tty, tty->pars[1], tty->pars[0]);
+					if (tty->vc_pars[0])
+						tty->vc_pars[0]--;
+					if (tty->vc_pars[1])
+						tty->vc_pars[1]--;
+					console_gotoxy(tty, tty->vc_pars[1], tty->vc_pars[0]);
 					break;
 				case 'r':
-					if (!tty->pars[0])
-						tty->pars[0]++;
-					if (!tty->pars[1])
-						tty->pars[1] = tty->fb.height;
-					if (tty->pars[0] < tty->pars[1] && tty->pars[1] <= tty->fb.height)
+					if (!tty->vc_pars[0])
+						tty->vc_pars[0]++;
+					if (!tty->vc_pars[1])
+						tty->vc_pars[1] = tty->fb.height;
+					if (tty->vc_pars[0] < tty->vc_pars[1] && tty->vc_pars[1] <= tty->fb.height)
 						console_gotoxy(tty, 0, 0);
 					break;
 				case 'P':
-					csi_P(tty, tty->pars[0]);
+					csi_P(tty, tty->vc_pars[0]);
 					break;
 				case 'K':
-					csi_K(tty, tty->pars[0]);
+					csi_K(tty, tty->vc_pars[0]);
 					break;
 				case 'J':
-					csi_J(tty, tty->pars[0]);
+					csi_J(tty, tty->vc_pars[0]);
 					break;
 				case 'm':
 					csi_m(tty);
 					break;
 				case 'L':
-					csi_L(tty, tty->pars[0]);
+					csi_L(tty, tty->vc_pars[0]);
 					break;
 				case '@':
-					csi_at(tty, tty->pars[0]);
+					csi_at(tty, tty->vc_pars[0]);
 					break;
 				case 'h':
 					console_set_mode(tty, 1);
@@ -593,7 +637,7 @@ static ssize_t console_write(struct tty_t *tty)
 	}
 
 	/* update cursor */
-	if (tty->deccm && tty->fb.active)
+	if (tty->vc_deccm && tty->fb.active)
 		tty->fb.ops->update_cursor(&tty->fb);
 
 	return count;
@@ -606,7 +650,7 @@ static int vt_waitactive(int n)
 {
 	for (;;) {
 		/* vt == current tty : exit */
-		if (n == current_tty)
+		if (n == fg_console)
 			break;
 
 		/* pending signals : exit */
@@ -751,8 +795,8 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			return 0;
 		case VT_GETSTATE:
 			vtstat = (struct vt_stat *) arg;
-			vtstat->v_active = current_tty + 1;
-			for (i = 0, mask = 2, vtstat->v_state = 1; i < NR_TTYS; i++, mask <<= 1)
+			vtstat->v_active = fg_console + 1;
+			for (i = 0, mask = 2, vtstat->v_state = 1; i < NR_CONSOLES; i++, mask <<= 1)
 				vtstat->v_state |= mask;
 			return 0;
 		case VT_GETMODE:
@@ -765,7 +809,7 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			tty->vt_newvt = -1;
 			return 0;
 		case VT_ACTIVATE:
-			if (arg == 0 || arg > NR_TTYS)
+			if (arg == 0 || arg > NR_CONSOLES)
 				return -ENXIO;
 			tty_change(arg - 1);
 			return 0;
@@ -789,7 +833,7 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 
 			return 0;
 		case VT_WAITACTIVE:
-			if (arg == 0 || arg > NR_TTYS)
+			if (arg == 0 || arg > NR_CONSOLES)
 				return -ENXIO;
 
 			/* wait for console activation */
@@ -802,26 +846,56 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 }
 
 /*
- * Reset a virtual console.
- */
-void reset_vc(struct tty_t *tty)
-{
-	tty->mode = KD_TEXT;
-	kbd_table[tty->dev - DEV_TTY0 - 1].kbdmode = VC_XLATE;
-	tty->vt_mode.mode = VT_AUTO;
-	tty->vt_mode.waitv = 0;
-	tty->vt_mode.relsig = 0;
-	tty->vt_mode.acqsig = 0;
-	tty->vt_mode.frsig = 0;
-	tty->vt_pid = -1;
-	tty->vt_newvt = -1;
-}
-
-/*
  * Console driver.
  */
-struct tty_driver_t console_driver = {
+static struct tty_driver_t console_driver = {
 	.write		= console_write,
 	.ioctl		= console_ioctl,
 };
 
+/*
+ * Init consoles.
+ */
+int init_console(struct multiboot_tag_framebuffer *tag_fb)
+{
+	struct tty_t *tty;
+	int i, ret;
+
+	/* reset consoles */
+	for (i = 0; i < NR_CONSOLES; i++)
+		memset(&console_table[i], 0, sizeof(struct tty_t));
+
+	/* init consoles */
+	for (i = 0; i < NR_CONSOLES; i++) {
+		tty = &console_table[i];
+
+		/* init tty device */
+		ret = tty_init_dev(tty, DEV_TTY0 + i + 1, &console_driver);
+		if (ret)
+			goto err;
+
+		/* init frame buffer */
+		ret = init_framebuffer(&tty->fb, tag_fb, tty->vc_erase_char, 0);
+		if (ret)
+			goto err;
+
+		/* set winsize */
+		tty->winsize.ws_row = tty->fb.height;
+		tty->winsize.ws_col = tty->fb.width;
+
+		/* init console attributes */
+		console_init_attr(tty);
+	}
+
+	/* set current tty to first tty */
+	fg_console = 0;
+	console_table[fg_console].fb.active = 1;
+
+	return 0;
+err:
+	/* destroy consoles */
+	for (i = 0; i < NR_CONSOLES; i++)
+		tty_destroy(&console_table[i]);
+
+	return ret;
+}

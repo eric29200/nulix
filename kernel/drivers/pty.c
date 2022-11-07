@@ -7,6 +7,9 @@
 
 #define PTY_NAME_LEN		64
 
+/* ptys table */
+struct tty_t pty_table[NR_PTYS * 2];
+
 /* Pty master/slave operations (set on init_pty) */
 static struct file_operations_t ptm_fops;
 static struct file_operations_t pts_fops;
@@ -126,14 +129,14 @@ static int ptmx_open(struct file_t *filp)
 	/* create master pty */
 	ptm = &pty_table[NR_PTYS + i];
 	memset(ptm, 0, sizeof(struct tty_t));
-	ret = tty_init_dev(ptm, DEV_PTMX, &ptm_driver, NULL);
+	ret = tty_init_dev(ptm, DEV_PTMX, &ptm_driver);
 	if (ret)
 		goto err;
 
 	/* create slave pty */
 	pts = &pty_table[i];
 	memset(pts, 0, sizeof(struct tty_t));
-	ret = tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i), &pts_driver, NULL);
+	ret = tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i), &pts_driver);
 	if (ret)
 		goto err;
 
