@@ -23,31 +23,9 @@ int current_tty;
  */
 struct tty_t *tty_lookup(dev_t dev)
 {
-	int i;
-
 	/* current task tty */
-	if (dev == DEV_TTY) {
-		if (current_task->tty == DEV_TTY0)
-			return current_tty >= 0 ? &tty_table[current_tty] : NULL;
-
-		/* find current task tty or pty */
-		switch (major(current_task->tty)) {
-			case major(DEV_TTY0):
-				for (i = 0; i < NR_TTYS; i++)
-					if (current_task->tty == tty_table[i].dev)
-						return &tty_table[i];
-				break;
-			case DEV_PTS_MAJOR:
-				for (i = 0; i < NR_PTYS; i++)
-					if (current_task->tty == pty_table[i].dev)
-						return &pty_table[i];
-				break;
-			default:
-				break;
-		}
-
-		return NULL;
-	}
+	if (dev == DEV_TTY)
+		return current_task->tty;
 
 	/* current active tty */
 	if (dev == DEV_TTY0)
@@ -91,7 +69,7 @@ static int tty_open(struct file_t *filp)
 
 	/* associate tty */
 	if (!noctty && current_task->leader) {
-		current_task->tty = filp->f_inode->i_rdev;
+		current_task->tty = tty;
 		tty->pgrp = current_task->pgrp;
 	}
 

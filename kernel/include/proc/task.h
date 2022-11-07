@@ -83,7 +83,7 @@ struct task_t {
 	gid_t				gid;				/* group id */
 	gid_t				egid;				/* effective group id */
 	gid_t				sgid;				/* saved group id */
-	dev_t				tty;				/* attached tty */
+	struct tty_t *			tty;				/* attached tty */
 	uint32_t			utime;				/* amount of time that this process has been scheduled in user mode */
 	uint32_t			stime;				/* amount of time that this process has been scheduled in kernel mode */
 	uint32_t			cutime;				/* amount of time that this process's waited-for children have been scheduled in user mode */

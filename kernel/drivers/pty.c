@@ -87,7 +87,7 @@ static int ptm_close(struct tty_t *tty)
 	/* send SIGHUP signal to processes attached to slave pty */
 	list_for_each(pos, &current_task->list) {
 		task = list_entry(pos, struct task_t, list);
-		if (task->tty == tty->link->dev) {
+		if (task->tty == tty->link) {
 			task_signal(task->pid, SIGHUP);
 			task_signal(task->pid, SIGCONT);
 		}

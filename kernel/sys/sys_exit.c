@@ -9,7 +9,6 @@ void sys_exit(int status)
 {
 	struct list_head_t *pos;
 	struct task_t *child;
-	struct tty_t *tty;
 
 	/* delete timer */
 	if (current_task->sig_tm.list.next)
@@ -40,11 +39,8 @@ void sys_exit(int status)
 	}
 
 	/* leader process : send signal to processes attached to tty */
-	if (current_task->leader) {
-		tty = tty_lookup(current_task->tty);
-		if (tty)
-			task_signal_group(tty->pgrp, SIGHUP);
-	}
+	if (current_task->leader && current_task->tty)
+		task_signal_group(current_task->tty->pgrp, SIGHUP);
 
 	/* call scheduler */
 	schedule();
