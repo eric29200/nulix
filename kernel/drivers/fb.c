@@ -83,18 +83,6 @@ err:
 }
 
 /*
- * Set framebuffer position.
- */
-void fb_set_xy(struct framebuffer_t *fb, uint32_t x, uint32_t y)
-{
-	if (!fb)
-		return;
-
-	fb->x = x;
-	fb->y = y;
-}
-
-/*
  * Open a frame buffer.
  */
 static int fb_open(struct file_t *filp)

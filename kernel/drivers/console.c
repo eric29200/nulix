@@ -306,6 +306,30 @@ static void console_set_mode(struct tty_t *tty, int on_off)
 }
 
 /*
+ * Do a carriage return.
+ */
+static void console_cr(struct tty_t *tty)
+{
+	tty->fb.x = 0;
+	tty->vt_need_wrap = 0;
+}
+
+/*
+ * Do a line feed.
+ */
+static void console_lf(struct tty_t *tty)
+{
+	struct framebuffer_t *fb = &tty->fb;
+
+	if (fb->y + 1 == fb->height)
+		console_scrup(tty, 0, fb->height, 1);
+	else if (fb->y < fb->height - 1)
+		fb->y++;
+
+	tty->vt_need_wrap = 0;
+}
+
+/*
  * Scroll down if needed.
  */
 static void console_ri(struct tty_t *tty)
@@ -317,6 +341,19 @@ static void console_ri(struct tty_t *tty)
 		console_scrdown(tty, 0, fb->height, 1);
 	else if (fb->y > 0)
 		fb->y--;
+
+	tty->vt_need_wrap = 0;
+}
+
+/*
+ * Do a back space.
+ */
+static void console_bs(struct tty_t *tty)
+{
+	if (tty->fb.x) {
+		tty->fb.x--;
+		tty->vt_need_wrap = 0;
+	}
 }
 
 /*
@@ -331,44 +368,64 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 		case 7:
 			break;
 		case 8:
-			fb->x--;
+			console_bs(tty);
 			break;
 		case 9:
 			fb->x = (fb->x + fb->bpp / 8) & ~0x03;
 			break;
 		case 10:
-			fb->y++;
-			fb->x = 0;
+		case 11:
+		case 12:
+			console_lf(tty);
+			console_cr(tty);
 			break;
 		case 13:
-			fb->x = 0;
+			console_cr(tty);
 			break;
 		case 14:
 			break;
 		case 15:
 			break;
 		default:
+			/* wrap if needed */
+			if (tty->vt_need_wrap) {
+				console_cr(tty);
+				console_lf(tty);
+			}
+
+			/* add character */
 			fb->buf[fb->y * fb->width + fb->x] = (tty->attr << 8) | c;
 			if (fb->active)
 				fb->ops->update_region(fb, fb->y * fb->width + fb->x, 1);
-			fb->x++;
+
+			/* update position */
+			if (fb->x == fb->width - 1)
+				tty->vt_need_wrap = 1;
+			else
+				fb->x++;
+
 			break;
 	}
+}
 
-	/* go to next line */
-	if (fb->x >= fb->width) {
-		fb->x = 0;
-		fb->y++;
-	}
+/*
+ * Go to (x ; y).
+ */
+static void console_gotoxy(struct tty_t *tty, uint32_t x, uint32_t y)
+{
+	struct framebuffer_t *fb = &tty->fb;
 
-	/* scroll */
-	if (fb->y >= fb->height) {
-		/* scroll up */
-		console_scrup(tty, 0, fb->height, 1);
+	if (x >= fb->width)
+		fb->x = fb->width - 1;
+	else
+		fb->x = x;
 
-		/* update position */
+	if (y >= fb->height)
 		fb->y = fb->height - 1;
-	}
+	else
+		fb->y = y;
+
+	tty->vt_need_wrap = 0;
 }
 
 /*
@@ -458,39 +515,39 @@ static ssize_t console_write(struct tty_t *tty)
 				case 'G':
 					if (tty->pars[0])
 						tty->pars[0]--;
-					fb_set_xy(&tty->fb, tty->pars[0], tty->fb.y);
+					console_gotoxy(tty, tty->pars[0], tty->fb.y);
 					break;
 				case 'A':
 					if (!tty->pars[0])
 						tty->pars[0]++;
-					fb_set_xy(&tty->fb, tty->fb.x, tty->fb.y - tty->pars[0]);
+					console_gotoxy(tty, tty->fb.x, tty->fb.y - tty->pars[0]);
 					break;
 				case 'B':
 					if (!tty->pars[0])
 						tty->pars[0]++;
-					fb_set_xy(&tty->fb, tty->fb.x, tty->fb.y + tty->pars[0]);
+					console_gotoxy(tty, tty->fb.x, tty->fb.y + tty->pars[0]);
 					break;
 				case 'C':
 					if (!tty->pars[0])
 						tty->pars[0]++;
-					fb_set_xy(&tty->fb, tty->fb.x + tty->pars[0], tty->fb.y);
+					console_gotoxy(tty, tty->fb.x + tty->pars[0], tty->fb.y);
 					break;
 				case 'D':
 					if (!tty->pars[0])
 						tty->pars[0]++;
-					fb_set_xy(&tty->fb, tty->fb.x - tty->pars[0], tty->fb.y);
+					console_gotoxy(tty, tty->fb.x - tty->pars[0], tty->fb.y);
 					break;
 				case 'd':
 					if (tty->pars[0])
 						tty->pars[0]--;
-					fb_set_xy(&tty->fb, tty->fb.x, tty->pars[0]);
+					console_gotoxy(tty, tty->fb.x, tty->pars[0]);
 					break;
 				case 'H':
 					if (tty->pars[0])
 						tty->pars[0]--;
 					if (tty->pars[1])
 						tty->pars[1]--;
-					fb_set_xy(&tty->fb, tty->pars[1], tty->pars[0]);
+					console_gotoxy(tty, tty->pars[1], tty->pars[0]);
 					break;
 				case 'r':
 					if (!tty->pars[0])
@@ -498,7 +555,7 @@ static ssize_t console_write(struct tty_t *tty)
 					if (!tty->pars[1])
 						tty->pars[1] = tty->fb.height;
 					if (tty->pars[0] < tty->pars[1] && tty->pars[1] <= tty->fb.height)
-						fb_set_xy(&tty->fb, 0, 0);
+						console_gotoxy(tty, 0, 0);
 					break;
 				case 'P':
 					csi_P(tty, tty->pars[0]);

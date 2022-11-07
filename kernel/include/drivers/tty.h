@@ -90,6 +90,7 @@ struct tty_t {
 	int			canon_data;						/* canon data */
 	uint8_t			mode;							/* console mode (KD_TEXT or KD_GRAPHICS) */
 	struct vt_mode		vt_mode;						/* vt mode (AUTO or PROCESS) */
+	char			vt_need_wrap;						/* 1 if vt need to be wrapped */
 	pid_t			vt_pid;							/* vt pid */
 	int			vt_newvt;						/* new asked vt */
 	struct winsize_t	winsize;						/* window size */
