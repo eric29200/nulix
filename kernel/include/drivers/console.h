@@ -1,7 +1,7 @@
 #ifndef _CONSOLE_H_
 #define _CONSOLE_H_
 
-#include <stddef.h>
+#include <drivers/fb.h>
 
 #define NR_CONSOLES		4
 
@@ -43,6 +43,30 @@ struct vt_mode {
 	uint16_t	relsig;		/* signal to raise on release req */
 	uint16_t	acqsig;		/* signal to raise on acquisition */
 	uint16_t	frsig;		/* unused (set to 0) */
+};
+
+/*
+ * Console structure.
+ */
+struct vc_t {
+	int			vc_num;							/* console id */
+	uint32_t		vc_pars[NPARS];						/* escaped pars */
+	uint32_t		vc_npars;						/* number of escaped pars */
+	int			vc_state;						/* tty state (NORMAL or ESCAPE) */
+	uint8_t			vc_attr;						/* attributes = current color */
+	uint8_t			vc_color;						/* forgeground/background color */
+	uint8_t			vc_def_color;						/* default foreground/background color */
+	uint8_t			vc_intensity;						/* foreground intensity */
+	uint8_t			vc_underline;						/* underline */
+	uint8_t			vc_reverse;						/* reverse mode */
+	uint16_t		vc_erase_char;						/* erase character */
+	uint8_t			vc_deccm:1;						/* cursor visible */
+	uint8_t			vc_mode;						/* console mode (KD_TEXT or KD_GRAPHICS) */
+	char			vc_need_wrap;						/* 1 if console needs to be wrapped */
+	struct vt_mode		vt_mode;						/* vt mode (AUTO or PROCESS) */
+	pid_t			vt_pid;							/* vt pid */
+	int			vt_newvt;						/* new asked vt */
+	struct framebuffer_t	fb;							/* framebuffer */
 };
 
 extern struct wait_queue_t *vt_activate_wq;

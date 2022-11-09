@@ -13,6 +13,9 @@
 #include <dev.h>
 #include <kd.h>
 
+/* global ttys table */
+struct tty_t tty_table[NR_TTYS];
+
 /*
  * Lookup for a tty.
  */
@@ -24,15 +27,15 @@ static struct tty_t *tty_lookup(dev_t dev)
 
 	/* current active console */
 	if (dev == DEV_TTY0)
-		return fg_console >= 0 ? &console_table[fg_console] : NULL;
+		return fg_console >= 0 ? &tty_table[fg_console] : NULL;
 
 	/* console */
 	if (major(dev) == major(DEV_TTY0) && minor(dev) > 0 && minor(dev) <= NR_CONSOLES)
-		return &console_table[minor(dev) - 1];
+		return &tty_table[minor(dev) - 1];
 
 	/* pty */
 	if (major(dev) == DEV_PTS_MAJOR && minor(dev) < NR_PTYS)
-		return &pty_table[minor(dev)];
+		return &tty_table[NR_CONSOLES + minor(dev)];
 
 	return NULL;
 }
@@ -368,12 +371,11 @@ static int tty_poll(struct file_t *filp, struct select_table_t *wait)
 /*
  * Init a tty.
  */
-int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver)
+int tty_init_dev(struct tty_t *tty, struct tty_driver_t *driver)
 {
 	int ret;
 
 	memset(tty, 0, sizeof(struct tty_t));
-	tty->dev = dev;
 	tty->driver = driver;
 
 	/* init read queue */
@@ -420,6 +422,9 @@ void tty_destroy(struct tty_t *tty)
 int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 {
 	int ret;
+
+	/* reset ttys */
+	memset(tty_table, 0, sizeof(struct tty_t) * NR_TTYS);
 
 	/* init consoles */
 	ret = init_console(tag_fb);

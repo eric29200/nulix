@@ -3,7 +3,6 @@
 #include <x86/io.h>
 #include <drivers/tty.h>
 #include <ipc/signal.h>
-#include <dev.h>
 
 #define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))
 
@@ -481,7 +480,7 @@ static void keyboard_handler(struct registers_t *regs)
 	UNUSED(regs);
 
 	/* get current console and keyboard */
-	tty = &console_table[fg_console];
+	tty = &tty_table[fg_console];
 	kbd = &kbd_table[fg_console];
 
 	/* get scan code */

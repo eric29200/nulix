@@ -7,8 +7,8 @@
 
 #define PTY_NAME_LEN		64
 
-/* ptys table */
-struct tty_t pty_table[NR_PTYS * 2];
+/* pty table */
+static struct pty_t pty_table[NR_PTYS];
 
 /* Pty master/slave operations (set on init_pty) */
 static struct file_operations_t ptm_fops;
@@ -53,9 +53,11 @@ static struct tty_driver_t pts_driver = {
  */
 static int ptm_ioctl(struct tty_t *tty, int request, unsigned long arg)
 {
+	struct pty_t *pty = tty->driver_data;
+
 	switch (request) {
 		case TIOCGPTN:
-			*((int *) arg) = tty->link->dev - mkdev(DEV_PTS_MAJOR, 0);
+			*((int *) arg) = pty->p_num;
 			return 0;
 		case TIOCSPTLCK:
 			return 0;
@@ -71,6 +73,7 @@ static int ptm_ioctl(struct tty_t *tty, int request, unsigned long arg)
  */
 static int ptm_close(struct tty_t *tty)
 {
+	struct pty_t *pty = tty->driver_data;
 	char name[PTY_NAME_LEN];
 	struct list_head_t *pos;
 	struct task_t *task;
@@ -80,7 +83,7 @@ static int ptm_close(struct tty_t *tty)
 		return 0;
 
 	/* get device node */
-	sprintf(name, "/dev/pts/%d", tty->link->dev - mkdev(DEV_PTS_MAJOR, 0));
+	sprintf(name, "/dev/pts/%d", pty->p_num);
 
 	/* delete device node */
 	ret = do_unlink(AT_FDCWD, name);
@@ -117,26 +120,26 @@ static int ptmx_open(struct file_t *filp)
 	char name[PTY_NAME_LEN];
 	int ret, i;
 
-	/* find a free slave pty */
+	/* find a free pty */
 	for (i = 0; i < NR_PTYS; i++)
-		if (pty_table[i].dev == 0)
+		if (pty_table[i].p_count == 0)
 			break;
 
 	/* no free pty : exit */
 	if (i >= NR_PTYS)
 		return -ENOMEM;
 
-	/* create master pty */
-	ptm = &pty_table[NR_PTYS + i];
-	memset(ptm, 0, sizeof(struct tty_t));
-	ret = tty_init_dev(ptm, DEV_PTMX, &ptm_driver);
+	/* create slave pty */
+	pts = &tty_table[NR_CONSOLES + i];
+	memset(pts, 0, sizeof(struct tty_t));
+	ret = tty_init_dev(pts, &pts_driver);
 	if (ret)
 		goto err;
 
-	/* create slave pty */
-	pts = &pty_table[i];
-	memset(pts, 0, sizeof(struct tty_t));
-	ret = tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i), &pts_driver);
+	/* create master pty */
+	ptm = &tty_table[NR_CONSOLES + NR_PTYS + i];
+	memset(ptm, 0, sizeof(struct tty_t));
+	ret = tty_init_dev(ptm, &ptm_driver);
 	if (ret)
 		goto err;
 
@@ -149,12 +152,19 @@ static int ptmx_open(struct file_t *filp)
 	if (ret)
 		goto err;
 
+	/* attach pty struct to master/slave */
+	ptm->driver_data = &pty_table[i];
+	pts->driver_data = &pty_table[i];
+
 	/* set links */
 	ptm->link = pts;
 	pts->link = ptm;
 
 	/* attach master pty to file */
 	filp->f_private = ptm;
+
+	/* update pty reference count */
+	pty_table[i].p_count++;
 
 	return 0;
 err:
@@ -171,8 +181,13 @@ err:
  */
 void init_pty()
 {
-	/* memzero pty table */
-	memset(&pty_table, 0, sizeof(struct tty_t) * NR_PTYS * 2);
+	int i;
+
+	/* set pty table */
+	for (i = 0; i < NR_PTYS; i++) {
+		pty_table[i].p_num = i;
+		pty_table[i].p_count = 0;
+	}
 
 	/* install master pty operations */
 	ptm_iops.fops = &ptm_fops;

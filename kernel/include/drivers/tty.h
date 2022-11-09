@@ -8,6 +8,8 @@
 #include <lib/ring_buffer.h>
 #include <proc/wait.h>
 
+#define NR_TTYS			(NR_CONSOLES + NR_PTYS * 2)
+
 #define TTY_BUF_SIZE		1024
 #define TTY_ESC_BUF_SIZE	16
 #define TTY_DELAY_UPDATE_MS	20
@@ -61,7 +63,6 @@ struct tty_driver_t {
  * TTY structure.
  */
 struct tty_t {
-	dev_t			dev;							/* dev number */
 	pid_t			pgrp;							/* process group id */
 	struct ring_buffer_t	read_queue;						/* read queue */
 	struct ring_buffer_t	write_queue;						/* write queue */
@@ -72,28 +73,12 @@ struct tty_t {
 	struct wait_queue_t *	wait;							/* wait queue */
 	struct tty_t *		link;							/* linked tty */
 	struct tty_driver_t *	driver;							/* tty driver */
-	uint32_t		vc_pars[NPARS];						/* escaped pars */
-	uint32_t		vc_npars;						/* number of escaped pars */
-	int			vc_state;						/* tty state (NORMAL or ESCAPE) */
-	uint8_t			vc_attr;						/* attributes = current color */
-	uint8_t			vc_color;						/* forgeground/background color */
-	uint8_t			vc_def_color;						/* default foreground/background color */
-	uint8_t			vc_intensity;						/* foreground intensity */
-	uint8_t			vc_underline;						/* underline */
-	uint8_t			vc_reverse;						/* reverse mode */
-	uint16_t		vc_erase_char;						/* erase character */
-	uint8_t			vc_deccm:1;						/* cursor visible */
-	uint8_t			vc_mode;						/* console mode (KD_TEXT or KD_GRAPHICS) */
-	struct vt_mode		vt_mode;						/* vt mode (AUTO or PROCESS) */
-	char			vt_need_wrap;						/* 1 if vt need to be wrapped */
-	pid_t			vt_pid;							/* vt pid */
-	int			vt_newvt;						/* new asked vt */
-	struct framebuffer_t	fb;							/* framebuffer */
+	void *			driver_data;						/* tty driver data */
 };
 
 /* tty functions */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
-int tty_init_dev(struct tty_t *tty, dev_t dev, struct tty_driver_t *driver);
+int tty_init_dev(struct tty_t *tty, struct tty_driver_t *driver);
 void tty_destroy(struct tty_t *tty);
 void tty_do_cook(struct tty_t *tty);
 void tty_change(int n);
@@ -105,8 +90,7 @@ extern struct inode_operations_t ptm_iops;
 extern struct inode_operations_t pts_iops;
 
 /* global ttys */
-extern struct tty_t console_table[NR_CONSOLES];
-extern struct tty_t pty_table[NR_PTYS * 2];
+extern struct tty_t tty_table[NR_TTYS];
 extern int fg_console;
 
 #endif

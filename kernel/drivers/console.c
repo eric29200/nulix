@@ -9,7 +9,7 @@
 #include <kd.h>
 
 /* consoles table */
-struct tty_t console_table[NR_CONSOLES];
+static struct vc_t console_table[NR_CONSOLES];
 int fg_console;
 
 /* processes waiting for console activation */
@@ -38,17 +38,17 @@ static uint8_t ansi_color_table[] = {
 /*
  * Reset a virtual console.
  */
-static void reset_vc(struct tty_t *tty)
+static void reset_vc(struct vc_t *vc)
 {
-	tty->vc_mode = KD_TEXT;
-	kbd_table[tty->dev - DEV_TTY0 - 1].kbdmode = VC_XLATE;
-	tty->vt_mode.mode = VT_AUTO;
-	tty->vt_mode.waitv = 0;
-	tty->vt_mode.relsig = 0;
-	tty->vt_mode.acqsig = 0;
-	tty->vt_mode.frsig = 0;
-	tty->vt_pid = -1;
-	tty->vt_newvt = -1;
+	vc->vc_mode = KD_TEXT;
+	kbd_table[vc->vc_num].kbdmode = VC_XLATE;
+	vc->vt_mode.mode = VT_AUTO;
+	vc->vt_mode.waitv = 0;
+	vc->vt_mode.relsig = 0;
+	vc->vt_mode.acqsig = 0;
+	vc->vt_mode.frsig = 0;
+	vc->vt_pid = -1;
+	vc->vt_newvt = -1;
 }
 
 /*
@@ -57,33 +57,33 @@ static void reset_vc(struct tty_t *tty)
 static void console_complete_change(int n)
 {
 	struct framebuffer_t *fb;
-	struct tty_t *tty_new;
+	struct vc_t *vc_new;
 
-	/* check tty */
+	/* check console */
 	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
 		return;
 
-	/* get current tty */
-	tty_new = &console_table[n];
+	/* get current console */
+	vc_new = &console_table[n];
 
 	/* if new console is in process mode, acquire it */
-	if (tty_new->vt_mode.mode == VT_PROCESS) {
+	if (vc_new->vt_mode.mode == VT_PROCESS) {
 		/* send acquire signal */
-		if (task_signal(tty_new->vt_pid, tty_new->vt_mode.acqsig) != 0)
-			reset_vc(tty_new);
+		if (task_signal(vc_new->vt_pid, vc_new->vt_mode.acqsig) != 0)
+			reset_vc(vc_new);
 	}
 
 	/* disable current frame buffer */
 	console_table[fg_console].fb.active = 0;
 
 	/* refresh new frame buffer */
-	if (tty_new->vc_mode == KD_TEXT) {
-		fb = &tty_new->fb;
+	if (vc_new->vc_mode == KD_TEXT) {
+		fb = &vc_new->fb;
 		fb->active = 1;
 		fb->ops->update_region(fb, 0, fb->width * fb->height);
 	}
 
-	/* set current tty */
+	/* set current console */
 	fg_console = n;
 
 	/* wake up eventual processes */
@@ -95,29 +95,29 @@ static void console_complete_change(int n)
  */
 void console_change(int n)
 {
-	struct tty_t *tty;
+	struct vc_t *vc;
 
-	/* check tty */
+	/* check console */
 	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
 		return;
 
-	/* get current tty */
-	tty = &console_table[fg_console];
+	/* get current console */
+	vc = &console_table[fg_console];
 
 	/* in process mode, handshake realase/acquire */
-	if (tty->vt_mode.mode == VT_PROCESS) {
+	if (vc->vt_mode.mode == VT_PROCESS) {
 		/* send release signal */
-		if (task_signal(tty->vt_pid, tty->vt_mode.relsig) == 0) {
-			tty->vt_newvt = n;
+		if (task_signal(vc->vt_pid, vc->vt_mode.relsig) == 0) {
+			vc->vt_newvt = n;
 			return;
 		}
 
 		/* on error reset console */
-		reset_vc(tty);
+		reset_vc(vc);
 	}
 
 	/* ignore switches in KD_GRAPHICS mode */
-	if (tty->vc_mode == KD_GRAPHICS)
+	if (vc->vc_mode == KD_GRAPHICS)
 		return;
 
 	/* change console */
@@ -127,49 +127,49 @@ void console_change(int n)
 /*
  * Init console attributes.
  */
-static void console_init_attr(struct tty_t *tty)
+static void console_init_attr(struct vc_t *vc)
 {
-	tty->vc_def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
-	tty->vc_color = tty->vc_def_color;
-	tty->vc_intensity = 1;
-	tty->vc_reverse = 0;
-	tty->vc_erase_char = ' ' | (tty->vc_def_color << 8);
-	tty->vc_deccm = 1;
-	tty->vc_attr = tty->vc_color;
+	vc->vc_def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
+	vc->vc_color = vc->vc_def_color;
+	vc->vc_intensity = 1;
+	vc->vc_reverse = 0;
+	vc->vc_erase_char = ' ' | (vc->vc_def_color << 8);
+	vc->vc_deccm = 1;
+	vc->vc_attr = vc->vc_color;
 }
 
 /*
  * Default console attributes.
  */
-static void console_default_attr(struct tty_t *tty)
+static void console_default_attr(struct vc_t *vc)
 {
-	tty->vc_intensity = 1;
-	tty->vc_reverse = 0;
-	tty->vc_color = tty->vc_def_color;
+	vc->vc_intensity = 1;
+	vc->vc_reverse = 0;
+	vc->vc_color = vc->vc_def_color;
 }
 
 /*
  * Update console attributes.
  */
-static void console_update_attr(struct tty_t *tty)
+static void console_update_attr(struct vc_t *vc)
 {
-	tty->vc_attr = tty->vc_color;
+	vc->vc_attr = vc->vc_color;
 
-	if (tty->vc_reverse)
-		tty->vc_attr = TEXT_COLOR(TEXT_COLOR_FG(tty->vc_color), TEXT_COLOR_BG(tty->vc_color));
-	if (tty->vc_intensity == 2)
-		tty->vc_attr ^= 0x08;
+	if (vc->vc_reverse)
+		vc->vc_attr = TEXT_COLOR(TEXT_COLOR_FG(vc->vc_color), TEXT_COLOR_BG(vc->vc_color));
+	if (vc->vc_intensity == 2)
+		vc->vc_attr ^= 0x08;
 
 	/* redefine erase char */
-	tty->vc_erase_char = ' ' | (tty->vc_color << 8);
+	vc->vc_erase_char = ' ' | (vc->vc_color << 8);
 }
 
 /*
  * Scroll up from bottom to top.
  */
-static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom, size_t nr)
+static void console_scrup(struct vc_t *vc, uint32_t top, uint32_t bottom, size_t nr)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 	uint16_t *dest, *src;
 
 	/* limit to bottom */
@@ -186,7 +186,7 @@ static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom, size
 	memmovew(dest, src, (bottom - top - nr) * fb->width);
 
 	/* clear last lines */
-	memsetw(dest + (bottom - top - nr) * fb->width, tty->vc_erase_char, fb->width * nr);
+	memsetw(dest + (bottom - top - nr) * fb->width, vc->vc_erase_char, fb->width * nr);
 
 	/* hardware scroll */
 	if (fb->active)
@@ -196,9 +196,9 @@ static void console_scrup(struct tty_t *tty, uint32_t top, uint32_t bottom, size
 /*
  * Scroll down from top to bottom.
  */
-static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom, size_t nr)
+static void console_scrdown(struct vc_t *vc, uint32_t top, uint32_t bottom, size_t nr)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 	uint16_t *src, *dest;
 
 	/* limit to bottom */
@@ -215,7 +215,7 @@ static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom, si
 	memmovew(dest, src, (bottom - top - nr) * fb->width);
 
 	/* clear first lines */
-	memsetw(src, tty->vc_erase_char, fb->width * nr);
+	memsetw(src, vc->vc_erase_char, fb->width * nr);
 
 	/* hardware scroll */
 	if (fb->active)
@@ -225,9 +225,9 @@ static void console_scrdown(struct tty_t *tty, uint32_t top, uint32_t bottom, si
 /*
  * Insert a character at current position.
  */
-static void insert_char(struct tty_t *tty)
+static void insert_char(struct vc_t *vc)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 	uint16_t *src, *dest;
 
 	/* move each character of current line to right */
@@ -243,20 +243,20 @@ static void insert_char(struct tty_t *tty)
 /*
  * Handle escape P sequences (delete characters).
  */
-static void csi_P(struct tty_t *tty, uint32_t nr)
+static void csi_P(struct vc_t *vc, uint32_t nr)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 	uint16_t *p;
 
-	if (nr > tty->fb.width - tty->fb.x)
-		nr = tty->fb.width - tty->fb.x;
+	if (nr > vc->fb.width - vc->fb.x)
+		nr = vc->fb.width - vc->fb.x;
 	else if (!nr)
 		nr = 1;
 
 	/* delete characters */
 	p = fb->buf + fb->y * fb->width + fb->x;
 	memcpy(p, p + nr, (fb->width - fb->x - nr) * 2);
-	memsetw(p + fb->width - fb->x - nr, tty->vc_erase_char, nr);
+	memsetw(p + fb->width - fb->x - nr, vc->vc_erase_char, nr);
 
 	/* update region */
 	if (fb->active)
@@ -266,9 +266,9 @@ static void csi_P(struct tty_t *tty, uint32_t nr)
 /*
  * Handle escape K sequences (erase line or part of line).
  */
-static void csi_K(struct tty_t *tty, int vpar)
+static void csi_K(struct vc_t *vc, int vpar)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 	uint16_t *start = fb->buf + fb->y * fb->width + fb->x;
 	uint32_t count;
 	int offset;
@@ -276,34 +276,34 @@ static void csi_K(struct tty_t *tty, int vpar)
 	switch (vpar) {
 		case 0:						/* erase from cursor to end of line */
 			offset = 0;
-			count = tty->fb.width - tty->fb.x;
+			count = vc->fb.width - vc->fb.x;
 			break;
 		case 1:						/* erase from start of line to cursor */
-			offset = -tty->fb.x;
-			count = tty->fb.x + 1;
+			offset = -vc->fb.x;
+			count = vc->fb.x + 1;
 			break;
 		case 2:						/* erase whole line */
-			offset = -tty->fb.x;
-			count = tty->fb.width;
+			offset = -vc->fb.x;
+			count = vc->fb.width;
 			break;
 		default:
 			return;
 	}
 
 	/* update frame buffer */
-	memsetw(start + offset, tty->vc_erase_char, count);
+	memsetw(start + offset, vc->vc_erase_char, count);
 
 	/* update region */
 	if (fb->active)
-		fb->ops->update_region(&tty->fb, start + offset - tty->fb.buf, count);
+		fb->ops->update_region(&vc->fb, start + offset - vc->fb.buf, count);
 }
 
 /*
  * Handle escape J sequences (delete screen or part of the screen).
  */
-static void csi_J(struct tty_t *tty, int vpar)
+static void csi_J(struct vc_t *vc, int vpar)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 	uint16_t *start;
 	size_t count;
 
@@ -325,114 +325,114 @@ static void csi_J(struct tty_t *tty, int vpar)
 	}
 
 	/* update frame buffer */
-	memsetw(start, tty->vc_erase_char, count);
+	memsetw(start, vc->vc_erase_char, count);
 
 	/* update region */
 	if (fb->active)
-		fb->ops->update_region(&tty->fb, start - tty->fb.buf, count);
+		fb->ops->update_region(&vc->fb, start - vc->fb.buf, count);
 }
 
 /*
  * Handle escape m sequences (change console attributes).
  */
-static void csi_m(struct tty_t *tty)
+static void csi_m(struct vc_t *vc)
 {
 	size_t i;
 
-	for (i = 0; i <= tty->vc_npars; i++) {
-		switch (tty->vc_pars[i]) {
+	for (i = 0; i <= vc->vc_npars; i++) {
+		switch (vc->vc_pars[i]) {
 			case 0:												/* set default attributes */
-				console_default_attr(tty);
+				console_default_attr(vc);
 				break;
 			case 1:												/* bold */
-				tty->vc_intensity = 2;
+				vc->vc_intensity = 2;
 				break;
 			case 4:												/* underline */
-				tty->vc_underline = 1;
+				vc->vc_underline = 1;
 				break;
 			case 7:												/* reverse attributes */
-				tty->vc_reverse = 1;
+				vc->vc_reverse = 1;
 				break;
 			case 24:											/* not underline */
-				tty->vc_underline = 0;
+				vc->vc_underline = 0;
 				break;
 			case 27:											/* unreverse attributes */
-				tty->vc_reverse = 0;
+				vc->vc_reverse = 0;
 				break;
 			case 39:											/* default foreground color */
-				tty->vc_color = TEXT_COLOR(TEXT_COLOR_BG(tty->vc_color), TEXT_COLOR_FG(tty->vc_def_color));
+				vc->vc_color = TEXT_COLOR(TEXT_COLOR_BG(vc->vc_color), TEXT_COLOR_FG(vc->vc_def_color));
 				break;
 			case 49:											/* default background color */
-				tty->vc_color = TEXT_COLOR(TEXT_COLOR_BG(tty->vc_def_color), TEXT_COLOR_FG(tty->vc_color));
+				vc->vc_color = TEXT_COLOR(TEXT_COLOR_BG(vc->vc_def_color), TEXT_COLOR_FG(vc->vc_color));
 				break;
 			default:
 				/* set foreground color */
-				if (tty->vc_pars[i] >= 30 && tty->vc_pars[i] <= 37) {
-					tty->vc_color = TEXT_COLOR(TEXT_COLOR_BG(tty->vc_color), ansi_color_table[tty->vc_pars[i] - 30]);
+				if (vc->vc_pars[i] >= 30 && vc->vc_pars[i] <= 37) {
+					vc->vc_color = TEXT_COLOR(TEXT_COLOR_BG(vc->vc_color), ansi_color_table[vc->vc_pars[i] - 30]);
 					break;
 				}
 
 				/* set background color */
-				if (tty->vc_pars[i] >= 40 && tty->vc_pars[i] <= 47) {
-					tty->vc_color = TEXT_COLOR(ansi_color_table[tty->vc_pars[i] - 40], TEXT_COLOR_FG(tty->vc_color));
+				if (vc->vc_pars[i] >= 40 && vc->vc_pars[i] <= 47) {
+					vc->vc_color = TEXT_COLOR(ansi_color_table[vc->vc_pars[i] - 40], TEXT_COLOR_FG(vc->vc_color));
 					break;
 				}
 
-				printf("console : unknown escape sequence m : %d\n", tty->vc_pars[i]);
+				printf("console : unknown escape sequence m : %d\n", vc->vc_pars[i]);
 				break;
 		}
 	}
 
 	/* update attributes */
-	console_update_attr(tty);
+	console_update_attr(vc);
 }
 
 /*
  * Handle escape L sequences (scroll down).
  */
-static void csi_L(struct tty_t *tty, uint32_t nr)
+static void csi_L(struct vc_t *vc, uint32_t nr)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 
 	if (nr > fb->height - fb->y)
 		nr = fb->height - fb->y;
 	else if (nr == 0)
 		nr = 1;
 
-	console_scrdown(tty, fb->y, fb->height, nr);
+	console_scrdown(vc, fb->y, fb->height, nr);
 }
 
 /*
  * Insert characters at current position.
  */
-static void csi_at(struct tty_t *tty, uint32_t nr)
+static void csi_at(struct vc_t *vc, uint32_t nr)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 
 	if (nr > fb->width)
 		nr = fb->width;
 	else if (nr == 0)
 		nr = 1;
 
-	insert_char(tty);
+	insert_char(vc);
 }
 
 /*
  * Set console mode.
  */
-static void console_set_mode(struct tty_t *tty, int on_off)
+static void console_set_mode(struct vc_t *vc, int on_off)
 {
 	size_t i;
 
-	for (i = 0; i <= tty->vc_npars; i++) {
-		switch (tty->vc_pars[i]) {
+	for (i = 0; i <= vc->vc_npars; i++) {
+		switch (vc->vc_pars[i]) {
 			case 25:				/* cursor visible */
-				tty->vc_deccm = on_off;
-				if (tty->fb.active)
-					tty->fb.ops->show_cursor(&tty->fb, on_off);
+				vc->vc_deccm = on_off;
+				if (vc->fb.active)
+					vc->fb.ops->show_cursor(&vc->fb, on_off);
 				break;
 			default:
-				printf("console : unknown mode : %d\n", tty->vc_pars[i]);
+				printf("console : unknown mode : %d\n", vc->vc_pars[i]);
 				break;
 		}
 	}
@@ -441,67 +441,67 @@ static void console_set_mode(struct tty_t *tty, int on_off)
 /*
  * Do a carriage return.
  */
-static void console_cr(struct tty_t *tty)
+static void console_cr(struct vc_t *vc)
 {
-	tty->fb.x = 0;
-	tty->vt_need_wrap = 0;
+	vc->fb.x = 0;
+	vc->vc_need_wrap = 0;
 }
 
 /*
  * Do a line feed.
  */
-static void console_lf(struct tty_t *tty)
+static void console_lf(struct vc_t *vc)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 
 	if (fb->y + 1 == fb->height)
-		console_scrup(tty, 0, fb->height, 1);
+		console_scrup(vc, 0, fb->height, 1);
 	else if (fb->y < fb->height - 1)
 		fb->y++;
 
-	tty->vt_need_wrap = 0;
+	vc->vc_need_wrap = 0;
 }
 
 /*
  * Scroll down if needed.
  */
-static void console_ri(struct tty_t *tty)
+static void console_ri(struct vc_t *vc)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 
 	/* don't scroll if not needed */
 	if (fb->y == 0)
-		console_scrdown(tty, 0, fb->height, 1);
+		console_scrdown(vc, 0, fb->height, 1);
 	else if (fb->y > 0)
 		fb->y--;
 
-	tty->vt_need_wrap = 0;
+	vc->vc_need_wrap = 0;
 }
 
 /*
  * Do a back space.
  */
-static void console_bs(struct tty_t *tty)
+static void console_bs(struct vc_t *vc)
 {
-	if (tty->fb.x) {
-		tty->fb.x--;
-		tty->vt_need_wrap = 0;
+	if (vc->fb.x) {
+		vc->fb.x--;
+		vc->vc_need_wrap = 0;
 	}
 }
 
 /*
  * Print a character on the console.
  */
-static void console_putc(struct tty_t *tty, uint8_t c)
+static void console_putc(struct vc_t *vc, uint8_t c)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 
 	/* handle character */
 	switch (c) {
 		case 7:
 			break;
 		case 8:
-			console_bs(tty);
+			console_bs(vc);
 			break;
 		case 9:
 			fb->x = (fb->x + fb->bpp / 8) & ~0x03;
@@ -509,11 +509,11 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 		case 10:
 		case 11:
 		case 12:
-			console_lf(tty);
-			console_cr(tty);
+			console_lf(vc);
+			console_cr(vc);
 			break;
 		case 13:
-			console_cr(tty);
+			console_cr(vc);
 			break;
 		case 14:
 			break;
@@ -521,19 +521,19 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 			break;
 		default:
 			/* wrap if needed */
-			if (tty->vt_need_wrap) {
-				console_cr(tty);
-				console_lf(tty);
+			if (vc->vc_need_wrap) {
+				console_cr(vc);
+				console_lf(vc);
 			}
 
 			/* add character */
-			fb->buf[fb->y * fb->width + fb->x] = (tty->vc_attr << 8) | c;
+			fb->buf[fb->y * fb->width + fb->x] = (vc->vc_attr << 8) | c;
 			if (fb->active)
 				fb->ops->update_region(fb, fb->y * fb->width + fb->x, 1);
 
 			/* update position */
 			if (fb->x == fb->width - 1)
-				tty->vt_need_wrap = 1;
+				vc->vc_need_wrap = 1;
 			else
 				fb->x++;
 
@@ -544,9 +544,9 @@ static void console_putc(struct tty_t *tty, uint8_t c)
 /*
  * Go to (x ; y).
  */
-static void console_gotoxy(struct tty_t *tty, uint32_t x, uint32_t y)
+static void console_gotoxy(struct vc_t *vc, uint32_t x, uint32_t y)
 {
-	struct framebuffer_t *fb = &tty->fb;
+	struct framebuffer_t *fb = &vc->fb;
 
 	if (x >= fb->width)
 		fb->x = fb->width - 1;
@@ -558,7 +558,7 @@ static void console_gotoxy(struct tty_t *tty, uint32_t x, uint32_t y)
 	else
 		fb->y = y;
 
-	tty->vt_need_wrap = 0;
+	vc->vc_need_wrap = 0;
 }
 
 /*
@@ -567,11 +567,15 @@ static void console_gotoxy(struct tty_t *tty, uint32_t x, uint32_t y)
 static ssize_t console_write(struct tty_t *tty)
 {
 	ssize_t count = 0;
+	struct vc_t *vc;
 	uint8_t c;
 
+	/* get console */
+	vc = tty->driver_data;
+
 	/* remove cursor */
-	if (tty->fb.active)
-		tty->fb.ops->update_region(&tty->fb, tty->fb.cursor_y * tty->fb.width + tty->fb.cursor_x, 1);
+	if (vc->fb.active)
+		vc->fb.ops->update_region(&vc->fb, vc->fb.cursor_y * vc->fb.width + vc->fb.cursor_x, 1);
 
 	/* get characters from write queue */
 	while (tty->write_queue.size > 0) {
@@ -580,13 +584,13 @@ static ssize_t console_write(struct tty_t *tty)
 		count++;
 
 		/* start an escape sequence or write to frame buffer */
-		if (tty->vc_state == TTY_STATE_NORMAL) {
+		if (vc->vc_state == TTY_STATE_NORMAL) {
 				switch (c) {
 					case '\033':
-						tty->vc_state = TTY_STATE_ESCAPE;
+						vc->vc_state = TTY_STATE_ESCAPE;
 						break;
 					default:
-						console_putc(tty, c);
+						console_putc(vc, c);
 						break;
 				}
 
@@ -594,15 +598,15 @@ static ssize_t console_write(struct tty_t *tty)
 		}
 
 		/* handle escape sequence */
-		if (tty->vc_state == TTY_STATE_ESCAPE) {
-				tty->vc_state = TTY_STATE_NORMAL;
+		if (vc->vc_state == TTY_STATE_ESCAPE) {
+				vc->vc_state = TTY_STATE_NORMAL;
 
 				switch (c) {
 					case '[':
-						tty->vc_state = TTY_STATE_SQUARE;
+						vc->vc_state = TTY_STATE_SQUARE;
 						break;
 					case 'M':
-						console_ri(tty);
+						console_ri(vc);
 						break;
 					default:
 						printf("console : unknown escape sequence %c\n", c);
@@ -613,106 +617,106 @@ static ssize_t console_write(struct tty_t *tty)
 		}
 
 		/* handle escape sequence */
-		if (tty->vc_state == TTY_STATE_SQUARE) {
+		if (vc->vc_state == TTY_STATE_SQUARE) {
 			/* reset npars */
-			for (tty->vc_npars = 0; tty->vc_npars < NPARS; tty->vc_npars++)
-				tty->vc_pars[tty->vc_npars] = 0;
-			tty->vc_npars = 0;
+			for (vc->vc_npars = 0; vc->vc_npars < NPARS; vc->vc_npars++)
+				vc->vc_pars[vc->vc_npars] = 0;
+			vc->vc_npars = 0;
 
-			tty->vc_state = TTY_STATE_GETPARS;
+			vc->vc_state = TTY_STATE_GETPARS;
 			if (c == '?')
 				continue;
 		}
 
 		/* get pars */
-		if (tty->vc_state == TTY_STATE_GETPARS) {
-			if (c == ';' && tty->vc_npars < NPARS - 1) {
-				tty->vc_npars++;
+		if (vc->vc_state == TTY_STATE_GETPARS) {
+			if (c == ';' && vc->vc_npars < NPARS - 1) {
+				vc->vc_npars++;
 				continue;
 			}
 
 			if (c >= '0' && c <= '9') {
-				tty->vc_pars[tty->vc_npars] *= 10;
-				tty->vc_pars[tty->vc_npars] += c - '0';
+				vc->vc_pars[vc->vc_npars] *= 10;
+				vc->vc_pars[vc->vc_npars] += c - '0';
 				continue;
 			}
 
-			tty->vc_state = TTY_STATE_GOTPARS;
+			vc->vc_state = TTY_STATE_GOTPARS;
 		}
 
 		/* handle pars */
-		if (tty->vc_state == TTY_STATE_GOTPARS) {
-			tty->vc_state = TTY_STATE_NORMAL;
+		if (vc->vc_state == TTY_STATE_GOTPARS) {
+			vc->vc_state = TTY_STATE_NORMAL;
 
 			switch (c) {
 				case 'G':
-					if (tty->vc_pars[0])
-						tty->vc_pars[0]--;
-					console_gotoxy(tty, tty->vc_pars[0], tty->fb.y);
+					if (vc->vc_pars[0])
+						vc->vc_pars[0]--;
+					console_gotoxy(vc, vc->vc_pars[0], vc->fb.y);
 					break;
 				case 'A':
-					if (!tty->vc_pars[0])
-						tty->vc_pars[0]++;
-					console_gotoxy(tty, tty->fb.x, tty->fb.y - tty->vc_pars[0]);
+					if (!vc->vc_pars[0])
+						vc->vc_pars[0]++;
+					console_gotoxy(vc, vc->fb.x, vc->fb.y - vc->vc_pars[0]);
 					break;
 				case 'B':
-					if (!tty->vc_pars[0])
-						tty->vc_pars[0]++;
-					console_gotoxy(tty, tty->fb.x, tty->fb.y + tty->vc_pars[0]);
+					if (!vc->vc_pars[0])
+						vc->vc_pars[0]++;
+					console_gotoxy(vc, vc->fb.x, vc->fb.y + vc->vc_pars[0]);
 					break;
 				case 'C':
-					if (!tty->vc_pars[0])
-						tty->vc_pars[0]++;
-					console_gotoxy(tty, tty->fb.x + tty->vc_pars[0], tty->fb.y);
+					if (!vc->vc_pars[0])
+						vc->vc_pars[0]++;
+					console_gotoxy(vc, vc->fb.x + vc->vc_pars[0], vc->fb.y);
 					break;
 				case 'D':
-					if (!tty->vc_pars[0])
-						tty->vc_pars[0]++;
-					console_gotoxy(tty, tty->fb.x - tty->vc_pars[0], tty->fb.y);
+					if (!vc->vc_pars[0])
+						vc->vc_pars[0]++;
+					console_gotoxy(vc, vc->fb.x - vc->vc_pars[0], vc->fb.y);
 					break;
 				case 'd':
-					if (tty->vc_pars[0])
-						tty->vc_pars[0]--;
-					console_gotoxy(tty, tty->fb.x, tty->vc_pars[0]);
+					if (vc->vc_pars[0])
+						vc->vc_pars[0]--;
+					console_gotoxy(vc, vc->fb.x, vc->vc_pars[0]);
 					break;
 				case 'H':
-					if (tty->vc_pars[0])
-						tty->vc_pars[0]--;
-					if (tty->vc_pars[1])
-						tty->vc_pars[1]--;
-					console_gotoxy(tty, tty->vc_pars[1], tty->vc_pars[0]);
+					if (vc->vc_pars[0])
+						vc->vc_pars[0]--;
+					if (vc->vc_pars[1])
+						vc->vc_pars[1]--;
+					console_gotoxy(vc, vc->vc_pars[1], vc->vc_pars[0]);
 					break;
 				case 'r':
-					if (!tty->vc_pars[0])
-						tty->vc_pars[0]++;
-					if (!tty->vc_pars[1])
-						tty->vc_pars[1] = tty->fb.height;
-					if (tty->vc_pars[0] < tty->vc_pars[1] && tty->vc_pars[1] <= tty->fb.height)
-						console_gotoxy(tty, 0, 0);
+					if (!vc->vc_pars[0])
+						vc->vc_pars[0]++;
+					if (!vc->vc_pars[1])
+						vc->vc_pars[1] = vc->fb.height;
+					if (vc->vc_pars[0] < vc->vc_pars[1] && vc->vc_pars[1] <= vc->fb.height)
+						console_gotoxy(vc, 0, 0);
 					break;
 				case 'P':
-					csi_P(tty, tty->vc_pars[0]);
+					csi_P(vc, vc->vc_pars[0]);
 					break;
 				case 'K':
-					csi_K(tty, tty->vc_pars[0]);
+					csi_K(vc, vc->vc_pars[0]);
 					break;
 				case 'J':
-					csi_J(tty, tty->vc_pars[0]);
+					csi_J(vc, vc->vc_pars[0]);
 					break;
 				case 'm':
-					csi_m(tty);
+					csi_m(vc);
 					break;
 				case 'L':
-					csi_L(tty, tty->vc_pars[0]);
+					csi_L(vc, vc->vc_pars[0]);
 					break;
 				case '@':
-					csi_at(tty, tty->vc_pars[0]);
+					csi_at(vc, vc->vc_pars[0]);
 					break;
 				case 'h':
-					console_set_mode(tty, 1);
+					console_set_mode(vc, 1);
 					break;
 				case 'l':
-					console_set_mode(tty, 0);
+					console_set_mode(vc, 0);
 					break;
 				case 'c':
 					break;
@@ -726,8 +730,8 @@ static ssize_t console_write(struct tty_t *tty)
 	}
 
 	/* update cursor */
-	if (tty->vc_deccm && tty->fb.active)
-		tty->fb.ops->update_cursor(&tty->fb);
+	if (vc->vc_deccm && vc->fb.active)
+		vc->fb.ops->update_cursor(&vc->fb);
 
 	return count;
 }
@@ -763,20 +767,22 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 	struct vt_stat *vtstat;
 	struct kbentry_t *kbe;
 	struct kbd_t *kbd;
+	struct vc_t *vc;
 	char *old_func;
 
-	/* get keyboard */
-	kbd = &kbd_table[tty->dev - DEV_TTY0 - 1];
+	/* get console and keyboard */
+	vc = tty->driver_data;
+	kbd = &kbd_table[vc->vc_num];
 
 	switch (request) {
 		case KDGKBTYPE:
 			*((char *) arg) = KB_101;
 			return 0;
 		case KDGETMODE:
-			*((uint8_t *) arg) = tty->vc_mode;
+			*((uint8_t *) arg) = vc->vc_mode;
 			return 0;
 		case KDSETMODE:
-			tty->vc_mode = *((uint8_t *) arg);
+			vc->vc_mode = *((uint8_t *) arg);
 			return 0;
 		case KDGKBENT:
 			kbe = (struct kbentry_t *) arg;
@@ -889,13 +895,13 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 				vtstat->v_state |= mask;
 			return 0;
 		case VT_GETMODE:
-			*((struct vt_mode *) arg) = tty->vt_mode;
+			*((struct vt_mode *) arg) = vc->vt_mode;
 			return 0;
 		case VT_SETMODE:
-			tty->vt_mode = *((struct vt_mode *) arg);
-			tty->vt_mode.frsig = 0;
-			tty->vt_pid = current_task->pid;
-			tty->vt_newvt = -1;
+			vc->vt_mode = *((struct vt_mode *) arg);
+			vc->vt_mode.frsig = 0;
+			vc->vt_pid = current_task->pid;
+			vc->vt_newvt = -1;
 			return 0;
 		case VT_ACTIVATE:
 			if (arg == 0 || arg > NR_CONSOLES)
@@ -903,18 +909,18 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			console_change(arg - 1);
 			return 0;
 		case VT_RELDISP:
-			if (tty->vt_mode.mode != VT_PROCESS)
+			if (vc->vt_mode.mode != VT_PROCESS)
 				return -EINVAL;
 
-			/* change tty */
-			if (tty->vt_newvt >= 0) {
+			/* change console */
+			if (vc->vt_newvt >= 0) {
 				if (arg == 0) {
-					tty->vt_newvt = -1;
+					vc->vt_newvt = -1;
 					return 0;
 				}
 
-				newvt = tty->vt_newvt;
-				tty->vt_newvt = -1;
+				newvt = vc->vt_newvt;
+				vc->vt_newvt = -1;
 				console_complete_change(newvt);
 			} else if (arg != VT_ACKACQ) {
 				return -EINVAL;
@@ -948,36 +954,39 @@ static struct tty_driver_t console_driver = {
 int init_console(struct multiboot_tag_framebuffer *tag_fb)
 {
 	struct tty_t *tty;
+	struct vc_t *vc;
 	int i, ret;
-
-	/* reset consoles */
-	for (i = 0; i < NR_CONSOLES; i++)
-		memset(&console_table[i], 0, sizeof(struct tty_t));
 
 	/* init consoles */
 	for (i = 0; i < NR_CONSOLES; i++) {
-		tty = &console_table[i];
+		tty = &tty_table[i];
+		vc = &console_table[i];
 
 		/* init tty device */
-		ret = tty_init_dev(tty, DEV_TTY0 + i + 1, &console_driver);
+		ret = tty_init_dev(tty, &console_driver);
 		if (ret)
 			goto err;
 
 		/* init frame buffer */
-		ret = init_framebuffer(&tty->fb, tag_fb, tty->vc_erase_char, 0);
+		ret = init_framebuffer(&vc->fb, tag_fb, vc->vc_erase_char, 0);
 		if (ret)
 			goto err;
 
 		/* set winsize */
-		tty->winsize.ws_row = tty->fb.height;
-		tty->winsize.ws_col = tty->fb.width;
+		tty->winsize.ws_row = vc->fb.height;
+		tty->winsize.ws_col = vc->fb.width;
 
 		/* init console attributes */
-		console_init_attr(tty);
-		reset_vc(tty);
+		vc->vc_num = i;
+		console_init_attr(vc);
+		reset_vc(vc);
+
+		/* attach console to tty */
+		tty->driver_data = vc;
+
 	}
 
-	/* set current tty to first tty */
+	/* set current console to first console */
 	fg_console = 0;
 	console_table[fg_console].fb.active = 1;
 
@@ -985,7 +994,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 err:
 	/* destroy consoles */
 	for (i = 0; i < NR_CONSOLES; i++)
-		tty_destroy(&console_table[i]);
+		tty_destroy(&tty_table[i]);
 
 	return ret;
 }
