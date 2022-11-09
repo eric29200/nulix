@@ -309,7 +309,7 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 			return -ENOTCONN;
 
 		/* signal received : restart system call */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* message received : break */
@@ -387,7 +387,7 @@ static int tcp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
 			return -ENOTCONN;
 
 		/* signal received : restart system call */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* connected : break */
@@ -448,7 +448,7 @@ static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 
 	for (;;) {
 		/* signal received : restart system call */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* for each received packet */
@@ -523,7 +523,7 @@ static int tcp_close(struct sock_t *sk)
 	/* wait for ACK message */
 	while (sk->sock->state != SS_DISCONNECTING) {
 		/* signal received : restart system call */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* sleep */

@@ -156,7 +156,7 @@ static int icmp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 	/* sleep until we receive a packet */
 	for (;;) {
 		/* signal received : restart system call */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* message received : break */

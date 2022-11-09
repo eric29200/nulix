@@ -95,7 +95,8 @@ struct task_t {
 	uint32_t			esp;				/* kernel stack pointer */
 	uint32_t			timeout;			/* timeout (used by sleep) */
 	sigset_t			sigpend;			/* pending signals */
-	sigset_t			sigmask;			/* masked signals */
+	sigset_t			sigmask;			/* signals mask */
+	sigset_t			saved_sigmask;			/* saved signals mask */
 	struct registers_t		user_regs;			/* saved registers at syscall entry */
 	struct registers_t		signal_regs;			/* saved registers at signal entry */
 	struct user_desc_t		tls;				/* Thread Local Storage address */

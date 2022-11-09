@@ -747,7 +747,7 @@ static int vt_waitactive(int n)
 			break;
 
 		/* pending signals : exit */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -EINTR;
 
 		/* sleep on waiting queue */

@@ -1,4 +1,5 @@
 #include <sys/syscall.h>
+#include <stderr.h>
 
 /*
  * Pselect6 system call.
@@ -9,10 +10,15 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 	sigset_t current_sigmask;
 	int ret;
 
-	/* save current sigmask and set new sigmask */
+	/* handle sigmask */
 	if (sigmask) {
+		/* save current sigmask */
 		current_sigmask = current_task->sigmask;
+
+		/* set new sigmask (do not mask SIGKILL and SIGSTOP) */
 		current_task->sigmask = *sigmask;
+		sigdelset(&current_task->sigmask, SIGKILL);
+		sigdelset(&current_task->sigmask, SIGSTOP);
 	}
 
 	/* convert timespec to kernel timeval */
@@ -23,10 +29,10 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 	ret = do_select(nfds, readfds, writefds, exceptfds, timeout ? &tv : NULL);
 
 	/* restore sigmask and delete masked pending signals */
-	if (sigmask) {
+	if (ret == -EINTR && sigmask)
+		current_task->saved_sigmask = current_sigmask;
+	else if (sigmask)
 		current_task->sigmask = current_sigmask;
-		current_task->sigpend &= !*sigmask;
-	}
 
 	return ret;
 }

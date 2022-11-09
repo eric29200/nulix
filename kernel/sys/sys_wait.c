@@ -18,7 +18,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 		has_children = 0;
 
 		/* process interruption */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* search zombie child */

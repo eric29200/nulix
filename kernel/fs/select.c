@@ -87,7 +87,7 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 		wait = NULL;
 
 		/* events catched or signal transmitted : break */
-		if (count || !sigisemptyset(&current_task->sigpend) || !timeout || jiffies >= current_task->timeout)
+		if (count || signal_pending(current_task) || !timeout || jiffies >= current_task->timeout)
 			break;
 
 		/* no events sleep */
@@ -220,7 +220,7 @@ end_check:
 			break;
 
 		/* signal catched : break */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			break;
 
 		/* timeout : break */
@@ -246,6 +246,10 @@ end_check:
 	/* free wait table */
 	free_wait(&wait_table);
 	free_page(entry);
+
+	/* signal interruption */
+	if (!count && signal_pending(current_task))
+		return -EINTR;
 
 	return count;
 }

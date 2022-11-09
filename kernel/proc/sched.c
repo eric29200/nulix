@@ -401,7 +401,7 @@ int do_signal(struct registers_t *regs)
 
 	/* no signal */
 	if (sig == NSIGS)
-		return 0;
+		goto out;
 
 	/* remove signal from current task */
 	sigdelset(&current_task->sigpend, sig);
@@ -409,22 +409,25 @@ int do_signal(struct registers_t *regs)
 
 	/* ignore signal handler */
 	if (act->sa_handler == SIG_IGN)
-		return 0;
+		goto out;
 
 	/* default signal handler */
 	if (act->sa_handler == SIG_DFL) {
 		switch (sig) {
 			/* ignore those signals */
-			case SIGCONT: case SIGCHLD: case SIGWINCH:
-				return 0;
-			case SIGSTOP: case SIGTSTP:
+			case SIGCONT:
+			case SIGCHLD:
+			case SIGWINCH:
+				goto out;
+			case SIGSTOP:
+			case SIGTSTP:
 				current_task->state = TASK_STOPPED;
 				current_task->exit_code = sig;
 				task_wakeup_all(&current_task->parent->wait_child_exit);
-				return 0;
+				goto out;
 			default:
 				sys_exit(sig);
-				return 0;
+				goto out;
 		}
 	}
 
@@ -439,6 +442,13 @@ int do_signal(struct registers_t *regs)
 	/* changer interrupt registers to return back in signal handler */
 	regs->useresp = (uint32_t) esp;
 	regs->eip = (uint32_t) act->sa_handler;
+
+out:
+	/* restore sigmask */
+	if (current_task->saved_sigmask) {
+		current_task->sigmask = current_task->saved_sigmask;
+		current_task->saved_sigmask = 0;
+	}
 
 	return 0;
 }

@@ -46,7 +46,7 @@ size_t ring_buffer_read(struct ring_buffer_t *rb, uint8_t *buf, size_t n)
 	for (i = 0; i < n; i++) {
 		/* buffer empty : sleep */
 		while (rb->size == 0) {
-			if (!sigisemptyset(&current_task->sigpend))
+			if (signal_pending(current_task))
 				return i;
 
 			task_sleep(&rb->wait);
@@ -77,7 +77,7 @@ size_t ring_buffer_write(struct ring_buffer_t *rb, const uint8_t *buf, size_t n)
 	for (i = 0; i < n; i++) {
 		/* buffer full : sleep */
 		while (rb->size == rb->capacity) {
-			if (!sigisemptyset(&current_task->sigpend))
+			if (signal_pending(current_task))
 				return i;
 
 			task_sleep(&rb->wait);

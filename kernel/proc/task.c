@@ -87,6 +87,7 @@ static int task_copy_signals(struct task_t *task, struct task_t *parent, uint32_
 	/* init signals */
 	sigemptyset(&task->sigpend);
 	sigemptyset(&task->sigmask);
+	sigemptyset(&task->saved_sigmask);
 
 	/* copy signals */
 	if (parent)

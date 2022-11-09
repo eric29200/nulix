@@ -28,6 +28,14 @@
 	load += n*(FIXED_1-exp); \
 	load >>= FSHIFT;
 
+/*
+ * Check if a process has pending signals.
+ */
+static inline int signal_pending(struct task_t *task)
+{
+	return task->sigpend & ~(task->sigmask);
+}
+
 extern unsigned long avenrun[];				/* Load averages */
 
 extern struct task_t *init_task;

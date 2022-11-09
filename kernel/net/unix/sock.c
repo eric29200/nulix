@@ -176,7 +176,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 	/* sleep until we receive a packet */
 	for (;;) {
 		/* signal received : restart system call */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* message received : break */
@@ -343,7 +343,7 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 
 	for (;;) {
 		/* signal received : restart system call */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* for each received packet */
@@ -427,7 +427,7 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr)
 	/* wait for an accept */
 	while (sock->state == SS_CONNECTING) {
 		/* signal received : restart system call */
-		if (!sigisemptyset(&current_task->sigpend))
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* sleep */
