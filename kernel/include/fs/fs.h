@@ -170,6 +170,9 @@ struct file_operations_t {
 	int (*mmap)(struct inode_t *, struct vm_area_t *);
 };
 
+/* files table */
+extern struct file_t filp_table[NR_FILE];
+
 /* super operations */
 int register_filesystem(struct file_system_t *fs);
 struct file_system_t *get_filesystem(const char *name);

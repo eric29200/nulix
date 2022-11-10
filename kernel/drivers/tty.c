@@ -75,14 +75,34 @@ static int tty_open(struct file_t *filp)
 }
 
 /*
+ * Check tty count.
+ */
+static int tty_check_count(struct tty_t *tty)
+{
+	int count = 0, i;
+
+	for (i = 0; i < NR_FILE; i++)
+		if (filp_table[i].f_ref && filp_table[i].f_private == tty)
+			count++;
+
+	return count;
+}
+
+
+/*
  * Close a TTY.
  */
 static int tty_close(struct file_t *filp)
 {
 	struct tty_t *tty = filp->f_private;
 
+	/* specifice close */
 	if (tty->driver && tty->driver->close)
 		return tty->driver->close(tty);
+
+	/* reset termios on last tty release */
+	if (!tty_check_count(tty))
+		tty->termios = tty->driver->termios;
 
 	return 0;
 }
@@ -394,14 +414,7 @@ int tty_init_dev(struct tty_t *tty, struct tty_driver_t *driver)
 		return ret;
 
 	/* init termios */
-	tty->termios = (struct termios_t) {
-		.c_iflag	= ICRNL | IXON,
-		.c_oflag	= OPOST | ONLCR,
-		.c_cflag	= B38400 | CS8 | CREAD | HUPCL,
-		.c_lflag	= ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN,
-		.c_line		= 0,
-		.c_cc		= INIT_C_CC,
-	};
+	tty->termios = driver->termios;
 
 	return 0;
 }

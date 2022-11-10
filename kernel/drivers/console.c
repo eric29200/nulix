@@ -946,6 +946,14 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 static struct tty_driver_t console_driver = {
 	.write		= console_write,
 	.ioctl		= console_ioctl,
+	.termios 	= (struct termios_t) {
+				.c_iflag	= ICRNL | IXON,
+				.c_oflag	= OPOST | ONLCR,
+				.c_cflag	= B38400 | CS8 | CREAD | HUPCL,
+				.c_lflag	= ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN,
+				.c_line		= 0,
+				.c_cc		= INIT_C_CC,
+			},
 };
 
 /*
