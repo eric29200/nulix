@@ -975,10 +975,6 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		if (ret)
 			goto err;
 
-		/* set winsize */
-		tty->winsize.ws_row = vc->fb.height;
-		tty->winsize.ws_col = vc->fb.width;
-
 		/* init console attributes */
 		vc->vc_num = i;
 		console_init_attr(vc);
@@ -988,6 +984,10 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		ret = init_framebuffer(&vc->fb, tag_fb, vc->vc_erase_char, 0);
 		if (ret)
 			goto err;
+
+		/* set winsize */
+		tty->winsize.ws_row = vc->fb.height;
+		tty->winsize.ws_col = vc->fb.width;
 
 		/* attach console to tty */
 		tty->driver_data = vc;
