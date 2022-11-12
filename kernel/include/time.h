@@ -18,10 +18,6 @@ extern volatile uint32_t jiffies;
 
 #define	rdtsc(low, high)		__asm__ __volatile__("rdtsc" : "=a" (low), "=d" (high))
 
-/* time stamp counter (defined in drivers/pit.c) */
-extern uint32_t last_tsc_low;
-extern uint32_t tsc_quotient;
-
 /*
  * Kernel time value structure.
  */

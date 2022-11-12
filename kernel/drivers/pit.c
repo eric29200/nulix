@@ -16,18 +16,12 @@
 /* current jiffies */
 volatile uint32_t jiffies = 0;
 
-/* time stamp counter */
-uint32_t last_tsc_low = 0;
-uint32_t tsc_quotient = 0;
-
 /*
- * Calibrate TimeStamp Counter.
+ * Get CPU frequency.
  */
-static uint32_t calibrate_tsc()
+static uint32_t get_cpu_frequency()
 {
-	uint32_t start_low, start_high;
-	uint32_t end_low, end_high;
-	uint32_t count = 0;
+	uint32_t eax, edx, cpu_khz, start_low, start_high, end_low, end_high, count = 0;
 
 	/* set the gate high, disable speaker */
 	outb(0x61, (inb(0x61) & ~0x02) | 0x01);
@@ -47,7 +41,6 @@ static uint32_t calibrate_tsc()
 
 	/* get end count down */
 	rdtsc(end_low, end_high);
-	last_tsc_low = end_low;
 
 	if (count <= 1)
 		return 0;
@@ -72,7 +65,15 @@ static uint32_t calibrate_tsc()
 		:"=a" (end_low), "=d" (end_high)
 		:"r" (end_low), "0" (0), "1" (CALIBRATE_TIME));
 
-	return end_low;
+	/* get CPU frequency in khz */
+	eax = 0;
+	edx = 1000;
+	__asm__("divl %2"
+		:"=a" (cpu_khz), "=d" (edx)
+		:"r" (end_low),
+		"0" (eax), "1" (edx));
+
+	return cpu_khz;
 }
 
 /*
@@ -94,32 +95,18 @@ static void pit_handler(struct registers_t *regs)
  */
 void init_pit()
 {
-	uint32_t eax, edx, cpu_khz, divisor;
-	uint8_t divisor_low, divisor_high;
-
-	/* calibrate time stamp counter */
-	tsc_quotient = calibrate_tsc();
+	uint32_t cpu_khz, divisor;
 
 	/* get CPU frequency */
-	eax = 0, edx = 1000;
-	__asm__("divl %2"
-		:"=a" (cpu_khz), "=d" (edx)
-		:"r" (tsc_quotient),
-		"0" (eax), "1" (edx));
-
-	/* print processor frequency */
+	cpu_khz = get_cpu_frequency();
 	printf("[Kernel] Detected %d.%d MHz processor.\n", cpu_khz / 1000, cpu_khz % 1000);
+
+	/* send command and frequency divisor */
+	divisor = CLOCK_TICK_RATE / HZ;
+	outb(0x43, 0x36);
+	outb(0x40, divisor & 0xFF);
+	outb(0x40, (divisor >> 8) & 0xFF);
 
 	/* register irq */
 	register_interrupt_handler(IRQ0, &pit_handler);
-
-	/* set frequency (PIT's clock is always at 1193180 Hz) */
-	divisor = 1193182 / HZ;
-	divisor_low = (uint8_t) (divisor & 0xFF);
-	divisor_high = (uint8_t) ((divisor >> 8) & 0xFF);
-
-	/* send command and frequency divisor */
-	outb(0x43, 0x36);
-	outb(0x40, divisor_low);
-	outb(0x40, divisor_high);
 }
