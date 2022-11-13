@@ -129,8 +129,8 @@ static inline uint32_t timespec_to_jiffies(const struct timespec_t *ts)
  */
 static inline void jiffies_to_timespec(uint32_t jiffies, struct timespec_t *ts)
 {
-	((uint32_t *) &ts->tv_nsec)[0] = 0;
 	((uint32_t *) &ts->tv_nsec)[0] = (jiffies % HZ) * (1000000000L / HZ);
+	((uint32_t *) &ts->tv_nsec)[1] = 0;
 	ts->tv_sec = jiffies / HZ;
 }
 
