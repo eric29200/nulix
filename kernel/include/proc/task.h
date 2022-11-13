@@ -84,11 +84,11 @@ struct task_t {
 	gid_t				egid;				/* effective group id */
 	gid_t				sgid;				/* saved group id */
 	struct tty_t *			tty;				/* attached tty */
-	uint32_t			utime;				/* amount of time that this process has been scheduled in user mode */
-	uint32_t			stime;				/* amount of time that this process has been scheduled in kernel mode */
-	uint32_t			cutime;				/* amount of time that this process's waited-for children have been scheduled in user mode */
-	uint32_t			cstime;				/* amount of time that this process's waited-for children have been scheduled in user mode */
-	uint32_t			start_time;			/* time process started after system boot */
+	time_t				utime;				/* amount of time (in jiffies) that this process has been scheduled in user mode */
+	time_t				stime;				/* amount of time (in jiffies) that this process has been scheduled in kernel mode */
+	time_t				cutime;				/* amount of time (in jiffies) that this process's waited-for children have been scheduled in user mode */
+	time_t				cstime;				/* amount of time (int jiffies) that this process's waited-for children have been scheduled in user mode */
+	time_t				start_time;			/* time process started after system boot */
 	int			 	exit_code;			/* exit code */
 	struct task_t *		 	parent;				/* parent process */
 	uint32_t			kernel_stack;			/* kernel stack */

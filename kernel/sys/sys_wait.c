@@ -48,6 +48,9 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 
 			/* destroy first zombie task */
 			if (task->state == TASK_ZOMBIE) {
+				current_task->cutime += task->utime + task->cutime;
+				current_task->cstime += task->stime + task->cstime;
+
 				if (wstatus != NULL)
 					*wstatus = task->exit_code;
 

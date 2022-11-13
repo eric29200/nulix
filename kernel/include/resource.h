@@ -4,6 +4,10 @@
 #include <stddef.h>
 #include <time.h>
 
+#define RUSAGE_SELF		0
+#define RUSAGE_CHILDREN		-1
+#define RUSAGE_BOTH		-2
+
 /*
  * Process usage statistics.
  */

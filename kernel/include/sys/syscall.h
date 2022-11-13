@@ -56,6 +56,7 @@
 #define __NR_getppid			64
 #define __NR_setsid			66
 #define __NR_sigaction			67
+#define __NR_getrusage			77
 #define __NR_symlink			83
 #define __NR_readlink			85
 #define __NR_reboot			88
@@ -264,5 +265,6 @@ int sys_mprotect(void *addr, size_t len, int prot);
 int sys_pread64(int fd, void *buf, size_t count, off_t offset);
 int sys_getsid(pid_t pid);
 int sys_setsid();
+int sys_getrusage(int who, struct rusage_t *ru);
 
 #endif
