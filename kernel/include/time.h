@@ -5,6 +5,7 @@
 
 extern uint32_t startup_time;
 extern volatile uint32_t jiffies;
+extern struct kernel_timeval_t xtimes;
 
 #define HZ				100
 #define CURRENT_TIME			(startup_time + (jiffies / HZ))
@@ -17,6 +18,7 @@ extern volatile uint32_t jiffies;
 #define ITIMER_PROF			2
 
 #define	rdtsc(low, high)		__asm__ __volatile__("rdtsc" : "=a" (low), "=d" (high))
+#define	rdtscl(low)			__asm__ __volatile__("rdtsc" : "=a" (low) : : "edx")
 
 /*
  * Kernel time value structure.

@@ -15,13 +15,46 @@
 
 /* current jiffies */
 volatile uint32_t jiffies = 0;
+struct kernel_timeval_t xtimes = { 0, 0 };
+
+/* Time Stamp Counter variables */
+static uint32_t tsc_quotient;
+static uint32_t last_tsc_low;
 
 /*
- * Get CPU frequency.
+ * Get time offset since last interrupt.
  */
-static uint32_t get_cpu_frequency()
+static inline uint32_t do_gettimeoffset(void)
 {
-	uint32_t eax, edx, cpu_khz, start_low, start_high, end_low, end_high, count = 0;
+	register uint32_t eax asm("ax");
+	register uint32_t edx asm("dx");
+
+	/* read the Time Stamp Counter */
+	rdtsc(eax,edx);
+
+	/* .. relative to previous jiffy (32 bits is enough) */
+	eax -= last_tsc_low;
+
+	/*
+         * Time offset = (tsc_low delta) * fast_gettimeoffset_quotient
+         *             = (tsc_low delta) * (usecs_per_clock)
+         *             = (tsc_low delta) * (usecs_per_jiffy / clocks_per_jiffy)
+         */
+	__asm__("mull %2"
+		:"=a" (eax), "=d" (edx)
+		:"g" (tsc_quotient),
+		 "0" (eax));
+
+	/* time offset in microseconds */
+	return edx;
+}
+
+/*
+ * Calibrate Time Stamp Counter.
+ */
+static uint32_t calibrate_tsc()
+{
+	uint32_t start_low, start_high, end_low, end_high, count = 0;
 
 	/* set the gate high, disable speaker */
 	outb(0x61, (inb(0x61) & ~0x02) | 0x01);
@@ -41,6 +74,7 @@ static uint32_t get_cpu_frequency()
 
 	/* get end count down */
 	rdtsc(end_low, end_high);
+	last_tsc_low = end_low;
 
 	if (count <= 1)
 		return 0;
@@ -65,15 +99,7 @@ static uint32_t get_cpu_frequency()
 		:"=a" (end_low), "=d" (end_high)
 		:"r" (end_low), "0" (0), "1" (CALIBRATE_TIME));
 
-	/* get CPU frequency in khz */
-	eax = 0;
-	edx = 1000;
-	__asm__("divl %2"
-		:"=a" (cpu_khz), "=d" (edx)
-		:"r" (end_low),
-		"0" (eax), "1" (edx));
-
-	return cpu_khz;
+	return end_low;
 }
 
 /*
@@ -81,7 +107,21 @@ static uint32_t get_cpu_frequency()
  */
 static void pit_handler(struct registers_t *regs)
 {
+	uint32_t time_offset;
+
+	/* unused register */
 	UNUSED(regs);
+
+	/* get time offset since last interrupt */
+	time_offset = do_gettimeoffset();
+
+	/* update xtimes */
+	xtimes.tv_nsec += time_offset * 1000L;
+	xtimes.tv_sec += xtimes.tv_nsec / 1000000000L;
+	xtimes.tv_nsec %= 1000000000L;
+
+	/* save last Time Stamp Counter */
+	rdtscl(last_tsc_low);
 
 	/* update jiffies */
 	jiffies++;
@@ -95,11 +135,19 @@ static void pit_handler(struct registers_t *regs)
  */
 void init_pit()
 {
-	uint32_t cpu_khz, divisor;
+	uint32_t cpu_khz, divisor, eax, edx;
 
 	/* get CPU frequency */
-	cpu_khz = get_cpu_frequency();
-	printf("[Kernel] Detected %d.%d MHz processor.\n", cpu_khz / 1000, cpu_khz % 1000);
+	tsc_quotient = calibrate_tsc();
+	if (tsc_quotient) {
+		eax = 0;
+		edx = 1000;
+		__asm__("divl %2"
+			:"=a" (cpu_khz), "=d" (edx)
+			:"r" (tsc_quotient),
+			"0" (eax), "1" (edx));
+		printf("[Kernel] Detected %d.%d MHz processor.\n", cpu_khz / 1000, cpu_khz % 1000);
+	}
 
 	/* send command and frequency divisor */
 	divisor = CLOCK_TICK_RATE / HZ;
