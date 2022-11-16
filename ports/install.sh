@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("pkgconf" "libncurses" "zlib" "libpng" "freetype" "expat" "fontconfig" "libtiff" "libexif" "pixman")
+BASE_PORTS=("pkgconf" "libncurses" "zlib" "libpng" "freetype" "expat" "fontconfig" "libtiff" "libexif" "pixman" "openssl")
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
@@ -103,7 +103,7 @@ export AR=`realpath ../musl/musl-install/bin/i386-linux-musl-ar`
 export AS=`realpath ../musl/musl-install/bin/i386-linux-musl-as`
 export RANLIB=`realpath ../musl/musl-install/bin/i386-linux-musl-ranlib`
 export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
-export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig"
+export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig"
 
 # get ports list

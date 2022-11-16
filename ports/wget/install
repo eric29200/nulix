@@ -8,7 +8,7 @@ function configure_port() {
 		--disable-nls							\
 		--disable-threads						\
 		--disable-ipv6							\
-		--with-ssl=no							\
+		--with-ssl=openssl						\
 		--prefix="/usr"
 }
 

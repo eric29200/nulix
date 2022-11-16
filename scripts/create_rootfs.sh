@@ -34,6 +34,7 @@ sudo mkdir -p tmp/sbin
 sudo cp -R musl/musl-install/i386-linux-musl/lib tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/share tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/usr tmp/
+sudo cp -R musl/musl-install/i386-linux-musl/etc tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R rootbase/root tmp/
 sudo cp usr/init tmp/sbin/
