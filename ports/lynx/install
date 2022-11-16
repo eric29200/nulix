@@ -1,0 +1,17 @@
+URL="ftp://ftp.invisible-island.net/lynx/tarballs/"
+VERSION="2.8.9rel.1"
+SRC_FILENAME="lynx"$VERSION".tar.bz2"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
