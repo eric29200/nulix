@@ -10,8 +10,16 @@
 #define TTY_STATE_SQUARE	2
 #define TTY_STATE_GETPARS	3
 #define TTY_STATE_GOTPARS	4
+#define TTY_STATE_SET_G0	5
+#define TTY_STATE_SET_G1	6
 
 #define NPARS			16
+
+/* translation maps */
+#define LAT1_MAP		0
+#define GRAF_MAP		1
+#define IBMPC_MAP		2
+#define USER_MAP		3
 
 /* ioctls */
 #define VT_GETMODE		0x5601
@@ -61,6 +69,10 @@ struct vc_t {
 	uint8_t			vc_reverse;						/* reverse mode */
 	uint16_t		vc_erase_char;						/* erase character */
 	uint8_t			vc_deccm:1;						/* cursor visible */
+	uint8_t			vc_charset;						/* charset (g0 or g1) */
+	uint16_t *		vc_translate;						/* translation table */
+	uint8_t			vc_charset_g0;						/* g0 charset */
+	uint8_t			vc_charset_g1;						/* g1 charset */
 	uint8_t			vc_mode;						/* console mode (KD_TEXT or KD_GRAPHICS) */
 	char			vc_need_wrap;						/* 1 if console needs to be wrapped */
 	struct vt_mode		vt_mode;						/* vt mode (AUTO or PROCESS) */
@@ -69,6 +81,7 @@ struct vc_t {
 	struct framebuffer_t	fb;							/* framebuffer */
 };
 
+extern uint16_t console_translations[][256];
 extern struct wait_queue_t *vt_activate_wq;
 
 int init_console();

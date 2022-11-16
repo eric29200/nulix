@@ -136,6 +136,7 @@ static void console_init_attr(struct vc_t *vc)
 	vc->vc_erase_char = ' ' | (vc->vc_def_color << 8);
 	vc->vc_deccm = 1;
 	vc->vc_attr = vc->vc_color;
+	vc->vc_translate = console_translations[LAT1_MAP];
 }
 
 /*
@@ -353,6 +354,9 @@ static void csi_m(struct vc_t *vc)
 			case 7:												/* reverse attributes */
 				vc->vc_reverse = 1;
 				break;
+			case 10:											/* set translation */
+				vc->vc_translate = console_translations[vc->vc_charset == 0 ? vc->vc_charset_g0 : vc->vc_charset_g1];
+				break;
 			case 24:											/* not underline */
 				vc->vc_underline = 0;
 				break;
@@ -495,50 +499,27 @@ static void console_bs(struct vc_t *vc)
 static void console_putc(struct vc_t *vc, uint8_t c)
 {
 	struct framebuffer_t *fb = &vc->fb;
+	uint16_t tc;
 
-	/* handle character */
-	switch (c) {
-		case 7:
-			break;
-		case 8:
-			console_bs(vc);
-			break;
-		case 9:
-			fb->x = (fb->x + fb->bpp / 8) & ~0x03;
-			break;
-		case 10:
-		case 11:
-		case 12:
-			console_lf(vc);
-			console_cr(vc);
-			break;
-		case 13:
-			console_cr(vc);
-			break;
-		case 14:
-			break;
-		case 15:
-			break;
-		default:
-			/* wrap if needed */
-			if (vc->vc_need_wrap) {
-				console_cr(vc);
-				console_lf(vc);
-			}
-
-			/* add character */
-			fb->buf[fb->y * fb->width + fb->x] = (vc->vc_attr << 8) | c;
-			if (fb->active)
-				fb->ops->update_region(fb, fb->y * fb->width + fb->x, 1);
-
-			/* update position */
-			if (fb->x == fb->width - 1)
-				vc->vc_need_wrap = 1;
-			else
-				fb->x++;
-
-			break;
+	/* wrap if needed */
+	if (vc->vc_need_wrap) {
+		console_cr(vc);
+		console_lf(vc);
 	}
+
+	/* translate character */
+	tc = vc->vc_translate[c];
+
+	/* add character */
+	fb->buf[fb->y * fb->width + fb->x] = (vc->vc_attr << 8) + tc;
+	if (fb->active)
+		fb->ops->update_region(fb, fb->y * fb->width + fb->x, 1);
+
+	/* update position */
+	if (fb->x == fb->width - 1)
+		vc->vc_need_wrap = 1;
+	else
+		fb->x++;
 }
 
 /*
@@ -559,6 +540,219 @@ static void console_gotoxy(struct vc_t *vc, uint32_t x, uint32_t y)
 		fb->y = y;
 
 	vc->vc_need_wrap = 0;
+}
+
+/*
+ * Handle control characters.
+ */
+static void console_do_control(struct vc_t *vc, uint8_t c)
+{
+	struct framebuffer_t *fb = &vc->fb;
+
+	/* handle special character */
+	switch (c) {
+		case 8:
+			console_bs(vc);
+			return;
+		case 9:
+			fb->x = (fb->x + fb->bpp / 8) & ~0x03;
+			return;
+		case 10:
+		case 11:
+		case 12:
+			console_lf(vc);
+			console_cr(vc);
+			return;
+		case 13:
+			console_cr(vc);
+			return;
+		case 27:
+			vc->vc_state = TTY_STATE_ESCAPE;
+			return;
+	}
+
+	/* handle escape sequence */
+	if (vc->vc_state == TTY_STATE_ESCAPE) {
+			vc->vc_state = TTY_STATE_NORMAL;
+
+			switch (c) {
+				case '[':
+					vc->vc_state = TTY_STATE_SQUARE;
+					break;
+				case 'M':
+					console_ri(vc);
+					break;
+				case '(':
+					vc->vc_state = TTY_STATE_SET_G0;
+					break;
+				case ')':
+					vc->vc_state = TTY_STATE_SET_G1;
+					break;
+				default:
+					printf("console : unknown escape sequence %c\n", c);
+					break;
+			}
+
+			return;
+	}
+
+	/* set g0 charset */
+	if (vc->vc_state == TTY_STATE_SET_G0) {
+		switch (c) {
+			case '0':
+				vc->vc_charset_g0 = GRAF_MAP;
+				break;
+			case 'B':
+				vc->vc_charset_g0 = LAT1_MAP;
+				break;
+			case 'U':
+				vc->vc_charset_g0 = IBMPC_MAP;
+				break;
+			case 'K':
+				vc->vc_charset_g0 = USER_MAP;
+				break;
+		}
+
+		if (vc->vc_charset == 0)
+			vc->vc_translate = console_translations[vc->vc_charset_g0];
+
+		vc->vc_state = TTY_STATE_NORMAL;
+		return;
+	}
+
+	/* set g1 charset */
+	if (vc->vc_state == TTY_STATE_SET_G1) {
+		switch (c) {
+			case '0':
+				vc->vc_charset_g1 = GRAF_MAP;
+				break;
+			case 'B':
+				vc->vc_charset_g1 = LAT1_MAP;
+				break;
+			case 'U':
+				vc->vc_charset_g1 = IBMPC_MAP;
+				break;
+			case 'K':
+				vc->vc_charset_g1 = USER_MAP;
+				break;
+		}
+
+		if (vc->vc_charset == 1)
+			vc->vc_translate = console_translations[vc->vc_charset_g1];
+
+		vc->vc_state = TTY_STATE_NORMAL;
+		return;
+	}
+
+	/* handle escape sequence */
+	if (vc->vc_state == TTY_STATE_SQUARE) {
+		/* reset npars */
+		for (vc->vc_npars = 0; vc->vc_npars < NPARS; vc->vc_npars++)
+			vc->vc_pars[vc->vc_npars] = 0;
+		vc->vc_npars = 0;
+
+		vc->vc_state = TTY_STATE_GETPARS;
+		if (c == '?')
+			return;
+	}
+
+	/* get pars */
+	if (vc->vc_state == TTY_STATE_GETPARS) {
+		if (c == ';' && vc->vc_npars < NPARS - 1) {
+			vc->vc_npars++;
+			return;
+		}
+
+		if (c >= '0' && c <= '9') {
+			vc->vc_pars[vc->vc_npars] *= 10;
+			vc->vc_pars[vc->vc_npars] += c - '0';
+			return;
+		}
+
+		vc->vc_state = TTY_STATE_GOTPARS;
+	}
+
+	/* handle pars */
+	if (vc->vc_state == TTY_STATE_GOTPARS) {
+		vc->vc_state = TTY_STATE_NORMAL;
+
+		switch (c) {
+			case 'G':
+				if (vc->vc_pars[0])
+					vc->vc_pars[0]--;
+				console_gotoxy(vc, vc->vc_pars[0], vc->fb.y);
+				break;
+			case 'A':
+				if (!vc->vc_pars[0])
+					vc->vc_pars[0]++;
+				console_gotoxy(vc, vc->fb.x, vc->fb.y - vc->vc_pars[0]);
+				break;
+			case 'B':
+				if (!vc->vc_pars[0])
+					vc->vc_pars[0]++;
+				console_gotoxy(vc, vc->fb.x, vc->fb.y + vc->vc_pars[0]);
+				break;
+			case 'C':
+				if (!vc->vc_pars[0])
+					vc->vc_pars[0]++;
+				console_gotoxy(vc, vc->fb.x + vc->vc_pars[0], vc->fb.y);
+				break;
+			case 'D':
+				if (!vc->vc_pars[0])
+					vc->vc_pars[0]++;
+				console_gotoxy(vc, vc->fb.x - vc->vc_pars[0], vc->fb.y);
+				break;
+			case 'd':
+				if (vc->vc_pars[0])
+					vc->vc_pars[0]--;
+				console_gotoxy(vc, vc->fb.x, vc->vc_pars[0]);
+				break;
+			case 'H':
+				if (vc->vc_pars[0])
+					vc->vc_pars[0]--;
+				if (vc->vc_pars[1])
+					vc->vc_pars[1]--;
+				console_gotoxy(vc, vc->vc_pars[1], vc->vc_pars[0]);
+				break;
+			case 'r':
+				if (!vc->vc_pars[0])
+					vc->vc_pars[0]++;
+				if (!vc->vc_pars[1])
+					vc->vc_pars[1] = vc->fb.height;
+				if (vc->vc_pars[0] < vc->vc_pars[1] && vc->vc_pars[1] <= vc->fb.height)
+					console_gotoxy(vc, 0, 0);
+				break;
+			case 'P':
+				csi_P(vc, vc->vc_pars[0]);
+				break;
+			case 'K':
+				csi_K(vc, vc->vc_pars[0]);
+				break;
+			case 'J':
+				csi_J(vc, vc->vc_pars[0]);
+				break;
+			case 'm':
+				csi_m(vc);
+				break;
+			case 'L':
+				csi_L(vc, vc->vc_pars[0]);
+				break;
+			case '@':
+				csi_at(vc, vc->vc_pars[0]);
+				break;
+			case 'h':
+				console_set_mode(vc, 1);
+				break;
+			case 'l':
+				console_set_mode(vc, 0);
+				break;
+			case 'c':
+				break;
+			default:
+				printf("console : unknown escape sequence %c (gotpars)\n", c);
+				break;
+		}
+	}
 }
 
 /*
@@ -583,150 +777,14 @@ static ssize_t console_write(struct tty_t *tty)
 		ring_buffer_read(&tty->write_queue, &c, 1);
 		count++;
 
-		/* start an escape sequence or write to frame buffer */
-		if (vc->vc_state == TTY_STATE_NORMAL) {
-				switch (c) {
-					case '\033':
-						vc->vc_state = TTY_STATE_ESCAPE;
-						break;
-					default:
-						console_putc(vc, c);
-						break;
-				}
-
-				continue;
-		}
-
-		/* handle escape sequence */
-		if (vc->vc_state == TTY_STATE_ESCAPE) {
-				vc->vc_state = TTY_STATE_NORMAL;
-
-				switch (c) {
-					case '[':
-						vc->vc_state = TTY_STATE_SQUARE;
-						break;
-					case 'M':
-						console_ri(vc);
-						break;
-					default:
-						printf("console : unknown escape sequence %c\n", c);
-						break;
-				}
-
-				continue;
-		}
-
-		/* handle escape sequence */
-		if (vc->vc_state == TTY_STATE_SQUARE) {
-			/* reset npars */
-			for (vc->vc_npars = 0; vc->vc_npars < NPARS; vc->vc_npars++)
-				vc->vc_pars[vc->vc_npars] = 0;
-			vc->vc_npars = 0;
-
-			vc->vc_state = TTY_STATE_GETPARS;
-			if (c == '?')
-				continue;
-		}
-
-		/* get pars */
-		if (vc->vc_state == TTY_STATE_GETPARS) {
-			if (c == ';' && vc->vc_npars < NPARS - 1) {
-				vc->vc_npars++;
-				continue;
-			}
-
-			if (c >= '0' && c <= '9') {
-				vc->vc_pars[vc->vc_npars] *= 10;
-				vc->vc_pars[vc->vc_npars] += c - '0';
-				continue;
-			}
-
-			vc->vc_state = TTY_STATE_GOTPARS;
-		}
-
-		/* handle pars */
-		if (vc->vc_state == TTY_STATE_GOTPARS) {
-			vc->vc_state = TTY_STATE_NORMAL;
-
-			switch (c) {
-				case 'G':
-					if (vc->vc_pars[0])
-						vc->vc_pars[0]--;
-					console_gotoxy(vc, vc->vc_pars[0], vc->fb.y);
-					break;
-				case 'A':
-					if (!vc->vc_pars[0])
-						vc->vc_pars[0]++;
-					console_gotoxy(vc, vc->fb.x, vc->fb.y - vc->vc_pars[0]);
-					break;
-				case 'B':
-					if (!vc->vc_pars[0])
-						vc->vc_pars[0]++;
-					console_gotoxy(vc, vc->fb.x, vc->fb.y + vc->vc_pars[0]);
-					break;
-				case 'C':
-					if (!vc->vc_pars[0])
-						vc->vc_pars[0]++;
-					console_gotoxy(vc, vc->fb.x + vc->vc_pars[0], vc->fb.y);
-					break;
-				case 'D':
-					if (!vc->vc_pars[0])
-						vc->vc_pars[0]++;
-					console_gotoxy(vc, vc->fb.x - vc->vc_pars[0], vc->fb.y);
-					break;
-				case 'd':
-					if (vc->vc_pars[0])
-						vc->vc_pars[0]--;
-					console_gotoxy(vc, vc->fb.x, vc->vc_pars[0]);
-					break;
-				case 'H':
-					if (vc->vc_pars[0])
-						vc->vc_pars[0]--;
-					if (vc->vc_pars[1])
-						vc->vc_pars[1]--;
-					console_gotoxy(vc, vc->vc_pars[1], vc->vc_pars[0]);
-					break;
-				case 'r':
-					if (!vc->vc_pars[0])
-						vc->vc_pars[0]++;
-					if (!vc->vc_pars[1])
-						vc->vc_pars[1] = vc->fb.height;
-					if (vc->vc_pars[0] < vc->vc_pars[1] && vc->vc_pars[1] <= vc->fb.height)
-						console_gotoxy(vc, 0, 0);
-					break;
-				case 'P':
-					csi_P(vc, vc->vc_pars[0]);
-					break;
-				case 'K':
-					csi_K(vc, vc->vc_pars[0]);
-					break;
-				case 'J':
-					csi_J(vc, vc->vc_pars[0]);
-					break;
-				case 'm':
-					csi_m(vc);
-					break;
-				case 'L':
-					csi_L(vc, vc->vc_pars[0]);
-					break;
-				case '@':
-					csi_at(vc, vc->vc_pars[0]);
-					break;
-				case 'h':
-					console_set_mode(vc, 1);
-					break;
-				case 'l':
-					console_set_mode(vc, 0);
-					break;
-				case 'c':
-					break;
-				default:
-					printf("console : unknown escape sequence %c (gotpars)\n", c);
-					break;
-			}
-
+		/* just put new character */
+		if (vc->vc_state == TTY_STATE_NORMAL && c >= 32) {
+			console_putc(vc, c);
 			continue;
 		}
+
+		/* do control */
+		console_do_control(vc, c);
 	}
 
 	/* update cursor */
