@@ -19,4 +19,7 @@ function build_port() {
 
 function install_port() {
 	make install DESTDIR=$SYSROOT
+
+	# get certificates
+	wget https://curl.se/ca/cacert-2022-10-11.pem -O $SYSROOT"/etc/ssl/cert.pem"
 }
