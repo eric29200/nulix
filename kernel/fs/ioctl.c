@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
 #include <stderr.h>
+#include <fcntl.h>
 
 /*
  * Ioctl system call.
@@ -16,9 +17,19 @@ int do_ioctl(int fd, int request, unsigned long arg)
 	/* get current file */
 	filp = current_task->files->filp[fd];
 
-	/* ioctl not implemented */
-	if (!filp->f_op || !filp->f_op->ioctl)
-		return -EPERM;
+	switch (request) {
+		case FIONBIO:
+			if (arg)
+				filp->f_flags |= O_NONBLOCK;
+			else
+				filp->f_flags &= ~O_NONBLOCK;
 
-	return filp->f_op->ioctl(filp, request, arg);
+			return 0;
+		default:
+			/* ioctl not implemented */
+			if (!filp->f_op || !filp->f_op->ioctl)
+				return -EPERM;
+
+			return filp->f_op->ioctl(filp, request, arg);
+	}
 }

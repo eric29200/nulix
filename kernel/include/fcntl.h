@@ -74,4 +74,6 @@
 #define AT_SYMLINK_NO_FOLLOW	0x100	 		/* do not follow last symbolic link */
 #define AT_REMOVEDIR		0x200	 		/* remove a directory */
 
+#define FIONBIO			0x5421
+
 #endif
