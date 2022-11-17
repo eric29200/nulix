@@ -162,11 +162,11 @@ static int inet_poll(struct socket_t *sock, struct select_table_t *wait)
 		return -EINVAL;
 
 	/* check if there is a message in the queue */
-	if (!list_empty(&sk->skb_list))
+	if (sk->sock->state == SS_DISCONNECTING || !list_empty(&sk->skb_list))
 		mask |= POLLIN;
 
 	/* check if socket can write */
-	if (sk->sock->state != SS_DEAD)
+	if (sk->sock->state != SS_DISCONNECTING && sk->sock->state != SS_DEAD)
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */
