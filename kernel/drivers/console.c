@@ -265,6 +265,22 @@ static void csi_P(struct vc_t *vc, uint32_t nr)
 }
 
 /*
+ * Handle escape M sequences (delete lines).
+ */
+static void csi_M(struct vc_t *vc, uint32_t nr)
+{
+	struct framebuffer_t *fb = &vc->fb;
+
+	if (nr > vc->fb.height - vc->fb.y)
+		nr = vc->fb.height - vc->fb.y;
+	else if (!nr)
+		nr = 1;
+
+	/* scroll up */
+	console_scrup(vc, fb->y, fb->height, nr);
+}
+
+/*
  * Handle escape K sequences (erase line or part of line).
  */
 static void csi_K(struct vc_t *vc, int vpar)
@@ -420,6 +436,26 @@ static void csi_at(struct vc_t *vc, uint32_t nr)
 
 	while (nr--)
 		insert_char(vc);
+}
+
+/*
+ * Handle escape X sequences (erase characters).
+ */
+static void csi_X(struct vc_t *vc, uint32_t nr)
+{
+	struct framebuffer_t *fb = &vc->fb;
+
+	if (nr == 0)
+		nr = 1;
+	if (nr > fb->width - fb->x)
+		nr = fb->width - fb->x;
+
+	/* update frame buffer */
+	memsetw(fb->buf + fb->y * fb->width + fb->x, vc->vc_erase_char, nr);
+
+	/* update region */
+	if (fb->active)
+		fb->ops->update_region(&vc->fb, fb->y * fb->width + fb->x, nr);
 }
 
 /*
@@ -793,6 +829,9 @@ static void console_do_control(struct tty_t *tty, struct vc_t *vc, uint8_t c)
 			case 'P':
 				csi_P(vc, vc->vc_pars[0]);
 				break;
+			case 'M':
+				csi_M(vc, vc->vc_pars[0]);
+				break;
 			case 'K':
 				csi_K(vc, vc->vc_pars[0]);
 				break;
@@ -807,6 +846,9 @@ static void console_do_control(struct tty_t *tty, struct vc_t *vc, uint8_t c)
 				break;
 			case '@':
 				csi_at(vc, vc->vc_pars[0]);
+				break;
+			case 'X':
+				csi_X(vc, vc->vc_pars[0]);
 				break;
 			case 'c':
 				break;
