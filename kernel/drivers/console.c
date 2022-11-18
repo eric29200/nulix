@@ -137,6 +137,8 @@ static void console_init_attr(struct vc_t *vc)
 	vc->vc_deccm = 1;
 	vc->vc_attr = vc->vc_color;
 	vc->vc_translate = console_translations[LAT1_MAP];
+	vc->vc_top = 0;
+	vc->vc_bottom = vc->fb.height;
 }
 
 /*
@@ -495,8 +497,8 @@ static void console_lf(struct vc_t *vc)
 {
 	struct framebuffer_t *fb = &vc->fb;
 
-	if (fb->y + 1 == fb->height)
-		console_scrup(vc, 0, fb->height, 1);
+	if (fb->y + 1 == vc->vc_bottom)
+		console_scrup(vc, vc->vc_top, vc->vc_bottom, 1);
 	else if (fb->y < fb->height - 1)
 		fb->y++;
 
@@ -511,8 +513,8 @@ static void console_ri(struct vc_t *vc)
 	struct framebuffer_t *fb = &vc->fb;
 
 	/* don't scroll if not needed */
-	if (fb->y == 0)
-		console_scrdown(vc, 0, fb->height, 1);
+	if (fb->y == vc->vc_top)
+		console_scrdown(vc, vc->vc_top, vc->vc_bottom, 1);
 	else if (fb->y > 0)
 		fb->y--;
 
@@ -823,8 +825,11 @@ static void console_do_control(struct tty_t *tty, struct vc_t *vc, uint8_t c)
 					vc->vc_pars[0]++;
 				if (!vc->vc_pars[1])
 					vc->vc_pars[1] = vc->fb.height;
-				if (vc->vc_pars[0] < vc->vc_pars[1] && vc->vc_pars[1] <= vc->fb.height)
+				if (vc->vc_pars[0] < vc->vc_pars[1] && vc->vc_pars[1] <= vc->fb.height) {
+					vc->vc_top = vc->vc_pars[0] - 1;
+					vc->vc_bottom = vc->vc_pars[1];
 					console_gotoxy(vc, 0, 0);
+				}
 				break;
 			case 'P':
 				csi_P(vc, vc->vc_pars[0]);

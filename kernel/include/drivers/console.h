@@ -62,6 +62,8 @@ struct vc_t {
 	uint32_t		vc_npars;						/* number of escaped pars */
 	int			vc_ques;						/* question ? */
 	int			vc_state;						/* tty state (NORMAL or ESCAPE) */
+	uint32_t		vc_top;							/* top scrolling region */
+	uint32_t		vc_bottom;						/* bottom scrolling region */
 	uint8_t			vc_attr;						/* attributes = current color */
 	uint8_t			vc_color;						/* forgeground/background color */
 	uint8_t			vc_def_color;						/* default foreground/background color */
