@@ -418,7 +418,8 @@ static void csi_at(struct vc_t *vc, uint32_t nr)
 	else if (nr == 0)
 		nr = 1;
 
-	insert_char(vc);
+	while (nr--)
+		insert_char(vc);
 }
 
 /*
