@@ -543,9 +543,39 @@ static void console_gotoxy(struct vc_t *vc, uint32_t x, uint32_t y)
 }
 
 /*
+ * Respond a string to tty.
+ */
+static void console_respond_string(struct tty_t *tty, char *p)
+{
+	while (*p) {
+		ring_buffer_putc(&tty->read_queue, *p);
+		p++;
+	}
+}
+
+/*
+ * Report console cursor.
+ */
+static void console_cursor_report(struct tty_t *tty, struct vc_t *vc)
+{
+	char buf[40];
+
+	sprintf(buf, "\033[%d;%dR", vc->fb.y + 1, vc->fb.x + 1);
+	console_respond_string(tty, buf);
+}
+
+/*
+ * Report console status.
+ */
+static void console_status_report(struct tty_t *tty)
+{
+	console_respond_string(tty, "\033[0n");	/* Terminal ok */
+}
+
+/*
  * Handle control characters.
  */
-static void console_do_control(struct vc_t *vc, uint8_t c)
+static void console_do_control(struct tty_t *tty, struct vc_t *vc, uint8_t c)
 {
 	struct framebuffer_t *fb = &vc->fb;
 
@@ -651,8 +681,12 @@ static void console_do_control(struct vc_t *vc, uint8_t c)
 			vc->vc_pars[vc->vc_npars] = 0;
 		vc->vc_npars = 0;
 
+		/* get pars */
 		vc->vc_state = TTY_STATE_GETPARS;
-		if (c == '?')
+
+		/* question ? */
+		vc->vc_ques = (c == '?');
+		if (vc->vc_ques)
 			return;
 	}
 
@@ -675,6 +709,39 @@ static void console_do_control(struct vc_t *vc, uint8_t c)
 	/* handle pars */
 	if (vc->vc_state == TTY_STATE_GOTPARS) {
 		vc->vc_state = TTY_STATE_NORMAL;
+
+		/* question sequences */
+		switch (c) {
+			case 'h':
+				console_set_mode(vc, 1);
+				return;
+			case 'l':
+				console_set_mode(vc, 0);
+				return;
+			case 'c':
+				if (vc->vc_ques)
+					return;
+				break;
+			case 'm':
+				if (vc->vc_ques)
+					return;
+				break;
+			case 'n':
+				if (!vc->vc_ques) {
+					if (vc->vc_pars[0] == 5)
+						console_status_report(tty);
+					else if (vc->vc_pars[0] == 6)
+						console_cursor_report(tty, vc);
+				}
+
+				return;
+		}
+
+		/* reset question */
+		if (vc->vc_ques) {
+			vc->vc_ques = 0;
+			return;
+		}
 
 		switch (c) {
 			case 'G':
@@ -740,12 +807,6 @@ static void console_do_control(struct vc_t *vc, uint8_t c)
 			case '@':
 				csi_at(vc, vc->vc_pars[0]);
 				break;
-			case 'h':
-				console_set_mode(vc, 1);
-				break;
-			case 'l':
-				console_set_mode(vc, 0);
-				break;
 			case 'c':
 				break;
 			default:
@@ -784,7 +845,7 @@ static ssize_t console_write(struct tty_t *tty)
 		}
 
 		/* do control */
-		console_do_control(vc, c);
+		console_do_control(tty, vc, c);
 	}
 
 	/* update cursor */

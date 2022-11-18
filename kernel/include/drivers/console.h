@@ -60,6 +60,7 @@ struct vc_t {
 	int			vc_num;							/* console id */
 	uint32_t		vc_pars[NPARS];						/* escaped pars */
 	uint32_t		vc_npars;						/* number of escaped pars */
+	int			vc_ques;						/* question ? */
 	int			vc_state;						/* tty state (NORMAL or ESCAPE) */
 	uint8_t			vc_attr;						/* attributes = current color */
 	uint8_t			vc_color;						/* forgeground/background color */
