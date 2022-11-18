@@ -1,0 +1,17 @@
+URL="https://ftp.gnu.org/gnu/diffutils/"
+VERSION="3.8"
+SRC_FILENAME="diffutils-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
