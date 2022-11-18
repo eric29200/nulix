@@ -1,0 +1,17 @@
+URL="https://tukaani.org/xz/"
+VERSION="5.2.6"
+SRC_FILENAME="xz-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--host=$TARGET							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
