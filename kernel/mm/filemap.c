@@ -58,10 +58,6 @@ static struct vm_operations_t file_private_mmap = {
  */
 int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
 {
-	/* shared mode is not supported */
-	if (vma->vm_flags & VM_SHARED)
-		return -EINVAL;
-
 	/* inode must be a regular file */
 	if (!inode->i_sb || !S_ISREG(inode->i_mode))
 		return -EACCES;
