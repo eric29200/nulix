@@ -104,13 +104,6 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int prot, int f
 	/* unmap existing pages */
 	do_munmap(addr, len);
 
-	/* add it to the list */
-	vm_prev = find_vma_prev(current_task, vm->vm_start);
-	if (vm_prev)
-		list_add(&vm->list, &vm_prev->list);
-	else
-		list_add(&vm->list, &current_task->mm->vm_list);
-
 	/* map file */
 	if (filp) {
 		/* shared mapping */
@@ -122,6 +115,13 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int prot, int f
 		if (ret)
 			goto err;
 	}
+
+	/* add it to the list */
+	vm_prev = find_vma_prev(current_task, vm->vm_start);
+	if (vm_prev)
+		list_add(&vm->list, &vm_prev->list);
+	else
+		list_add(&vm->list, &current_task->mm->vm_list);
 
 	return vm;
 err:
