@@ -1,0 +1,18 @@
+URL="https://mandoc.bsd.lv/snapshots/"
+VERSION="1.14.6"
+SRC_FILENAME="mandoc-"$VERSION".tar.gz"
+
+function configure_port() {
+	echo 'HAVE_FTS=0' > configure.local
+	echo 'HAVE_FTS_COMPARE_CONST=0' >> configure.local
+	echo "PREFIX=/usr" >> configure.local
+	./configure
+}
+
+function build_port() {
+	make -j$NJOBS CC=$CC LD=$CC LDFLAGS="-static"
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
