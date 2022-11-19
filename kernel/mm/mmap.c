@@ -214,35 +214,33 @@ void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file_t *fil
  */
 static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 {
+	uint32_t end = addr + len;
 	struct vm_area_t *vm_new;
 
 	/* unmap the whole area */
-	if (addr == vm->vm_start && addr + len == vm->vm_end) {
+	if (addr == vm->vm_start && end == vm->vm_end) {
 		list_del(&vm->list);
 		kfree(vm);
 		return 0;
 	}
 
-	/* shrink area */
-	if (addr >= vm->vm_start && addr + len == vm->vm_end)
+	/* shrink area or create a hole */
+	if (end == vm->vm_end) {
 		vm->vm_end = addr;
-	if (addr == vm->vm_start && addr + len <= vm->vm_end) {
-		vm->vm_offset += (addr + len - vm->vm_start);
-		vm->vm_start = addr + len;
-	}
-
-	/* unmap a hole */
-	if (addr > vm->vm_start && addr + len < vm->vm_end) {
+	} else if (addr == vm->vm_start) {
+		vm->vm_offset += (end - vm->vm_start);
+		vm->vm_start = end;
+	} else {
 		/* create new memory region */
 		vm_new = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
 		if (!vm_new)
 			return -ENOMEM;
 
 		/* set new memory region = after the hole */
-		vm_new->vm_start = addr + len;
+		vm_new->vm_start = end;
 		vm_new->vm_end = vm->vm_end;
 		vm_new->vm_flags = vm->vm_flags;
-		vm_new->vm_offset = vm->vm_offset + (addr + len - vm->vm_start);
+		vm_new->vm_offset = vm->vm_offset + (end - vm->vm_start);
 		vm_new->vm_inode = vm->vm_inode;
 		if (vm_new->vm_inode)
 			vm_new->vm_inode->i_ref++;
