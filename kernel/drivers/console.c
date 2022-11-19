@@ -125,23 +125,6 @@ void console_change(int n)
 }
 
 /*
- * Init console attributes.
- */
-static void console_init_attr(struct vc_t *vc)
-{
-	vc->vc_def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
-	vc->vc_color = vc->vc_def_color;
-	vc->vc_intensity = 1;
-	vc->vc_reverse = 0;
-	vc->vc_erase_char = ' ' | (vc->vc_def_color << 8);
-	vc->vc_deccm = 1;
-	vc->vc_attr = vc->vc_color;
-	vc->vc_translate = console_translations[LAT1_MAP];
-	vc->vc_top = 0;
-	vc->vc_bottom = vc->fb.height;
-}
-
-/*
  * Default console attributes.
  */
 static void console_default_attr(struct vc_t *vc)
@@ -1144,7 +1127,14 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 
 		/* init console attributes */
 		vc->vc_num = i;
-		console_init_attr(vc);
+		vc->vc_def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
+		vc->vc_color = vc->vc_def_color;
+		vc->vc_intensity = 1;
+		vc->vc_reverse = 0;
+		vc->vc_erase_char = ' ' | (vc->vc_def_color << 8);
+		vc->vc_deccm = 1;
+		vc->vc_attr = vc->vc_color;
+		vc->vc_translate = console_translations[LAT1_MAP];
 		reset_vc(vc);
 
 		/* init frame buffer */
@@ -1155,6 +1145,8 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		/* set winsize */
 		tty->winsize.ws_row = vc->fb.height;
 		tty->winsize.ws_col = vc->fb.width;
+		vc->vc_top = 0;
+		vc->vc_bottom = vc->fb.height;
 
 		/* attach console to tty */
 		tty->driver_data = vc;
