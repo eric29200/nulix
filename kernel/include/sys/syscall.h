@@ -245,7 +245,7 @@ int sys_ftruncate64(int fd, off_t length);
 int sys_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags);
 int sys_sync();
 int sys_chroot(const char *path);
-int sys_reboot();
+int sys_reboot(int magic1, int magic2, int cmd, void *arg);
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data);
 int sys_statfs64(const char *path, size_t size, struct statfs64_t *buf);
 int sys_fstatfs64(int fd, struct statfs64_t *buf);
