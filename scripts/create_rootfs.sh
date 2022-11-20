@@ -63,7 +63,7 @@ sudo mknod tmp/dev/hdb b 3 1
 sudo ln -s ../mouse tmp/dev/input/mice
 
 # chown root
-sudo chown -R 0.0 tmp/
+sudo chown -R 0:0 tmp/
 
 # unmount disk
 sudo umount tmp
