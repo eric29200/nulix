@@ -18,3 +18,4 @@ musl/musl-install
 tmp/*
 usr/init
 traffic.pcap
+.vscode
