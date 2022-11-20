@@ -26,10 +26,9 @@ enter_user_mode:
 	mov gs, ax
 
 	mov eax, [esp + 4]		; get user stack
-	sub eax, 4
 
 	mov ebx, [esp + 12]		; get user return address
-	mov dword [eax], ebx
+	mov dword [eax - 4], ebx
 
 	mov ebx, [esp + 8]		; get user eip
 
