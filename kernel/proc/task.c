@@ -5,6 +5,7 @@
 #include <proc/sched.h>
 #include <proc/elf.h>
 #include <ipc/semaphore.h>
+#include <sys/syscall.h>
 #include <string.h>
 #include <stderr.h>
 
@@ -27,16 +28,10 @@ static void task_user_entry(struct task_t *task)
  */
 static void init_entry(struct task_t *task)
 {
-	struct binargs_t bargs = {
-		.buf		= NULL,
-		.argc		= 0,
-		.argv_len	= 0,
-		.envc		= 0,
-		.envp_len	= 0,
-	};
+	char *argv[] = { "init", NULL };
 
-	/* load elf header */
-	if (elf_load("/sbin/init", &bargs) == 0)
+	/* load init process */
+	if (sys_execve("/sbin/init", argv, NULL) == 0)
 		enter_user_mode(task->user_regs.useresp, task->user_regs.eip, TASK_RETURN_ADDRESS);
 }
 
@@ -395,7 +390,7 @@ void task_release_mmap(struct task_t *task)
 /*
  * Create and init a task.
  */
-static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, uint32_t user_sp)
+static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, uint32_t user_sp, int kernel_thread)
 {
 	struct task_t *task;
 	void *stack;
@@ -416,7 +411,7 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 	task->esp = task->kernel_stack - sizeof(struct task_registers_t);
 
 	/* init task */
-	task->pid = get_next_pid();
+	task->pid = kernel_thread ? 0 : get_next_pid();
 	task->pgrp = parent ? parent->pgrp : task->pid;
 	task->session = parent ? parent->session : task->pid;
 	task->leader = 0;
@@ -488,7 +483,7 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(NULL, 0, 0);
+	task = create_task(NULL, 0, 0, 1);
 	if (!task)
 		return NULL;
 
@@ -517,7 +512,7 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(current_task, clone_flags, user_sp);
+	task = create_task(current_task, clone_flags, user_sp, 0);
 	if (!task)
 		return -EINVAL;
 
@@ -552,7 +547,7 @@ struct task_t *create_init_task(struct task_t *parent)
 	struct task_t *task;
 
 	/* create task */
-	task = create_task(parent, 0, 0);
+	task = create_task(parent, 0, 0, 0);
 	if (!task)
 		return NULL;
 

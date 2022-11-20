@@ -13,7 +13,7 @@ LIST_HEAD(tasks_list);					/* active processes list */
 static struct task_t *kinit_task;			/* kernel init task (pid = 0) */
 struct task_t *init_task;				/* user init task (pid = 1) */
 struct task_t *current_task = NULL;			/* current task */
-static pid_t next_pid = 0;				/* next pid */
+static pid_t next_pid = 1;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
 
 struct kernel_stat_t kstat;				/* kernel statistics */
