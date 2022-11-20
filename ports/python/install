@@ -1,0 +1,25 @@
+URL="https://www.python.org/ftp/python/3.10.6/"
+VERSION="3.10.6"
+SRC_FILENAME="Python-"$VERSION".tar.xz"
+
+function configure_port() {
+	echo "ac_cv_file__dev_ptmx=no" > config.site
+	echo "ac_cv_file__dev_ptc=no" >> config.site
+
+	./configure								\
+		CONFIG_SITE=./config.site					\
+		--host=$HOST							\
+		--build=`uname -m`						\
+		--with-system-expat						\
+		--with-system-ffi						\
+		--disable-ipv6							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

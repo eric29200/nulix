@@ -4,7 +4,7 @@ SRC_FILENAME="flex-"$VERSION".tar.gz"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--disable-nls							\
 		--prefix="/"							\
 		CC=gcc LD=ld AR=ar RANLIB=ranlib

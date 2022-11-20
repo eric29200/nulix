@@ -5,7 +5,7 @@ SRC_FILENAME="v"$VERSION".tar.gz"
 function configure_port() {
 	autoreconf -i
 	./configure						\
-		--host=$TARGET					\
+		--host=$HOST					\
 		--prefix=$SYSROOT
 }
 

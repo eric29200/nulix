@@ -4,8 +4,8 @@ SRC_FILENAME="binutils-"$VERSION".tar.xz"
 
 function configure_port() {
 	./configure								\
-		--target=$TARGET"-elf"						\
-		--host=$TARGET							\
+		--target="i386-elf"						\
+		--host=$HOST							\
 		--prefix="/usr"
 }
 

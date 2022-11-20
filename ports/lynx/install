@@ -4,7 +4,7 @@ SRC_FILENAME="lynx"$VERSION".tar.bz2"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--with-zlib							\
 		--with-bzlib							\
 		--with-screen=ncursesw						\

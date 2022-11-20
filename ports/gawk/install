@@ -4,7 +4,7 @@ SRC_FILENAME="gawk-"$VERSION".tar.gz"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--disable-nls							\
 		--prefix="/usr"
 }

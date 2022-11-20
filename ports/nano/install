@@ -4,7 +4,7 @@ SRC_FILENAME="nano-"$VERSION".tar.xz"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--disable-nls							\
 		--disable-threads						\
 		--disable-browser						\

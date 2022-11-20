@@ -4,7 +4,7 @@ SRC_FILENAME="expat-"$VERSION".tar.bz2"
 
 function configure_port() {
 	./configure						\
-		--host=$TARGET					\
+		--host=$HOST					\
 		--prefix=$SYSROOT
 }
 

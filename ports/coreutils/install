@@ -4,7 +4,7 @@ SRC_FILENAME="coreutils-"$VERSION".tar.gz"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--disable-threads						\
 		--disable-nls							\
 		--disable-acl							\

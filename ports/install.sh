@@ -93,7 +93,8 @@ if [[ ! -d "../musl/musl-install" ]]; then
 fi
 
 # global environ
-export TARGET=i386
+export TARGET=i386-elf
+export HOST=i386-linux-musl
 export NJOBS=`nproc`
 export SYSROOT=`realpath ../musl/musl-install/i386-linux-musl`
 export CC=`realpath ../musl/musl-install/bin/i386-linux-musl-gcc`
@@ -102,6 +103,7 @@ export LD=`realpath ../musl/musl-install/bin/i386-linux-musl-ld`
 export AR=`realpath ../musl/musl-install/bin/i386-linux-musl-ar`
 export AS=`realpath ../musl/musl-install/bin/i386-linux-musl-as`
 export RANLIB=`realpath ../musl/musl-install/bin/i386-linux-musl-ranlib`
+export READELF=`realpath ../musl/musl-install/bin/i386-linux-musl-readelf`
 export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
 export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig"

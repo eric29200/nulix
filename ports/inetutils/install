@@ -4,7 +4,7 @@ SRC_FILENAME="inetutils-"$VERSION".tar.xz"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--disable-threads						\
 		--prefix="/usr"
 }

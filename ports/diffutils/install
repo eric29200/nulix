@@ -4,7 +4,7 @@ SRC_FILENAME="diffutils-"$VERSION".tar.xz"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--prefix="/usr"
 }
 

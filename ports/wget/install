@@ -4,7 +4,7 @@ SRC_FILENAME="wget-"$VERSION".tar.gz"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--disable-nls							\
 		--disable-threads						\
 		--disable-ipv6							\

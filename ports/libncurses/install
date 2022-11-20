@@ -3,7 +3,7 @@ VERSION="6.3"
 SRC_FILENAME="ncurses-"$VERSION".tar.gz"
 
 function configure_port() {
-	./configure --host=$TARGET				\
+	./configure --host=$HOST				\
 		--without-ada					\
 		--enable-sigwinch				\
 		--enable-widec					\

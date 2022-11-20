@@ -4,7 +4,7 @@ SRC_FILENAME="vim-"$VERSION".tar.bz2"
 
 function configure_port() {
 	./configure								\
-		--host=$TARGET							\
+		--host=$HOST							\
 		--disable-nls							\
 		--disable-gpm							\
 		--disable-sysmouse						\
