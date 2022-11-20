@@ -31,6 +31,11 @@ static pid_t spawn_shell(int tty_num)
 	char tty[32];
 	pid_t pid;
 
+	/* close stdin, stdout, stderr */
+	close(0);
+	close(1);
+	close(2);
+
 	/* set tty */
 	sprintf(tty, "/dev/tty%d", tty_num);
 

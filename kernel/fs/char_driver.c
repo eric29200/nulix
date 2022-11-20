@@ -34,7 +34,7 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode)
 		return &tty_iops;
 
 	/* console driver */
-	if (inode->i_rdev == DEV_TTY)
+	if (inode->i_rdev == DEV_TTY || inode->i_rdev == DEV_CONSOLE)
 		return &tty_iops;
 
 	/* ptmx driver */

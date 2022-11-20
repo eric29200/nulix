@@ -25,6 +25,10 @@ static struct tty_t *tty_lookup(dev_t dev)
 	if (dev == DEV_TTY)
 		return current_task->tty;
 
+ 	/* console = always first tty */
+	if (dev == DEV_CONSOLE)
+		return &tty_table[0];
+
 	/* current active console */
 	if (dev == DEV_TTY0)
 		return fg_console >= 0 ? &tty_table[fg_console] : NULL;

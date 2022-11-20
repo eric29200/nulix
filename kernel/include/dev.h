@@ -3,6 +3,7 @@
 
 #define DEV_TTY0		0x400		/* current active tty */
 #define DEV_TTY			0x500		/* current task tty */
+#define DEV_CONSOLE		0x501		/* main console */
 #define DEV_PTMX		0x502		/* ptys master creator */
 
 #define DEV_NULL		0x103		/* /dev/null device */

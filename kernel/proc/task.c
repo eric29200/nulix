@@ -6,8 +6,10 @@
 #include <proc/elf.h>
 #include <ipc/semaphore.h>
 #include <sys/syscall.h>
+#include <stdio.h>
 #include <string.h>
 #include <stderr.h>
+#include <fcntl.h>
 
 /* switch to user mode (defined in x86/scheduler.s) */
 extern void enter_user_mode(uint32_t esp, uint32_t eip, uint32_t return_address);
@@ -29,10 +31,27 @@ static void task_user_entry(struct task_t *task)
 static void init_entry(struct task_t *task)
 {
 	char *argv[] = { "init", NULL };
+	int ret;
+
+	/* open console */
+	ret = sys_open("/dev/console", O_RDWR, 0);
+	if (ret < 0)
+		goto err;
+
+	/* dup stdin, stdout, stderr */
+	do_dup(ret);
+	do_dup(ret);
 
 	/* load init process */
-	if (sys_execve("/sbin/init", argv, NULL) == 0)
-		enter_user_mode(task->user_regs.useresp, task->user_regs.eip, TASK_RETURN_ADDRESS);
+	ret = sys_execve("/sbin/init", argv, NULL);
+	if (ret)
+		goto err;
+		
+	/* enter user mode */
+	enter_user_mode(task->user_regs.useresp, task->user_regs.eip, TASK_RETURN_ADDRESS);
+	return;
+err:
+	panic("cannot load init process");
 }
 
 /*
