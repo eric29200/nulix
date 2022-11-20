@@ -55,6 +55,7 @@ sudo mknod tmp/dev/tty2 c 4 2
 sudo mknod tmp/dev/tty3 c 4 3
 sudo mknod tmp/dev/tty4 c 4 4
 sudo mknod tmp/dev/tty c 5 0
+sudo mknod tmp/dev/console c 5 1
 sudo mknod tmp/dev/ptmx c 5 2
 sudo mknod tmp/dev/mouse c 13 0
 sudo mknod tmp/dev/fb0 c 29 0
