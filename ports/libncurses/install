@@ -3,11 +3,13 @@ VERSION="6.3"
 SRC_FILENAME="ncurses-"$VERSION".tar.gz"
 
 function configure_port() {
-	./configure --host=$HOST				\
-		--without-ada					\
+	./configure						\
+		--host=$HOST					\
+		--with-termlib					\
 		--enable-sigwinch				\
 		--enable-widec					\
 		--enable-pc-files				\
+		--without-ada					\
 		--with-pkg-config-libdir="/lib/pkgconfig"	\
 		--prefix="/usr"					\
 		DESTDIR=$SYSROOT
@@ -21,10 +23,12 @@ function install_port() {
 	make install
 
 	cd $SYSROOT/lib/pkgconfig/
-	ln -s ncursesw.pc ncurses.pc
-	ln -s ncursesw.pc curses.pc
+	ln -sf ncursesw.pc ncurses.pc
+	ln -sf ncursesw.pc curses.pc
+	ln -sf tinfow.pc tinfo.pc
 
 	cd $SYSROOT/usr/lib/
-	ln -s libncursesw.a libncurses.a
-	ln -s libncursesw.a libcurses.a
+	ln -sf libncursesw.a libncurses.a
+	ln -sf libncursesw.a libcurses.a
+	ln -sf libtinfow.a libtinfo.a
 }
