@@ -7,7 +7,6 @@
 #include <fs/poll.h>
 #include <fs/statfs.h>
 #include <fs/minix_i.h>
-#include <fs/ext2_i.h>
 #include <fs/pipe_i.h>
 #include <proc/wait.h>
 #include <mm/mm.h>
@@ -86,7 +85,6 @@ struct inode_t {
 	struct inode_t *		i_mount;
 	union {
 		struct minix_inode_info_t	minix_i;
-		struct ext2_inode_info_t	ext2_i;
 		struct pipe_inode_info_t	pipe_i;
 	} u;
 };
