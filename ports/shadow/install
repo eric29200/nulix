@@ -1,0 +1,22 @@
+URL="https://github.com/shadow-maint/shadow/releases/download/4.12.2/"
+VERSION="4.12.2"
+SRC_FILENAME="shadow-"$VERSION".tar.xz"
+
+function configure_port() {
+	# remove groups (already present in coreutils)
+	sed -i 's/groups$(EXEEXT) //' src/Makefile.in
+	find man -name Makefile.in -exec sed -i 's/groups\.1 / /'   {} \;
+
+	./configure								\
+		--host=$HOST							\
+		--with-group-name-max-length=32					\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
