@@ -28,7 +28,6 @@ sudo mkdir -p tmp/dev/input
 sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt
 sudo mkdir -p tmp/tmp
-sudo mkdir -p tmp/sbin
 
 # populate disk
 sudo cp -R musl/musl-install/i386-linux-musl/lib tmp/
@@ -36,6 +35,7 @@ sudo cp -R musl/musl-install/i386-linux-musl/share tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/usr tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/etc tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/bin tmp/
+sudo cp -R musl/musl-install/i386-linux-musl/sbin tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R rootbase/root tmp/
 sudo cp usr/init tmp/sbin/

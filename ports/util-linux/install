@@ -6,6 +6,8 @@ function configure_port() {
 	./configure								\
 		--host=$HOST							\
 		--disable-pylibmount						\
+		--disable-use-ttygroup						\
+		--disable-makeinstall-chown					\
 		--without-python						\
 		--without-systemd						\
 		--prefix="/usr"
@@ -16,5 +18,5 @@ function build_port() {
 }
 
 function install_port() {
-	sudo make install DESTDIR=$SYSROOT
+	make install DESTDIR=$SYSROOT
 }
