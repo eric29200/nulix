@@ -8,7 +8,6 @@ function configure_port() {
 		--disable-nls							\
 		--disable-gpm							\
 		--disable-sysmouse						\
-		--with-tlib=ncursesw						\
 		--with-features=normal						\
 		--prefix="/usr"							\
 		CFLAGS="-static" LDFLAGS="-static"
