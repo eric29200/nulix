@@ -5,6 +5,12 @@ SRC_FILENAME="util-linux-"$VERSION".tar.xz"
 function configure_port() {
 	./configure								\
 		--host=$HOST							\
+		--disable-chfn-chsh						\
+		--disable-login							\
+		--disable-nologin						\
+		--disable-su							\
+		--disable-setpriv						\
+		--disable-runuser						\
 		--disable-pylibmount						\
 		--disable-use-ttygroup						\
 		--disable-makeinstall-chown					\
