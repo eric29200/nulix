@@ -10,8 +10,7 @@
 
 #define MAX_ATA_DEVICE		4
 
-/*
- * ata devices */
+/* ata devices */
 static struct pci_device_t *pci_device = NULL;
 static struct ata_device_t ata_devices[MAX_ATA_DEVICE];
 
