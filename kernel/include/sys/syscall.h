@@ -34,6 +34,7 @@
 #define __NR_mount			21
 #define __NR_setuid			23
 #define __NR_getuid			24
+#define __NR_pause			29
 #define __NR_access			33
 #define __NR_sync			36
 #define __NR_kill			37
@@ -266,5 +267,6 @@ int sys_pread64(int fd, void *buf, size_t count, off_t offset);
 int sys_getsid(pid_t pid);
 int sys_setsid();
 int sys_getrusage(int who, struct rusage_t *ru);
+int sys_pause();
 
 #endif
