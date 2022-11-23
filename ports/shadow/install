@@ -10,6 +10,7 @@ function configure_port() {
 	./configure								\
 		--host=$HOST							\
 		--with-group-name-max-length=32					\
+		--without-nscd							\
 		--prefix="/usr"
 }
 
