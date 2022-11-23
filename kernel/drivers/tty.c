@@ -382,6 +382,9 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 			break;
 		case TIOCSCTTY:
 		   	return tiocsctty(tty);
+		case TIOCGLCKTRMIOS:
+		case TIOCSLCKTRMIOS:
+			break;
 		default:
 			if (tty->driver->ioctl) {
 				ret = tty->driver->ioctl(tty, request, arg);
