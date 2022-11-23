@@ -18,6 +18,10 @@ int sys_fchdir(int fd)
 	if (!S_ISDIR(inode->i_mode))
 		return -ENOTDIR;
 
+	/* no change */
+	if (inode == current_task->fs->cwd)
+		return 0;
+
 	/* release current working dir */
 	iput(current_task->fs->cwd);
 
