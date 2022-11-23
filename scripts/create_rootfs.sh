@@ -38,6 +38,7 @@ sudo cp -R rootbase/root tmp/
 
 # create links
 mkdir -p tmp/bin
+sudo ln -s /usr/bin/bash tmp/bin/bash
 sudo ln -s /usr/bin/bash tmp/bin/sh
 sudo ln -s /lib/libc.so tmp/lib/ld-musl-i386.so.1
 sudo ln -s /proc/mounts tmp/etc/mtab

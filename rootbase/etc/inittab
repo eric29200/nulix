@@ -1,11 +1,11 @@
 id:1:initdefault:
 
-l1:1:wait:/usr/bin/bash /etc/init.d/rc 1
-l2:2:wait:/usr/bin/bash /etc/init.d/rc 2
-l3:3:wait:/usr/bin/bash /etc/init.d/rc 3
-l4:4:wait:/usr/bin/bash /etc/init.d/rc 4
-l5:5:wait:/usr/bin/bash /etc/init.d/rc 5
-l6:6:wait:/usr/bin/bash /etc/init.d/rc 6
+l1:1:wait:/etc/init.d/rc 1
+l2:2:wait:/etc/init.d/rc 2
+l3:3:wait:/etc/init.d/rc 3
+l4:4:wait:/etc/init.d/rc 4
+l5:5:wait:/etc/init.d/rc 5
+l6:6:wait:/etc/init.d/rc 6
 
 1:1:respawn:/sbin/agetty tty1
 2:1:respawn:/sbin/agetty tty2
