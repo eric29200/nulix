@@ -72,6 +72,7 @@ static int tty_open(struct file_t *filp)
 	/* associate tty */
 	if (!noctty && current_task->leader) {
 		current_task->tty = tty;
+		tty->session = current_task->session;
 		tty->pgrp = current_task->pgrp;
 	}
 
@@ -306,6 +307,39 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 }
 
 /*
+ * Set tty's session.
+ */
+static int tiocsctty(struct tty_t *tty)
+{
+	struct list_head_t *pos;
+	struct task_t *task;
+
+	/* nothing to do */
+	if (current_task->leader && current_task->session == tty->session)
+		return 0;
+
+	/* check permissions */
+	if (!current_task->leader || current_task->tty)
+		return -EPERM;
+
+	/* this tty is already the controlling tty for another session group */
+	if (tty->session > 0) {
+		list_for_each(pos, &current_task->list) {
+			task = list_entry(pos, struct task_t, list);
+			if (task->tty == tty)
+				task->tty = NULL;
+		}
+	}
+
+	/* set session and pgrp */
+	current_task->tty = tty;
+	tty->session = current_task->session;
+	tty->pgrp = current_task->pgrp;
+
+	return 0;
+}
+
+/*
  * TTY ioctl.
  */
 int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
@@ -338,8 +372,16 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 			*((pid_t *) arg) = tty->pgrp;
 			break;
 		case TIOCSPGRP:
+			if (current_task->session != tty->session)
+				return -ENOTTY;
+
 			tty->pgrp = *((pid_t *) arg);
 			break;
+		case TIOCGSID:
+			*((pid_t *) arg) = tty->session;
+			break;
+		case TIOCSCTTY:
+		   	return tiocsctty(tty);
 		default:
 			if (tty->driver->ioctl) {
 				ret = tty->driver->ioctl(tty, request, arg);

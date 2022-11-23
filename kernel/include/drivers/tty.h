@@ -64,6 +64,7 @@ struct tty_driver_t {
  * TTY structure.
  */
 struct tty_t {
+	pid_t			session;						/* session id */
 	pid_t			pgrp;							/* process group id */
 	struct ring_buffer_t	read_queue;						/* read queue */
 	struct ring_buffer_t	write_queue;						/* write queue */
