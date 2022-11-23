@@ -38,6 +38,10 @@
 #define TIOCSPTLCK		0x40045431
 #define TIOCGPTN		0x80045430
 
+#define TCIFLUSH		0
+#define TCOFLUSH		1
+#define TCIOFLUSH		2
+
 /*
  * Window size structure.
  */

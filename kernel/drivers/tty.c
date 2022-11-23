@@ -340,6 +340,33 @@ static int tiocsctty(struct tty_t *tty)
 }
 
 /*
+ * Flush tty input.
+ */
+static void tty_flush_input(struct tty_t *tty)
+{
+	ring_buffer_flush(&tty->read_queue);
+	ring_buffer_flush(&tty->cooked_queue);
+	tty->canon_data = 0;
+
+	if (tty->link)
+		ring_buffer_flush(&tty->link->write_queue);
+}
+
+/*
+ * Flush tty output.
+ */
+static void tty_flush_output(struct tty_t *tty)
+{
+	ring_buffer_flush(&tty->write_queue);
+
+	if (tty->link) {
+		ring_buffer_flush(&tty->link->read_queue);
+		ring_buffer_flush(&tty->link->cooked_queue);
+		tty->canon_data = 0;
+	}
+}
+
+/*
  * TTY ioctl.
  */
 int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
@@ -384,6 +411,23 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 		   	return tiocsctty(tty);
 		case TIOCGLCKTRMIOS:
 		case TIOCSLCKTRMIOS:
+			break;
+		case TCFLSH:
+			switch (arg) {
+				case TCIFLUSH:
+				 	tty_flush_input(tty);
+					break;
+				case TCOFLUSH:
+				 	tty_flush_output(tty);
+					break;
+				case TCIOFLUSH:
+				 	tty_flush_input(tty);
+				 	tty_flush_output(tty);
+					break;
+				default:
+					return -EINVAL;
+			}
+
 			break;
 		default:
 			if (tty->driver->ioctl) {

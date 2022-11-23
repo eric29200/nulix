@@ -119,3 +119,17 @@ int ring_buffer_putc(struct ring_buffer_t *rb, uint8_t c)
 
 	return 0;
 }
+
+/*
+ * Flush a ring buffer.
+ */
+void ring_buffer_flush(struct ring_buffer_t *rb)
+{
+	/* flush buffer */
+	rb->size = 0;
+	rb->head = 0;
+	rb->tail = 0;
+	
+	/* wakeup eventual readers/writers */
+	task_wakeup(&rb->wait);
+}
