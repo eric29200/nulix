@@ -8,9 +8,6 @@ if [[ `basename $PWD` != "nulix" ]]; then
 	exit 1
 fi
 
-# compile user programs
-make -C usr/
-
 # create first disk
 rm -f $DISK1
 dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE
@@ -38,7 +35,6 @@ sudo cp -R musl/musl-install/i386-linux-musl/bin tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/sbin tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R rootbase/root tmp/
-sudo cp usr/init tmp/sbin/
 
 # create links
 mkdir -p tmp/bin

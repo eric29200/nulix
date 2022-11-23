@@ -1,0 +1,17 @@
+URL="https://download.savannah.gnu.org/releases/sysvinit/"
+VERSION="3.04"
+SRC_FILENAME="sysvinit-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix="/"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install ROOT=$SYSROOT
+}

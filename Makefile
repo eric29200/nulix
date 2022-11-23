@@ -9,7 +9,6 @@ args		= `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
 run:
 	make -j$(NJOBS) -C kernel
-	make -j$(NJOBS) -C usr
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
 	sudo $(QEMU)								\
@@ -26,10 +25,8 @@ run:
 
 port:
 	./ports/install.sh $(call args)
-	make -C usr
 	./scripts/create_rootfs.sh
 
 clean:
 	make clean -C kernel
-	make clean -C usr
 	rm -f $(DISK) $(ISO)

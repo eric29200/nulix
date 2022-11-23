@@ -1,0 +1,6 @@
+id:1:initdefault:
+rc::bootwait:/etc/rc
+1:1:respawn:/sbin/agetty tty1
+2:1:respawn:/sbin/agetty tty2
+3:1:respawn:/sbin/agetty tty3
+4:1:respawn:/sbin/agetty tty4
