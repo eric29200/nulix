@@ -145,7 +145,7 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 		}
 
 		/* no more characters : break */
-		if (ring_buffer_empty(&tty->cooked_queue))
+		if (!L_CANON(tty) && ring_buffer_empty(&tty->cooked_queue))
 			break;
 	}
 
