@@ -387,11 +387,17 @@ extern const int max_vals[];
 #define VC_RAW				2	/* raw (scancode) mode */
 #define VC_UNICODE			3	/* unicode mode */
 
+#define KBD_DEFLEDS			0
+#define LED_SHOW_FLAGS			0
+
 /*
  * Keyboard structure.
  */
 struct kbd_t {
-	uint8_t		kbdmode;
+	uint8_t		kbd_mode;
+	uint8_t		kbd_led_mode;
+	uint8_t		kbd_led_flag_state;
+	uint8_t		kbd_default_led_flag_state;
 };
 
 extern struct kbd_t kbd_table[NR_CONSOLES];

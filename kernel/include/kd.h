@@ -25,6 +25,8 @@
 #define KDSKBENT		0x4B47
 #define KDGKBSENT		0x4B48
 #define KDSKBSENT		0x4B49
+#define	KDGKBLED		0x4B64
+#define KDSKBLED		0x4B65
 
 #define U(x)			((x) ^ 0xF000)
 

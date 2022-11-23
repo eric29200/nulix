@@ -485,7 +485,7 @@ static void keyboard_handler(struct registers_t *regs)
 
 	/* get scan code */
 	scan_code = scan_key();
-	if (kbd->kbdmode == VC_RAW)
+	if (kbd->kbd_mode == VC_RAW)
 		putc(scan_code);
 
 	if (scan_code == 0xE0 || scan_code == 0xE1) {
@@ -527,9 +527,9 @@ static void keyboard_handler(struct registers_t *regs)
 	}
 
 	/* raw mode */
-	if (kbd->kbdmode == VC_RAW) {
+	if (kbd->kbd_mode == VC_RAW) {
 		goto end;
-	} else if (kbd->kbdmode == VC_MEDIUMRAW) {
+	} else if (kbd->kbd_mode == VC_MEDIUMRAW) {
 		putc(key_code + up_flag);
 		goto end;
 	}
@@ -565,14 +565,19 @@ end:
  */
 void init_keyboard()
 {
-	struct kbd_t kbd;
+	struct kbd_t kbd0;
 	int i;
+
+ 	/* set keyboard */
+	memset(&kbd0, 0, sizeof(struct kbd_t));
+	kbd0.kbd_default_led_flag_state = KBD_DEFLEDS;
+	kbd0.kbd_led_flag_state = kbd0.kbd_default_led_flag_state;
+	kbd0.kbd_led_mode = LED_SHOW_FLAGS;
+
+	/* set keyboards table */
+	for (i = 0; i < NR_CONSOLES; i++)
+		kbd_table[i] = kbd0;
 
 	/* register interrupt handler */
 	register_interrupt_handler(33, keyboard_handler);
-
-	/* set keyboards table */
-	memset(&kbd, 0, sizeof(struct kbd_t));
-	for (i = 0; i < NR_CONSOLES; i++)
-		kbd_table[i] = kbd;
 }

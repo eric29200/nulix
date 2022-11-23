@@ -41,7 +41,9 @@ static uint8_t ansi_color_table[] = {
 static void reset_vc(struct vc_t *vc)
 {
 	vc->vc_mode = KD_TEXT;
-	kbd_table[vc->vc_num].kbdmode = VC_XLATE;
+	kbd_table[vc->vc_num].kbd_mode = VC_XLATE;
+	kbd_table[vc->vc_num].kbd_led_mode = LED_SHOW_FLAGS;
+	kbd_table[vc->vc_num].kbd_led_flag_state = kbd_table[vc->vc_num].kbd_default_led_flag_state;
 	vc->vt_mode.mode = VT_AUTO;
 	vc->vt_mode.waitv = 0;
 	vc->vt_mode.relsig = 0;
@@ -1003,7 +1005,7 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 
 			return 0;
 		case KDGKBMODE:
-			switch(kbd->kbdmode) {
+			switch(kbd->kbd_mode) {
 				  case VC_RAW:
 					*((int *) arg) = K_RAW;
 					break;
@@ -1023,20 +1025,29 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 		case KDSKBMODE:
 			switch(arg) {
 				  case K_RAW:
-					kbd->kbdmode = VC_RAW;
+					kbd->kbd_mode = VC_RAW;
 					break;
 				  case K_MEDIUMRAW:
-					kbd->kbdmode = VC_MEDIUMRAW;
+					kbd->kbd_mode = VC_MEDIUMRAW;
 					break;
 				  case K_XLATE:
-					kbd->kbdmode = VC_XLATE;
+					kbd->kbd_mode = VC_XLATE;
 					break;
 				  case K_UNICODE:
-					kbd->kbdmode = VC_UNICODE;
+					kbd->kbd_mode = VC_UNICODE;
 					break;
 				  default:
 					return -EINVAL;
 			}
+			return 0;
+		case KDGKBLED:
+			*((uint8_t *) arg) = kbd->kbd_led_flag_state | (kbd->kbd_default_led_flag_state << 4);
+			return 0;
+		case KDSKBLED:
+			if (arg & ~0x77)
+				return -EINVAL;
+			kbd->kbd_led_flag_state = (arg & 7);
+			kbd->kbd_default_led_flag_state = ((arg >> 4) & 7);
 			return 0;
 		case VT_GETSTATE:
 			vtstat = (struct vt_stat *) arg;
