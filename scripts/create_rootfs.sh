@@ -36,6 +36,10 @@ sudo cp -R musl/musl-install/i386-linux-musl/sbin tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R rootbase/root tmp/
 
+# remove x86_64 binaries
+sudo rm -f tmp/bin/pkgconf tmp/bin/ar tmp/bin/as tmp/bin/ld tmp/bin/ld.bfd tmp/bin/objdump
+sudo rm -f tmp/bin/objcopy tmp/bin/ranlib tmp/bin/nm tmp/bin/readelf tmp/bin/strip
+
 # create links
 mkdir -p tmp/bin
 sudo ln -s /usr/bin/bash tmp/bin/bash
