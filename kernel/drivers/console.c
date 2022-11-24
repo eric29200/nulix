@@ -264,7 +264,7 @@ static void csi_M(struct vc_t *vc, uint32_t nr)
 		nr = 1;
 
 	/* scroll up */
-	console_scrup(vc, fb->y, fb->height, nr);
+	console_scrup(vc, fb->y, vc->vc_bottom, nr);
 }
 
 /*
