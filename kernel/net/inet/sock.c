@@ -5,8 +5,9 @@
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
-#include <math.h>
+#include <stdio.h>
 #include <stderr.h>
+#include <math.h>
 
 static uint16_t dyn_port = 0;
 extern struct socket_t sockets[NR_SOCKETS];
@@ -375,6 +376,22 @@ static int inet_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 }
 
 /*
+ * Set socket options system call.
+ */
+static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t optlen)
+{
+	UNUSED(sock);
+	UNUSED(level);
+	UNUSED(optname);
+	UNUSED(optval);
+	UNUSED(optlen);
+
+	printf("inet_setsockopt(%d) undefined\n", optname);
+
+	return 0;
+}
+
+/*
  * Inet operations.
  */
 struct prot_ops inet_ops = {
@@ -390,4 +407,5 @@ struct prot_ops inet_ops = {
 	.connect	= inet_connect,
 	.getpeername	= inet_getpeername,
 	.getsockname	= inet_getsockname,
+	.setsockopt	= inet_setsockopt,
 };

@@ -23,6 +23,31 @@
 #define MSG_OOB			1
 #define MSG_PEEK		2
 
+/* socket options */
+#define SOL_SOCKET		1
+#define SO_DEBUG		1
+#define SO_REUSEADDR		2
+#define SO_TYPE			3
+#define SO_ERROR		4
+#define SO_DONTROUTE		5
+#define SO_BROADCAST		6
+#define SO_SNDBUF		7
+#define SO_RCVBUF		8
+#define SO_SNDBUFFORCE		32
+#define SO_RCVBUFFORCE		33
+#define SO_KEEPALIVE		9
+#define SO_OOBINLINE		10
+#define SO_NO_CHECK		11
+#define SO_PRIORITY		12
+#define SO_LINGER		13
+#define SO_BSDCOMPAT		14
+#define SO_PASSCRED		16
+#define SO_PEERCRED		17
+#define SO_RCVLOWAT		18
+#define SO_SNDLOWAT		19
+#define SO_RCVTIMEO		20
+#define SO_SNDTIMEO		21
+
 /*
  * Socket address.
  */
@@ -86,6 +111,7 @@ struct prot_ops {
 	int (*connect)(struct socket_t *, const struct sockaddr *);
 	int (*getpeername)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
+	int (*setsockopt)(struct socket_t *, int, int, void *, size_t);
 };
 
 /* protocole operations */
@@ -103,5 +129,6 @@ int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct socka
 int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);
+int do_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 
 #endif

@@ -134,6 +134,7 @@
 #define __NR_connect			362
 #define __NR_listen			363
 #define __NR_accept			364
+#define __NR_setsockopt			366
 #define __NR_getsockname		367
 #define __NR_getpeername		368
 #define __NR_sendto			369
@@ -268,5 +269,6 @@ int sys_getsid(pid_t pid);
 int sys_setsid();
 int sys_getrusage(int who, struct rusage_t *ru);
 int sys_pause();
+int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 
 #endif

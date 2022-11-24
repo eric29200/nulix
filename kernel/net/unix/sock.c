@@ -3,9 +3,10 @@
 #include <mm/mm.h>
 #include <fs/fs.h>
 #include <proc/sched.h>
-#include <fcntl.h>
+#include <stdio.h>
 #include <stderr.h>
 #include <string.h>
+#include <fcntl.h>
 #include <uio.h>
 
 /* sockets table */
@@ -480,6 +481,22 @@ static int unix_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 }
 
 /*
+ * Set socket options system call.
+ */
+static int unix_setsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t optlen)
+{
+	UNUSED(sock);
+	UNUSED(level);
+	UNUSED(optname);
+	UNUSED(optval);
+	UNUSED(optlen);
+
+	printf("unix_setsockopt(%d) undefined\n", optname);
+
+	return 0;
+}
+
+/*
  * UNIX operations.
  */
 struct prot_ops unix_ops = {
@@ -495,4 +512,5 @@ struct prot_ops unix_ops = {
 	.connect	= unix_connect,
 	.getpeername	= unix_getpeername,
 	.getsockname	= unix_getsockname,
+	.setsockopt	= unix_setsockopt,
 };

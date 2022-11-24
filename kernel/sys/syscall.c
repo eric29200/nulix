@@ -134,6 +134,7 @@ static const void *syscalls[] = {
 	[__NR_setsid]			= sys_setsid,
 	[__NR_getrusage]		= sys_getrusage,
 	[__NR_pause]			= sys_pause,
+	[__NR_setsockopt]		= sys_setsockopt,
 };
 
 /*

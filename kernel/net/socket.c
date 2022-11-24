@@ -2,10 +2,11 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
-#include <fcntl.h>
-#include <uio.h>
+#include <stdio.h>
 #include <stderr.h>
 #include <string.h>
+#include <fcntl.h>
+#include <uio.h>
 
 /* sockets table */
 struct socket_t sockets[NR_SOCKETS];
@@ -564,3 +565,49 @@ int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	return sock->ops->getsockname(sock, addr, addrlen);
 }
 
+/*
+ * Set socket options.
+ */
+static int sock_setsockopt(struct socket_t *sock, int optname, void *optval, size_t optlen)
+{
+	UNUSED(sock);
+	UNUSED(optval);
+	UNUSED(optlen);
+
+	switch (optname) {
+		case SO_PASSCRED:
+			break;
+		default:
+			printf("sock_setsockopt(%d) undefined\n", optname);
+			break;
+	}
+
+	return 0;
+}
+
+/*
+ * Set socket options system call.
+ */
+int do_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
+{
+	struct socket_t *sock;
+
+	/* check socket file descriptor */
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
+		return -EBADF;
+
+	/* find socket */
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	if (!sock)
+		return -EINVAL;
+
+	/* socket options */
+	if (level == SOL_SOCKET)
+		return sock_setsockopt(sock, optname, optval, optlen);
+
+	/* setsockopt not implemented */
+	if (!sock->ops || !sock->ops->setsockopt)
+		return -EINVAL;
+
+	return sock->ops->setsockopt(sock, level, optname, optval, optlen);
+}
