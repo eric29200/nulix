@@ -33,6 +33,7 @@ int sys_reboot(int magic1, int magic2, int cmd, void *arg)
 {
 	/* unused argument */
 	UNUSED(arg);
+	printf("reboot\n");
 
 	/* check magic */
 	if ((uint32_t) magic1 != LINUX_REBOOT_MAGIC1 || (

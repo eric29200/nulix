@@ -1,5 +1,6 @@
 id:1:initdefault:
 
+l0:0:wait:/etc/init.d/rc 0
 l1:1:wait:/etc/init.d/rc 1
 l2:2:wait:/etc/init.d/rc 2
 l3:3:wait:/etc/init.d/rc 3
