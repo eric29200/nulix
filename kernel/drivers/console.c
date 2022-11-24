@@ -459,6 +459,8 @@ static void console_set_mode(struct vc_t *vc, int on_off)
 				if (vc->fb.active)
 					vc->fb.ops->show_cursor(&vc->fb, on_off);
 				break;
+			case 2004:				/* bracket mode = ignore */
+				break;
 			default:
 				printf("console : unknown mode : %d\n", vc->vc_pars[i]);
 				break;
