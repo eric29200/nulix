@@ -8,6 +8,7 @@
 #include <ipc/signal.h>
 #include <lib/list.h>
 #include <x86/tls.h>
+#include <resource.h>
 #include <stddef.h>
 
 #define STACK_SIZE		0x2000
@@ -97,6 +98,7 @@ struct task_t {
 	sigset_t			sigpend;			/* pending signals */
 	sigset_t			sigmask;			/* signals mask */
 	sigset_t			saved_sigmask;			/* saved signals mask */
+	struct rlimit_t			rlim[RLIM_NLIMITS];		/* resource limits */
 	struct registers_t		user_regs;			/* saved registers at syscall entry */
 	struct registers_t		signal_regs;			/* saved registers at signal entry */
 	struct user_desc_t		tls;				/* Thread Local Storage address */

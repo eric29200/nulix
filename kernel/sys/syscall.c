@@ -135,6 +135,7 @@ static const void *syscalls[] = {
 	[__NR_getrusage]		= sys_getrusage,
 	[__NR_pause]			= sys_pause,
 	[__NR_setsockopt]		= sys_setsockopt,
+	[__NR_prlimit64]		= sys_prlimit64,
 };
 
 /*

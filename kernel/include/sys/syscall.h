@@ -127,6 +127,7 @@
 #define __NR_pselect6			308
 #define __NR_utimensat			320
 #define __NR_pipe2			331
+#define __NR_prlimit64			340
 #define __NR_renameat2			353
 #define __NR_getrandom			355
 #define __NR_socket			359
@@ -270,5 +271,6 @@ int sys_setsid();
 int sys_getrusage(int who, struct rusage_t *ru);
 int sys_pause();
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
+int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct rlimit64_t *old_limit);
 
 #endif

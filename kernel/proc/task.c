@@ -113,6 +113,34 @@ static int task_copy_signals(struct task_t *task, struct task_t *parent, uint32_
 }
 
 /*
+ * Copy resource limits.
+ */
+static int task_copy_rlim(struct task_t *task, struct task_t *parent)
+{
+	int i;
+
+	/* copy parent limits */
+	if (parent) {
+		memcpy(task->rlim, parent->rlim, sizeof(parent->rlim));
+		return 0;
+	}
+
+	/* default limits */
+	for (i = 0; i < RLIM_NLIMITS; i++) {
+		task->rlim[i].rlim_cur = LONG_MAX;
+		task->rlim[i].rlim_max = LONG_MAX;
+	}
+
+	/* number of opened files and stack limit */
+	task->rlim[RLIMIT_NOFILE].rlim_cur = NR_OPEN;
+	task->rlim[RLIMIT_NOFILE].rlim_max = NR_OPEN;
+	task->rlim[RLIMIT_STACK].rlim_cur = USTACK_LIMIT;
+	task->rlim[RLIMIT_STACK].rlim_max = USTACK_LIMIT;
+
+	return 0;
+}
+
+/*
  * Duplicate a memory structure.
  */
 struct mm_struct *task_dup_mm(struct mm_struct *mm)
@@ -419,6 +447,9 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 	if (!task)
 		return NULL;
 
+	/* reset task */
+	memset(task, 0, sizeof(struct task_t));
+
 	/* allocate stack */
 	stack = (void *) kmalloc(STACK_SIZE);
 	if (!stack)
@@ -433,7 +464,6 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 	task->pid = kernel_thread ? 0 : get_next_pid();
 	task->pgrp = parent ? parent->pgrp : task->pid;
 	task->session = parent ? parent->session : task->pid;
-	task->leader = 0;
 	task->state = TASK_RUNNING;
 	task->parent = parent;
 	task->uid = parent ? parent->uid : 0;
@@ -443,13 +473,7 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 	task->egid = parent ? parent->egid : 0;
 	task->sgid = parent ? parent->sgid : 0;
 	task->tty = parent ? parent->tty : 0;
-	task->timeout = 0;
-	task->utime = 0;
-	task->stime = 0;
-	task->cutime = 0;
-	task->cstime = 0;
 	task->start_time = jiffies;
-	task->wait_child_exit = NULL;
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->sig_tm.list);
 
@@ -473,12 +497,15 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 		goto err_files;
 	if (task_copy_signals(task, parent, clone_flags))
 		goto err_signals;
+	if (task_copy_rlim(task, parent))
+		goto err_rlim;
 	if (task_copy_thread(task, parent, user_sp))
 		goto err_thread;
 
 	return task;
 err_thread:
 	task_exit_signals(task);
+err_rlim:
 err_signals:
 	task_exit_files(task);
 err_files:

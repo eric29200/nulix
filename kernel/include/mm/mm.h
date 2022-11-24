@@ -14,6 +14,7 @@
 #define UMAP_START			0x80000000				/* user memory map : from 2 GB to 4 GB */
 #define UMAP_END			0xF0000000
 #define USTACK_START			0xF8000000				/* user stack */
+#define USTACK_LIMIT			(8 * 1024 * 1024)			/* user stack limit = 8 MB */
 
 /*
  * Virtual memory area structure.
