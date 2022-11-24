@@ -116,16 +116,13 @@ void schedule()
 	struct task_t *prev_task, *task;
 	struct list_head_t *pos;
 
-	/* disable interrupts */
-	irq_disable();
-
 	/* update timers */
 	timer_update();
 
 	/* update timeout on all tasks and wake them if needed */
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task_t, list);
-		if (task->timeout && task->timeout < jiffies) {
+		if (task && task->timeout && task->timeout < jiffies) {
 			task->timeout = 0;
 			task->state = TASK_RUNNING;
 		}
@@ -147,9 +144,6 @@ void schedule()
 	/* update task time */
 	if (current_task)
 		current_task->utime++;
-
-	/* enable interrupts */
-	irq_enable();
 }
 
 /*
