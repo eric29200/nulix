@@ -116,6 +116,9 @@ void schedule()
 	struct task_t *prev_task, *task;
 	struct list_head_t *pos;
 
+	/* disable interrupts */
+	irq_disable();
+
 	/* update timers */
 	timer_update();
 
@@ -127,9 +130,6 @@ void schedule()
 			task->state = TASK_RUNNING;
 		}
 	}
-
-	/* disable interrupts */
-	irq_disable();
 
 	/* get next task to run */
 	prev_task = current_task;
