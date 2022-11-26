@@ -88,7 +88,7 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 	node = htable_lookup(buffer_htable, block, buffer_htable_bits);
 	while (node) {
 		bh = htable_entry(node, struct buffer_head_t, b_htable);
-		if (bh->b_block == block && bh->b_dev == dev) {
+		if (bh->b_block == block && bh->b_dev == dev && bh->b_size == blocksize) {
 			bh->b_ref++;
 			goto out;
 		}
