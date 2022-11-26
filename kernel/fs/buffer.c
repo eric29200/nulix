@@ -29,7 +29,7 @@ int bwrite(struct buffer_head_t *bh)
 		return -EINVAL;
 
 	/* write to block device */
-	ret = ata_write(bh->b_sb->s_dev, bh);
+	ret = ata_write(bh->b_dev, bh);
 	if (ret)
 		return ret;
 
@@ -40,7 +40,7 @@ int bwrite(struct buffer_head_t *bh)
 /*
  * Get an empty buffer.
  */
-static struct buffer_head_t *get_empty_buffer(struct super_block_t *sb)
+static struct buffer_head_t *get_empty_buffer(dev_t dev, size_t blocksize)
 {
 	struct buffer_head_t *bh;
 	struct list_head_t *pos;
@@ -69,8 +69,8 @@ found:
 
 	/* reset buffer */
 	bh->b_ref = 1;
-	bh->b_sb = sb;
-	bh->b_size = sb->s_blocksize;
+	bh->b_dev = dev;
+	bh->b_size = blocksize;
 	memset(bh->b_data, 0, bh->b_size);
 
 	return bh;
@@ -79,7 +79,7 @@ found:
 /*
  * Get a buffer (from cache or create one).
  */
-struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block)
+struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 {
 	struct htable_link_t *node;
 	struct buffer_head_t *bh;
@@ -88,7 +88,7 @@ struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block)
 	node = htable_lookup(buffer_htable, block, buffer_htable_bits);
 	while (node) {
 		bh = htable_entry(node, struct buffer_head_t, b_htable);
-		if (bh->b_block == block && bh->b_sb == sb && bh->b_size == sb->s_blocksize) {
+		if (bh->b_block == block && bh->b_dev == dev) {
 			bh->b_ref++;
 			goto out;
 		}
@@ -97,12 +97,12 @@ struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block)
 	}
 
 	/* get an empty buffer */
-	bh = get_empty_buffer(sb);
+	bh = get_empty_buffer(dev, blocksize);
 	if (!bh)
 		return NULL;
 
 	/* set buffer */
-	bh->b_sb = sb;
+	bh->b_dev = dev;
 	bh->b_block = block;
 	bh->b_uptodate = 0;
 
@@ -124,7 +124,7 @@ struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block)
 	struct buffer_head_t *bh;
 
 	/* get buffer */
-	bh = getblk(sb, block);
+	bh = getblk(sb->s_dev, block, sb->s_blocksize);
 	if (!bh)
 		return NULL;
 

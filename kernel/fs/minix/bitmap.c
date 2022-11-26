@@ -74,7 +74,7 @@ uint32_t minix_new_block(struct super_block_t *sb)
 		return 0;
 
 	/* get a buffer */
-	bh = getblk(sb, block_nr);
+	bh = getblk(sb->s_dev, block_nr, sb->s_blocksize);
 	if (!bh)
 		return 0;
 

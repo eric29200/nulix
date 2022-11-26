@@ -15,13 +15,13 @@
 #define NR_INODE			1024
 #define NR_FILE				256
 
-#define BSYNC_TIMER_MS			10000
-
 #define MS_RDONLY			1
 
 #define RENAME_NOREPLACE		(1 << 0)
 #define RENAME_EXCHANGE			(1 << 1)
 #define RENAME_WHITEOUT			(1 << 2)
+
+struct super_block_t;
 
 /*
  * Buffer structure.
@@ -33,7 +33,7 @@ struct buffer_head_t {
 	int				b_ref;
 	char				b_dirt;
 	char				b_uptodate;
-	struct super_block_t *		b_sb;
+	dev_t				b_dev;
 	struct list_head_t		b_list;
 	struct htable_link_t		b_htable;
 };
@@ -183,7 +183,7 @@ int bwrite(struct buffer_head_t *bh);
 void brelse(struct buffer_head_t *bh);
 void bsync();
 int binit();
-struct buffer_head_t *getblk(struct super_block_t *sb, uint32_t block);
+struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void reclaim_buffers();
 
 /* inode operations */
