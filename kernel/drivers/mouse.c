@@ -5,6 +5,7 @@
 #include <lib/ring_buffer.h>
 #include <fs/fs.h>
 #include <stderr.h>
+#include <fcntl.h>
 
 #define MOUSE_BUF_SIZE		2048
 #define MOUSE_EVENT_SIZE	3
@@ -190,8 +191,6 @@ static int mouse_open(struct file_t *filp)
 	UNUSED(filp);
 	return 0;
 }
-
-#include <fcntl.h>
 
 /*
  * Read a mouse.
