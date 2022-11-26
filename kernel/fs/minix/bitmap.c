@@ -98,6 +98,7 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
 {
 	struct minix_sb_info_t *sbi = minix_sb(sb);
 	struct buffer_head_t *bh;
+	uint32_t zone;
 
 	/* check block number */
 	if (block < sbi->s_firstdatazone || block >= sbi->s_nzones)
@@ -106,15 +107,15 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
 	/* get buffer and clear it */
 	bh = bread(sb, block);
 	if (bh) {
-		bh->b_dirt = 1;
 		memset(bh->b_data, 0, MINIX_BLOCK_SIZE);
+		bh->b_dirt = 1;
+		brelse(bh);
 	}
-	brelse(bh);
 
 	/* update/clear block bitmap */
-	block -= sbi->s_firstdatazone - 1;
-	bh = sbi->s_zmap[block / (8 * MINIX_BLOCK_SIZE)];
-	MINIX_CLEAR_BITMAP(bh, block & (MINIX_BLOCK_SIZE * 8 - 1));
+	zone = block - sbi->s_firstdatazone + 1;
+	bh = sbi->s_zmap[zone >> 13];
+	MINIX_CLEAR_BITMAP(bh, zone & (MINIX_BLOCK_SIZE * 8 - 1));
 	bh->b_dirt = 1;
 
 	return 0;
