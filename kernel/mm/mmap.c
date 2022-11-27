@@ -1,6 +1,7 @@
 #include <mm/mmap.h>
 #include <mm/mm.h>
 #include <proc/sched.h>
+#include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
 
@@ -292,4 +293,89 @@ int do_munmap(uint32_t addr, size_t len)
 	unmap_pages(addr, addr + len, current_task->mm->pgd);
 
 	return 0;
+}
+
+/*
+ * Memory region remap system call.
+ */
+void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
+{
+	struct vm_area_t *vma, *vma_next;
+	int ret;
+
+	/* check flags */
+	if (flags & ~(MREMAP_FIXED | MREMAP_MAYMOVE))
+		goto err;
+
+	/* old address must be page aligned */
+	if (old_address & ~PAGE_MASK)
+		goto err;
+
+	/* page align lengths */
+	old_size = PAGE_ALIGN_UP(old_size);
+	new_size = PAGE_ALIGN_UP(new_size);
+
+	if (flags & MREMAP_FIXED) {
+		/* new address must be page aligned and movable */
+		if (new_address & ~PAGE_MASK)
+			goto err;
+		if (!(flags & MREMAP_MAYMOVE))
+			goto err;
+
+		/* allow new_size == 0 only if new_size == old_size */
+		if (!new_size && new_size != old_size)
+			goto err;
+
+		/* new memory region must not overlap old memory region */
+		if (new_address <= old_address && new_address + new_size > old_address)
+			goto err;
+		if (old_address <= new_address && old_address + old_size > new_address)
+			goto err;
+
+		/* unmap new region */
+		ret = do_munmap(new_address, new_size);
+		if (ret && new_size)
+			goto err;
+	}
+
+	/* shrinking remap */
+	if (old_size >= new_size) {
+		/* unmap pages */
+		ret = do_munmap(old_address + new_size, old_size - new_size);
+		if (ret && old_size != new_size)
+			goto err;
+
+		/* done */
+		if (!(flags & MREMAP_FIXED) || new_address == old_address)
+			return (void *) old_address;
+	}
+
+	/* find old memory region */
+	vma = find_vma(current_task, old_address);
+	if (!vma || vma->vm_start > old_address)
+		return NULL;
+
+	/* check old memory region size */
+	if (old_size > vma->vm_end - old_address)
+		return NULL;
+
+	/* try to grow old region */
+	if (old_size == vma->vm_end - old_address
+		&& !(flags & MREMAP_FIXED)
+		&& new_address != old_address
+		&& (old_size != new_size || !(flags & MREMAP_MAYMOVE))) {
+			/* get next vma */
+			vma_next = list_next_entry_or_null(vma, &current_task->mm->vm_list, list);
+
+			/* just expand old region */
+			if (!vma_next || vma_next->vm_start - old_address >= new_size) {
+				vma->vm_end = old_address + new_size;
+				return (void *) old_address;
+			}
+	}
+
+	/* TODO : move memory region into a new one */
+	printf("mremap not implemented\n");
+err:
+	return NULL;
 }

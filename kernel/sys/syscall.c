@@ -62,6 +62,7 @@ static const void *syscalls[] = {
 	[__NR_mmap]			= sys_mmap,
 	[__NR_mmap2]			= sys_mmap2,
 	[__NR_munmap]			= sys_munmap,
+	[__NR_mremap]			= sys_mremap,
 	[__NR_modify_ldt]		= sys_modify_ldt,
 	[__NR_gettid]			= sys_gettid,
 	[__NR_get_thread_area]		= sys_get_thread_area,

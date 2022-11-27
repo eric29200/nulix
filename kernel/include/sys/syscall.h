@@ -82,6 +82,7 @@
 #define __NR_writev			146
 #define __NR_getsid			147
 #define __NR_nanosleep			162
+#define __NR_mremap			163
 #define __NR_poll			168
 #define __NR_rt_sigaction		174
 #define __NR_rt_sigprocmask		175
@@ -272,5 +273,6 @@ int sys_getrusage(int who, struct rusage_t *ru);
 int sys_pause();
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct rlimit64_t *old_limit);
+void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address);
 
 #endif

@@ -22,6 +22,9 @@
 #define MAP_FIXED        	0x10
 #define MAP_ANONYMOUS    	0x20
 
+#define MREMAP_MAYMOVE		1
+#define MREMAP_FIXED		2
+
 #define PROT_READ		0x1		/* page can be read */
 #define PROT_WRITE		0x2		/* page can be written */
 #define PROT_EXEC		0x4		/* page can be executed */
@@ -29,6 +32,7 @@
 
 void *do_mmap(uint32_t addr, size_t length, int prot, int flags, struct file_t *filp, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
+void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address);
 struct vm_area_t *find_vma(struct task_t *task, uint32_t addr);
 struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr);
 struct vm_area_t *find_vma_next(struct task_t *task, uint32_t addr);
