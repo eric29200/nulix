@@ -114,6 +114,7 @@
 #define __NR_set_tid_address		258
 #define __NR_statfs64			268
 #define __NR_fstatfs64			269
+#define __NR_fadvise64			272
 #define __NR_openat			295
 #define __NR_mkdirat			296
 #define __NR_fchownat			298
@@ -274,5 +275,6 @@ int sys_pause();
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct rlimit64_t *old_limit);
 void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address);
+int sys_fadvise64(int fd, off_t offset, off_t len, int advice);
 
 #endif
