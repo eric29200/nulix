@@ -87,6 +87,7 @@ uint32_t minix_new_block(struct super_block_t *sb)
 	/* set block in bitmap */
 	MINIX_SET_BITMAP(sbi->s_zmap[i], j);
 	sbi->s_zmap[i]->b_dirt = 1;
+	bwrite(sbi->s_zmap[i]);
 
 	return block_nr;
 }
@@ -117,6 +118,7 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
 	bh = sbi->s_zmap[zone >> 13];
 	MINIX_CLEAR_BITMAP(bh, zone & (MINIX_BLOCK_SIZE * 8 - 1));
 	bh->b_dirt = 1;
+	bwrite(bh);
 
 	return 0;
 }
@@ -141,6 +143,7 @@ int minix_free_inode(struct inode_t *inode)
 	bh = minix_sb(inode->i_sb)->s_imap[inode->i_ino >> 13];
 	MINIX_CLEAR_BITMAP(bh, inode->i_ino & (MINIX_BLOCK_SIZE * 8 - 1));
 	bh->b_dirt = 1;
+	bwrite(bh);
 
 	/* free inode */
 	memset(inode, 0, sizeof(struct inode_t));
@@ -185,6 +188,7 @@ struct inode_t *minix_new_inode(struct super_block_t *sb)
 	/* set inode in bitmap */
 	MINIX_SET_BITMAP(sbi->s_imap[i], j);
 	sbi->s_imap[i]->b_dirt = 1;
+	bwrite(sbi->s_imap[i]);
 
 	return inode;
 }

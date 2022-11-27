@@ -146,6 +146,10 @@ void brelse(struct buffer_head_t *bh)
 	if (!bh)
 		return;
 
+	/* write diry buffer */
+	if (bh->b_dirt)
+		bwrite(bh);
+
 	/* update inode reference count */
 	bh->b_ref--;
 }
