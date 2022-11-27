@@ -67,8 +67,11 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 		/* else wait for child */
 		task_sleep(&current_task->wait_child_exit);
 
-		/* process interruption (ignore SIGCHLD) */
-		if (current_task->sigpend & ~(current_task->sigmask | (1 << SIGCHLD)))
+		/* remove SIGCHLD */
+		current_task->sigpend &= (1 << (SIGCHLD - 1));
+
+		/* process interruption */
+		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 	}
 }
