@@ -17,10 +17,6 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 	for (;;) {
 		has_children = 0;
 
-		/* process interruption */
-		if (signal_pending(current_task))
-			return -ERESTARTSYS;
-
 		/* search zombie child */
 		list_for_each(pos, &current_task->list) {
 			task = list_entry(pos, struct task_t, list);
@@ -70,5 +66,9 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 
 		/* else wait for child */
 		task_sleep(&current_task->wait_child_exit);
+
+		/* process interruption (ignore SIGCHLD) */
+		if (current_task->sigpend & ~(current_task->sigmask | (1 << SIGCHLD)))
+			return -ERESTARTSYS;
 	}
 }
