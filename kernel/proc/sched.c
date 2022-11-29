@@ -20,6 +20,7 @@ struct kernel_stat_t kstat;				/* kernel statistics */
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
+extern void return_user_mode(struct registers_t *regs);
 
 /* average run */
 unsigned long avenrun[3] = { 0, 0, 0 };
@@ -425,6 +426,10 @@ int do_signal(struct registers_t *regs)
 		}
 	}
 
+	/* signal in system call : restore user registers */
+	if (current_task->in_syscall)
+		memcpy(regs, &current_task->user_regs, sizeof(struct registers_t));
+
 	/* save interrupt registers, to restore it at the end of signal */
 	memcpy(&current_task->signal_regs, regs, sizeof(struct registers_t));
 
@@ -442,6 +447,13 @@ out:
 	if (current_task->saved_sigmask) {
 		current_task->sigmask = current_task->saved_sigmask;
 		current_task->saved_sigmask = 0;
+	}
+
+	/* signal in system call : return to user mode */
+	if (current_task->in_syscall) {
+		current_task->in_syscall = 0;
+		regs->eax = -EINTR;
+		return_user_mode(regs);
 	}
 
 	return 0;

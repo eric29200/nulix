@@ -157,7 +157,9 @@ static void syscall_handler(struct registers_t *regs)
 	memcpyb(&current_task->user_regs, regs, sizeof(struct registers_t));
 
 	/* execute system call */
+	current_task->in_syscall = 1;
 	ret = ((syscall_f) syscalls[regs->eax])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
+	current_task->in_syscall = 0;
 
 	/* restore registers and set return value */
 	memcpyb(regs, &current_task->user_regs, sizeof(struct registers_t));

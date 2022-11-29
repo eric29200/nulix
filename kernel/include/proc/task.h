@@ -98,6 +98,7 @@ struct task_t {
 	sigset_t			sigpend;			/* pending signals */
 	sigset_t			sigmask;			/* signals mask */
 	sigset_t			saved_sigmask;			/* saved signals mask */
+	char				in_syscall;			/* process in system call */
 	struct rlimit_t			rlim[RLIM_NLIMITS];		/* resource limits */
 	struct registers_t		user_regs;			/* saved registers at syscall entry */
 	struct registers_t		signal_regs;			/* saved registers at signal entry */
