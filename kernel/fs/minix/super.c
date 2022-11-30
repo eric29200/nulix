@@ -28,7 +28,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 	sb->s_blocksize_bits = DEFAULT_BLOCK_SIZE_BITS;
 
 	/* read super block */
-	sbi->s_sbh = bread(sb, 1);
+	sbi->s_sbh = bread(sb->s_dev, 1, sb->s_blocksize);
 	if (!sbi->s_sbh)
 		goto err_bad_sb;
 
@@ -73,7 +73,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 
 	/* read inodes bitmap */
 	for (i = 0, block = 2; i < sbi->s_imap_blocks; i++, block++) {
-		sbi->s_imap[i] = bread(sb, block);
+		sbi->s_imap[i] = bread(sb->s_dev, block, sb->s_blocksize);
 		if (!sbi->s_imap[i]) {
 			ret = -EIO;
 			goto err_map;
@@ -93,7 +93,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 
 	/* read zones bitmap */
 	for (i = 0; i < sbi->s_zmap_blocks; i++, block++) {
-		sbi->s_zmap[i] = bread(sb, block);
+		sbi->s_zmap[i] = bread(sb->s_dev, block, sb->s_blocksize);
 		if (!sbi->s_zmap[i]) {
 			ret = -EIO;
 			goto err_map;

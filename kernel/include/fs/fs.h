@@ -181,7 +181,7 @@ int get_filesystem_list(char *buf, int count);
 int get_vfs_mount_list(char *buf, int count);
 
 /* buffer operations */
-struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block);
+struct buffer_head_t *bread(dev_t dev, uint32_t block, size_t blocksize);
 int bwrite(struct buffer_head_t *bh);
 void brelse(struct buffer_head_t *bh);
 void bsync();

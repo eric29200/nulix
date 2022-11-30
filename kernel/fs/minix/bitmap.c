@@ -106,7 +106,7 @@ int minix_free_block(struct super_block_t *sb, uint32_t block)
 		return -EINVAL;
 
 	/* get buffer and clear it */
-	bh = bread(sb, block);
+	bh = bread(sb->s_dev, block, sb->s_blocksize);
 	if (bh) {
 		memset(bh->b_data, 0, bh->b_size);
 		bh->b_dirt = 1;

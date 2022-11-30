@@ -154,17 +154,17 @@ out:
 /*
  * Read a block from a device.
  */
-struct buffer_head_t *bread(struct super_block_t *sb, uint32_t block)
+struct buffer_head_t *bread(dev_t dev, uint32_t block, size_t blocksize)
 {
 	struct buffer_head_t *bh;
 
 	/* get buffer */
-	bh = getblk(sb->s_dev, block, sb->s_blocksize);
+	bh = getblk(dev, block, blocksize);
 	if (!bh)
 		return NULL;
 
 	/* read it from device */
-	if (!bh->b_uptodate && ata_read(sb->s_dev, bh) != 0) {
+	if (!bh->b_uptodate && ata_read(dev, bh) != 0) {
 		brelse(bh);
 		return NULL;
 	}
