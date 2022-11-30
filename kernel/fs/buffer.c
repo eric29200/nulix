@@ -7,6 +7,7 @@
 #include <stderr.h>
 #include <stdio.h>
 #include <time.h>
+#include <dev.h>
 
 /* global buffer table */
 static int nr_buffer = 0;
@@ -15,8 +16,42 @@ static struct buffer_head_t *buffer_table = NULL;
 static struct htable_link_t **buffer_htable = NULL;
 static LIST_HEAD(lru_buffers);
 
+/* block size of devices */
+size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
+
 /* number of kernel pages (defined in mm/mm.c) */
 extern int nb_kernel_pages;
+
+/*
+ * Set blocksize of a device.
+ */
+void set_blocksize(dev_t dev, size_t blocksize)
+{
+	/* check device */
+	if (!blocksize_size[major(dev)])
+		return;
+
+	/* check block size */
+	switch (blocksize) {
+		case 512:
+		case 1024:
+		case 2048:
+		case 4096:
+			break;
+		default:
+			panic("set_blocksize : invalid block size");
+	}
+
+	/* nothing to do */
+	if (blocksize_size[major(dev)][minor(dev)] == blocksize)
+		return;
+
+ 	/* sync buffers */
+	bsync();
+
+	/* set block size */
+	blocksize_size[major(dev)][minor(dev)] = blocksize;
+}
 
 /*
  * Write a block buffer.

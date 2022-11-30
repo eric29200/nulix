@@ -13,6 +13,7 @@
 /* ata devices */
 static struct pci_device_t *pci_device = NULL;
 static struct ata_device_t ata_devices[MAX_ATA_DEVICE];
+static size_t ata_blocksizes[MAX_ATA_DEVICE] = { 0, };
 
 /*
  * Get an ata device.
@@ -275,6 +276,8 @@ static void ata_irq_handler(struct registers_t *regs)
  */
 int init_ata()
 {
+	int i;
+
 	/* get PCI device */
 	pci_device = pci_get_device(ATA_VENDOR_ID, ATA_DEVICE_ID);
 	if (!pci_device)
@@ -296,6 +299,11 @@ int init_ata()
 		printf("[Kernel] Secondary ATA master drive detected\n");
 	if (ata_detect(3, ATA_SECONDARY, ATA_SLAVE) == 0)
 		printf("[Kernel] Secondary ATA slave drive detected\n");
+
+	/* set default block size */
+	for (i = 0; i < MAX_ATA_DEVICE; i++)
+		ata_blocksizes[i] = DEFAULT_BLOCK_SIZE;
+	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
 
 	return 0;
 }

@@ -187,6 +187,7 @@ void brelse(struct buffer_head_t *bh);
 void bsync();
 int binit();
 struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize);
+void set_blocksize(dev_t dev, size_t blocksize);
 void reclaim_buffers();
 
 /* inode operations */

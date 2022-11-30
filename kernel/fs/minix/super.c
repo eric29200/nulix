@@ -23,6 +23,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 		return -ENOMEM;
 
 	/* set default block size */
+	set_blocksize(sb->s_dev, DEFAULT_BLOCK_SIZE);
 	sb->s_blocksize = DEFAULT_BLOCK_SIZE;
 	sb->s_blocksize_bits = DEFAULT_BLOCK_SIZE_BITS;
 
@@ -55,6 +56,9 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 	sb->s_blocksize_bits = blksize_bits(msb3->s_blocksize);
 	sb->s_op = &minix_sops;
 	sb->s_root_inode = NULL;
+
+	/* set real block size */
+	set_blocksize(sb->s_dev, sb->s_blocksize);
 
 	/* allocate inodes bitmap */
 	sbi->s_imap = (struct buffer_head_t **) kmalloc(sizeof(struct buffer_head_t *) * sbi->s_imap_blocks);
