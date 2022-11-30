@@ -189,6 +189,7 @@ int binit();
 struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void set_blocksize(dev_t dev, size_t blocksize);
 void reclaim_buffers();
+int generic_block_read(struct file_t *filp, char *buf, int count);
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);
@@ -203,8 +204,9 @@ off_t generic_lseek(struct file_t *filp, off_t offset, int whence);
 struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int follow_links);
 int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
 
-/* character device drivers */
+/* character/block device drivers */
 struct inode_operations_t *char_get_driver(struct inode_t *inode);
+struct inode_operations_t *block_get_driver(struct inode_t *inode);
 
 /* system calls */
 int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);

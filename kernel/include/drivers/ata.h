@@ -92,4 +92,6 @@ int init_ata();
 int ata_read(dev_t dev, struct buffer_head_t *bh);
 int ata_write(dev_t dev, struct buffer_head_t *bh);
 
+extern struct inode_operations_t ata_iops;
+
 #endif

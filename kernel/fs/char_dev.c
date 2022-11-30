@@ -13,7 +13,7 @@
  */
 struct inode_operations_t *char_get_driver(struct inode_t *inode)
 {
-	/* no a character device */
+	/* not a character device */
 	if (!inode || !S_ISCHR(inode->i_mode))
 		return NULL;
 

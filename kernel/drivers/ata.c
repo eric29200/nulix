@@ -307,3 +307,17 @@ int init_ata()
 
 	return 0;
 }
+
+/*
+ * ATA file operations.
+ */
+static struct file_operations_t ata_fops = {
+	.read		= generic_block_read,
+};
+
+/*
+ * ATA inode operations.
+ */
+struct inode_operations_t ata_iops = {
+	.fops		= &ata_fops,
+};

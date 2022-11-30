@@ -24,7 +24,7 @@ int minix_file_read(struct file_t *filp, char *buf, int count)
 		/* read block */
 		bh = minix_bread(filp->f_inode, filp->f_pos / sb->s_blocksize, 0);
 		if (!bh)
-			goto out;
+			break;
 
 		/* find position and number of chars to read */
 		pos = filp->f_pos % sb->s_blocksize;
@@ -42,7 +42,6 @@ int minix_file_read(struct file_t *filp, char *buf, int count)
 		left -= nb_chars;
 	}
 
-out:
 	return count - left;
 }
 
@@ -66,7 +65,7 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
 		/* read block */
 		bh = minix_bread(filp->f_inode, filp->f_pos / sb->s_blocksize, 1);
 		if (!bh)
-			goto out;
+			break;
 
 		/* find position and number of chars to read */
 		pos = filp->f_pos % sb->s_blocksize;
@@ -91,6 +90,5 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
 		}
 	}
 
-out:
 	return count - left;
 }
