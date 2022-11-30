@@ -2,6 +2,9 @@
 #include <string.h>
 #include <stderr.h>
 
+#define DEFAULT_FONT_WIDTH		8
+#define DEFAULT_FONT_HEIGHT		16
+
 /* RGB color table */
 static uint32_t rgb_color_table[] = {
 	0x000000,	/* black */
@@ -44,7 +47,7 @@ static void fb_put_glyph(struct framebuffer_t *fb, int glyph, uint32_t pos_x, ui
 	uint8_t bit;
 
 	/* get font */
-	font = fb->font->data + glyph * fb->font->char_size;
+	font = &fb->font->data[glyph * fb->font->height];
 	bit = 1 << 7;
 
 	/* print glyph */
@@ -101,7 +104,7 @@ static void fb_rgb_update_cursor(struct framebuffer_t *fb)
 	color = fb->buf[fb->y * fb->width + fb->x] >> 8;
 	color_bg = fb_rgb_bg_color(color);
 	color_fg = fb_rgb_fg_color(color);
-	fb_put_glyph(fb, get_glyph(fb->font, c), fb->x * fb->font->width, fb->y * fb->font->height, color_fg, color_bg);
+	fb_put_glyph(fb, c, fb->x * fb->font->width, fb->y * fb->font->height, color_fg, color_bg);
 
 	/* set new cusor */
 	fb->cursor_x = fb->x;
@@ -128,7 +131,7 @@ static void fb_rgb_update_region(struct framebuffer_t *fb, uint32_t start, uint3
 		color_fg = fb_rgb_fg_color(color);
 
 		/* put glyph */
-		fb_put_glyph(fb, c ? get_glyph(fb->font, c) : -1, x * fb->font->width, y * fb->font->height, color_bg, color_fg);
+		fb_put_glyph(fb, c, x * fb->font->width, y * fb->font->height, color_bg, color_fg);
 	}
 }
 
@@ -181,9 +184,9 @@ static void fb_rgb_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t 
 static int fb_rgb_init(struct framebuffer_t *fb)
 {
 	/* get font */
-	fb->font = get_default_font();
+	fb->font = font_find(DEFAULT_FONT_WIDTH, DEFAULT_FONT_HEIGHT);
 	if (!fb->font)
-		return -ENOSPC;
+		return -EINVAL;
 
 	fb->width = fb->real_width / fb->font->width;
 	fb->height = fb->real_height / fb->font->height;

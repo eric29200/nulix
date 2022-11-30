@@ -88,9 +88,9 @@ static void fb_text_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t
  */
 static int fb_text_init(struct framebuffer_t *fb)
 {
-	fb->font = NULL;
 	fb->width = fb->real_width;
 	fb->height = fb->real_height;
+	fb->font = NULL;
 
 	return 0;
 }

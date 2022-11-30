@@ -4,8 +4,8 @@
 #include <grub/multiboot2.h>
 #include <fs/fs.h>
 #include <stddef.h>
-#include <lib/font.h>
 #include <string.h>
+#include <font.h>
 
 #define TEXT_BLACK			0
 #define TEXT_LIGHT_GREY			7
@@ -135,7 +135,7 @@ struct framebuffer_t {
 	uint32_t			real_width;
 	uint32_t			real_height;
 	uint8_t				bpp;
-	struct font_t *			font;
+	struct font_desc_t *		font;
 	uint32_t			x;
 	uint32_t			y;
 	uint32_t			cursor_x;
