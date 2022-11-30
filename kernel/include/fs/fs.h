@@ -21,6 +21,9 @@
 #define RENAME_EXCHANGE			(1 << 1)
 #define RENAME_WHITEOUT			(1 << 2)
 
+#define DEFAULT_BLOCK_SIZE_BITS		10
+#define DEFAULT_BLOCK_SIZE		(1 << DEFAULT_BLOCK_SIZE_BITS)
+
 struct super_block_t;
 
 /*

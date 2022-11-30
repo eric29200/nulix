@@ -17,8 +17,6 @@
 #define MINIX_ERROR_FS			0x0002
 
 #define MINIX_ROOT_INODE		1
-#define MINIX_BLOCK_SIZE_BITS		10
-#define MINIX_BLOCK_SIZE		(1 << MINIX_BLOCK_SIZE_BITS)
 
 /*
  * Minix V3 super block.
