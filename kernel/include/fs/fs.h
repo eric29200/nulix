@@ -53,7 +53,7 @@ struct file_system_t {
  */
 struct super_block_t {
 	dev_t				s_dev;
-	uint16_t			s_blocksize;
+	size_t				s_blocksize;
 	uint8_t				s_blocksize_bits;
 	void *				s_fs_info;
 	uint16_t			s_magic;

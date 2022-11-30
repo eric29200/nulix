@@ -49,6 +49,7 @@ int minix_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t
  */
 ssize_t minix_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 {
+	struct super_block_t *sb = inode->i_sb;
 	struct buffer_head_t *bh;
 	size_t len;
 
@@ -59,8 +60,8 @@ ssize_t minix_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 	}
 
 	/* limit buffer size to block size */
-	if (bufsize > MINIX_BLOCK_SIZE - 1)
-		bufsize = MINIX_BLOCK_SIZE - 1;
+	if (bufsize > sb->s_blocksize - 1)
+		bufsize = sb->s_blocksize - 1;
 
 	/* check 1st block */
 	if (!inode->u.minix_i.i_zone[0]) {

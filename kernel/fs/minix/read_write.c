@@ -8,8 +8,9 @@
  */
 int minix_file_read(struct file_t *filp, char *buf, int count)
 {
+	struct super_block_t *sb = filp->f_inode->i_sb;
+	size_t pos, nb_chars, left;
 	struct buffer_head_t *bh;
-	int pos, nb_chars, left;
 
 	/* adjust size */
 	if (filp->f_pos + count > filp->f_inode->i_size)
@@ -21,13 +22,13 @@ int minix_file_read(struct file_t *filp, char *buf, int count)
 	left = count;
 	while (left > 0) {
 		/* read block */
-		bh = minix_bread(filp->f_inode, filp->f_pos / MINIX_BLOCK_SIZE, 0);
+		bh = minix_bread(filp->f_inode, filp->f_pos / sb->s_blocksize, 0);
 		if (!bh)
 			goto out;
 
 		/* find position and number of chars to read */
-		pos = filp->f_pos % MINIX_BLOCK_SIZE;
-		nb_chars = MINIX_BLOCK_SIZE - pos <= left ? MINIX_BLOCK_SIZE - pos : left;
+		pos = filp->f_pos % sb->s_blocksize;
+		nb_chars = sb->s_blocksize - pos <= left ? sb->s_blocksize - pos : left;
 
 		/* copy into buffer */
 		memcpy(buf, bh->b_data + pos, nb_chars);
@@ -50,7 +51,8 @@ out:
  */
 int minix_file_write(struct file_t *filp, const char *buf, int count)
 {
-	uint32_t pos, nb_chars, left;
+	struct super_block_t *sb = filp->f_inode->i_sb;
+	size_t pos, nb_chars, left;
 	struct buffer_head_t *bh;
 
 	/* handle append flag */
@@ -62,13 +64,13 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
 	left = count;
 	while (left > 0) {
 		/* read block */
-		bh = minix_bread(filp->f_inode, filp->f_pos / MINIX_BLOCK_SIZE, 1);
+		bh = minix_bread(filp->f_inode, filp->f_pos / sb->s_blocksize, 1);
 		if (!bh)
 			goto out;
 
 		/* find position and number of chars to read */
-		pos = filp->f_pos % MINIX_BLOCK_SIZE;
-		nb_chars = MINIX_BLOCK_SIZE - pos <= left ? MINIX_BLOCK_SIZE - pos : left;
+		pos = filp->f_pos % sb->s_blocksize;
+		nb_chars = sb->s_blocksize - pos <= left ? sb->s_blocksize - pos : left;
 
 		/* copy into buffer */
 		memcpy(bh->b_data + pos, buf, nb_chars);

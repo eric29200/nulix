@@ -399,8 +399,9 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
 {
 	struct buffer_head_t *bh;
 	struct inode_t *inode;
-	int err, i;
 	void *de;
+	size_t i;
+	int err;
 
 	/* create a new inode */
 	inode = minix_new_inode(dir->i_sb);

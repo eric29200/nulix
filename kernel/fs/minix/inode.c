@@ -234,7 +234,7 @@ struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create)
 	struct buffer_head_t *bh;
 
 	/* check block number */
-	if (block < 0 || (uint32_t) block >= minix_sb(inode->i_sb)->s_max_size / MINIX_BLOCK_SIZE)
+	if (block < 0 || (uint32_t) block >= minix_sb(inode->i_sb)->s_max_size / inode->i_sb->s_blocksize)
 		return NULL;
 
 	/* direct block */
