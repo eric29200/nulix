@@ -1,0 +1,17 @@
+URL="https://downloads.sourceforge.net/freetype/"
+VERSION="2.12.1"
+SRC_FILENAME="freetype-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix=$SYSROOT"/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}
