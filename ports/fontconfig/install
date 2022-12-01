@@ -1,0 +1,17 @@
+URL="https://www.freedesktop.org/software/fontconfig/release/"
+VERSION="2.14.1"
+SRC_FILENAME="fontconfig-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix=$SYSROOT"/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}

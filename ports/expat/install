@@ -1,0 +1,17 @@
+URL="https://github.com/libexpat/libexpat/releases/download/R_2_4_8/"
+VERSION="2.4.8"
+SRC_FILENAME="expat-"$VERSION".tar.xz"
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix=$SYSROOT"/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}
