@@ -16,7 +16,7 @@ function configure_port() {
 		--disable-makeinstall-chown					\
 		--without-python						\
 		--without-systemd						\
-		--prefix="/usr"
+		--prefix=$SYSROOT"/usr"
 }
 
 function build_port() {
@@ -24,5 +24,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install DESTDIR=$SYSROOT
+	make install
 }
