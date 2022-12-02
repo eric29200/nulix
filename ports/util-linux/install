@@ -25,4 +25,7 @@ function build_port() {
 
 function install_port() {
 	make install
+
+	# create symlinks
+	ln -svf /usr/sbin/agetty $SYSROOT/sbin/agetty
 }
