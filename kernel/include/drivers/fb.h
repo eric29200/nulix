@@ -127,22 +127,23 @@ struct framebuffer_ops_t {
  * Frame buffer structure.
  */
 struct framebuffer_t {
-	uint32_t			addr;
-	uint16_t			type;
-	uint32_t			pitch;
-	uint32_t			width;
-	uint32_t			height;
-	uint32_t			real_width;
-	uint32_t			real_height;
-	uint8_t				bpp;
-	struct font_desc_t *		font;
-	uint32_t			x;
-	uint32_t			y;
-	uint32_t			cursor_x;
-	uint32_t			cursor_y;
-	uint16_t *			buf;
-	int				active;
-	struct framebuffer_ops_t	*ops;
+	uint32_t				addr;
+	uint16_t				type;
+	uint32_t				pitch;
+	uint32_t				width;
+	uint32_t				height;
+	uint32_t				real_width;
+	uint32_t				real_height;
+	uint8_t					bpp;
+	struct font_desc_t *			font;
+	uint32_t				x;
+	uint32_t				y;
+	uint32_t				cursor_x;
+	uint32_t				cursor_y;
+	uint16_t *				buf;
+	int					active;
+	struct multiboot_tag_framebuffer *	tag_fb;
+	struct framebuffer_ops_t	*	ops;
 };
 
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct);

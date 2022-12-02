@@ -35,6 +35,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	fb->real_width = tag_fb->common.framebuffer_width;
 	fb->real_height = tag_fb->common.framebuffer_height;
 	fb->bpp = tag_fb->common.framebuffer_bpp;
+	fb->tag_fb = tag_fb;
 	fb->x = fb->cursor_x = 0;
 	fb->y = fb->cursor_y = 0;
 	fb->active = 0;

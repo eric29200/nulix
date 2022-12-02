@@ -230,6 +230,12 @@ static int fb_rgb_get_var(struct framebuffer_t *fb, struct fb_var_screeninfo *va
 	var->xres_virtual = fb->real_width;
 	var->yres_virtual = fb->real_height;
 	var->bits_per_pixel = fb->bpp;
+	var->red.offset = fb->tag_fb->framebuffer_red_field_position;
+	var->red.length = fb->tag_fb->framebuffer_red_mask_size;
+	var->green.offset = fb->tag_fb->framebuffer_green_field_position;
+	var->green.length = fb->tag_fb->framebuffer_green_mask_size;
+	var->blue.offset = fb->tag_fb->framebuffer_blue_field_position;
+	var->blue.length = fb->tag_fb->framebuffer_blue_mask_size;
 
 	return 0;
 }
