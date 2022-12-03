@@ -5,7 +5,8 @@ SRC_FILENAME="fontconfig-"$VERSION".tar.xz"
 function configure_port() {
 	./configure								\
 		--host=$HOST							\
-		--prefix=$SYSROOT"/usr"
+		--sysconfdir="/etc"						\
+		--prefix="/usr"
 }
 
 function build_port() {
@@ -13,5 +14,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install
+	make install DESTDIR=$SYSROOT
 }
