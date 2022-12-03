@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("pkgconf" "libncurses" "zlib" "openssl" "libpng" "expat")
+BASE_PORTS=("pkgconf" "libncurses" "zlib" "openssl" "libpng" "expat" "freetype2")
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
