@@ -23,7 +23,7 @@ export RANLIB=`realpath ../musl/musl-install/bin/i386-linux-musl-ranlib`
 export READELF=`realpath ../musl/musl-install/bin/i386-linux-musl-readelf`
 export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
 export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/lib/pkgconfig:"$SYSROOT"/usr/X11/lib/pkgconfig:"$SYSROOT"/usr/X11/share/pkgconfig"
-export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig"
+export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/X11/lib"
 
 # go to tinyx build directory
 cd build/tinyx
@@ -55,6 +55,7 @@ PACKAGES_URLS=(
 	"https://www.x.org/pub/individual/lib/libXft-2.3.7.tar.xz"
 	"https://www.x.org/pub/individual/lib/libXi-1.8.tar.bz2"
 	"https://www.x.org/pub/individual/lib/libXtst-1.2.4.tar.xz"
+	"https://www.x.org/pub/individual/lib/libxkbfile-1.1.1.tar.xz"
 	"https://www.x.org/pub/individual/data/xcursor-themes-1.0.6.tar.bz2"
 	"https://www.x.org/pub/individual/font/font-util-1.3.3.tar.xz"
 	"https://www.x.org/pub/individual/font/encodings-1.0.6.tar.xz"
@@ -72,7 +73,10 @@ PACKAGES_URLS=(
 	"https://www.x.org/pub/individual/font/font-isas-misc-1.0.3.tar.bz2"
 	"https://www.x.org/pub/individual/font/font-misc-misc-1.1.2.tar.bz2"
 	"https://www.x.org/pub/individual/font/font-cursor-misc-1.0.3.tar.bz2"
+	"https://www.x.org/pub/individual/app/xclock-1.1.1.tar.xz"
 )
+
+rm -rf xclock*
 
 # build all packages
 for PACKAGE_URL in ${PACKAGES_URLS[@]}; do
@@ -105,10 +109,10 @@ for PACKAGE_URL in ${PACKAGES_URLS[@]}; do
 
 	# build
 	./configure					\
-		--host=i386				\
+		--host=i386-linux			\
 		--enable-malloc0returnsnull		\
 		--prefix=$SYSROOT"/usr/X11"
-	make -j$NJOBS
+	make -j$NJOBS LDFLAGS="-Wl,-rpath-link="$SYSROOT"/usr/X11/lib"
 	make install
 
 	# go back xorg build directory
