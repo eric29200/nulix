@@ -76,6 +76,9 @@ static int tty_open(struct file_t *filp)
 		tty->pgrp = current_task->pgrp;
 	}
 
+	/* update reference count */
+	tty->count++;
+
 	return 0;
 }
 
@@ -108,6 +111,9 @@ static int tty_close(struct file_t *filp)
 	/* reset termios on last tty release */
 	if (!tty_check_count(tty))
 		tty->termios = tty->driver->termios;
+
+	/* update reference count */
+	tty->count--;
 
 	return 0;
 }

@@ -3,7 +3,7 @@
 
 #include <drivers/fb.h>
 
-#define NR_CONSOLES		4
+#define NR_CONSOLES		8
 
 #define TTY_STATE_NORMAL	0
 #define TTY_STATE_ESCAPE	1
@@ -22,6 +22,7 @@
 #define USER_MAP		3
 
 /* ioctls */
+#define VT_OPENQRY		0x5600
 #define VT_GETMODE		0x5601
 #define VT_SETMODE		0x5602
 #define VT_GETSTATE		0x5603

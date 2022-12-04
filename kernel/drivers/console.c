@@ -1096,6 +1096,15 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 
 			/* wait for console activation */
 			return vt_waitactive(arg - 1);
+		case VT_OPENQRY:
+			/* find free tty */
+		 	for (i = 0; i < NR_CONSOLES; i++)
+				if (tty_table[i].count == 0)
+					break;
+
+			*((int *) arg) = i < NR_CONSOLES ? i + 1 : -1;
+			printf("%d\n", i);
+			return 0;
 		default:
 			break;
 	}
