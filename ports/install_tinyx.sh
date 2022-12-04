@@ -11,7 +11,6 @@ rm -rf build/tinyx
 mkdir -p build/tinyx
 
 # global environ
-export TARGET=i386-elf
 export HOST=i386-linux-musl
 export NJOBS=`nproc`
 export SYSROOT=`realpath ../musl/musl-install/i386-linux-musl`
@@ -53,6 +52,7 @@ PACKAGES_URLS=(
 	"https://www.x.org/pub/individual/lib/libXcursor-1.2.1.tar.xz"
 	"https://www.x.org/pub/individual/lib/libfontenc-1.1.6.tar.xz"
 	"https://www.x.org/pub/individual/lib/libXfont-1.5.4.tar.bz2"
+	"https://www.x.org/pub/individual/lib/libXft-2.3.7.tar.xz"
 	"https://www.x.org/pub/individual/lib/libXi-1.8.tar.bz2"
 	"https://www.x.org/pub/individual/lib/libXtst-1.2.4.tar.xz"
 	"https://www.x.org/pub/individual/data/xcursor-themes-1.0.6.tar.bz2"
