@@ -1103,7 +1103,6 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 					break;
 
 			*((int *) arg) = i < NR_CONSOLES ? i + 1 : -1;
-			printf("%d\n", i);
 			return 0;
 		default:
 			break;
