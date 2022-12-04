@@ -76,8 +76,6 @@ PACKAGES_URLS=(
 	"https://www.x.org/pub/individual/app/xclock-1.1.1.tar.xz"
 )
 
-rm -rf xclock*
-
 # build all packages
 for PACKAGE_URL in ${PACKAGES_URLS[@]}; do
 	cd $BASE_DIR
