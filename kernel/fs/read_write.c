@@ -98,7 +98,7 @@ int do_pread64(struct file_t *filp, void *buf, size_t count, off_t offset)
 
 	/* seek to offset */
 	ret = do_lseek(filp, offset, SEEK_SET);
-	if (ret)
+	if (ret < 0)
 		return ret;
 
 	/* read data */
