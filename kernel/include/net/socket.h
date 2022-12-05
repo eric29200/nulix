@@ -111,6 +111,7 @@ struct prot_ops {
 	int (*connect)(struct socket_t *, const struct sockaddr *);
 	int (*getpeername)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
+	int (*getsockopt)(struct socket_t *, int, int, void *, size_t);
 	int (*setsockopt)(struct socket_t *, int, int, void *, size_t);
 };
 
@@ -129,6 +130,7 @@ int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct socka
 int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);
+int do_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 int do_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 
 #endif

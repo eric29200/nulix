@@ -376,6 +376,22 @@ static int inet_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 }
 
 /*
+ * Get socket options system call.
+ */
+static int inet_getsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t optlen)
+{
+	UNUSED(sock);
+	UNUSED(level);
+	UNUSED(optname);
+	UNUSED(optval);
+	UNUSED(optlen);
+
+	printf("inet_getsockopt(%d) undefined\n", optname);
+
+	return 0;
+}
+
+/*
  * Set socket options system call.
  */
 static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t optlen)
@@ -407,5 +423,6 @@ struct prot_ops inet_ops = {
 	.connect	= inet_connect,
 	.getpeername	= inet_getpeername,
 	.getsockname	= inet_getsockname,
+	.getsockopt	= inet_getsockopt,
 	.setsockopt	= inet_setsockopt,
 };

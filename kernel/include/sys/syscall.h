@@ -137,6 +137,7 @@
 #define __NR_connect			362
 #define __NR_listen			363
 #define __NR_accept			364
+#define __NR_getsockopt			365
 #define __NR_setsockopt			366
 #define __NR_getsockname		367
 #define __NR_getpeername		368
@@ -272,6 +273,7 @@ int sys_getsid(pid_t pid);
 int sys_setsid();
 int sys_getrusage(int who, struct rusage_t *ru);
 int sys_pause();
+int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct rlimit64_t *old_limit);
 void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address);

@@ -566,6 +566,20 @@ int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 }
 
 /*
+ * Get socket options.
+ */
+static int sock_getsockopt(struct socket_t *sock, int optname, void *optval, size_t optlen)
+{
+	UNUSED(sock);
+	UNUSED(optval);
+	UNUSED(optlen);
+
+	printf("sock_getsockopt(%d) undefined\n", optname);
+
+	return 0;
+}
+
+/*
  * Set socket options.
  */
 static int sock_setsockopt(struct socket_t *sock, int optname, void *optval, size_t optlen)
@@ -583,6 +597,33 @@ static int sock_setsockopt(struct socket_t *sock, int optname, void *optval, siz
 	}
 
 	return 0;
+}
+
+/*
+ * Get socket options system call.
+ */
+int do_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
+{
+	struct socket_t *sock;
+
+	/* check socket file descriptor */
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
+		return -EBADF;
+
+	/* find socket */
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	if (!sock)
+		return -EINVAL;
+
+	/* socket options */
+	if (level == SOL_SOCKET)
+		return sock_getsockopt(sock, optname, optval, optlen);
+
+	/* setsockopt not implemented */
+	if (!sock->ops || !sock->ops->getsockopt)
+		return -EINVAL;
+
+	return sock->ops->getsockopt(sock, level, optname, optval, optlen);
 }
 
 /*
