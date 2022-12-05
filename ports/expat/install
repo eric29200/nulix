@@ -5,6 +5,7 @@ SRC_FILENAME="expat-"$VERSION".tar.xz"
 function configure_port() {
 	./configure								\
 		--host=$HOST							\
+		--without-docbook						\
 		--prefix=$SYSROOT"/usr"
 }
 

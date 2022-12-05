@@ -73,6 +73,7 @@ PACKAGES_URLS=(
 	"https://www.x.org/pub/individual/font/font-isas-misc-1.0.3.tar.bz2"
 	"https://www.x.org/pub/individual/font/font-misc-misc-1.1.2.tar.bz2"
 	"https://www.x.org/pub/individual/font/font-cursor-misc-1.0.3.tar.bz2"
+	"https://www.x.org/pub/individual/app/xinit-1.4.1.tar.bz2"
 	"https://www.x.org/pub/individual/app/xclock-1.1.1.tar.xz"
 )
 
