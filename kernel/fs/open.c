@@ -52,7 +52,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 		return -EINVAL;
 
 	/* open file */
-	ret = open_namei(dirfd, pathname, flags, mode, &inode);
+	ret = open_namei(dirfd, NULL, pathname, flags, mode, &inode);
 	if (ret != 0)
 		goto err;
 

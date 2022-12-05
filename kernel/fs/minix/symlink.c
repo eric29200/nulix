@@ -6,17 +6,18 @@
 /*
  * Resolve a symbolic link.
  */
-int minix_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode)
+int minix_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
 {
 	struct buffer_head_t *bh;
+	int ret;
 
 	*res_inode = NULL;
 
 	/* null inode */
-	if (!inode) {
+	if (!inode)
 		return -ENOENT;
-	}
 
+	/* not a link */
 	if (!S_ISLNK(inode->i_mode)) {
 		*res_inode = inode;
 		return 0;
@@ -32,16 +33,13 @@ int minix_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t
 	/* release link inode */
 	iput(inode);
 
-	/* resolve target inode */
-	*res_inode = namei(AT_FDCWD, dir, bh->b_data, 0);
-	if (!*res_inode) {
-		brelse(bh);
-		return -EACCES;
-	}
+	/* open target inode */
+	ret = open_namei(AT_FDCWD, dir, bh->b_data, flags, mode, res_inode);
 
-	/* release link buffer */
+	/* release block buffer */
 	brelse(bh);
-	return 0;
+
+	return ret;
 }
 
 /*

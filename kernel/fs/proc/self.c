@@ -8,9 +8,12 @@
 /*
  * Follow self link.
  */
-static int proc_self_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode)
+static int proc_self_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
 {
+	/* unused */
 	UNUSED(dir);
+	UNUSED(flags);
+	UNUSED(mode);
 
 	/* get target inode */
 	*res_inode = iget(inode->i_sb, (current_task->pid << 16) + PROC_PID_INO);

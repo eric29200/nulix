@@ -386,14 +386,16 @@ struct inode_operations_t proc_fd_iops = {
 /*
  * Follow fd link.
  */
-static int proc_fd_follow_link(struct inode_t *dir, struct inode_t *inode, struct inode_t **res_inode)
+static int proc_fd_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
 {
 	struct task_t *task;
 	pid_t pid;
 	int fd;
 
-	/* unused dir */
+	/* unused dir/flags/mode */
 	UNUSED(dir);
+	UNUSED(flags);
+	UNUSED(mode);
 
 	/* get task */
 	pid = inode->i_ino >> 16;

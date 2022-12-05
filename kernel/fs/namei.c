@@ -9,7 +9,7 @@
 /*
  * Follow a link.
  */
-static struct inode_t *follow_link(struct inode_t *dir, struct inode_t *inode)
+static struct inode_t *follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode)
 {
 	struct inode_t *res_inode;
 
@@ -17,7 +17,7 @@ static struct inode_t *follow_link(struct inode_t *dir, struct inode_t *inode)
 	if (!inode || !inode->i_op || !inode->i_op->follow_link)
 		return inode;
 
-	inode->i_op->follow_link(dir, inode, &res_inode);
+	inode->i_op->follow_link(dir, inode, flags, mode, &res_inode);
 	return res_inode;
 }
 
@@ -83,7 +83,7 @@ static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pa
 		}
 
 		/* follow symbolic links */
-		inode = follow_link(inode, tmp);
+		inode = follow_link(inode, tmp, 0, 0);
 		if (!inode)
 			return NULL;
 	}
@@ -137,7 +137,7 @@ struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int
 
 	/* follow symbolic link */
 	if (follow_links)
-		inode = follow_link(dir, inode);
+		inode = follow_link(dir, inode, 0, 0);
 
 	iput(dir);
 	return inode;
@@ -146,7 +146,7 @@ struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int
 /*
  * Resolve and open a path name.
  */
-int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
+int open_namei(int dirfd, struct inode_t *base, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode)
 {
 	struct inode_t *dir, *inode;
 	const char *basename;
@@ -156,7 +156,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
 	*res_inode = NULL;
 
 	/* find directory */
-	dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
+	dir = dir_namei(dirfd, base, pathname, &basename, &basename_len);
 	if (!dir)
 		return -ENOENT;
 
@@ -208,7 +208,7 @@ int open_namei(int dirfd, const char *pathname, int flags, mode_t mode, struct i
 	}
 
 	/* follow symbolic link */
-	*res_inode = follow_link(dir, inode);
+	*res_inode = follow_link(dir, inode, flags, mode);
 	if (!*res_inode)
 		return -EACCES;
 

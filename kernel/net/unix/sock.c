@@ -43,7 +43,7 @@ static int unix_find_other(char *pathname, struct unix_sock_t **res)
 	*res = NULL;
 
 	/* find socket inode */
-	ret = open_namei(AT_FDCWD, pathname, S_IFSOCK, 0, &inode);
+	ret = open_namei(AT_FDCWD, NULL, pathname, S_IFSOCK, 0, &inode);
 	if (ret)
 		return ret;
 
@@ -316,7 +316,7 @@ static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 		return ret;
 
 	/* get inode */
-	ret = open_namei(AT_FDCWD, sk->sunaddr.sun_path, 0, S_IFSOCK, &sk->inode);
+	ret = open_namei(AT_FDCWD, NULL, sk->sunaddr.sun_path, 0, S_IFSOCK, &sk->inode);
 	if (ret)
 		return ret;
 
