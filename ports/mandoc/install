@@ -1,4 +1,4 @@
-URL="https://mandoc.bsd.lv/snapshots/"
+URL="https://mirrors.xtom.ee/gentoo/distfiles/ad/"
 VERSION="1.14.6"
 SRC_FILENAME="mandoc-"$VERSION".tar.gz"
 
