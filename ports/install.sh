@@ -15,6 +15,7 @@ function install_musl() {
 	# create musl install directory
 	rm -rf ../musl/musl-install
 	cp -R ../musl/musl-build/output ../musl/musl-install
+	ln -svf libc.so ../musl/musl-install/i386-linux-musl/lib/ld-musl-i386.so.1
 }
 
 ##############################################
