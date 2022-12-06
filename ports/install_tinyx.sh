@@ -130,3 +130,6 @@ autoreconf -i
 	--prefix="/usr/X11"
 make -j$NJOBS
 make install DESTDIR=$SYSROOT
+
+# Xfbdev = X
+ln -svf "/usr/X11/bin/Xfbdev" $SYSROOT"/usr/X11/bin/X"
