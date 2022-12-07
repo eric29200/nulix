@@ -23,7 +23,7 @@ export RANLIB=`realpath ../musl/musl-install/bin/i386-linux-musl-ranlib`
 export READELF=`realpath ../musl/musl-install/bin/i386-linux-musl-readelf`
 export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
 export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/lib/pkgconfig:"$SYSROOT"/usr/X11/lib/pkgconfig:"$SYSROOT"/usr/X11/share/pkgconfig"
-export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/X11/lib"
+export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/lib/pkgconfig:"$SYSROOT"/usr/X11/lib"
 
 # go to tinyx build directory
 cd build/tinyx
@@ -75,6 +75,7 @@ PACKAGES_URLS=(
 	"https://www.x.org/pub/individual/font/font-cursor-misc-1.0.3.tar.bz2"
 	"https://www.x.org/pub/individual/app/xinit-1.4.1.tar.bz2"
 	"https://www.x.org/pub/individual/app/xclock-1.1.1.tar.xz"
+	"https://www.x.org/pub/individual/app/twm-1.0.12.tar.xz"
 )
 
 # build all packages
@@ -89,6 +90,7 @@ for PACKAGE_URL in ${PACKAGES_URLS[@]}; do
 
 	# extract sources
 	PACKAGE_EXTENSION=`echo $PACKAGE_FILE | awk -F '.' '{ print $(NF-1)"."$NF }'`
+	PACKAGE_EXTENSION1=`echo $PACKAGE_FILE | awk -F '.' '{ print "."$NF }'`
 	if [[ $PACKAGE_EXTENSION == "tar.gz" ]]; then
 		tar -xzvf $PACKAGE_FILE
 		SRC_DIR=`tar --list -zf $PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
@@ -98,6 +100,9 @@ for PACKAGE_URL in ${PACKAGES_URLS[@]}; do
 	elif [[ $PACKAGE_EXTENSION == "tar.xz" ]]; then
 		tar -xvf $PACKAGE_FILE
 		SRC_DIR=`tar --list -f $PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+	elif [[ $PACKAGE_EXTENSION1 == ".tgz" ]]; then
+		tar -xzvf $PACKAGE_FILE
+		SRC_DIR=`tar --list -zf $PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
 	else
 		echo "Error : cannot extract file $PACKAGE_FILE"
 		exit 1
