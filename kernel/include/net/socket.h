@@ -108,7 +108,7 @@ struct prot_ops {
 	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int flags);
 	int (*bind)(struct socket_t *, const struct sockaddr *, size_t);
 	int (*accept)(struct socket_t *, struct socket_t *, struct sockaddr *);
-	int (*connect)(struct socket_t *, const struct sockaddr *);
+	int (*connect)(struct socket_t *, const struct sockaddr *, size_t);
 	int (*getpeername)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockopt)(struct socket_t *, int, int, void *, size_t);

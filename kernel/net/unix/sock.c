@@ -15,7 +15,7 @@ extern struct socket_t sockets[NR_SOCKETS];
 /*
  * Find a UNIX socket.
  */
-static struct unix_sock_t *unix_find_socket(struct inode_t *inode)
+static struct unix_sock_t *unix_find_socket_by_inode(struct inode_t *inode)
 {
 	struct unix_sock_t *sk;
 	int i;
@@ -32,28 +32,55 @@ static struct unix_sock_t *unix_find_socket(struct inode_t *inode)
 }
 
 /*
+ * Find a UNIX socket.
+ */
+static struct unix_sock_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen)
+{
+	struct unix_sock_t *sk;
+	int i;
+
+	for (i = 0; i < NR_SOCKETS; i++) {
+		if (sockets[i].family == AF_UNIX) {
+			sk = (struct unix_sock_t *) sockets[i].data;
+			if (sk && sk->sunaddr_len == addrlen && memcmp(&sk->sunaddr, sunaddr, addrlen) == 0)
+				return sk;
+		}
+	}
+
+	return NULL;
+}
+
+/*
  * Find other UNIX socket.
  */
-static int unix_find_other(char *pathname, struct unix_sock_t **res)
+static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, struct unix_sock_t **res)
 {
 	struct inode_t *inode;
-	int ret;
+	int ret = 0;
 
-	/* reset result socket -*/
+	/* reset result socket */
 	*res = NULL;
 
-	/* find socket inode */
-	ret = open_namei(AT_FDCWD, NULL, pathname, S_IFSOCK, 0, &inode);
-	if (ret)
-		return ret;
+	/* abstract socket */
+	if (!sunaddr->sun_path[0]) {
+		*res = unix_find_socket_by_name(sunaddr, addrlen);
+		if (!*res)
+			ret = -ECONNREFUSED;
+	} else {
+		/* find socket inode */
+		ret = open_namei(AT_FDCWD, NULL, sunaddr->sun_path, S_IFSOCK, 0, &inode);
+		if (ret)
+			return ret;
 
-	/* find UNIX socket */
-	*res = unix_find_socket(inode);
-	if (!*res)
-		ret = -ECONNREFUSED;
+		/* find UNIX socket */
+		*res = unix_find_socket_by_inode(inode);
+		if (!*res)
+			ret = -ECONNREFUSED;
 
-	/* release inode */
-	iput(inode);
+		/* release inode */
+		iput(inode);
+	}
+
 	return ret;
 }
 
@@ -246,7 +273,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int f
 
 	/* find other socket */
 	if (sunaddr) {
-		ret = unix_find_other(sunaddr->sun_path, &other);
+		ret = unix_find_other(sunaddr, msg->msg_namelen, &other);
 		if (ret)
 			return ret;
 	} else {
@@ -289,6 +316,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int f
  */
 static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
 {
+	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	struct unix_sock_t *sk;
 	int ret;
 
@@ -305,20 +333,27 @@ static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 	if (sk->sunaddr_len || sk->inode)
 		return -EBUSY;
 
+	/* abstract socket */
+	if (!sunaddr->sun_path[0]) {
+		/* check if socket already exists */
+		if (unix_find_socket_by_name(sunaddr, addrlen) != NULL)
+			return -EADDRINUSE;
+	} else {
+		/* create socket file */
+		ret = do_mknod(AT_FDCWD, sunaddr->sun_path, S_IFSOCK | S_IRWXUGO, 0);
+		if (ret)
+			return ret;
+
+		/* get inode */
+		ret = open_namei(AT_FDCWD, NULL, sunaddr->sun_path, 0, S_IFSOCK, &sk->inode);
+		if (ret)
+			return ret;
+	}
+
 	/* set socket address */
 	memcpy(&sk->sunaddr, addr, addrlen);
 	sk->sunaddr.sun_path[addrlen - UN_PATH_OFFSET] = 0;
 	sk->sunaddr_len = addrlen;
-
-	/* create socket file */
-	ret = do_mknod(AT_FDCWD, sk->sunaddr.sun_path, S_IFSOCK | S_IRWXUGO, 0);
-	if (ret)
-		return ret;
-
-	/* get inode */
-	ret = open_namei(AT_FDCWD, NULL, sk->sunaddr.sun_path, 0, S_IFSOCK, &sk->inode);
-	if (ret)
-		return ret;
 
 	return 0;
 }
@@ -385,7 +420,7 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 /*
  * Connect system call.
  */
-static int unix_connect(struct socket_t *sock, const struct sockaddr *addr)
+static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	struct unix_sock_t *sk, *other;
@@ -398,7 +433,7 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr)
 		return -EINVAL;
 
 	/* find other unix socket */
-	ret = unix_find_other(sunaddr->sun_path, &other);
+	ret = unix_find_other(sunaddr, addrlen, &other);
 	if (ret)
 		return ret;
 

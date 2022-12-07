@@ -312,9 +312,6 @@ int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock;
 
-	/* unused addrlen */
-	UNUSED(addrlen);
-
 	/* check socket file descriptor */
 	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
@@ -328,7 +325,7 @@ int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	if (!sock->ops || !sock->ops->connect)
 		return -EINVAL;
 
-	return sock->ops->connect(sock, addr);
+	return sock->ops->connect(sock, addr, addrlen);
 }
 
 /*

@@ -305,9 +305,12 @@ static int inet_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 /*
  * Connect system call.
  */
-static int inet_connect(struct socket_t *sock, const struct sockaddr *addr)
+static int inet_connect(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sock_t *sk;
+
+	/* unused address length */
+	UNUSED(addrlen);
 
 	/* get inet socket */
 	sk = (struct sock_t *) sock->data;
