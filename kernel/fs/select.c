@@ -87,7 +87,7 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 		wait = NULL;
 
 		/* events catched or signal transmitted : break */
-		if (count || signal_pending(current_task) || !timeout || jiffies >= current_task->timeout)
+		if (count || signal_pending(current_task) || !timeout || (timeout > 0 && jiffies >= current_task->timeout))
 			break;
 
 		/* no events sleep */
