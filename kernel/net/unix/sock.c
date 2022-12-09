@@ -186,7 +186,7 @@ static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
 /*
  * Receive a message.
  */
-static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
+static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonblock, int flags)
 {
 	struct unix_sock_t *sk, *from;
 	size_t n, i, len, count = 0;
@@ -210,6 +210,10 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 		/* message received : break */
 		if (!list_empty(&sk->skb_list))
 			break;
+
+		/* non blocking */
+		if (nonblock)
+			return -EAGAIN;
 
 		/* sleep */
 		task_sleep(&sk->sock->wait);
@@ -254,7 +258,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 /*
  * Send a message.
  */
-static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
+static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int nonblock, int flags)
 {
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	struct unix_sock_t *sk, *other;
@@ -265,6 +269,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int f
 
 	/* unused flags */
 	UNUSED(flags);
+	UNUSED(nonblock);
 
 	/* get UNIX socket */
 	sk = (struct unix_sock_t *) sock->data;

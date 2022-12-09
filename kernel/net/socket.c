@@ -203,7 +203,7 @@ static int sock_read(struct file_t *filp, char *buf, int len)
 	iov.iov_base = buf;
 	iov.iov_len = len;
 
-	return sock->ops->recvmsg(sock, &msg, 0);
+	return sock->ops->recvmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
 }
 
 /*
@@ -231,7 +231,7 @@ static int sock_write(struct file_t *filp, const char *buf, int len)
 	iov.iov_base = (char *) buf;
 	iov.iov_len = len;
 
-	return sock->ops->sendmsg(sock, &msg, 0);
+	return sock->ops->sendmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
 }
 
 /*
@@ -416,8 +416,9 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen)
 {
 	struct socket_t *sock;
-	struct msghdr_t msg;
 	struct iovec_t iovec;
+	struct file_t *filp;
+	struct msghdr_t msg;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -427,7 +428,8 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	filp = current_task->files->filp[sockfd];
+	sock = sock_lookup(filp->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -449,7 +451,7 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
 	msg.msg_flags = 0;
 
 	/* send message */
-	return sock->ops->sendmsg(sock, &msg, flags);
+	return sock->ops->sendmsg(sock, &msg, filp->f_flags & O_NONBLOCK, flags);
 }
 
 /*
@@ -458,8 +460,9 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
 int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen)
 {
 	struct socket_t *sock;
-	struct msghdr_t msg;
 	struct iovec_t iovec;
+	struct file_t *filp;
+	struct msghdr_t msg;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -469,7 +472,8 @@ int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct socka
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	filp = current_task->files->filp[sockfd];
+	sock = sock_lookup(filp->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -490,7 +494,7 @@ int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct socka
 	msg.msg_controllen = 0;
 	msg.msg_flags = 0;
 
-	return sock->ops->recvmsg(sock, &msg, flags);
+	return sock->ops->recvmsg(sock, &msg, filp->f_flags & O_NONBLOCK, flags);
 }
 
 /*
@@ -499,13 +503,15 @@ int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct socka
 int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 {
 	struct socket_t *sock;
+	struct file_t *filp;
 
 	/* check socket file descriptor */
 	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
 		return -EBADF;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	filp = current_task->files->filp[sockfd];
+	sock = sock_lookup(filp->f_inode);
 	if (!sock)
 		return -EINVAL;
 
@@ -513,7 +519,7 @@ int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 	if (!sock->ops || !sock->ops->recvmsg)
 		return -EINVAL;
 
-	return sock->ops->recvmsg(sock, msg, flags);
+	return sock->ops->recvmsg(sock, msg, filp->f_flags & O_NONBLOCK, flags);
 }
 
 /*

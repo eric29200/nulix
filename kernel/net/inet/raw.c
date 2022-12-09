@@ -32,7 +32,7 @@ static int raw_handle(struct sock_t *sk, struct sk_buff_t *skb)
 /*
  * Receive a rax message.
  */
-static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
+static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, int flags)
 {
 	size_t len, n, count = 0, i;
 	struct sockaddr_in *sin;
@@ -48,6 +48,10 @@ static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 		/* message received : break */
 		if (!list_empty(&sk->skb_list))
 			break;
+
+		/* non blocking */
+		if (nonblock)
+			return -EAGAIN;
 
 		/* sleep */
 		task_sleep(&sk->sock->wait);
@@ -97,7 +101,7 @@ static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 /*
  * Send a raw message.
  */
-static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
+static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblock, int flags)
 {
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff_t *skb;
@@ -107,6 +111,7 @@ static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
 
 	/* unused flags */
 	UNUSED(flags);
+	UNUSED(nonblock);
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;

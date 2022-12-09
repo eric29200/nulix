@@ -104,8 +104,8 @@ struct prot_ops {
 	int (*release)(struct socket_t *);
 	int (*close)(struct socket_t *);
 	int (*poll)(struct socket_t *, struct select_table_t *);
-	int (*recvmsg)(struct socket_t *, struct msghdr_t *, int flags);
-	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int flags);
+	int (*recvmsg)(struct socket_t *, struct msghdr_t *, int, int);
+	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int, int);
 	int (*bind)(struct socket_t *, const struct sockaddr *, size_t);
 	int (*accept)(struct socket_t *, struct socket_t *, struct sockaddr *);
 	int (*connect)(struct socket_t *, const struct sockaddr *, size_t);

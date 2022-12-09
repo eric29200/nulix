@@ -295,7 +295,7 @@ out:
 /*
  * Receive a TCP message.
  */
-static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
+static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, int flags)
 {
 	size_t len, n, i, count = 0;
 	struct sockaddr_in *sin;
@@ -319,6 +319,10 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 		/* disconnected : break */
 		if (sk->sock->state == SS_DISCONNECTING)
 			return 0;
+
+		/* non blocking */
+		if (nonblock)
+			return -EAGAIN;
 
 		/* sleep */
 		task_sleep(&sk->sock->wait);
@@ -371,7 +375,7 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 /*
  * Send a TCP message.
  */
-static int tcp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
+static int tcp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblock, int flags)
 {
 	struct sk_buff_t *skb;
 	size_t i;
@@ -393,6 +397,10 @@ static int tcp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
 		/* connected : break */
 		if (sk->sock->state == SS_CONNECTED)
 			break;
+
+		/* non blocking */
+		if (nonblock)
+			return -EAGAIN;
 
 		/* sleep */
 		task_sleep(&sk->sock->wait);

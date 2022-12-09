@@ -57,7 +57,7 @@ static int udp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 /*
  * Send an UDP message.
  */
-static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
+static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblock, int flags)
 {
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff_t *skb;
@@ -67,6 +67,7 @@ static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
 
 	/* unused flags */
 	UNUSED(flags);
+	UNUSED(nonblock);
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
@@ -111,7 +112,7 @@ static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int flags)
 /*
  * Receive an UDP message.
  */
-static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
+static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, int flags)
 {
 	size_t len, n, i, count = 0;
 	struct sockaddr_in *sin;
@@ -127,6 +128,10 @@ static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int flags)
 		/* message received : break */
 		if (!list_empty(&sk->skb_list))
 			break;
+
+		/* non blocking */
+		if (nonblock)
+			return -EAGAIN;
 
 		/* sleep */
 		task_sleep(&sk->sock->wait);

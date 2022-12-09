@@ -36,8 +36,8 @@ struct sock_t {
 struct proto_t {
 	int (*handle)(struct sock_t *, struct sk_buff_t *);
 	int (*close)(struct sock_t *);
-	int (*recvmsg)(struct sock_t *, struct msghdr_t *, int flags);
-	int (*sendmsg)(struct sock_t *, const struct msghdr_t *, int flags);
+	int (*recvmsg)(struct sock_t *, struct msghdr_t *, int, int);
+	int (*sendmsg)(struct sock_t *, const struct msghdr_t *, int, int);
 	int (*connect)(struct sock_t *);
 	int (*accept)(struct sock_t *, struct sock_t *);
 };

@@ -179,7 +179,7 @@ static int inet_poll(struct socket_t *sock, struct select_table_t *wait)
 /*
  * Receive a message.
  */
-static int inet_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
+static int inet_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonblock, int flags)
 {
 	struct sock_t *sk;
 
@@ -192,13 +192,13 @@ static int inet_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int flags)
 	if (!sk->prot || !sk->prot->recvmsg)
 		return -EINVAL;
 
-	return sk->prot->recvmsg(sk, msg, flags);
+	return sk->prot->recvmsg(sk, msg, nonblock, flags);
 }
 
 /*
  * Send a message.
  */
-static int inet_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int flags)
+static int inet_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int nonblock, int flags)
 {
 	struct sock_t *sk;
 
@@ -211,7 +211,7 @@ static int inet_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int f
 	if (!sk->prot || !sk->prot->sendmsg)
 		return -EINVAL;
 
-	return sk->prot->sendmsg(sk, msg, flags);
+	return sk->prot->sendmsg(sk, msg, nonblock, flags);
 }
 
 /*
