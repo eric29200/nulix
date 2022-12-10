@@ -7,8 +7,7 @@ fi
 
 # create tinyx build directory
 cd ports
-rm -rf build/tinyx
-mkdir -p build/tinyx
+mkdir -p build/tinyx/src
 
 # global environ
 export HOST=i386-linux-musl
@@ -83,7 +82,9 @@ for PACKAGE_URL in ${PACKAGES_URLS[@]}; do
 	cd $BASE_DIR
 
 	# download package
-	wget $PACKAGE_URL
+	cd src
+	wget -c $PACKAGE_URL
+	cd ..
 
 	# get package file
 	PACKAGE_FILE=`echo $PACKAGE_URL | awk -F '/' '{ print $(NF) }'`
@@ -92,17 +93,21 @@ for PACKAGE_URL in ${PACKAGES_URLS[@]}; do
 	PACKAGE_EXTENSION=`echo $PACKAGE_FILE | awk -F '.' '{ print $(NF-1)"."$NF }'`
 	PACKAGE_EXTENSION1=`echo $PACKAGE_FILE | awk -F '.' '{ print "."$NF }'`
 	if [[ $PACKAGE_EXTENSION == "tar.gz" ]]; then
-		tar -xzvf $PACKAGE_FILE
-		SRC_DIR=`tar --list -zf $PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+		SRC_DIR=`tar --list -zf "src/"$PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+		rm -rf $SRC_DIR
+		tar -xzvf "src/"$PACKAGE_FILE
 	elif [[ $PACKAGE_EXTENSION == "tar.bz2" ]]; then
-		tar -xjvf $PACKAGE_FILE
-		SRC_DIR=`tar --list -jf $PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+		SRC_DIR=`tar --list -jf "src/"$PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+		rm -rf $SRC_DIR
+		tar -xjvf "src/"$PACKAGE_FILE
 	elif [[ $PACKAGE_EXTENSION == "tar.xz" ]]; then
-		tar -xvf $PACKAGE_FILE
-		SRC_DIR=`tar --list -f $PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+		SRC_DIR=`tar --list -f "src/"$PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+		rm -rf $SRC_DIR
+		tar -xvf "src/"$PACKAGE_FILE
 	elif [[ $PACKAGE_EXTENSION1 == ".tgz" ]]; then
-		tar -xzvf $PACKAGE_FILE
-		SRC_DIR=`tar --list -zf $PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+		SRC_DIR=`tar --list -zf "src/"$PACKAGE_FILE | head -1 | awk -F '/' '{ print $1 }'`
+		rm -rf $SRC_DIR
+		tar -xzvf "src/"$PACKAGE_FILE
 	else
 		echo "Error : cannot extract file $PACKAGE_FILE"
 		exit 1
@@ -124,6 +129,7 @@ for PACKAGE_URL in ${PACKAGES_URLS[@]}; do
 done
 
 # get tinyx
+rm -rf tinyx
 git clone https://github.com/tinycorelinux/tinyx.git
 cd tinyx
 

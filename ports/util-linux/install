@@ -15,7 +15,8 @@ function configure_port() {
 		--disable-use-ttygroup						\
 		--disable-makeinstall-chown					\
 		--without-python						\
-		--without-systemd
+		--without-systemd						\
+		--prefix=$SYSROOT"/usr"
 }
 
 function build_port() {
@@ -23,5 +24,8 @@ function build_port() {
 }
 
 function install_port() {
-	make install DESTDIR=$SYSROOT
+	make install
+
+	# create symlinks
+	ln -svf /usr/sbin/agetty $SYSROOT/sbin/agetty
 }
