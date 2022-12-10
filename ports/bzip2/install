@@ -1,6 +1,6 @@
-URL="https://sourceware.org/pub/bzip2/"
 VERSION="1.0.8"
 SRC_FILENAME="bzip2-"$VERSION".tar.gz"
+URL="https://sourceware.org/pub/bzip2/"$SRC_FILENAME
 
 function configure_port() {
 	:

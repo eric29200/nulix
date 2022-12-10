@@ -1,6 +1,6 @@
-URL="http://www.lua.org/ftp/"
 VERSION="5.4.4"
 SRC_FILENAME="lua-"$VERSION".tar.gz"
+URL="http://www.lua.org/ftp/"$SRC_FILENAME
 
 function configure_port() {
 	:

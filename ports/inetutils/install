@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/inetutils/"
 VERSION="2.3"
 SRC_FILENAME="inetutils-"$VERSION".tar.xz"
+URL="https://ftp.gnu.org/gnu/inetutils/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

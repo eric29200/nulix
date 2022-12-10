@@ -1,6 +1,6 @@
-URL="https://www.freedesktop.org/software/fontconfig/release/"
 VERSION="2.14.1"
 SRC_FILENAME="fontconfig-"$VERSION".tar.xz"
+URL="https://www.freedesktop.org/software/fontconfig/release/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

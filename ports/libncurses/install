@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/ncurses/"
 VERSION="6.3"
 SRC_FILENAME="ncurses-"$VERSION".tar.gz"
+URL="https://ftp.gnu.org/gnu/ncurses/"$SRC_FILENAME
 
 function configure_port() {
 	./configure						\

@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/gzip/"
 VERSION="1.12"
 SRC_FILENAME="gzip-"$VERSION".tar.xz"
+URL="https://ftp.gnu.org/gnu/gzip/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

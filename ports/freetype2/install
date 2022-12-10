@@ -1,6 +1,6 @@
-URL="https://downloads.sourceforge.net/freetype/"
 VERSION="2.12.1"
 SRC_FILENAME="freetype-"$VERSION".tar.xz"
+URL="https://downloads.sourceforge.net/freetype/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

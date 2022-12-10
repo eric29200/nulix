@@ -1,6 +1,6 @@
-URL="ftp://ftp.invisible-island.net/lynx/tarballs/"
 VERSION="2.8.9rel.1"
 SRC_FILENAME="lynx"$VERSION".tar.bz2"
+URL="ftp://ftp.invisible-island.net/lynx/tarballs/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

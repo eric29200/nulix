@@ -1,6 +1,6 @@
-URL="ftp://ftp.vim.org/pub/vim/unix/"
 VERSION="8.1"
 SRC_FILENAME="vim-"$VERSION".tar.bz2"
+URL="ftp://ftp.vim.org/pub/vim/unix/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

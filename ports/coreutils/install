@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/coreutils/"
 VERSION="9.1"
 SRC_FILENAME="coreutils-"$VERSION".tar.gz"
+URL="https://ftp.gnu.org/gnu/coreutils/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

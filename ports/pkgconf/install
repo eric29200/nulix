@@ -1,6 +1,6 @@
-URL="https://distfiles.dereferenced.org/pkgconf/"
 VERSION="1.8.0"
 SRC_FILENAME="pkgconf-"$VERSION".tar.xz"
+URL="https://distfiles.dereferenced.org/pkgconf/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

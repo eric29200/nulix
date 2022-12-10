@@ -1,6 +1,6 @@
-URL="https://github.com/mtoyoda/sl/archive/refs/tags/"
 VERSION="5.02"
-SRC_FILENAME=$VERSION".tar.gz"
+SRC_FILENAME="sl-"$VERSION".tar.gz"
+URL="https://github.com/mtoyoda/sl/archive/refs/tags/"$VERSION".tar.gz"
 
 function configure_port() {
 	:

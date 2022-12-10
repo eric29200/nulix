@@ -1,6 +1,6 @@
-URL="https://www.kernel.org/pub/linux/utils/util-linux/v2.38/"
 VERSION="2.38.1"
 SRC_FILENAME="util-linux-"$VERSION".tar.xz"
+URL="https://www.kernel.org/pub/linux/utils/util-linux/v2.38/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

@@ -1,6 +1,6 @@
-URL="https://github.com/openssl/openssl/archive/refs/tags/"
 VERSION="3.0.5"
 SRC_FILENAME="openssl-"$VERSION".tar.gz"
+URL="https://github.com/openssl/openssl/archive/refs/tags/"$SRC_FILENAME
 
 function configure_port() {
 	./Configure								\

@@ -1,6 +1,6 @@
-URL="https://sourceforge.net/projects/procps-ng/files/Production/"
 VERSION="4.0.0"
 SRC_FILENAME="procps-ng-"$VERSION".tar.xz"
+URL="https://sourceforge.net/projects/procps-ng/files/Production/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

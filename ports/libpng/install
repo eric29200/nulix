@@ -1,6 +1,6 @@
-URL="https://downloads.sourceforge.net/libpng/"
 VERSION="1.6.39"
 SRC_FILENAME="libpng-"$VERSION".tar.xz"
+URL="https://downloads.sourceforge.net/libpng/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

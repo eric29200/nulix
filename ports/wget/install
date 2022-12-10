@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/wget/"
 VERSION="1.21.3"
 SRC_FILENAME="wget-"$VERSION".tar.gz"
+URL="https://ftp.gnu.org/gnu/wget/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

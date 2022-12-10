@@ -1,6 +1,6 @@
-URL="https://www.python.org/ftp/python/3.10.6/"
 VERSION="3.10.6"
 SRC_FILENAME="Python-"$VERSION".tar.xz"
+URL="https://www.python.org/ftp/python/3.10.6/"$SRC_FILENAME
 
 function configure_port() {
 	echo "ac_cv_file__dev_ptmx=no" > config.site

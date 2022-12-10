@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/diffutils/"
 VERSION="3.8"
 SRC_FILENAME="diffutils-"$VERSION".tar.xz"
+URL="https://ftp.gnu.org/gnu/diffutils/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

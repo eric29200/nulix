@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/bash/"
 VERSION="5.1.16"
 SRC_FILENAME="bash-"$VERSION".tar.gz"
+URL="https://ftp.gnu.org/gnu/bash/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

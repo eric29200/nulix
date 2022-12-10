@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/nano/"
 VERSION="6.3"
 SRC_FILENAME="nano-"$VERSION".tar.xz"
+URL="https://ftp.gnu.org/gnu/nano/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

@@ -1,6 +1,6 @@
-URL="https://tukaani.org/xz/"
 VERSION="5.2.6"
 SRC_FILENAME="xz-"$VERSION".tar.xz"
+URL="https://tukaani.org/xz/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

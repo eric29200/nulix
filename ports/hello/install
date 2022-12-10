@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/hello/"
 VERSION="2.12.1"
 SRC_FILENAME="hello-"$VERSION".tar.gz"
+URL="https://ftp.gnu.org/gnu/hello/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

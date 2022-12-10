@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/findutils/"
 VERSION="4.9.0"
 SRC_FILENAME="findutils-"$VERSION".tar.xz"
+URL="https://ftp.gnu.org/gnu/findutils/"$SRC_FILENAME
 
 function configure_port() {
 	./configure 								\

@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/less/"
 VERSION="590"
 SRC_FILENAME="less-"$VERSION".tar.gz"
+URL="https://ftp.gnu.org/gnu/less/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

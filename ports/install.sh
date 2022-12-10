@@ -28,39 +28,44 @@ function check_port() {
 	fi
 
 	# load port environ
-	URL_GIT=0
 	source $PORT"/install"
 }
 
-###########################################
-####### Download and extract a port #######
-###########################################
-function download_and_extract_port() {
-	# create build directory
-	rm -rf build/$PORT
-	mkdir -p build/$PORT
-	cd build/$PORT
+###############################
+####### Download a port #######
+###############################
+function download_port() {
+	# create source directory
+	mkdir -p build/src
+	cd build/src
 
 	# download sources
-	if [[ $URL_GIT == 1 ]]; then
-		SRC_DIR=$SRC_FILENAME
-		git clone $URL
-		return
-	else
-		wget $URL"/"$SRC_FILENAME
-	fi
+	wget -c $URL -O $SRC_FILENAME
+
+	# go back to build directory
+	cd ..
+}
+
+##############################
+####### Extract a port #######
+##############################
+function extract_port() {
+	# create build directory
+	rm -rf $PORT
+	mkdir -p $PORT
+	cd $PORT
 
 	# extract sources
 	SRC_EXTENSION=`echo $SRC_FILENAME | awk -F '.' '{ print $(NF-1)"."$NF }'`
 	if [[ $SRC_EXTENSION == "tar.gz" ]]; then
-		tar -xzvf $SRC_FILENAME
-		SRC_DIR=`tar --list -zf $SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
+		tar -xzvf "../src/"$SRC_FILENAME
+		SRC_DIR=`tar --list -zf "../src/"$SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	elif [[ $SRC_EXTENSION == "tar.bz2" ]]; then
-		tar -xjvf $SRC_FILENAME
-		SRC_DIR=`tar --list -jf $SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
+		tar -xjvf "../src/"$SRC_FILENAME
+		SRC_DIR=`tar --list -jf "../src/"$SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	elif [[ $SRC_EXTENSION == "tar.xz" ]]; then
-		tar -xvf $SRC_FILENAME
-		SRC_DIR=`tar --list -f $SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
+		tar -xvf "../src/"$SRC_FILENAME
+		SRC_DIR=`tar --list -f "../src/"$SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	else
 		echo "Error : cannot extract file $SRC_FILENAME"
 		exit 1
@@ -154,7 +159,8 @@ for PORT in ${PORTS[@]}; do
 
 	# download and extract
 	check_port
-	download_and_extract_port
+	download_port
+	extract_port
 	patch_port
 
 	# build and install port

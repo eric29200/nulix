@@ -1,6 +1,6 @@
-URL="https://github.com/vicgeralds/vitetris/archive/refs/tags/"
 VERSION="0.59.1"
-SRC_FILENAME="v"$VERSION".tar.gz"
+SRC_FILENAME="vitetris-"$VERSION".tar.gz"
+URL="https://github.com/vicgeralds/vitetris/archive/refs/tags/v"$VERSION".tar.gz"
 
 function configure_port() {
 	./configure								\

@@ -1,6 +1,6 @@
-URL="https://mirrors.xtom.ee/gentoo/distfiles/ad/"
 VERSION="1.14.6"
 SRC_FILENAME="mandoc-"$VERSION".tar.gz"
+URL="https://mirrors.xtom.ee/gentoo/distfiles/ad/"$SRC_FILENAME
 
 function configure_port() {
 	echo 'HAVE_FTS=0' > configure.local

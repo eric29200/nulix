@@ -1,6 +1,6 @@
-URL="https://ftp.gnu.org/gnu/grep/"
 VERSION="3.7"
 SRC_FILENAME="grep-"$VERSION".tar.xz"
+URL="https://ftp.gnu.org/gnu/grep/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\

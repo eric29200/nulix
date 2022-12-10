@@ -1,6 +1,6 @@
-URL="http://ftp.figlet.org/pub/figlet/program/unix/"
 VERSION="2.2.5"
 SRC_FILENAME="figlet-"$VERSION".tar.gz"
+URL="http://ftp.figlet.org/pub/figlet/program/unix/"$SRC_FILENAME
 
 function configure_port() {
 	:
