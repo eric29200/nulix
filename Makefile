@@ -24,11 +24,7 @@ run:
 	@:
 
 port:
-	@if [ $(call args) = "tinyx" ]; then 					\
-		./ports/install_tinyx.sh;					\
-	else 									\
-		./ports/install.sh $(call args);				\
-	fi
+	./ports/install.sh $(call args)
 	./scripts/create_rootfs.sh
 
 clean:

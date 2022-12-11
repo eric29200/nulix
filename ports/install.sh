@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("pkgconf" "libncurses" "zlib" "openssl" "libpng" "expat" "freetype2")
+BASE_PORTS=("pkgconf" "libncurses" "zlib" "openssl" "libpng" "expat" "freetype2" "fontconfig" "util-linux" "tinyx")
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
@@ -111,8 +111,8 @@ export AS=`realpath ../musl/musl-install/bin/i386-linux-musl-as`
 export RANLIB=`realpath ../musl/musl-install/bin/i386-linux-musl-ranlib`
 export READELF=`realpath ../musl/musl-install/bin/i386-linux-musl-readelf`
 export PKG_CONFIG=$SYSROOT"/bin/pkgconf"
-export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/lib/pkgconfig"
-export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig"
+export PKG_CONFIG_PATH=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/lib/pkgconfig:"$SYSROOT"/usr/X11/lib/pkgconfig:"$SYSROOT"/usr/X11/share/pkgconfig"
+export PKG_CONFIG_LIBDIR=$SYSROOT"/lib/pkgconfig:"$SYSROOT"/usr/lib/pkgconfig:"$SYSROOT"/usr/X11/lib"
 
 # get ports list
 PORTS=()
@@ -156,6 +156,13 @@ fi
 # for each port
 for PORT in ${PORTS[@]}; do
 	cd $BASE_DIR
+
+	# specific script for tinyx
+	if [[ $PORT == "tinyx" ]]; then
+		cd ../
+		./ports/install_tinyx.sh
+		continue
+	fi
 
 	# download and extract
 	check_port
