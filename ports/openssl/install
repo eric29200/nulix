@@ -9,7 +9,7 @@ function configure_port() {
 		no-sse2								\
 		no-threads							\
 		-latomic							\
-		--prefix=/							\
+		--prefix=/usr							\
 		--openssldir=/etc/ssl
 }
 
@@ -22,4 +22,10 @@ function install_port() {
 
 	# get certificates
 	wget https://curl.se/ca/cacert-2022-10-11.pem -O $SYSROOT"/etc/ssl/cert.pem"
+	
+	# fix libtool and pkgconfig
+	SYSROOT_ESC=$(echo $SYSROOT | sed 's/\//\\\//g')
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/libssl.pc"
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/libcrypto.pc"
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/openssl.pc"
 }
