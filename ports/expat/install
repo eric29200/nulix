@@ -6,7 +6,7 @@ function configure_port() {
 	./configure								\
 		--host=$HOST							\
 		--without-docbook						\
-		--prefix=$SYSROOT"/usr"
+		--prefix="/usr"
 }
 
 function build_port() {
@@ -14,5 +14,10 @@ function build_port() {
 }
 
 function install_port() {
-	make install
+	make install DESTDIR=$SYSROOT
+
+	# fix libtool and pkgconfig
+	SYSROOT_ESC=$(echo $SYSROOT | sed 's/\//\\\//g')
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/expat.pc"
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/libexpat.la"
 }
