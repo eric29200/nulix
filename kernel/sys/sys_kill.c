@@ -20,7 +20,7 @@ int sys_kill(pid_t pid, int sig)
 	if (pid == 0) {
 		task = get_task(pid);
 		if (!task)
-			return -EINVAL;
+			return -ESRCH;
 
 		return task_signal_group(task->pgrp, sig);
 	}

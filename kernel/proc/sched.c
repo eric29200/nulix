@@ -325,7 +325,7 @@ int task_signal(pid_t pid, int sig)
 	/* get task */
 	task = get_task(pid);
 	if (!task)
-		return -EINVAL;
+		return -ESRCH;
 
 	/* send signal */
 	__task_signal(task, sig);
