@@ -144,6 +144,7 @@
 #define __NR_sendto			369
 #define __NR_recvfrom			371
 #define __NR_recvmsg			372
+#define __NR_shutdown			373
 #define __NR_copy_file_range		377
 #define __NR_statx			383
 #define __NR_clock_gettime64		403
@@ -278,5 +279,6 @@ int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optl
 int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct rlimit64_t *old_limit);
 void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address);
 int sys_fadvise64(int fd, off_t offset, off_t len, int advice);
+int sys_shutdown(int sockfd, int how);
 
 #endif

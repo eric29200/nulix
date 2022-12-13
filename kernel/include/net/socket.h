@@ -23,6 +23,11 @@
 #define MSG_OOB			1
 #define MSG_PEEK		2
 
+/* flags for shutdown */
+#define RCV_SHUTDOWN		1
+#define SEND_SHUTDOWN		2
+#define SHUTDOWN_MASK		3
+
 /* socket options */
 #define SOL_SOCKET		1
 #define SO_DEBUG		1
@@ -109,6 +114,7 @@ struct prot_ops {
 	int (*bind)(struct socket_t *, const struct sockaddr *, size_t);
 	int (*accept)(struct socket_t *, struct socket_t *, struct sockaddr *);
 	int (*connect)(struct socket_t *, const struct sockaddr *, size_t);
+	int (*shutdown)(struct socket_t *, int);
 	int (*getpeername)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockopt)(struct socket_t *, int, int, void *, size_t);
@@ -128,6 +134,7 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
 int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
 int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen);
 int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
+int do_shutdown(int sockfd, int how);
 int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int do_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);

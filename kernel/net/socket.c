@@ -523,6 +523,29 @@ int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 }
 
 /*
+ * Shutdown system call.
+ */
+int do_shutdown(int sockfd, int how)
+{
+	struct socket_t *sock;
+
+	/* check socket file descriptor */
+	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
+		return -EBADF;
+
+	/* find socket */
+	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	if (!sock)
+		return -EINVAL;
+
+	/* shutdown not implemented */
+	if (!sock->ops || !sock->ops->shutdown)
+		return -EINVAL;
+
+	return sock->ops->shutdown(sock, how);
+}
+
+/*
  * Get peer name system call.
  */
 int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)

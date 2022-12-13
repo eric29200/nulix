@@ -21,6 +21,7 @@ struct unix_sock_t {
 	uint16_t		protocol;
 	struct sockaddr_un	sunaddr;
 	size_t			sunaddr_len;
+	uint16_t		shutdown;
 	struct inode_t *	inode;
 	struct socket_t *	sock;
 	struct unix_sock_t *	other;

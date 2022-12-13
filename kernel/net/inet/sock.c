@@ -303,6 +303,19 @@ static int inet_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 }
 
 /*
+ * Shutdown system call.
+ */
+static int inet_shutdown(struct socket_t *sock, int how)
+{
+	UNUSED(sock);
+	UNUSED(how);
+
+	printf("inet_shutdown() not implemented\n");
+
+	return 0;
+}
+
+/*
  * Connect system call.
  */
 static int inet_connect(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
@@ -424,6 +437,7 @@ struct prot_ops inet_ops = {
 	.bind		= inet_bind,
 	.accept		= inet_accept,
 	.connect	= inet_connect,
+	.shutdown	= inet_shutdown,
 	.getpeername	= inet_getpeername,
 	.getsockname	= inet_getsockname,
 	.getsockopt	= inet_getsockopt,

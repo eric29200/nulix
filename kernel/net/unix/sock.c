@@ -170,11 +170,11 @@ static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
 		return -EINVAL;
 
 	/* check if there is a message in the queue */
-	if (!list_empty(&sk->skb_list))
+	if (!list_empty(&sk->skb_list) || sk->shutdown & RCV_SHUTDOWN)
 		mask |= POLLIN;
 
 	/* check if socket can write */
-	if (sk->sock->state != SS_DEAD)
+	if (sk->sock->state != SS_DEAD || sk->shutdown & SEND_SHUTDOWN)
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */
@@ -210,6 +210,10 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 		/* message received : break */
 		if (!list_empty(&sk->skb_list))
 			break;
+
+		/* socket is down */
+		if (sk->shutdown & RCV_SHUTDOWN)
+			return 0;
 
 		/* non blocking */
 		if (nonblock)
@@ -479,6 +483,35 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size
 }
 
 /*
+ * Shutdown system call.
+ */
+static int unix_shutdown(struct socket_t *sock, int how)
+{
+	struct unix_sock_t *sk;
+
+	/* get UNIX socket */
+	sk = (struct unix_sock_t *) sock->data;
+	if (!sk)
+		return -EINVAL;
+
+ 	/* shutdown send */
+	if (how & SEND_SHUTDOWN) {
+		sk->shutdown |= SEND_SHUTDOWN;
+		if (sk->other)
+			sk->other->shutdown |= RCV_SHUTDOWN;
+	}
+
+	/* shutdown receive */
+	if (how & RCV_SHUTDOWN) {
+		sk->shutdown |= RCV_SHUTDOWN;
+		if (sk->other)
+			sk->other->shutdown |= SEND_SHUTDOWN;
+	}
+
+	return 0;
+}
+
+/*
  * Get peer name system call.
  */
 static int unix_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t *addrlen)
@@ -566,6 +599,7 @@ struct prot_ops unix_ops = {
 	.bind		= unix_bind,
 	.accept		= unix_accept,
 	.connect	= unix_connect,
+	.shutdown	= unix_shutdown,
 	.getpeername	= unix_getpeername,
 	.getsockname	= unix_getsockname,
 	.getsockopt	= unix_getsockopt,
