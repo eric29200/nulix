@@ -340,14 +340,17 @@ int task_signal_group(pid_t pgrp, int sig)
 {
 	struct list_head_t *pos;
 	struct task_t *task;
+	int ret = -ESRCH;
 
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task_t, list);
-		if (task->pgrp == pgrp)
+		if (task->pgrp == pgrp) {
 			__task_signal(task, sig);
+			ret = 0;
+		}
 	}
 
-	return 0;
+	return ret;
 }
 
 /*
