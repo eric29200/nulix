@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("pkgconf" "libncurses" "zlib" "openssl" "libpng" "expat" "freetype2" "fontconfig" "util-linux" "tinyx")
+BASE_PORTS=("pkgconf" "libncurses" "termcap" "zlib" "openssl" "libpng" "expat" "freetype2" "fontconfig" "util-linux" "tinyx")
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
@@ -57,7 +57,8 @@ function extract_port() {
 
 	# extract sources
 	SRC_EXTENSION=`echo $SRC_FILENAME | awk -F '.' '{ print $(NF-1)"."$NF }'`
-	if [[ $SRC_EXTENSION == "tar.gz" ]]; then
+	SRC_EXTENSION1=`echo $SRC_FILENAME | awk -F '.' '{ print $NF }'`
+	if [[ $SRC_EXTENSION == "tar.gz" || $SRC_EXTENSION1 == "tgz" ]]; then
 		tar -xzvf "../src/"$SRC_FILENAME
 		SRC_DIR=`tar --list -zf "../src/"$SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	elif [[ $SRC_EXTENSION == "tar.bz2" ]]; then
