@@ -66,26 +66,14 @@ static void clear_frame(uint32_t frame_addr)
 }
 
 /*
- * Free a frame.
- */
-static void free_frame(struct page_t *page)
-{
-	if (!page->frame)
-		return;
-
-	clear_frame(page->frame * PAGE_SIZE);
-	page->frame = 0x0;
-}
-
-/*
  * Allocate a frame.
  */
-static int alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
+static int alloc_frame(uint32_t *pte, uint8_t kernel, uint8_t write)
 {
 	int32_t frame_idx;
 
 	/* frame already allocated */
-	if (page->frame != 0)
+	if (PTE_PAGE(*pte) != 0)
 		return -EPERM;
 
 	/* get a new frame */
@@ -101,10 +89,7 @@ static int alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
 	}
 
 	set_frame(PAGE_SIZE * frame_idx);
-	page->present = 1;
-	page->frame = frame_idx;
-	page->rw = write ? 1 : 0;
-	page->user = kernel ? 0 : 1;
+	*pte = MK_PTE(frame_idx, PAGE_PRESENT | (kernel ? 0 : PAGE_USER) | (write ? PAGE_RW : 0));
 
 	return 0;
 }
@@ -114,16 +99,16 @@ static int alloc_frame(struct page_t *page, uint8_t kernel, uint8_t write)
  */
 int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
 {
-	struct page_t *page;
+	uint32_t *pte;
 	int ret;
 
-	/* get page */
-	page = get_page(address, 1, pgd);
-	if (!page)
+	/* get page table entry */
+	pte = get_pte(address, 1, pgd);
+	if (!pte)
 		return -ENOMEM;
 
 	/* alloc frame */
-	ret = alloc_frame(page, kernel, write);
+	ret = alloc_frame(pte, kernel, write);
 	if (ret)
 		return ret;
 
@@ -155,23 +140,19 @@ int map_pages(uint32_t start_address, uint32_t end_address, struct page_director
  */
 int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
 {
-	struct page_t *page;
-	uint32_t frame_idx;
+	uint32_t frame_idx, *pte;
 
-	/* get page */
-	page = get_page(address, 1, pgd);
-	if (!page)
+	/* get page table entry */
+	pte = get_pte(address, 1, pgd);
+	if (!pte)
 		return -ENOMEM;
 
 	/* compute frame index */
 	frame_idx = phys / PAGE_SIZE;
 
-	/* set page */
+	/* set page table entry */
 	set_frame(frame_idx * PAGE_SIZE);
-	page->present = 1;
-	page->frame = frame_idx;
-	page->rw = write ? 1 : 0;
-	page->user = kernel ? 0 : 1;
+	*pte = MK_PTE(frame_idx, PAGE_PRESENT | (kernel ? 0 : PAGE_USER) | (write ? PAGE_RW : 0));
 
 	return 0;
 }
@@ -181,8 +162,7 @@ int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd,
  */
 static void unmap_page(uint32_t address, struct page_directory_t *pgd)
 {
-	uint32_t page_nr, table_idx;
-	struct page_t *page;
+	uint32_t page_nr, table_idx, *pte;
 
 	/* get page table */
 	page_nr = address / PAGE_SIZE;
@@ -191,15 +171,16 @@ static void unmap_page(uint32_t address, struct page_directory_t *pgd)
 		return;
 
 	/* get page */
-	page = &pgd->tables[table_idx]->pages[page_nr % 1024];
-	if (!page)
+	pte = &pgd->tables[table_idx]->pages[page_nr % 1024];
+	if (!pte)
 		return;
 
-	/* free frame */
-	free_frame(page);
+	/* clear frame */
+	if (PTE_PAGE(*pte))
+		clear_frame(PTE_PAGE(*pte) * PAGE_SIZE);
 
-	/* reset page */
-	memset(page, 0, sizeof(struct page_t));
+	/* reset page table entry */
+	*pte = 0;
 
 	/* flush tlb */
 	flush_tlb(address);
@@ -312,9 +293,9 @@ void switch_page_directory(struct page_directory_t *pgd)
 }
 
 /*
- * Get page from pgd at virtual address. If make is set and the page doesn't exist, create it.
+ * Get page table entry from pgd at virtual address. If make is set and the page doesn't exist, create it.
  */
-struct page_t *get_page(uint32_t address, uint8_t make, struct page_directory_t *pgd)
+uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory_t *pgd)
 {
 	uint32_t page_nr, table_idx, tmp;
 
@@ -363,7 +344,7 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
 
 	/* copy physical pages */
 	for (i = 0; i < 1024; i++) {
-		if (!src->pages[i].frame)
+		if (!PTE_PAGE(src->pages[i]))
 			continue;
 
 		/* alloc a frame */
@@ -373,12 +354,8 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
 		}
 
 		/* set page */
-		ret->pages[i].present = src->pages[i].present;
-		ret->pages[i].rw = src->pages[i].rw;
-		ret->pages[i].user = src->pages[i].user;
-		ret->pages[i].accessed = src->pages[i].accessed;
-		ret->pages[i].dirty = src->pages[i].dirty;
-		copy_page_physical(src->pages[i].frame * PAGE_SIZE, ret->pages[i].frame * PAGE_SIZE);
+		ret->pages[i] |= PTE_PROT(src->pages[i]);
+		copy_page_physical(PTE_PAGE(src->pages[i]) * PAGE_SIZE, PTE_PAGE(ret->pages[i]) * PAGE_SIZE);
 	}
 
 	return ret;
@@ -432,8 +409,8 @@ static void free_page_table(struct page_table_t *pgt)
 	int i;
 
 	for (i = 0; i < 1024; i++)
-		if (pgt->pages[i].frame)
-			free_frame(&pgt->pages[i]);
+		if (PTE_PAGE(pgt->pages[i]))
+			clear_frame(PTE_PAGE(pgt->pages[i]) * PAGE_SIZE);
 
 	kfree(pgt);
 }
@@ -473,7 +450,7 @@ void *get_free_page()
 	page = list_first_entry(&kernel_free_pages, struct kernel_page_t, list);
 
 	/* alloc frame */
-	ret = alloc_frame(page->page, 1, 1);
+	ret = alloc_frame(page->pte, 1, 1);
 	if (ret)
 		return NULL;
 
@@ -538,13 +515,13 @@ int init_paging(uint32_t start, uint32_t end)
 
 	/* create kernel pages tables */
 	for (i = 0, address = KPAGE_START; i < nb_kernel_pages; i++, address += PAGE_SIZE)
-		get_page(address, 1, kernel_pgd);
+		get_pte(address, 1, kernel_pgd);
 
 	/* create kernel pages */
 	INIT_LIST_HEAD(&kernel_free_pages);
 	kernel_pages = (struct kernel_page_t *) kmalloc_align_phys(sizeof(struct kernel_page_t) * nb_kernel_pages, NULL);
 	for (i = 0, address = KPAGE_START; i < nb_kernel_pages; i++, address += PAGE_SIZE) {
-		kernel_pages[i].page = get_page(address, 0, kernel_pgd);
+		kernel_pages[i].pte = get_pte(address, 0, kernel_pgd);
 		kernel_pages[i].address = address;
 		list_add_tail(&kernel_pages[i].list, &kernel_free_pages);
 	}

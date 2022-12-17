@@ -16,7 +16,7 @@ struct heap_t *kheap = NULL;
  */
 static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
 {
-	struct page_t *page;
+	uint32_t *pte;
 	void *ret;
 
 	/* use kernel heap */
@@ -26,8 +26,8 @@ static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
 			return NULL;
 
 		if (phys) {
-			page = get_page((uint32_t) ret, 0, kernel_pgd);
-			*phys = page->frame * PAGE_SIZE + ((uint32_t) ret & 0xFFF);
+			pte = get_pte((uint32_t) ret, 0, kernel_pgd);
+			*phys = PTE_PAGE(*pte) * PAGE_SIZE + ((uint32_t) ret & 0xFFF);
 		}
 
 		return ret;
