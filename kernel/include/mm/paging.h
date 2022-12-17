@@ -20,6 +20,12 @@
 #define PAGE_ACCESSED			0x020
 #define PAGE_DIRTY			0x040
 
+#define PAGE_NONE			(PAGE_PRESENT | PAGE_ACCESSED)
+#define PAGE_SHARED			(PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_ACCESSED)
+#define PAGE_COPY			(PAGE_PRESENT | PAGE_USER | PAGE_ACCESSED)
+#define PAGE_READONLY			(PAGE_PRESENT | PAGE_USER | PAGE_ACCESSED)
+#define PAGE_KERNEL			(PAGE_PRESENT | PAGE_RW | PAGE_DIRTY | PAGE_ACCESSED)
+
 #define PTE_PAGE(pte)			((pte) >> PAGE_SHIFT)
 #define PTE_PROT(pte)			((pte) & (PAGE_SIZE - 1))
 #define MK_PTE(page, prot)		(((page) << PAGE_SHIFT) | (prot))
@@ -56,9 +62,9 @@ struct kernel_page_t {
 
 int init_paging(uint32_t start, uint32_t end);
 uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory_t *pgd);
-int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write);
-int map_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write);
-int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, uint8_t kernel, uint8_t write);
+int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot);
+int map_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd, int pgprot);
+int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, int pgprot);
 void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd);
 void switch_page_directory(struct page_directory_t *pgd);
 void page_fault_handler(struct registers_t *regs);

@@ -68,7 +68,7 @@ static void clear_frame(uint32_t frame_addr)
 /*
  * Allocate a frame.
  */
-static int alloc_frame(uint32_t *pte, uint8_t kernel, uint8_t write)
+static int alloc_frame(uint32_t *pte, int pgprot)
 {
 	int32_t frame_idx;
 
@@ -89,7 +89,7 @@ static int alloc_frame(uint32_t *pte, uint8_t kernel, uint8_t write)
 	}
 
 	set_frame(PAGE_SIZE * frame_idx);
-	*pte = MK_PTE(frame_idx, PAGE_PRESENT | (kernel ? 0 : PAGE_USER) | (write ? PAGE_RW : 0));
+	*pte = MK_PTE(frame_idx, pgprot);
 
 	return 0;
 }
@@ -97,7 +97,7 @@ static int alloc_frame(uint32_t *pte, uint8_t kernel, uint8_t write)
 /*
  * Map a page.
  */
-int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
+int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot)
 {
 	uint32_t *pte;
 	int ret;
@@ -108,7 +108,7 @@ int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uin
 		return -ENOMEM;
 
 	/* alloc frame */
-	ret = alloc_frame(pte, kernel, write);
+	ret = alloc_frame(pte, pgprot);
 	if (ret)
 		return ret;
 
@@ -121,13 +121,13 @@ int map_page(uint32_t address, struct page_directory_t *pgd, uint8_t kernel, uin
 /*
  * Map pages.
  */
-int map_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
+int map_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd, int pgprot)
 {
 	uint32_t address;
 	int ret;
 
 	for (address = start_address; address < end_address; address += PAGE_SIZE) {
-		ret = map_page(address, pgd, kernel, write);
+		ret = map_page(address, pgd, pgprot);
 		if (ret)
 			return ret;
 	}
@@ -138,7 +138,7 @@ int map_pages(uint32_t start_address, uint32_t end_address, struct page_director
 /*
  * Map a page to a physical address.
  */
-int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, uint8_t kernel, uint8_t write)
+int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, int pgprot)
 {
 	uint32_t frame_idx, *pte;
 
@@ -152,7 +152,7 @@ int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd,
 
 	/* set page table entry */
 	set_frame(frame_idx * PAGE_SIZE);
-	*pte = MK_PTE(frame_idx, PAGE_PRESENT | (kernel ? 0 : PAGE_USER) | (write ? PAGE_RW : 0));
+	*pte = MK_PTE(frame_idx, pgprot);
 
 	return 0;
 }
@@ -210,7 +210,7 @@ static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 		return vma->vm_ops->nopage(vma, address);
 
 	/* else just map page */
-	ret = map_page(address, task->mm->pgd, 0, 1);
+	ret = map_page(address, task->mm->pgd, PAGE_SHARED);
 	if (ret)
 		return ret;
 
@@ -348,7 +348,7 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
 			continue;
 
 		/* alloc a frame */
-		if (alloc_frame(&ret->pages[i], 0, 0) == -1) {
+		if (alloc_frame(&ret->pages[i], PAGE_READONLY) == -1) {
 			kfree(ret);
 			return NULL;
 		}
@@ -450,7 +450,7 @@ void *get_free_page()
 	page = list_first_entry(&kernel_free_pages, struct kernel_page_t, list);
 
 	/* alloc frame */
-	ret = alloc_frame(page->pte, 1, 1);
+	ret = alloc_frame(page->pte, PAGE_KERNEL);
 	if (ret)
 		return NULL;
 
@@ -503,7 +503,7 @@ int init_paging(uint32_t start, uint32_t end)
 	memset(kernel_pgd, 0, sizeof(struct page_directory_t));
 
 	/* map kernel pages (kernel code + kernel heap) */
-	ret = map_pages(0, KMEM_SIZE, kernel_pgd, 0, 0);
+	ret = map_pages(0, KMEM_SIZE, kernel_pgd, PAGE_READONLY);
 	if (ret)
 		return ret;
 

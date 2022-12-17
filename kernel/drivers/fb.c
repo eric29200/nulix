@@ -69,7 +69,7 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 	/* identity map frame buffer */
 	fb_nb_pages = div_ceil(fb->real_height * fb->pitch, PAGE_SIZE);
 	for (i = 0; i < fb_nb_pages; i++) {
-		ret = map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, 0, 1);
+		ret = map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, PAGE_SHARED);
 		if (ret)
 			goto err;
 	}
@@ -173,7 +173,7 @@ static int fb_nopage(struct vm_area_t *vma, uint32_t address)
 		return -EINVAL;
 
 	/* map address to physical framebuffer */
-	return map_page_phys(address, fb->addr + offset, current_task->mm->pgd, 0, 1);
+	return map_page_phys(address, fb->addr + offset, current_task->mm->pgd, PAGE_SHARED);
 }
 
 /*

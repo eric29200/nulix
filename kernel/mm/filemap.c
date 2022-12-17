@@ -23,7 +23,7 @@ static int filemap_nopage(struct vm_area_t *vma, uint32_t address)
 		return -EINVAL;
 
 	/* just map page */
-	ret = map_page(address, current_task->mm->pgd, 0, 1);
+	ret = map_page(address, current_task->mm->pgd, PAGE_SHARED);
 	if (ret)
 		return ret;
 
