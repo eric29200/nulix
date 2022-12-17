@@ -5,7 +5,8 @@
 #include <lib/list.h>
 #include <stddef.h>
 
-#define PAGE_SIZE			0x1000
+#define PAGE_SHIFT			12
+#define PAGE_SIZE			(1 << PAGE_SHIFT)
 #define PAGE_MASK			(~(PAGE_SIZE - 1))
 #define PAGE_ALIGNED(addr)		(((addr) & PAGE_MASK) == (addr))
 #define PAGE_ALIGN_DOWN(addr)		((addr) & PAGE_MASK)

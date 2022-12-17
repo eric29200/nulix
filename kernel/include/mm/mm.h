@@ -2,9 +2,8 @@
 #define _MM_H_
 
 #include <lib/list.h>
+#include <mm/paging.h>
 #include <stddef.h>
-
-#define PAGE_SIZE			0x1000
 
 #define KHEAP_START			0x400000				/* kernel memory : from 0 to 16 MB */
 #define KHEAP_SIZE			0xF00000

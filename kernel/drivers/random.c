@@ -1,8 +1,6 @@
 #include <drivers/random.h>
 #include <math.h>
 
-#define ALIGN_UP(val, a)	(((val) + ((a) - 1)) & ~((a) - 1))
-
 /*
  * Process unaligned data.
  */
