@@ -21,8 +21,8 @@ int minix_file_read(struct file_t *filp, char *buf, int count)
 
 	left = count;
 	while (left > 0) {
-		/* read block */
-		bh = minix_bread(filp->f_inode, filp->f_pos / sb->s_blocksize, 0);
+		/* get block */
+		bh = minix_getblk(filp->f_inode, filp->f_pos / sb->s_blocksize, 0);
 		if (!bh)
 			break;
 
@@ -62,8 +62,8 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
 
 	left = count;
 	while (left > 0) {
-		/* read block */
-		bh = minix_bread(filp->f_inode, filp->f_pos / sb->s_blocksize, 1);
+		/* get/create block */
+		bh = minix_getblk(filp->f_inode, filp->f_pos / sb->s_blocksize, 1);
 		if (!bh)
 			break;
 

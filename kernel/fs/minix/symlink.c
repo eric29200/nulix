@@ -23,8 +23,8 @@ int minix_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mod
 		return 0;
 	}
 
-	/* read first link block */
-	bh = minix_bread(inode, 0, 0);
+	/* get first link block */
+	bh = minix_getblk(inode, 0, 0);
 	if (!bh) {
 		iput(inode);
 		return -EIO;
@@ -67,8 +67,8 @@ ssize_t minix_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 		return 0;
 	}
 
-	/* read 1st block */
-	bh = minix_bread(inode, 0, 0);
+	/* get 1st block */
+	bh = minix_getblk(inode, 0, 0);
 	if (!bh) {
 		iput(inode);
 		return 0;

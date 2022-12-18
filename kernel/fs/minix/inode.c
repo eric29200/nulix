@@ -227,9 +227,9 @@ static struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_h
 }
 
 /*
- * Read a buffer.
+ * Get or create a buffer.
  */
-struct buffer_head_t *minix_bread(struct inode_t *inode, int block, int create)
+struct buffer_head_t *minix_getblk(struct inode_t *inode, int block, int create)
 {
 	struct buffer_head_t *bh;
 
