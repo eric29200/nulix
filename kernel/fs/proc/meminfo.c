@@ -12,7 +12,7 @@ static int proc_meminfo_read(struct file_t *filp, char *buf, int count)
 	size_t len;
 
 	/* print meminfo */
-	len = sprintf(tmp_buf, "MemTotal:\t%d kB\n", nb_frames * PAGE_SIZE / 1024);
+	len = sprintf(tmp_buf, "MemTotal:\t%d kB\n", nb_pages * PAGE_SIZE / 1024);
 
 	/* file position after end */
 	if (filp->f_pos >= len)

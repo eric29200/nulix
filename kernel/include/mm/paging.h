@@ -32,8 +32,7 @@
 
 /* defined in paging.c */
 extern uint32_t placement_address;
-extern uint32_t *frames;
-extern uint32_t nb_frames;
+extern uint32_t nb_pages;
 extern struct page_directory_t *kernel_pgd;
 
 /*
@@ -52,12 +51,19 @@ struct page_table_t {
 };
 
 /*
+ * Page structure.
+ */
+struct page_t {
+	uint32_t		page;					/* page number */
+	struct list_head_t	list;					/* next page */
+};
+
+/*
  * Kernel page structure.
  */
 struct kernel_page_t {
-	uint32_t *		pte;				/* page table entry */
-	uint32_t		address;			/* virtual address */
-	struct list_head_t	list;				/* next page */
+	uint32_t		address;				/* virtual address */
+	struct list_head_t	list;					/* next page */
 };
 
 int init_paging(uint32_t start, uint32_t end);

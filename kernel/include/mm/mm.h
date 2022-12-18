@@ -7,7 +7,6 @@
 
 #define KHEAP_START			0x400000				/* kernel memory : from 0 to 16 MB */
 #define KHEAP_SIZE			0xF00000
-#define KMEM_SIZE			(KHEAP_START + KHEAP_SIZE)
 #define KPAGE_START			0x40000000				/* kernel pages : from 1 GB to 2 GB */
 #define KPAGE_END			0x80000000
 #define UMAP_START			0x80000000				/* user memory map : from 2 GB to 4 GB */
