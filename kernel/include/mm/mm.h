@@ -39,8 +39,8 @@ void *kmalloc(uint32_t size);
 void *kmalloc_align(uint32_t size);
 void *kmalloc_align_phys(uint32_t size, uint32_t *phys);
 void kfree(void *p);
-void *get_free_page();
-void free_page(void *address);
+void *get_free_kernel_page();
+void free_kernel_page(void *address);
 int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);
 
 #endif

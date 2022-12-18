@@ -13,7 +13,7 @@ static int proc_filesystems_read(struct file_t *filp, char *buf, int count)
 	size_t len;
 
 	/* allocate temp buffer */
-	tmp_buf = (char *) get_free_page();
+	tmp_buf = (char *) get_free_kernel_page();
 	if (!tmp_buf)
 		return -ENOMEM;
 
@@ -35,7 +35,7 @@ static int proc_filesystems_read(struct file_t *filp, char *buf, int count)
 	filp->f_pos += count;
 
 out:
-	free_page(tmp_buf);
+	free_kernel_page(tmp_buf);
 	return count;
 }
 

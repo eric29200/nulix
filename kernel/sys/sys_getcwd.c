@@ -89,7 +89,7 @@ int sys_getcwd(char *buf, size_t size)
 	}
 
 	/* allocate dir buffer */
-	dirp = get_free_page();
+	dirp = get_free_kernel_page();
 	if (!dirp)
 		return -ENOMEM;
 
@@ -127,7 +127,7 @@ int sys_getcwd(char *buf, size_t size)
 		sys_close(parent_fd);
 
 	/* free dir buffer */
-	free_page(dirp);
+	free_kernel_page(dirp);
 
 	return n;
 }

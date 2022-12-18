@@ -97,7 +97,7 @@ found:
 
 	/* allocate data if needed */
 	if (!bh->b_data) {
-		bh->b_data = (char *) get_free_page();
+		bh->b_data = (char *) get_free_kernel_page();
 		if (!bh->b_data)
 			return NULL;
 	}
@@ -203,7 +203,7 @@ void reclaim_buffers()
 
 		/* free data */
 		if (buffer_table[i].b_data)
-			free_page(buffer_table[i].b_data);
+			free_kernel_page(buffer_table[i].b_data);
 
 		/* remove it from lists */
 		htable_delete(&buffer_table[i].b_htable);
@@ -249,7 +249,7 @@ int binit()
 	nr = 1 + nr_buffer * sizeof(struct buffer_head_t) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
-		addr = get_free_page();
+		addr = get_free_kernel_page();
 		if (!addr)
 			return -ENOMEM;
 
@@ -265,7 +265,7 @@ int binit()
 	nr = 1 + nr_buffer * sizeof(struct htable_link_t *) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
-		addr = get_free_page();
+		addr = get_free_kernel_page();
 		if (!addr)
 			return -ENOMEM;
 
