@@ -5,12 +5,12 @@
 #include <mm/paging.h>
 #include <stddef.h>
 
-#define KHEAP_START			0x400000				/* kernel memory : from 0 to 16 MB */
+#define KHEAP_START			0x400000				/* kernel code + heap : from 0 to 16 MB */
 #define KHEAP_SIZE			0xF00000
-#define KPAGE_START			0x40000000				/* kernel pages : from 1 GB to 2 GB */
-#define KPAGE_END			0x80000000
-#define UMAP_START			0x80000000				/* user memory map : from 2 GB to 4 GB */
-#define UMAP_END			0xF0000000
+#define UMAP_START			0x40000000				/* user memory map : from 1 GB to 3 GB */
+#define UMAP_END			0xC0000000
+#define KPAGE_START			0xC0000000				/* kernel pages : from 3 GB to 4 GB */
+#define KPAGE_END			0xF0000000
 #define USTACK_START			0xF8000000				/* user stack */
 #define USTACK_LIMIT			(8 * 1024 * 1024)			/* user stack limit = 8 MB */
 
@@ -39,8 +39,8 @@ void *kmalloc(uint32_t size);
 void *kmalloc_align(uint32_t size);
 void *kmalloc_align_phys(uint32_t size, uint32_t *phys);
 void kfree(void *p);
-void *get_free_kernel_page();
-void free_kernel_page(void *address);
+void *get_free_page();
+void free_page(void *address);
 int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);
 
 #endif

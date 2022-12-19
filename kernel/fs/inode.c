@@ -94,7 +94,7 @@ void iput(struct inode_t *inode)
 
 		/* no references : free inode */
 		if (!inode->i_ref) {
-			free_kernel_page((void *) inode->i_size);
+			free_page((void *) inode->i_size);
 			memset(inode, 0, sizeof(struct inode_t));
 		}
 

@@ -19,9 +19,6 @@ static LIST_HEAD(lru_buffers);
 /* block size of devices */
 size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
 
-/* number of kernel pages (defined in mm/mm.c) */
-extern int nb_kernel_pages;
-
 /*
  * Set blocksize of a device.
  */
@@ -97,7 +94,7 @@ found:
 
 	/* allocate data if needed */
 	if (!bh->b_data) {
-		bh->b_data = (char *) get_free_kernel_page();
+		bh->b_data = (char *) get_free_page();
 		if (!bh->b_data)
 			return NULL;
 	}
@@ -203,7 +200,7 @@ void reclaim_buffers()
 
 		/* free data */
 		if (buffer_table[i].b_data)
-			free_kernel_page(buffer_table[i].b_data);
+			free_page(buffer_table[i].b_data);
 
 		/* remove it from lists */
 		htable_delete(&buffer_table[i].b_htable);
@@ -241,15 +238,15 @@ int binit()
 	void *addr;
 	int nr, i;
 
-	/* number of buffers = number of kernel pages / 2 */
-	nr_buffer = 1 << blksize_bits(nb_kernel_pages / 2);
+	/* number of buffers = number of pages / 4 */
+	nr_buffer = 1 << blksize_bits(nb_pages / 4);
 	buffer_htable_bits = blksize_bits(nr_buffer);
 
 	/* allocate buffers */
 	nr = 1 + nr_buffer * sizeof(struct buffer_head_t) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
-		addr = get_free_kernel_page();
+		addr = get_free_page();
 		if (!addr)
 			return -ENOMEM;
 
@@ -265,7 +262,7 @@ int binit()
 	nr = 1 + nr_buffer * sizeof(struct htable_link_t *) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
-		addr = get_free_kernel_page();
+		addr = get_free_page();
 		if (!addr)
 			return -ENOMEM;
 

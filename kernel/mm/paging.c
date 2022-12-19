@@ -14,11 +14,6 @@ struct list_head_t free_pages;
 /* page directories */
 struct page_directory_t *kernel_pgd = 0;
 
-/* kernel pages */
-uint32_t nb_kernel_pages;
-static struct kernel_page_t *kernel_pages;
-static struct list_head_t kernel_free_pages;
-
 /* copy phsyical page (defined in x86/paging.s) */
 extern void copy_page_physical(uint32_t src, uint32_t dst);
 
@@ -33,7 +28,7 @@ static inline void flush_tlb(uint32_t address)
 /*
  * Get a free page.
  */
-static struct page_t *get_free_page()
+static struct page_t *__get_free_page()
 {
 	struct page_t *page;
 
@@ -56,7 +51,7 @@ static struct page_t *get_free_page()
 /*
  * Free a page.
  */
-static void free_page(struct page_t *page)
+static void __free_page(struct page_t *page)
 {
 	if (!page)
 		return;
@@ -164,14 +159,14 @@ int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot)
 		return -EPERM;
 
 	/* try to get a page */
-	page = get_free_page();
+	page = __get_free_page();
 	if (!page)
 		return -ENOMEM;
 
 	/* set page table entry */
 	ret = set_pte(pte, pgprot, page);
 	if (ret) {
-		free_page(page);
+		__free_page(page);
 		return ret;
 	}
 
@@ -238,7 +233,7 @@ static void unmap_page(uint32_t address, struct page_directory_t *pgd)
 	/* free page */
 	page_idx = PTE_PAGE(*pte);
 	if (page_idx && page_idx < nb_pages)
-		free_page(&page_table[page_idx]);
+		__free_page(&page_table[page_idx]);
 
 	/* reset page table entry */
 	*pte = 0;
@@ -377,7 +372,7 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
 			continue;
 
 		/* try to get a page */
-		page = get_free_page();
+		page = __get_free_page();
 		if (!page) {
 			kfree(pgt);
 			return NULL;
@@ -386,7 +381,7 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
 		/* set page table entry */
 		ret = set_pte(&pgt->pages[i], PAGE_READONLY, page);
 		if (ret) {
-			free_page(page);
+			__free_page(page);
 			kfree(pgt);
 			return NULL;
 		}
@@ -481,49 +476,48 @@ void free_page_directory(struct page_directory_t *pgd)
 /*
  * Get a free page.
  */
-void *get_free_kernel_page()
+void *get_free_page()
 {
-	struct kernel_page_t *page;
+	uint32_t address, *pte;
+	struct page_t *page;
 	int ret;
 
-	/* no more free pages */
-	if (list_empty(&kernel_free_pages))
+	/* get a free page */
+	page = __get_free_page();
+	if (!page)
 		return NULL;
 
-	/* get first free page */
-	page = list_first_entry(&kernel_free_pages, struct kernel_page_t, list);
+	/* get page table entry */
+	address = KPAGE_START + page->page * PAGE_SIZE;
+	pte = get_pte(address, 0, kernel_pgd);
+	if (!pte)
+		goto err;
 
-	/* map page */
-	ret = map_page(page->address, kernel_pgd, PAGE_KERNEL);
+	/* page table entry already set */
+	if (PTE_PAGE(*pte) != 0)
+		goto err;
+
+	/* set page table entry */
+	ret = set_pte(pte, PAGE_KERNEL, page);
 	if (ret)
-		return NULL;
+		goto err;
 
 	/* flush TLB */
-	flush_tlb(page->address);
+	flush_tlb(address);
 
-	/* remove page from list */
-	list_del(&page->list);
-
-	return (void *) page->address;
+	return (void *) address;
+err:
+	__free_page(page);
+	return NULL;
 }
 
 /*
  * Free a page.
  */
-void free_kernel_page(void *address)
+void free_page(void *address)
 {
-	struct kernel_page_t *page;
-	int page_nr;
-
-	/* get kernel page */
-	page_nr = ((uint32_t) address - KPAGE_START) / PAGE_SIZE;
-	page = &kernel_pages[page_nr];
-
-	/* unmap page */
+	/* just unmap page */
 	unmap_page((uint32_t) address, kernel_pgd);
-
-	/* add page to free list */
-	list_add(&page->list, &kernel_free_pages);
 }
 
 /*
@@ -556,29 +550,15 @@ int init_paging(uint32_t start, uint32_t end)
 		list_add_tail(&page_table[i].list, &free_pages);
 	}
 
-	/* identity map kernel pages */
+	/* map kernel code + heap pages */
 	ret = map_pages(0, last_kernel_addr, kernel_pgd, PAGE_READONLY);
 	if (ret)
 		return ret;
 
-	/* compute number of kernel pages (limit to 1/4 of total memory) */
-	if (KPAGE_END - KPAGE_START > end / 4)
-		nb_kernel_pages = end / (PAGE_SIZE * 4);
-	else
-		nb_kernel_pages = (KPAGE_END - KPAGE_START) / PAGE_SIZE;
-
-	/* create kernel pages */
-	INIT_LIST_HEAD(&kernel_free_pages);
-	kernel_pages = (struct kernel_page_t *) kmalloc_align_phys(sizeof(struct kernel_page_t) * nb_kernel_pages, NULL);
-	for (i = 0, address = KPAGE_START; i < nb_kernel_pages; i++, address += PAGE_SIZE) {
-		/* create page table entry */
+	/* create kernel pages table entries */
+	for (i = 0, address = KPAGE_START; i < nb_pages; i++, address += PAGE_SIZE)
 		if (!get_pte(address, 1, kernel_pgd))
 			return -ENOMEM;
-
-		/* set kernel page */
-		kernel_pages[i].address = address;
-		list_add_tail(&kernel_pages[i].list, &kernel_free_pages);
-	}
 
 	/* register page fault handler */
 	register_interrupt_handler(14, page_fault_handler);

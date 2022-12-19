@@ -58,14 +58,6 @@ struct page_t {
 	struct list_head_t	list;					/* next page */
 };
 
-/*
- * Kernel page structure.
- */
-struct kernel_page_t {
-	uint32_t		address;				/* virtual address */
-	struct list_head_t	list;					/* next page */
-};
-
 int init_paging(uint32_t start, uint32_t end);
 struct page_t *get_page(uint32_t address, struct page_directory_t *pgd);
 int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot);
