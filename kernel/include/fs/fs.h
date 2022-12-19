@@ -154,6 +154,7 @@ struct inode_operations_t {
 	int (*rename)(struct inode_t *, const char *, size_t, struct inode_t *, const char *, size_t);
 	int (*mknod)(struct inode_t *, const char *, size_t, mode_t, dev_t);
 	void (*truncate)(struct inode_t *);
+	int (*bmap)(struct inode_t *, int);
 };
 
 /*

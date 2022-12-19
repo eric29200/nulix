@@ -34,6 +34,7 @@ struct inode_operations_t minix_file_iops = {
 	.follow_link		= minix_follow_link,
 	.readlink		= minix_readlink,
 	.truncate		= minix_truncate,
+	.bmap			= minix_bmap,
 };
 
 /*
@@ -231,10 +232,11 @@ static struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_h
  */
 struct buffer_head_t *minix_getblk(struct inode_t *inode, int block, int create)
 {
+	struct super_block_t *sb = inode->i_sb;
 	struct buffer_head_t *bh;
 
 	/* check block number */
-	if (block < 0 || (uint32_t) block >= minix_sb(inode->i_sb)->s_max_size / inode->i_sb->s_blocksize)
+	if (block < 0 || (uint32_t) block >= minix_sb(sb)->s_max_size / sb->s_blocksize)
 		return NULL;
 
 	/* direct block */
@@ -262,4 +264,78 @@ struct buffer_head_t *minix_getblk(struct inode_t *inode, int block, int create)
 	bh = block_getblk(inode, bh, (block >> 16) & 255, create);
 	bh = block_getblk(inode, bh, (block >> 8) & 255, create);
 	return block_getblk(inode, bh, block & 255, create);
+}
+
+/*
+ * Get a block number.
+ */
+static int inode_bmap(struct inode_t *inode, int nr)
+{
+	return inode->u.minix_i.i_zone[nr];
+}
+
+/*
+ * Get a block number.
+ */
+static int block_bmap(struct buffer_head_t *bh, int nr)
+{
+	int ret;
+
+	if (!bh)
+		return 0;
+
+	ret = ((uint32_t *) bh->b_data)[nr];
+	brelse(bh);
+	return ret;
+}
+
+/*
+ * Get a block number.
+ */
+int minix_bmap(struct inode_t *inode, int block)
+{
+	struct super_block_t *sb = inode->i_sb;
+	int i;
+
+	/* check block number */
+	if (block < 0 || (uint32_t) block >= minix_sb(sb)->s_max_size / sb->s_blocksize)
+		return 0;
+
+	/* direct block */
+	if (block < 7)
+		return inode_bmap(inode, block);
+
+	/* indirect block */
+	block -= 7;
+	if (block < 256) {
+		i = inode_bmap(inode, 7);
+		if (!i)
+			return 0;
+		return block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block);
+	}
+
+	/* double indirect block */
+	block -= 256;
+	if (block < 256 * 256) {
+		i = inode_bmap(inode, 8);
+		if (!i)
+			return 0;
+		i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), (block >> 8) & 255);
+		if (!i)
+			return 0;
+		return block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block & 255);
+	}
+
+	/* triple indirect block */
+	block -= 256 * 256;
+	i = inode_bmap(inode, 9);
+	if (!i)
+		return 0;
+	i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), (block >> 16) & 255);
+	if (!i)
+		return 0;
+	i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), (block >> 8) & 255);
+	if (!i)
+		return 0;
+	return block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block & 255);
 }
