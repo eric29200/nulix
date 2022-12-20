@@ -60,34 +60,6 @@ static void __free_page(struct page_t *page)
 }
 
 /*
- * Get a page.
- */
-struct page_t *get_page(uint32_t address, struct page_directory_t *pgd)
-{
-	uint32_t page_nr, table_idx, pte, page_idx;
-
-	/* get page table */
-	page_nr = address / PAGE_SIZE;
-	table_idx = page_nr / 1024;
-
-	/* table not assigned */
-	if (!pgd->tables[table_idx])
-		return NULL;
-	
-	/* get page table entry */
-	pte = pgd->tables[table_idx]->pages[page_nr % 1024];
-	if (!pte)
-		return NULL;
-
-	/* get page */
-	page_idx = PTE_PAGE(pte);
-	if (page_idx > 0 && page_idx < nb_pages)
-		return &page_table[page_idx];
-
-	return NULL;
-}
-
-/*
  * Get or create a page table entry from pgd at virtual address.
  */
 static uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory_t *pgd)
