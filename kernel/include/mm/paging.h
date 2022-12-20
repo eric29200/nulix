@@ -30,9 +30,14 @@
 #define PTE_PROT(pte)			((pte) & (PAGE_SIZE - 1))
 #define MK_PTE(page, prot)		(((page) << PAGE_SHIFT) | (prot))
 
+#define P2V(addr)			((addr) + KPAGE_START)
+#define V2P(addr)			((addr) - KPAGE_START)
+#define MAP_NR(addr)			(V2P(addr) >> PAGE_SHIFT)
+
 /* defined in paging.c */
 extern uint32_t placement_address;
 extern uint32_t nb_pages;
+extern struct page_t *page_table;
 extern struct page_directory_t *kernel_pgd;
 
 /*

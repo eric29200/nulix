@@ -9,10 +9,10 @@
 /* global pages */
 uint32_t nb_pages;
 struct page_t *page_table;
-struct list_head_t free_pages;
+static struct list_head_t free_pages;
 
 /* page directories */
-struct page_directory_t *kernel_pgd = 0;
+struct page_directory_t *kernel_pgd = NULL;
 
 /* copy phsyical page (defined in x86/paging.s) */
 extern void copy_page_physical(uint32_t src, uint32_t dst);
@@ -440,7 +440,7 @@ void *get_free_page()
 		return NULL;
 
 	/* make virtual address */
-	return (void *) (KPAGE_START + page->page * PAGE_SIZE);
+	return (void *) P2V(page->page * PAGE_SIZE);
 }
 
 /*
@@ -451,7 +451,7 @@ void free_page(void *address)
 	uint32_t page_idx;
 
 	/* get page index */
-	page_idx = ((uint32_t) address - KPAGE_START) / PAGE_SIZE;
+	page_idx = MAP_NR((uint32_t) address);
 	
 	/* free page */
 	if (page_idx && page_idx < nb_pages)
