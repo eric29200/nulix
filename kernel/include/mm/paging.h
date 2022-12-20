@@ -33,6 +33,7 @@
 #define P2V(addr)			((addr) + KPAGE_START)
 #define V2P(addr)			((addr) - KPAGE_START)
 #define MAP_NR(addr)			(V2P(addr) >> PAGE_SHIFT)
+#define PAGE_ADDRESS(page)		(KPAGE_START + (page)->page * PAGE_SIZE)
 
 /* defined in paging.c */
 extern uint32_t placement_address;
