@@ -177,23 +177,6 @@ int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot)
 }
 
 /*
- * Map pages.
- */
-int map_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd, int pgprot)
-{
-	uint32_t address;
-	int ret;
-
-	for (address = start_address; address < end_address; address += PAGE_SIZE) {
-		ret = map_page(address, pgd, pgprot);
-		if (ret)
-			return ret;
-	}
-
-	return 0;
-}
-
-/*
  * Map a page to a physical address.
  */
 int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, int pgprot)
@@ -478,37 +461,15 @@ void free_page_directory(struct page_directory_t *pgd)
  */
 void *get_free_page()
 {
-	uint32_t address, *pte;
 	struct page_t *page;
-	int ret;
 
 	/* get a free page */
 	page = __get_free_page();
 	if (!page)
 		return NULL;
 
-	/* get page table entry */
-	address = KPAGE_START + page->page * PAGE_SIZE;
-	pte = get_pte(address, 0, kernel_pgd);
-	if (!pte)
-		goto err;
-
-	/* page table entry already set */
-	if (PTE_PAGE(*pte) != 0)
-		goto err;
-
-	/* set page table entry */
-	ret = set_pte(pte, PAGE_KERNEL, page);
-	if (ret)
-		goto err;
-
-	/* flush TLB */
-	flush_tlb(address);
-
-	return (void *) address;
-err:
-	__free_page(page);
-	return NULL;
+	/* make virtual address */
+	return (void *) (KPAGE_START + page->page * PAGE_SIZE);
 }
 
 /*
@@ -516,8 +477,14 @@ err:
  */
 void free_page(void *address)
 {
-	/* just unmap page */
-	unmap_page((uint32_t) address, kernel_pgd);
+	uint32_t page_idx;
+
+	/* get page index */
+	page_idx = ((uint32_t) address - KPAGE_START) / PAGE_SIZE;
+	
+	/* free page */
+	if (page_idx && page_idx < nb_pages)
+		__free_page(&page_table[page_idx]);
 }
 
 /*
@@ -525,7 +492,7 @@ void free_page(void *address)
  */
 int init_paging(uint32_t start, uint32_t end)
 {
-	uint32_t address, last_kernel_addr, i;
+	uint32_t address, last_kernel_addr, i, *pte;
 	int ret;
 
 	/* unused start address */
@@ -547,19 +514,38 @@ int init_paging(uint32_t start, uint32_t end)
 	INIT_LIST_HEAD(&free_pages);
 	for (i = 0; i < nb_pages; i++) {
 		page_table[i].page = i;
-		list_add_tail(&page_table[i].list, &free_pages);
-	}
+	
+		/* add pages to free list */
+		if (i * PAGE_SIZE > last_kernel_addr)
+			list_add_tail(&page_table[i].list, &free_pages);
+	}	
 
-	/* map kernel code + heap pages */
-	ret = map_pages(0, last_kernel_addr, kernel_pgd, PAGE_READONLY);
-	if (ret)
-		return ret;
-
-	/* create kernel pages table entries */
-	for (i = 0, address = KPAGE_START; i < nb_pages; i++, address += PAGE_SIZE)
-		if (!get_pte(address, 1, kernel_pgd))
+	/* identity map kernel pages */
+	for (i = 0, address = 0; address < last_kernel_addr; i++, address += PAGE_SIZE) {
+		/* make page table entry */
+		pte = get_pte(address, 1, kernel_pgd);
+		if (!pte)
 			return -ENOMEM;
 
+		/* set page table entry */
+		ret = set_pte(pte, PAGE_READONLY, &page_table[i]);
+		if (ret)
+			return ret;
+	}
+
+	/* map physical pages to highmem */
+	for (i = 0, address = KPAGE_START; i < nb_pages; i++, address += PAGE_SIZE) {
+		/* make page table entry */
+		pte = get_pte(address, 1, kernel_pgd);
+		if (!pte)
+			return -ENOMEM;
+
+		/* set page table entry */
+		ret = set_pte(pte, PAGE_KERNEL, &page_table[i]);
+		if (ret)
+			return ret;
+	}
+	  
 	/* register page fault handler */
 	register_interrupt_handler(14, page_fault_handler);
 
