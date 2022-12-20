@@ -38,7 +38,7 @@ static int ata_read_sectors(struct ata_device_t *device, uint32_t sector, uint32
 
 	/* prepare DMA transfert */
 	outb(device->bar4, 0);
-	outl(device->bar4 + 0x04, device->prdt_phys);
+	outl(device->bar4 + 0x04, (uint32_t) device->prdt);
 	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
 
 	/* select sector */
@@ -106,7 +106,7 @@ static int ata_write_sectors(struct ata_device_t *device, uint32_t sector, uint3
 
 	/* prepare DMA transfert */
 	outb(device->bar4, 0);
-	outl(device->bar4 + 0x04, device->prdt_phys);
+	outl(device->bar4 + 0x04, (uint32_t) device->prdt);
 	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
 
 	/* select sector */
@@ -205,12 +205,12 @@ static int ata_identify(struct ata_device_t *device)
 		inw(device->io_base + ATA_REG_DATA);
 
 	/* allocate prdt */
-	device->prdt = kmalloc_align_phys(sizeof(struct ata_prdt_t), &device->prdt_phys);
+	device->prdt = kmalloc_align(sizeof(struct ata_prdt_t));
 	if (!device->prdt)
 		return -ENOMEM;
 
 	/* allocate buffer */
-	device->buf = kmalloc_align_phys(PAGE_SIZE, &device->buf_phys);
+	device->buf = kmalloc_align(PAGE_SIZE);
 	if (!device->buf) {
 		kfree(device->prdt);
 		return -ENOMEM;
@@ -221,7 +221,7 @@ static int ata_identify(struct ata_device_t *device)
 	memset(device->buf, 0, PAGE_SIZE);
 
 	/* set prdt */
-	device->prdt[0].buffer_phys = device->buf_phys;
+	device->prdt[0].buffer_phys = (uint32_t) device->buf;
 	device->prdt[0].transfert_size = ATA_SECTOR_SIZE;
 	device->prdt[0].mark_end = 0x8000;
 

@@ -14,39 +14,17 @@ struct heap_t *kheap = NULL;
 /*
  * Allocate memory (internal function).
  */
-static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
+static void *__kmalloc(uint32_t size, uint8_t align)
 {
-	struct page_t *page;
 	void *ret;
 
 	/* use kernel heap */
-	if (kheap) {
-		ret = heap_alloc(kheap, size, align);
-		if (!ret)
-			return NULL;
-
-		if (phys) {
-			/* get physical page */
-			page = get_page((uint32_t) ret, kernel_pgd);
-			if (!page) {
-				kfree(ret);
-				return NULL;
-			}
-
-			/* set physical address */
-			*phys = page->page * PAGE_SIZE + ((uint32_t) ret & 0xFFF);
-		}
-
-		return ret;
-	}
+	if (kheap) 
+		return heap_alloc(kheap, size, align);
 
 	/* align adress on PAGE boundary */
 	if (align == 1)
 		placement_address = PAGE_ALIGN_UP(placement_address);
-
-	/* get physical memory */
-	if (phys)
-		*phys = placement_address;
 
 	/* update placement_address */
 	ret = (void *) placement_address;
@@ -59,7 +37,7 @@ static void *__kmalloc(uint32_t size, uint8_t align, uint32_t *phys)
  */
 void *kmalloc(uint32_t size)
 {
-	return __kmalloc(size, 0, NULL);
+	return __kmalloc(size, 0);
 }
 
 /*
@@ -67,15 +45,7 @@ void *kmalloc(uint32_t size)
  */
 void *kmalloc_align(uint32_t size)
 {
-	return __kmalloc(size, 1, NULL);
-}
-
-/*
- * Allocate page aligned memory and output physical memory.
- */
-void *kmalloc_align_phys(uint32_t size, uint32_t *phys)
-{
-	return __kmalloc(size, 1, phys);
+	return __kmalloc(size, 1);
 }
 
 /*

@@ -92,7 +92,7 @@ struct page_t *get_page(uint32_t address, struct page_directory_t *pgd)
  */
 static uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory_t *pgd)
 {
-	uint32_t page_nr, table_idx, tmp;
+	uint32_t page_nr, table_idx;
 
 	/* get page table */
 	page_nr = address / PAGE_SIZE;
@@ -104,13 +104,13 @@ static uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory_t
 
 	/* create a new page table */
 	if (make) {
-		pgd->tables[table_idx] = (struct page_table_t *) kmalloc_align_phys(sizeof(struct page_table_t), &tmp);
+		pgd->tables[table_idx] = (struct page_table_t *) kmalloc_align(sizeof(struct page_table_t));
 		if (!pgd->tables[table_idx])
 			return NULL;
 
 		/* set page table entry */
 		memset(pgd->tables[table_idx], 0, PAGE_SIZE);
-		pgd->tables_physical[table_idx] = tmp | 0x7;
+		pgd->tables_physical[table_idx] = (uint32_t) pgd->tables[table_idx] | 0x7;
 
 		/* flush tlb */
 		flush_tlb(address);
@@ -335,14 +335,14 @@ void switch_page_directory(struct page_directory_t *pgd)
 /*
  * Clone a page table.
  */
-static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t *phys_addr)
+static struct page_table_t *clone_page_table(struct page_table_t *src)
 {
 	struct page_table_t *pgt;
 	struct page_t *page;
 	int ret, i;
 
 	/* create a new page table */
-	pgt = (struct page_table_t *) kmalloc_align_phys(sizeof(struct page_table_t), phys_addr);
+	pgt = (struct page_table_t *) kmalloc_align(sizeof(struct page_table_t));
 	if (!pgt)
 		return NULL;
 
@@ -383,11 +383,10 @@ static struct page_table_t *clone_page_table(struct page_table_t *src, uint32_t 
 struct page_directory_t *clone_page_directory(struct page_directory_t *src)
 {
 	struct page_directory_t *ret;
-	uint32_t phys;
 	int i;
 
 	/* create a new page directory */
-	ret = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), &phys);
+	ret = (struct page_directory_t *) kmalloc_align(sizeof(struct page_directory_t));
 	if (!ret)
 		return NULL;
 
@@ -404,13 +403,13 @@ struct page_directory_t *clone_page_directory(struct page_directory_t *src)
 			ret->tables[i] = src->tables[i];
 			ret->tables_physical[i] = src->tables_physical[i];
 		} else {
-			ret->tables[i] = clone_page_table(src->tables[i], &phys);
+			ret->tables[i] = clone_page_table(src->tables[i]);
 			if (!ret->tables[i]) {
 				free_page_directory(ret);
 				return NULL;
 			}
 
-			ret->tables_physical[i] = phys | 0x07;
+			ret->tables_physical[i] = (uint32_t) ret->tables[i] | 0x07;
 		}
 	}
 
@@ -502,7 +501,7 @@ int init_paging(uint32_t start, uint32_t end)
 	nb_pages = end / PAGE_SIZE;
 
 	/* allocate kernel page directory */
-	kernel_pgd = (struct page_directory_t *) kmalloc_align_phys(sizeof(struct page_directory_t), NULL);
+	kernel_pgd = (struct page_directory_t *) kmalloc_align(sizeof(struct page_directory_t));
 	memset(kernel_pgd, 0, sizeof(struct page_directory_t));
 
 	/* allocate global page table after kernel heap */

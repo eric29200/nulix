@@ -13,7 +13,6 @@ static struct net_device_t *rtl8139_net_dev = NULL;
 
 /* transmit buffers */
 static void *tx_buffer[4];
-static uint32_t tx_buffers_phys[4];
 static int tx_cur = 0;
 
 /* receive buffer */
@@ -28,7 +27,7 @@ static void rtl8139_send_packet(struct sk_buff_t *skb)
 	memcpy(tx_buffer[tx_cur], skb->head, skb->len);
 
 	/* put packet on device */
-	outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, tx_buffers_phys[tx_cur]);
+	outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, (uint32_t) (tx_buffer[tx_cur]));
 	outl(rtl8139_net_dev->io_base + 0x10 + tx_cur * 4, skb->size);
 
 	/* update tx buffer index */
@@ -105,8 +104,8 @@ struct net_device_t *rtl8139_get_net_device()
  */
 int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 {
-	uint32_t io_base, pci_cmd, rx_buffer_phys;
 	struct pci_device_t *pci_dev;
+	uint32_t io_base, pci_cmd;
 	int i;
 
 	/* get pci device */
@@ -149,13 +148,13 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	while (inb(io_base + 0x37) & 0x10);
 
 	/* allocate receive buffer */
-	rx_buffer = kmalloc_align_phys(RX_BUFFER_SIZE, &rx_buffer_phys);
+	rx_buffer = kmalloc_align(RX_BUFFER_SIZE);
 	if (!rx_buffer)
 		return -ENOMEM;
 
 	/* allocate transmit buffers */
 	for (i = 0; i < 4; i++) {
-		tx_buffer[i] = kmalloc_align_phys(PAGE_SIZE, &tx_buffers_phys[i]);
+		tx_buffer[i] = kmalloc_align(PAGE_SIZE);
 		if (!tx_buffer[i]) {
 			while (--i >= 0)
 				kfree(tx_buffer[i]);
@@ -166,7 +165,7 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 
 	/* memzero buffer and set physical address on chip */
 	memset(rx_buffer, 0, RX_BUFFER_SIZE);
-	outl(io_base + 0x30, rx_buffer_phys);
+	outl(io_base + 0x30, (uint32_t) rx_buffer);
 
 	/* set Interrupt Mask Register (only accept Transmit OK and Receive OK interrupts) */
 	outw(io_base + 0x3C, 0x0005);

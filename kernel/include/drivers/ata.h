@@ -69,9 +69,9 @@
  * ATA Physical Region Descriptor Table.
  */
 struct ata_prdt_t {
-	uint32_t	buffer_phys;
-	uint16_t	transfert_size;
-	uint16_t	mark_end;
+	uint32_t		buffer_phys;
+	uint16_t		transfert_size;
+	uint16_t		mark_end;
 } __attribute__((packed));
 
 /*
@@ -82,9 +82,7 @@ struct ata_device_t {
 	uint8_t			drive;
 	uint16_t		io_base;
 	struct ata_prdt_t	*prdt;
-	uint32_t		prdt_phys;
 	uint8_t *		buf;
-	uint32_t		buf_phys;
 	uint32_t		bar4;
 };
 
