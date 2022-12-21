@@ -30,15 +30,16 @@ struct super_block_t;
  * Buffer structure.
  */
 struct buffer_head_t {
-	uint32_t			b_block;
-	char *				b_data;
-	size_t				b_size;
-	int				b_ref;
-	char				b_dirt;
-	char				b_uptodate;
-	dev_t				b_dev;
-	struct list_head_t		b_list;
-	struct htable_link_t		b_htable;
+	uint32_t			b_block;		/* block number */
+	char *				b_data;			/* data */
+	size_t				b_size;			/* block size */
+	int				b_ref;			/* reference counter */
+	char				b_dirt;			/* dirty flag */
+	char				b_uptodate;		/* up to date flag */
+	dev_t				b_dev;			/* device number */
+	struct buffer_head_t *		b_this_page;		/* next buffer in page */
+	struct list_head_t		b_list;			/* next buffer in list */
+	struct htable_link_t		b_htable;		/* buffer hash */
 };
 
 /*

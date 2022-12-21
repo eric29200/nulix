@@ -9,12 +9,19 @@
 #include <time.h>
 #include <dev.h>
 
+#define NR_SIZES			4
+#define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
+
 /* global buffer table */
 static int nr_buffer = 0;
 static int buffer_htable_bits = 0;
 static struct buffer_head_t *buffer_table = NULL;
 static struct htable_link_t **buffer_htable = NULL;
-static LIST_HEAD(lru_buffers);
+
+/* buffers lists */
+static char buffersize_index[9] = { -1, 0, 1, -1, 2, -1, -1, -1, 3 };
+static struct list_head_t unused_list;
+static struct list_head_t free_list[NR_SIZES];
 
 /* block size of devices */
 size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
@@ -51,61 +58,109 @@ void set_blocksize(dev_t dev, size_t blocksize)
 }
 
 /*
- * Write a block buffer.
+ * Get an unused buffer.
  */
-int bwrite(struct buffer_head_t *bh)
-{
-	int ret;
-
-	if (!bh)
-		return -EINVAL;
-
-	/* write to block device */
-	ret = ata_write(bh->b_dev, bh);
-	if (ret)
-		return ret;
-
-	bh->b_dirt = 0;
-	return ret;
-}
-
-/*
- * Get an empty buffer.
- */
-static struct buffer_head_t *get_empty_buffer(dev_t dev, size_t blocksize)
+static struct buffer_head_t *get_unused_buffer()
 {
 	struct buffer_head_t *bh;
-	struct list_head_t *pos;
 
-	/* get first free entry from LRU list */
-	list_for_each(pos, &lru_buffers) {
-		bh = list_entry(pos, struct buffer_head_t, b_list);
-		if (!bh->b_ref)
-			goto found;
-	}
+	/* no more unused buffers */
+	if (list_empty(&unused_list)) {
+		/* reclaim buffers */
+		reclaim_buffers();
 
-	/* no free buffer : exit */
-	return NULL;
-
-found:
-	/* write it on disk if needed */
-	if (bh->b_dirt && bwrite(bh))
-		printf("Can't write block %d on disk\n", bh->b_block);
-
-	/* allocate data if needed */
-	if (!bh->b_data) {
-		bh->b_data = (char *) get_free_page();
-		if (!bh->b_data)
+		/* recheck unused list */
+		if (list_empty(&unused_list))
 			return NULL;
 	}
 
-	/* reset buffer */
-	bh->b_ref = 1;
-	bh->b_dev = dev;
-	bh->b_size = blocksize;
-	memset(bh->b_data, 0, bh->b_size);
+	/* get first free unused buffer */
+	bh = list_first_entry(&unused_list, struct buffer_head_t, b_list);
+	list_del(&bh->b_list);
 
 	return bh;
+}
+
+/*
+ * Put a buffer in unused list.
+ */ 
+static void put_unused_buffer(struct buffer_head_t *bh)
+{
+	memset(bh, 0, sizeof(struct buffer_head_t));
+	list_add(&bh->b_list, &unused_list);
+}
+
+/*
+ * Create new buffers.
+ */
+static struct buffer_head_t *create_buffers(void *page, size_t size)
+{
+	struct buffer_head_t *bh, *head, *tail;
+	int offset;
+
+	/* create buffers */
+	head = NULL;
+	for (offset = PAGE_SIZE - size; offset >= 0; offset -= size) {
+		/* get an unused buffer */
+		bh = get_unused_buffer();
+		if (!bh)
+			goto err;
+
+		/* set buffer */	
+		bh->b_data = (char *) (page + offset);
+		bh->b_size = size;
+		bh->b_this_page = head;
+
+		/* set tail and head */
+		if (!head)
+			tail = bh;
+		head = bh;
+	}
+
+	/* end circular list */
+	tail->b_this_page = head;
+
+	return head;
+err:
+	/* put buffers in unused list */
+	for (bh = head; bh != NULL;) {
+		head = bh;
+		bh = bh->b_this_page;
+		put_unused_buffer(head);
+	}
+
+	return NULL;
+}
+
+/*
+ * Refill free list.
+ */
+static int refill_freelist(size_t blocksize)
+{
+	size_t isize = BUFSIZE_INDEX(blocksize);
+	struct buffer_head_t *bh, *tmp;
+	void *page;
+
+	/* get a new page */
+	page = get_free_page();
+	if (!page)
+		return -ENOMEM;
+
+	/* create new buffers */
+	bh = create_buffers(page, blocksize);
+	if (!bh) {
+		free_page(page);
+		return -ENOMEM;
+	}
+
+	/* add new buffers to free list */
+	tmp = bh;
+	do {
+		list_add_tail(&tmp->b_list, &free_list[isize]);
+		tmp = tmp->b_this_page;
+	} while (tmp != bh);
+
+	return 0;
 }
 
 /*
@@ -113,6 +168,7 @@ found:
  */
 struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 {
+	size_t isize = BUFSIZE_INDEX(blocksize);
 	struct htable_link_t *node;
 	struct buffer_head_t *bh;
 
@@ -122,18 +178,27 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 		bh = htable_entry(node, struct buffer_head_t, b_htable);
 		if (bh->b_block == block && bh->b_dev == dev && bh->b_size == blocksize) {
 			bh->b_ref++;
-			goto out;
+			return bh;
 		}
 
 		node = node->next;
 	}
 
-	/* get an empty buffer */
-	bh = get_empty_buffer(dev, blocksize);
-	if (!bh)
-		return NULL;
+	/* refill free list if needed */
+	if (list_empty(&free_list[isize])) {
+		refill_freelist(blocksize);
+
+		/* recheck free list */
+		if (list_empty(&free_list[isize]))
+			return NULL;
+	}
+	
+	/* get first free buffer */
+	bh = list_first_entry(&free_list[isize], struct buffer_head_t, b_list);
+	list_del(&bh->b_list);
 
 	/* set buffer */
+	bh->b_ref = 1;
 	bh->b_dev = dev;
 	bh->b_block = block;
 	bh->b_uptodate = 0;
@@ -141,10 +206,7 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 	/* hash the new buffer */
 	htable_delete(&bh->b_htable);
 	htable_insert(buffer_htable, &bh->b_htable, block, buffer_htable_bits);
-out:
-	/* put it at the end of LRU list */
-	list_del(&bh->b_list);
-	list_add_tail(&bh->b_list, &lru_buffers);
+
 	return bh;
 }
 
@@ -171,6 +233,25 @@ struct buffer_head_t *bread(dev_t dev, uint32_t block, size_t blocksize)
 }
 
 /*
+ * Write a block buffer.
+ */
+int bwrite(struct buffer_head_t *bh)
+{
+	int ret;
+
+	if (!bh)
+		return -EINVAL;
+
+	/* write to block device */
+	ret = ata_write(bh->b_dev, bh);
+	if (ret)
+		return ret;
+
+	bh->b_dirt = 0;
+	return ret;
+}
+
+/*
  * Release a buffer.
  */
 void brelse(struct buffer_head_t *bh)
@@ -187,31 +268,58 @@ void brelse(struct buffer_head_t *bh)
 }
 
 /*
+ * Try to free a buffer.
+ */
+static void try_to_free_buffer(struct buffer_head_t *bh)
+{
+	struct buffer_head_t *tmp, *tmp1;
+	uint32_t page;
+
+	/* already freed */
+	if (!bh->b_this_page)
+		return;
+
+	/* get page address */
+	page = (uint32_t) bh->b_data & PAGE_MASK;
+
+	/* check if all page buffers can be freed */
+	tmp = bh;
+	do {
+		/* used buffer */
+		if (tmp->b_ref || tmp->b_dirt)
+			return;
+
+		/* go to next buffer in page */	
+		tmp = tmp->b_this_page;
+	} while (tmp != bh);
+
+	/* ok to free buffers */
+	tmp = bh;
+	do {
+		/* save next buffer */
+		tmp1 = tmp->b_this_page;
+
+		/* remove it from lists */
+		htable_delete(&tmp->b_htable);
+		put_unused_buffer(tmp);
+
+		/* go to next buffer in page */	
+		tmp = tmp1;
+	} while (tmp != bh);
+
+	/* free page */
+	free_page((void *) page);
+}
+
+/*
  * Reclaim buffers cache.
  */
 void reclaim_buffers()
 {
 	int i;
 
-	for (i = 0; i < nr_buffer; i++) {
-		/* used buffer */
-		if (buffer_table[i].b_ref || buffer_table[i].b_dirt)
-			continue;
-
-		/* free data */
-		if (buffer_table[i].b_data)
-			free_page(buffer_table[i].b_data);
-
-		/* remove it from lists */
-		htable_delete(&buffer_table[i].b_htable);
-		list_del(&buffer_table[i].b_list);
-
-		/* reset buffer */
-		memset(&buffer_table[i], 0, sizeof(struct buffer_head_t));
-
-		/* add it to LRU buffers list */
-		list_add(&buffer_table[i].b_list, &lru_buffers);
-	}
+	for (i = 0; i < nr_buffer; i++)
+		try_to_free_buffer(&buffer_table[i]);
 }
 
 /*
@@ -274,12 +382,14 @@ int binit()
 			buffer_htable = addr;
 	}
 
-	/* init Last Recently Used buffers list */
-	INIT_LIST_HEAD(&lru_buffers);
+	/* init buffers list */
+	INIT_LIST_HEAD(&unused_list);
+	for (i = 0; i < NR_SIZES; i++)
+		INIT_LIST_HEAD(&free_list[i]);
 
-	/* add all buffers to LRU list */
+	/* add all buffers to unused list */
 	for (i = 0; i < nr_buffer; i++)
-		list_add(&buffer_table[i].b_list, &lru_buffers);
+		list_add(&buffer_table[i].b_list, &unused_list);
 
 	/* init buffers hash table */
 	htable_init(buffer_htable, buffer_htable_bits);
