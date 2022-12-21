@@ -5,30 +5,12 @@
 #include <stderr.h>
 
 /*
- * Handle a page fault = read page from file.
+ * Read a page.
  */
-static int filemap_nopage(struct vm_area_t *vma, uint32_t address)
+static int generic_readpage(struct inode_t *inode, struct page_t *page, off_t offset)
 {
-	struct inode_t *inode = vma->vm_inode;
 	struct file_t filp;
-	off_t offset;
 	int ret;
-
-	/* page align address */
-	address = PAGE_ALIGN_DOWN(address);
-
-	/* compute offset */
-	offset = address - vma->vm_start + vma->vm_offset;
-	if (offset >= inode->i_size)
-		return -EINVAL;
-
-	/* just map page */
-	ret = map_page(address, current_task->mm->pgd, PAGE_SHARED);
-	if (ret)
-		return ret;
-
-	/* memzero page */
-	memset((void *) PAGE_ALIGN_DOWN(address), 0, PAGE_SIZE);
 
 	/* set temporary file */
 	filp.f_mode = O_RDONLY;
@@ -39,11 +21,56 @@ static int filemap_nopage(struct vm_area_t *vma, uint32_t address)
 	filp.f_op = inode->i_op->fops;
 
 	/* read page */
-	ret = do_read(&filp, (char *) address, PAGE_SIZE);
+	ret = do_read(&filp, (char *) PAGE_ADDRESS(page), PAGE_SIZE);
 	if (ret < 0)
 		return ret;
 
 	return 0;
+}
+
+/*
+ * Fill a page.
+ */
+static struct page_t *fill_page(struct inode_t *inode, off_t offset)
+{
+	struct page_t *page;
+	uint32_t new_page;
+	int ret;
+
+	/* get a new page */
+	new_page = (uint32_t) get_free_page();
+	if (!new_page)
+		return NULL;
+
+	/* read page */
+	page = &page_table[MAP_NR(new_page)];
+	ret = generic_readpage(inode, page, offset);
+	if (ret) {
+		free_page((void *) new_page);
+		return NULL;
+	}
+
+	return page;
+}
+
+/*
+ * Handle a page fault = read page from file.
+ */
+static struct page_t *filemap_nopage(struct vm_area_t *vma, uint32_t address)
+{
+	struct inode_t *inode = vma->vm_inode;
+	off_t offset;
+
+	/* page align address */
+	address = PAGE_ALIGN_DOWN(address);
+
+	/* compute offset */
+	offset = address - vma->vm_start + vma->vm_offset;
+	if (offset >= inode->i_size)
+		return NULL;
+
+	/* fill in page */
+	return fill_page(inode, offset);
 }
 
 /*

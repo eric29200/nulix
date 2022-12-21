@@ -31,7 +31,7 @@ struct vm_area_t {
  * Virtual memory area operations.
  */
 struct vm_operations_t {
-	int (*nopage)(struct vm_area_t *, uint32_t address);
+	struct page_t *(*nopage)(struct vm_area_t *, uint32_t address);
 };
 
 void init_mem(uint32_t start, uint32_t end);

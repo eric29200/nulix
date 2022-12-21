@@ -212,23 +212,60 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_direc
 }
 
 /*
+ * Anonymous page mapping.
+ */
+static int do_anonymous_page(uint32_t *pte)
+{
+	struct page_t *page;
+	int ret;
+
+	/* try to get a page */
+	page = __get_free_page();
+	if (!page)
+		return -ENOMEM;
+
+	/* memzero page */
+	memset((void *) PAGE_ADDRESS(page), 0, PAGE_SIZE);
+
+	/* set page table entry */
+	ret = set_pte(pte, PAGE_SHARED, page);
+	if (ret)
+		goto err;
+
+	return 0;
+err:
+	__free_page(page);
+	return ret;
+}
+
+/*
  * Handle a no page fault.
  */
 static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t address)
 {
-	int ret;
+	struct page_t *page;
+	uint32_t *pte;
 
-	/* handle no page */
-	if (vma && vma->vm_ops && vma->vm_ops->nopage)
-		return vma->vm_ops->nopage(vma, address);
+	/* get page table entry */
+	pte = get_pte(address, 1, task->mm->pgd);
+	if (!pte)
+		return -ENOMEM;
 
-	/* else just map page */
-	ret = map_page(address, task->mm->pgd, PAGE_SHARED);
-	if (ret)
-		return ret;
+	/* page table entry already set */
+	if (PTE_PAGE(*pte) != 0)
+		return -EPERM;
 
-	/* memzero page */
-	memset((void *) PAGE_ALIGN_DOWN(address), 0, PAGE_SIZE);
+	/* anonymous page mapping */
+	if (!vma->vm_ops || !vma->vm_ops->nopage)
+		return do_anonymous_page(pte);
+
+	/* specific mapping */
+	page = vma->vm_ops->nopage(vma, address);
+	if (!page)
+		return -ENOSPC;
+
+	/* set page table entry */
+	set_pte(pte, PAGE_SHARED, page);
 
 	return 0;
 }
