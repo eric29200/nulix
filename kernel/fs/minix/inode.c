@@ -35,6 +35,7 @@ struct inode_operations_t minix_file_iops = {
 	.readlink		= minix_readlink,
 	.truncate		= minix_truncate,
 	.bmap			= minix_bmap,
+	.readpage		= generic_readpage,
 };
 
 /*

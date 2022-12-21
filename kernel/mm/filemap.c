@@ -5,30 +5,6 @@
 #include <stderr.h>
 
 /*
- * Read a page.
- */
-static int generic_readpage(struct inode_t *inode, struct page_t *page, off_t offset)
-{
-	struct file_t filp;
-	int ret;
-
-	/* set temporary file */
-	filp.f_mode = O_RDONLY;
-	filp.f_flags = 0;
-	filp.f_pos = offset;
-	filp.f_ref = 1;
-	filp.f_inode = inode;
-	filp.f_op = inode->i_op->fops;
-
-	/* read page */
-	ret = do_read(&filp, (char *) PAGE_ADDRESS(page), PAGE_SIZE);
-	if (ret < 0)
-		return ret;
-
-	return 0;
-}
-
-/*
  * Fill a page.
  */
 static struct page_t *fill_page(struct inode_t *inode, off_t offset)
@@ -42,9 +18,13 @@ static struct page_t *fill_page(struct inode_t *inode, off_t offset)
 	if (!new_page)
 		return NULL;
 
-	/* read page */
+	/* get page */
 	page = &page_table[MAP_NR(new_page)];
-	ret = generic_readpage(inode, page, offset);
+	page->inode = inode;
+	page->offset = offset;
+
+	/* read page */
+	ret = inode->i_op->readpage(inode, page);
 	if (ret) {
 		free_page((void *) new_page);
 		return NULL;

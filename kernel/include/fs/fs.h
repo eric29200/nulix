@@ -156,6 +156,7 @@ struct inode_operations_t {
 	int (*mknod)(struct inode_t *, const char *, size_t, mode_t, dev_t);
 	void (*truncate)(struct inode_t *);
 	int (*bmap)(struct inode_t *, int);
+	int (*readpage)(struct inode_t *, struct page_t *);
 };
 
 /*
@@ -192,6 +193,7 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void set_blocksize(dev_t dev, size_t blocksize);
 void reclaim_buffers();
 int generic_block_read(struct file_t *filp, char *buf, int count);
+int generic_readpage(struct inode_t *inode, struct page_t *page);
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);

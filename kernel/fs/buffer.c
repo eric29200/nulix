@@ -339,6 +339,42 @@ void bsync()
 }
 
 /*
+ * Read a page.
+ */
+int generic_readpage(struct inode_t *inode, struct page_t *page)
+{
+	struct super_block_t *sb = inode->i_sb;
+	uint32_t block, real_block, address;
+	struct buffer_head_t *bh;
+	int nr, i;
+
+	/* compute blocks to read */
+	nr = PAGE_SIZE >> sb->s_blocksize_bits;
+	block = page->offset >> sb->s_blocksize_bits;
+	address = PAGE_ADDRESS(page);
+
+	/* read block by block */
+	for (i = 0; i < nr; i++, block++) {
+		/* get real block number */
+		real_block = inode->i_op->bmap(inode, block);
+
+		/* read block on disk */
+		bh = bread(sb->s_dev, real_block, sb->s_blocksize);
+		if (!bh)
+			continue;
+
+		/* copy to address */
+		memcpy((char *) address, bh->b_data, sb->s_blocksize);
+
+		/* go to next address */
+		address += sb->s_blocksize;
+	}
+
+	return 0;
+}
+
+
+/*
  * Init buffers.
  */
 int binit()
