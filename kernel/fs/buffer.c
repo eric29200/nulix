@@ -306,7 +306,7 @@ static void try_to_free_buffer(struct buffer_head_t *bh)
 		/* go to next buffer in page */	
 		tmp = tmp1;
 	} while (tmp != bh);
-
+	
 	/* free page */
 	free_page((void *) page);
 }
@@ -353,22 +353,33 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 	block = page->offset >> sb->s_blocksize_bits;
 	address = PAGE_ADDRESS(page);
 
+	/* create buffers */
+	bh = create_buffers((void *) address, sb->s_blocksize);
+	if (!bh)
+		return -ENOMEM;
+
 	/* read block by block */
 	for (i = 0; i < nr; i++, block++) {
 		/* get real block number */
 		real_block = inode->i_op->bmap(inode, block);
 
-		/* read block on disk */
-		bh = bread(sb->s_dev, real_block, sb->s_blocksize);
-		if (!bh)
-			continue;
+		/* set temporary block buffer */
+		bh->b_dev = sb->s_dev;
+		bh->b_block = real_block;
 
-		/* copy to address */
-		memcpy((char *) address, bh->b_data, sb->s_blocksize);
+		/* read block buffer */
+		if (ata_read(sb->s_dev, bh) == 0)
+			bh->b_uptodate = 1;
 
-		/* go to next address */
-		address += sb->s_blocksize;
+		/* reset block buffer address */
+		bh->b_data = NULL;
+
+		/* go to next block */
+		bh = bh->b_this_page;
 	}
+
+	/* free temporary buffers */
+	try_to_free_buffer(bh);
 
 	return 0;
 }
