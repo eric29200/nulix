@@ -66,8 +66,8 @@ struct page_t {
 
 int init_paging(uint32_t start, uint32_t end);
 int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot);
-int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, int pgprot);
 void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd);
+int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory_t *pgd, int pgprot);
 void switch_page_directory(struct page_directory_t *pgd);
 void page_fault_handler(struct registers_t *regs);
 struct page_directory_t *clone_page_directory(struct page_directory_t *pgd);

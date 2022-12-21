@@ -25,7 +25,6 @@ int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
  */
 int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct)
 {
-	uint32_t fb_nb_pages, i;
 	int ret;
 
 	/* set frame buffer */
@@ -67,12 +66,9 @@ int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer 
 		return -ENOMEM;
 
 	/* identity map frame buffer */
-	fb_nb_pages = div_ceil(fb->real_height * fb->pitch, PAGE_SIZE);
-	for (i = 0; i < fb_nb_pages; i++) {
-		ret = map_page_phys(fb->addr + i * PAGE_SIZE, fb->addr + i * PAGE_SIZE, kernel_pgd, PAGE_SHARED);
-		if (ret)
-			goto err;
-	}
+	ret = remap_page_range(fb->addr, fb->addr, fb->real_height * fb->pitch, kernel_pgd, PAGE_SHARED);
+	if (ret)
+		goto err;
 
 	/* clear frame buffer */
 	memsetw(fb->buf, erase_char, fb->width * (fb->height + 1));
@@ -157,37 +153,13 @@ int fb_ioctl(struct file_t *filp, int request, unsigned long arg)
 }
 
 /*
- * Handle a page fault.
- */
-static int fb_nopage(struct vm_area_t *vma, uint32_t address)
-{
-	struct framebuffer_t *fb = &direct_fb;
-	off_t offset;
-
-	/* page align address */
-	address = PAGE_ALIGN_DOWN(address);
-
-	/* compute offset */
-	offset = address - vma->vm_start + vma->vm_offset;
-	if (offset >= fb->real_height * fb->pitch)
-		return -EINVAL;
-
-	/* map address to physical framebuffer */
-	return map_page_phys(address, fb->addr + offset, current_task->mm->pgd, PAGE_SHARED);
-}
-
-/*
- * Framebuffer virtual memory operations.
- */
-static struct vm_operations_t fb_vm_ops = {
-	.nopage		= fb_nopage,
-};
-
-/*
  * Framebuffer mmap.
  */
 static int fb_mmap(struct inode_t *inode, struct vm_area_t *vma)
 {
+	struct framebuffer_t *fb = &direct_fb;
+	int ret;
+
 	/* offset must be page aligned */
 	if (vma->vm_offset & (PAGE_SIZE - 1))
 		return -EINVAL;
@@ -199,7 +171,11 @@ static int fb_mmap(struct inode_t *inode, struct vm_area_t *vma)
 
 	/* set memory region */
 	vma->vm_inode = inode;
-	vma->vm_ops = &fb_vm_ops;
+	
+	/* remap frame buffer */
+	ret = remap_page_range(vma->vm_start, fb->addr + vma->vm_offset, vma->vm_end - vma->vm_start, current_task->mm->pgd, PAGE_SHARED);
+	if (ret)
+		return ret;
 
 	return 0;
 }

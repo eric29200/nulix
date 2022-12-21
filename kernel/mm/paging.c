@@ -149,20 +149,22 @@ int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot)
 }
 
 /*
- * Map a page to a physical address.
+ * Remap pages to physical address.
  */
-int map_page_phys(uint32_t address, uint32_t phys, struct page_directory_t *pgd, int pgprot)
+int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory_t *pgd, int pgprot)
 {
-	uint32_t page_idx, *pte;
+	uint32_t address, page_idx, *pte;
 
-	/* get page table entry */
-	pte = get_pte(address, 1, pgd);
-	if (!pte)
-		return -ENOMEM;
+	for (address = start; address < start + size; address += PAGE_SIZE, phys_addr += PAGE_SIZE) {
+		/* get page table entry */
+		pte = get_pte(address, 1, pgd);
+		if (!pte)
+			return -ENOMEM;
 
-	/* set page table entry */
-	page_idx = phys / PAGE_SIZE;
-	*pte = MK_PTE(page_idx, pgprot);
+		/* set page table entry */
+		page_idx = phys_addr / PAGE_SIZE;
+		*pte = MK_PTE(page_idx, pgprot);
+	}
 
 	return 0;
 }
