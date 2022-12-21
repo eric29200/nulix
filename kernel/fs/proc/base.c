@@ -349,7 +349,7 @@ static int proc_fd_lookup(struct inode_t *dir, const char *name, size_t name_len
 
 	/* try to find matching file descriptor */
 	fd = atoi(name);
-	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd]) {
+	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd]) {
 		iput(dir);
 		return -ENOENT;
 	}
