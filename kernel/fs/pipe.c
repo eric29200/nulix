@@ -16,24 +16,26 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 	int chars, size, rpos, read = 0;
 
 	/* sleep while empty */
-	while (PIPE_EMPTY(inode)) {
-		/* non blocking : return */
-		if (filp->f_flags & O_NONBLOCK)
-			return read;
+	if (filp->f_flags & O_NONBLOCK)  {
+		if (PIPE_EMPTY(inode)) {
+			if (PIPE_WRITERS(inode))
+				return -EAGAIN;
+			else
+				return 0;
+		}
+	} else {
+		while (PIPE_EMPTY(inode)) {
+			/* no writer : return */
+			if (!PIPE_WRITERS(inode))
+				return 0;
 
-		/* process interruption */
-		if (signal_pending(current_task))
-			return read;
+			/* process interruption */
+			if (signal_pending(current_task))
+				return -ERESTARTSYS;
 
-		/* wake up writer */
-		task_wakeup(&PIPE_WAIT(inode));
-
-		/* no writer : return */
-		if (inode->i_ref != 2)
-			return read;
-
-		/* wait for some data */
-		task_sleep(&PIPE_WAIT(inode));
+			/* wait for some data */
+			task_sleep(&PIPE_WAIT(inode));
+		}
 	}
 
 	/* read available data */
@@ -74,19 +76,28 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 	struct inode_t *inode = filp->f_inode;
 	int chars, size, wpos, written = 0;
 
+	/* no readers */
+	if (!PIPE_READERS(inode)) {
+		task_signal(current_task->pid, SIGPIPE);
+		return -EPIPE;
+	}
+
 	while (count > 0) {
 		/* no free space */
 		while (!(size = (PAGE_SIZE - 1) - PIPE_SIZE(inode))) {
+			/* no readers */
+			if (!PIPE_READERS(inode)) {
+				task_signal(current_task->pid, SIGPIPE);
+				return written ? written : -EPIPE;
+			}
+
 			/* process interruption */
 			if (signal_pending(current_task))
-				return written;
+				return written ? written : -ERESTARTSYS;
 
-			/* wake up reader */
-			task_wakeup(&PIPE_WAIT(inode));
-
-			/* no reader : return */
-			if (inode->i_ref != 2)
-				return written ? written : -ENOSPC;
+			/* non blocking */
+			if (filp->f_flags & O_NONBLOCK)
+				return written ? written : -EAGAIN;
 
 			/* wait for free space */
 			task_sleep(&PIPE_WAIT(inode));
@@ -111,6 +122,9 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 		/* copy data to memory */
 		memcpy(PIPE_BASE(inode) + wpos, buf, chars);
 		buf += chars;
+
+		/* wake up readers */
+		task_wakeup(&PIPE_WAIT(inode));
 	}
 
 	/* wake up reader */
@@ -119,12 +133,39 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 }
 
 /*
- * Pipe operations.
+ * Close a read pipe.
  */
-static struct file_operations_t pipe_fops = {
+static int pipe_read_close(struct file_t *filp)
+{
+	PIPE_READERS(filp->f_inode)--;
+	task_wakeup(&PIPE_WAIT(filp->f_inode));
+	return 0;
+}
+
+/*
+ * Close a write pipe.
+ */
+static int pipe_write_close(struct file_t *filp)
+{
+	PIPE_WRITERS(filp->f_inode)--;
+	task_wakeup(&PIPE_WAIT(filp->f_inode));
+	return 0;
+}
+
+/*
+ * Read pipe operations.
+ */
+static struct file_operations_t read_pipe_fops = {
 	.read		= pipe_read,
+	.close		= pipe_read_close,
+};
+
+/*
+ * Write pipe operations.
+ */
+static struct file_operations_t write_pipe_fops = {
 	.write		= pipe_write,
-	.getdents64	= NULL,
+	.close		= pipe_write_close,
 };
 
 /*
@@ -155,6 +196,8 @@ static struct inode_t *get_pipe_inode()
 	inode->i_atime = inode->i_ctime = inode->i_mtime = CURRENT_TIME;
 	PIPE_RPOS(inode) = 0;
 	PIPE_WPOS(inode) = 0;
+	PIPE_READERS(inode) = 1;
+	PIPE_WRITERS(inode) = 1;
 
 	return inode;
 }
@@ -168,9 +211,6 @@ int do_pipe(int pipefd[2], int flags)
 	struct inode_t *inode;
 	int fd[2];
 	int i, j;
-
-	/* unused flags */
-	UNUSED(flags);
 
 	/* find 2 file descriptors in global table */
 	for (i = 0, j = 0; i < NR_FILE && j < 2; i++)
@@ -216,15 +256,17 @@ int do_pipe(int pipefd[2], int flags)
 	/* set 1st file descriptor as read channel */
 	filps[0]->f_inode = inode;
 	filps[0]->f_pos = 0;
-	filps[0]->f_mode = O_RDONLY;
-	filps[0]->f_op = &pipe_fops;
+	filps[0]->f_flags |= O_WRONLY | flags;
+	filps[0]->f_mode = 1;
+	filps[0]->f_op = &read_pipe_fops;
 	pipefd[0] = fd[0];
 
 	/* set 2nd file descriptor as write channel */
 	filps[1]->f_inode = inode;
 	filps[1]->f_pos = 0;
-	filps[1]->f_mode = O_WRONLY;
-	filps[1]->f_op = &pipe_fops;
+	filps[1]->f_flags |= O_WRONLY | flags;
+	filps[1]->f_mode = 2;
+	filps[1]->f_op = &write_pipe_fops;
 	pipefd[1] = fd[1];
 
 	return 0;
