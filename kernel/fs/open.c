@@ -71,6 +71,13 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	filp->f_pos = 0;
 	filp->f_op = inode->i_op->fops;
 
+	/* set path */
+	filp->f_path = strdup(pathname);
+	if (!filp->f_path) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
 	/* specific open function */
 	if (filp->f_op && filp->f_op->open) {
 		ret = filp->f_op->open(filp);
@@ -80,6 +87,8 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 
 	return fd;
 err:
+	if (filp->f_path)
+		kfree(filp->f_path);
 	memset(filp, 0, sizeof(struct file_t));
 	return ret;
 }
@@ -98,6 +107,12 @@ int do_close(struct file_t *filp)
 
 		/* release inode */
 		iput(filp->f_inode);
+
+		/* free path */
+		if (filp->f_path)
+			kfree(filp->f_path);
+
+		/* clear inode */
 		memset(filp, 0, sizeof(struct file_t));
 	}
 

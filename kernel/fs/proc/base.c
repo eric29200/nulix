@@ -426,20 +426,49 @@ static int proc_fd_follow_link(struct inode_t *dir, struct inode_t *inode, int f
  */
 static ssize_t proc_fd_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 {
+	struct task_t *task;
+	struct file_t *filp;
 	char tmp[32];
 	size_t len;
+	pid_t pid;
+	int fd;
 
-	/* set target link */
-	len = sprintf(tmp, "%d:%d", inode->i_ino >> 16, inode->i_ino & 0xFF) + 1;
+	/* get task */
+	pid = inode->i_ino >> 16;
+	task = find_task(pid);
+	if (!task) {
+		iput(inode);
+		return -ENOENT;
+	}
+
+	/* get file */
+	fd = inode->i_ino & 0xFF;
+	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd]) {
+		iput(inode);
+		return -ENOENT;
+	}
+	filp = task->files->filp[fd];
+
+	/* use file path */
+	if (filp->f_path) {
+		len = strlen(filp->f_path) + 1;
+		if (bufsize < len)
+			len = bufsize;
+
+		memcpy(buf, filp->f_path, len);
+		goto out;
+	}
+
+	/* else concat <pid>:<fd> */
+	len = sprintf(tmp, "%d:%d", pid, fd) + 1;
 	if (bufsize < len)
 		len = bufsize;
-
-	/* release inode */
-	iput(inode);
 
 	/* copy target link */
 	memcpy(buf, tmp, len);
 
+ out:
+	iput(inode);
 	return len;
 }
 
