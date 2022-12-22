@@ -26,14 +26,14 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 			return read;
 
 		/* wake up writer */
-		task_wakeup(&inode->u.pipe_i.i_wwait);
+		task_wakeup(&PIPE_WAIT(inode));
 
 		/* no writer : return */
 		if (inode->i_ref != 2)
 			return read;
 
 		/* wait for some data */
-		task_sleep(&inode->u.pipe_i.i_rwait);
+		task_sleep(&PIPE_WAIT(inode));
 	}
 
 	/* read available data */
@@ -57,12 +57,12 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 		PIPE_RPOS(inode) &= (PAGE_SIZE - 1);
 
 		/* copy data to buffer */
-		memcpy(buf, &((char *) inode->i_size)[rpos], chars);
+		memcpy(buf, PIPE_BASE(inode) + rpos, chars);
 		buf += chars;
 	}
 
 	/* wake up writer */
-	task_wakeup(&inode->u.pipe_i.i_wwait);
+	task_wakeup(&PIPE_WAIT(inode));
 	return read;
 }
 
@@ -82,14 +82,14 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 				return written;
 
 			/* wake up reader */
-			task_wakeup(&inode->u.pipe_i.i_rwait);
+			task_wakeup(&PIPE_WAIT(inode));
 
 			/* no reader : return */
 			if (inode->i_ref != 2)
 				return written ? written : -ENOSPC;
 
 			/* wait for free space */
-			task_sleep(&inode->u.pipe_i.i_wwait);
+			task_sleep(&PIPE_WAIT(inode));
 		}
 
 		/* compute number of characters to write */
@@ -109,12 +109,12 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 		PIPE_WPOS(inode) &= (PAGE_SIZE - 1);
 
 		/* copy data to memory */
-		memcpy(&((char *) inode->i_size)[wpos], buf, chars);
+		memcpy(PIPE_BASE(inode) + wpos, buf, chars);
 		buf += chars;
 	}
 
 	/* wake up reader */
-	task_wakeup(&inode->u.pipe_i.i_rwait);
+	task_wakeup(&PIPE_WAIT(inode));
 	return written;
 }
 
@@ -140,8 +140,8 @@ static struct inode_t *get_pipe_inode()
 		return NULL;
 
 	/* allocate some memory for data */
-	inode->i_size = (uint32_t) get_free_page();
-	if (!inode->i_size) {
+	PIPE_BASE(inode) = get_free_page();
+	if (!PIPE_BASE(inode)) {
 		inode->i_ref = 0;
 		return NULL;
 	}

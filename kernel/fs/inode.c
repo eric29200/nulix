@@ -89,12 +89,11 @@ void iput(struct inode_t *inode)
 	/* special case : pipe inode */
 	if (inode->i_pipe) {
 		/* wakeup eventual readers/writers */
-		task_wakeup(&inode->u.pipe_i.i_rwait);
-		task_wakeup(&inode->u.pipe_i.i_wwait);
+		task_wakeup(&PIPE_WAIT(inode));
 
 		/* no references : free inode */
 		if (!inode->i_ref) {
-			free_page((void *) inode->i_size);
+			free_page(PIPE_BASE(inode));
 			memset(inode, 0, sizeof(struct inode_t));
 		}
 
