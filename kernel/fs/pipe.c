@@ -15,23 +15,30 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 	struct inode_t *inode = filp->f_inode;
 	int chars, size, rpos, read = 0;
 
-	while (count > 0) {
-		/* no data available */
-		while (!(size = PIPE_SIZE(inode))) {
-			/* process interruption */
-			if (signal_pending(current_task))
-				return read;
+	/* sleep while empty */
+	while (PIPE_EMPTY(inode)) {
+		/* non blocking : return */
+		if (filp->f_flags & O_NONBLOCK)
+			return read;
 
-			/* wake up writer */
-			task_wakeup(&inode->u.pipe_i.i_wwait);
+		/* process interruption */
+		if (signal_pending(current_task))
+			return read;
 
-			/* no writer : return */
-			if (inode->i_ref != 2)
-				return read;
+		/* wake up writer */
+		task_wakeup(&inode->u.pipe_i.i_wwait);
 
-			/* wait for some data */
-			task_sleep(&inode->u.pipe_i.i_rwait);
-		}
+		/* no writer : return */
+		if (inode->i_ref != 2)
+			return read;
+
+		/* wait for some data */
+		task_sleep(&inode->u.pipe_i.i_rwait);
+	}
+
+	/* read available data */
+	while (count > 0 && !PIPE_EMPTY(inode)) {
+		size = PIPE_SIZE(inode);
 
 		/* compute number of characters to read */
 		chars = PAGE_SIZE - PIPE_RPOS(inode);
