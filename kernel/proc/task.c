@@ -181,6 +181,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vm_child->vm_start = vm_parent->vm_start;
 			vm_child->vm_end = vm_parent->vm_end;
 			vm_child->vm_flags = vm_parent->vm_flags;
+			vm_child->vm_page_prot = vm_parent->vm_page_prot;
 			vm_child->vm_offset = vm_parent->vm_offset;
 			vm_child->vm_inode = vm_parent->vm_inode;
 			vm_child->vm_ops = vm_parent->vm_ops;

@@ -6,6 +6,14 @@
 #include <fcntl.h>
 
 /*
+ * Page protection.
+ */
+uint32_t protection_map[16] = {
+	__P000, __P001, __P010, __P011, __P100, __P101, __P110, __P111,
+	__S000, __S001, __S010, __S011, __S100, __S101, __S110, __S111
+};
+
+/*
  * Find a memory region.
  */
 struct vm_area_t *find_vma(struct task_t *task, uint32_t addr)
@@ -98,6 +106,7 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int prot, int f
 	vm->vm_end = addr + len;
 	vm->vm_flags = prot & (VM_READ | VM_WRITE | VM_EXEC);
 	vm->vm_flags |= flags & (VM_GROWSDOWN | VM_DENYWRITE | VM_EXECUTABLE);
+	vm->vm_page_prot = protection_map[vm->vm_flags & 0x0F];
 	vm->vm_offset = offset;
 	vm->vm_inode = NULL;
 	vm->vm_ops = NULL;

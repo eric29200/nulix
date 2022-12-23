@@ -217,7 +217,7 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_direc
 /*
  * Anonymous page mapping.
  */
-static int do_anonymous_page(uint32_t *pte)
+static int do_anonymous_page(struct vm_area_t *vma, uint32_t *pte)
 {
 	struct page_t *page;
 	int ret;
@@ -231,7 +231,7 @@ static int do_anonymous_page(uint32_t *pte)
 	memset((void *) PAGE_ADDRESS(page), 0, PAGE_SIZE);
 
 	/* set page table entry */
-	ret = set_pte(pte, PAGE_SHARED, page);
+	ret = set_pte(pte, vma->vm_page_prot, page);
 	if (ret)
 		goto err;
 
@@ -260,7 +260,7 @@ static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 
 	/* anonymous page mapping */
 	if (!vma->vm_ops || !vma->vm_ops->nopage)
-		return do_anonymous_page(pte);
+		return do_anonymous_page(vma, pte);
 
 	/* specific mapping */
 	page = vma->vm_ops->nopage(vma, address);
@@ -268,7 +268,7 @@ static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 		return -ENOSPC;
 
 	/* set page table entry */
-	set_pte(pte, PAGE_SHARED, page);
+	set_pte(pte, vma->vm_page_prot, page);
 
 	return 0;
 }
@@ -530,7 +530,7 @@ int init_paging(uint32_t start, uint32_t end)
 		page_table[i].page = i;
 	
 		/* add pages to free list */
-		if (i * PAGE_SIZE <= last_kernel_addr)
+		if (i * PAGE_SIZE < last_kernel_addr)
 			page_table[i].count = 1;
 		else
 			list_add_tail(&page_table[i].list, &free_pages);
@@ -557,7 +557,7 @@ int init_paging(uint32_t start, uint32_t end)
 			return -ENOMEM;
 
 		/* set page table entry */
-		ret = set_pte(pte, PAGE_KERNEL, &page_table[i]);
+		ret = set_pte(pte, V2P(address) < last_kernel_addr ? PAGE_READONLY : PAGE_KERNEL, &page_table[i]);
 		if (ret)
 			return ret;
 	}

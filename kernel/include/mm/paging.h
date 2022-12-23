@@ -26,6 +26,23 @@
 #define PAGE_READONLY			(PAGE_PRESENT | PAGE_USER | PAGE_ACCESSED)
 #define PAGE_KERNEL			(PAGE_PRESENT | PAGE_RW | PAGE_DIRTY | PAGE_ACCESSED)
 
+#define __P000				PAGE_NONE
+#define __P001				PAGE_READONLY
+#define __P010				PAGE_SHARED
+#define __P011				PAGE_SHARED
+#define __P100				PAGE_READONLY
+#define __P101				PAGE_READONLY
+#define __P110				PAGE_SHARED
+#define __P111				PAGE_SHARED
+#define __S000				PAGE_NONE
+#define __S001				PAGE_READONLY
+#define __S010				PAGE_SHARED
+#define __S011				PAGE_SHARED
+#define __S100				PAGE_READONLY
+#define __S101				PAGE_READONLY
+#define __S110				PAGE_SHARED
+#define __S111				PAGE_SHARED
+
 #define PTE_PAGE(pte)			((pte) >> PAGE_SHIFT)
 #define PTE_PROT(pte)			((pte) & (PAGE_SIZE - 1))
 #define MK_PTE(page, prot)		(((page) << PAGE_SHIFT) | (prot))

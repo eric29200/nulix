@@ -21,6 +21,7 @@ struct vm_area_t {
 	uint32_t			vm_start;
 	uint32_t			vm_end;
 	uint16_t			vm_flags;
+	uint32_t			vm_page_prot;
 	off_t				vm_offset;
 	struct inode_t *		vm_inode;
 	struct vm_operations_t *	vm_ops;
