@@ -86,20 +86,6 @@ void iput(struct inode_t *inode)
 	/* update inode reference count */
 	inode->i_ref--;
 
-	/* special case : pipe inode */
-	if (inode->i_pipe) {
-		/* wakeup eventual readers/writers */
-		task_wakeup(&PIPE_WAIT(inode));
-
-		/* no references : free inode */
-		if (!inode->i_ref) {
-			free_page(PIPE_BASE(inode));
-			memset(inode, 0, sizeof(struct inode_t));
-		}
-
-		return;
-	}
-
 	/* removed inode : truncate and free it */
 	if (!inode->i_nlinks && inode->i_ref == 0 && inode->i_sb) {
 		inode->i_sb->s_op->put_inode(inode);
