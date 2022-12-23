@@ -12,6 +12,8 @@
 
 #define MAX_SELECT_TABLE_ENTRIES	((PAGE_SIZE) / sizeof(struct select_table_entry_t))
 
+#define WAIT_QUEUE_HEAD(x) 		((struct wait_queue_t *)((x) - 1))
+
 /*
  * Wait queue.
  */

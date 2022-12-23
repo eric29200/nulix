@@ -50,7 +50,7 @@ pid_t get_next_pid();
 void schedule();
 
 void add_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait);
-void remove_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait);
+void remove_wait_queue(struct wait_queue_t *wait);
 
 void select_wait(struct wait_queue_t **wait_address, struct select_table_t *st);
 void task_sleep(struct wait_queue_t **wq);

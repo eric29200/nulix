@@ -152,41 +152,34 @@ void schedule()
  */
 void add_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait)
 {
-	/* first element */
-	if (!*wq) {
-		wait->next = wait;
-		*wq = wait;
-		return;
-	}
+	struct wait_queue_t *next = WAIT_QUEUE_HEAD(wq);
+	struct wait_queue_t *head = *wq;
 
-	wait->next = (*wq)->next;
-	(*wq)->next = wait;
+	if (head)
+		next = head;
+
+	*wq = wait;
+	wait->next = next;
 }
 
 /*
  * Remove from a wait queue.
  */
-void remove_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait)
+void remove_wait_queue(struct wait_queue_t *wait)
 {
-	struct wait_queue_t *tmp;
+	struct wait_queue_t *next = wait->next;
+	struct wait_queue_t *head = next;
 
-	/* first element */
-	if (*wq == wait) {
-		*wq = wait->next;
-		if (*wq == wait)
-			*wq = NULL;
+	for (;;) {
+		struct wait_queue_t *nextlist = head->next;
 
-		return;
+		if (nextlist == wait)
+			break;
+
+		head = nextlist;
 	}
 
-	/* else find position */
-	tmp = wait;
-	while (tmp->next != wait)
-		tmp = tmp->next;
-	tmp->next = wait->next;
-
-	/* reset next element */
-	wait->next = NULL;
+	head->next = next;
 }
 
 /*
@@ -230,7 +223,7 @@ void task_sleep(struct wait_queue_t **wq)
 	schedule();
 
 	/* remove from wait queue */
-	remove_wait_queue(wq, &wait);
+	remove_wait_queue(&wait);
 }
 
 /*

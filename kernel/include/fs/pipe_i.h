@@ -8,8 +8,7 @@
 #define PIPE_BASE(inode)		((inode)->u.pipe_i.i_base)
 #define PIPE_START(inode)		((inode)->u.pipe_i.i_start)
 #define PIPE_LEN(inode)			((inode)->u.pipe_i.i_len)
-#define PIPE_RWAIT(inode)		((inode)->u.pipe_i.i_rwait)
-#define PIPE_WWAIT(inode)		((inode)->u.pipe_i.i_wwait)
+#define PIPE_WAIT(inode)		((inode)->u.pipe_i.i_wait)
 #define PIPE_READERS(inode)		((inode)->u.pipe_i.i_readers)
 #define PIPE_WRITERS(inode)		((inode)->u.pipe_i.i_writers)
 
@@ -30,8 +29,7 @@ struct pipe_inode_info_t {
 	int			i_len;
 	size_t			i_readers;
 	size_t			i_writers;
-	struct wait_queue_t *	i_rwait;
-	struct wait_queue_t *	i_wwait;
+	struct wait_queue_t *	i_wait;
 };
 
 #endif

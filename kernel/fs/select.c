@@ -15,7 +15,7 @@ static void free_wait(struct select_table_t *st)
 	while (st->nr > 0) {
 		st->nr--;
 		entry--;
-		remove_wait_queue(entry->wait_address, &entry->wait);
+		remove_wait_queue(&entry->wait);
 	}
 }
 
