@@ -43,6 +43,7 @@ static struct page_t *__get_free_page()
 	
 	/* get first free page */
 	page = list_first_entry(&free_pages, struct page_t, list);
+	page->count = 1;
 	list_del(&page->list);
 
 	return page;
@@ -56,7 +57,9 @@ static void __free_page(struct page_t *page)
 	if (!page)
 		return;
 
-	list_add(&page->list, &free_pages);
+	page->count--;
+	if (!page->count)
+		list_add(&page->list, &free_pages);
 }
 
 /*
@@ -518,6 +521,7 @@ int init_paging(uint32_t start, uint32_t end)
 	/* allocate global page table after kernel heap */
 	last_kernel_addr = KHEAP_START + KHEAP_SIZE;
 	page_table = (struct page_t *) last_kernel_addr;
+	memset(page_table, 0, sizeof(struct page_t) * nb_pages);
 	last_kernel_addr += sizeof(struct page_t) * nb_pages;
 
 	/* init pages */
@@ -526,7 +530,9 @@ int init_paging(uint32_t start, uint32_t end)
 		page_table[i].page = i;
 	
 		/* add pages to free list */
-		if (i * PAGE_SIZE > last_kernel_addr)
+		if (i * PAGE_SIZE <= last_kernel_addr)
+			page_table[i].count = 1;
+		else
 			list_add_tail(&page_table[i].list, &free_pages);
 	}	
 

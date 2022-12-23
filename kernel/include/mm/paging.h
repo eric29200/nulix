@@ -61,6 +61,7 @@ struct page_table_t {
  */
 struct page_t {
 	uint32_t		page;					/* page number */
+	int 			count;					/* reference count */
 	struct inode_t *	inode;					/* inode */
 	off_t			offset;					/* offset in inode */
 	struct list_head_t	list;					/* next page */
