@@ -15,7 +15,7 @@ ssize_t sys_writev(int fd, const struct iovec_t *iov, int iovcnt)
 
 	/* write each buffer */
 	for (i = 0; i < iovcnt; i++, iov++) {
-		/* read into buffer */
+		/* write into buffer */
 		n = do_write(current_task->files->filp[fd], iov->iov_base, iov->iov_len);
 		if (n < 0)
 			return n;

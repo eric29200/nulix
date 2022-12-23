@@ -163,11 +163,11 @@ static int pipe_read_close(struct file_t *filp)
 {
 	struct inode_t *inode = filp->f_inode;
 
-	PIPE_READERS(filp->f_inode)--;
+	PIPE_READERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
 		free_page(PIPE_BASE(inode));
 	else
-		task_wakeup(&PIPE_WAIT(filp->f_inode));
+		task_wakeup(&PIPE_WAIT(inode));
 
 	return 0;
 }
@@ -179,11 +179,11 @@ static int pipe_write_close(struct file_t *filp)
 {
 	struct inode_t *inode = filp->f_inode;
 
-	PIPE_WRITERS(filp->f_inode)--;
+	PIPE_WRITERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
 		free_page(PIPE_BASE(inode));
 	else
-		task_wakeup(&PIPE_WAIT(filp->f_inode));
+		task_wakeup(&PIPE_WAIT(inode));
 
 	return 0;
 }
