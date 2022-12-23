@@ -95,12 +95,6 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 		return -EPIPE;
 	}
 
-	/* can do it atomically */
-	if (count <= PIPE_BUF)
-		free = count;
-	else
-		free = 1;
-
 	while (count > 0) {
 		/* no free space */
 		while (!PIPE_EMPTY(inode)) {
