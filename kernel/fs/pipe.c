@@ -103,7 +103,7 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 
 	while (count > 0) {
 		/* no free space */
-		while (PIPE_FREE(inode) < free) {
+		while (!PIPE_EMPTY(inode)) {
 			/* no readers */
 			if (!PIPE_READERS(inode)) {
 				task_signal(current_task->pid, SIGPIPE);
