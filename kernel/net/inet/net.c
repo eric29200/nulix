@@ -174,13 +174,13 @@ static void net_handler_thread(void *arg)
 			}
 		}
 
-		/* enable interrupts */
-		irq_restore(flags);
-
 		/* wait for incoming packets */
 		current_task->timeout = jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS);
 		task_sleep(&net_dev->wait);
 		current_task->timeout = 0;
+
+		/* enable interrupts */
+		irq_restore(flags);
 	}
 }
 
