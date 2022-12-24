@@ -276,13 +276,19 @@ static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 	/* set page table entry */
 	set_pte(pte, vma->vm_page_prot, page);
 
+	/* add page to clean pages */
+	if (!vma->vm_inode) {
+		list_del(&page->list);
+		list_add(&page->list, &vma->vm_inode->i_mapping.clean_pages);
+	}
+
 	return 0;
 }
 
 /*
  * Handle a read only page fault.
  */
-static int do_wp_page(struct task_t *task, uint32_t address)
+static int do_wp_page(struct task_t *task, struct vm_area_t *vma, uint32_t address)
 {
 	uint32_t *pte, page_idx;
 	struct page_t *page;
@@ -300,6 +306,12 @@ static int do_wp_page(struct task_t *task, uint32_t address)
 
 	/* make page table entry writable */
 	*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
+	
+	/* add page to dirty pages */
+	if (vma->vm_inode && (vma->vm_flags & VM_SHARED)) {
+		list_del(&page->list);
+		list_add(&page->list, &vma->vm_inode->i_mapping.dirty_pages);
+	}
 
 	return 0;
 }
@@ -351,7 +363,7 @@ good_area:
 
 	/* present page : try to make it writable */
 	if (present) {
-		ret = do_wp_page(current_task, fault_addr);
+		ret = do_wp_page(current_task, vma, fault_addr);
 		if (ret)
 			goto bad_area;
 		else

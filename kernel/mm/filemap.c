@@ -84,3 +84,33 @@ int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
 
 	return 0;
 }
+
+/*
+ * Write dirty pages.
+ */
+int filemap_fdatasync(struct address_space_t *mapping)
+{
+	struct list_head_t *pos, *n;
+	struct page_t *page;
+	int ret = 0, err;
+
+	/* writepage not implemented */
+	if (!mapping->inode->i_op->writepage)
+		return -EINVAL;
+
+	/* for each dirty page */
+	list_for_each_safe(pos, n, &mapping->dirty_pages) {
+		page = list_entry(pos, struct page_t, list);
+
+		/* write page */
+		err = mapping->inode->i_op->writepage(page);
+		if (err && !ret)
+			ret = err;
+
+		/* put it in clean list */
+		list_del(&page->list);
+		list_add(&page->list, &mapping->clean_pages);
+	}
+
+	return ret;
+}

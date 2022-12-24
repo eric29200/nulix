@@ -259,7 +259,7 @@ void brelse(struct buffer_head_t *bh)
 	if (!bh)
 		return;
 
-	/* write diry buffer */
+	/* write dirty buffer */
 	if (bh->b_dirt)
 		bwrite(bh);
 
@@ -384,6 +384,42 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 	return 0;
 }
 
+/*
+ * Write a page.
+ */
+int generic_writepage(struct page_t *page)
+{
+	struct inode_t *inode = page->inode;
+	struct super_block_t *sb = inode->i_sb;
+	uint32_t block, real_block, address;
+	struct buffer_head_t *bh;
+	int nr, i;
+
+	/* compute blocks to write */
+	nr = PAGE_SIZE >> sb->s_blocksize_bits;
+	block = page->offset >> sb->s_blocksize_bits;
+	address = PAGE_ADDRESS(page);
+
+	/* write block by block */
+	for (i = 0; i < nr; i++, block++) {
+		/* get real block number */
+		real_block = inode->i_op->bmap(inode, block);
+
+		/* get block buffer */
+		bh = getblk(sb->s_dev, real_block, sb->s_blocksize);
+		if (!bh)
+			continue;
+
+		/* copy data to buffer */
+		memcpy(bh->b_data, (char *) (address + sb->s_blocksize * i), sb->s_blocksize);
+		bh->b_dirt = 1;
+
+		/* release block buffer */
+		brelse(bh);
+	}
+
+	return 0;
+}
 
 /*
  * Init buffers.

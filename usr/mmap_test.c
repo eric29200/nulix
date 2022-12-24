@@ -35,7 +35,7 @@ int main()
 
 	strcpy(buf, "hello");
 
-	/*pid = fork();
+	pid = fork();
 	if (pid == 0) {
 		printf("Child read : %s\n", buf);
 		strcpy(buf, "goodbye");
@@ -43,11 +43,10 @@ int main()
 	}
 
 	waitpid(pid, NULL, 0);
-	printf("Parent read : %s\n", buf);*/
+	printf("Parent read : %s\n", buf);
 
 	/* unmap buffer */
 	munmap(buf, BUF_SIZE);
-	fsync(fd);
 	close(fd);
 
 	return 0;

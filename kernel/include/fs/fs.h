@@ -67,6 +67,15 @@ struct super_block_t {
 };
 
 /*
+ * Address space.
+ */
+struct address_space_t {
+	struct list_head_t		clean_pages;
+	struct list_head_t		dirty_pages;
+	struct inode_t *		inode;
+};
+
+/*
  * Generic inode.
  */
 struct inode_t {
@@ -87,6 +96,7 @@ struct inode_t {
 	dev_t				i_rdev;
 	char				i_pipe;
 	struct inode_t *		i_mount;
+	struct address_space_t		i_mapping;
 	union {
 		struct minix_inode_info_t	minix_i;
 		struct pipe_inode_info_t	pipe_i;
@@ -158,6 +168,7 @@ struct inode_operations_t {
 	void (*truncate)(struct inode_t *);
 	int (*bmap)(struct inode_t *, int);
 	int (*readpage)(struct inode_t *, struct page_t *);
+	int (*writepage)(struct page_t *);
 };
 
 /*
@@ -195,6 +206,7 @@ void set_blocksize(dev_t dev, size_t blocksize);
 void reclaim_buffers();
 int generic_block_read(struct file_t *filp, char *buf, int count);
 int generic_readpage(struct inode_t *inode, struct page_t *page);
+int generic_writepage(struct page_t *page);
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);
@@ -212,6 +224,10 @@ int open_namei(int dirfd, struct inode_t *base, const char *pathname, int flags,
 /* character/block device drivers */
 struct inode_operations_t *char_get_driver(struct inode_t *inode);
 struct inode_operations_t *block_get_driver(struct inode_t *inode);
+
+/* filemap operations */
+int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);
+int filemap_fdatasync(struct address_space_t *mapping);
 
 /* system calls */
 int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);

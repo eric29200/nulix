@@ -41,6 +41,5 @@ void *kmalloc_align(uint32_t size);
 void kfree(void *p);
 void *get_free_page();
 void free_page(void *address);
-int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);
 
 #endif

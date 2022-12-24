@@ -33,6 +33,9 @@ struct inode_t *get_empty_inode(struct super_block_t *sb)
 	memset(inode, 0, sizeof(struct inode_t));
 	inode->i_sb = sb;
 	inode->i_ref = 1;
+	inode->i_mapping.inode = inode;
+	INIT_LIST_HEAD(&inode->i_mapping.clean_pages);
+	INIT_LIST_HEAD(&inode->i_mapping.dirty_pages);
 
 	return inode;
 }
@@ -76,6 +79,21 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 }
 
 /*
+ * Synchronize inode on disk.
+ */
+static void sync_inode(struct inode_t *inode)
+{
+	/* sync data */
+	filemap_fdatasync(&inode->i_mapping);
+
+	/* write inode if needed */
+	if (inode->i_dirt && inode->i_sb) {
+		inode->i_sb->s_op->write_inode(inode);
+		inode->i_dirt = 0;
+	}
+}
+
+/*
  * Release an inode.
  */
 void iput(struct inode_t *inode)
@@ -92,11 +110,8 @@ void iput(struct inode_t *inode)
 		return;
 	}
 
-	/* write inode if needed */
-	if (inode->i_dirt && inode->i_sb) {
-		inode->i_sb->s_op->write_inode(inode);
-		inode->i_dirt = 0;
-	}
+	/* sync inode */
+	sync_inode(inode);
 
 	/* no more references : reset inode */
 	if (inode->i_ref == 0)
