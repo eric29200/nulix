@@ -432,7 +432,7 @@ static void task_exit_mm(struct task_t *task)
 void task_release_mmap(struct task_t *task)
 {
 	if (task->flags & CLONE_VFORK)
-		up(task->vfork_sem);
+		up(task->parent->vfork_sem);
 }
 
 /*
@@ -475,6 +475,7 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 	task->sgid = parent ? parent->sgid : 0;
 	task->tty = parent ? parent->tty : 0;
 	task->start_time = jiffies;
+	task->vfork_sem = NULL;
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->sig_tm.list);
 
@@ -563,10 +564,6 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 	if (!task)
 		return -EINVAL;
 
-	/* lock vfork semaphore */
-	init_semaphore(&sem, 0);
-	task->vfork_sem = &sem;
-
 	/* set registers */
 	regs = (struct task_registers_t *) task->esp;
 	memset(regs, 0, sizeof(struct task_registers_t));
@@ -580,8 +577,12 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 	list_add(&task->list, &current_task->list);
 
 	/* vfork : sleep on semaphore */
-	if (clone_flags & CLONE_VFORK)
+	if (clone_flags & CLONE_VFORK) {
+		init_semaphore(&sem, 0);
+		current_task->vfork_sem = &sem;
 		down(&sem);
+		current_task->vfork_sem = NULL;
+	}
 
 	return task->pid;
 }

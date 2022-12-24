@@ -274,12 +274,38 @@ static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 }
 
 /*
+ * Handle a read only page fault.
+ */
+static int do_wp_page(struct task_t *task, uint32_t address)
+{
+	uint32_t *pte, page_idx;
+	struct page_t *page;
+
+	/* get page table entry */
+	pte = get_pte(address, 0, task->mm->pgd);
+	if (!pte)
+		return -EINVAL;
+
+	/* get page */
+	page_idx = PTE_PAGE(*pte);
+	if (page_idx <= 0 || page_idx >= nb_pages)
+		return -EINVAL;
+	page = &page_table[page_idx];
+
+	/* make page table entry writable */
+	*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
+
+	return 0;
+}
+
+/*
  * Page fault handler.
  */
 void page_fault_handler(struct registers_t *regs)
 {
 	struct vm_area_t *vma;
 	uint32_t fault_addr;
+	int ret;
 
 	/* faulting address is stored in CR2 register */
 	__asm__ volatile("mov %%cr2, %0" : "=r" (fault_addr));
@@ -313,9 +339,25 @@ expand_stack:
 	vma->vm_start = fault_addr & PAGE_MASK;
 	return;
 good_area:
-	/* user page fault : handle it */
-	if (do_no_page(current_task, vma, fault_addr) == 0)
-		return;
+	/* write violation */
+	if (write && !(vma->vm_flags & VM_WRITE))
+		goto bad_area;
+
+	/* present page : try to make it writable */
+	if (present) {
+		ret = do_wp_page(current_task, fault_addr);
+		if (ret)
+			goto bad_area;
+		else
+			return;
+	}
+
+	/* non present page */
+	ret = do_no_page(current_task, vma, fault_addr);
+	if (ret)
+		goto bad_area;
+
+	return;
 bad_area:
 	/* output message */
 	printf("Page fault at address=%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d (process %d at %x)\n",

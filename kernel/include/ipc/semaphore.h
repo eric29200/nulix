@@ -26,6 +26,9 @@ static inline void init_semaphore(struct semaphore_t *sem, int count)
  */
 static inline void up(struct semaphore_t *sem)
 {
+	if (!sem)
+		return;
+
 	sem->count++;
 	task_wakeup(&sem->wait);
 }
@@ -35,6 +38,9 @@ static inline void up(struct semaphore_t *sem)
  */
 static inline void down(struct semaphore_t *sem)
 {
+	if (!sem)
+		return;
+
 	for (;;) {
 		if (sem->count > 0) {
 			sem->count--;
