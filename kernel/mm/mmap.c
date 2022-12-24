@@ -229,6 +229,9 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 
 	/* unmap the whole area */
 	if (addr == vm->vm_start && end == vm->vm_end) {
+		if (vm->vm_inode)
+			iput(vm->vm_inode);
+
 		list_del(&vm->list);
 		kfree(vm);
 		return 0;
