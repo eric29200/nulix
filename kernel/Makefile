@@ -8,7 +8,7 @@ C_SOURCES 	= $(wildcard */*.c */*/*.c)
 AS_SOURCES 	= $(wildcard */*.s)
 PSF_SOURCES 	= $(wildcard */*.psf)
 OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.s=.o} ${PSF_SOURCES:.psf=.o}
-CFLAGS		= -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -I$(HEADER_PATH) -D__KERNEL__
+CFLAGS		= -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -I$(HEADER_PATH) -D__KERNEL__ -g
 LDFLAGS		= -T link.ld
 ASFLAGS		= -felf32
 
