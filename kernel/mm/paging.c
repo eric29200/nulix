@@ -10,6 +10,7 @@
 uint32_t nb_pages;
 struct page_t *page_table;
 static struct list_head_t free_pages;
+static struct list_head_t used_pages;
 
 /* page directories */
 struct page_directory_t *kernel_pgd = NULL;
@@ -40,11 +41,14 @@ static struct page_t *__get_free_page()
 		if (list_empty(&free_pages))
 			return NULL;
 	}
-	
+
 	/* get first free page */
 	page = list_first_entry(&free_pages, struct page_t, list);
 	page->count = 1;
+
+	/* update lists */
 	list_del(&page->list);
+	list_add(&page->list, &used_pages);
 
 	return page;
 }
@@ -58,8 +62,10 @@ static void __free_page(struct page_t *page)
 		return;
 
 	page->count--;
-	if (!page->count)
+	if (!page->count) {
+		list_del(&page->list);
 		list_add(&page->list, &free_pages);
+	}
 }
 
 /*
@@ -485,6 +491,7 @@ static void free_page_table(struct page_table_t *pgt)
 		page_idx = PTE_PAGE(pgt->pages[i]);
 		if (page_idx > 0 && page_idx < nb_pages) {
 			page = &page_table[page_idx];
+			list_del(&page->list);
 			list_add(&page->list, &free_pages);
 		}
 	}
@@ -568,14 +575,17 @@ int init_paging(uint32_t start, uint32_t end)
 
 	/* init pages */
 	INIT_LIST_HEAD(&free_pages);
+	INIT_LIST_HEAD(&used_pages);
 	for (i = 0; i < nb_pages; i++) {
 		page_table[i].page = i;
 	
-		/* add pages to free list */
-		if (i * PAGE_SIZE < last_kernel_addr)
+		/* add pages to used/free list */
+		if (i * PAGE_SIZE < last_kernel_addr) {
 			page_table[i].count = 1;
-		else
+			list_add_tail(&page_table[i].list, &used_pages);
+		} else {
 			list_add_tail(&page_table[i].list, &free_pages);
+		}
 	}	
 
 	/* identity map kernel pages */
