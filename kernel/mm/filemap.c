@@ -107,7 +107,7 @@ int generic_file_read(struct file_t *filp, char *buf, int count)
 	offset = filp->f_pos & ~PAGE_MASK;
 
 	/* read page by page */
-	for (left = count; left > 0; index += PAGE_SIZE, offset = 0) {
+	for (left = count; left > 0; index++, offset = 0) {
 		/* get a free page */
 		page_buf = (uint32_t) get_free_page();
 		if (!page_buf)
@@ -116,7 +116,7 @@ int generic_file_read(struct file_t *filp, char *buf, int count)
 		/* get page */
 		page = &page_table[MAP_NR(page_buf)];
 		page->inode = inode;
-		page->offset = index;
+		page->offset = index * PAGE_SIZE;
 
 		/* read page */
 		ret = inode->i_op->readpage(inode, page);
