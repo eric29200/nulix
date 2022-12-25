@@ -164,11 +164,10 @@ static int refill_freelist(size_t blocksize)
 }
 
 /*
- * Get a buffer (from cache or create one).
+ * Find a buffer in hash table.
  */
-struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
+static struct buffer_head_t *find_buffer(dev_t dev, uint32_t block, size_t blocksize)
 {
-	size_t isize = BUFSIZE_INDEX(blocksize);
 	struct htable_link_t *node;
 	struct buffer_head_t *bh;
 
@@ -183,6 +182,22 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 
 		node = node->next;
 	}
+
+	return NULL;
+}
+
+/*
+ * Get a buffer (from cache or create one).
+ */
+struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
+{
+	size_t isize = BUFSIZE_INDEX(blocksize);
+	struct buffer_head_t *bh;
+
+	/* try to find buffer in cache */
+	bh = find_buffer(dev, block, blocksize);
+	if (bh)
+		return bh;
 
 	/* refill free list if needed */
 	if (list_empty(&free_list[isize])) {
@@ -344,8 +359,8 @@ void bsync()
 int generic_readpage(struct inode_t *inode, struct page_t *page)
 {
 	struct super_block_t *sb = inode->i_sb;
-	uint32_t block, real_block, address;
-	struct buffer_head_t *bh;
+	struct buffer_head_t *bh, *next, *tmp;
+	uint32_t block, address;
 	int nr, i;
 
 	/* compute blocks to read */
@@ -353,21 +368,40 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 	block = page->offset >> sb->s_blocksize_bits;
 	address = PAGE_ADDRESS(page);
 
+	/* create temporary buffers */
+	bh = create_buffers((void *) address, sb->s_blocksize);
+	if (!bh)
+		return -ENOMEM;
+
 	/* read block by block */
-	for (i = 0; i < nr; i++, block++) {
-		/* get real block number */
-		real_block = inode->i_op->bmap(inode, block);
+	for (i = 0, next = bh; i < nr; i++, block++) {
+		/* set block buffer */
+		next->b_dev = sb->s_dev;
+		next->b_block = inode->i_op->bmap(inode, block);
+		next->b_uptodate = 1;
 
-		/* get block buffer */
-		bh = bread(sb->s_dev, real_block, sb->s_blocksize);
-		if (!bh)
-			continue;
+		/* check if buffer is already hashed */
+		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
+		if (tmp) {
+			/* read it from disk if needed */
+			if (!tmp->b_uptodate)
+				ata_read(sb->s_dev, tmp);
 
-		/* copy data to page */
-		memcpy((char *) (address + sb->s_blocksize * i), bh->b_data, sb->s_blocksize);
+			/* copy data to user address space */
+			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
 
-		/* release block buffer */
-		brelse(bh);
+			/* release buffer */
+			brelse(tmp);
+			goto next;
+		}
+		
+		/* read buffer on disk */
+		ata_read(sb->s_dev, next);
+ next:
+		/* clear temporary buffer */
+		tmp = next->b_this_page;
+		put_unused_buffer(next);
+		next = tmp;
 	}
 
 	return 0;
