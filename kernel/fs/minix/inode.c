@@ -54,8 +54,6 @@ struct inode_operations_t minix_dir_iops = {
 	.rename			= minix_rename,
 	.mknod			= minix_mknod,
 	.truncate		= minix_truncate,
-	.bmap			= minix_bmap,
-	.readpage		= generic_readpage,
 };
 
 /*
