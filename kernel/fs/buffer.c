@@ -414,31 +414,46 @@ int generic_writepage(struct page_t *page)
 {
 	struct inode_t *inode = page->inode;
 	struct super_block_t *sb = inode->i_sb;
-	uint32_t block, real_block, address;
-	struct buffer_head_t *bh;
+	struct buffer_head_t *bh, *next, *tmp;
+	uint32_t block, address;
 	int nr, i;
 
-	/* compute blocks to write */
+	/* compute blocks to read */
 	nr = PAGE_SIZE >> sb->s_blocksize_bits;
 	block = page->offset >> sb->s_blocksize_bits;
 	address = PAGE_ADDRESS(page);
 
+	/* create temporary buffers */
+	bh = create_buffers((void *) address, sb->s_blocksize);
+	if (!bh)
+		return -ENOMEM;
+
 	/* write block by block */
-	for (i = 0; i < nr; i++, block++) {
-		/* get real block number */
-		real_block = inode->i_op->bmap(inode, block);
+	for (i = 0, next = bh; i < nr; i++, block++) {
+		/* set block buffer */
+		next->b_dev = sb->s_dev;
+		next->b_block = inode->i_op->bmap(inode, block);
+		next->b_dirt = 1;
 
-		/* get block buffer */
-		bh = getblk(sb->s_dev, real_block, sb->s_blocksize);
-		if (!bh)
-			continue;
+		/* check if buffer is already hashed */
+		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
+		if (tmp) {
+			/* update buffer */
+			memcpy(tmp->b_data, next->b_data, sb->s_blocksize);
+			tmp->b_dirt = 1;
 
-		/* copy data to buffer */
-		memcpy(bh->b_data, (char *) (address + sb->s_blocksize * i), sb->s_blocksize);
-		bh->b_dirt = 1;
+			/* release buffer */
+			brelse(tmp);
+			goto next;
+		}
 
-		/* release block buffer */
-		brelse(bh);
+		/* write buffer on disk */
+		ata_write(sb->s_dev, next);
+ next:
+		/* clear temporary buffer */
+		tmp = next->b_this_page;
+		put_unused_buffer(next);
+		next = tmp;
 	}
 
 	return 0;
