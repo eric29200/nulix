@@ -86,6 +86,61 @@ int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
 }
 
 /*
+ * Generic file read.
+ */
+int generic_file_read(struct file_t *filp, char *buf, int count)
+{
+	struct inode_t *inode = filp->f_inode;
+	off_t index, offset;
+	struct page_t *page;
+	uint32_t page_buf;
+	int left, ret, nr;
+
+	/* adjust size */
+	if (filp->f_pos + count > filp->f_inode->i_size)
+		count = filp->f_inode->i_size - filp->f_pos;
+	if (count <= 0)
+		return 0;
+
+	/* compute page index and offset */
+	index = filp->f_pos >> PAGE_SHIFT;
+	offset = filp->f_pos & ~PAGE_MASK;
+
+	/* read page by page */
+	for (left = count; left > 0; index += PAGE_SIZE, offset = 0) {
+		/* get a free page */
+		page_buf = (uint32_t) get_free_page();
+		if (!page_buf)
+			break;
+
+		/* get page */
+		page = &page_table[MAP_NR(page_buf)];
+		page->inode = inode;
+		page->offset = index;
+
+		/* read page */
+		ret = inode->i_op->readpage(inode, page);
+		if (ret)
+			break;
+
+		/* compute number of characters to read */
+		nr = PAGE_SIZE - offset;
+		if (nr > left)
+			nr = left;
+
+		/* copy data to user buffer */
+		memcpy(buf, (void *) page_buf + offset, nr);
+		buf += nr;
+
+		/* update sizes */
+		filp->f_pos += nr;
+		left -= nr;
+	}
+
+	return count - left;
+}
+
+/*
  * Write dirty pages.
  */
 int filemap_fdatasync(struct address_space_t *mapping)

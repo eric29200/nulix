@@ -216,6 +216,7 @@ struct inode_t *get_empty_inode(struct super_block_t *sb);
 /* file operations */
 struct file_t *get_empty_filp();
 off_t generic_lseek(struct file_t *filp, off_t offset, int whence);
+int generic_file_read(struct file_t *filp, char *buf, int count);
 
 /* name operations */
 struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int follow_links);

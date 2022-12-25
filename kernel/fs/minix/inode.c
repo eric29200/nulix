@@ -21,7 +21,7 @@ struct file_operations_t minix_dir_fops = {
  * File operations.
  */
 struct file_operations_t minix_file_fops = {
-	.read			= minix_file_read,
+	.read			= generic_file_read,
 	.write			= minix_file_write,
 	.mmap			= generic_file_mmap,
 };
@@ -54,6 +54,8 @@ struct inode_operations_t minix_dir_iops = {
 	.rename			= minix_rename,
 	.mknod			= minix_mknod,
 	.truncate		= minix_truncate,
+	.bmap			= minix_bmap,
+	.readpage		= generic_readpage,
 };
 
 /*
