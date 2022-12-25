@@ -253,6 +253,7 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 		vm_new->vm_start = end;
 		vm_new->vm_end = vm->vm_end;
 		vm_new->vm_flags = vm->vm_flags;
+		vm_new->vm_page_prot = vm->vm_page_prot;
 		vm_new->vm_offset = vm->vm_offset + (end - vm->vm_start);
 		vm_new->vm_inode = vm->vm_inode;
 		if (vm_new->vm_inode)
