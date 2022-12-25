@@ -5,6 +5,8 @@ URL="http://ftp.astron.com/pub/file/"$SRC_FILENAME
 function configure_port() {
 	./configure								\
 		--host=$HOST							\
+		--enable-static							\
+		--disable-shared						\
 		--prefix="/usr"
 }
 
