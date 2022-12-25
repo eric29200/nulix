@@ -21,7 +21,7 @@ struct file_operations_t minix_dir_fops = {
  * File operations.
  */
 struct file_operations_t minix_file_fops = {
-	.read			= generic_file_read,
+	.read			= minix_file_read,
 	.write			= minix_file_write,
 	.mmap			= generic_file_mmap,
 };
