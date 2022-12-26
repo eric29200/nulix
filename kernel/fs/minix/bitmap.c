@@ -145,8 +145,8 @@ int minix_free_inode(struct inode_t *inode)
 	bh->b_dirt = 1;
 	bwrite(bh);
 
-	/* free inode */
-	memset(inode, 0, sizeof(struct inode_t));
+	/* clear inode */
+	clear_inode(inode);
 
 	return 0;
 }

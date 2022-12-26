@@ -214,6 +214,7 @@ int generic_writepage(struct page_t *page);
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode(struct super_block_t *sb);
+void clear_inode(struct inode_t *inode);
 int iinit();
 
 /* file operations */

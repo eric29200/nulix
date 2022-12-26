@@ -11,17 +11,22 @@ static int inode_htable_bits = 0;
 static struct inode_t *inode_table = NULL;
 static struct htable_link_t **inode_htable = NULL;
 
-/* inodes LRU list */
-static struct list_head_t inodes_lru_list;
+/* inodes lists */
+static struct list_head_t free_inodes;
+static struct list_head_t used_inodes;
 
 /*
  * Clear an inode.
  */
-static void clear_inode(struct inode_t *inode)
+void clear_inode(struct inode_t *inode)
 {
+	/* clear inode */
 	list_del(&inode->i_list);
 	htable_delete(&inode->i_htable);
 	memset(inode, 0, sizeof(struct inode_t));
+
+	/* put it in free list */
+	list_add(&inode->i_list, &free_inodes);
 }
 
 /*
@@ -32,18 +37,25 @@ struct inode_t *get_empty_inode(struct super_block_t *sb)
 	struct list_head_t *pos;
 	struct inode_t *inode;
 
-	/* find a free inode */
-	list_for_each(pos, &inodes_lru_list) {
-		inode = list_entry(pos, struct inode_t, i_list);
-		if (!inode->i_ref)
-			goto found;
+	/* try to get a free inode */
+	if (!list_empty(&free_inodes)) {
+		inode = list_first_entry(&free_inodes, struct inode_t, i_list);
+		goto found;
+	}
+
+	/* if no free inodes, try to grab a used one */
+	if (list_empty(&free_inodes)) {
+		list_for_each(pos, &used_inodes) {
+			inode = list_entry(pos, struct inode_t, i_list);
+			if (!inode->i_ref) {
+				clear_inode(inode);
+				goto found;
+			}
+		}
 	}
 
 	return NULL;
 found:
-	/* clear inode */
-	clear_inode(inode);
-
 	/* set inode */
 	inode->i_sb = sb;
 	inode->i_ref = 1;
@@ -52,7 +64,8 @@ found:
 	INIT_LIST_HEAD(&inode->i_mapping.dirty_pages);
 
 	/* put inode at the end of LRU list */
-	list_add_tail(&inode->i_list, &inodes_lru_list);
+	list_del(&inode->i_list);
+	list_add_tail(&inode->i_list, &used_inodes);
 
 	return inode;
 }
@@ -195,9 +208,10 @@ int iinit()
 	}
 
 	/* add all inodes to free list */
-	INIT_LIST_HEAD(&inodes_lru_list);
+	INIT_LIST_HEAD(&free_inodes);
+	INIT_LIST_HEAD(&used_inodes);
 	for (i = 0; i < NR_INODE; i++)
-		list_add(&inode_table[i].i_list, &inodes_lru_list);
+		list_add(&inode_table[i].i_list, &free_inodes);
 
 	/* init inode hash table */
 	htable_init(inode_htable, inode_htable_bits);
