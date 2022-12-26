@@ -12,7 +12,7 @@
 #include <mm/mm.h>
 #include <time.h>
 
-#define NR_INODE			1024
+#define NR_INODE			4096
 #define NR_FILE				256
 
 #define MS_RDONLY			1
@@ -97,6 +97,8 @@ struct inode_t {
 	char				i_pipe;
 	struct inode_t *		i_mount;
 	struct address_space_t		i_mapping;
+	struct list_head_t		i_list;
+	struct htable_link_t		i_htable;
 	union {
 		struct minix_inode_info_t	minix_i;
 		struct pipe_inode_info_t	pipe_i;
@@ -212,6 +214,7 @@ int generic_writepage(struct page_t *page);
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode(struct super_block_t *sb);
+int iinit();
 
 /* file operations */
 struct file_t *get_empty_filp();
@@ -220,9 +223,13 @@ struct file_t *get_empty_filp();
 struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int follow_links);
 int open_namei(int dirfd, struct inode_t *base, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
 
-/* character/block device drivers */
+/* character device driver */
 struct inode_operations_t *char_get_driver(struct inode_t *inode);
+
+/* block device driver */
 struct inode_operations_t *block_get_driver(struct inode_t *inode);
+int block_read(dev_t dev, struct buffer_head_t *bh);
+int block_write(dev_t dev, struct buffer_head_t *bh);
 
 /* filemap operations */
 int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);

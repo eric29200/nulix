@@ -238,7 +238,7 @@ struct buffer_head_t *bread(dev_t dev, uint32_t block, size_t blocksize)
 		return NULL;
 
 	/* read it from device */
-	if (!bh->b_uptodate && ata_read(dev, bh) != 0) {
+	if (!bh->b_uptodate && block_read(dev, bh) != 0) {
 		brelse(bh);
 		return NULL;
 	}
@@ -258,7 +258,7 @@ int bwrite(struct buffer_head_t *bh)
 		return -EINVAL;
 
 	/* write to block device */
-	ret = ata_write(bh->b_dev, bh);
+	ret = block_write(bh->b_dev, bh);
 	if (ret)
 		return ret;
 
@@ -385,7 +385,7 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 		if (tmp) {
 			/* read it from disk if needed */
 			if (!tmp->b_uptodate)
-				ata_read(sb->s_dev, tmp);
+				block_read(sb->s_dev, tmp);
 
 			/* copy data to user address space */
 			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
@@ -396,7 +396,7 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 		}
 		
 		/* read buffer on disk */
-		ata_read(sb->s_dev, next);
+		block_read(sb->s_dev, next);
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;
@@ -448,7 +448,7 @@ int generic_writepage(struct page_t *page)
 		}
 
 		/* write buffer on disk */
-		ata_write(sb->s_dev, next);
+		block_write(sb->s_dev, next);
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;

@@ -7,37 +7,77 @@
 #include <string.h>
 
 /* global inode table */
-static struct inode_t inode_table[NR_INODE];
+static int inode_htable_bits = 0;
+static struct inode_t *inode_table = NULL;
+static struct htable_link_t **inode_htable = NULL;
+
+/* inodes LRU list */
+static struct list_head_t inodes_lru_list;
+
+/*
+ * Clear an inode.
+ */
+static void clear_inode(struct inode_t *inode)
+{
+	list_del(&inode->i_list);
+	htable_delete(&inode->i_htable);
+	memset(inode, 0, sizeof(struct inode_t));
+}
 
 /*
  * Get an empty inode.
  */
 struct inode_t *get_empty_inode(struct super_block_t *sb)
 {
+	struct list_head_t *pos;
 	struct inode_t *inode;
-	int i;
 
 	/* find a free inode */
-	for (i = 0; i < NR_INODE; i++) {
-		if (!inode_table[i].i_ref) {
-			inode = &inode_table[i];
-			break;
-		}
+	list_for_each(pos, &inodes_lru_list) {
+		inode = list_entry(pos, struct inode_t, i_list);
+		if (!inode->i_ref)
+			goto found;
 	}
 
-	/* no more inode */
-	if (!inode)
-		return NULL;
+	return NULL;
+found:
+	/* clear inode */
+	clear_inode(inode);
 
-	/* reset inode */
-	memset(inode, 0, sizeof(struct inode_t));
+	/* set inode */
 	inode->i_sb = sb;
 	inode->i_ref = 1;
 	inode->i_mapping.inode = inode;
 	INIT_LIST_HEAD(&inode->i_mapping.clean_pages);
 	INIT_LIST_HEAD(&inode->i_mapping.dirty_pages);
 
+	/* put inode at the end of LRU list */
+	list_add_tail(&inode->i_list, &inodes_lru_list);
+
 	return inode;
+}
+
+/*
+ * Find an inode in hash table.
+ */
+static struct inode_t *find_inode(struct super_block_t *sb, ino_t ino)
+{
+	struct htable_link_t *node;
+	struct inode_t *inode;
+
+	/* try to find inode in cache */
+	node = htable_lookup(inode_htable, ino, inode_htable_bits);
+	while (node) {
+		inode = htable_entry(node, struct inode_t, i_htable);
+		if (inode->i_ino == ino && inode->i_sb == sb) {
+			inode->i_ref++;
+			return inode;
+		}
+
+		node = node->next;
+	}
+
+	return NULL;
 }
 
 /*
@@ -46,24 +86,19 @@ struct inode_t *get_empty_inode(struct super_block_t *sb)
 struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 {
 	struct inode_t *inode, *tmp;
-	int i;
 
 	/* try to find inode in table */
-	for (i = 0; i < NR_INODE; i++) {
-		if (inode_table[i].i_ino == ino && inode_table[i].i_sb == sb) {
-			inode = &inode_table[i];
-			inode->i_ref++;
-
-			/* cross mount point */
-			if (inode->i_mount) {
-				tmp = inode->i_mount;
-				tmp->i_ref++;
-				iput(inode);
-				inode = tmp;
-			}
-
-			return inode;
+	inode = find_inode(sb, ino);
+	if (inode) {
+		/* cross mount point */
+		if (inode->i_mount) {
+			tmp = inode->i_mount;
+			tmp->i_ref++;
+			iput(inode);
+			inode = tmp;
 		}
+
+		return inode;
 	}
 
 	/* get an empty inode */
@@ -74,6 +109,9 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 	/* read inode */
 	inode->i_ino = ino;
 	sb->s_op->read_inode(inode);
+
+	/* hash the new inode */
+	htable_insert(inode_htable, &inode->i_htable, ino, inode_htable_bits);
 
 	return inode;
 }
@@ -112,8 +150,57 @@ void iput(struct inode_t *inode)
 
 	/* sync inode */
 	sync_inode(inode);
+}
 
-	/* no more references : reset inode */
-	if (inode->i_ref == 0)
-		memset(inode, 0, sizeof(struct inode_t));
+/*
+ * Init inodes.
+ */
+int iinit()
+{
+	void *addr;
+	int nr, i;
+
+	inode_htable_bits = blksize_bits(NR_INODE);
+
+	/* allocate inodes */
+	nr = 1 + NR_INODE * sizeof(struct inode_t) / PAGE_SIZE;
+	for (i = 0; i < nr; i++) {
+		/* get a free page */
+		addr = get_free_page();
+		if (!addr)
+			return -ENOMEM;
+
+		/* reset page */
+		memset(addr, 0, PAGE_SIZE);
+
+		/* set inode table */
+		if (i == 0)
+			inode_table = addr;
+	}
+
+	/* allocate inode hash table */
+	nr = 1 + NR_INODE * sizeof(struct htable_link_t *) / PAGE_SIZE;
+	for (i = 0; i < nr; i++) {
+		/* get a free page */
+		addr = get_free_page();
+		if (!addr)
+			return -ENOMEM;
+
+		/* reset page */
+		memset(addr, 0, PAGE_SIZE);
+
+		/* set inode hash table */
+		if (i == 0)
+			inode_htable = addr;
+	}
+
+	/* add all inodes to free list */
+	INIT_LIST_HEAD(&inodes_lru_list);
+	for (i = 0; i < NR_INODE; i++)
+		list_add(&inode_table[i].i_list, &inodes_lru_list);
+
+	/* init inode hash table */
+	htable_init(inode_htable, inode_htable_bits);
+
+	return 0;
 }

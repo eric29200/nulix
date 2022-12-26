@@ -64,3 +64,29 @@ int generic_block_read(struct file_t *filp, char *buf, int count)
 
 	return count - left;
 }
+
+/*
+ * Read a block.
+ */
+int block_read(dev_t dev, struct buffer_head_t *bh)
+{
+	switch (major(dev)) {
+		case DEV_ATA_MAJOR:
+			return ata_read(dev, bh);
+		default:
+			return -EINVAL;
+	}
+}
+
+/*
+ * Write a block.
+ */
+int block_write(dev_t dev, struct buffer_head_t *bh)
+{
+	switch (major(dev)) {
+		case DEV_ATA_MAJOR:
+			return ata_write(dev, bh);
+		default:
+			return -EINVAL;
+	}
+}
