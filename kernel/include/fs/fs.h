@@ -67,15 +67,6 @@ struct super_block_t {
 };
 
 /*
- * Address space.
- */
-struct address_space_t {
-	struct list_head_t		clean_pages;
-	struct list_head_t		dirty_pages;
-	struct inode_t *		inode;
-};
-
-/*
  * Generic inode.
  */
 struct inode_t {
@@ -96,7 +87,7 @@ struct inode_t {
 	dev_t				i_rdev;
 	char				i_pipe;
 	struct inode_t *		i_mount;
-	struct address_space_t		i_mapping;
+	struct list_head_t		i_pages;
 	struct list_head_t		i_list;
 	struct htable_link_t		i_htable;
 	union {
@@ -234,7 +225,7 @@ int block_write(dev_t dev, struct buffer_head_t *bh);
 
 /* filemap operations */
 int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);
-int filemap_fdatasync(struct address_space_t *mapping);
+int filemap_fdatasync(struct inode_t *inode);
 
 /* system calls */
 int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);

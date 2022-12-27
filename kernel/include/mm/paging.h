@@ -3,6 +3,7 @@
 
 #include <x86/interrupt.h>
 #include <lib/list.h>
+#include <lib/htable.h>
 #include <stddef.h>
 
 #define PAGE_SHIFT			12
@@ -50,11 +51,11 @@
 #define P2V(addr)			((addr) + KPAGE_START)
 #define V2P(addr)			((addr) - KPAGE_START)
 #define MAP_NR(addr)			(V2P(addr) >> PAGE_SHIFT)
-#define PAGE_ADDRESS(page)		(KPAGE_START + (page)->page * PAGE_SIZE)
+#define PAGE_ADDRESS(p)			(KPAGE_START + (p)->page * PAGE_SIZE)
 
 /* defined in paging.c */
 extern uint32_t placement_address;
-extern uint32_t nb_pages;
+extern uint32_t nr_pages;
 extern struct page_t *page_table;
 extern struct page_directory_t *kernel_pgd;
 
@@ -81,7 +82,9 @@ struct page_t {
 	int 			count;					/* reference count */
 	struct inode_t *	inode;					/* inode */
 	off_t			offset;					/* offset in inode */
+	char			dirty;					/* dirty page */
 	struct list_head_t	list;					/* next page */
+	struct htable_link_t	htable;					/* page hash */
 };
 
 int init_paging(uint32_t start, uint32_t end);
@@ -92,5 +95,9 @@ void switch_page_directory(struct page_directory_t *pgd);
 void page_fault_handler(struct registers_t *regs);
 struct page_directory_t *clone_page_directory(struct page_directory_t *pgd);
 void free_page_directory(struct page_directory_t *pgd);
+
+/* page cache */
+struct page_t *find_page(struct inode_t *inode, off_t offset);
+void add_to_page_cache(struct page_t *page, struct inode_t *inode, off_t offset);
 
 #endif

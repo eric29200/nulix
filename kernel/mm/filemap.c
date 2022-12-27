@@ -11,24 +11,23 @@ static struct page_t *fill_page(struct inode_t *inode, off_t offset)
 {
 	struct page_t *page;
 	uint32_t new_page;
-	int ret;
+
+	/* try to get page from cache */
+	page = find_page(inode, offset);
+	if (page)
+		return page;
 
 	/* get a new page */
 	new_page = (uint32_t) get_free_page();
 	if (!new_page)
 		return NULL;
 
-	/* get page */
+	/* get page and add it to cache */
 	page = &page_table[MAP_NR(new_page)];
-	page->inode = inode;
-	page->offset = offset;
+	add_to_page_cache(page, inode, offset);
 
 	/* read page */
-	ret = inode->i_op->readpage(inode, page);
-	if (ret) {
-		free_page((void *) new_page);
-		return NULL;
-	}
+	inode->i_op->readpage(inode, page);
 
 	return page;
 }
@@ -39,7 +38,8 @@ static struct page_t *fill_page(struct inode_t *inode, off_t offset)
 static struct page_t *filemap_nopage(struct vm_area_t *vma, uint32_t address)
 {
 	struct inode_t *inode = vma->vm_inode;
-	off_t offset;
+	struct page_t *page, *new_page;
+	uint32_t offset;
 
 	/* page align address */
 	address = PAGE_ALIGN_DOWN(address);
@@ -50,7 +50,21 @@ static struct page_t *filemap_nopage(struct vm_area_t *vma, uint32_t address)
 		return NULL;
 
 	/* fill in page */
-	return fill_page(inode, offset);
+	page = fill_page(inode, offset);
+
+	/* no share : copy to new page and keep old page in offset */
+	if (page && !(vma->vm_flags & VM_SHARED)) {
+		/* get a new page */
+		new_page = __get_free_page();
+		if (new_page)
+			memcpy((void *) PAGE_ADDRESS(new_page), (void *) PAGE_ADDRESS(page), PAGE_SIZE);
+	
+		/* release cache page */
+		__free_page(page);
+		return new_page;
+	}
+
+	return page;
 }
 
 /*
@@ -88,29 +102,57 @@ int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
 /*
  * Write dirty pages.
  */
-int filemap_fdatasync(struct address_space_t *mapping)
+int filemap_fdatasync(struct inode_t *inode)
 {
-	struct list_head_t *pos, *n;
+	struct list_head_t *pos;
 	struct page_t *page;
 	int ret = 0, err;
 
 	/* writepage not implemented */
-	if (!mapping->inode->i_op->writepage)
+	if (!inode->i_op->writepage)
 		return -EINVAL;
 
-	/* for each dirty page */
-	list_for_each_safe(pos, n, &mapping->dirty_pages) {
+	/* for each page */
+	list_for_each(pos, &inode->i_pages) {
 		page = list_entry(pos, struct page_t, list);
+		if (!page->dirty)
+			continue;
 
-		/* write page */
-		err = mapping->inode->i_op->writepage(page);
+		err = inode->i_op->writepage(page);
 		if (err && !ret)
 			ret = err;
 
-		/* put it in clean list */
-		list_del(&page->list);
-		list_add(&page->list, &mapping->clean_pages);
+		page->dirty = 0;
 	}
 
 	return ret;
+}
+
+/*
+ * Truncate inode pages.
+ */
+void truncate_inode_pages(struct inode_t *inode, off_t start)
+{
+	struct list_head_t *pos, *n;
+	struct page_t *page;
+	off_t offset;
+
+	list_for_each_safe(pos, n, &inode->i_pages) {
+		page = list_entry(pos, struct page_t, list);
+		offset = page->offset;
+
+		/* full page truncate */
+		if (offset >= start) {
+			page->inode = NULL;
+			page->dirty = 0;
+			htable_delete(&page->htable);
+			__free_page(page);
+			continue;
+		}
+
+		/* partial page truncate */
+		offset = start - offset;
+		if (offset < PAGE_SIZE)
+			memset((void *) (PAGE_ADDRESS(page) + offset), 0, PAGE_SIZE - offset);
+	}
 }

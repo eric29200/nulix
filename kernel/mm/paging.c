@@ -7,10 +7,12 @@
 #include <stderr.h>
 
 /* global pages */
-uint32_t nb_pages;
+uint32_t nr_pages;
 struct page_t *page_table;
 static struct list_head_t free_pages;
 static struct list_head_t used_pages;
+static int page_htable_bits = 0;
+static struct htable_link_t **page_htable = NULL;
 
 /* page directories */
 struct page_directory_t *kernel_pgd = NULL;
@@ -29,7 +31,7 @@ static inline void flush_tlb(uint32_t address)
 /*
  * Get a free page.
  */
-static struct page_t *__get_free_page()
+struct page_t *__get_free_page()
 {
 	struct page_t *page;
 
@@ -56,7 +58,7 @@ static struct page_t *__get_free_page()
 /*
  * Free a page.
  */
-static void __free_page(struct page_t *page)
+void __free_page(struct page_t *page)
 {
 	if (!page)
 		return;
@@ -66,6 +68,37 @@ static void __free_page(struct page_t *page)
 		list_del(&page->list);
 		list_add(&page->list, &free_pages);
 	}
+}
+
+/*
+ * Get a free page.
+ */
+void *get_free_page()
+{
+	struct page_t *page;
+
+	/* get a free page */
+	page = __get_free_page();
+	if (!page)
+		return NULL;
+
+	/* make virtual address */
+	return (void *) P2V(page->page * PAGE_SIZE);
+}
+
+/*
+ * Free a page.
+ */
+void free_page(void *address)
+{
+	uint32_t page_idx;
+
+	/* get page index */
+	page_idx = MAP_NR((uint32_t) address);
+	
+	/* free page */
+	if (page_idx && page_idx < nr_pages)
+		__free_page(&page_table[page_idx]);
 }
 
 /*
@@ -198,7 +231,7 @@ static void unmap_page(uint32_t address, struct page_directory_t *pgd)
 
 	/* free page */
 	page_idx = PTE_PAGE(*pte);
-	if (page_idx && page_idx < nb_pages)
+	if (page_idx && page_idx < nr_pages)
 		__free_page(&page_table[page_idx]);
 
 	/* reset page table entry */
@@ -276,19 +309,13 @@ static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 	/* set page table entry */
 	set_pte(pte, vma->vm_page_prot, page);
 
-	/* add page to clean pages */
-	if (!vma->vm_inode) {
-		list_del(&page->list);
-		list_add(&page->list, &vma->vm_inode->i_mapping.clean_pages);
-	}
-
 	return 0;
 }
 
 /*
  * Handle a read only page fault.
  */
-static int do_wp_page(struct task_t *task, struct vm_area_t *vma, uint32_t address)
+static int do_wp_page(struct task_t *task, uint32_t address)
 {
 	uint32_t *pte, page_idx;
 	struct page_t *page;
@@ -300,19 +327,13 @@ static int do_wp_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 
 	/* get page */
 	page_idx = PTE_PAGE(*pte);
-	if (page_idx <= 0 || page_idx >= nb_pages)
+	if (page_idx <= 0 || page_idx >= nr_pages)
 		return -EINVAL;
 	page = &page_table[page_idx];
 
 	/* make page table entry writable */
 	*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
 	
-	/* add page to dirty pages */
-	if (vma->vm_inode && (vma->vm_flags & VM_SHARED)) {
-		list_del(&page->list);
-		list_add(&page->list, &vma->vm_inode->i_mapping.dirty_pages);
-	}
-
 	return 0;
 }
 
@@ -363,7 +384,7 @@ good_area:
 
 	/* present page : try to make it writable */
 	if (present) {
-		ret = do_wp_page(current_task, vma, fault_addr);
+		ret = do_wp_page(current_task, fault_addr);
 		if (ret)
 			goto bad_area;
 		else
@@ -436,15 +457,14 @@ static struct page_table_t *clone_page_table(struct page_table_t *src)
 		}
 
 		/* set page table entry */
-		ret = set_pte(&pgt->pages[i], PAGE_READONLY, page);
+		ret = set_pte(&pgt->pages[i], PTE_PROT(src->pages[i]), page);
 		if (ret) {
 			__free_page(page);
 			kfree(pgt);
 			return NULL;
 		}
 
-		/* set page */
-		pgt->pages[i] |= PTE_PROT(src->pages[i]);
+		/* copy physical page */
 		copy_page_physical(PTE_PAGE(src->pages[i]) * PAGE_SIZE, PTE_PAGE(pgt->pages[i]) * PAGE_SIZE);
 	}
 
@@ -501,7 +521,7 @@ static void free_page_table(struct page_table_t *pgt)
 
 	for (i = 0; i < 1024; i++) {
 		page_idx = PTE_PAGE(pgt->pages[i]);
-		if (page_idx > 0 && page_idx < nb_pages) {
+		if (page_idx > 0 && page_idx < nr_pages) {
 			page = &page_table[page_idx];
 			list_del(&page->list);
 			list_add(&page->list, &free_pages);
@@ -531,34 +551,88 @@ void free_page_directory(struct page_directory_t *pgd)
 }
 
 /*
- * Get a free page.
+ * Hash an inode/offset.
  */
-void *get_free_page()
+static inline uint32_t __page_hashfn(struct inode_t *inode, off_t offset)
 {
-	struct page_t *page;
-
-	/* get a free page */
-	page = __get_free_page();
-	if (!page)
-		return NULL;
-
-	/* make virtual address */
-	return (void *) P2V(page->page * PAGE_SIZE);
+#define i (((uint32_t) inode) / (sizeof(struct inode_t) & ~(sizeof(struct inode_t) - 1)))
+#define o (offset >> PAGE_SHIFT)
+#define s(x) ((x) + ((x) >> page_htable_bits))
+	return s(i + o) & ((1 << page_htable_bits) - 1);
+#undef i
+#undef o
+#undef s
 }
 
 /*
- * Free a page.
+ * Find a page in hash table.
  */
-void free_page(void *address)
+struct page_t *find_page(struct inode_t *inode, off_t offset)
 {
-	uint32_t page_idx;
+	struct htable_link_t *node;
+	struct page_t *page;
 
-	/* get page index */
-	page_idx = MAP_NR((uint32_t) address);
+	/* try to find buffer in cache */
+	node = htable_lookup(page_htable, __page_hashfn(inode, offset), page_htable_bits);
+	while (node) {
+		page = htable_entry(node, struct page_t, htable);
+		if (page->inode == inode && page->offset == offset) {
+			page->count++;
+			return page;
+		}
+
+		node = node->next;
+	}
+
+	return NULL;
+}
+
+/*
+ * Cache a page.
+ */
+void add_to_page_cache(struct page_t *page, struct inode_t *inode, off_t offset)
+{
+	/* set page */
+	page->count++;
+	page->inode = inode;
+	page->offset = offset;
 	
-	/* free page */
-	if (page_idx && page_idx < nb_pages)
-		__free_page(&page_table[page_idx]);
+	/* cache page */
+	htable_delete(&page->htable);
+	htable_insert(page_htable, &page->htable, __page_hashfn(inode, offset), page_htable_bits);
+
+	/* add page to inode */
+	list_del(&page->list);
+	list_add(&page->list, &inode->i_pages);
+}
+
+/*
+ * Init page cache.
+ */
+int init_page_cache()
+{
+	uint32_t addr, nr, i;
+
+	/* compute htable bits */
+	page_htable_bits = blksize_bits(nr_pages);
+
+	/* allocate page hash table */
+	nr = 1 + nr_pages * sizeof(struct htable_link_t *) / PAGE_SIZE;
+	for (i = 0; i < nr; i++) {
+		/* get a free page */
+		addr = (uint32_t) get_free_page();
+		if (!addr)
+			return -ENOMEM;
+
+		/* reset page */
+		memset((void *) addr, 0, PAGE_SIZE);
+
+		/* set buffer hash table */
+		if (i == 0)
+			page_htable = (struct htable_link_t **) addr;
+	}
+
+	return 0;
 }
 
 /*
@@ -566,14 +640,14 @@ void free_page(void *address)
  */
 int init_paging(uint32_t start, uint32_t end)
 {
-	uint32_t address, last_kernel_addr, i, *pte;
+	uint32_t addr, last_kernel_addr, i, *pte;
 	int ret;
 
 	/* unused start address */
 	UNUSED(start);
 
 	/* compute number of pages */
-	nb_pages = end / PAGE_SIZE;
+	nr_pages = end / PAGE_SIZE;
 
 	/* allocate kernel page directory */
 	kernel_pgd = (struct page_directory_t *) kmalloc_align(sizeof(struct page_directory_t));
@@ -582,13 +656,13 @@ int init_paging(uint32_t start, uint32_t end)
 	/* allocate global page table after kernel heap */
 	last_kernel_addr = KHEAP_START + KHEAP_SIZE;
 	page_table = (struct page_t *) last_kernel_addr;
-	memset(page_table, 0, sizeof(struct page_t) * nb_pages);
-	last_kernel_addr += sizeof(struct page_t) * nb_pages;
+	memset(page_table, 0, sizeof(struct page_t) * nr_pages);
+	last_kernel_addr += sizeof(struct page_t) * nr_pages;
 
 	/* init pages */
 	INIT_LIST_HEAD(&free_pages);
 	INIT_LIST_HEAD(&used_pages);
-	for (i = 0; i < nb_pages; i++) {
+	for (i = 0; i < nr_pages; i++) {
 		page_table[i].page = i;
 	
 		/* add pages to used/free list */
@@ -601,9 +675,9 @@ int init_paging(uint32_t start, uint32_t end)
 	}	
 
 	/* identity map kernel pages */
-	for (i = 0, address = 0; address < last_kernel_addr; i++, address += PAGE_SIZE) {
+	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
 		/* make page table entry */
-		pte = get_pte(address, 1, kernel_pgd);
+		pte = get_pte(addr, 1, kernel_pgd);
 		if (!pte)
 			return -ENOMEM;
 
@@ -614,14 +688,14 @@ int init_paging(uint32_t start, uint32_t end)
 	}
 
 	/* map physical pages to highmem */
-	for (i = 0, address = KPAGE_START; i < nb_pages; i++, address += PAGE_SIZE) {
+	for (i = 0, addr = KPAGE_START; i < nr_pages; i++, addr += PAGE_SIZE) {
 		/* make page table entry */
-		pte = get_pte(address, 1, kernel_pgd);
+		pte = get_pte(addr, 1, kernel_pgd);
 		if (!pte)
 			return -ENOMEM;
 
 		/* set page table entry */
-		ret = set_pte(pte, V2P(address) < last_kernel_addr ? PAGE_READONLY : PAGE_KERNEL, &page_table[i]);
+		ret = set_pte(pte, V2P(addr) < last_kernel_addr ? PAGE_READONLY : PAGE_KERNEL, &page_table[i]);
 		if (ret)
 			return ret;
 	}
@@ -632,5 +706,6 @@ int init_paging(uint32_t start, uint32_t end)
 	/* enable paging */
 	switch_page_directory(kernel_pgd);
 
-	return 0;
+	/* init page cache */
+	return init_page_cache();
 }

@@ -468,7 +468,7 @@ int binit()
 	int nr, i;
 
 	/* number of buffers = number of pages / 4 */
-	nr_buffer = 1 << blksize_bits(nb_pages / 4);
+	nr_buffer = 1 << blksize_bits(nr_pages / 4);
 	buffer_htable_bits = blksize_bits(nr_buffer);
 
 	/* allocate buffers */

@@ -178,6 +178,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			if (!vm_child)
 				goto err;
 
+			/* copy memory area */
 			vm_child->vm_start = vm_parent->vm_start;
 			vm_child->vm_end = vm_parent->vm_end;
 			vm_child->vm_flags = vm_parent->vm_flags;
@@ -188,6 +189,10 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			if (vm_child->vm_inode)
 				vm_child->vm_inode->i_ref++;
 			list_add_tail(&vm_child->list, &mm_new->vm_list);
+
+			/* shared memory : unmap pages = force page fault, to read from page cache */
+			if (vm_child->vm_flags & VM_SHARED)
+				unmap_pages(vm_child->vm_start, vm_child->vm_end, mm_new->pgd);
 		}
 	}
 

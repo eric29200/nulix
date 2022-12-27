@@ -39,7 +39,10 @@ void init_mem(uint32_t start, uint32_t end);
 void *kmalloc(uint32_t size);
 void *kmalloc_align(uint32_t size);
 void kfree(void *p);
+struct page_t *__get_free_page();
 void *get_free_page();
+void __free_page(struct page_t *page);
 void free_page(void *address);
+void truncate_inode_pages(struct inode_t *inode, off_t start);
 
 #endif

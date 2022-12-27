@@ -20,6 +20,9 @@ static struct list_head_t used_inodes;
  */
 void clear_inode(struct inode_t *inode)
 {
+	/* truncate inode pages */
+	truncate_inode_pages(inode, 0);
+
 	/* clear inode */
 	list_del(&inode->i_list);
 	htable_delete(&inode->i_htable);
@@ -59,9 +62,7 @@ found:
 	/* set inode */
 	inode->i_sb = sb;
 	inode->i_ref = 1;
-	inode->i_mapping.inode = inode;
-	INIT_LIST_HEAD(&inode->i_mapping.clean_pages);
-	INIT_LIST_HEAD(&inode->i_mapping.dirty_pages);
+	INIT_LIST_HEAD(&inode->i_pages);
 
 	/* put inode at the end of LRU list */
 	list_del(&inode->i_list);
@@ -135,7 +136,7 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 static void sync_inode(struct inode_t *inode)
 {
 	/* sync data */
-	filemap_fdatasync(&inode->i_mapping);
+	filemap_fdatasync(inode);
 
 	/* write inode if needed */
 	if (inode->i_dirt && inode->i_sb) {
