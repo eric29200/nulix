@@ -82,7 +82,6 @@ struct page_t {
 	int 			count;					/* reference count */
 	struct inode_t *	inode;					/* inode */
 	off_t			offset;					/* offset in inode */
-	char			dirty;					/* dirty page */
 	struct buffer_head_t *	buffers;				/* buffers of this page */
 	struct list_head_t	list;					/* next page */
 	struct htable_link_t	htable;					/* page hash */

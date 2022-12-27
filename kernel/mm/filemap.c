@@ -100,35 +100,6 @@ int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
 }
 
 /*
- * Write dirty pages.
- */
-int filemap_fdatasync(struct inode_t *inode)
-{
-	struct list_head_t *pos;
-	struct page_t *page;
-	int ret = 0, err;
-
-	/* writepage not implemented */
-	if (!inode->i_op->writepage)
-		return -EINVAL;
-
-	/* for each page */
-	list_for_each(pos, &inode->i_pages) {
-		page = list_entry(pos, struct page_t, list);
-		if (!page->dirty)
-			continue;
-
-		err = inode->i_op->writepage(page);
-		if (err && !ret)
-			ret = err;
-
-		page->dirty = 0;
-	}
-
-	return ret;
-}
-
-/*
  * Truncate inode pages.
  */
 void truncate_inode_pages(struct inode_t *inode, off_t start)
@@ -143,8 +114,6 @@ void truncate_inode_pages(struct inode_t *inode, off_t start)
 
 		/* full page truncate */
 		if (offset >= start) {
-			page->inode = NULL;
-			page->dirty = 0;
 			htable_delete(&page->htable);
 			__free_page(page);
 			continue;

@@ -162,7 +162,6 @@ struct inode_operations_t {
 	void (*truncate)(struct inode_t *);
 	int (*bmap)(struct inode_t *, int);
 	int (*readpage)(struct inode_t *, struct page_t *);
-	int (*writepage)(struct page_t *);
 };
 
 /*
@@ -200,7 +199,6 @@ void try_to_free_buffer(struct buffer_head_t *bh);
 void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_read(struct file_t *filp, char *buf, int count);
 int generic_readpage(struct inode_t *inode, struct page_t *page);
-int generic_writepage(struct page_t *page);
 
 /* inode operations */
 struct inode_t *iget(struct super_block_t *sb, ino_t ino);
@@ -226,7 +224,6 @@ int block_write(dev_t dev, struct buffer_head_t *bh);
 
 /* filemap operations */
 int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);
-int filemap_fdatasync(struct inode_t *inode);
 
 /* system calls */
 int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);

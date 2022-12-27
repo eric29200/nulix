@@ -47,7 +47,7 @@ struct page_t *__get_free_page()
 	/* get first free page */
 	page = list_first_entry(&free_pages, struct page_t, list);
 	page->inode = NULL;
-	page->dirty = 0;
+	page->offset = 0;
 	page->buffers = NULL;
 	page->count = 1;
 

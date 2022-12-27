@@ -136,9 +136,6 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
  */
 static void sync_inode(struct inode_t *inode)
 {
-	/* sync data */
-	filemap_fdatasync(inode);
-
 	/* write inode if needed */
 	if (inode->i_dirt && inode->i_sb) {
 		inode->i_sb->s_op->write_inode(inode);

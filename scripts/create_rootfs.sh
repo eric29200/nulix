@@ -37,7 +37,6 @@ sudo cp -R musl/musl-install/i386-linux-musl/bin tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/sbin tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R rootbase/root tmp/
-sudo cp usr/mmap_test tmp/usr/bin/
 
 # remove x86_64 binaries
 sudo rm -f tmp/bin/pkgconf tmp/bin/ar tmp/bin/as tmp/bin/ld tmp/bin/ld.bfd tmp/bin/objdump
