@@ -4,7 +4,7 @@
 /*
  * Llseek system call.
  */
-int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence)
+int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off64_t *result, int whence)
 {
 	off_t offset;
 

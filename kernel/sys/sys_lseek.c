@@ -4,7 +4,7 @@
 /*
  * Lseek system call.
  */
-off_t sys_lseek(int fd, off_t offset, int whence)
+off_t sys_lseek(int fd, off64_t offset, int whence)
 {
 	/* check file descriptor */
 	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
