@@ -37,5 +37,6 @@ struct vm_area_t *find_vma(struct task_t *task, uint32_t addr);
 struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr);
 struct vm_area_t *find_vma_next(struct task_t *task, uint32_t addr);
 struct vm_area_t *find_vma_intersection(struct task_t *task, uint32_t start, uint32_t end);
+void vmtruncate(struct inode_t *inode, off_t offset);
 
 #endif

@@ -63,6 +63,7 @@ found:
 	inode->i_sb = sb;
 	inode->i_ref = 1;
 	INIT_LIST_HEAD(&inode->i_pages);
+	INIT_LIST_HEAD(&inode->i_mmap);
 
 	/* put inode at the end of LRU list */
 	list_del(&inode->i_list);

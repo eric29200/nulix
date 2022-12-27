@@ -6,17 +6,13 @@
 /*
  * Truncate system call.
  */
-int do_truncate(const char *pathname, off_t length)
+int do_truncate(struct inode_t *inode, off_t length)
 {
-	struct inode_t *inode;
-
-	/* get inode */
-	inode = namei(AT_FDCWD, NULL, pathname, 1);
-	if (!inode)
-		return -ENOENT;
-
 	/* set new size */
 	inode->i_size = length;
+
+	/* truncate virtual mapping */
+	vmtruncate(inode, length);
 
 	/* truncate */
 	if (inode->i_op && inode->i_op->truncate)
@@ -24,7 +20,6 @@ int do_truncate(const char *pathname, off_t length)
 
 	/* release inode */
 	inode->i_dirt = 1;
-	iput(inode);
 
 	return 0;
 }
@@ -43,15 +38,5 @@ int do_ftruncate(int fd, off_t length)
 	/* get inode */
 	inode = current_task->files->filp[fd]->f_inode;
 
-	/* set new size */
-	inode->i_size = length;
-
-	/* truncate */
-	if (inode->i_op && inode->i_op->truncate)
-		inode->i_op->truncate(inode);
-
-	/* mark inode dirty */
-	inode->i_dirt = 1;
-
-	return 0;
+	return do_truncate(inode, length);
 }

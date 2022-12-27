@@ -213,10 +213,12 @@ int open_namei(int dirfd, struct inode_t *base, const char *pathname, int flags,
 		return -EACCES;
 
 	/* truncate file */
-	if (flags & O_TRUNC && (*res_inode)->i_op && (*res_inode)->i_op->truncate) {
-		(*res_inode)->i_size = 0;
-		(*res_inode)->i_op->truncate(*res_inode);
-		(*res_inode)->i_dirt = 1;
+	if (flags & O_TRUNC) {
+		err = do_truncate(*res_inode, 0);
+		if (err) {
+			iput(inode);
+			return err;
+		}
 	}
 
 	return 0;

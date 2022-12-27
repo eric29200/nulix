@@ -26,6 +26,7 @@ struct vm_area_t {
 	struct inode_t *		vm_inode;
 	struct vm_operations_t *	vm_ops;
 	struct list_head_t		list;
+	struct list_head_t		list_share;
 };
 
 /*

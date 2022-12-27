@@ -68,9 +68,9 @@ static struct page_t *filemap_nopage(struct vm_area_t *vma, uint32_t address)
 }
 
 /*
- * Private file mapping operations.
+ * File mapping operations.
  */
-static struct vm_operations_t file_private_mmap = {
+static struct vm_operations_t file_mmap = {
 	.nopage		= filemap_nopage,
 };
 
@@ -94,7 +94,10 @@ int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
 
 	/* set memory region */
 	vma->vm_inode = inode;
-	vma->vm_ops = &file_private_mmap;
+	vma->vm_ops = &file_mmap;
+
+	/* add memory region to inode */
+	list_add_tail(&vma->list_share, &inode->i_mmap);
 
 	return 0;
 }

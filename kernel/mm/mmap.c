@@ -102,6 +102,7 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int prot, int f
 		return NULL;
 
 	/* set new memory region */
+	memset(vm, 0, sizeof(struct vm_area_t));
 	vm->vm_start = addr;
 	vm->vm_end = addr + len;
 	vm->vm_flags = prot & (VM_READ | VM_WRITE | VM_EXEC);
@@ -229,8 +230,10 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 
 	/* unmap the whole area */
 	if (addr == vm->vm_start && end == vm->vm_end) {
-		if (vm->vm_inode)
+		if (vm->vm_inode) {
+			list_del(&vm->list_share);
 			iput(vm->vm_inode);
+		}
 
 		list_del(&vm->list);
 		kfree(vm);
@@ -250,15 +253,20 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 			return -ENOMEM;
 
 		/* set new memory region = after the hole */
+		memset(vm_new, 0, sizeof(struct vm_area_t));
 		vm_new->vm_start = end;
 		vm_new->vm_end = vm->vm_end;
 		vm_new->vm_flags = vm->vm_flags;
 		vm_new->vm_page_prot = vm->vm_page_prot;
 		vm_new->vm_offset = vm->vm_offset + (end - vm->vm_start);
 		vm_new->vm_inode = vm->vm_inode;
-		if (vm_new->vm_inode)
-			vm_new->vm_inode->i_ref++;
 		vm_new->vm_ops = vm->vm_ops;
+		
+		/* update inode */
+		if (vm_new->vm_inode) {
+			list_add(&vm_new->list_share, &vm_new->vm_inode->i_mmap);
+			vm_new->vm_inode->i_ref++;
+		}
 
 		/* add new memory region after old one */
 		list_add(&vm_new->list, &vm->list);
@@ -391,4 +399,15 @@ void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flag
 	printf("mremap not implemented\n");
 err:
 	return NULL;
+}
+
+/*
+ * Truncate memory regions.
+ */
+void vmtruncate(struct inode_t *inode, off_t offset)
+{
+	UNUSED(offset);
+
+	if (!list_empty(&inode->i_mmap))
+		printf("vmtruncate() not implemented");
 }

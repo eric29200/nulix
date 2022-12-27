@@ -179,6 +179,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 				goto err;
 
 			/* copy memory area */
+			memset(vm_child, 0, sizeof(struct vm_area_t));
 			vm_child->vm_start = vm_parent->vm_start;
 			vm_child->vm_end = vm_parent->vm_end;
 			vm_child->vm_flags = vm_parent->vm_flags;
@@ -186,9 +187,13 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vm_child->vm_offset = vm_parent->vm_offset;
 			vm_child->vm_inode = vm_parent->vm_inode;
 			vm_child->vm_ops = vm_parent->vm_ops;
-			if (vm_child->vm_inode)
-				vm_child->vm_inode->i_ref++;
 			list_add_tail(&vm_child->list, &mm_new->vm_list);
+			
+			/* update inode */
+			if (vm_child->vm_inode) {
+				vm_child->vm_inode->i_ref++;
+				list_add(&vm_child->list_share, &vm_child->vm_inode->i_mmap);
+			}
 
 			/* shared memory : unmap pages = force page fault, to read from page cache */
 			if (vm_child->vm_flags & VM_SHARED)
@@ -396,8 +401,10 @@ void task_exit_mmap(struct mm_struct *mm)
 		vm_area = list_entry(pos, struct vm_area_t, list);
 		if (vm_area) {
 			/* release inode */
-			if (vm_area->vm_inode)
+			if (vm_area->vm_inode) {
+				list_del(&vm_area->list_share);
 				iput(vm_area->vm_inode);
+			}
 
 			/* unmap pages */
 			unmap_pages(vm_area->vm_start, vm_area->vm_end, mm->pgd);

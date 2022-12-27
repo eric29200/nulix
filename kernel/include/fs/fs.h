@@ -88,6 +88,7 @@ struct inode_t {
 	char				i_pipe;
 	struct inode_t *		i_mount;
 	struct list_head_t		i_pages;
+	struct list_head_t		i_mmap;
 	struct list_head_t		i_list;
 	struct htable_link_t		i_htable;
 	union {
@@ -257,7 +258,7 @@ int do_fchmod(int fd, mode_t mode);
 int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev);
 int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags);
 int do_fchown(int fd, uid_t owner, gid_t group);
-int do_truncate(const char *pathname, off_t length);
+int do_truncate(struct inode_t *inode, off_t length);
 int do_ftruncate(int fd, off_t length);
 int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t *times, int flags);
 int do_fcntl(int fd, int cmd, unsigned long arg);
