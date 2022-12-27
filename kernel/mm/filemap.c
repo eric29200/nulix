@@ -96,9 +96,6 @@ int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
 	vma->vm_inode = inode;
 	vma->vm_ops = &file_mmap;
 
-	/* add memory region to inode */
-	list_add_tail(&vma->list_share, &inode->i_mmap);
-
 	return 0;
 }
 

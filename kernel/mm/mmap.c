@@ -125,6 +125,9 @@ static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int prot, int f
 		ret = filp->f_op->mmap(filp->f_inode, vm);
 		if (ret)
 			goto err;
+
+		/* add memory region to inode */
+		list_add_tail(&vm->list_share, &filp->f_inode->i_mmap);
 	}
 
 	/* add it to the list */
