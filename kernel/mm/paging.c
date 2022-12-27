@@ -37,8 +37,8 @@ struct page_t *__get_free_page()
 
 	/* try to get a page */
 	if (list_empty(&free_pages)) {
-		/* no more pages : reclaim buffers */
-		reclaim_buffers();
+		/* no more pages */
+		reclaim_pages();
 
 		if (list_empty(&free_pages))
 			return NULL;
@@ -46,6 +46,9 @@ struct page_t *__get_free_page()
 
 	/* get first free page */
 	page = list_first_entry(&free_pages, struct page_t, list);
+	page->inode = NULL;
+	page->dirty = 0;
+	page->buffers = NULL;
 	page->count = 1;
 
 	/* update lists */
@@ -65,6 +68,7 @@ void __free_page(struct page_t *page)
 
 	page->count--;
 	if (!page->count) {
+		page->inode = NULL;
 		list_del(&page->list);
 		list_add(&page->list, &free_pages);
 	}
@@ -100,6 +104,39 @@ void free_page(void *address)
 	if (page_idx && page_idx < nr_pages)
 		__free_page(&page_table[page_idx]);
 }
+
+/*
+ * Reclaim pages, when memory is low.
+ */
+void reclaim_pages()
+{
+	struct page_t *page;
+	uint32_t i;
+
+	for (i = 0; i < nr_pages; i++) {
+		page = &page_table[i];
+
+		/* skip used pages */
+		if (page->count > 1)
+			continue;
+
+		/* is it a buffer cached page ? */
+		if (page->buffers) {
+			try_to_free_buffer(page->buffers);
+			continue;
+		}
+
+		/* is it a page cached page ? */
+		if (page->inode) {
+			/* remove from page cache */
+			htable_delete(&page->htable);
+
+			/* free page */
+			__free_page(page);
+		}
+	}
+}
+
 
 /*
  * Get or create a page table entry from pgd at virtual address.

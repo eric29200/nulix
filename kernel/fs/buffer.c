@@ -66,8 +66,8 @@ static struct buffer_head_t *get_unused_buffer()
 
 	/* no more unused buffers */
 	if (list_empty(&unused_list)) {
-		/* reclaim buffers */
-		reclaim_buffers();
+		/* reclaim pages */
+		reclaim_pages();
 
 		/* recheck unused list */
 		if (list_empty(&unused_list))
@@ -159,6 +159,9 @@ static int refill_freelist(size_t blocksize)
 		list_add_tail(&tmp->b_list, &free_list[isize]);
 		tmp = tmp->b_this_page;
 	} while (tmp != bh);
+
+	/* set page buffers */
+	page_table[MAP_NR((uint32_t) page)].buffers = bh;
 
 	return 0;
 }
@@ -285,7 +288,7 @@ void brelse(struct buffer_head_t *bh)
 /*
  * Try to free a buffer.
  */
-static void try_to_free_buffer(struct buffer_head_t *bh)
+void try_to_free_buffer(struct buffer_head_t *bh)
 {
 	struct buffer_head_t *tmp, *tmp1;
 	uint32_t page;
@@ -324,17 +327,6 @@ static void try_to_free_buffer(struct buffer_head_t *bh)
 	
 	/* free page */
 	free_page((void *) page);
-}
-
-/*
- * Reclaim buffers cache.
- */
-void reclaim_buffers()
-{
-	int i;
-
-	for (i = 0; i < nr_buffer; i++)
-		try_to_free_buffer(&buffer_table[i]);
 }
 
 /*

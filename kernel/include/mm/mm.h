@@ -44,6 +44,7 @@ struct page_t *__get_free_page();
 void *get_free_page();
 void __free_page(struct page_t *page);
 void free_page(void *address);
+void reclaim_pages();
 void truncate_inode_pages(struct inode_t *inode, off_t start);
 
 #endif
