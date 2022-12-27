@@ -78,6 +78,9 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
 		bh->b_dirt = 1;
 		brelse(bh);
 
+		/* update page cache */
+		update_vm_cache(filp->f_inode, buf, pos, nb_chars);
+
 		/* update sizes */
 		filp->f_pos += nb_chars;
 		buf += nb_chars;

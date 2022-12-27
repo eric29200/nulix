@@ -156,3 +156,41 @@ void truncate_inode_pages(struct inode_t *inode, off_t start)
 			memset((void *) (PAGE_ADDRESS(page) + offset), 0, PAGE_SIZE - offset);
 	}
 }
+
+/*
+ * Update a page cache copy.
+ */
+void update_vm_cache(struct inode_t *inode, const char *buf, size_t pos, size_t count)
+{
+	struct page_t *page;
+	off_t offset;
+	size_t len;
+	void *addr;
+
+	offset = pos & ~PAGE_MASK;
+	pos = pos & PAGE_MASK;
+	len = PAGE_SIZE - offset;
+
+	while (count > 0) {
+		/* adjust size */
+		if (len > count)
+			len = count;
+
+		/* find page in cache */
+		page = find_page(inode, pos);
+		if (page) {
+			/* update page */
+			addr = (void *) PAGE_ADDRESS(page);
+			memcpy(addr + offset, buf, len);
+
+			/* release page */
+			__free_page(page);
+		}
+
+		count -= len;
+		buf += len;
+		pos += PAGE_SIZE;
+		len = PAGE_SIZE;
+		offset = 0;
+	}
+}

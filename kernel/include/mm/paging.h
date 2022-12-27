@@ -100,5 +100,7 @@ void free_page_directory(struct page_directory_t *pgd);
 /* page cache */
 struct page_t *find_page(struct inode_t *inode, off_t offset);
 void add_to_page_cache(struct page_t *page, struct inode_t *inode, off_t offset);
+void update_vm_cache(struct inode_t *inode, const char *buf, size_t pos, size_t count);
+void truncate_inode_pages(struct inode_t *inode, off_t start);
 
 #endif
