@@ -131,8 +131,8 @@ int proc_write_inode(struct inode_t *inode)
  */
 int proc_put_inode(struct inode_t *inode)
 {
-	if (inode->i_nlinks)
-		inode->i_size = 0;
+	if (!inode->i_ref)
+		clear_inode(inode);
 
 	return 0;
 }

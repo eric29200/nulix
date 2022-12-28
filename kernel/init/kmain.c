@@ -18,6 +18,7 @@
 #include <sys/syscall.h>
 #include <fs/minix_fs.h>
 #include <fs/proc_fs.h>
+#include <fs/tmp_fs.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
@@ -101,6 +102,8 @@ static void kinit()
 		panic("Cannot register minix file system");
 	if (init_proc_fs() != 0)
 		panic("Cannot register proc file system");
+	if (init_tmp_fs() != 0)
+		panic("Cannot register tmp file system");
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");

@@ -213,7 +213,7 @@ static struct inode_t *get_pipe_inode()
 	/* allocate some memory for data */
 	PIPE_BASE(inode) = get_free_page();
 	if (!PIPE_BASE(inode)) {
-		inode->i_ref = 0;
+		clear_inode(inode);
 		return NULL;
 	}
 

@@ -173,7 +173,7 @@ int minix_put_inode(struct inode_t *inode)
 		return -EINVAL;
 
 	/* truncate and free inode */
-	if (!inode->i_nlinks) {
+	if (!inode->i_ref && !inode->i_nlinks) {
 		inode->i_size = 0;
 		minix_truncate(inode);
 		minix_free_inode(inode);

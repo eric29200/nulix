@@ -16,6 +16,14 @@ static struct list_head_t free_inodes;
 static struct list_head_t used_inodes;
 
 /*
+ * Insert an inode in hash table.
+ */
+void insert_inode_hash(struct inode_t *inode)
+{
+	htable_insert(inode_htable, &inode->i_htable, inode->i_ino, inode_htable_bits);
+}
+
+/*
  * Clear an inode.
  */
 void clear_inode(struct inode_t *inode)
@@ -101,6 +109,7 @@ static struct inode_t *find_inode(struct super_block_t *sb, ino_t ino)
 struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 {
 	struct inode_t *inode, *tmp;
+	int ret;
 
 	/* try to find inode in table */
 	inode = find_inode(sb, ino);
@@ -116,6 +125,10 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 		return inode;
 	}
 
+	/* read inode not implemented */
+	if (!sb->s_op->read_inode)
+		return NULL;
+
 	/* get an empty inode */
 	inode = get_empty_inode(sb);
 	if (!inode)
@@ -123,10 +136,14 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 
 	/* read inode */
 	inode->i_ino = ino;
-	sb->s_op->read_inode(inode);
+	ret = sb->s_op->read_inode(inode);
+	if (ret) {
+		clear_inode(inode);
+		return NULL;
+	}
 
 	/* hash the new inode */
-	htable_insert(inode_htable, &inode->i_htable, ino, inode_htable_bits);
+	insert_inode_hash(inode);
 
 	return inode;
 }
@@ -154,10 +171,11 @@ void iput(struct inode_t *inode)
 	/* update inode reference count */
 	inode->i_ref--;
 
-	/* removed inode : truncate and free it */
-	if (!inode->i_nlinks && inode->i_ref == 0 && inode->i_sb) {
+	/* put inode */
+	if (inode->i_sb && inode->i_sb->s_op->put_inode) {
 		inode->i_sb->s_op->put_inode(inode);
-		return;
+		if (!inode->i_nlinks)
+			return;
 	}
 
 	/* sync inode */

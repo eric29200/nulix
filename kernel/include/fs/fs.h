@@ -8,6 +8,7 @@
 #include <fs/statfs.h>
 #include <fs/minix_i.h>
 #include <fs/pipe_i.h>
+#include <fs/tmp_i.h>
 #include <proc/wait.h>
 #include <mm/mm.h>
 #include <time.h>
@@ -94,6 +95,7 @@ struct inode_t {
 	union {
 		struct minix_inode_info_t	minix_i;
 		struct pipe_inode_info_t	pipe_i;
+		struct tmp_inode_info_t		tmp_i;
 	} u;
 };
 
@@ -205,6 +207,7 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino);
 void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode(struct super_block_t *sb);
 void clear_inode(struct inode_t *inode);
+void insert_inode_hash(struct inode_t *inode);
 int iinit();
 
 /* file operations */

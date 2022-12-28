@@ -32,7 +32,7 @@ struct proc_dir_entry_t {
 /* super operations */
 int init_proc_fs();
 
-/* inode  operations */
+/* inode operations */
 int proc_read_inode(struct inode_t *inode);
 int proc_write_inode(struct inode_t *inode);
 int proc_put_inode(struct inode_t *inode);

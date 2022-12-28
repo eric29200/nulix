@@ -56,9 +56,7 @@ int minix_file_write(struct file_t *filp, const char *buf, int count)
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)
-		pos = filp->f_inode->i_size;
-	else
-		pos = filp->f_pos;
+		filp->f_pos = filp->f_inode->i_size;
 
 	left = count;
 	while (left > 0) {

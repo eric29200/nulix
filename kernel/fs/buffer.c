@@ -400,58 +400,6 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 }
 
 /*
- * Write a page.
- */
-int generic_writepage(struct page_t *page)
-{
-	struct inode_t *inode = page->inode;
-	struct super_block_t *sb = inode->i_sb;
-	struct buffer_head_t *bh, *next, *tmp;
-	uint32_t block, address;
-	int nr, i;
-
-	/* compute blocks to read */
-	nr = PAGE_SIZE >> sb->s_blocksize_bits;
-	block = page->offset >> sb->s_blocksize_bits;
-	address = PAGE_ADDRESS(page);
-
-	/* create temporary buffers */
-	bh = create_buffers((void *) address, sb->s_blocksize);
-	if (!bh)
-		return -ENOMEM;
-
-	/* write block by block */
-	for (i = 0, next = bh; i < nr; i++, block++) {
-		/* set block buffer */
-		next->b_dev = sb->s_dev;
-		next->b_block = inode->i_op->bmap(inode, block);
-		next->b_dirt = 1;
-
-		/* check if buffer is already hashed */
-		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
-		if (tmp) {
-			/* update buffer */
-			memcpy(tmp->b_data, next->b_data, sb->s_blocksize);
-			tmp->b_dirt = 1;
-
-			/* release buffer */
-			brelse(tmp);
-			goto next;
-		}
-
-		/* write buffer on disk */
-		block_write(sb->s_dev, next);
- next:
-		/* clear temporary buffer */
-		tmp = next->b_this_page;
-		put_unused_buffer(next);
-		next = tmp;
-	}
-
-	return 0;
-}
-
-/*
  * Init buffers.
  */
 int binit()
