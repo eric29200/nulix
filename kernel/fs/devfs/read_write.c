@@ -39,7 +39,7 @@ int devfs_file_read(struct file_t *filp, char *buf, int count)
 		buf += nb_chars;
 		left -= nb_chars;
 		page_offset += PAGE_SIZE;
-		
+
 		/* end of read */
 		if (left <= 0)
 			break;

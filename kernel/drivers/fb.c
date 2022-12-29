@@ -184,7 +184,7 @@ static int fb_mmap(struct inode_t *inode, struct vm_area_t *vma)
 
 	/* set memory region */
 	vma->vm_inode = inode;
-	
+
 	/* remap frame buffer */
 	ret = remap_page_range(vma->vm_start, fb->addr + vma->vm_offset, vma->vm_end - vma->vm_start, current_task->mm->pgd, PAGE_SHARED);
 	if (ret)

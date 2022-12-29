@@ -129,7 +129,7 @@ void ring_buffer_flush(struct ring_buffer_t *rb)
 	rb->size = 0;
 	rb->head = 0;
 	rb->tail = 0;
-	
+
 	/* wakeup eventual readers/writers */
 	task_wakeup(&rb->wait);
 }

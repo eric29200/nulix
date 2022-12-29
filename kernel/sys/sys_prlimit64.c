@@ -8,7 +8,7 @@
 int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct rlimit64_t *old_limit)
 {
 	struct task_t *task;
-	
+
 	/* check resource */
 	if (resource >= RLIM_NLIMITS)
 		return -EINVAL;

@@ -99,7 +99,7 @@ void free_page(void *address)
 
 	/* get page index */
 	page_idx = MAP_NR((uint32_t) address);
-	
+
 	/* free page */
 	if (page_idx && page_idx < nr_pages)
 		__free_page(&page_table[page_idx]);
@@ -370,7 +370,7 @@ static int do_wp_page(struct task_t *task, uint32_t address)
 
 	/* make page table entry writable */
 	*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
-	
+
 	return 0;
 }
 
@@ -633,7 +633,7 @@ void add_to_page_cache(struct page_t *page, struct inode_t *inode, off_t offset)
 	page->count++;
 	page->inode = inode;
 	page->offset = offset;
-	
+
 	/* cache page */
 	htable_delete(&page->htable);
 	htable_insert(page_htable, &page->htable, __page_hashfn(inode, offset), page_htable_bits);
@@ -701,7 +701,7 @@ int init_paging(uint32_t start, uint32_t end)
 	INIT_LIST_HEAD(&used_pages);
 	for (i = 0; i < nr_pages; i++) {
 		page_table[i].page = i;
-	
+
 		/* add pages to used/free list */
 		if (i * PAGE_SIZE < last_kernel_addr) {
 			page_table[i].count = 1;
@@ -709,7 +709,7 @@ int init_paging(uint32_t start, uint32_t end)
 		} else {
 			list_add_tail(&page_table[i].list, &free_pages);
 		}
-	}	
+	}
 
 	/* identity map kernel pages */
 	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
@@ -736,7 +736,7 @@ int init_paging(uint32_t start, uint32_t end)
 		if (ret)
 			return ret;
 	}
-	  
+
 	/* register page fault handler */
 	register_interrupt_handler(14, page_fault_handler);
 

@@ -537,7 +537,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 
 	/* reset ttys */
 	memset(tty_table, 0, sizeof(struct tty_t) * NR_TTYS);
-	
+
 	/* init ptys */
 	ret = init_pty();
 	if (ret)

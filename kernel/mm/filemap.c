@@ -58,7 +58,7 @@ static struct page_t *filemap_nopage(struct vm_area_t *vma, uint32_t address)
 		new_page = __get_free_page();
 		if (new_page)
 			memcpy((void *) PAGE_ADDRESS(new_page), (void *) PAGE_ADDRESS(page), PAGE_SIZE);
-	
+
 		/* release cache page */
 		__free_page(page);
 		return new_page;

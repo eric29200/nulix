@@ -106,7 +106,7 @@ static struct buffer_head_t *create_buffers(void *page, size_t size)
 		if (!bh)
 			goto err;
 
-		/* set buffer */	
+		/* set buffer */
 		bh->b_data = (char *) (page + offset);
 		bh->b_size = size;
 		bh->b_this_page = head;
@@ -210,7 +210,7 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 		if (list_empty(&free_list[isize]))
 			return NULL;
 	}
-	
+
 	/* get first free buffer */
 	bh = list_first_entry(&free_list[isize], struct buffer_head_t, b_list);
 	list_del(&bh->b_list);
@@ -307,7 +307,7 @@ void try_to_free_buffer(struct buffer_head_t *bh)
 		if (tmp->b_ref || tmp->b_dirt)
 			return;
 
-		/* go to next buffer in page */	
+		/* go to next buffer in page */
 		tmp = tmp->b_this_page;
 	} while (tmp != bh);
 
@@ -321,10 +321,10 @@ void try_to_free_buffer(struct buffer_head_t *bh)
 		htable_delete(&tmp->b_htable);
 		put_unused_buffer(tmp);
 
-		/* go to next buffer in page */	
+		/* go to next buffer in page */
 		tmp = tmp1;
 	} while (tmp != bh);
-	
+
 	/* free page */
 	free_page((void *) page);
 }
@@ -386,7 +386,7 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 			brelse(tmp);
 			goto next;
 		}
-		
+
 		/* read buffer on disk */
 		block_read(sb->s_dev, next);
  next:

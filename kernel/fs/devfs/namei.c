@@ -28,7 +28,7 @@ static struct devfs_dir_entry_t *devfs_find_entry(struct inode_t *dir, const cha
 	/* check file name length */
 	if (name_len <= 0 || name_len > DEVFS_NAME_LEN)
 		return NULL;
-	
+
 	/* compute number of entries per page */
 	nb_entries_per_page = PAGE_SIZE / sizeof(struct devfs_dir_entry_t);
 
@@ -60,10 +60,10 @@ int devfs_add_entry(struct inode_t *dir, const char *name, int name_len, struct 
 	/* check file name */
 	if (name_len <= 0 || name_len > DEVFS_NAME_LEN)
 		return -EINVAL;
-	
+
 	/* compute number of entries per page */
 	nb_entries_per_page = PAGE_SIZE / sizeof(struct devfs_dir_entry_t);
-	
+
 retry:
 	/* walk through all pages */
 	list_for_each(pos, &dir->u.dev_i.i_pages) {
@@ -116,7 +116,7 @@ int devfs_lookup(struct inode_t *dir, const char *name, size_t name_len, struct 
 		iput(dir);
 		return -ENOENT;
 	}
-	
+
 	/* get inode */
 	*res_inode = iget(dir->i_sb, de->d_inode);
 	if (!*res_inode) {

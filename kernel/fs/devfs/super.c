@@ -30,7 +30,7 @@ static struct inode_t *devfs_mkroot(struct super_block_t *sb)
 {
 	struct inode_t *inode;
 	int ret;
-	
+
 	/* create root inode */
 	inode = devfs_new_inode(sb, S_IFDIR | 0755, 0);
 	if (!inode)

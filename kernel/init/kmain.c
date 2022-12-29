@@ -125,12 +125,12 @@ static void kinit()
 	printf("[Kernel] Tmp file system init\n");
 	if (sys_mount("tmp", "/tmp", "tmpfs", MS_RDONLY, NULL) != 0)
 		panic("Cannot mount tmp file system");
-	
+
 	/* mount device file system */
 	printf("[Kernel] Device file system init\n");
 	if (sys_mount("dev", "/dev", "devfs", MS_RDONLY, NULL) != 0)
 		panic("Cannot mount device file system");
-	
+
 	/* init keyboard */
 	printf("[Kernel] Keyboard Init\n");
 	init_keyboard();

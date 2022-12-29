@@ -85,7 +85,7 @@ struct inode_t *tmpfs_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev
 	/* set number of links */
 	if (S_ISDIR(mode))
 		inode->i_nlinks = 2;
-	
+
 	/* set operations */
 	if (S_ISDIR(mode))
 		inode->i_op = &tmpfs_dir_iops;

@@ -28,7 +28,7 @@ static struct tmpfs_dir_entry_t *tmpfs_find_entry(struct inode_t *dir, const cha
 	/* check file name length */
 	if (name_len <= 0 || name_len > TMPFS_NAME_LEN)
 		return NULL;
-	
+
 	/* compute number of entries per page */
 	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry_t);
 
@@ -76,7 +76,7 @@ static int tmpfs_empty_dir(struct inode_t *dir)
 			/* skip first 2 entries "." and ".." */
 			if (first_page && i < 2)
 				continue;
-			
+
 			/* found an entry : directory is not empty */
 			if (de->d_inode)
 				return 0;
@@ -101,10 +101,10 @@ int tmpfs_add_entry(struct inode_t *dir, const char *name, int name_len, struct 
 	/* check file name */
 	if (name_len <= 0 || name_len > TMPFS_NAME_LEN)
 		return -EINVAL;
-	
+
 	/* compute number of entries per page */
 	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry_t);
-	
+
 retry:
 	/* walk through all pages */
 	list_for_each(pos, &dir->u.tmp_i.i_pages) {
@@ -157,7 +157,7 @@ int tmpfs_lookup(struct inode_t *dir, const char *name, size_t name_len, struct 
 		iput(dir);
 		return -ENOENT;
 	}
-	
+
 	/* get inode */
 	*res_inode = iget(dir->i_sb, de->d_inode);
 	if (!*res_inode) {

@@ -17,7 +17,7 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 	char *pipebuf;
 
 	/* sleep while empty */
-	if (filp->f_flags & O_NONBLOCK)  {
+	if (filp->f_flags & O_NONBLOCK) {
 		if (PIPE_EMPTY(inode)) {
 			if (PIPE_WRITERS(inode))
 				return -EAGAIN;

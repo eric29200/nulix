@@ -56,7 +56,7 @@ ssize_t tmpfs_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 	/* limit buffer size to page size */
 	if (bufsize > PAGE_SIZE)
 		bufsize = PAGE_SIZE;
-	
+
 	/* check first page */
 	if (list_empty(&inode->u.tmp_i.i_pages)) {
 		iput(inode);

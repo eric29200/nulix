@@ -39,7 +39,7 @@ int tmpfs_file_read(struct file_t *filp, char *buf, int count)
 		buf += nb_chars;
 		left -= nb_chars;
 		page_offset += PAGE_SIZE;
-		
+
 		/* end of read */
 		if (left <= 0)
 			break;
@@ -63,7 +63,7 @@ int tmpfs_file_write(struct file_t *filp, const char *buf, int count)
 
 	/* grow inode size */
 	tmpfs_inode_grow_size(filp->f_inode, filp->f_pos + count);
-	
+
 	/* walk through all pages */
 	page_offset = 0;
 	left = count;
@@ -86,7 +86,7 @@ int tmpfs_file_write(struct file_t *filp, const char *buf, int count)
 		buf += nb_chars;
 		left -= nb_chars;
 		page_offset += PAGE_SIZE;
-		
+
 		/* end of write */
 		if (left <= 0)
 			break;

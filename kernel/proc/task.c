@@ -46,7 +46,7 @@ static void init_entry(struct task_t *task)
 	ret = sys_execve("/sbin/init", argv, NULL);
 	if (ret)
 		goto err;
-		
+
 	/* enter user mode */
 	enter_user_mode(task->user_regs.useresp, task->user_regs.eip, TASK_RETURN_ADDRESS);
 	return;
@@ -188,7 +188,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vm_child->vm_inode = vm_parent->vm_inode;
 			vm_child->vm_ops = vm_parent->vm_ops;
 			list_add_tail(&vm_child->list, &mm_new->vm_list);
-			
+
 			/* update inode */
 			if (vm_child->vm_inode) {
 				vm_child->vm_inode->i_ref++;

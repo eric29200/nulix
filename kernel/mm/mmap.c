@@ -264,7 +264,7 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 		vm_new->vm_offset = vm->vm_offset + (end - vm->vm_start);
 		vm_new->vm_inode = vm->vm_inode;
 		vm_new->vm_ops = vm->vm_ops;
-		
+
 		/* update inode */
 		if (vm_new->vm_inode) {
 			list_add(&vm_new->list_share, &vm_new->vm_inode->i_mmap);
