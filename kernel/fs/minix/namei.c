@@ -413,7 +413,7 @@ int minix_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
 	/* set new inode */
 	inode->i_uid = current_task->uid;
 	inode->i_gid = current_task->gid;
-	inode->i_op = &minix_file_iops;
+	inode->i_op = &minix_symlink_iops;
 	inode->i_mode = S_IFLNK | (0777 & ~current_task->fs->umask);
 	inode->i_dirt = 1;
 

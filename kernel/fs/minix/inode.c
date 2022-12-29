@@ -27,12 +27,18 @@ struct file_operations_t minix_file_fops = {
 };
 
 /*
+ * Minix symbolic link inode operations.
+ */
+struct inode_operations_t minix_symlink_iops = {
+	.follow_link		= minix_follow_link,
+	.readlink		= minix_readlink,
+};
+
+/*
  * Minix file inode operations.
  */
 struct inode_operations_t minix_file_iops = {
 	.fops			= &minix_file_fops,
-	.follow_link		= minix_follow_link,
-	.readlink		= minix_readlink,
 	.truncate		= minix_truncate,
 	.bmap			= minix_bmap,
 	.readpage		= generic_readpage,
@@ -100,6 +106,8 @@ int minix_read_inode(struct inode_t *inode)
 	/* set operations */
 	if (S_ISDIR(inode->i_mode)) {
 		inode->i_op = &minix_dir_iops;
+	} else if (S_ISLNK(inode->i_mode)) {
+		inode->i_op = &minix_symlink_iops;
 	} else if (S_ISCHR(inode->i_mode)) {
 		inode->i_rdev = inode->u.minix_i.i_zone[0];
 		inode->i_op = char_get_driver(inode);

@@ -25,18 +25,24 @@ static struct file_operations_t tmp_file_fops = {
 };
 
 /*
- * Minix file inode operations.
+ * Symbolic link inode operations.
+ */
+static struct inode_operations_t tmp_symlink_iops = {
+	.follow_link		= tmp_follow_link,
+	.readlink		= tmp_readlink,
+};
+
+/*
+ * File inode operations.
  */
 static struct inode_operations_t tmp_file_iops = {
 	.fops			= &tmp_file_fops,
-	.follow_link		= tmp_follow_link,
-	.readlink		= tmp_readlink,
 	.truncate		= tmp_truncate,
 	.readpage		= tmp_readpage,
 };
 
 /*
- * Minix directory inode operations.
+ * Directory inode operations.
  */
 static struct inode_operations_t tmp_dir_iops = {
 	.fops			= &tmp_dir_fops,
@@ -83,6 +89,8 @@ struct inode_t *tmp_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev)
 	/* set operations */
 	if (S_ISDIR(mode))
 		inode->i_op = &tmp_dir_iops;
+	else if (S_ISLNK(mode))
+		inode->i_op = &tmp_symlink_iops;
 	else if (S_ISCHR(inode->i_mode))
 		inode->i_op = char_get_driver(inode);
 	else if (S_ISBLK(inode->i_mode))

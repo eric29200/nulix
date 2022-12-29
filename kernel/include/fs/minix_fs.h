@@ -92,7 +92,7 @@ static inline struct minix_sb_info_t *minix_sb(struct super_block_t *sb)
 extern struct super_operations_t minix_sops;
 extern struct inode_operations_t minix_file_iops;
 extern struct inode_operations_t minix_dir_iops;
-extern struct inode_operations_t minix_char_iops;
+extern struct inode_operations_t minix_symlink_iops;
 extern struct file_operations_t minix_file_fops;
 extern struct file_operations_t minix_dir_fops;
 
