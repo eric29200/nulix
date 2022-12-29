@@ -117,7 +117,7 @@ static void kinit()
 
 	/* mount tmp file system */
 	printf("[Kernel] Tmp file system init\n");
-	if (sys_mount("tmp", "/tmp", "tmp", MS_RDONLY, NULL) != 0)
+	if (sys_mount("tmp", "/tmp", "tmpfs", MS_RDONLY, NULL) != 0)
 		panic("Cannot mount tmp file system");
 
 	/* spawn init process */

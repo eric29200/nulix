@@ -1,5 +1,5 @@
-#ifndef _TMP_FS_H_
-#define _TMP_FS_H_
+#ifndef _TMPFS_FS_H_
+#define _TMPFS_FS_H_
 
 #include <fs/fs.h>
 

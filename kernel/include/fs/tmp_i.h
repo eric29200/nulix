@@ -1,5 +1,5 @@
-#ifndef _TMP_I_H_
-#define _TMP_I_H_
+#ifndef _TMPFS_I_H_
+#define _TMPFS_I_H_
 
 #include <lib/list.h>
 #include <stddef.h>
