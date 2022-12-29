@@ -5,7 +5,7 @@
 /*
  * Resolve a symbolic link.
  */
-int tmp_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
+int tmpfs_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
 {
 	struct page_t *page;
 	int ret;
@@ -43,7 +43,7 @@ int tmp_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_
 /*
  * Read value of a symbolic link.
  */
-ssize_t tmp_readlink(struct inode_t *inode, char *buf, size_t bufsize)
+ssize_t tmpfs_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 {
 	struct page_t *page;
 

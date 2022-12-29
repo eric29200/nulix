@@ -4,7 +4,7 @@
 /*
  * Read a file.
  */
-int tmp_file_read(struct file_t *filp, char *buf, int count)
+int tmpfs_file_read(struct file_t *filp, char *buf, int count)
 {
 	size_t page_offset, offset, nb_chars, left;
 	struct list_head_t *pos;
@@ -51,7 +51,7 @@ int tmp_file_read(struct file_t *filp, char *buf, int count)
 /*
  * Write to a file.
  */
-int tmp_file_write(struct file_t *filp, const char *buf, int count)
+int tmpfs_file_write(struct file_t *filp, const char *buf, int count)
 {
 	size_t page_offset, left, offset, nb_chars;
 	struct list_head_t *pos;
@@ -62,7 +62,7 @@ int tmp_file_write(struct file_t *filp, const char *buf, int count)
 		filp->f_pos = filp->f_inode->i_size;
 
 	/* grow inode size */
-	tmp_inode_grow_size(filp->f_inode, filp->f_pos + count);
+	tmpfs_inode_grow_size(filp->f_inode, filp->f_pos + count);
 	
 	/* walk through all pages */
 	page_offset = 0;
@@ -98,7 +98,7 @@ int tmp_file_write(struct file_t *filp, const char *buf, int count)
 /*
  * Read a page.
  */
-int tmp_readpage(struct inode_t *inode, struct page_t *page)
+int tmpfs_readpage(struct inode_t *inode, struct page_t *page)
 {
 	struct page_t *inode_page;
 	struct list_head_t *pos;

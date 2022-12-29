@@ -95,7 +95,7 @@ struct inode_t {
 	union {
 		struct minix_inode_info_t	minix_i;
 		struct pipe_inode_info_t	pipe_i;
-		struct tmp_inode_info_t		tmp_i;
+		struct tmpfs_inode_info_t	tmp_i;
 	} u;
 };
 

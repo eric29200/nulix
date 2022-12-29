@@ -3,7 +3,7 @@
 /*
  * Truncate an inode.
  */
-void tmp_truncate(struct inode_t *inode)
+void tmpfs_truncate(struct inode_t *inode)
 {
 	struct list_head_t *pos, *n;
 	struct page_t *page;

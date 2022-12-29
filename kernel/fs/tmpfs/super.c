@@ -4,35 +4,45 @@
 #include <fcntl.h>
 
 /*
+ * Get statistics on file system.
+ */
+static void tmpfs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+{
+	memset(buf, 0, sizeof(struct statfs64_t));
+	buf->f_type = sb->s_magic;
+	buf->f_bsize = sb->s_blocksize;
+}
+
+/*
  * Superblock operations.
  */
-static struct super_operations_t tmp_sops = {
-	.read_inode		= tmp_read_inode,
-	.write_inode		= tmp_write_inode,
-	.put_inode		= tmp_put_inode,
-	.statfs			= tmp_statfs,
+static struct super_operations_t tmpfs_sops = {
+	.read_inode		= tmpfs_read_inode,
+	.write_inode		= tmpfs_write_inode,
+	.put_inode		= tmpfs_put_inode,
+	.statfs			= tmpfs_statfs,
 };
 
 /*
  * Create root inode.
  */
-static struct inode_t *tmp_mkroot(struct super_block_t *sb)
+static struct inode_t *tmpfs_mkroot(struct super_block_t *sb)
 {
 	struct inode_t *inode;
 	int ret;
 	
 	/* create root inode */
-	inode = tmp_new_inode(sb, S_IFDIR | 0755, 0);
+	inode = tmpfs_new_inode(sb, S_IFDIR | 0755, 0);
 	if (!inode)
 		return NULL;
 
 	/* create "." entry in root directory */
-	ret = tmp_add_entry(inode, ".", 1, inode);
+	ret = tmpfs_add_entry(inode, ".", 1, inode);
 	if (ret)
 		goto err;
 
 	/* create ".." entry in root directory */
-	ret = tmp_add_entry(inode, "..", 2, inode);
+	ret = tmpfs_add_entry(inode, "..", 2, inode);
 	if (ret)
 		goto err;
 
@@ -46,17 +56,17 @@ err:
 /*
  * Read super block.
  */
-static int tmp_read_super(struct super_block_t *sb, void *data, int silent)
+static int tmpfs_read_super(struct super_block_t *sb, void *data, int silent)
 {
 	/* unused data */
 	UNUSED(data);
 
 	/* set super block */
 	sb->s_magic = TMPFS_SUPER_MAGIC;
-	sb->s_op = &tmp_sops;
+	sb->s_op = &tmpfs_sops;
 
 	/* get root inode */
-	sb->s_root_inode = tmp_mkroot(sb);
+	sb->s_root_inode = tmpfs_mkroot(sb);
 	if (!sb->s_root_inode) {
 		if (!silent)
 			printf("[Tmp-fs] Can't create root inode\n");
@@ -68,22 +78,12 @@ static int tmp_read_super(struct super_block_t *sb, void *data, int silent)
 }
 
 /*
- * Get statistics on file system.
- */
-void tmp_statfs(struct super_block_t *sb, struct statfs64_t *buf)
-{
-	memset(buf, 0, sizeof(struct statfs64_t));
-	buf->f_type = sb->s_magic;
-	buf->f_bsize = sb->s_blocksize;
-}
-
-/*
  * Tmp file system.
  */
 static struct file_system_t tmp_fs = {
 	.name		= "tmp",
 	.requires_dev	= 0,
-	.read_super	= tmp_read_super,
+	.read_super	= tmpfs_read_super,
 };
 
 /*

@@ -4,9 +4,9 @@
 /*
  * Get directory entries system call.
  */
-int tmp_getdents64(struct file_t *filp, void *dirp, size_t count)
+int tmpfs_getdents64(struct file_t *filp, void *dirp, size_t count)
 {
-	struct tmp_dir_entry_t de;
+	struct tmpfs_dir_entry_t de;
 	struct dirent64_t *dirent;
 	int entries_size;
 	size_t name_len;
@@ -14,7 +14,7 @@ int tmp_getdents64(struct file_t *filp, void *dirp, size_t count)
 	/* walk through all entries */
 	for (entries_size = 0, dirent = (struct dirent64_t *) dirp;;) {
 		/* read next drectory entry */
-		if (tmp_file_read(filp, (char *) &de, sizeof(struct tmp_dir_entry_t)) != sizeof(struct tmp_dir_entry_t))
+		if (tmpfs_file_read(filp, (char *) &de, sizeof(struct tmpfs_dir_entry_t)) != sizeof(struct tmpfs_dir_entry_t))
 			return entries_size;
 
 		/* skip null entries */
@@ -24,7 +24,7 @@ int tmp_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* not enough space to fill in next dir entry */
 		name_len = strlen(de.d_name);
 		if (count < sizeof(struct dirent64_t) + name_len + 1) {
-			filp->f_pos -= sizeof(struct tmp_dir_entry_t);
+			filp->f_pos -= sizeof(struct tmpfs_dir_entry_t);
 			return entries_size;
 		}
 

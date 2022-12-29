@@ -7,7 +7,7 @@
 /*
  * Tmpfs in memory inode.
  */
-struct tmp_inode_info_t {
+struct tmpfs_inode_info_t {
 	struct list_head_t	i_pages;
 };
 

@@ -4,64 +4,64 @@
 #include <stderr.h>
 
 /* next inode number */
-static ino_t tmp_next_ino = TMPFS_ROOT_INO;
+static ino_t tmpfs_next_ino = TMPFS_ROOT_INO;
 
 /*
  * Directory operations.
  */
-static struct file_operations_t tmp_dir_fops = {
-	.read			= tmp_file_read,
-	.write			= tmp_file_write,
-	.getdents64		= tmp_getdents64,
+static struct file_operations_t tmpfs_dir_fops = {
+	.read			= tmpfs_file_read,
+	.write			= tmpfs_file_write,
+	.getdents64		= tmpfs_getdents64,
 };
 
 /*
  * File operations.
  */
-static struct file_operations_t tmp_file_fops = {
-	.read			= tmp_file_read,
-	.write			= tmp_file_write,
+static struct file_operations_t tmpfs_file_fops = {
+	.read			= tmpfs_file_read,
+	.write			= tmpfs_file_write,
 	.mmap			= generic_file_mmap,
 };
 
 /*
  * Symbolic link inode operations.
  */
-static struct inode_operations_t tmp_symlink_iops = {
-	.follow_link		= tmp_follow_link,
-	.readlink		= tmp_readlink,
+static struct inode_operations_t tmpfs_symlink_iops = {
+	.follow_link		= tmpfs_follow_link,
+	.readlink		= tmpfs_readlink,
 };
 
 /*
  * File inode operations.
  */
-static struct inode_operations_t tmp_file_iops = {
-	.fops			= &tmp_file_fops,
-	.truncate		= tmp_truncate,
-	.readpage		= tmp_readpage,
+static struct inode_operations_t tmpfs_file_iops = {
+	.fops			= &tmpfs_file_fops,
+	.truncate		= tmpfs_truncate,
+	.readpage		= tmpfs_readpage,
 };
 
 /*
  * Directory inode operations.
  */
-static struct inode_operations_t tmp_dir_iops = {
-	.fops			= &tmp_dir_fops,
-	.lookup			= tmp_lookup,
-	.create			= tmp_create,
-	.link			= tmp_link,
-	.unlink			= tmp_unlink,
-	.symlink		= tmp_symlink,
-	.mkdir			= tmp_mkdir,
-	.rmdir			= tmp_rmdir,
-	.rename			= tmp_rename,
-	.mknod			= tmp_mknod,
-	.truncate		= tmp_truncate,
+static struct inode_operations_t tmpfs_dir_iops = {
+	.fops			= &tmpfs_dir_fops,
+	.lookup			= tmpfs_lookup,
+	.create			= tmpfs_create,
+	.link			= tmpfs_link,
+	.unlink			= tmpfs_unlink,
+	.symlink		= tmpfs_symlink,
+	.mkdir			= tmpfs_mkdir,
+	.rmdir			= tmpfs_rmdir,
+	.rename			= tmpfs_rename,
+	.mknod			= tmpfs_mknod,
+	.truncate		= tmpfs_truncate,
 };
 
 /*
  * Create a new inode.
  */
-struct inode_t *tmp_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev)
+struct inode_t *tmpfs_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev)
 {
 	struct inode_t *inode;
 
@@ -72,7 +72,7 @@ struct inode_t *tmp_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev)
 
 	/* set inode */
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	inode->i_ino = tmp_next_ino++;
+	inode->i_ino = tmpfs_next_ino++;
 	inode->i_ref = 1;
 	inode->i_nlinks = 1;
 	inode->i_sb = sb;
@@ -88,15 +88,15 @@ struct inode_t *tmp_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev)
 	
 	/* set operations */
 	if (S_ISDIR(mode))
-		inode->i_op = &tmp_dir_iops;
+		inode->i_op = &tmpfs_dir_iops;
 	else if (S_ISLNK(mode))
-		inode->i_op = &tmp_symlink_iops;
+		inode->i_op = &tmpfs_symlink_iops;
 	else if (S_ISCHR(inode->i_mode))
 		inode->i_op = char_get_driver(inode);
 	else if (S_ISBLK(inode->i_mode))
 		inode->i_op = block_get_driver(inode);
 	else
-		inode->i_op = &tmp_file_iops;
+		inode->i_op = &tmpfs_file_iops;
 
 	/* hash inode */
 	insert_inode_hash(inode);
@@ -107,7 +107,7 @@ struct inode_t *tmp_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev)
 /*
  * Read an inode.
  */
-int tmp_read_inode(struct inode_t *inode)
+int tmpfs_read_inode(struct inode_t *inode)
 {
 	UNUSED(inode);
 	return -ENOENT;
@@ -116,7 +116,7 @@ int tmp_read_inode(struct inode_t *inode)
 /*
  * Write an inode.
  */
-int tmp_write_inode(struct inode_t *inode)
+int tmpfs_write_inode(struct inode_t *inode)
 {
 	/* nothing to do */
 	UNUSED(inode);
@@ -126,7 +126,7 @@ int tmp_write_inode(struct inode_t *inode)
 /*
  * Put an inode.
  */
-int tmp_put_inode(struct inode_t *inode)
+int tmpfs_put_inode(struct inode_t *inode)
 {
 	/* check inode */
 	if (!inode)
@@ -135,7 +135,7 @@ int tmp_put_inode(struct inode_t *inode)
 	/* truncate and free inode */
 	if (inode->i_ref <= 1 && !inode->i_nlinks) {
 		inode->i_size = 0;
-		tmp_truncate(inode);
+		tmpfs_truncate(inode);
 		clear_inode(inode);
 		return 0;
 	}
@@ -150,7 +150,7 @@ int tmp_put_inode(struct inode_t *inode)
 /*
  * Grow an inode size.
  */
-int tmp_inode_grow_size(struct inode_t *inode, size_t size)
+int tmpfs_inode_grow_size(struct inode_t *inode, size_t size)
 {
 	struct list_head_t pages_list, *pos, *n;
 	struct page_t *page;
