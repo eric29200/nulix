@@ -3,6 +3,7 @@
 #include <mm/paging.h>
 #include <mm/mmap.h>
 #include <proc/sched.h>
+#include <sys/syscall.h>
 #include <fcntl.h>
 #include <string.h>
 #include <stderr.h>
@@ -17,7 +18,19 @@ static struct framebuffer_t direct_fb;
  */
 int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
 {
-  return init_framebuffer(&direct_fb, tag_fb, 0, 1);
+	int ret;
+
+	/* create device node */
+	ret = sys_mknod("/dev/fb0", S_IFCHR | 0660, mkdev(DEV_FB_MAJOR, 0));
+	if (ret)
+		return ret;
+
+	/* init frame buffer */
+	ret = init_framebuffer(&direct_fb, tag_fb, 0, 1);
+	if (ret)
+		sys_unlink("/dev/fb0");
+
+	return ret;
 }
 
 /*

@@ -1,5 +1,6 @@
 #include <drivers/tty.h>
 #include <proc/sched.h>
+#include <sys/syscall.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -187,7 +188,7 @@ err:
 /*
  * Init ptys.
  */
-void init_pty()
+int init_pty()
 {
 	int i;
 
@@ -205,4 +206,7 @@ void init_pty()
 	/* install slave pty operations */
 	pts_iops.fops = &pts_fops;
 	pts_fops = *tty_iops.fops;
+
+	/* create pty slave directory */
+	return sys_mkdir("/dev/pts", 0755);
 }

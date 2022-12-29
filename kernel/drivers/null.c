@@ -1,4 +1,7 @@
 #include <drivers/null.h>
+#include <sys/syscall.h>
+#include <fcntl.h>
+#include <dev.h>
 
 /*
  * Open null device.
@@ -56,3 +59,11 @@ static struct file_operations_t null_fops = {
 struct inode_operations_t null_iops = {
 	.fops		= &null_fops,
 };
+
+/*
+ * Init null device.
+ */
+int init_null_dev()
+{
+	return sys_mknod("/dev/null", S_IFCHR | 0666, DEV_NULL);
+}

@@ -1,11 +1,13 @@
 #include <drivers/mouse.h>
 #include <x86/interrupt.h>
-#include <proc/sched.h>
 #include <x86/io.h>
 #include <lib/ring_buffer.h>
+#include <proc/sched.h>
+#include <sys/syscall.h>
 #include <fs/fs.h>
 #include <stderr.h>
 #include <fcntl.h>
+#include <dev.h>
 
 #define MOUSE_BUF_SIZE		2048
 #define MOUSE_EVENT_SIZE	3
@@ -284,7 +286,8 @@ int init_mouse()
 	mouse_write_cmd(MOUSE_INTS_ON);
 	mouse_poll_status_no_sleep();
 
-	return 0;
+	/* create device node */
+	return sys_mknod("/dev/mouse", S_IFCHR | 0660, mkdev(DEV_MOUSE_MAJOR, 0));
 }
 
 /*

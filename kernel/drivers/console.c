@@ -1,10 +1,12 @@
 #include <drivers/console.h>
 #include <drivers/keyboard.h>
 #include <proc/sched.h>
+#include <sys/syscall.h>
 #include <mm/mm.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
+#include <fcntl.h>
 #include <dev.h>
 #include <kd.h>
 
@@ -1134,6 +1136,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 {
 	struct tty_t *tty;
 	struct vc_t *vc;
+	char path[64];
 	int i, ret;
 
 	/* init consoles */
@@ -1172,17 +1175,39 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		/* attach console to tty */
 		tty->driver_data = vc;
 
+		/* create device node */
+		sprintf(path, "/dev/tty%d", i);
+		ret = sys_mknod(path, S_IFCHR | 0644, DEV_TTY0 + i);
+		if (ret)
+			goto err;
 	}
 
 	/* set current console to first console */
 	fg_console = 0;
 	console_table[fg_console].fb.active = 1;
 
+	/* create tty node */
+	ret = sys_mknod("/dev/tty", S_IFCHR | 0644, DEV_TTY);
+	if (ret)
+		goto err;
+
+	/* create console node */
+	ret = sys_mknod("/dev/console", S_IFCHR | 0644, DEV_CONSOLE);
+	if (ret)
+		goto err;
+
 	return 0;
 err:
 	/* destroy consoles */
-	for (i = 0; i < NR_CONSOLES; i++)
+	for (i = 0; i < NR_CONSOLES; i++) {
 		tty_destroy(&tty_table[i]);
+		sprintf(path, "/dev/tty%d", i);
+		sys_unlink(path);
+	}
+
+	/* remove device nodes */ 
+	sys_unlink("/dev/tty");
+	sys_unlink("/dev/console");
 
 	return ret;
 }

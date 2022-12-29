@@ -1,5 +1,8 @@
 #include <drivers/random.h>
+#include <sys/syscall.h>
+#include <fcntl.h>
 #include <math.h>
+#include <dev.h>
 
 /*
  * Process unaligned data.
@@ -89,3 +92,11 @@ static struct file_operations_t random_fops = {
 struct inode_operations_t random_iops = {
 	.fops		= &random_fops,
 };
+
+/*
+ * Init random device.
+ */
+int init_random_dev()
+{
+	return sys_mknod("/dev/random", S_IFCHR | 0666, DEV_RANDOM);
+}

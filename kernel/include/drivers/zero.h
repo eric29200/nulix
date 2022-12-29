@@ -5,4 +5,6 @@
 
 extern struct inode_operations_t zero_iops;
 
+int init_zero_dev();
+
 #endif

@@ -11,6 +11,6 @@ struct pty_t {
 	int	p_count;	/* reference count */
 };
 
-void init_pty();
+int init_pty();
 
 #endif
