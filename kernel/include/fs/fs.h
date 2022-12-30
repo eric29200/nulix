@@ -88,6 +88,7 @@ struct inode_t {
 	struct inode_operations_t *	i_op;
 	dev_t				i_rdev;
 	char				i_pipe;
+	char				i_shm;
 	struct inode_t *		i_mount;
 	struct list_head_t		i_pages;
 	struct list_head_t		i_mmap;

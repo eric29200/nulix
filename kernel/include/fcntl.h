@@ -35,6 +35,8 @@
 #define S_IWOTH			0002
 #define S_IXOTH			0001
 
+#define S_IRUGO 		(S_IRUSR | S_IRGRP | S_IROTH)
+#define S_IWUGO 		(S_IWUSR | S_IWGRP | S_IWOTH)
 #define S_IRWXUGO		(S_IRWXU | S_IRWXG | S_IRWXO)
 #define S_IALLUGO		(S_ISUID | S_ISGID | S_ISVTX | S_IRWXUGO)
 
@@ -75,5 +77,8 @@
 #define AT_REMOVEDIR		0x200	 		/* remove a directory */
 
 #define FIONBIO			0x5421
+
+#define FMODE_READ		1
+#define FMODE_WRITE		2
 
 #endif

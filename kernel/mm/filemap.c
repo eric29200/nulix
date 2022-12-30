@@ -68,9 +68,29 @@ static struct page_t *filemap_nopage(struct vm_area_t *vma, uint32_t address)
 }
 
 /*
+ * Open a memory region.
+ */
+void filemap_open(struct vm_area_t *vma)
+{
+	vma->vm_inode->i_ref++;
+	list_add(&vma->list_share, &vma->vm_inode->i_mmap);
+}
+
+/*
+ * Close a memory region.
+ */
+void filemap_close(struct vm_area_t *vma)
+{
+	list_del(&vma->list_share);
+	iput(vma->vm_inode);
+}
+
+/*
  * File mapping operations.
  */
 static struct vm_operations_t file_mmap = {
+	.open		= filemap_open,
+	.close		= filemap_close,
 	.nopage		= filemap_nopage,
 };
 

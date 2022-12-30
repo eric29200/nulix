@@ -233,10 +233,8 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 
 	/* unmap the whole area */
 	if (addr == vm->vm_start && end == vm->vm_end) {
-		if (vm->vm_inode) {
-			list_del(&vm->list_share);
-			iput(vm->vm_inode);
-		}
+		if (vm->vm_ops && vm->vm_ops->close)
+			vm->vm_ops->close(vm);
 
 		list_del(&vm->list);
 		kfree(vm);
@@ -265,11 +263,9 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 		vm_new->vm_inode = vm->vm_inode;
 		vm_new->vm_ops = vm->vm_ops;
 
-		/* update inode */
-		if (vm_new->vm_inode) {
-			list_add(&vm_new->list_share, &vm_new->vm_inode->i_mmap);
-			vm_new->vm_inode->i_ref++;
-		}
+		/* open region */
+		if (vm_new->vm_ops && vm_new->vm_ops->open)
+			vm_new->vm_ops->open(vm_new);
 
 		/* add new memory region after old one */
 		list_add(&vm_new->list, &vm->list);

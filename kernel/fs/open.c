@@ -98,8 +98,9 @@ err:
  */
 int do_close(struct file_t *filp)
 {
-	/* release file if not used anymore */
 	filp->f_ref--;
+
+	/* release file if not used anymore */
 	if (filp->f_ref <= 0) {
 		/* specific close operation */
 		if (filp->f_op && filp->f_op->close)

@@ -67,6 +67,7 @@
 #define __NR_setitimer			104
 #define __NR_wait4			114
 #define __NR_sysinfo			116
+#define __NR_ipc			117
 #define __NR_fsync			118
 #define __NR_sigreturn			119
 #define __NR_clone			120
@@ -280,5 +281,6 @@ int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct 
 void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address);
 int sys_fadvise64(int fd, off64_t offset, off64_t len, int advice);
 int sys_shutdown(int sockfd, int how);
+int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fifth);
 
 #endif

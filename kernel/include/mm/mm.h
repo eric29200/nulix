@@ -33,6 +33,8 @@ struct vm_area_t {
  * Virtual memory area operations.
  */
 struct vm_operations_t {
+	void (*open)(struct vm_area_t *);
+	void (*close)(struct vm_area_t *);
 	struct page_t *(*nopage)(struct vm_area_t *, uint32_t address);
 };
 
