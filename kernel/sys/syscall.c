@@ -141,6 +141,8 @@ static const void *syscalls[] = {
 	[__NR_fadvise64]		= sys_fadvise64,
 	[__NR_shutdown]			= sys_shutdown,
 	[__NR_ipc]			= sys_ipc,
+	[__NR_setresuid]		= sys_setresuid,
+	[__NR_setresgid]		= sys_setresgid,
 };
 
 /*
