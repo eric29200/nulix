@@ -30,9 +30,32 @@ struct shmid_t {
 	pid_t			shm_lprid;
 };
 
+/*
+ * Shared memory user data structure.
+ */
+struct shmid_ds_t {
+	struct ipc_perm_t 	shm_perm;
+	size_t 			shm_segsz;
+	uint32_t 		__shm_atime_lo;
+	uint32_t		__shm_atime_hi;
+	uint32_t 		__shm_dtime_lo;
+	uint32_t		__shm_dtime_hi;
+	uint32_t 		__shm_ctime_lo;
+	uint32_t 		__shm_ctime_hi;
+	pid_t 			shm_cpid;
+	pid_t 			shm_lpid;
+	uint32_t 		shm_nattch;
+	uint32_t 		__pad1;
+	uint32_t 		__pad2;
+	uint32_t 		__pad3;
+	int64_t 		shm_atime;
+	int64_t 		shm_dtime;
+	int64_t 		shm_ctime;
+};
+
 int do_shmget(int key, int size, int shmflg);
 int do_shmat(int shmid, char *shmaddr, int shmflg, uint32_t *addr_ret);
-int do_shmctl(int shmid, int cmd);
+int do_shmctl(int shmid, int cmd, struct shmid_ds_t *buf);
 int do_shmdt(char *shmaddr);
 
 #endif

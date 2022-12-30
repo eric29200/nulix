@@ -28,7 +28,7 @@ int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fift
 
 			return 0;
 		case SHMCTL:
-			return do_shmctl(first, second);
+			return do_shmctl(first, second, (struct shmid_ds_t *) ptr);
 		case SHMDT:
 			return do_shmdt((char *) ptr);
 		default:

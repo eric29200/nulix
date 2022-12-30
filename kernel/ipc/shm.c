@@ -237,7 +237,7 @@ out:
 /*
  * Control a shared memory segment.
  */
-int do_shmctl(int shmid, int cmd)
+int do_shmctl(int shmid, int cmd, struct shmid_ds_t *buf)
 {
 	struct shmid_t *shm;
 
@@ -252,6 +252,17 @@ int do_shmctl(int shmid, int cmd)
 	/* 64 bits command */
 	cmd ^= 0x0100;
 	switch (cmd) {
+		case IPC_STAT:
+			/* set output buffer */
+			memset(&buf, 0, sizeof(buf));
+			buf->shm_segsz = shm->shm_size;
+			buf->shm_cpid = shm->shm_cprid;
+			buf->shm_lpid = shm->shm_lprid;
+			buf->shm_nattch = shm->shm_nattch;
+			buf->shm_atime = shm->shm_atime;
+			buf->shm_dtime = shm->shm_dtime;
+			buf->shm_ctime = shm->shm_ctime;
+			return 0;
 		case IPC_RMID:
 		  	if (shm->shm_nattch) {
 				shm->shm_perm.mode |= SHM_DEST;
