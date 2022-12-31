@@ -102,6 +102,7 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
 static void kinit()
 {
 	/* register filesystems */
+	printf("[Kernel] Register file systems\n");
 	if (init_minix_fs() != 0)
 		panic("Cannot register minix file system");
 	if (init_proc_fs() != 0)
