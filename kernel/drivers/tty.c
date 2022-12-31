@@ -373,6 +373,36 @@ static void tty_flush_output(struct tty_t *tty)
 }
 
 /*
+ * Disassociate current task tty.
+ */
+void disassociate_ctty()
+{
+	struct tty_t *tty = current_task->tty;
+	struct list_head_t *pos;
+	struct task_t *task;
+
+	if (!tty)
+		return;
+
+	/* send SIGHUP/SIGCONT to fg process group */
+	if (tty->pgrp > 0) {
+		task_signal_group(tty->pgrp, SIGHUP);
+		task_signal_group(tty->pgrp, SIGCONT);
+	}
+
+	/* clear tty */
+	tty->session = 0;
+	tty->pgrp = -1;
+
+	/* clear tty for all processes in the session group */
+	list_for_each(pos, &current_task->list) {
+		task = list_entry(pos, struct task_t, list);
+		if (task->session == current_task->session)
+			task->tty = NULL;
+	}
+}
+
+/*
  * TTY ioctl.
  */
 int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
@@ -435,6 +465,14 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 			}
 
 			break;
+		case TIOCNOTTY:
+			if (current_task->tty != tty)
+				return -ENOTTY;
+			if (current_task->leader)
+				disassociate_ctty();
+
+			current_task->tty = NULL;
+			return 0;
 		default:
 			if (tty->driver->ioctl) {
 				ret = tty->driver->ioctl(tty, request, arg);

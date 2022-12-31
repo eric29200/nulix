@@ -86,6 +86,7 @@ void tty_destroy(struct tty_t *tty);
 void tty_do_cook(struct tty_t *tty);
 void tty_change(int n);
 void tty_complete_change(int n);
+void disassociate_ctty();
 
 /* inode operations */
 extern struct inode_operations_t tty_iops;

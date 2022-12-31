@@ -38,9 +38,9 @@ void sys_exit(int status)
 		}
 	}
 
-	/* leader process : send signal to processes attached to tty */
-	if (current_task->leader && current_task->tty)
-		task_signal_group(current_task->tty->pgrp, SIGHUP);
+	/* leader process : disassociate tty */
+	if (current_task->leader)
+		disassociate_ctty();
 
 	/* call scheduler */
 	schedule();
