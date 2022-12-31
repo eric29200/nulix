@@ -20,7 +20,7 @@
 
 #define TASK_NAME_LEN		32
 
-#define NR_OPEN			32
+#define NR_OPEN			64
 #define MAX_PATH_LEN		1024
 
 /*
