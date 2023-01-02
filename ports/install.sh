@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("pkgconf" "libncurses" "termcap" "zlib" "openssl" "libpng" "expat" "freetype2" "fontconfig" "util-linux" "tinyx")
+BASE_PORTS=("pkgconf" "libncurses" "termcap" "zlib" "openssl" "libpng" "expat" "freetype2" "fontconfig" "util-linux")
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
@@ -28,6 +28,7 @@ function check_port() {
 	fi
 
 	# load port environ
+	URL_GIT=0
 	source $PORT"/install"
 }
 
@@ -35,12 +36,14 @@ function check_port() {
 ####### Download a port #######
 ###############################
 function download_port() {
-	# create source directory
-	mkdir -p build/src
-	cd build/src
-
-	# download sources
-	wget -c $URL -O $SRC_FILENAME
+	if [[ $URL_GIT == 1 ]]; then
+		cd build ; rm -rf $PORT ; mkdir -p $PORT ; cd $PORT
+		git clone $URL
+		SRC_DIR=$SRC_FILENAME
+	else
+		mkdir -p build/src ; cd build/src
+		wget -c $URL -O $SRC_FILENAME
+	fi
 
 	# go back to build directory
 	cd ..
@@ -50,6 +53,12 @@ function download_port() {
 ####### Extract a port #######
 ##############################
 function extract_port() {
+	# git URL
+	if [[ $URL_GIT == 1 ]]; then
+	 	cd $PORT
+		return
+	fi
+
 	# create build directory
 	rm -rf $PORT
 	mkdir -p $PORT
@@ -157,13 +166,6 @@ fi
 # for each port
 for PORT in ${PORTS[@]}; do
 	cd $BASE_DIR
-
-	# specific script for tinyx
-	if [[ $PORT == "tinyx" ]]; then
-		cd ../
-		./ports/install_tinyx.sh
-		continue
-	fi
 
 	# download and extract
 	check_port
