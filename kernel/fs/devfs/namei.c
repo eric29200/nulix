@@ -271,3 +271,64 @@ int devfs_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t m
 
 	return 0;
 }
+
+/*
+ * Create a symbolic link.
+ */
+int devfs_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target)
+{
+	struct devfs_dir_entry_t *de;
+	struct inode_t *inode;
+	struct page_t *page;
+	char *buf;
+	int ret, i;
+
+	/* create a new inode */
+	inode = devfs_new_inode(dir->i_sb, S_IFLNK | (0777 & ~current_task->fs->umask), 0);
+	if (!inode) {
+		iput(dir);
+		return -ENOSPC;
+	}
+
+	/* create first page */
+	ret = devfs_inode_grow_size(inode, PAGE_SIZE);
+	if (ret) {
+		inode->i_nlinks = 0;
+		iput(inode);
+		iput(dir);
+		return -ENOMEM;
+	}
+
+	/* get first page */
+	page = list_first_entry(&inode->u.dev_i.i_pages, struct page_t, list);
+	buf = (char *) PAGE_ADDRESS(page);
+
+	/* write file name on first page */
+	for (i = 0; target[i] && i < PAGE_SIZE - 1; i++)
+		buf[i] = target[i];
+	buf[i] = 0;
+
+	/* check if file exists */
+	de = devfs_find_entry(dir, name, name_len);
+	if (de) {
+		inode->i_nlinks = 0;
+		iput(inode);
+		iput(dir);
+		return -EEXIST;
+	}
+
+	/* add entry */
+	ret = devfs_add_entry(dir, name, name_len, inode);
+	if (ret) {
+		inode->i_nlinks = 0;
+		iput(inode);
+		iput(dir);
+		return ret;
+	}
+
+	/* release inode */
+	iput(inode);
+	iput(dir);
+
+	return 0;
+}

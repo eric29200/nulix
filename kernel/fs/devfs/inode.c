@@ -23,6 +23,15 @@ static struct inode_operations_t devfs_dir_iops = {
 	.unlink			= devfs_unlink,
 	.mkdir			= devfs_mkdir,
 	.mknod			= devfs_mknod,
+	.symlink		= devfs_symlink,
+};
+
+/*
+ * Symbolic link inode operations.
+ */
+static struct inode_operations_t devfs_symlink_iops = {
+	.follow_link		= devfs_follow_link,
+	.readlink		= devfs_readlink,
 };
 
 /*
@@ -56,6 +65,8 @@ struct inode_t *devfs_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev
 	/* set operations */
 	if (S_ISDIR(mode))
 		inode->i_op = &devfs_dir_iops;
+	else if (S_ISLNK(mode))
+		inode->i_op = &devfs_symlink_iops;
 	else if (S_ISCHR(inode->i_mode))
 		inode->i_op = char_get_driver(inode);
 	else if (S_ISBLK(inode->i_mode))

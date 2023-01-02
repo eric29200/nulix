@@ -34,6 +34,11 @@ int devfs_lookup(struct inode_t *dir, const char *name, size_t name_len, struct 
 int devfs_unlink(struct inode_t *dir, const char *name, size_t name_len);
 int devfs_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mode);
 int devfs_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, dev_t dev);
+int devfs_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target);
+
+/* symbolic link operations */
+int devfs_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode);
+ssize_t devfs_readlink(struct inode_t *inode, char *buf, size_t bufsize);
 
 /* file operations */
 int devfs_file_read(struct file_t *filp, char *buf, int count);
