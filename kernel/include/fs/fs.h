@@ -7,6 +7,7 @@
 #include <fs/poll.h>
 #include <fs/statfs.h>
 #include <fs/minix_i.h>
+#include <fs/ext2_i.h>
 #include <fs/pipe_i.h>
 #include <fs/tmp_i.h>
 #include <fs/dev_i.h>
@@ -96,6 +97,7 @@ struct inode_t {
 	struct htable_link_t		i_htable;
 	union {
 		struct minix_inode_info_t	minix_i;
+		struct ext2_inode_info_t	ext2_i;
 		struct pipe_inode_info_t	pipe_i;
 		struct tmpfs_inode_info_t	tmp_i;
 		struct devfs_inode_info_t	dev_i;

@@ -20,6 +20,7 @@
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <fs/minix_fs.h>
+#include <fs/ext2_fs.h>
 #include <fs/proc_fs.h>
 #include <fs/tmp_fs.h>
 #include <fs/dev_fs.h>
@@ -105,6 +106,8 @@ static void kinit()
 	printf("[Kernel] Register file systems\n");
 	if (init_minix_fs() != 0)
 		panic("Cannot register minix file system");
+	if (init_ext2_fs() != 0)
+		panic("Cannot register ext2 file system");
 	if (init_proc_fs() != 0)
 		panic("Cannot register proc file system");
 	if (init_tmp_fs() != 0)

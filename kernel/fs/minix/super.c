@@ -11,8 +11,8 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 {
 	struct minix3_super_block_t *msb3;
 	struct minix_sb_info_t *sbi;
+	int i, ret = -EINVAL;
 	uint32_t block;
-	int i, ret;
 
 	/* unused data */
 	UNUSED(data);

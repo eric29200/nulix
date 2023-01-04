@@ -11,7 +11,7 @@ fi
 # create first disk
 rm -f $DISK1
 dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE
-mkfs.minix -3 $DISK1
+mkfs.ext2 $DISK1
 
 # mount disk
 mkdir tmp >& /dev/null
