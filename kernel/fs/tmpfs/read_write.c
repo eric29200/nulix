@@ -22,8 +22,10 @@ int tmpfs_file_read(struct file_t *filp, char *buf, int count)
 	left = count;
 	list_for_each(pos, &filp->f_inode->u.tmp_i.i_pages) {
 		page = list_entry(pos, struct page_t, list);
-		if (page_offset + PAGE_SIZE < filp->f_pos)
+		if (page_offset + PAGE_SIZE < filp->f_pos) {
+			page_offset += PAGE_SIZE;
 			continue;
+		}
 
 		/* compute offset in page and number of characters to read */
 		offset = filp->f_pos - page_offset;
@@ -69,8 +71,10 @@ int tmpfs_file_write(struct file_t *filp, const char *buf, int count)
 	left = count;
 	list_for_each(pos, &filp->f_inode->u.tmp_i.i_pages) {
 		page = list_entry(pos, struct page_t, list);
-		if (page_offset + PAGE_SIZE < filp->f_pos)
+		if (page_offset + PAGE_SIZE < filp->f_pos) {
+			page_offset += PAGE_SIZE;
 			continue;
+		}
 
 		/* compute offset in page and number of characters to write */
 		offset = filp->f_pos - page_offset;
