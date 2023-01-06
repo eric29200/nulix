@@ -523,12 +523,19 @@ static int tcp_close(struct sock_t *sk)
 {
 	struct sk_buff_t *skb;
 
+	/* socket no connected : no need to send FIN message */
+	if (sk->sock->state != SS_CONNECTED) {
+		sk->sock->state = SS_DISCONNECTING;
+		goto wait_for_ack;
+	}
+
 	/* send FIN message */
 	skb = tcp_create_skb(sk, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, NULL, 0);
 	if (skb)
 		net_transmit(sk->dev, skb);
 
 	/* wait for ACK message */
+wait_for_ack:
 	while (sk->sock->state != SS_DISCONNECTING) {
 		/* signal received : restart system call */
 		if (signal_pending(current_task))
