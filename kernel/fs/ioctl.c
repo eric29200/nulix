@@ -9,6 +9,7 @@
 int do_ioctl(int fd, int request, unsigned long arg)
 {
 	struct file_t *filp;
+	int on;
 
 	/* check input args */
 	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
@@ -19,7 +20,9 @@ int do_ioctl(int fd, int request, unsigned long arg)
 
 	switch (request) {
 		case FIONBIO:
-			if (arg)
+			on = *((int *) arg);
+
+			if (on)
 				filp->f_flags |= O_NONBLOCK;
 			else
 				filp->f_flags &= ~O_NONBLOCK;
