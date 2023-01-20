@@ -33,9 +33,34 @@ static void ext2_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 }
 
 /*
+ * Release a super block.
+ */
+static void ext2_put_super(struct super_block_t *sb)
+{
+	struct ext2_sb_info_t *sbi = ext2_sb(sb);
+	size_t i;
+
+	/* release group descriptors */
+	for (i = 0; i < sbi->s_gdb_count; i++)
+		brelse(sbi->s_group_desc[i]);
+
+	/* free group descriptors */
+	kfree(sbi->s_group_desc);
+
+	/* release super block buffer */
+	brelse(sbi->s_sbh);
+
+	/* free super block */
+	kfree(sbi);
+
+	sb->s_dev = 0;
+}
+
+/*
  * Ext2 super operations.
  */
 static struct super_operations_t ext2_sops = {
+	.put_super		= ext2_put_super,
 	.read_inode		= ext2_read_inode,
 	.write_inode		= ext2_write_inode,
 	.put_inode		= ext2_put_inode,

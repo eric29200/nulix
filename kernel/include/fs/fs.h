@@ -145,6 +145,7 @@ struct dirent64_t {
  * Super operations.
  */
 struct super_operations_t {
+	void (*put_super)(struct super_block_t *);
 	int (*read_inode)(struct inode_t *);
 	int (*write_inode)(struct inode_t *);
 	int (*put_inode)(struct inode_t *);
@@ -189,6 +190,7 @@ struct file_operations_t {
 
 /* files table */
 extern struct file_t filp_table[NR_FILE];
+extern struct inode_t *inode_table;
 
 /* super operations */
 int register_filesystem(struct file_system_t *fs);
@@ -201,6 +203,7 @@ struct buffer_head_t *bread(dev_t dev, uint32_t block, size_t blocksize);
 int bwrite(struct buffer_head_t *bh);
 void brelse(struct buffer_head_t *bh);
 void bsync();
+void bsync_dev(dev_t dev);
 int binit();
 struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void try_to_free_buffer(struct buffer_head_t *bh);
@@ -237,6 +240,7 @@ int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);
 /* system calls */
 int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);
 int do_mount_root(dev_t dev, const char *dev_name);
+int do_umount(const char *target, int flags);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(struct file_t *filp);
 ssize_t do_read(struct file_t *filp, char *buf, int count);

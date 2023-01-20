@@ -346,6 +346,22 @@ void bsync()
 }
 
 /*
+ * Write all dirty buffers on disk.
+ */
+void bsync_dev(dev_t dev)
+{
+	int i;
+
+	/* write all dirty buffers */
+	for (i = 0; i < nr_buffer; i++) {
+		if (buffer_table[i].b_dev == dev && buffer_table[i].b_dirt && bwrite(&buffer_table[i])) {
+			printf("Can't write block %d on disk\n", buffer_table[i].b_block);
+			panic("Disk error");
+		}
+	}
+}
+
+/*
  * Read a page.
  */
 int generic_readpage(struct inode_t *inode, struct page_t *page)

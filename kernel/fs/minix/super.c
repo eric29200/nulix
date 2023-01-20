@@ -167,11 +167,38 @@ static void minix_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 	buf->f_namelen = sbi->s_name_len;
 }
 
+/*
+ * Release a super block.
+ */
+static void minix_put_super(struct super_block_t *sb)
+{
+	struct minix_sb_info_t *sbi = minix_sb(sb);
+	int i;
+
+	/* release and free imap */
+	for (i = 0; i < sbi->s_imap_blocks; i++)
+		brelse(sbi->s_imap[i]);
+	kfree(sbi->s_imap);
+
+	/* release and free zmap */
+	for (i = 0; i < sbi->s_zmap_blocks; i++)
+		brelse(sbi->s_zmap[i]);
+	kfree(sbi->s_imap);
+
+	/* release super block buffer */
+	brelse(sbi->s_sbh);
+
+	/* free super block */
+	kfree(sbi);
+
+	sb->s_dev = 0;
+}
 
 /*
  * Minix super operations.
  */
 struct super_operations_t minix_sops = {
+	.put_super		= minix_put_super,
 	.read_inode		= minix_read_inode,
 	.write_inode		= minix_write_inode,
 	.put_inode		= minix_put_inode,

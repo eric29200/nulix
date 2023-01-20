@@ -7,8 +7,8 @@
 #include <string.h>
 
 /* global inode table */
+struct inode_t *inode_table = NULL;
 static int inode_htable_bits = 0;
-static struct inode_t *inode_table = NULL;
 static struct htable_link_t **inode_htable = NULL;
 
 /* inodes lists */

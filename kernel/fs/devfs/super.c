@@ -14,9 +14,18 @@ static void devfs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 }
 
 /*
+ * Release a super block.
+ */
+static void devfs_put_super(struct super_block_t *sb)
+{
+	sb->s_dev = 0;
+}
+
+/*
  * Superblock operations.
  */
 static struct super_operations_t devfs_sops = {
+	.put_super		= devfs_put_super,
 	.read_inode		= devfs_read_inode,
 	.write_inode		= devfs_write_inode,
 	.put_inode		= devfs_put_inode,

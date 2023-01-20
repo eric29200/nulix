@@ -48,6 +48,7 @@
 #define __NR_getgid			47
 #define __NR_geteuid			49
 #define __NR_getegid			50
+#define __NR_umount2			52
 #define __NR_ioctl			54
 #define __NR_fcntl			55
 #define __NR_setpgid			57
@@ -257,6 +258,7 @@ int sys_sync();
 int sys_chroot(const char *path);
 int sys_reboot(int magic1, int magic2, int cmd, void *arg);
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data);
+int sys_umount2(const char *target, int flags);
 int sys_statfs64(const char *path, size_t size, struct statfs64_t *buf);
 int sys_fstatfs64(int fd, struct statfs64_t *buf);
 int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flags);

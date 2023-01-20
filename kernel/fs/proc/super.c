@@ -3,9 +3,18 @@
 #include <stdio.h>
 
 /*
+ * Release a super block.
+ */
+static void proc_put_super(struct super_block_t *sb)
+{
+	sb->s_dev = 0;
+}
+
+/*
  * Superblock operations.
  */
 static struct super_operations_t proc_sops = {
+	.put_super		= proc_put_super,
 	.read_inode		= proc_read_inode,
 	.write_inode		= proc_write_inode,
 	.put_inode		= proc_put_inode,

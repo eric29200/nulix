@@ -148,6 +148,34 @@ err:
 }
 
 /*
+ * Remove a mounted file system.
+ */
+static void del_vfs_mount(struct super_block_t *sb)
+{
+	struct vfs_mount_t *vfs_mount;
+	struct list_head_t *pos;
+
+	/* find mounted file system */
+	list_for_each(pos, &vfs_mounts_list) {
+		vfs_mount = list_entry(pos, struct vfs_mount_t, mnt_list);
+		if (vfs_mount->mnt_sb == sb)
+			goto found;
+	}
+
+	return;
+found:
+	/* remove file system from list */
+	list_del(&vfs_mount->mnt_list);
+
+	/* free file system */
+	if (vfs_mount->mnt_devname)
+		kfree(vfs_mount->mnt_devname);
+	if (vfs_mount->mnt_dirname)
+		kfree(vfs_mount->mnt_dirname);
+	kfree(vfs_mount);
+}
+
+/*
  * Get mount point inode.
  */
 static int get_mount_point(const char *mount_point, struct inode_t **res_inode)
@@ -263,6 +291,81 @@ found:
 		kfree(sb);
 		return err;
 	}
+
+	return 0;
+}
+
+/*
+ * Check if a file system can be unmounted.
+ */
+static int fs_may_umount(struct super_block_t *sb)
+{
+	struct inode_t *inode;
+	int i;
+
+	for (i = 0; i < NR_INODE; i++) {
+		inode = &inode_table[i];
+
+		if (inode->i_sb != sb || !inode->i_ref)
+			continue;
+
+		if (inode == sb->s_root_inode && inode->i_ref == (inode->i_mount != inode ? 1 : 2))
+			continue;
+
+		return 0;
+	}
+
+	return 1;
+}
+
+/*
+ * Unmount a file system.
+ */
+int do_umount(const char *target, int flags)
+{
+	struct super_block_t *sb;
+	struct inode_t *inode;
+
+	/* unused flags */
+	UNUSED(flags);
+
+	/* get target inode */
+	inode = namei(AT_FDCWD, NULL, target, 1);
+	if (!inode)
+		return -EACCES;
+
+	/* target inode must be a root inode */
+	sb = inode->i_sb;
+	if (!sb || inode != sb->s_root_inode || !sb->s_covered || !sb->s_covered->i_mount) {
+		iput(inode);
+		return -EINVAL;
+	}
+
+	/* release inode */
+	iput(inode);
+
+	/* check if file system is busy */
+	if (!fs_may_umount(sb)) {
+		iput(inode);
+		return -EBUSY;
+	}
+
+	/* sync buffers */
+	bsync_dev(sb->s_dev);
+
+	/* unmount file system */
+	sb->s_covered->i_mount = NULL;
+	iput(sb->s_covered);
+	sb->s_covered = NULL;
+	iput(sb->s_root_inode);
+	sb->s_root_inode = NULL;
+
+	/* remove mounted file system */
+	del_vfs_mount(sb);
+
+	/* release super block */
+	if (sb->s_op && sb->s_op->put_super)
+		sb->s_op->put_super(sb);
 
 	return 0;
 }

@@ -128,7 +128,7 @@ static int create_devices_nodes()
 	ret = sys_mknod("/dev/console", S_IFCHR | 0644, DEV_CONSOLE);
 	if (ret)
 		return ret;
-	
+
 	/* create pty slave directory */
 	ret = sys_mkdir("/dev/pts", 0755);
 	if (ret)

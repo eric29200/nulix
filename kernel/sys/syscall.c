@@ -114,6 +114,7 @@ static const void *syscalls[] = {
 	[__NR_chroot]			= sys_chroot,
 	[__NR_reboot]			= sys_reboot,
 	[__NR_mount]			= sys_mount,
+	[__NR_umount2]			= sys_umount2,
 	[__NR_statfs64]			= sys_statfs64,
 	[__NR_fstatfs64]		= sys_fstatfs64,
 	[__NR_pselect6]			= sys_pselect6,
@@ -179,4 +180,3 @@ void init_syscall()
 	/* register syscall interrupt handler */
 	register_interrupt_handler(0x80, syscall_handler);
 }
-

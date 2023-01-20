@@ -14,9 +14,18 @@ static void tmpfs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 }
 
 /*
+ * Release a super block.
+ */
+static void tmpfs_put_super(struct super_block_t *sb)
+{
+	sb->s_dev = 0;
+}
+
+/*
  * Superblock operations.
  */
 static struct super_operations_t tmpfs_sops = {
+	.put_super		= tmpfs_put_super,
 	.read_inode		= tmpfs_read_inode,
 	.write_inode		= tmpfs_write_inode,
 	.put_inode		= tmpfs_put_inode,
