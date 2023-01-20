@@ -1,5 +1,6 @@
 #include <fs/fs.h>
 #include <fs/ext2_fs.h>
+#include <proc/sched.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -334,7 +335,7 @@ int ext2_create(struct inode_t *dir, const char *name, size_t name_len, mode_t m
 	}
 
 	/* create a new inode */
-	inode = ext2_new_inode(dir, S_IFREG | mode);
+	inode = ext2_new_inode(dir, S_IFREG | (mode & ~current_task->fs->umask & 0777));
 	if (!inode) {
 		iput(dir);
 		return -ENOSPC;
@@ -389,7 +390,7 @@ int ext2_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mo
 	}
 
 	/* allocate a new inode */
-	inode = ext2_new_inode(dir, S_IFDIR | mode);
+	inode = ext2_new_inode(dir, S_IFDIR | (mode & ~current_task->fs->umask & 0777));
 	if (!inode) {
 		iput(dir);
 		return -ENOMEM;
@@ -660,7 +661,7 @@ int ext2_symlink(struct inode_t *dir, const char *name, size_t name_len, const c
 		return -ENAMETOOLONG;
 
 	/* create a new inode */
-	inode = ext2_new_inode(dir, S_IFLNK | 0777);
+	inode = ext2_new_inode(dir, S_IFLNK | (0777 & ~current_task->fs->umask));
 	if (!inode) {
 		iput(dir);
 		return -ENOSPC;
