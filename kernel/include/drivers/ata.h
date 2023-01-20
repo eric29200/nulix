@@ -4,6 +4,8 @@
 #include <fs/fs.h>
 #include <stddef.h>
 
+#define NR_ATA_DEVICES			4
+
 #define ATA_SECTOR_SIZE			512
 
 #define ATA_PRIMARY			0x00

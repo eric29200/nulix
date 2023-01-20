@@ -103,6 +103,14 @@ static int create_devices_nodes()
 	char path[64];
 	int ret, i;
 
+	/* create disk nodes */
+	for (i = 0; i < NR_ATA_DEVICES; i++) {
+		sprintf(path, "/dev/hd%c", 'a' + i);
+		ret = sys_mknod(path, S_IFBLK | 0600, mkdev(DEV_ATA_MAJOR, i));
+		if (ret)
+			return ret;
+	}
+
 	/* create ttys nodes */
 	for (i = 0; i < NR_CONSOLES; i++) {
 		sprintf(path, "/dev/tty%d", i);

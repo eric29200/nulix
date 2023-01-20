@@ -8,19 +8,17 @@
 #include <stdio.h>
 #include <dev.h>
 
-#define MAX_ATA_DEVICE		4
-
 /* ata devices */
 static struct pci_device_t *pci_device = NULL;
-static struct ata_device_t ata_devices[MAX_ATA_DEVICE];
-static size_t ata_blocksizes[MAX_ATA_DEVICE] = { 0, };
+static struct ata_device_t ata_devices[NR_ATA_DEVICES];
+static size_t ata_blocksizes[NR_ATA_DEVICES] = { 0, };
 
 /*
  * Get an ata device.
  */
 static struct ata_device_t *ata_get_device(dev_t dev)
 {
-	if (major(dev) != DEV_ATA_MAJOR || minor(dev) >= MAX_ATA_DEVICE)
+	if (major(dev) != DEV_ATA_MAJOR || minor(dev) >= NR_ATA_DEVICES)
 		return NULL;
 
 	return &ata_devices[minor(dev)];
@@ -247,7 +245,7 @@ static int ata_detect(int id, uint16_t bus, uint8_t drive)
 {
 	int ret;
 
-	if (id > MAX_ATA_DEVICE)
+	if (id > NR_ATA_DEVICES)
 		return -ENXIO;
 
 	/* set device */
@@ -301,7 +299,7 @@ int init_ata()
 		printf("[Kernel] Secondary ATA slave drive detected\n");
 
 	/* set default block size */
-	for (i = 0; i < MAX_ATA_DEVICE; i++)
+	for (i = 0; i < NR_ATA_DEVICES; i++)
 		ata_blocksizes[i] = DEFAULT_BLOCK_SIZE;
 	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
 
