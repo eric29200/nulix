@@ -58,11 +58,3 @@ static struct file_operations_t zero_fops = {
 struct inode_operations_t zero_iops = {
 	.fops		= &zero_fops,
 };
-
-/*
- * Init zero device.
- */
-int init_zero_dev()
-{
-	return sys_mknod("/dev/zero", S_IFCHR | 0666, DEV_ZERO);
-}

@@ -14,9 +14,6 @@
 #include <drivers/mouse.h>
 #include <drivers/fb.h>
 #include <drivers/rtl8139.h>
-#include <drivers/null.h>
-#include <drivers/zero.h>
-#include <drivers/random.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <fs/minix_fs.h>
@@ -27,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
+#include <fcntl.h>
 #include <dev.h>
 
 #define ROOT_DEV	(mkdev(DEV_ATA_MAJOR, 0))
@@ -98,6 +96,82 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
 }
 
 /*
+ * Create devices nodes.
+ */
+static int create_devices_nodes()
+{
+	char path[64];
+	int ret, i;
+
+	/* create ttys nodes */
+	for (i = 0; i < NR_CONSOLES; i++) {
+		sprintf(path, "/dev/tty%d", i);
+		ret = sys_mknod(path, S_IFCHR | 0644, DEV_TTY0 + i);
+		if (ret)
+			return ret;
+	}
+
+	/* create /dev/tty node */
+	ret = sys_mknod("/dev/tty", S_IFCHR | 0644, DEV_TTY);
+	if (ret)
+		return ret;
+
+	/* create /dev/console node */
+	ret = sys_mknod("/dev/console", S_IFCHR | 0644, DEV_CONSOLE);
+	if (ret)
+		return ret;
+	
+	/* create pty slave directory */
+	ret = sys_mkdir("/dev/pts", 0755);
+	if (ret)
+		return ret;
+
+	/* create pty multiplexer */
+	ret = sys_mknod("/dev/ptmx", S_IFCHR | 0644, DEV_PTMX);
+	if (ret) {
+		sys_unlink("/dev/ptmx");
+		return ret;
+	}
+
+	/* create direct framebuffer node */
+	ret = sys_mknod("/dev/fb0", S_IFCHR | 0660, mkdev(DEV_FB_MAJOR, 0));
+	if (ret)
+		return ret;
+
+	/* create mouse node */
+	ret = sys_mknod("/dev/mouse", S_IFCHR | 0660, mkdev(DEV_MOUSE_MAJOR, 0));
+	if (ret)
+		return ret;
+
+	/* create /dev/input folder */
+	ret = sys_mkdir("/dev/input", S_IFDIR | 0755);
+	if (ret)
+		return ret;
+
+	/* create /dev/input/mice symlink */
+	ret = sys_symlink("../mouse", "/dev/input/mice");
+	if (ret)
+		return ret;
+
+	/* create /dev/zero node */
+	ret = sys_mknod("/dev/zero", S_IFCHR | 0666, DEV_ZERO);
+	if (ret)
+		return ret;
+
+	/* create /dev/random node */
+	ret = sys_mknod("/dev/random", S_IFCHR | 0666, DEV_RANDOM);
+	if (ret)
+		return ret;
+
+	/* create /dev/null node */
+	ret = sys_mknod("/dev/null", S_IFCHR | 0666, DEV_NULL);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+/*
  * Nulix init (second phase).
  */
 static void kinit()
@@ -159,20 +233,10 @@ static void kinit()
 	if (init_framebuffer_direct(tag_fb))
 		panic("Cannot init direct frame buffer\n");
 
-	/* init null device */
-	printf("[Kernel] Null device Init\n");
-	if (init_null_dev())
-		panic("Cannot init null device\n");
-
-	/* init zero device */
-	printf("[Kernel] Zero device Init\n");
-	if (init_zero_dev())
-		panic("Cannot init zero device\n");
-
-	/* init random device */
-	printf("[Kernel] Random device Init\n");
-	if (init_random_dev())
-		panic("Cannot init random device\n");
+	/* create devices nodes */
+	printf("[Kernel] Create devices nodes\n");
+	if (create_devices_nodes())
+		panic("Cannot create devices nodes\n");
 
 	/* spawn init process */
 	if (spawn_init() != 0)

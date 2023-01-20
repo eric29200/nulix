@@ -190,7 +190,7 @@ err:
  */
 int init_pty()
 {
-	int ret, i;
+	int i;
 
 	/* set pty table */
 	for (i = 0; i < NR_PTYS; i++) {
@@ -206,18 +206,6 @@ int init_pty()
 	/* install slave pty operations */
 	pts_iops.fops = &pts_fops;
 	pts_fops = *tty_iops.fops;
-
-	/* create pty slave directory */
-	ret = sys_mkdir("/dev/pts", 0755);
-	if (ret)
-		return ret;
-
-	/* create pty multiplexer */
-	ret = sys_mknod("/dev/ptmx", S_IFCHR | 0644, DEV_PTMX);
-	if (ret) {
-		sys_unlink("/dev/ptmx");
-		return ret;
-	}
 
 	return 0;
 }

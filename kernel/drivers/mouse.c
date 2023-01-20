@@ -286,27 +286,7 @@ int init_mouse()
 	mouse_write_cmd(MOUSE_INTS_ON);
 	mouse_poll_status_no_sleep();
 
-	/* create device node */
-	ret = sys_mknod("/dev/mouse", S_IFCHR | 0660, mkdev(DEV_MOUSE_MAJOR, 0));
-	if (ret)
-		return ret;
-
-	/* create /dev/input folder */
-	ret = sys_mkdir("/dev/input", S_IFDIR | 0755);
-	if (ret)
-		goto err;
-
-	/* create /dev/input/mice symlink */
-	ret = sys_symlink("../mouse", "/dev/input/mice");
-	if (ret)
-		goto err;
-
 	return 0;
-err:
-	sys_unlink("/dev/input/mice");
-	sys_rmdir("/dev/input");
-	sys_unlink("/dev/mouse");
-	return ret;
 }
 
 /*
