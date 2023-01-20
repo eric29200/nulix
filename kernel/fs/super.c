@@ -194,6 +194,7 @@ int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const ch
 	/* read super block */
 	sb->s_type = fs;
 	sb->s_dev = dev;
+	sb->s_covered = mount_point_dir;
 	err = fs->read_super(sb, data, 0);
 	if (err)
 		goto err;
@@ -252,6 +253,7 @@ int do_mount_root(dev_t dev, const char *dev_name)
 found:
 	/* set mount point */
 	sb->s_root_inode->i_ref = 3;
+	sb->s_covered = NULL;
 	current_task->fs->cwd = sb->s_root_inode;
 	current_task->fs->root = sb->s_root_inode;
 

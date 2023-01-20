@@ -66,6 +66,7 @@ struct super_block_t {
 	uint16_t			s_magic;
 	struct file_system_t *		s_type;
 	struct inode_t *		s_root_inode;
+	struct inode_t *		s_covered;
 	struct super_operations_t *	s_op;
 };
 
