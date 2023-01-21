@@ -89,6 +89,7 @@ struct ata_device_t {
 };
 
 int init_ata();
+struct ata_device_t *ata_get_device(dev_t dev);
 int ata_read(dev_t dev, struct buffer_head_t *bh);
 int ata_write(dev_t dev, struct buffer_head_t *bh);
 

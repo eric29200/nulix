@@ -100,11 +100,18 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
  */
 static int create_devices_nodes()
 {
+	struct ata_device_t *device;
 	char path[64];
 	int ret, i;
 
 	/* create disk nodes */
 	for (i = 0; i < NR_ATA_DEVICES; i++) {
+		/* get device */
+		device = ata_get_device(mkdev(DEV_ATA_MAJOR, i));
+		if (!device)
+			continue;
+
+		/* create node */
 		sprintf(path, "/dev/hd%c", 'a' + i);
 		ret = sys_mknod(path, S_IFBLK | 0600, mkdev(DEV_ATA_MAJOR, i));
 		if (ret)

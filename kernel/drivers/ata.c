@@ -9,19 +9,19 @@
 #include <dev.h>
 
 /* ata devices */
-static struct pci_device_t *pci_device = NULL;
-static struct ata_device_t ata_devices[NR_ATA_DEVICES];
+static struct pci_device_t *ata_pci_device = NULL;
+static struct ata_device_t *ata_devices[NR_ATA_DEVICES];
 static size_t ata_blocksizes[NR_ATA_DEVICES] = { 0, };
 
 /*
  * Get an ata device.
  */
-static struct ata_device_t *ata_get_device(dev_t dev)
+struct ata_device_t *ata_get_device(dev_t dev)
 {
 	if (major(dev) != DEV_ATA_MAJOR || minor(dev) >= NR_ATA_DEVICES)
 		return NULL;
 
-	return &ata_devices[minor(dev)];
+	return ata_devices[minor(dev)];
 }
 
 /*
@@ -224,14 +224,14 @@ static int ata_identify(struct ata_device_t *device)
 	device->prdt[0].mark_end = 0x8000;
 
 	/* activate pci */
-	cmd_reg = pci_read_field(pci_device->address, PCI_CMD);
+	cmd_reg = pci_read_field(ata_pci_device->address, PCI_CMD);
 	if (!(cmd_reg & (1 << 2))) {
 		cmd_reg |= (1 << 2);
-		pci_write_field(pci_device->address, PCI_CMD, cmd_reg);
+		pci_write_field(ata_pci_device->address, PCI_CMD, cmd_reg);
 	}
 
 	/* get BAR4 from pci device */
-	device->bar4 = pci_read_field(pci_device->address, PCI_BAR4);
+	device->bar4 = pci_read_field(ata_pci_device->address, PCI_BAR4);
 	if (device->bar4 & 0x00000001)
 		device->bar4 &= 0xFFFFFFFC;
 
@@ -243,20 +243,32 @@ static int ata_identify(struct ata_device_t *device)
  */
 static int ata_detect(int id, uint16_t bus, uint8_t drive)
 {
+	struct ata_device_t *device;
 	int ret;
 
+	/* check id */
 	if (id > NR_ATA_DEVICES)
 		return -ENXIO;
 
+	/* allocate a new device */
+	device = (struct ata_device_t *) kmalloc(sizeof(struct ata_device_t));
+	if (!device)
+		return -ENOMEM;
+
 	/* set device */
-	ata_devices[id].bus = bus;
-	ata_devices[id].drive = drive;
-	ata_devices[id].io_base = bus == ATA_PRIMARY ? ATA_PRIMARY_IO : ATA_SECONDARY_IO;
+	device->bus = bus;
+	device->drive = drive;
+	device->io_base = bus == ATA_PRIMARY ? ATA_PRIMARY_IO : ATA_SECONDARY_IO;
 
 	/* identify device */
-	ret = ata_identify(&ata_devices[id]);
-	if (ret)
-		memset(&ata_devices[id], 0, sizeof(struct ata_device_t));
+	ret = ata_identify(device);
+	if (ret) {
+		kfree(device);
+		device = NULL;
+	}
+
+	/* set device */
+	ata_devices[id] = device;
 
 	return ret;
 }
@@ -277,8 +289,8 @@ int init_ata()
 	int i;
 
 	/* get PCI device */
-	pci_device = pci_get_device(ATA_VENDOR_ID, ATA_DEVICE_ID);
-	if (!pci_device)
+	ata_pci_device = pci_get_device(ATA_VENDOR_ID, ATA_DEVICE_ID);
+	if (!ata_pci_device)
 		return -EINVAL;
 
 	/* reset ata devices */
