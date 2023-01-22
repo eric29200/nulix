@@ -66,6 +66,52 @@ int generic_block_read(struct file_t *filp, char *buf, int count)
 }
 
 /*
+ * Generic block write.
+ */
+int generic_block_write(struct file_t *filp, const char *buf, int count)
+{
+	size_t blocksize, pos, nb_chars, left;
+	struct buffer_head_t *bh;
+	dev_t dev;
+
+	/* check size */
+	if (count <= 0)
+		return 0;
+
+	/* get device and blocksize */
+	dev = filp->f_inode->i_rdev;
+	blocksize = blocksize_size[major(dev)][minor(dev)];
+	if (!blocksize)
+		return -EINVAL;
+
+	left = count;
+	while (left > 0) {
+		/* read block */
+		bh = bread(dev, filp->f_pos / blocksize, blocksize);
+		if (!bh)
+			break;
+
+		/* find position and number of chars to write */
+		pos = filp->f_pos % blocksize;
+		nb_chars = blocksize - pos <= left ? blocksize - pos : left;
+
+		/* copy into block buffer */
+		memcpy(bh->b_data + pos, buf, nb_chars);
+
+		/* release block */
+		bh->b_dirt = 1;
+		brelse(bh);
+
+		/* update sizes */
+		filp->f_pos += nb_chars;
+		buf += nb_chars;
+		left -= nb_chars;
+	}
+
+	return count - left;
+}
+
+/*
  * Read a block.
  */
 int block_read(dev_t dev, struct buffer_head_t *bh)

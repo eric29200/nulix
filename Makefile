@@ -16,6 +16,7 @@ run:
 		-serial stdio 							\
 		-cdrom $(ISO) 							\
 		-drive format=raw,file=$(DISK1)					\
+		-drive format=raw,file=$(DISK2)					\
 		-netdev tap,id=nulix_net					\
 		-device rtl8139,netdev=nulix_net,id=nulix_nic			\
 		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap

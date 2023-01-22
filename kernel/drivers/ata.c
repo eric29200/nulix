@@ -323,6 +323,7 @@ int init_ata()
  */
 static struct file_operations_t ata_fops = {
 	.read		= generic_block_read,
+	.write		= generic_block_write,
 };
 
 /*

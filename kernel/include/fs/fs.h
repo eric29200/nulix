@@ -209,6 +209,7 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void try_to_free_buffer(struct buffer_head_t *bh);
 void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_read(struct file_t *filp, char *buf, int count);
+int generic_block_write(struct file_t *filp, const char *buf, int count);
 int generic_readpage(struct inode_t *inode, struct page_t *page);
 
 /* inode operations */
