@@ -1,7 +1,7 @@
-#include <drivers/keyboard.h>
+#include <drivers/char/keyboard.h>
+#include <drivers/char/tty.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
-#include <drivers/tty.h>
 #include <ipc/signal.h>
 
 #define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))

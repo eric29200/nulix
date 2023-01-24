@@ -1,4 +1,4 @@
-#include <drivers/mouse.h>
+#include <drivers/char/mouse.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <lib/ring_buffer.h>

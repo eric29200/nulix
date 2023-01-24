@@ -1,10 +1,10 @@
 #ifndef _TTY_H_
 #define _TTY_H_
 
-#include <drivers/console.h>
-#include <drivers/pty.h>
-#include <drivers/fb.h>
-#include <drivers/termios.h>
+#include <drivers/char/console.h>
+#include <drivers/char/pty.h>
+#include <drivers/char/termios.h>
+#include <drivers/video/fb.h>
 #include <lib/ring_buffer.h>
 #include <proc/wait.h>
 

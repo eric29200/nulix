@@ -1,4 +1,4 @@
-#include <drivers/pci.h>
+#include <drivers/pci/pci.h>
 #include <x86/io.h>
 #include <string.h>
 #include <stdio.h>

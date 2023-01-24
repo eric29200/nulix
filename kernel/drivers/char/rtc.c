@@ -1,4 +1,4 @@
-#include <drivers/rtc.h>
+#include <drivers/char/rtc.h>
 #include <x86/io.h>
 #include <time.h>
 

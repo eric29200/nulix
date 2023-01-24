@@ -1,4 +1,4 @@
-#include <drivers/pit.h>
+#include <drivers/char/pit.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <x86/system.h>

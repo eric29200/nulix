@@ -1,5 +1,5 @@
 #include <sys/syscall.h>
-#include <drivers/tty.h>
+#include <drivers/char/tty.h>
 #include <fcntl.h>
 #include <stderr.h>
 #include <stdio.h>

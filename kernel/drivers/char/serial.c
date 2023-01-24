@@ -1,4 +1,4 @@
-#include <drivers/serial.h>
+#include <drivers/char/serial.h>
 #include <x86/io.h>
 
 /*

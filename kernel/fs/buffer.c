@@ -1,7 +1,7 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
 #include <proc/timer.h>
-#include <drivers/ata.h>
+#include <drivers/block/ata.h>
 #include <mm/mm.h>
 #include <string.h>
 #include <stderr.h>

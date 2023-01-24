@@ -1,5 +1,5 @@
 #include <sys/syscall.h>
-#include <drivers/keyboard.h>
+#include <drivers/char/keyboard.h>
 #include <x86/io.h>
 #include <reboot.h>
 #include <stderr.h>

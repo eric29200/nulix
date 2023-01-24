@@ -1,5 +1,5 @@
-#include <drivers/console.h>
-#include <drivers/keyboard.h>
+#include <drivers/char/console.h>
+#include <drivers/char/keyboard.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <mm/mm.h>

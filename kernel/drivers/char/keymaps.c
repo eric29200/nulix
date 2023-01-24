@@ -1,4 +1,4 @@
-#include <drivers/keyboard.h>
+#include <drivers/char/keyboard.h>
 
 uint16_t plain_map[NR_KEYS] = {
 	0xf200,	0xf01b,	0xf031,	0xf032,	0xf033,	0xf034,	0xf035,	0xf036,

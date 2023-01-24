@@ -1,4 +1,4 @@
-#include <drivers/null.h>
+#include <drivers/char/null.h>
 #include <sys/syscall.h>
 #include <fcntl.h>
 #include <dev.h>

@@ -1,4 +1,4 @@
-#include <drivers/tty.h>
+#include <drivers/char/tty.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <stdio.h>

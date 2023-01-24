@@ -1,4 +1,4 @@
-#include <drivers/console.h>
+#include <drivers/char/console.h>
 
 uint16_t console_translations[][256] = {
 	/* 8-bit Latin-1 mapped to Unicode -- trivial mapping */

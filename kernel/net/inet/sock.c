@@ -1,7 +1,7 @@
 #include <net/inet/sock.h>
 #include <net/inet/ip.h>
 #include <net/inet/net.h>
-#include <drivers/rtl8139.h>
+#include <drivers/net/rtl8139.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <fs/fs.h>

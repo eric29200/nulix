@@ -1,4 +1,4 @@
-#include <drivers/random.h>
+#include <drivers/char/random.h>
 #include <sys/syscall.h>
 #include <fcntl.h>
 #include <math.h>

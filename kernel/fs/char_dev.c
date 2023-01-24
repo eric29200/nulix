@@ -1,10 +1,10 @@
 #include <fs/fs.h>
-#include <drivers/null.h>
-#include <drivers/zero.h>
-#include <drivers/random.h>
-#include <drivers/tty.h>
-#include <drivers/fb.h>
-#include <drivers/mouse.h>
+#include <drivers/char/null.h>
+#include <drivers/char/zero.h>
+#include <drivers/char/random.h>
+#include <drivers/char/tty.h>
+#include <drivers/char/mouse.h>
+#include <drivers/video/fb.h>
 #include <dev.h>
 #include <fcntl.h>
 

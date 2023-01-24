@@ -1,5 +1,5 @@
 #include <fs/fs.h>
-#include <drivers/ata.h>
+#include <drivers/block/ata.h>
 #include <stderr.h>
 #include <fcntl.h>
 #include <dev.h>

@@ -1,5 +1,5 @@
 #include <sys/syscall.h>
-#include <drivers/random.h>
+#include <drivers/char/random.h>
 
 /*
  * Get random system call.

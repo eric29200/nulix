@@ -1,4 +1,4 @@
-#include <drivers/fb.h>
+#include <drivers/video/fb.h>
 #include <x86/io.h>
 #include <string.h>
 

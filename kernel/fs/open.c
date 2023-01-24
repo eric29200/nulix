@@ -1,6 +1,6 @@
 #include <fs/fs.h>
 #include <mm/mm.h>
-#include <drivers/tty.h>
+#include <drivers/char/tty.h>
 #include <proc/sched.h>
 #include <stdio.h>
 #include <stderr.h>

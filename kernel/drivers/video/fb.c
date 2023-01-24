@@ -1,4 +1,4 @@
-#include <drivers/fb.h>
+#include <drivers/video/fb.h>
 #include <mm/mm.h>
 #include <mm/paging.h>
 #include <mm/mmap.h>

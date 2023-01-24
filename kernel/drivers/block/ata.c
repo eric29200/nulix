@@ -1,5 +1,5 @@
-#include <drivers/ata.h>
-#include <drivers/pci.h>
+#include <drivers/block/ata.h>
+#include <drivers/pci/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>

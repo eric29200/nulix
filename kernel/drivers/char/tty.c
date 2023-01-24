@@ -1,8 +1,8 @@
-#include <drivers/serial.h>
-#include <drivers/keyboard.h>
-#include <drivers/termios.h>
-#include <drivers/tty.h>
-#include <drivers/pit.h>
+#include <drivers/char/serial.h>
+#include <drivers/char/keyboard.h>
+#include <drivers/char/termios.h>
+#include <drivers/char/tty.h>
+#include <drivers/char/pit.h>
 #include <proc/sched.h>
 #include <ipc/signal.h>
 #include <stdio.h>

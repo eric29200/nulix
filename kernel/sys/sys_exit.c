@@ -1,6 +1,6 @@
 #include <sys/syscall.h>
 #include <proc/sched.h>
-#include <drivers/tty.h>
+#include <drivers/char/tty.h>
 
 /*
  * Exit a task.

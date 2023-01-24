@@ -1,7 +1,7 @@
 #ifndef _CONSOLE_H_
 #define _CONSOLE_H_
 
-#include <drivers/fb.h>
+#include <drivers/video/fb.h>
 
 #define NR_CONSOLES		8
 

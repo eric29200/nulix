@@ -1,5 +1,5 @@
-#include <drivers/rtl8139.h>
-#include <drivers/pci.h>
+#include <drivers/net/rtl8139.h>
+#include <drivers/pci/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <net/inet/net.h>

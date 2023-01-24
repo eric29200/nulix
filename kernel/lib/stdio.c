@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include <drivers/serial.h>
+#include <drivers/char/serial.h>
 
 static char *__buf_ptr;
 

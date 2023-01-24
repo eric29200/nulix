@@ -1,7 +1,7 @@
 #ifndef _KEYBOARD_H_
 #define _KEYBOARD_H_
 
-#include <drivers/tty.h>
+#include <drivers/char/tty.h>
 #include <stddef.h>
 
 #define NR_KEYS				256
