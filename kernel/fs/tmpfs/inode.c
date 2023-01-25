@@ -10,8 +10,6 @@ static ino_t tmpfs_next_ino = TMPFS_ROOT_INO;
  * Directory operations.
  */
 static struct file_operations_t tmpfs_dir_fops = {
-	.read			= tmpfs_file_read,
-	.write			= tmpfs_file_write,
 	.getdents64		= tmpfs_getdents64,
 };
 

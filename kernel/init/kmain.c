@@ -21,6 +21,7 @@
 #include <fs/proc_fs.h>
 #include <fs/tmp_fs.h>
 #include <fs/dev_fs.h>
+#include <fs/iso_fs.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
@@ -203,6 +204,8 @@ static void kinit()
 		panic("Cannot register tmp file system");
 	if (init_dev_fs() != 0)
 		panic("Cannot register device file system");
+	if (init_iso_fs() != 0)
+		panic("Cannot register iso file system");
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");

@@ -10,7 +10,6 @@ static ino_t devfs_next_ino = DEVFS_ROOT_INO;
  * Directory operations.
  */
 static struct file_operations_t devfs_dir_fops = {
-	.read			= devfs_file_read,
 	.getdents64		= devfs_getdents64,
 };
 

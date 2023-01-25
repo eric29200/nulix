@@ -11,6 +11,7 @@
 #include <fs/pipe_i.h>
 #include <fs/tmp_i.h>
 #include <fs/dev_i.h>
+#include <fs/iso_i.h>
 #include <proc/wait.h>
 #include <mm/mm.h>
 #include <time.h>
@@ -102,6 +103,7 @@ struct inode_t {
 		struct pipe_inode_info_t	pipe_i;
 		struct tmpfs_inode_info_t	tmp_i;
 		struct devfs_inode_info_t	dev_i;
+		struct isofs_inode_info_t	iso_i;
 	} u;
 };
 
