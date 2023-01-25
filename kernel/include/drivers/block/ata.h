@@ -7,6 +7,7 @@
 #define NR_ATA_DEVICES			4
 
 #define ATA_SECTOR_SIZE			512
+#define ATAPI_SECTOR_SIZE		2048
 
 #define ATA_PRIMARY			0x00
 #define ATA_SECONDARY			0x01
@@ -86,12 +87,19 @@ struct ata_device_t {
 	struct ata_prdt_t	*prdt;
 	uint8_t *		buf;
 	uint32_t		bar4;
+	int			(*read)(struct ata_device_t *, struct buffer_head_t *);
+	int			(*write)(struct ata_device_t *, struct buffer_head_t *);
 };
 
 int init_ata();
 struct ata_device_t *ata_get_device(dev_t dev);
+int ata_poll_identify(struct ata_device_t *device);
 int ata_read(dev_t dev, struct buffer_head_t *bh);
 int ata_write(dev_t dev, struct buffer_head_t *bh);
+
+/* init functions */
+int ata_hd_init(struct ata_device_t *device);
+int ata_cd_init(struct ata_device_t *device);
 
 extern struct inode_operations_t ata_iops;
 

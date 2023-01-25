@@ -1,5 +1,4 @@
 #include <drivers/block/ata.h>
-#include <drivers/pci/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>
@@ -9,7 +8,6 @@
 #include <dev.h>
 
 /* ata devices */
-static struct pci_device_t *ata_pci_device = NULL;
 static struct ata_device_t *ata_devices[NR_ATA_DEVICES];
 static size_t ata_blocksizes[NR_ATA_DEVICES] = { 0, };
 
@@ -25,112 +23,18 @@ struct ata_device_t *ata_get_device(dev_t dev)
 }
 
 /*
- * Read sectors from an ata device.
- */
-static int ata_read_sectors(struct ata_device_t *device, uint32_t sector, uint32_t nb_sectors, char *buf)
-{
-	int status, dstatus;
-
-	/* set transfert size */
-	device->prdt[0].transfert_size = nb_sectors * ATA_SECTOR_SIZE;
-
-	/* prepare DMA transfert */
-	outb(device->bar4, 0);
-	outl(device->bar4 + 0x04, (uint32_t) device->prdt);
-	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
-
-	/* select sector */
-	outb(device->io_base + ATA_REG_CONTROL, 0x00);
-	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-	outb(device->io_base + ATA_REG_FEATURES, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, nb_sectors);
-	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-
-	/* issue read DMA command */
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_DMA);
-	outb(device->bar4, 0x8 | 0x1);
-
-	/* wait for completion */
-	for (;;) {
-		status = inb(device->bar4 + 2);
-		dstatus = inb(device->io_base + ATA_REG_STATUS);
-		if (!(status & 0x04))
-			continue;
-		if (!(dstatus & ATA_SR_BSY))
-			break;
-	}
-
-	/* copy buffer */
-	memcpy(buf, device->buf, nb_sectors * ATA_SECTOR_SIZE);
-
-	return 0;
-}
-
-/*
  * Read from an ata device.
  */
 int ata_read(dev_t dev, struct buffer_head_t *bh)
 {
-	uint32_t nb_sectors, sector;
 	struct ata_device_t *device;
 
 	/* get ata device */
 	device = ata_get_device(dev);
-	if (!device)
+	if (!device || !device->read)
 		return -EINVAL;
 
-	/* compute nb sectors */
-	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
-	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
-
-	/* read sectors */
-	return ata_read_sectors(device, sector, nb_sectors, bh->b_data);
-}
-
-/*
- * Write sectors to an ata device.
- */
-static int ata_write_sectors(struct ata_device_t *device, uint32_t sector, uint32_t nb_sectors, char *buf)
-{
-	int status, dstatus;
-
-	/* copy buffer */
-	memcpy(device->buf, buf, nb_sectors * ATA_SECTOR_SIZE);
-
-	/* set transfert size */
-	device->prdt[0].transfert_size = nb_sectors * ATA_SECTOR_SIZE;
-
-	/* prepare DMA transfert */
-	outb(device->bar4, 0);
-	outl(device->bar4 + 0x04, (uint32_t) device->prdt);
-	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
-
-	/* select sector */
-	outb(device->io_base + ATA_REG_CONTROL, 0x00);
-	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-	outb(device->io_base + ATA_REG_FEATURES, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, nb_sectors);
-	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-
-	/* issue write DMA command */
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
-	outb(device->bar4, 0x1);
-
-	/* wait for completion */
-	for (;;) {
-		status = inb(device->bar4 + 2);
-		dstatus = inb(device->io_base + ATA_REG_STATUS);
-		if (!(status & 0x04))
-			continue;
-		if (!(dstatus & ATA_SR_BSY))
-			break;
-	}
-
-	return 0;
+	return device->read(device, bh);
 }
 
 /*
@@ -138,45 +42,23 @@ static int ata_write_sectors(struct ata_device_t *device, uint32_t sector, uint3
  */
 int ata_write(dev_t dev, struct buffer_head_t *bh)
 {
-	uint32_t nb_sectors, sector;
 	struct ata_device_t *device;
 
 	/* get ata device */
 	device = ata_get_device(dev);
-	if (!device)
+	if (!device || !device->write)
 		return -EINVAL;
 
-	/* compute nb sectors */
-	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
-	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
-
-	/* write sectors */
-	return ata_write_sectors(device, sector, nb_sectors, bh->b_data);
+	return device->write(device, bh);
 }
 
 /*
- * Identify a device.
+ * Poll for identification.
  */
-static int ata_identify(struct ata_device_t *device)
+int ata_poll_identify(struct ata_device_t *device)
 {
-	uint32_t cmd_reg;
 	uint8_t status;
 	int i;
-
-	/* select drive */
-	if (device->drive == ATA_MASTER)
-		outb(device->io_base + ATA_REG_HDDEVSEL, 0xA0);
-	else
-		outb(device->io_base + ATA_REG_HDDEVSEL, 0xB0);
-
-	/* reset ata registers */
-	outb(device->io_base + ATA_REG_SECCOUNT0, 0);
-	outb(device->io_base + ATA_REG_LBA0, 0);
-	outb(device->io_base + ATA_REG_LBA2, 0);
-	outb(device->io_base + ATA_REG_LBA0, 0);
-
-	/* identify drive */
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
 
 	/* wait until BSY is clear */
 	while (1) {
@@ -201,39 +83,6 @@ static int ata_identify(struct ata_device_t *device)
 	/* read identified drive data */
 	for (i = 0; i < 256; i += 2)
 		inw(device->io_base + ATA_REG_DATA);
-
-	/* allocate prdt */
-	device->prdt = kmalloc_align(sizeof(struct ata_prdt_t));
-	if (!device->prdt)
-		return -ENOMEM;
-
-	/* allocate buffer */
-	device->buf = kmalloc_align(PAGE_SIZE);
-	if (!device->buf) {
-		kfree(device->prdt);
-		return -ENOMEM;
-	}
-
-	/* clear prdt and buffer */
-	memset(device->prdt, 0, sizeof(struct ata_prdt_t));
-	memset(device->buf, 0, PAGE_SIZE);
-
-	/* set prdt */
-	device->prdt[0].buffer_phys = (uint32_t) device->buf;
-	device->prdt[0].transfert_size = ATA_SECTOR_SIZE;
-	device->prdt[0].mark_end = 0x8000;
-
-	/* activate pci */
-	cmd_reg = pci_read_field(ata_pci_device->address, PCI_CMD);
-	if (!(cmd_reg & (1 << 2))) {
-		cmd_reg |= (1 << 2);
-		pci_write_field(ata_pci_device->address, PCI_CMD, cmd_reg);
-	}
-
-	/* get BAR4 from pci device */
-	device->bar4 = pci_read_field(ata_pci_device->address, PCI_BAR4);
-	if (device->bar4 & 0x00000001)
-		device->bar4 &= 0xFFFFFFFC;
 
 	return 0;
 }
@@ -260,16 +109,21 @@ static int ata_detect(int id, uint16_t bus, uint8_t drive)
 	device->drive = drive;
 	device->io_base = bus == ATA_PRIMARY ? ATA_PRIMARY_IO : ATA_SECONDARY_IO;
 
-	/* identify device */
-	ret = ata_identify(device);
-	if (ret) {
-		kfree(device);
-		device = NULL;
-	}
+	/* try to identify hard disk */
+	ret = ata_hd_init(device);
+	if (!ret)
+		goto out;
 
-	/* set device */
+	/* try to identify cdrom */
+	ret = ata_cd_init(device);
+	if (!ret)
+		goto out;
+
+	/* free device */
+	kfree(device);
+	device = NULL;
+out:
 	ata_devices[id] = device;
-
 	return ret;
 }
 
@@ -287,11 +141,6 @@ static void ata_irq_handler(struct registers_t *regs)
 int init_ata()
 {
 	int i;
-
-	/* get PCI device */
-	ata_pci_device = pci_get_device(ATA_VENDOR_ID, ATA_DEVICE_ID);
-	if (!ata_pci_device)
-		return -EINVAL;
 
 	/* reset ata devices */
 	memset(ata_devices, 0, sizeof(ata_devices));
