@@ -8,7 +8,6 @@
 static int ata_cd_read_sector(struct ata_device_t *device, uint32_t sector, char *buf)
 {
 	uint8_t status, command[12];
-	size_t i;
 
 	/* select drive */
 	outb(device->io_base + ATA_REG_HDDEVSEL, device->drive == ATA_MASTER ? 0xE0 : 0xF0);
@@ -39,8 +38,7 @@ static int ata_cd_read_sector(struct ata_device_t *device, uint32_t sector, char
 	command[9] = 1;
 
 	/* issue read command */
-	for (i = 0; i < 12; i++)
-		outw(device->io_base, command[i]);
+	outsw(device->io_base, command, 12 / sizeof(uint16_t));
 
 	/* wait until BSY is clear */
 	while (1) {
