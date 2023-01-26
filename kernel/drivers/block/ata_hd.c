@@ -129,29 +129,11 @@ int ata_hd_init(struct ata_device_t *device)
 {
 	struct pci_device_t *ata_pci_device;
 	uint32_t cmd_reg;
-	int ret;
 	
 	/* get PCI device */
 	ata_pci_device = pci_get_device(ATA_VENDOR_ID, ATA_DEVICE_ID);
 	if (!ata_pci_device)
 		return -EINVAL;
-
-	/* select drive */
-	outb(device->io_base + ATA_REG_HDDEVSEL, device->drive == ATA_MASTER ? 0xA0 : 0xB0);
-
-	/* reset ata registers */
-	outb(device->io_base + ATA_REG_SECCOUNT0, 0);
-	outb(device->io_base + ATA_REG_LBA0, 0);
-	outb(device->io_base + ATA_REG_LBA2, 0);
-	outb(device->io_base + ATA_REG_LBA0, 0);
-
-	/* identify drive */
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
-
-	/* poll for identification */
-	ret = ata_poll_identify(device);
-	if (ret)
-		return ret;
 
 	/* allocate prdt */
 	device->prdt = kmalloc_align(sizeof(struct ata_prdt_t));

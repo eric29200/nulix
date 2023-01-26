@@ -55,9 +55,10 @@ int ata_write(dev_t dev, struct buffer_head_t *bh)
 /*
  * Poll for identification.
  */
-int ata_poll_identify(struct ata_device_t *device)
+static int ata_poll_identify(struct ata_device_t *device)
 {
 	uint8_t status;
+	uint16_t id;
 	int i;
 
 	/* wait until BSY is clear */
@@ -70,6 +71,13 @@ int ata_poll_identify(struct ata_device_t *device)
 			break;
 	}
 
+	/* check if it is an atapi device */
+	id = (inb(device->io_base + ATA_REG_LBA1) << 8) | inb(device->io_base + ATA_REG_LBA2);
+	if (id == 0x14EB) {
+		device->is_atapi = 1;
+		goto out;
+	}
+
 	/* wait until DRQ (drive has data to transfer) is clear */
 	while (1) {
 		status = inb(device->io_base + ATA_REG_STATUS);
@@ -80,6 +88,7 @@ int ata_poll_identify(struct ata_device_t *device)
 			break;
 	}
 
+out:
 	/* read identified drive data */
 	for (i = 0; i < 256; i += 2)
 		inw(device->io_base + ATA_REG_DATA);
@@ -109,20 +118,33 @@ static int ata_detect(int id, uint16_t bus, uint8_t drive)
 	device->drive = drive;
 	device->io_base = bus == ATA_PRIMARY ? ATA_PRIMARY_IO : ATA_SECONDARY_IO;
 
-	/* try to identify hard disk */
-	ret = ata_hd_init(device);
-	if (!ret)
-		goto out;
+	/* select drive */
+	outb(device->io_base + ATA_REG_HDDEVSEL, device->drive == ATA_MASTER ? 0xA0 : 0xB0);
 
-	/* try to identify cdrom */
-	ret = ata_cd_init(device);
-	if (!ret)
-		goto out;
+	/* identify drive */
+	outb(device->io_base + ATA_REG_SECCOUNT0, 0);
+	outb(device->io_base + ATA_REG_LBA0, 0);
+	outb(device->io_base + ATA_REG_LBA2, 0);
+	outb(device->io_base + ATA_REG_LBA0, 0);
+	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
 
-	/* free device */
-	kfree(device);
-	device = NULL;
-out:
+	/* poll for identification */
+	ret = ata_poll_identify(device);
+	if (ret)
+		return ret;
+
+	/* init drive */
+	if (device->is_atapi)
+		ret = ata_cd_init(device);
+	else
+		ret = ata_hd_init(device);
+
+	/* free device on error */
+	if (ret) {
+		kfree(device);
+		device = NULL;
+	}
+
 	ata_devices[id] = device;
 	return ret;
 }

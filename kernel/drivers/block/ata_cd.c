@@ -94,28 +94,7 @@ static int ata_cd_read(struct ata_device_t *device, struct buffer_head_t *bh)
  */
 int ata_cd_init(struct ata_device_t *device)
 {
-	int ret;
-
-	/* select drive */
-	outb(device->io_base + ATA_REG_HDDEVSEL, device->drive == ATA_MASTER ? 0xA0 : 0xB0);
-
-	/* reset ata registers */
-	outb(device->io_base + ATA_REG_SECCOUNT0, 0);
-	outb(device->io_base + ATA_REG_LBA0, 0);
-	outb(device->io_base + ATA_REG_LBA2, 0);
-	outb(device->io_base + ATA_REG_LBA0, 0);
-
-	/* identify drive */
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY_PACKET);
-
-	/* poll for identification */
-	ret = ata_poll_identify(device);
-	if (ret)
-		return ret;
-
-	/* set operations */
 	device->read = ata_cd_read;
 	device->write = NULL;
-
 	return 0;
 }

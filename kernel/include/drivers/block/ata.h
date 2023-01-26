@@ -84,6 +84,7 @@ struct ata_device_t {
 	uint8_t			bus;
 	uint8_t			drive;
 	uint16_t		io_base;
+	char			is_atapi;
 	struct ata_prdt_t	*prdt;
 	uint8_t *		buf;
 	uint32_t		bar4;
@@ -93,7 +94,6 @@ struct ata_device_t {
 
 int init_ata();
 struct ata_device_t *ata_get_device(dev_t dev);
-int ata_poll_identify(struct ata_device_t *device);
 int ata_read(dev_t dev, struct buffer_head_t *bh);
 int ata_write(dev_t dev, struct buffer_head_t *bh);
 
