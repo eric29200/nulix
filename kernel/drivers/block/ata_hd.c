@@ -4,12 +4,29 @@
 #include <stderr.h>
 
 /*
+ * Wait for operation completion.
+ */
+static void ata_hd_wait(struct ata_device_t *device)
+{
+	int status, dstatus;
+
+	for (;;) {
+		status = inb(device->bar4 + 2);
+		dstatus = inb(device->io_base + ATA_REG_STATUS);
+
+		if (!(status & 0x04))
+			continue;
+
+		if (!(dstatus & ATA_SR_BSY))
+			break;
+	}
+}
+
+/*
  * Read sectors from an ata device.
  */
 static int ata_hd_read_sectors(struct ata_device_t *device, uint32_t sector, uint32_t nb_sectors, char *buf)
 {
-	int status, dstatus;
-
 	/* set transfert size */
 	device->prdt[0].transfert_size = nb_sectors * ATA_SECTOR_SIZE;
 
@@ -32,14 +49,7 @@ static int ata_hd_read_sectors(struct ata_device_t *device, uint32_t sector, uin
 	outb(device->bar4, 0x8 | 0x1);
 
 	/* wait for completion */
-	for (;;) {
-		status = inb(device->bar4 + 2);
-		dstatus = inb(device->io_base + ATA_REG_STATUS);
-		if (!(status & 0x04))
-			continue;
-		if (!(dstatus & ATA_SR_BSY))
-			break;
-	}
+	ata_hd_wait(device);
 
 	/* copy buffer */
 	memcpy(buf, device->buf, nb_sectors * ATA_SECTOR_SIZE);
@@ -67,8 +77,6 @@ static int ata_hd_read(struct ata_device_t *device, struct buffer_head_t *bh)
  */
 static int ata_hd_write_sectors(struct ata_device_t *device, uint32_t sector, uint32_t nb_sectors, char *buf)
 {
-	int status, dstatus;
-
 	/* copy buffer */
 	memcpy(device->buf, buf, nb_sectors * ATA_SECTOR_SIZE);
 
@@ -94,14 +102,7 @@ static int ata_hd_write_sectors(struct ata_device_t *device, uint32_t sector, ui
 	outb(device->bar4, 0x1);
 
 	/* wait for completion */
-	for (;;) {
-		status = inb(device->bar4 + 2);
-		dstatus = inb(device->io_base + ATA_REG_STATUS);
-		if (!(status & 0x04))
-			continue;
-		if (!(dstatus & ATA_SR_BSY))
-			break;
-	}
+	ata_hd_wait(device);
 
 	return 0;
 }

@@ -3,11 +3,31 @@
 #include <stderr.h>
 
 /*
+ * Wait for operation completion.
+ */
+static int ata_cd_wait(struct ata_device_t *device)
+{
+	uint8_t status; 
+
+	for (;;) {
+		status = inb(device->io_base + ATA_REG_STATUS);
+		if (!status)
+			return -ENXIO;
+
+		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ))
+			break;
+	}
+
+	return 0;
+}
+
+/*
  * Read a sector from an ata device.
  */
 static int ata_cd_read_sector(struct ata_device_t *device, uint32_t sector, char *buf)
 {
-	uint8_t status, command[12];
+	uint8_t command[12];
+	int ret;
 
 	/* select drive */
 	outb(device->io_base + ATA_REG_HDDEVSEL, device->drive == ATA_MASTER ? 0xE0 : 0xF0);
@@ -18,15 +38,10 @@ static int ata_cd_read_sector(struct ata_device_t *device, uint32_t sector, char
 	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (ATAPI_SECTOR_SIZE >> 8));
 	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
 
-	/* wait until BSY is clear */
-	while (1) {
-		status = inb(device->io_base + ATA_REG_STATUS);
-		if (!status)
-			return -ENXIO;
-
-		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ))
-			break;
-	}
+	/* wait for completion */
+	ret = ata_cd_wait(device);
+	if (ret)
+		return ret;
 
 	/* prepare read command */
 	memset(command, 0, 12);
@@ -40,15 +55,10 @@ static int ata_cd_read_sector(struct ata_device_t *device, uint32_t sector, char
 	/* issue read command */
 	outsw(device->io_base, command, 12 / sizeof(uint16_t));
 
-	/* wait until BSY is clear */
-	while (1) {
-		status = inb(device->io_base + ATA_REG_STATUS);
-		if (!status)
-			return -ENXIO;
-
-		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ))
-			break;
-	}
+	/* wait for completion */
+	ret = ata_cd_wait(device);
+	if (ret)
+		return ret;
 
 	/* read data */
 	insw(device->io_base, buf, ATAPI_SECTOR_SIZE / sizeof(uint16_t));
