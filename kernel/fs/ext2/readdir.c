@@ -11,8 +11,8 @@ int ext2_getdents64(struct file_t *filp, void *dirp, size_t count)
 	struct buffer_head_t *bh = NULL;
 	struct ext2_dir_entry_t *de;
 	struct dirent64_t *dirent;
+	int entries_size = 0, ret;
 	uint32_t offset, block;
-	int entries_size = 0;
 
 	/* get start offset */
 	offset = filp->f_pos & (sb->s_blocksize - 1);
@@ -44,19 +44,12 @@ int ext2_getdents64(struct file_t *filp, void *dirp, size_t count)
 				continue;
 			}
 
-			/* not enough space to fill in next dir entry : break */
-			if (count < sizeof(struct dirent64_t) + de->d_name_len + 1) {
+			/* fill in directory entry */
+			ret = filldir(dirent, de->d_name, de->d_name_len, de->d_inode, count);
+			if (ret) {
 				brelse(bh);
 				return entries_size;
 			}
-
-			/* fill in dirent */
-			dirent->d_inode = de->d_inode;
-			dirent->d_off = 0;
-			dirent->d_reclen = sizeof(struct dirent64_t) + de->d_name_len + 1;
-			dirent->d_type = 0;
-			memcpy(dirent->d_name, de->d_name, de->d_name_len);
-			dirent->d_name[de->d_name_len] = 0;
 
 			/* update offset */
 			offset += de->d_rec_len;

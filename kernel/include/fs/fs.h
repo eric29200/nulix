@@ -229,6 +229,9 @@ struct file_t *get_empty_filp();
 struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int follow_links);
 int open_namei(int dirfd, struct inode_t *base, const char *pathname, int flags, mode_t mode, struct inode_t **res_inode);
 
+/* directory operations */
+int filldir(struct dirent64_t *dirent, const char *name, size_t name_len, ino_t ino, size_t max_len);
+
 /* character device driver */
 struct inode_operations_t *char_get_driver(struct inode_t *inode);
 

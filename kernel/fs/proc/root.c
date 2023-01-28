@@ -29,26 +29,17 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 {
 	struct dirent64_t *dirent = (struct dirent64_t *) dirp;
 	struct list_head_t *pos;
+	int name_len, ret, n;
 	struct task_t *task;
-	int name_len, n;
 	char pid_s[16];
 	size_t i;
 
 	/* read root dir entries */
 	for (i = filp->f_pos, n = 0; i < NR_ROOT_DIRENTRY; i++, filp->f_pos++) {
-		/* check buffer size */
-		name_len = root_dir[i].name_len;
-		if (count < sizeof(struct dirent64_t) + name_len + 1)
+		/* fill in directory entry */ 
+		ret = filldir(dirent, root_dir[i].name, root_dir[i].name_len, root_dir[i].ino, count);
+		if (ret)
 			return n;
-
-		/* set dir entry */
-		dirent->d_inode = root_dir[i].ino;
-		dirent->d_type = 0;
-		memcpy(dirent->d_name, root_dir[i].name, name_len);
-		dirent->d_name[name_len] = 0;
-
-		/* set dir entry size */
-		dirent->d_reclen = sizeof(struct dirent64_t) + name_len + 1;
 
 		/* go to next dir entry */
 		count -= dirent->d_reclen;
@@ -68,19 +59,11 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 		if (filp->f_pos > i++)
 			continue;
 
-		/* check buffer size */
+		/* fill in directory entry */ 
 		name_len = sprintf(pid_s, "%d", task->pid);
-		if (count < sizeof(struct dirent64_t) + name_len + 1)
+		ret = filldir(dirent, pid_s, name_len, (task->pid << 16) + PROC_PID_INO, count);
+		if (ret)
 			return n;
-
-		/* set dir entry */
-		dirent->d_inode = (task->pid << 16) + PROC_PID_INO;
-		dirent->d_type = 0;
-		memcpy(dirent->d_name, pid_s, name_len);
-		dirent->d_name[name_len] = 0;
-
-		/* set dir entry size */
-		dirent->d_reclen = sizeof(struct dirent64_t) + name_len + 1;
 
 		/* go to next dir entry */
 		count -= dirent->d_reclen;

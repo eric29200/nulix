@@ -12,7 +12,7 @@ int isofs_getdents64(struct file_t *filp, void *dirp, size_t count)
 	struct isofs_inode_info_t *isofs_inode = &filp->f_inode->u.iso_i;
 	char name[ISOFS_MAX_NAME_LEN + 1], de_tmp[4096];
 	struct super_block_t *sb = filp->f_inode->i_sb;
-	int de_len, entries_size = 0, name_len;
+	int de_len, entries_size = 0, name_len, ret;
 	struct inode_t *inode = filp->f_inode;
 	uint32_t offset, next_offset, block;
 	struct iso_directory_record_t *de;
@@ -101,50 +101,35 @@ int isofs_getdents64(struct file_t *filp, void *dirp, size_t count)
 
 		/* fake "." entry */
 		if (de->name_len[0] == 1 && de->name[0] == 0) {
-			if (count < sizeof(struct dirent64_t) + 1 + 1) {
+			ret = filldir(dirent, ".", 1, inode->i_ino, count);
+			if (ret) {
 				brelse(bh);
 				return entries_size;
 			}
 
-			dirent->d_inode = inode->i_ino;
-			dirent->d_off = 0;
-			dirent->d_reclen = sizeof(struct dirent64_t) + 2;
-			dirent->d_type = 0;
-			strcpy(dirent->d_name, ".");
 			goto next;
 		}
 
 		/* fake ".." entry */
 		if (de->name_len[0] == 1 && de->name[0] == 1) {
-			if (count < sizeof(struct dirent64_t) + 2 + 1) {
+			ret = filldir(dirent, "..", 2, inode->i_ino, count);
+			if (ret) {
 				brelse(bh);
 				return entries_size;
 			}
 
-			dirent->d_inode = isofs_parent_ino(inode);
-			dirent->d_off = 0;
-			dirent->d_reclen = sizeof(struct dirent64_t) + 3;
-			dirent->d_type = 0;
-			strcpy(dirent->d_name, "..");
 			goto next;
 		}
 
 		/* translate name */
 		name_len = isofs_name_translate(de->name, de->name_len[0], name);
 
-		/* not enough space to fill in next dir entry : break */
-		if (count < sizeof(struct dirent64_t) + name_len + 1) {
+		/* fill in directory entry */ 
+		ret = filldir(dirent, name, name_len, ino, count);
+		if (ret) {
 			brelse(bh);
 			return entries_size;
 		}
-
-		/* fill in directory entry */
-		dirent->d_inode = ino;
-		dirent->d_off = 0;
-		dirent->d_reclen = sizeof(struct dirent64_t) + name_len + 1;
-		dirent->d_type = 0;
-		memcpy(dirent->d_name, name, name_len);
-		dirent->d_name[name_len] = 0;
 
 		/* go to next entry */
 next:

@@ -8,8 +8,7 @@ int tmpfs_getdents64(struct file_t *filp, void *dirp, size_t count)
 {
 	struct tmpfs_dir_entry_t de;
 	struct dirent64_t *dirent;
-	int entries_size;
-	size_t name_len;
+	int entries_size, ret;
 
 	/* walk through all entries */
 	for (entries_size = 0, dirent = (struct dirent64_t *) dirp;;) {
@@ -20,21 +19,13 @@ int tmpfs_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* skip null entries */
 		if (!de.d_inode)
 			continue;
-
-		/* not enough space to fill in next dir entry */
-		name_len = strlen(de.d_name);
-		if (count < sizeof(struct dirent64_t) + name_len + 1) {
+		
+		/* fill in directory entry */
+		ret = filldir(dirent, de.d_name, strlen(de.d_name), de.d_inode, count);
+		if (ret) {
 			filp->f_pos -= sizeof(struct tmpfs_dir_entry_t);
 			return entries_size;
 		}
-
-		/* fill in dirent */
-		dirent->d_inode = de.d_inode;
-		dirent->d_off = 0;
-		dirent->d_type = 0;
-		dirent->d_reclen = sizeof(struct dirent64_t) + name_len + 1;
-		memcpy(dirent->d_name, de.d_name, name_len);
-		dirent->d_name[name_len] = 0;
 
 		/* go to next entry */
 		count -= dirent->d_reclen;

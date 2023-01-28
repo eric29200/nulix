@@ -238,7 +238,7 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 	struct dirent64_t *dirent = (struct dirent64_t *) dirp;
 	struct task_t *task;
 	size_t name_len, i;
-	int fd, n = 0;
+	int fd, n = 0, ret;
 	char fd_s[16];
 	pid_t pid;
 
@@ -247,14 +247,12 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 
 	/* add "." entry */
 	if (filp->f_pos == 0) {
-		if (count < sizeof(struct dirent64_t) + 1 + 1)
+		/* fill in directory entry */ 
+		ret = filldir(dirent, ".", 1, filp->f_inode->i_ino, count);
+		if (ret)
 			return n;
 
-		dirent->d_inode = filp->f_inode->i_ino;
-		dirent->d_type = 0;
-		memcpy(dirent->d_name, ".", 1);
-		dirent->d_name[1] = 0;
-		dirent->d_reclen = sizeof(struct dirent64_t) + 1 + 1;
+		/* go to next entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
 		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
@@ -263,14 +261,12 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 
 	/* add ".." entry */
 	if (filp->f_pos == 1) {
-		if (count < sizeof(struct dirent64_t) + 2 + 1)
+		/* fill in directory entry */ 
+		ret = filldir(dirent, "..", 2, (filp->f_inode->i_ino & 0xFFFF0000) + PROC_PID_INO, count);
+		if (ret)
 			return n;
 
-		dirent->d_inode = (filp->f_inode->i_ino & 0xFFFF0000) + PROC_PID_INO;
-		dirent->d_type = 0;
-		memcpy(dirent->d_name, "..", 2);
-		dirent->d_name[2] = 0;
-		dirent->d_reclen = sizeof(struct dirent64_t) + 2 + 1;
+		/* go to next entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
 		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
@@ -291,20 +287,13 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* skip files before offset */
 		if (filp->f_pos > i++)
 			continue;
+		
 
-		/* check buffer size */
+		/* fill in directory entry */ 
 		name_len = sprintf(fd_s, "%d", fd);
-		if (count < sizeof(struct dirent64_t) + name_len + 1)
+		ret = filldir(dirent, fd_s, name_len, (pid << 16) + (PROC_PID_FD_INO << 8) + fd, count);
+		if (ret)
 			return n;
-
-		/* set dir entry */
-		dirent->d_inode = (pid << 16) + (PROC_PID_FD_INO << 8) + fd;
-		dirent->d_type = 0;
-		memcpy(dirent->d_name, fd_s, name_len);
-		dirent->d_name[name_len] = 0;
-
-		/* set dir entry size */
-		dirent->d_reclen = sizeof(struct dirent64_t) + name_len + 1;
 
 		/* go to next dir entry */
 		count -= dirent->d_reclen;
@@ -486,7 +475,7 @@ struct inode_operations_t proc_fd_link_iops = {
 static int proc_base_getdents64(struct file_t *filp, void *dirp, size_t count)
 {
 	struct dirent64_t *dirent;
-	int name_len, n;
+	int n, ret;
 	pid_t pid;
 	size_t i;
 
@@ -495,19 +484,10 @@ static int proc_base_getdents64(struct file_t *filp, void *dirp, size_t count)
 
 	/* read root dir entries */
 	for (i = filp->f_pos, n = 0, dirent = (struct dirent64_t *) dirp; i < NR_BASE_DIRENTRY; i++, filp->f_pos++) {
-		/* check buffer size */
-		name_len = base_dir[i].name_len;
-		if (count < sizeof(struct dirent64_t) + name_len + 1)
+		/* fill in directory entry */ 
+		ret = filldir(dirent, base_dir[i].name, base_dir[i].name_len, (pid << 16) + base_dir[i].ino, count);
+		if (ret)
 			return n;
-
-		/* set dir entry */
-		dirent->d_inode = (pid << 16) + base_dir[i].ino;
-		dirent->d_type = 0;
-		memcpy(dirent->d_name, base_dir[i].name, name_len);
-		dirent->d_name[name_len] = 0;
-
-		/* set dir entry size */
-		dirent->d_reclen = sizeof(struct dirent64_t) + name_len + 1;
 
 		/* go to next dir entry */
 		count -= dirent->d_reclen;
