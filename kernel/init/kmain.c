@@ -119,6 +119,15 @@ static void kinit()
 	if (init_iso_fs() != 0)
 		panic("Cannot register iso file system");
 
+	/* init pci devices */
+	printf("[Kernel] PCI devices Init\n");
+	init_pci();
+
+	/* init ata devices */
+	printf("[Kernel] ATA devices Init\n");
+	if (init_ata())
+		printf("[Kernel] ATA devices Init error\n");
+
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
 	if (do_mount_root(ROOT_DEV, ROOT_DEV_NAME) != 0)
@@ -241,15 +250,6 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 	/* init real time clock */
 	printf("[Kernel] Real Time Clock Init\n");
 	init_rtc();
-
-	/* init pci devices */
-	printf("[Kernel] PCI devices Init\n");
-	init_pci();
-
-	/* init ata devices */
-	printf("[Kernel] ATA devices Init\n");
-	if (init_ata())
-		printf("[Kernel] ATA devices Init error\n");
 
 	/* init system calls */
 	printf("[Kernel] System calls Init\n");

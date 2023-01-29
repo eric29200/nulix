@@ -81,6 +81,7 @@ struct ata_prdt_t {
  * ATA device.
  */
 struct ata_device_t {
+	int			id;
 	uint8_t			bus;
 	uint8_t			drive;
 	uint16_t		io_base;

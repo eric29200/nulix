@@ -10,7 +10,34 @@
 #include <dev.h>
 
 /* ata devices */
-static struct ata_device_t *ata_devices[NR_ATA_DEVICES] = { NULL, };
+static struct ata_device_t ata_devices[NR_ATA_DEVICES] = {
+	{
+		.id 		= 0,
+		.bus 		= ATA_PRIMARY,
+		.drive 		= ATA_MASTER,
+		.io_base 	= ATA_PRIMARY_IO
+	},
+	{
+		.id 		= 1,
+		.bus 		= ATA_PRIMARY,
+		.drive 		= ATA_SLAVE,
+		.io_base 	= ATA_PRIMARY_IO
+	},
+	{
+		.id 		= 2,
+		.bus 		= ATA_SECONDARY,
+		.drive 		= ATA_MASTER,
+		.io_base 	= ATA_SECONDARY_IO
+	},
+	{
+		.id 		= 3,
+		.bus 		= ATA_SECONDARY,
+		.drive 		= ATA_SLAVE,
+		.io_base 	= ATA_SECONDARY_IO
+	},
+};
+
+/* ata block sizes */
 static size_t ata_blocksizes[NR_ATA_DEVICES] = { 0, };
 
 /*
@@ -21,7 +48,7 @@ struct ata_device_t *ata_get_device(dev_t dev)
 	if (major(dev) != DEV_ATA_MAJOR || minor(dev) >= NR_ATA_DEVICES)
 		return NULL;
 
-	return ata_devices[minor(dev)];
+	return &ata_devices[minor(dev)];
 }
 
 /*
@@ -101,25 +128,10 @@ out:
 /*
  * Detect an ATA device.
  */
-static int ata_detect(int id, uint16_t bus, uint8_t drive)
+static int ata_detect(struct ata_device_t *device)
 {
-	struct ata_device_t *device;
 	char dev_name[32];
 	int ret;
-
-	/* check id */
-	if (id > NR_ATA_DEVICES)
-		return -ENXIO;
-
-	/* allocate a new device */
-	device = (struct ata_device_t *) kmalloc(sizeof(struct ata_device_t));
-	if (!device)
-		return -ENOMEM;
-
-	/* set device */
-	device->bus = bus;
-	device->drive = drive;
-	device->io_base = bus == ATA_PRIMARY ? ATA_PRIMARY_IO : ATA_SECONDARY_IO;
 
 	/* select drive */
 	outb(device->io_base + ATA_REG_HDDEVSEL, device->drive == ATA_MASTER ? 0xA0 : 0xB0);
@@ -147,17 +159,14 @@ static int ata_detect(int id, uint16_t bus, uint8_t drive)
 		goto err;
 
 	/* register device */
-	sprintf(dev_name, "hd%c", 'a' + id);
-	if (!devfs_register(NULL, dev_name, S_IFBLK | 0660, mkdev(DEV_ATA_MAJOR, id))) {
+	sprintf(dev_name, "hd%c", 'a' + device->id);
+	if (!devfs_register(NULL, dev_name, S_IFBLK | 0660, mkdev(DEV_ATA_MAJOR, device->id))) {
 		ret = -ENOSPC;
 		goto err;
 	}
 
-	/* set device */
-	ata_devices[id] = device;
 	return 0;
 err:
-	kfree(device);
 	return ret;
 }
 
@@ -174,28 +183,23 @@ static void ata_irq_handler(struct registers_t *regs)
  */
 int init_ata()
 {
-	int i;
-
-	/* reset ata devices */
-	memset(ata_devices, 0, sizeof(ata_devices));
+	int ret, i;
 
 	/* register interrupt handlers */
 	register_interrupt_handler(IRQ14, ata_irq_handler);
 	register_interrupt_handler(IRQ15, ata_irq_handler);
 
 	/* detect hard drives */
-	if (ata_detect(0, ATA_PRIMARY, ATA_MASTER) == 0)
-		printf("[Kernel] Primary ATA master drive detected\n");
-	if (ata_detect(1, ATA_PRIMARY, ATA_SLAVE) == 0)
-		printf("[Kernel] Primary ATA slave drive detected\n");
-	if (ata_detect(2, ATA_SECONDARY, ATA_MASTER) == 0)
-		printf("[Kernel] Secondary ATA master drive detected\n");
-	if (ata_detect(3, ATA_SECONDARY, ATA_SLAVE) == 0)
-		printf("[Kernel] Secondary ATA slave drive detected\n");
+	for (i = 0; i < NR_ATA_DEVICES; i++) {
+		ret = ata_detect(&ata_devices[i]);
+		if (ret)
+			continue;
+		
+		/* set default block size */
+		ata_blocksizes[i] = DEFAULT_BLOCK_SIZE;
+	}
 
 	/* set default block size */
-	for (i = 0; i < NR_ATA_DEVICES; i++)
-		ata_blocksizes[i] = DEFAULT_BLOCK_SIZE;
 	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
 
 	return 0;
