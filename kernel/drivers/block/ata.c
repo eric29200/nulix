@@ -43,7 +43,7 @@ static size_t ata_blocksizes[NR_ATA_DEVICES] = { 0, };
 /*
  * Get an ata device.
  */
-struct ata_device_t *ata_get_device(dev_t dev)
+static struct ata_device_t *ata_get_device(dev_t dev)
 {
 	if (major(dev) != DEV_ATA_MAJOR || minor(dev) >= NR_ATA_DEVICES)
 		return NULL;
