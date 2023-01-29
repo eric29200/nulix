@@ -1,14 +1,16 @@
 #include <drivers/block/ata.h>
+#include <fs/dev_fs.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>
 #include <stderr.h>
 #include <string.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <dev.h>
 
 /* ata devices */
-static struct ata_device_t *ata_devices[NR_ATA_DEVICES];
+static struct ata_device_t *ata_devices[NR_ATA_DEVICES] = { NULL, };
 static size_t ata_blocksizes[NR_ATA_DEVICES] = { 0, };
 
 /*
@@ -102,6 +104,7 @@ out:
 static int ata_detect(int id, uint16_t bus, uint8_t drive)
 {
 	struct ata_device_t *device;
+	char dev_name[32];
 	int ret;
 
 	/* check id */
@@ -140,12 +143,21 @@ static int ata_detect(int id, uint16_t bus, uint8_t drive)
 		ret = ata_hd_init(device);
 
 	/* free device on error */
-	if (ret) {
-		kfree(device);
-		device = NULL;
+	if (ret)
+		goto err;
+
+	/* register device */
+	sprintf(dev_name, "hd%c", 'a' + id);
+	if (!devfs_register(NULL, dev_name, S_IFBLK | 0660, mkdev(DEV_ATA_MAJOR, id))) {
+		ret = -ENOSPC;
+		goto err;
 	}
 
+	/* set device */
 	ata_devices[id] = device;
+	return 0;
+err:
+	kfree(device);
 	return ret;
 }
 

@@ -10,6 +10,9 @@
 #include <drivers/char/tty.h>
 #include <drivers/char/keyboard.h>
 #include <drivers/char/mouse.h>
+#include <drivers/char/zero.h>
+#include <drivers/char/null.h>
+#include <drivers/char/random.h>
 #include <drivers/pci/pci.h>
 #include <drivers/block/ata.h>
 #include <drivers/video/fb.h>
@@ -28,8 +31,8 @@
 #include <fcntl.h>
 #include <dev.h>
 
-#define ROOT_DEV	(mkdev(DEV_ATA_MAJOR, 0))
-#define ROOT_DEV_NAME	"/dev/hda"
+#define ROOT_DEV		(mkdev(DEV_ATA_MAJOR, 0))
+#define ROOT_DEV_NAME		"/dev/hda"
 
 extern uint32_t loader;
 extern uint32_t kernel_stack;
@@ -97,97 +100,6 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
 }
 
 /*
- * Create devices nodes.
- */
-static int create_devices_nodes()
-{
-	struct ata_device_t *device;
-	char path[64];
-	int ret, i;
-
-	/* create disk nodes */
-	for (i = 0; i < NR_ATA_DEVICES; i++) {
-		/* get device */
-		device = ata_get_device(mkdev(DEV_ATA_MAJOR, i));
-		if (!device)
-			continue;
-
-		/* create node */
-		sprintf(path, "/dev/hd%c", 'a' + i);
-		ret = sys_mknod(path, S_IFBLK | 0600, mkdev(DEV_ATA_MAJOR, i));
-		if (ret)
-			return ret;
-	}
-
-	/* create ttys nodes */
-	for (i = 0; i < NR_CONSOLES; i++) {
-		sprintf(path, "/dev/tty%d", i);
-		ret = sys_mknod(path, S_IFCHR | 0644, DEV_TTY0 + i);
-		if (ret)
-			return ret;
-	}
-
-	/* create /dev/tty node */
-	ret = sys_mknod("/dev/tty", S_IFCHR | 0644, DEV_TTY);
-	if (ret)
-		return ret;
-
-	/* create /dev/console node */
-	ret = sys_mknod("/dev/console", S_IFCHR | 0644, DEV_CONSOLE);
-	if (ret)
-		return ret;
-
-	/* create pty slave directory */
-	ret = sys_mkdir("/dev/pts", 0755);
-	if (ret)
-		return ret;
-
-	/* create pty multiplexer */
-	ret = sys_mknod("/dev/ptmx", S_IFCHR | 0644, DEV_PTMX);
-	if (ret) {
-		sys_unlink("/dev/ptmx");
-		return ret;
-	}
-
-	/* create direct framebuffer node */
-	ret = sys_mknod("/dev/fb0", S_IFCHR | 0660, mkdev(DEV_FB_MAJOR, 0));
-	if (ret)
-		return ret;
-
-	/* create mouse node */
-	ret = sys_mknod("/dev/mouse", S_IFCHR | 0660, mkdev(DEV_MOUSE_MAJOR, 0));
-	if (ret)
-		return ret;
-
-	/* create /dev/input folder */
-	ret = sys_mkdir("/dev/input", S_IFDIR | 0755);
-	if (ret)
-		return ret;
-
-	/* create /dev/input/mice symlink */
-	ret = sys_symlink("../mouse", "/dev/input/mice");
-	if (ret)
-		return ret;
-
-	/* create /dev/zero node */
-	ret = sys_mknod("/dev/zero", S_IFCHR | 0666, DEV_ZERO);
-	if (ret)
-		return ret;
-
-	/* create /dev/random node */
-	ret = sys_mknod("/dev/random", S_IFCHR | 0666, DEV_RANDOM);
-	if (ret)
-		return ret;
-
-	/* create /dev/null node */
-	ret = sys_mknod("/dev/null", S_IFCHR | 0666, DEV_NULL);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-/*
  * Nulix init (second phase).
  */
 static void kinit()
@@ -244,17 +156,27 @@ static void kinit()
 	/* init ttys */
 	printf("[Kernel] Ttys Init\n");
 	if (init_tty(tag_fb))
-		panic("Cannot init ttys\n");
+		panic("Cannot init ttys");
 
 	/* init direct frame buffer */
 	printf("[Kernel] Direct frame buffer Init\n");
 	if (init_framebuffer_direct(tag_fb))
-		panic("Cannot init direct frame buffer\n");
+		panic("Cannot init direct frame buffer");
 
-	/* create devices nodes */
-	printf("[Kernel] Create devices nodes\n");
-	if (create_devices_nodes())
-		panic("Cannot create devices nodes\n");
+	/* init zero device */
+	printf("[Kernel] Zero device Init\n");
+	if (init_zero())
+		panic("Cannot init zero device");
+
+	/* init null device */
+	printf("[Kernel] Null device Init\n");
+	if (init_null())
+		panic("Cannot init null device");
+
+	/* init random device */
+	printf("[Kernel] Random device Init\n");
+	if (init_random())
+		panic("Cannot init random device");
 
 	/* spawn init process */
 	if (spawn_init() != 0)
@@ -336,7 +258,7 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 	/* init processes */
 	printf("[Kernel] Processes Init\n");
 	if (init_scheduler(kinit) != 0)
-		panic("Cannot init processes\n");
+		panic("Cannot init processes");
 
 	/* enable interrupts */
 	printf("[Kernel] Enable interrupts\n");

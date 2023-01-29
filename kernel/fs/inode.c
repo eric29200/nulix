@@ -83,7 +83,7 @@ found:
 /*
  * Find an inode in hash table.
  */
-static struct inode_t *find_inode(struct super_block_t *sb, ino_t ino)
+struct inode_t *find_inode(struct super_block_t *sb, ino_t ino)
 {
 	struct htable_link_t *node;
 	struct inode_t *inode;

@@ -7,8 +7,7 @@
  */
 int devfs_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
 {
-	struct page_t *page;
-	int ret;
+	struct devfs_entry_t *de;
 
 	*res_inode = NULL;
 
@@ -22,22 +21,14 @@ int devfs_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mod
 		return 0;
 	}
 
-	/* check first page */
-	if (list_empty(&inode->u.dev_i.i_pages)) {
-		iput(inode);
-		return -EIO;
-	}
-
-	/* get first page */
-	page = list_first_entry(&inode->u.dev_i.i_pages, struct page_t, list);
+	/* get devfs entry */
+	de = (struct devfs_entry_t *) inode->u.generic_i;
 
 	/* release link inode */
 	iput(inode);
 
 	/* open target inode */
-	ret = open_namei(AT_FDCWD, dir, (char *) PAGE_ADDRESS(page), flags, mode, res_inode);
-
-	return ret;
+	return open_namei(AT_FDCWD, dir, de->u.symlink.linkname, flags, mode, res_inode);
 }
 
 /*
@@ -45,7 +36,7 @@ int devfs_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mod
  */
 ssize_t devfs_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 {
-	struct page_t *page;
+	struct devfs_entry_t *de;
 
 	/* inode must be link */
 	if (!S_ISLNK(inode->i_mode)) {
@@ -53,24 +44,18 @@ ssize_t devfs_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 		return -EINVAL;
 	}
 
+	/* get devfs entry */
+	de = (struct devfs_entry_t *) inode->u.generic_i;
+
 	/* limit buffer size to page size */
-	if (bufsize > PAGE_SIZE)
-		bufsize = PAGE_SIZE;
-
-	/* check first page */
-	if (list_empty(&inode->u.dev_i.i_pages)) {
-		iput(inode);
-		return 0;
-	}
-
-	/* get first page */
-	page = list_first_entry(&inode->u.dev_i.i_pages, struct page_t, list);
+	if (bufsize > de->u.symlink.linkname_len)
+		bufsize = de->u.symlink.linkname_len;
 
 	/* release inode */
 	iput(inode);
 
 	/* copy target name to user buffer */
-	memcpy(buf, (char *) PAGE_ADDRESS(page), bufsize);
+	memcpy(buf, de->u.symlink.linkname, bufsize);
 
 	return bufsize;
 }

@@ -10,7 +10,6 @@
 #include <fs/ext2_i.h>
 #include <fs/pipe_i.h>
 #include <fs/tmp_i.h>
-#include <fs/dev_i.h>
 #include <fs/iso_i.h>
 #include <proc/wait.h>
 #include <mm/mm.h>
@@ -102,8 +101,8 @@ struct inode_t {
 		struct ext2_inode_info_t	ext2_i;
 		struct pipe_inode_info_t	pipe_i;
 		struct tmpfs_inode_info_t	tmp_i;
-		struct devfs_inode_info_t	dev_i;
 		struct isofs_inode_info_t	iso_i;
+		void *				generic_i;
 	} u;
 };
 
@@ -220,6 +219,7 @@ void iput(struct inode_t *inode);
 struct inode_t *get_empty_inode(struct super_block_t *sb);
 void clear_inode(struct inode_t *inode);
 void insert_inode_hash(struct inode_t *inode);
+struct inode_t *find_inode(struct super_block_t *sb, ino_t ino);
 int iinit();
 
 /* file operations */

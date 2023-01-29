@@ -33,40 +33,13 @@ static struct super_operations_t devfs_sops = {
 };
 
 /*
- * Create root inode.
- */
-static struct inode_t *devfs_mkroot(struct super_block_t *sb)
-{
-	struct inode_t *inode;
-	int ret;
-
-	/* create root inode */
-	inode = devfs_new_inode(sb, S_IFDIR | 0755, 0);
-	if (!inode)
-		return NULL;
-
-	/* create "." entry in root directory */
-	ret = devfs_add_entry(inode, ".", 1, inode);
-	if (ret)
-		goto err;
-
-	/* create ".." entry in root directory */
-	ret = devfs_add_entry(inode, "..", 2, inode);
-	if (ret)
-		goto err;
-
-	return inode;
-err:
-	inode->i_nlinks = 0;
-	iput(inode);
-	return NULL;
-}
-
-/*
  * Read super block.
  */
 static int devfs_read_super(struct super_block_t *sb, void *data, int silent)
 {
+	struct devfs_entry_t *root_entry;
+	int ret = -EINVAL;
+
 	/* unused data */
 	UNUSED(data);
 
@@ -74,16 +47,26 @@ static int devfs_read_super(struct super_block_t *sb, void *data, int silent)
 	sb->s_magic = DEVFS_SUPER_MAGIC;
 	sb->s_op = &devfs_sops;
 
-	/* get root inode */
-	sb->s_root_inode = devfs_mkroot(sb);
-	if (!sb->s_root_inode) {
-		if (!silent)
-			printf("[Dev-fs] Can't create root inode\n");
+	/* get or create root entry */
+	root_entry = devfs_get_root_entry();
+	if (!root_entry)
+		goto err_no_root_entry;
 
-		return -EACCES;
-	}
+	/* get root inode */
+	sb->s_root_inode = devfs_iget(sb, root_entry);
+	if (!sb->s_root_inode)
+		goto err_no_root_inode;
 
 	return 0;
+err_no_root_inode:
+	if (!silent)
+		printf("[Dev-fs] Can't get root inode\n");
+	goto err;
+err_no_root_entry:
+	if (!silent)
+		printf("[Dev-fs] Can't get root entry\n");
+err:
+	return ret;
 }
 
 /*

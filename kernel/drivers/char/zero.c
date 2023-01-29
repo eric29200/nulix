@@ -1,5 +1,7 @@
 #include <drivers/char/zero.h>
 #include <sys/syscall.h>
+#include <fs/dev_fs.h>
+#include <stderr.h>
 #include <fcntl.h>
 #include <dev.h>
 
@@ -58,3 +60,14 @@ static struct file_operations_t zero_fops = {
 struct inode_operations_t zero_iops = {
 	.fops		= &zero_fops,
 };
+
+/*
+ * Init zero device.
+ */
+int init_zero()
+{
+	if (!devfs_register(NULL, "zero", S_IFCHR | 0666, DEV_ZERO))
+		return -ENOSPC;
+
+	return 0;
+}

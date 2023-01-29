@@ -1,6 +1,7 @@
 #include <drivers/char/tty.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
+#include <fs/dev_fs.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -16,6 +17,9 @@ static struct file_operations_t ptm_fops;
 static struct file_operations_t pts_fops;
 struct inode_operations_t ptm_iops;
 struct inode_operations_t pts_iops;
+
+/* pty slave devfs directory */
+static struct devfs_entry_t *devfs_pts_dir = NULL;
 
 /*
  * Master/slave pty write.
@@ -83,21 +87,15 @@ static int ptm_ioctl(struct tty_t *tty, int request, unsigned long arg)
 static int ptm_close(struct tty_t *tty)
 {
 	struct pty_t *pty = tty->driver_data;
-	char name[PTY_NAME_LEN];
 	struct list_head_t *pos;
 	struct task_t *task;
-	int ret;
 
 	if (!tty->link)
 		return 0;
 
-	/* get device node */
-	sprintf(name, "/dev/pts/%d", pty->p_num);
-
-	/* delete device node */
-	ret = do_unlink(AT_FDCWD, name);
-	if (ret)
-		return ret;
+	/* unregister device */
+	if (pty->de)
+		devfs_unregister(pty->de);
 
 	/* send SIGHUP signal to processes attached to slave pty */
 	list_for_each(pos, &current_task->list) {
@@ -156,10 +154,12 @@ static int ptmx_open(struct file_t *filp)
 	memset(&ptm->termios, 0, sizeof(struct termios_t));
 
 	/* create slave pty node */
-	sprintf(name, "/dev/pts/%d", i);
-	ret = do_mknod(AT_FDCWD, name, S_IFCHR | S_IRWXUGO, mkdev(DEV_PTS_MAJOR, i));
-	if (ret)
+	sprintf(name, "%d", i);
+	pty_table[i].de = devfs_register(devfs_pts_dir, name, S_IFCHR | 0660, mkdev(DEV_PTS_MAJOR, i));
+	if (!pty_table[i].de) {
+		ret = -ENOSPC;
 		goto err;
+	}
 
 	/* attach pty struct to master/slave */
 	ptm->driver_data = &pty_table[i];
@@ -206,6 +206,15 @@ int init_pty()
 	/* install slave pty operations */
 	pts_iops.fops = &pts_fops;
 	pts_fops = *tty_iops.fops;
+
+	/* register pty multiplexer */
+	if (!devfs_register(NULL, "ptmx", S_IFCHR | 0666, DEV_PTMX))
+		return -ENOSPC;
+
+	/* create pty slave directory */
+	devfs_pts_dir = devfs_mkdir(NULL, "pts");
+	if (!devfs_pts_dir)
+		return -ENOSPC;
 
 	return 0;
 }
