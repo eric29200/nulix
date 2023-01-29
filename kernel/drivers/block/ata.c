@@ -88,7 +88,6 @@ static int ata_poll_identify(struct ata_device_t *device)
 {
 	uint8_t status;
 	uint16_t id;
-	int i;
 
 	/* wait until BSY is clear */
 	while (1) {
@@ -119,8 +118,7 @@ static int ata_poll_identify(struct ata_device_t *device)
 
 out:
 	/* read identified drive data */
-	for (i = 0; i < 256; i += 2)
-		inw(device->io_base + ATA_REG_DATA);
+	insw(device->io_base + ATA_REG_DATA, &device->identify, 256);
 
 	return 0;
 }

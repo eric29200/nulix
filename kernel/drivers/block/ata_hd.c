@@ -130,6 +130,10 @@ int ata_hd_init(struct ata_device_t *device)
 	struct pci_device_t *ata_pci_device;
 	uint32_t cmd_reg;
 	
+	/* no sectors */
+	if (!device->identify.sectors_28 && !device->identify.sectors_48)
+		return -EINVAL;
+
 	/* get PCI device */
 	ata_pci_device = pci_get_device(ATA_VENDOR_ID, ATA_DEVICE_ID);
 	if (!ata_pci_device)
