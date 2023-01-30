@@ -13,6 +13,7 @@ run:
 	sudo $(QEMU)								\
 		-m $(MEM_SIZE)							\
 		-serial stdio 							\
+		-boot order=d 							\
 		-cdrom $(ISO) 							\
 		-drive format=raw,file=$(DISK1)					\
 		-netdev tap,id=nulix_net					\

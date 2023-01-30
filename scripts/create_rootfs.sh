@@ -1,21 +1,29 @@
 #!/bin/bash
 
-DISK1=hda.img
-DISK_SIZE=2048M
+DISK=hda.img
+DISK_SIZE=2G
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
 	exit 1
 fi
 
-# create first disk
-rm -f $DISK1
-dd if=/dev/zero of=$DISK1 bs=1 count=1 seek=$DISK_SIZE
-mkfs.ext2 $DISK1
+# create disk
+qemu-img create -f raw $DISK $DISK_SIZE
+
+# mount device
+LOOP_DEVICE=`sudo losetup -Pf --show $DISK`
+
+# create partition table
+sudo parted --script $LOOP_DEVICE mktable msdos
+sudo parted --script $LOOP_DEVICE mkpart primary 2048s 100%
+
+# create file system
+sudo mkfs.ext2 ${LOOP_DEVICE}p1
 
 # mount disk
 mkdir tmp >& /dev/null
-sudo mount $DISK1 tmp
+sudo mount ${LOOP_DEVICE}p1 tmp
 
 # create root folders
 sudo mkdir -p tmp/etc
@@ -52,3 +60,6 @@ sudo chown -R 0:0 tmp/
 # unmount disk
 sudo umount tmp
 sudo rm -rf tmp
+
+# detach loop device
+sudo losetup -d $LOOP_DEVICE

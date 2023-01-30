@@ -31,8 +31,8 @@
 #include <fcntl.h>
 #include <dev.h>
 
-#define ROOT_DEV		(mkdev(DEV_ATA_MAJOR, 0))
-#define ROOT_DEV_NAME		"/dev/hda"
+#define ROOT_DEV		(mkdev(DEV_ATA_MAJOR, 1))
+#define ROOT_DEV_NAME		"/dev/hda1"
 
 extern uint32_t loader;
 extern uint32_t kernel_stack;
