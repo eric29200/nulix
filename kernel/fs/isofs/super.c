@@ -23,7 +23,7 @@ static int isofs_read_super(struct super_block_t *sb, void *data, int silent)
 	sb->s_fs_info = sbi = (struct isofs_sb_info_t *) kmalloc(sizeof(struct isofs_sb_info_t));
 	if (!sbi)
 		return -ENOMEM;
-	
+
 	/* set default block size */
 	set_blocksize(sb->s_dev, ISOFS_BLOCK_SIZE);
 	sb->s_blocksize = ISOFS_BLOCK_SIZE;

@@ -71,7 +71,7 @@ int isofs_read_inode(struct inode_t *inode)
 			return -ENOMEM;
 		}
 
-		/* copy 1st fragment */	
+		/* copy 1st fragment */
 		memcpy(cpnt, bh->b_data + offset, frag1);
 
 		/* read next block */

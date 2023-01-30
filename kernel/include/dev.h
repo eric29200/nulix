@@ -15,7 +15,7 @@
 #define DEV_FB_MAJOR		29		/* frame buffer major number */
 #define DEV_PTS_MAJOR		88		/* pty major number */
 
-#define MAX_BLKDEV		64
+#define MAX_BLKDEV		128
 
 extern size_t *blocksize_size[MAX_BLKDEV];
 

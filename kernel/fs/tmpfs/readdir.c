@@ -19,7 +19,7 @@ int tmpfs_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* skip null entries */
 		if (!de.d_inode)
 			continue;
-		
+
 		/* fill in directory entry */
 		ret = filldir(dirent, de.d_name, strlen(de.d_name), de.d_inode, count);
 		if (ret) {

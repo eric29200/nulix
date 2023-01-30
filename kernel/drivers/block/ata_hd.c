@@ -60,13 +60,13 @@ static int ata_hd_read_sectors(struct ata_device_t *device, uint32_t sector, uin
 /*
  * Read from an ata device.
  */
-static int ata_hd_read(struct ata_device_t *device, struct buffer_head_t *bh)
+static int ata_hd_read(struct ata_device_t *device, struct buffer_head_t *bh, uint32_t start_sector)
 {
 	uint32_t nb_sectors, sector;
 
 	/* compute nb sectors */
 	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
-	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
+	sector = start_sector + bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
 	/* read sectors */
 	return ata_hd_read_sectors(device, sector, nb_sectors, bh->b_data);
@@ -110,13 +110,13 @@ static int ata_hd_write_sectors(struct ata_device_t *device, uint32_t sector, ui
 /*
  * Write to an ata device.
  */
-static int ata_hd_write(struct ata_device_t *device, struct buffer_head_t *bh)
+static int ata_hd_write(struct ata_device_t *device, struct buffer_head_t *bh, uint32_t start_sector)
 {
 	uint32_t nb_sectors, sector;
 
 	/* compute nb sectors */
 	nb_sectors = bh->b_size / ATA_SECTOR_SIZE;
-	sector = bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
+	sector = start_sector + bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
 
 	/* write sectors */
 	return ata_hd_write_sectors(device, sector, nb_sectors, bh->b_data);
@@ -129,7 +129,7 @@ int ata_hd_init(struct ata_device_t *device)
 {
 	struct pci_device_t *ata_pci_device;
 	uint32_t cmd_reg;
-	
+
 	/* no sectors */
 	if (!device->identify.sectors_28 && !device->identify.sectors_48)
 		return -EINVAL;

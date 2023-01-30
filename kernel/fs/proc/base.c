@@ -287,7 +287,7 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* skip files before offset */
 		if (filp->f_pos > i++)
 			continue;
-		
+
 
 		/* fill in directory entry */ 
 		name_len = sprintf(fd_s, "%d", fd);

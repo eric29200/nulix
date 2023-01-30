@@ -54,7 +54,7 @@ static struct devfs_entry_t *devfs_alloc_entry(const char *name, size_t name_len
 	de->ino = devfs_next_ino++;
 	de->name_len = name_len;
 	de->mode = mode;
-	
+
 	/* allocate name */
 	de->name = (char *) kmalloc(name_len + 1);
 	if (!de->name)

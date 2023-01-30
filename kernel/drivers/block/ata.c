@@ -38,17 +38,40 @@ static struct ata_device_t ata_devices[NR_ATA_DEVICES] = {
 };
 
 /* ata block sizes */
-static size_t ata_blocksizes[NR_ATA_DEVICES] = { 0, };
+static size_t ata_blocksizes[NR_ATA_DEVICES * NR_PARTITIONS] = { 0, };
 
 /*
  * Get an ata device.
  */
 static struct ata_device_t *ata_get_device(dev_t dev)
 {
-	if (major(dev) != DEV_ATA_MAJOR || minor(dev) >= NR_ATA_DEVICES)
+	int id;
+
+	/* check major number */
+	if (major(dev) != DEV_ATA_MAJOR)
 		return NULL;
 
-	return &ata_devices[minor(dev)];
+	/* get device id */
+	id = minor(dev) >> PARTITION_MINOR_SHIFT;
+	if (id >= NR_ATA_DEVICES)
+		return NULL;
+
+	return &ata_devices[id];
+}
+
+/*
+ * Get partition start sector.
+ */
+static uint32_t ata_get_start_sector(struct ata_device_t *device, dev_t dev)
+{
+	int partition_nr;
+
+	/* get partition number */
+	partition_nr = dev - device->hd.dev;
+	if (!partition_nr)
+		return 0;
+
+	return device->hd.partitions[partition_nr].start_sect;
 }
 
 /*
@@ -57,13 +80,17 @@ static struct ata_device_t *ata_get_device(dev_t dev)
 int ata_read(dev_t dev, struct buffer_head_t *bh)
 {
 	struct ata_device_t *device;
+	uint32_t start_sector;
 
 	/* get ata device */
 	device = ata_get_device(dev);
 	if (!device || !device->read)
 		return -EINVAL;
 
-	return device->read(device, bh);
+	/* get partition start sector */
+	start_sector = ata_get_start_sector(device, dev);
+
+	return device->read(device, bh, start_sector);
 }
 
 /*
@@ -72,13 +99,17 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
 int ata_write(dev_t dev, struct buffer_head_t *bh)
 {
 	struct ata_device_t *device;
+	uint32_t start_sector;
 
 	/* get ata device */
 	device = ata_get_device(dev);
 	if (!device || !device->write)
 		return -EINVAL;
 
-	return device->write(device, bh);
+	/* get partition start sector */
+	start_sector = ata_get_start_sector(device, dev);
+
+	return device->write(device, bh, start_sector);
 }
 
 /*
@@ -128,7 +159,6 @@ out:
  */
 static int ata_detect(struct ata_device_t *device)
 {
-	char dev_name[32];
 	int ret;
 
 	/* select drive */
@@ -156,9 +186,12 @@ static int ata_detect(struct ata_device_t *device)
 	if (ret)
 		goto err;
 
+	/* set gendisk */
+	device->hd.dev = mkdev(DEV_ATA_MAJOR, device->id << PARTITION_MINOR_SHIFT);
+	sprintf(device->hd.name, "hd%c", 'a' + device->id);
+
 	/* register device */
-	sprintf(dev_name, "hd%c", 'a' + device->id);
-	if (!devfs_register(NULL, dev_name, S_IFBLK | 0660, mkdev(DEV_ATA_MAJOR, device->id))) {
+	if (!devfs_register(NULL, device->hd.name, S_IFBLK | 0660, device->hd.dev)) {
 		ret = -ENOSPC;
 		goto err;
 	}
@@ -187,18 +220,21 @@ int init_ata()
 	register_interrupt_handler(IRQ14, ata_irq_handler);
 	register_interrupt_handler(IRQ15, ata_irq_handler);
 
+	/* set default block size */
+	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
+
 	/* detect hard drives */
 	for (i = 0; i < NR_ATA_DEVICES; i++) {
 		ret = ata_detect(&ata_devices[i]);
 		if (ret)
 			continue;
-		
+
 		/* set default block size */
 		ata_blocksizes[i] = DEFAULT_BLOCK_SIZE;
-	}
 
-	/* set default block size */
-	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
+		/* discover partitions */
+		check_partition(&ata_devices[i].hd, ata_devices[i].hd.dev);
+	}
 
 	return 0;
 }

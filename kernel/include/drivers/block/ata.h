@@ -1,6 +1,7 @@
 #ifndef _ATA_H_
 #define _ATA_H_
 
+#include <drivers/block/genhd.h>
 #include <fs/fs.h>
 #include <stddef.h>
 
@@ -110,11 +111,12 @@ struct ata_device_t {
 	uint16_t		io_base;
 	struct ata_identify_t	identify;
 	char			is_atapi;
+	struct gendisk_t	hd;
 	struct ata_prdt_t	*prdt;
 	uint8_t *		buf;
 	uint32_t		bar4;
-	int			(*read)(struct ata_device_t *, struct buffer_head_t *);
-	int			(*write)(struct ata_device_t *, struct buffer_head_t *);
+	int			(*read)(struct ata_device_t *, struct buffer_head_t *, uint32_t);
+	int			(*write)(struct ata_device_t *, struct buffer_head_t *, uint32_t);
 };
 
 int init_ata();
