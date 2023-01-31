@@ -241,7 +241,7 @@ struct buffer_head_t *bread(dev_t dev, uint32_t block, size_t blocksize)
 		return NULL;
 
 	/* read it from device */
-	if (!bh->b_uptodate && block_read(dev, bh) != 0) {
+	if (!bh->b_uptodate && block_read(bh) != 0) {
 		brelse(bh);
 		return NULL;
 	}
@@ -261,7 +261,7 @@ int bwrite(struct buffer_head_t *bh)
 		return -EINVAL;
 
 	/* write to block device */
-	ret = block_write(bh->b_dev, bh);
+	ret = block_write(bh);
 	if (ret)
 		return ret;
 
@@ -393,7 +393,7 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 		if (tmp) {
 			/* read it from disk if needed */
 			if (!tmp->b_uptodate)
-				block_read(sb->s_dev, tmp);
+				block_read(tmp);
 
 			/* copy data to user address space */
 			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
@@ -404,7 +404,7 @@ int generic_readpage(struct inode_t *inode, struct page_t *page)
 		}
 
 		/* read buffer on disk */
-		block_read(sb->s_dev, next);
+		block_read(next);
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;

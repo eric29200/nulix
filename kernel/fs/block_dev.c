@@ -114,11 +114,11 @@ int generic_block_write(struct file_t *filp, const char *buf, int count)
 /*
  * Read a block.
  */
-int block_read(dev_t dev, struct buffer_head_t *bh)
+int block_read(struct buffer_head_t *bh)
 {
-	switch (major(dev)) {
+	switch (major(bh->b_dev)) {
 		case DEV_ATA_MAJOR:
-			return ata_read(dev, bh);
+			return ata_read(bh);
 		default:
 			return -EINVAL;
 	}
@@ -127,11 +127,11 @@ int block_read(dev_t dev, struct buffer_head_t *bh)
 /*
  * Write a block.
  */
-int block_write(dev_t dev, struct buffer_head_t *bh)
+int block_write(struct buffer_head_t *bh)
 {
-	switch (major(dev)) {
+	switch (major(bh->b_dev)) {
 		case DEV_ATA_MAJOR:
-			return ata_write(dev, bh);
+			return ata_write(bh);
 		default:
 			return -EINVAL;
 	}

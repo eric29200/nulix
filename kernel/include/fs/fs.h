@@ -237,8 +237,8 @@ struct inode_operations_t *char_get_driver(struct inode_t *inode);
 
 /* block device driver */
 struct inode_operations_t *block_get_driver(struct inode_t *inode);
-int block_read(dev_t dev, struct buffer_head_t *bh);
-int block_write(dev_t dev, struct buffer_head_t *bh);
+int block_read(struct buffer_head_t *bh);
+int block_write(struct buffer_head_t *bh);
 
 /* filemap operations */
 int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);

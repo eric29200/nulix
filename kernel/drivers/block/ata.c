@@ -77,18 +77,18 @@ static uint32_t ata_get_start_sector(struct ata_device_t *device, dev_t dev)
 /*
  * Read from an ata device.
  */
-int ata_read(dev_t dev, struct buffer_head_t *bh)
+int ata_read(struct buffer_head_t *bh)
 {
 	struct ata_device_t *device;
 	uint32_t start_sector;
 
 	/* get ata device */
-	device = ata_get_device(dev);
+	device = ata_get_device(bh->b_dev);
 	if (!device || !device->read)
 		return -EINVAL;
 
 	/* get partition start sector */
-	start_sector = ata_get_start_sector(device, dev);
+	start_sector = ata_get_start_sector(device, bh->b_dev);
 
 	return device->read(device, bh, start_sector);
 }
@@ -96,18 +96,18 @@ int ata_read(dev_t dev, struct buffer_head_t *bh)
 /*
  * Write to an ata device.
  */
-int ata_write(dev_t dev, struct buffer_head_t *bh)
+int ata_write(struct buffer_head_t *bh)
 {
 	struct ata_device_t *device;
 	uint32_t start_sector;
 
 	/* get ata device */
-	device = ata_get_device(dev);
+	device = ata_get_device(bh->b_dev);
 	if (!device || !device->write)
 		return -EINVAL;
 
 	/* get partition start sector */
-	start_sector = ata_get_start_sector(device, dev);
+	start_sector = ata_get_start_sector(device, bh->b_dev);
 
 	return device->write(device, bh, start_sector);
 }

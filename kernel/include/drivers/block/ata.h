@@ -120,8 +120,8 @@ struct ata_device_t {
 };
 
 int init_ata();
-int ata_read(dev_t dev, struct buffer_head_t *bh);
-int ata_write(dev_t dev, struct buffer_head_t *bh);
+int ata_read(struct buffer_head_t *bh);
+int ata_write(struct buffer_head_t *bh);
 
 /* init functions */
 int ata_hd_init(struct ata_device_t *device);
