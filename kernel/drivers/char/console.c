@@ -525,19 +525,15 @@ static void console_bs(struct vc_t *vc)
 /*
  * Print a character on the console.
  */
-static void console_putc(struct vc_t *vc, uint8_t c)
+static void console_putc(struct vc_t *vc, uint16_t tc)
 {
 	struct framebuffer_t *fb = &vc->fb;
-	uint16_t tc;
 
 	/* wrap if needed */
 	if (vc->vc_need_wrap) {
 		console_cr(vc);
 		console_lf(vc);
 	}
-
-	/* translate character */
-	tc = vc->vc_translate[c];
 
 	/* add character */
 	fb->buf[fb->y * fb->width + fb->x] = (vc->vc_attr << 8) + tc;
@@ -861,6 +857,7 @@ static ssize_t console_write(struct tty_t *tty)
 {
 	ssize_t count = 0;
 	struct vc_t *vc;
+	uint16_t tc;
 	uint8_t c;
 
 	/* get console */
@@ -876,14 +873,17 @@ static ssize_t console_write(struct tty_t *tty)
 		ring_buffer_read(&tty->write_queue, &c, 1);
 		count++;
 
+		/* translate character */
+		tc = vc->vc_translate[c];
+
 		/* just put new character */
-		if (vc->vc_state == TTY_STATE_NORMAL && c >= 32) {
-			console_putc(vc, c);
+		if (vc->vc_state == TTY_STATE_NORMAL && tc >= 32) {
+			console_putc(vc, tc);
 			continue;
 		}
 
 		/* do control */
-		console_do_control(tty, vc, c);
+		console_do_control(tty, vc, tc);
 	}
 
 	/* update cursor */
