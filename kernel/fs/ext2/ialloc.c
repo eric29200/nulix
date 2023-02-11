@@ -146,7 +146,7 @@ int ext2_free_inode(struct inode_t *inode)
 
 	/* check if inode is still referenced */
 	if (inode->i_ref > 1) {
-		printf("[Ext2-fs] Trying to free inode %ld with ref=%d\n", inode->i_ino, inode->i_ref);
+		printf("[Ext2-fs] Trying to free inode %d with ref=%d\n", inode->i_ino, inode->i_ref);
 		return -EINVAL;
 	}
 
@@ -155,7 +155,7 @@ int ext2_free_inode(struct inode_t *inode)
 
 	/* check if inode is not reserved */
 	if (inode->i_ino < sbi->s_first_ino || inode->i_ino > sbi->s_es->s_inodes_count) {
-		printf("[Ext2-fs] Trying to free inode reserved or non existent inode %ld\n", inode->i_ino);
+		printf("[Ext2-fs] Trying to free inode reserved or non existent inode %d\n", inode->i_ino);
 		return -EINVAL;
 	}
 

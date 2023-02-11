@@ -205,14 +205,14 @@ static int ext2_empty_dir(struct inode_t *inode)
 
 	/* check directory size : must contain '.' and '..' */
 	if (inode->i_size < EXT2_DIR_REC_LEN(1) + EXT2_DIR_REC_LEN(2)) {
-		printf("[Ext2-fs] Bad directory size %ld (inode = %ld)\n", inode->i_size, inode->i_ino);
+		printf("[Ext2-fs] Bad directory size %d (inode = %d)\n", inode->i_size, inode->i_ino);
 		return 1;
 	}
 
 	/* read first block */
 	bh = ext2_bread(inode, 0, 0);
 	if (!bh) {
-		printf("[Ext2-fs] Bad directory (inode = %ld) : no data block\n", inode->i_ino);
+		printf("[Ext2-fs] Bad directory (inode = %d) : no data block\n", inode->i_ino);
 		return 1;
 	}
 
@@ -222,7 +222,7 @@ static int ext2_empty_dir(struct inode_t *inode)
 
 	/* first 2 entries must be '.' and '..' */
 	if (de->d_inode != inode->i_ino || !de1->d_inode || strcmp(".", de->d_name) || strcmp("..", de1->d_name)) {
-		printf("[Ext2-fs] Bad directory (inode = %ld) : no '.' or '..'\n", inode->i_ino);
+		printf("[Ext2-fs] Bad directory (inode = %d) : no '.' or '..'\n", inode->i_ino);
 		return 1;
 	}
 
@@ -238,7 +238,7 @@ static int ext2_empty_dir(struct inode_t *inode)
 			/* read next block */
 			bh = ext2_bread(inode, offset / inode->i_sb->s_blocksize, 0);
 			if (!bh) {
-				printf("[Ext2-fs] Directory (inode = %ld) contains a hole at offset %d\n", inode->i_ino, offset);
+				printf("[Ext2-fs] Directory (inode = %d) contains a hole at offset %d\n", inode->i_ino, offset);
 				offset += inode->i_sb->s_blocksize;
 				continue;
 			}
