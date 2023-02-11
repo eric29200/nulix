@@ -186,5 +186,8 @@ int ext2_free_inode(struct inode_t *inode)
 	sbi->s_sbh->b_dirt = 1;
 	bwrite(sbi->s_sbh);
 
+	/* clear inode */
+	clear_inode(inode);
+
 	return 0;
 }
