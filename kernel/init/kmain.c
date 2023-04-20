@@ -201,7 +201,7 @@ static void kinit()
 /*
  * Main nulix function.
  */
-int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
+int kmain(unsigned long magic, unsigned long addr)
 {
 	uint32_t mem_upper;
 	int ret;
@@ -219,7 +219,6 @@ int kmain(unsigned long magic, unsigned long addr, uint32_t initial_stack)
 
 	/* print grub informations */
 	printf("[Kernel] Loading at linear address = %x\n", loader);
-	kernel_stack = initial_stack;
 
 	/* init gdt */
 	printf("[Kernel] Global Descriptor Table Init\n");

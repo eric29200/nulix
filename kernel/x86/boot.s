@@ -40,7 +40,6 @@ loader:
 	mov esp, kernel_stack + KSTACK_SIZE	; point esp to the start of the stack (end of memory area)
 
 call_kmain:
-	push esp				; push kernel stack address
 	push ebx				; push multiboot header pointer
 	push eax				; push multiboot magic
 	call kmain				; call main C function
