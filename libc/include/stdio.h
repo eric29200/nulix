@@ -2,6 +2,7 @@
 #define _LIBC_STDIO_H_
 
 #include <sys/types.h>
+#include <stdarg.h>
 
 #define NULL				((void *) 0)
 #define ALIGN_DOWN(base, size)		((base) & -((__typeof__(base))(size)))
@@ -56,5 +57,9 @@ int fflush(FILE *fp);
 int feof(FILE *fp);
 int ferror(FILE *fp);
 int fileno(FILE *fp);
+
+int vfprintf(FILE *fp, const char *format, va_list ap);
+int fprintf(FILE *fp, const char *format, ...);
+int printf(const char *format, ...);
 
 #endif
