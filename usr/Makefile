@@ -1,9 +1,9 @@
 CC		= i686-linux-gnu-gcc
 LIBC		= ../libc/libc.a
-CFLAGS		= -O0 -Wall -nostdinc -fno-builtin -fno-stack-protector -fno-pic -I../libc/include -ffreestanding -nostdlib -m32
+CFLAGS		= -O0 -Wall -Wextra -nostdinc -fno-builtin -fno-stack-protector -fno-pic -I../libc/include -ffreestanding -nostdlib -m32
 LDFLAGS		= ../libc/libc.a -static
 
-PROGS		= cat
+PROGS		= cat ls
 
 all: $(PROGS)
 
