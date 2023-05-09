@@ -10,21 +10,22 @@ extern char **environ;
 #define STDOUT_FILENO	1
 #define STDERR_FILENO	2
 
-#define SYS_exit	1
-#define SYS_fork	2
-#define SYS_read	3
-#define SYS_write	4
-#define SYS_open	5
-#define SYS_close	6
-#define SYS_lseek	19
-#define SYS_dup		41
-#define SYS_brk		45
-#define SYS_ioctl	54
-#define SYS_fcntl	55
-#define SYS_dup2	63
-#define SYS_readv	145
-#define SYS_writev	146
-#define SYS_fstatat64	300
+#define SYS_exit		1
+#define SYS_fork		2
+#define SYS_read		3
+#define SYS_write		4
+#define SYS_open		5
+#define SYS_close		6
+#define SYS_lseek		19
+#define SYS_dup			41
+#define SYS_brk			45
+#define SYS_ioctl		54
+#define SYS_fcntl		55
+#define SYS_dup2		63
+#define SYS_readv		145
+#define SYS_writev		146
+#define SYS_getdents64		220
+#define SYS_fstatat64		300
 
 void _exit(int status);
 void _Exit(int status);
