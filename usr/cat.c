@@ -22,8 +22,8 @@ int main(int argc, char **argv)
 
 	if (argc <= 1) {
 		ret = __copy_fd(STDIN_FILENO);
-		//if (ret)
-		//	perror("stdin");
+		if (ret)
+			perror("stdin");
 
 		return ret;
 	}
@@ -32,13 +32,13 @@ int main(int argc, char **argv)
 		if (argv[i][0] == '-' && argv[i][1] == '\0') {
 			fd = STDIN_FILENO;
 		} else if ((fd = open(argv[i], O_RDONLY)) < 0) {
-			//perror(argv[i]);
+			perror(argv[i]);
 			return EXIT_FAILURE;
 		}
 
 		ret = __copy_fd(fd);
 		if (ret) {
-			//perror(argv[i]);
+			perror(argv[i]);
 			close(fd);
 			return ret;
 		}

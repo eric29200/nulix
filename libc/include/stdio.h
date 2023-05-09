@@ -62,4 +62,6 @@ int vfprintf(FILE *fp, const char *format, va_list ap);
 int fprintf(FILE *fp, const char *format, ...);
 int printf(const char *format, ...);
 
+void perror(const char *msg);
+
 #endif
