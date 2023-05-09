@@ -28,7 +28,7 @@ size_t __stdio_read(FILE *fp, unsigned char *buf, size_t len)
 	}
 
 	/* nothing to buffer */
-	if (cnt <= iov[0].iov_len)
+	if (cnt <= (ssize_t) iov[0].iov_len)
 		return cnt;
 	
 	/* buffer */

@@ -4,7 +4,7 @@ LIBC		= libc.a
 C_SOURCES 	= $(wildcard *.c */*.c */*/*.c)
 AS_SOURCES 	= $(wildcard *.s */*.s */*/*.s)
 OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.s=.o}
-CFLAGS		= -O0 -Wall -nostdinc -fno-builtin -fno-stack-protector -fno-pic -nostdlib -nodefaultlibs -m32 -Iinclude/
+CFLAGS		= -O0 -Wall -Wextra -nostdinc -fno-builtin -fno-stack-protector -fno-pic -nostdlib -nodefaultlibs -m32 -Iinclude/
 ASFLAGS		= -Wall -nostdinc -fno-builtin -nostdlib -nodefaultlibs -m32
 
 all: $(LIBC)

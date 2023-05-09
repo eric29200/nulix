@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <errno.h>
 
 static char *__error_msgs[] = {
@@ -98,7 +99,7 @@ static char *__error_msgs[] = {
 
 char *strerror(int errnum)
 {
-	if (errnum < 0 || errnum >= sizeof(__error_msgs) / sizeof(*__error_msgs))
+	if (errnum < 0 || (size_t) errnum >= sizeof(__error_msgs) / sizeof(*__error_msgs))
 		errnum = 0;
 
 	return __error_msgs[errnum];

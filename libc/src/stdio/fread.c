@@ -14,7 +14,7 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *fp)
 
 	/* read from file buffer first */
 	if (fp->rpos != fp->rend) {
-		k = MIN(fp->rend - fp->rpos, rem);
+		k = MIN((size_t) (fp->rend - fp->rpos), rem);
 		memcpy(dest, fp->rpos, k);
 		fp->rpos += k;
 		dest += k;

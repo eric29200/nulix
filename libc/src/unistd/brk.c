@@ -5,5 +5,6 @@
 
 int brk(void *addr)
 {
+	UNUSED(addr);
 	return __syscall_ret(-ENOMEM);
 }

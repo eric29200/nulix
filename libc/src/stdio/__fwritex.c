@@ -12,7 +12,7 @@ size_t __fwritex(const unsigned char *ptr, size_t len, FILE *fp)
 		return 0;
 
 	/* len > buffer capacity */
-	if (len > fp->wend - fp->wpos)
+	if (len > (size_t) (fp->wend - fp->wpos))
 		return fp->write(fp, ptr, len);
 
 	if (fp->lbf >= 0) {

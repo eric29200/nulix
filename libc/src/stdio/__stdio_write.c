@@ -19,7 +19,7 @@ size_t __stdio_write(FILE *fp, const unsigned char *buf, size_t len)
 		cnt = writev(fp->fd, iov, iovcnt);
 
 		/* full write : exit */
-		if (cnt == rem) {
+		if (cnt == (ssize_t) rem) {
 			fp->wend = fp->buf + fp->buf_size;
 			fp->wpos = fp->wbase = fp->buf;
 			return len;
@@ -34,7 +34,7 @@ size_t __stdio_write(FILE *fp, const unsigned char *buf, size_t len)
 
 		/* next write */
 		rem -= cnt;
-		if (cnt > iov[0].iov_len) {
+		if (cnt > (ssize_t) iov[0].iov_len) {
 			cnt -= iov[0].iov_len;
 			iov++;
 			iovcnt--;
