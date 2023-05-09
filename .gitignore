@@ -19,6 +19,6 @@ musl/musl-build
 musl/musl-install
 libc/libc.a
 tmp/*
-usr/init
+usr/build
 traffic.pcap
 .vscode

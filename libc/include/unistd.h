@@ -6,6 +6,10 @@
 
 extern char **environ;
 
+#define STDIN_FILENO	0
+#define STDOUT_FILENO	1
+#define STDERR_FILENO	2
+
 #define SYS_exit	1
 #define SYS_fork	2
 #define SYS_read	3
@@ -27,7 +31,7 @@ void _Exit(int status);
 pid_t fork();
 ssize_t read(int fd, void *buf, size_t count);
 ssize_t write(int fd, const void *buf, size_t count);
-int open(const char *pathname, int flags, mode_t mode);
+int open(const char *pathname, int flags, ...);
 int close(int fd);
 int brk(void *addr);
 void *sbrk(intptr_t increment);
