@@ -6,8 +6,8 @@
 #define SCHAR_MAX	127
 #define UCHAR_MAX	255
 #define SHRT_MIN	(-1 - 0x7FFF)
-#define SHRT_MAX	0x7fff
-#define USHRT_MAX	0xffff
+#define SHRT_MAX	0x7FFF
+#define USHRT_MAX	0xFFFF
 #define INT_MIN		(-1 - 0x7FFFFFFF)
 #define INT_MAX		0x7FFFFFFF
 #define UINT_MAX	0xFFFFFFFFU
@@ -17,5 +17,7 @@
 #define LLONG_MIN	(-LLONG_MAX - 1)
 #define LLONG_MAX	0x7FFFFFFFFFFFFFFFLL
 #define ULLONG_MAX	(2ULL * LLONG_MAX + 1)
+
+#define PATH_MAX	4096
 
 #endif
