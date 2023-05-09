@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 
 #include "__stdio_impl.h"
+#include "../x86/__syscall.h"
 
 FILE *fdopen(int fd, const char *mode)
 {
@@ -33,13 +34,13 @@ FILE *fdopen(int fd, const char *mode)
 
 	/* apply close on exec flag */
 	if (strchr(mode, 'e'))
-		fcntl(fd, F_SETFD, FD_CLOEXEC);
+		__syscall3(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
 
 	/* set append mode */
 	if (*mode == 'a') {
 		flags = fcntl(fd, F_GETFL);
 		if (!(flags & O_APPEND))
-			fcntl(fd, F_SETFL, flags | O_APPEND);
+			__syscall3(SYS_fcntl, fd, F_SETFL, flags | O_APPEND);
 
 		fp->flags |= F_APP;
 	}

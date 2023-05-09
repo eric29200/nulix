@@ -18,7 +18,7 @@ int open(const char *pathname, int flags, ...)
 
 	fd = __syscall3(SYS_open, (long) pathname, flags, mode);
 	if (fd >= 0 && (flags & O_CLOEXEC))
-		fcntl(fd, F_SETFD, FD_CLOEXEC);
+		__syscall3(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
 
 	return fd;
 }

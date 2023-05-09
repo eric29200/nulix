@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include "__stdio_impl.h"
+#include "../x86/__syscall.h"
 
 FILE *fopen(const char *pathname, const char *mode)
 {
@@ -27,7 +28,7 @@ FILE *fopen(const char *pathname, const char *mode)
 
 	/* close-on-exec */
 	if (flags & O_CLOEXEC)
-		fcntl(fd, F_SETFD, FD_CLOEXEC);
+		__syscall3(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
 
 	/* create file */
 	fp = fdopen(fd, mode);
@@ -35,6 +36,6 @@ FILE *fopen(const char *pathname, const char *mode)
 		return fp;
 
 	/* on failure close file */	
-	close(fd);
-		return NULL;
+	__syscall1(SYS_close, fd);
+	return NULL;
 }
