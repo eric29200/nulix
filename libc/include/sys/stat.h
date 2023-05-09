@@ -45,6 +45,7 @@ struct stat {
 };
 
 int stat(const char *pathname, struct stat *statbuf);
+int lstat(const char *pathname, struct stat *statbuf);
 int fstat(int fd, struct stat *statbuf);
 int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags);
 
