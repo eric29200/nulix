@@ -13,6 +13,7 @@ void *calloc(size_t nmemb, size_t size);
 void *realloc(void *ptr, size_t size);
 void free(void *ptr);
 
+int abs(int val);
 int atoi(const char *s);
 
 void qsort(void *base, size_t nmemb, size_t size, int (*compare)(const void *, const void *));
