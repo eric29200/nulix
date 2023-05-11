@@ -29,6 +29,7 @@ struct _FILE {
 	unsigned char *		wend;							/* end of write buffer */
 	unsigned char *		wbase;							/* start of write buffer */
 	int			lbf;							/* line end character */
+	void *			cookie;							/* private cookie */
 	size_t 			(*read)(FILE *, unsigned char *, size_t);		/* read operation */
 	size_t 			(*write)(FILE *, const unsigned char *, size_t);	/* write operation */
 	off_t 			(*seek)(FILE *, off_t, int);				/* seek operation */
@@ -61,9 +62,13 @@ int fileno(FILE *fp);
 
 int printf(const char *format, ...);
 int fprintf(FILE *fp, const char *format, ...);
+int sprintf(char *str, const char *format, ...);
+int snprintf(char *str, size_t size, const char *format, ...);
 
 int vprintf(const char *format, va_list ap);
 int vfprintf(FILE *fp, const char *format, va_list ap);
+int vsprintf(char *str, const char *format, va_list ap);
+int vsnprintf(char *str, size_t size, const char *format, va_list ap);
 
 void perror(const char *msg);
 
