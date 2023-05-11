@@ -11,6 +11,14 @@
 #define FLAG_ZERO		(1 << 0)
 #define FLAG_MINUS		(1 << 1)
 
+#define LENGTH_SHORT_SHORT	1
+#define LENGTH_SHORT		2
+#define LENGTH_DEFAULT		3
+#define LENGTH_LONG		4
+#define LENGTH_LONG_LONG	5
+#define LENGTH_INTMAX_T		6
+#define LENGTH_SIZE_T		7
+
 /*
  * Output characters.
  */
@@ -55,12 +63,13 @@ static int prints(FILE *fp, const char *str, int width, int flags)
 /*
  * Print a number.
  */
-static int printi(FILE *fp, int i, int base, int sign, int width, int flags, bool uppercase)
+static int printi(FILE *fp, intmax_t i, int base, int sign, int width, int flags, bool uppercase)
 {
-	int neg = 0, remainder, n = 0;
 	char buf[PRINT_BUFSIZ], *s;
-	unsigned int u = i;
+	int neg = 0, n = 0;
+	intmax_t remainder; 
 	char minus = '-';
+	uintmax_t u = i;
 
 	/* print zero */
 	if (i == 0) {
@@ -104,11 +113,34 @@ static int printi(FILE *fp, int i, int base, int sign, int width, int flags, boo
 }
 
 /*
+ * Get a parameter value.
+ */
+static inline intmax_t __get_val(va_list ap, int length_modifier)
+{
+	switch (length_modifier) {
+		case LENGTH_SHORT_SHORT:
+		case LENGTH_SHORT:
+		case LENGTH_DEFAULT:
+			return va_arg(ap, int);
+		case LENGTH_LONG:
+			return va_arg(ap, long);
+		case LENGTH_LONG_LONG:
+			return va_arg(ap, long long);
+		case LENGTH_INTMAX_T:
+			return va_arg(ap, intmax_t);
+		case LENGTH_SIZE_T:
+			return va_arg(ap, ssize_t);
+		default:
+			return 0;
+	}
+}
+
+/*
  * Print a formatted string.
  */
 static int printf_core(FILE *fp, const char *format, va_list ap)
 {
-	int n = 0, i, width, flags;
+	int n = 0, i, width, flags, length_modifier;
 	char c[2];
 
 	while (*format) {
@@ -157,6 +189,28 @@ static int printf_core(FILE *fp, const char *format, va_list ap)
 		if (!*format)
 			goto out;
 
+		/* handle length modifier */
+		length_modifier = LENGTH_DEFAULT;
+		if (*format == 'h' && *(format + 1) == 'h') {
+			length_modifier = LENGTH_SHORT_SHORT;
+			format += 2;
+		} else if (*format == 'l' && *(format + 1) == 'l') {
+			length_modifier = LENGTH_LONG_LONG;
+			format += 2;
+		} else if (*format == 'h') {
+			length_modifier = LENGTH_SHORT;
+			format++;
+		} else if (*format == 'l') {
+			length_modifier = LENGTH_LONG;
+			format++;
+		} else if (*format == 'j') {
+			length_modifier = LENGTH_INTMAX_T;
+			format++;
+		} else if (*format == 'z') {
+			length_modifier = LENGTH_SIZE_T;
+			format++;
+		}
+
 		/* handle type */
 		switch (*format++) {
 			case 0:
@@ -171,16 +225,16 @@ static int printf_core(FILE *fp, const char *format, va_list ap)
 				break;
 			case 'd':
 			case 'i':
-				n += printi(fp, va_arg(ap, int), 10, 1, width, flags, false);
+				n += printi(fp, __get_val(ap, length_modifier), 10, 1, width, flags, false);
 				break;
 			case 'u':
-				n += printi(fp, va_arg(ap, unsigned int), 10, 0, width, flags, false);
+				n += printi(fp, __get_val(ap, length_modifier), 10, 0, width, flags, false);
 				break;
 			case 'x':
-				n += printi(fp, va_arg(ap, unsigned int), 16, 0, width, flags, false);
+				n += printi(fp, __get_val(ap, length_modifier), 16, 0, width, flags, false);
 				break;
 			case 'X':
-				n += printi(fp, va_arg(ap, unsigned int), 16, 0, width, flags, true);
+				n += printi(fp, __get_val(ap, length_modifier), 16, 0, width, flags, true);
 				break;
 			default:
 				break;
