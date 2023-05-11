@@ -59,9 +59,11 @@ int feof(FILE *fp);
 int ferror(FILE *fp);
 int fileno(FILE *fp);
 
-int vfprintf(FILE *fp, const char *format, va_list ap);
-int fprintf(FILE *fp, const char *format, ...);
 int printf(const char *format, ...);
+int fprintf(FILE *fp, const char *format, ...);
+
+int vprintf(const char *format, va_list ap);
+int vfprintf(FILE *fp, const char *format, va_list ap);
 
 void perror(const char *msg);
 
