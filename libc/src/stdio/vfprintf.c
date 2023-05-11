@@ -115,21 +115,21 @@ static int printi(FILE *fp, intmax_t i, int base, int sign, int width, int flags
 /*
  * Get a parameter value.
  */
-static inline intmax_t __get_val(va_list ap, int length_modifier)
+static inline intmax_t __get_val(va_list *ap, int length_modifier)
 {
 	switch (length_modifier) {
 		case LENGTH_SHORT_SHORT:
 		case LENGTH_SHORT:
 		case LENGTH_DEFAULT:
-			return va_arg(ap, int);
+			return va_arg(*ap, int);
 		case LENGTH_LONG:
-			return va_arg(ap, long);
+			return va_arg(*ap, long);
 		case LENGTH_LONG_LONG:
-			return va_arg(ap, long long);
+			return va_arg(*ap, long long);
 		case LENGTH_INTMAX_T:
-			return va_arg(ap, intmax_t);
+			return va_arg(*ap, intmax_t);
 		case LENGTH_SIZE_T:
-			return va_arg(ap, ssize_t);
+			return va_arg(*ap, ssize_t);
 		default:
 			return 0;
 	}
@@ -225,16 +225,16 @@ static int printf_core(FILE *fp, const char *format, va_list ap)
 				break;
 			case 'd':
 			case 'i':
-				n += printi(fp, __get_val(ap, length_modifier), 10, 1, width, flags, false);
+				n += printi(fp, __get_val(&ap, length_modifier), 10, 1, width, flags, false);
 				break;
 			case 'u':
-				n += printi(fp, __get_val(ap, length_modifier), 10, 0, width, flags, false);
+				n += printi(fp, __get_val(&ap, length_modifier), 10, 0, width, flags, false);
 				break;
 			case 'x':
-				n += printi(fp, __get_val(ap, length_modifier), 16, 0, width, flags, false);
+				n += printi(fp, __get_val(&ap, length_modifier), 16, 0, width, flags, false);
 				break;
 			case 'X':
-				n += printi(fp, __get_val(ap, length_modifier), 16, 0, width, flags, true);
+				n += printi(fp, __get_val(&ap, length_modifier), 16, 0, width, flags, true);
 				break;
 			default:
 				break;
