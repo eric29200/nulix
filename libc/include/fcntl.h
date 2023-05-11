@@ -1,6 +1,8 @@
 #ifndef _LIBC_FCNTL_H_
 #define _LIBC_FCNTL_H_
 
+#include <sys/types.h>
+
 #define O_CREAT		0100
 #define O_EXCL		0200
 #define O_NOCTTY	0400
@@ -57,5 +59,7 @@
 #define AT_EMPTY_PATH		0x1000
 
 int fcntl(int fd, int cmd, ...);
+int open(const char *pathname, int flags, ...);
+int creat(const char *filename, mode_t mode);
 
 #endif
