@@ -1,118 +1,194 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 
 #include "__stdio_impl.h"
 
+#define PRINT_BUFSIZ		64
+
+#define FLAG_ZERO		(1 << 0)
+#define FLAG_MINUS		(1 << 1)
+
 /*
- * Print a formatted signed number to a file descriptor.
+ * Output characters.
  */
-static int __print_num_signed(FILE *fp, int num, int base)
+static int __out(FILE *fp, const char *str, size_t len)
 {
-	static char *digits = "0123456789abcdef";
-	bool is_negative = false;
-	int i, ret, n = num;
-	char buf[16];
-
-	if (num < 0) {
-		n = -n;
-		is_negative = true;
-	}
-
-	i = 0;
-	do {
-		buf[i++] = digits[n % base];
-		n /= base;
-	} while (n > 0);
-
-	if (is_negative)
-		buf[i++] = '-';
-
-	ret = i;
-	while (i > 0)
-		putc(buf[--i], fp);
-
-	return ret;
+	if (!ferror(fp))
+		__fwritex((const unsigned char *) str, len, fp);
+	
+	return len;
 }
 
 /*
- * Print a formatted unsigned number to a file descriptor.
+ * Print a string.
  */
-static int __print_num_unsigned(FILE *fp, unsigned int num, int base)
+static int prints(FILE *fp, const char *str, int width, int flags)
 {
-	static char *digits = "0123456789abcdef";
-	unsigned int n = num;
-	char buf[16];
-	int i, ret;
+	size_t len = strlen(str);
+	char padchar;
+	int n = 0;
 
-	i = 0;
-	do {
-		buf[i++] = digits[n % base];
-		n /= base;
-	} while (n > 0);
+	/* set padchar */
+	padchar = flags & FLAG_ZERO ? '0' : ' ';
 
-	ret = i;
-	while (i > 0)
-		putc(buf[--i], fp);
+	/* fix width */
+	width -= len;
+	
+	/* pad left */
+	if (!(flags & FLAG_MINUS))
+		for (; width > 0; width--)
+			n += __out(fp, &padchar, 1);
 
-	return ret;
+	/* print string */
+	n += __out(fp, str, len);
+
+	/* pad right */
+	for (; width > 0; --width)
+		n += __out(fp, &padchar, 1);
+
+	return n;
+}
+
+/*
+ * Print a number.
+ */
+static int printi(FILE *fp, int i, int base, int sign, int width, int flags, bool uppercase)
+{
+	int neg = 0, remainder, n = 0;
+	char buf[PRINT_BUFSIZ], *s;
+	unsigned int u = i;
+	char minus = '-';
+
+	/* print zero */
+	if (i == 0) {
+		buf[0] = '0';
+		buf[1] = 0;
+		return prints(fp, buf, width, flags);
+	}
+
+	/* negative value */
+	if (sign && base == 10 && i < 0) {
+		neg = 1;
+		u = -i;
+	}
+
+	/* end buffer */
+	s = buf + PRINT_BUFSIZ - 1;
+	*s = 0;
+
+	/* print digits */
+	while (u) {
+		remainder = u % base;
+		if (remainder >= 10)
+			remainder += (uppercase ? 'A' : 'a') - '0' - 10;
+
+		*--s = remainder + '0';
+		u /= base;
+	}
+
+	/* add negative sign */
+	if (neg) {
+		if (width & (flags & FLAG_ZERO)) {
+			n += __out(fp, &minus, 1);
+			width--;
+		} else {
+			*--s = minus;
+		}
+	}
+
+	/* print digits */
+	return n + prints(fp, s, width, flags);
 }
 
 /*
  * Print a formatted string.
  */
-static int printf_core(FILE *fp, const char *format, va_list args)
+static int printf_core(FILE *fp, const char *format, va_list ap)
 {
-	char *substr;
-	int i, count;
-	char c;
+	int n = 0, i, width, flags;
+	char c[2];
 
-	for (i = 0, count = 0; format[i] != '\0'; i++) {
-		c = format[i];
-
-		if (c != '%') {
-			putc(c, fp);
-			count++;
+	while (*format) {
+		/* handle character */
+		if (*format != '%') {
+			for (i = 0; format[i] && format[i] != '%'; i++);
+			n += __out(fp, format, i);
+			format += i;
 			continue;
 		}
 
-		c = format[++i];
-		switch (c) {
+		/* %% = % character */
+		if (*++format == '%') {
+			n += __out(fp, format, 1);
+			continue;
+		}
+
+		/* handle flags */
+		for (flags = 0;;) {
+			switch (*format++) {
+				case '0':
+					flags |= FLAG_ZERO;
+					continue;
+				case '-':
+					flags |= FLAG_MINUS;
+					continue;
+				case '#':
+				case ' ':
+				case '+':
+				case '\'':
+				case 'I':
+					continue;
+				default:
+					format--;
+					break;
+			}
+
+			break;
+		}
+
+		/* get width */
+		for (width = 0; *format >= '0' && *format <= '9'; format++)
+			width = width * 10 + *format - '0';
+
+		/* end of string */
+		if (!*format)
+			goto out;
+
+		/* handle type */
+		switch (*format++) {
+			case 0:
+				goto out;
 			case 'c':
-				putc(va_arg(args, int), fp);
-				count++;
+			 	c[0] = va_arg(ap, int);
+				c[1] = 0;
+				n += prints(fp, c, width, flags);
+				break;
+			case 's':
+				n += prints(fp, va_arg(ap, char *), width, flags);
 				break;
 			case 'd':
 			case 'i':
-				count += __print_num_signed(fp, va_arg(args, int), 10);
+				n += printi(fp, va_arg(ap, int), 10, 1, width, flags, false);
 				break;
 			case 'u':
-				count += __print_num_unsigned(fp, va_arg(args, unsigned int), 10);
+				n += printi(fp, va_arg(ap, unsigned int), 10, 0, width, flags, false);
 				break;
 			case 'x':
-				putc('0', fp);
-				putc('x', fp);
-				count += 2;
-				count += __print_num_unsigned(fp, va_arg(args, unsigned int), 16);
+				n += printi(fp, va_arg(ap, unsigned int), 16, 0, width, flags, false);
 				break;
-			case 's':
-				for (substr = va_arg(args, char *); *substr != '\0'; substr++, count++)
-					putc(*substr, fp);
-				break;
-			case '%':
-				putc('%', fp);
-				count++;
+			case 'X':
+				n += printi(fp, va_arg(ap, unsigned int), 16, 0, width, flags, true);
 				break;
 			default:
-				putc('%', fp);
-				putc(c, fp);
-				count += 2;
 				break;
 		}
 	}
 
-	return count;
+out:
+	return n;
 }
 
 int vfprintf(FILE *fp, const char *format, va_list ap)
