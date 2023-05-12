@@ -61,6 +61,9 @@ int feof(FILE *fp);
 int ferror(FILE *fp);
 int fileno(FILE *fp);
 
+ssize_t getdelim(char **lineptr, size_t *size, int delim, FILE *fp);
+ssize_t getline(char **lineptr, size_t *n, FILE *fp);
+
 int printf(const char *format, ...);
 int fprintf(FILE *fp, const char *format, ...);
 int sprintf(char *str, const char *format, ...);
