@@ -7,7 +7,7 @@
  */
 int sys_nanosleep(const struct old_timespec_t *req, struct old_timespec_t *rem)
 {
-	uint32_t timeout;
+	time_t timeout;
 
 	/* check request */
 	if (req->tv_nsec < 0 || req->tv_sec < 0)

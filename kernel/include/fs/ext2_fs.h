@@ -38,7 +38,7 @@
  * Ext2 super block.
  */
 struct ext2_super_block_t {
-uint32_t	s_inodes_count;					/* Inodes count */
+	uint32_t	s_inodes_count;					/* Inodes count */
 	uint32_t	s_blocks_count;					/* Blocks count */
 	uint32_t	s_r_blocks_count;				/* Reserved blocks count */
 	uint32_t	s_free_blocks_count;				/* Free blocks count */

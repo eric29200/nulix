@@ -14,7 +14,7 @@
 #define CALIBRATE_TIME		(5 * 1000020 / HZ)
 
 /* current jiffies */
-volatile uint32_t jiffies = 0;
+volatile time_t jiffies = 0;
 struct kernel_timeval_t xtimes = { 0, 0 };
 
 /* Time Stamp Counter variables */

@@ -11,6 +11,7 @@ OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.s=.o} ${PSF_SOURCES:.psf=.o}
 CFLAGS		= -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -I$(HEADER_PATH) -D__KERNEL__ -g
 LDFLAGS		= -T link.ld
 ASFLAGS		= -felf32
+LIBGCC		= $(shell $(CC) -print-libgcc-file-name)
 
 %.o: %.psf
 	$(OBJCOPY) -O elf32-i386 -B i386 -I binary $< $@
@@ -22,7 +23,7 @@ ASFLAGS		= -felf32
 	$(AS) $(ASFLAGS) $<
 
 $(KERNEL): $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBGCC)
 
 clean:
 	rm -f *.o */*.o */*/*.o $(KERNEL)

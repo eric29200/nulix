@@ -2,7 +2,7 @@
 #include <x86/io.h>
 #include <time.h>
 
-uint32_t startup_time = 0;
+time_t startup_time = 0;
 
 /*
  * Read a value from a CMOS register.
@@ -16,7 +16,7 @@ static uint8_t cmos_read(uint8_t addr)
 /*
  * Get real time clock.
  */
-static uint32_t rtc_get_time()
+static time_t rtc_get_time()
 {
 	uint32_t year, month, day, hour, min, sec;
 	int i;

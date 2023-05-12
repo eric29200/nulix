@@ -7,7 +7,7 @@ static LIST_HEAD(timers_list);
 /*
  * Init a timer event.
  */
-void timer_event_init(struct timer_event_t *tm, void (*func)(void *), void *data, uint32_t expires)
+void timer_event_init(struct timer_event_t *tm, void (*func)(void *), void *data, time_t expires)
 {
 	INIT_LIST_HEAD(&tm->list);
 	tm->expires = expires;
@@ -34,7 +34,7 @@ void timer_event_del(struct timer_event_t *tm)
 /*
  * Modify a timer event.
  */
-void timer_event_mod(struct timer_event_t *tm, uint32_t expires)
+void timer_event_mod(struct timer_event_t *tm, time_t expires)
 {
 	tm->expires = expires;
 	timer_event_add(tm);

@@ -94,7 +94,7 @@ struct task_t {
 	struct task_t *		 	parent;				/* parent process */
 	uint32_t			kernel_stack;			/* kernel stack */
 	uint32_t			esp;				/* kernel stack pointer */
-	uint32_t			timeout;			/* timeout (used by sleep) */
+	time_t				timeout;			/* timeout (used by sleep) */
 	sigset_t			sigpend;			/* pending signals */
 	sigset_t			sigmask;			/* signals mask */
 	sigset_t			saved_sigmask;			/* saved signals mask */
