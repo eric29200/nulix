@@ -20,5 +20,5 @@ int open(const char *pathname, int flags, ...)
 	if (fd >= 0 && (flags & O_CLOEXEC))
 		__syscall3(SYS_fcntl, fd, F_SETFD, FD_CLOEXEC);
 
-	return fd;
+	return __syscall_ret(fd);
 }

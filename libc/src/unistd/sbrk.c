@@ -8,5 +8,5 @@ void *sbrk(intptr_t increment)
 	if (increment)
 		return (void *) __syscall_ret(-ENOMEM);
 
-	return (void *) __syscall1(SYS_brk, 0);
+	return (void *) syscall1(SYS_brk, 0);
 }

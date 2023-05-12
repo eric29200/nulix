@@ -13,5 +13,5 @@ int fcntl(int fd, int cmd, ...)
 	arg = va_arg(ap, unsigned long);
 	va_end(ap);
 
-	return __syscall_ret(__syscall3(SYS_fcntl, fd, cmd, arg));
+	return syscall3(SYS_fcntl, fd, cmd, arg);
 }
