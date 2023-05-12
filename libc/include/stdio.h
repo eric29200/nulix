@@ -52,6 +52,7 @@ int getchar(void);
 int fputc(int c, FILE *fp);
 int putc(int c, FILE *fp);
 int putchar(int c);
+char *fgets(char *s, int size, FILE *fp);
 int fseek(FILE *fp, long offset, int whence);
 long ftell(FILE *fp);
 void rewind(FILE *fp);
