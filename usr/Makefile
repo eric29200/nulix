@@ -3,7 +3,7 @@ LIBC		= ../libc/libc.a
 CFLAGS		= -O0 -Wall -Wextra -nostdinc -fno-builtin -fno-stack-protector -fno-pic -I../libc/include -ffreestanding -nostdlib -m32
 LDFLAGS		= ../libc/libc.a -lgcc -static
 
-PROGS		= cat ls
+PROGS		= cat ls chmod
 
 all: $(PROGS)
 

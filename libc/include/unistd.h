@@ -16,6 +16,7 @@ extern char **environ;
 #define SYS_write		4
 #define SYS_open		5
 #define SYS_close		6
+#define SYS_chmod		15
 #define SYS_lseek		19
 #define SYS_dup			41
 #define SYS_brk			45
