@@ -26,6 +26,7 @@ extern char **environ;
 #define SYS_readv		145
 #define SYS_writev		146
 #define SYS_getdents64		220
+#define SYS_fchownat		298
 #define SYS_fstatat64		300
 
 void _exit(int status);
@@ -40,5 +41,7 @@ off_t lseek(int fd, off_t offset, int whence);
 int isatty(int fd);
 int dup(int oldfd);
 int dup2(int oldfd, int newfd);
+int chown(const char *pathname, uid_t owner, gid_t group);
+int fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags);
 
 #endif

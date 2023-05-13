@@ -58,6 +58,8 @@ int __getgrent(FILE *fp, struct group *gr, char **line, size_t *size, char ***me
 		/* get users list */
 		*s++ = 0;
 		mems = s;
+	
+		break;
 	}
 
 	/* get number of users */
@@ -92,7 +94,6 @@ int __getgrent(FILE *fp, struct group *gr, char **line, size_t *size, char ***me
 	}
 
 	gr->gr_mem = *mem;
-
 out:
 	*res = gr;
 	if (ret)
