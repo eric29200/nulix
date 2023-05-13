@@ -16,8 +16,10 @@ extern char **environ;
 #define SYS_write		4
 #define SYS_open		5
 #define SYS_close		6
+#define SYS_link		9
 #define SYS_chmod		15
 #define SYS_lseek		19
+#define SYS_access		33
 #define SYS_mkdir		39
 #define SYS_dup			41
 #define SYS_brk			45
@@ -25,6 +27,7 @@ extern char **environ;
 #define SYS_fcntl		55
 #define SYS_umask		60
 #define SYS_dup2		63
+#define SYS_symlink		83
 #define SYS_readv		145
 #define SYS_writev		146
 #define SYS_getdents64		220
@@ -46,5 +49,8 @@ int dup(int oldfd);
 int dup2(int oldfd, int newfd);
 int chown(const char *pathname, uid_t owner, gid_t group);
 int fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags);
+int access(const char *pathname, int mode);
+int link(const char *oldpath, const char *newpath);
+int symlink(const char *target, const char *linkpath);
 
 #endif
