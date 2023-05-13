@@ -2,6 +2,14 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
+/*
+ * Usage.
+ */
+static void usage(const char *name)
+{
+	fprintf(stderr, "Usage: %s mode file [...]\n", name);
+}
+
 int main(int argc, char **argv)
 {
 	mode_t mode = 0;
@@ -10,7 +18,7 @@ int main(int argc, char **argv)
 
 	/* check arguments */
 	if (argc < 3) {
-		fprintf(stderr, "Usage: %s mode file [...]\n", argv[0]);
+		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
 

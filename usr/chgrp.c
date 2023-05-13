@@ -6,9 +6,9 @@
 #include <sys/stat.h>
 
 /*
- * Get gid from gid string.
+ * Get gid from decimal string.
  */
-static void __gid_from_gid(const char *gid_str, gid_t *gid)
+static void __gid_from_decimal(const char *gid_str, gid_t *gid)
 {
 	*gid = 0;
 
@@ -37,6 +37,14 @@ static void __gid_from_name(const char *name, gid_t *gid)
 	*gid = grp->gr_gid;
 }
 
+/*
+ * Usage.
+ */
+static void usage(const char *name)
+{
+	fprintf(stderr, "Usage: %s { group_name | group_id } file [...]\n", name);
+}
+
 int main(int argc, char **argv)
 {
 	struct stat statbuf;
@@ -46,14 +54,14 @@ int main(int argc, char **argv)
 
 	/* check arguments */
 	if (argc < 3) {
-		fprintf(stderr, "Usage: %s { group_name | group_id } file [...]\n", argv[0]);
+		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
 	/* get gid */
 	s = argv[1];
 	if (*s >= '0' && *s <= '9')
-		__gid_from_gid(s, &gid);
+		__gid_from_decimal(s, &gid);
 	else
 		__gid_from_name(s, &gid);
 

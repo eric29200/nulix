@@ -6,6 +6,14 @@
 #include <errno.h>
 #include <sys/stat.h>
 
+/*
+ * Usage.
+ */
+static void usage(const char *name)
+{
+	fprintf(stderr, "Usage: %s file1 file2\n", name);
+}
+
 int main(int argc, char **argv)
 {
 	char buf1[BUFSIZ], buf2[BUFSIZ];
@@ -15,7 +23,7 @@ int main(int argc, char **argv)
 
 	/* check arguments */
 	if (argc < 3) {
-		fprintf(stderr, "Usage: %s file1 file2\n", argv[0]);
+		usage(argv[0]);
 		return EINVAL;
 	}
 
