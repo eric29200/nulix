@@ -9,5 +9,7 @@ typedef long long		off_t;
 typedef unsigned long long	ino_t;
 typedef unsigned		uid_t;
 typedef unsigned		gid_t;
+typedef long long		time_t;
+typedef int			clockid_t;
 
 #endif

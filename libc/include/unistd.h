@@ -28,6 +28,7 @@ extern char **environ;
 #define SYS_getdents64		220
 #define SYS_fchownat		298
 #define SYS_fstatat64		300
+#define SYS_clock_gettime64	403
 
 void _exit(int status);
 void _Exit(int status);
