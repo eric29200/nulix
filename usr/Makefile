@@ -3,7 +3,7 @@ LIBC		= ../libc/libc.a
 CFLAGS		= -O0 -Wall -Wextra -nostdinc -fno-builtin -fno-stack-protector -fno-pic -I../libc/include -ffreestanding -nostdlib -m32
 LDFLAGS		= ../libc/libc.a -lgcc -static
 
-PROGS		= echo cat ls chmod chown chgrp cmp mkdir mknod mkfifo ln rm rmdir
+PROGS		= echo true false cat ls chmod chown chgrp cmp mkdir mknod mkfifo ln rm rmdir
 
 all: $(PROGS)
 
