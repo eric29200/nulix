@@ -21,10 +21,12 @@ extern char **environ;
 #define SYS_mknod		14
 #define SYS_chmod		15
 #define SYS_lseek		19
+#define SYS_getuid		24
 #define SYS_access		33
 #define SYS_mkdir		39
 #define SYS_rmdir		40
 #define SYS_dup			41
+#define SYS_getgid		47
 #define SYS_brk			45
 #define SYS_ioctl		54
 #define SYS_fcntl		55
@@ -57,5 +59,7 @@ int link(const char *oldpath, const char *newpath);
 int symlink(const char *target, const char *linkpath);
 int unlink(const char *pathname);
 int rmdir(const char *pathname);
+uid_t getuid();
+gid_t getgid();
 
 #endif
