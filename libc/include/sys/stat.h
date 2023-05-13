@@ -53,5 +53,6 @@ int fstat(int fd, struct stat *statbuf);
 int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags);
 int chmod(const char *pathname, mode_t mode);
 int mkdir(const char *pathname, mode_t mode);
+int mknod(const char *pathname, mode_t mode, dev_t dev);
 
 #endif

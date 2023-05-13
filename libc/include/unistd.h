@@ -17,6 +17,7 @@ extern char **environ;
 #define SYS_open		5
 #define SYS_close		6
 #define SYS_link		9
+#define SYS_mknod		14
 #define SYS_chmod		15
 #define SYS_lseek		19
 #define SYS_access		33
