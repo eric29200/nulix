@@ -17,11 +17,13 @@ extern char **environ;
 #define SYS_open		5
 #define SYS_close		6
 #define SYS_link		9
+#define SYS_unlink		10
 #define SYS_mknod		14
 #define SYS_chmod		15
 #define SYS_lseek		19
 #define SYS_access		33
 #define SYS_mkdir		39
+#define SYS_rmdir		40
 #define SYS_dup			41
 #define SYS_brk			45
 #define SYS_ioctl		54
@@ -53,5 +55,7 @@ int fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flag
 int access(const char *pathname, int mode);
 int link(const char *oldpath, const char *newpath);
 int symlink(const char *target, const char *linkpath);
+int unlink(const char *pathname);
+int rmdir(const char *pathname);
 
 #endif
