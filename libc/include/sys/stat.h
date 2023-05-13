@@ -46,10 +46,12 @@ struct stat {
 	unsigned long long	st_ino;
 };
 
+mode_t umask(mode_t mask);
 int stat(const char *pathname, struct stat *statbuf);
 int lstat(const char *pathname, struct stat *statbuf);
 int fstat(int fd, struct stat *statbuf);
 int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags);
 int chmod(const char *pathname, mode_t mode);
+int mkdir(const char *pathname, mode_t mode);
 
 #endif

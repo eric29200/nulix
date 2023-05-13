@@ -18,10 +18,12 @@ extern char **environ;
 #define SYS_close		6
 #define SYS_chmod		15
 #define SYS_lseek		19
+#define SYS_mkdir		39
 #define SYS_dup			41
 #define SYS_brk			45
 #define SYS_ioctl		54
 #define SYS_fcntl		55
+#define SYS_umask		60
 #define SYS_dup2		63
 #define SYS_readv		145
 #define SYS_writev		146
