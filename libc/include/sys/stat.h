@@ -2,6 +2,7 @@
 #define _LIBC_STAT_H_
 
 #include <stdio.h>
+#include <time.h>
 
 #define S_IFMT		0170000
 
@@ -20,6 +21,9 @@
 #define S_ISFIFO(mode)	(((mode) & S_IFMT) == S_IFIFO)
 #define S_ISLNK(mode)	(((mode) & S_IFMT) == S_IFLNK)
 #define S_ISSOCK(mode)	(((mode) & S_IFMT) == S_IFSOCK)
+
+#define UTIME_NOW	0x3FFFFFFF
+#define UTIME_OMIT	0x3FFFFFFe
 
 /*
  * Stat64 structure.
@@ -54,5 +58,7 @@ int fstatat(int dirfd, const char *pathname, struct stat *statbuf, int flags);
 int chmod(const char *pathname, mode_t mode);
 int mkdir(const char *pathname, mode_t mode);
 int mknod(const char *pathname, mode_t mode, dev_t dev);
+
+int utimensat(int dirfd, const char *pathname, const struct timespec times[2], int flags);
 
 #endif
