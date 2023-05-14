@@ -18,6 +18,7 @@ extern char **environ;
 #define SYS_close		6
 #define SYS_link		9
 #define SYS_unlink		10
+#define SYS_chdir		12
 #define SYS_mknod		14
 #define SYS_chmod		15
 #define SYS_lseek		19
@@ -72,5 +73,6 @@ gid_t getgid();
 gid_t getegid();
 ssize_t readlink(const char *pathname, char *buf, size_t bufsize);
 char *getcwd(char *buf, size_t size);
+int chdir(const char *path);
 
 #endif
