@@ -22,6 +22,10 @@ char *strchrnul(const char *str, int c);
 char *strrchr(const char *str, int c);
 char *strdup(const char *s);
 char *strndup(const char *s, size_t n);
+size_t strspn(const char *s, const char *accept);
+size_t strcspn(const char *s, const char *reject);
+char *strtok(char *str, const char *delim);
+char *strtok_r(char *str, const char *delim, char **p);
 
 char *strerror(int errnum);
 
