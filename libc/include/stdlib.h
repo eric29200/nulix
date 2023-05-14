@@ -16,6 +16,8 @@ void free(void *ptr);
 int abs(int val);
 int atoi(const char *s);
 
+char *getenv(const char *name);
+
 void qsort(void *base, size_t nmemb, size_t size, int (*compare)(const void *, const void *));
 
 #endif

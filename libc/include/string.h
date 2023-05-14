@@ -18,6 +18,7 @@ char *strncpy(char *dest, const char *src, size_t n);
 char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, size_t n);
 char *strchr(const char *str, int c);
+char *strchrnul(const char *str, int c);
 char *strrchr(const char *str, int c);
 char *strdup(const char *s);
 char *strndup(const char *s, size_t n);
