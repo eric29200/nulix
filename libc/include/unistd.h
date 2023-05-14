@@ -35,6 +35,7 @@ extern char **environ;
 #define SYS_umask		60
 #define SYS_dup2		63
 #define SYS_symlink		83
+#define SYS_readlink		85
 #define SYS_readv		145
 #define SYS_writev		146
 #define SYS_getdents64		220
@@ -66,5 +67,6 @@ uid_t getuid();
 uid_t geteuid();
 gid_t getgid();
 gid_t getegid();
+ssize_t readlink(const char *pathname, char *buf, size_t bufsize);
 
 #endif
