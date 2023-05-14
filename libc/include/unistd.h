@@ -37,6 +37,7 @@ extern char **environ;
 #define SYS_dup2		63
 #define SYS_symlink		83
 #define SYS_readlink		85
+#define SYS_uname		122
 #define SYS_readv		145
 #define SYS_writev		146
 #define SYS_getcwd		183
