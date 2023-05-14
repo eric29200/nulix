@@ -58,6 +58,11 @@
 #define AT_EACCESS		0x200
 #define AT_EMPTY_PATH		0x1000
 
+#define F_OK		0
+#define R_OK		4
+#define W_OK		2
+#define X_OK		1
+
 int fcntl(int fd, int cmd, ...);
 int open(const char *pathname, int flags, ...);
 int creat(const char *filename, mode_t mode);

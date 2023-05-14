@@ -60,6 +60,7 @@ int fflush(FILE *fp);
 int feof(FILE *fp);
 int ferror(FILE *fp);
 int fileno(FILE *fp);
+int rename(const char *oldpath, const char *newpath);
 
 ssize_t getdelim(char **lineptr, size_t *size, int delim, FILE *fp);
 ssize_t getline(char **lineptr, size_t *n, FILE *fp);
