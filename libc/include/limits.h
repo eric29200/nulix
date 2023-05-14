@@ -18,6 +18,8 @@
 #define LLONG_MAX	0x7FFFFFFFFFFFFFFFLL
 #define ULLONG_MAX	(2ULL * LLONG_MAX + 1)
 
+#define ARG_MAX		131072
 #define PATH_MAX	4096
+#define NAME_MAX	255
 
 #endif

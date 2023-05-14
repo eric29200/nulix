@@ -18,6 +18,7 @@ extern char **environ;
 #define SYS_close		6
 #define SYS_link		9
 #define SYS_unlink		10
+#define SYS_execve		11
 #define SYS_chdir		12
 #define SYS_mknod		14
 #define SYS_chmod		15
@@ -51,6 +52,10 @@ extern char **environ;
 void _exit(int status);
 void _Exit(int status);
 pid_t fork();
+int execv(const char *pathname, char *const argv[]);
+int execve(const char *pathname, char *const argv[], char *const envp[]);
+int execvp(const char *file, char *const argv[]);
+int execvpe(const char *file, char *const argv[], char *const envp[]);
 ssize_t read(int fd, void *buf, size_t count);
 ssize_t write(int fd, const void *buf, size_t count);
 int close(int fd);
