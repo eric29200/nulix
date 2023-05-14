@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 	if (argc == 3 && argv[2][0] == 'p') {
 		if (mknod(argv[1], mode | S_IFIFO, 0) < 0) {
 			perror(argv[1]);
-			exit(EXIT_FAILURE);
+			exit(1);
 		}
 
 		return 0;
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc != 5) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* get device type */
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 			break;
 		default:
 			usage(argv[0]);
-			exit(EXIT_FAILURE);
+			exit(1);
 	}
 
 	/* get major/minor numbers */
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 	if (errno != ERANGE) {
 		if (mknod(argv[1], mode, mkdev(major, minor)) < 0) {
 			perror(argv[1]);
-			exit(EXIT_FAILURE);
+			exit(1);
 		}
 	}
 

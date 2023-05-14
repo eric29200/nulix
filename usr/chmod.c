@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc < 3) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* get mode */
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	/* check mode */
 	if (*mode_str) {
 		fprintf(stderr, "Mode must be specified as an octal number\n");
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* chmod all files */

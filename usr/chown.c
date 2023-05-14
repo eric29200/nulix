@@ -20,7 +20,7 @@ static void __uid_from_decimal(const char *str, uid_t *uid)
 
 	if (*str) {
 		fprintf(stderr, "Bad uid value\n");
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 }
 
@@ -36,7 +36,7 @@ static void __gid_from_decimal(const char *str, gid_t *gid)
 
 	if (*str) {
 		fprintf(stderr, "Bad gid value\n");
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 }
 
@@ -50,7 +50,7 @@ static void __uid_from_name(const char *name, uid_t *uid)
 	pwd = getpwnam(name);
 	if (!pwd) {
 		fprintf(stderr, "%s : unknown user\n", name);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	*uid = pwd->pw_uid;
@@ -66,7 +66,7 @@ static void __gid_from_name(const char *name, gid_t *gid)
 	grp = getgrnam(name);
 	if (!grp) {
 		fprintf(stderr, "%s : unknown group\n", name);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	*gid = grp->gr_gid;
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc < 3) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* get user string */

@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc != 2 && argc != 3) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* get basename */

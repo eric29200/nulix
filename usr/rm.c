@@ -144,20 +144,20 @@ static void usage(const char *name)
 
 int main(int argc, char **argv)
 {
-	int i, j, flags = 0, ret = 0;
+	const char *name = argv[0];
+	int flags = 0, ret = 0;
+	char *p;
 
 	/* check arguments */
 	if (argc < 2) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
-	/* parse arguments */
-	for (i = 1; i < argc && argv[i][0] == '-'; i++) {
-		for (j = 1; argv[i][j]; j++) {
-			switch (argv[i][j]) {
-				case 0:
-					break;
+	/* parse options */
+	while (argv[1] && argv[1][0] == '-') {
+		for (p = &argv[1][1]; *p; p++) {
+			switch (*p) {
 				case 'f':
 					flags |= FLAG_FORCE;
 					break;
@@ -168,20 +168,23 @@ int main(int argc, char **argv)
 					flags |= FLAG_RECURSIVE;
 					break;
 				default:
-					usage(argv[0]);
-					exit(EXIT_FAILURE);
+					usage(name);
+					exit(1);
 			}
 		}
+
+		argc--;
+		argv++;
 	}
 
 	/* remove files */
-	for (; i < argc; i++) {
-		if (dotname(argv[i])) {
-			fprintf(stderr, "%s : cannot remove '.' and '..'\n", argv[0]);
+	while (--argc > 0) {
+		if (dotname(*++argv)) {
+			fprintf(stderr, "%s : cannot remove '.' and '..'\n", name);
 			continue;
 		}
 
-		ret += rm(argv[i], flags, 0);
+		ret += rm(*argv, flags, 0);
 	}
 
 	return ret;

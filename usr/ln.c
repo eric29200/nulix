@@ -59,31 +59,31 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc < 3) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* symbolic link */
 	if (argv[1][0] == '-') {
 		if (strcmp(argv[1], "-s") != 0 || argc != 4) {
 			usage(argv[0]);
-			exit(EXIT_FAILURE);
+			exit(1);
 		}
 
 		/* create symbolic link */
 		if (symlink(argv[2], argv[3]) < 0) {
 			perror(argv[3]);
-			exit(EXIT_FAILURE);
+			exit(1);
 		}
 
 		return 0;
 	}
 
-	/* mutiple arguments : last arugment must be a directory */
+	/* mutiple arguments : last argument must be a directory */
 	lastarg = argv[argc - 1];
 	dirflag = isdir(lastarg);
 	if (argc > 3 && !dirflag) {
 		fprintf(stderr, "%s: not a directory\n", lastarg);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	for (i = 1; i < argc - 1; i++) {

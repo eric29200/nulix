@@ -11,9 +11,9 @@ static int __copy_fd(int fd)
 
 	while ((n = read(fd, buf, BUFSIZ)) > 0)
 		if (write(STDOUT_FILENO, buf, n) != n)
-			return EXIT_FAILURE;
+			return 1;
 
-	return n < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
+	return n < 0 ? 1 : EXIT_SUCCESS;
 }
 
 int main(int argc, char **argv)
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 			fd = STDIN_FILENO;
 		} else if ((fd = open(argv[i], O_RDONLY)) < 0) {
 			perror(argv[i]);
-			return EXIT_FAILURE;
+			return 1;
 		}
 
 		ret = __copy_fd(fd);

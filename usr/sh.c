@@ -96,7 +96,7 @@ static int __cmd_cd(int argc, char **argv)
 	ret = chdir(path);
 	if (ret < 0) {
 		perror(path);
-		return EXIT_FAILURE;
+		return 1;
 	}
 
 	return 0;
@@ -143,7 +143,7 @@ static int execute_cmd()
 	pid = fork();
 	if (pid < 0) {
 		perror("fork");
-		ret = EXIT_FAILURE;
+		ret = 1;
 	} else if (pid == 0) {
 		/* execute command */
 		ret = execvpe(argv[0], argv, environ);

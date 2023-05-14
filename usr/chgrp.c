@@ -17,7 +17,7 @@ static void __gid_from_decimal(const char *gid_str, gid_t *gid)
 
 	if (*gid_str) {
 		fprintf(stderr, "Bad gid value\n");
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 }
 
@@ -31,7 +31,7 @@ static void __gid_from_name(const char *name, gid_t *gid)
 	grp = getgrnam(name);
 	if (!grp) {
 		fprintf(stderr, "%s : unknown group\n", name);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	*gid = grp->gr_gid;
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc < 3) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* get gid */

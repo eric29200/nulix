@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc < 2) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* get mode */
@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
 	for (i = 1; i < argc; i++) {
 		if (mknod(argv[i], mode | S_IFIFO, 0) < 0) {
-			ret = EXIT_FAILURE;
+			ret = 1;
 		}
 	}
 

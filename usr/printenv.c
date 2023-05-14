@@ -31,5 +31,5 @@ int main(int argc, char **argv)
 		env++;
 	}
 
-	return EXIT_FAILURE;
+	return 1;
 }

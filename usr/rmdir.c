@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc < 2) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* parent argument */
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 		/* check name */
 		if (argv[i][0] == '-') {
 			usage(argv[0]);
-			exit(EXIT_FAILURE);
+			exit(1);
 		}
 
 		/* remove end slashs */
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 		/* remove directory */
 		if (rm_dir(argv[i], parent)) {
 			fprintf(stderr, "%s: cannot remove directory\n", argv[i]);
-			ret = EXIT_FAILURE;
+			ret = 1;
 		}
 	}
 

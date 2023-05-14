@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 	/* check arguments */
 	if (argc < 2) {
 		usage(argv[0]);
-		exit(EXIT_FAILURE);
+		exit(1);
 	}
 
 	/* parent option */
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 		/* check argument */
 		if (argv[i][0] == '-') {
 			usage(argv[0]);
-			exit(EXIT_FAILURE);
+			exit(1);
 		}
 
 		/* remove last '/' */

@@ -10,7 +10,7 @@ int main()
 	/* get passwd */
 	pwd = getpwuid(getuid());
 	if (!pwd)
-		exit(EXIT_FAILURE);
+		exit(1);
 
 	/* print name */
 	printf("%s\n", pwd->pw_name);
