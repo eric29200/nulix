@@ -39,6 +39,7 @@ extern char **environ;
 #define SYS_readlink		85
 #define SYS_readv		145
 #define SYS_writev		146
+#define SYS_getcwd		183
 #define SYS_getdents64		220
 #define SYS_fchownat		298
 #define SYS_fstatat64		300
@@ -69,5 +70,6 @@ uid_t geteuid();
 gid_t getgid();
 gid_t getegid();
 ssize_t readlink(const char *pathname, char *buf, size_t bufsize);
+char *getcwd(char *buf, size_t size);
 
 #endif
