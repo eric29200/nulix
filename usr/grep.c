@@ -103,11 +103,11 @@ static int grep(const char *word, const char *filename, int flags)
 		/* search word in line */
 		if (search(buf, word, flags)) {
 			/* print filename */
-			printf("%s: ", filename);
+			printf("%s:", filename);
 
 			/* print line number */	
 			if (flags & FLAG_TELLLINE)
-				printf("%ld: ", line);
+				printf("%ld:", line);
 
 			/* print line */
 			printf("%s", buf);
