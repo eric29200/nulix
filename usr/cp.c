@@ -18,6 +18,19 @@ static int copy_item(const char *src, const char *dst, int flags);
 static char buf[BUFSIZ];
 
 /*
+ * Remove end slash.
+ */
+static char *remove_end_slash(char *str)
+{
+	int len = strlen(str) - 1;
+
+	while (len > 0 && str[len] == '/')
+		str[len] = 0;
+
+	return str;
+}
+
+/*
  * "." or ".." ?
  */
 static bool dotname(const char *name)
@@ -57,6 +70,10 @@ static int copy_dir(const char *src, const char *dst, struct stat *src_statbuf, 
 	struct dirent *entry;
 	int ret = 0;
 	DIR *dirp;
+
+	/* print copy */
+	if (flags & FLAG_VERBOSE)
+		printf("'%s' -> '%s'\n", src, dst);
 
 	/* create directory */
 	mkdir(dst, src_statbuf->st_mode & 0777);
@@ -230,7 +247,7 @@ static void usage(const char *name)
 
 int main(int argc, char **argv)
 {
-	char *lastarg, *p, *src, *dst;
+	char *lastarg, *p, *src, *dst, *tmp;
 	const char *name = argv[0];
 	int flags = 0, ret = 0;
 	bool dirflag;
@@ -240,6 +257,7 @@ int main(int argc, char **argv)
 		for (p = &argv[1][1]; *p; p++) {
 			switch (*p) {
 				case 'r':
+				case 'R':
 					flags |= FLAG_RECURSIVE;
 					break;
 				case 'f':
@@ -267,7 +285,7 @@ int main(int argc, char **argv)
 	}
 
 	/* mutiple arguments : last argument must be a directory */
-	lastarg = argv[argc - 1];
+	lastarg = remove_end_slash(argv[argc - 1]);
 	dirflag = isdir(lastarg);
 	if (argc > 2 && !dirflag) {
 		fprintf(stderr, "%s: not a directory\n", lastarg);
@@ -276,12 +294,17 @@ int main(int argc, char **argv)
 
 	/* copy files */
 	while (argc-- > 1) {
-		src = *argv++;
+		src = remove_end_slash(*argv++);
 		dst = lastarg;
 
 		/* copy to directory */
-		if (dirflag)
-			dst = build_name(dst, src);
+		if (dirflag) {
+			tmp = strrchr(src, '/');
+			if (!tmp)
+				tmp = src;
+			
+			dst = build_name(dst, tmp);
+		}
 
 		/* copy item */
 		if (copy_item(src, dst, flags)) {
