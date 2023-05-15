@@ -13,6 +13,8 @@
 #define FLAG_INTERACT		(1 << 1)
 #define FLAG_RECURSIVE		(1 << 2)
 
+static int rm(const char *name, int flags, int level);
+
 /*
  * Ask yes to user.
  */
@@ -38,14 +40,75 @@ static bool dotname(const char *name)
 }
 
 /*
+ * Remove a directory.
+ */
+static int rm_dir(const char *name, int flags, int level)
+{
+	char subname[PATH_MAX];
+	struct dirent *entry;
+	int ret = 0;
+	DIR *dirp;
+
+	/* non recursive mode */
+	if (!(flags & FLAG_RECURSIVE)) {
+		fprintf(stderr, "rm: %s is a directory\n", name);
+		return 1;
+	}
+
+	/* check write access */
+	if (access(name, O_WRONLY) < 0) {
+		if (!(flags & FLAG_FORCE))
+			fprintf(stderr, "rm: %s not changed\n", name);
+
+		return 1;
+	}
+
+	/* interactive rm */
+	if ((flags & FLAG_INTERACT) && level != 0) {
+		printf("rm: remove directory %s ? ", name);
+		if (!yes())
+			return 0;
+	}
+
+	/* open directory */
+	dirp = opendir(name);
+	if (!dirp) {
+		fprintf(stderr, "rm: cannot open directory %s\n", name);
+		return 0;
+	}
+
+	/* recursive rm */
+	for (;;) {
+		/* read next entry */
+		entry = readdir(dirp);
+		if (!entry)
+			break;
+
+		/* remove entry */
+		if (entry->d_ino && !dotname(entry->d_name)) {
+			snprintf(subname, PATH_MAX, "%s/%s", name, entry->d_name);
+			ret += rm(subname, flags, level + 1);
+		}
+	}
+
+	/* close directory */
+	closedir(dirp);
+
+	/* remove this directory */
+	if (!dotname(name) && rmdir(name) < 0) {
+		fprintf(stderr, "rm: %s", strerror(errno));
+		return 1;
+	}
+
+	return !!ret;
+}
+
+/*
  * Remove a file.
  */
 static int rm(const char *name, int flags, int level)
 {
-	char subname[PATH_MAX];
-	struct dirent *entry;
 	struct stat statbuf;
-	DIR *dirp;
 	int ret;
 
 	/* stat file */
@@ -59,61 +122,16 @@ static int rm(const char *name, int flags, int level)
 	}
 
 	/* remove a directory */
-	if (S_ISDIR(statbuf.st_mode)) {
-		/* non recursive mode */
-		if (!(flags & FLAG_RECURSIVE)) {
-			fprintf(stderr, "rm: %s is a directory\n", name);
-			return 1;
-		}
-
-		/* check write access */
-		if (access(name, O_WRONLY) < 0) {
-			if (!(flags & FLAG_FORCE))
-				fprintf(stderr, "rm: %s not changed\n", name);
-
-			return 1;
-		}
-
-		/* interactive rm */
-		if ((flags & FLAG_INTERACT) && level != 0) {
-			printf("rm: remove directory %s ? ", name);
-			if (!yes())
-				return 0;
-		}
-
-		/* open directory */
-		dirp = opendir(name);
-		if (!dirp) {
-			fprintf(stderr, "rm: cannot open directory %s\n", name);
-			return 0;
-		}
-
-		/* recursive rm */
-		for (;;) {
-			/* read next entry */
-			entry = readdir(dirp);
-			if (!entry)
-				break;
-
-			/* remove entry */
-			if (entry->d_ino && !dotname(entry->d_name)) {
-				snprintf(subname, PATH_MAX, "%s/%s", name, entry->d_name);
-				ret += rm(subname, flags, level + 1);
-			}
-		}
-
-		/* close directory */
-		closedir(dirp);
-
-		/* remove this directory */
-		if (!dotname(name) && rmdir(name) < 0) {
-			fprintf(stderr, "rm: %s", strerror(errno));
-			return 1;
-		}
-
-		return !!ret;
-	}
+	if (S_ISDIR(statbuf.st_mode))
+		return rm_dir(name, flags, level);
 	 
+	/* interactive rm */
+	if (flags & FLAG_INTERACT) {
+		printf("rm: remove %s ? ", name);
+		if (!yes())
+			return 0;
+	}
+
 	/* interactive rm */
 	if (flags & FLAG_INTERACT) {
 		printf("rm: remove %s ? ", name);
@@ -126,7 +144,7 @@ static int rm(const char *name, int flags, int level)
 	}
 
 	/* remove */
-	if (unlink(name) && (!(flags & FLAG_FORCE) || (flags & FLAG_INTERACT))) {
+	if (unlink(name) != 0 && (!(flags & FLAG_FORCE) || (flags & FLAG_INTERACT))) {
 		fprintf(stderr, "rm: %s not removed\n", name);
 		return 1;
 	}
