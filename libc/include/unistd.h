@@ -67,6 +67,7 @@ int isatty(int fd);
 int dup(int oldfd);
 int dup2(int oldfd, int newfd);
 int chown(const char *pathname, uid_t owner, gid_t group);
+int lchown(const char *pathname, uid_t owner, gid_t group);
 int fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags);
 int access(const char *pathname, int mode);
 int link(const char *oldpath, const char *newpath);
