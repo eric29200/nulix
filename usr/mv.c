@@ -1,32 +1,45 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <limits.h>
-#include <fcntl.h>
-#include <dirent.h>
-#include <string.h>
-#include <utime.h>
-#include <libgen.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 
 #include "libutils/build_path.h"
-#include "libutils/copy.h"
+
+#define FLAG_FORCE	(1 << 0)
+#define FLAG_VERBOSE	(1 << 1)
+
+/*
+ * Move a file.
+ */
+static int mv(const char *src, const char *dst, int flags)
+{
+	int ret;
+
+	/* print move */
+	if (flags & FLAG_VERBOSE)
+		printf("'%s' -> '%s'\n", src, dst);
+
+	/* try to rename */
+	ret = rename(src, dst);
+	if (!ret)
+		return 0;
+
+	return 1;
+}
 
 /*
  * Usage.
  */
 static void usage(const char *name)
 {
-	fprintf(stderr, "Usage: %s [-RvfapHLP] source [...] target\n", name);
+	fprintf(stderr, "Usage: %s [-fv] source [...] target\n", name);
 }
 
 int main(int argc, char **argv)
 {
-	int flags = 0, ret = 0, follow = 0;
 	const char *name = argv[0];
-	char *p, *src, *dst;
+	int flags = 0, ret = 0;
+	char *src, *dst, *p;
 	char buf[BUFSIZ];
 	bool dst_is_dir;
 	struct stat st;
@@ -42,27 +55,10 @@ int main(int argc, char **argv)
 		for (p = &argv[1][1]; *p; p++) {
 			switch (*p) {
 				case 'f':
-					flags |= FLAG_CP_FORCE;
-					break;
-				case 'R':
-				case 'r':
-					flags |= FLAG_CP_RECURSIVE;
+					flags |= FLAG_FORCE;
 					break;
 				case 'v':
-					flags |= FLAG_CP_VERBOSE;
-					break;
-				case 'a':
-					flags |= FLAG_CP_RECURSIVE;
-					flags |= FLAG_CP_PRESERVE_ATTR;
-					flags |= FLAG_CP_PRESERVE_MODE;
-					break;
-				case 'p':
-					flags |= FLAG_CP_PRESERVE_MODE;
-					break;
-				case 'H':
-				case 'L':
-				case 'P':
-				 	follow = *p;
+					flags |= FLAG_VERBOSE;
 					break;
 				default:
 					usage(name);
@@ -73,10 +69,6 @@ int main(int argc, char **argv)
 		argc--;
 		argv++;
 	}
-
-	/* default follow */
-	if (!follow)
-		follow = flags & FLAG_CP_RECURSIVE ? 'P' : 'L';
 
 	/* update arguments position */
 	argv++;
@@ -89,17 +81,17 @@ int main(int argc, char **argv)
 	dst = argv[argc - 1];
 	dst_is_dir = stat(dst, &st) == 0 && S_ISDIR(st.st_mode);
 
-	/* simple copy */
+	/* simple move */
 	if (argc == 2 && !dst_is_dir)
-		return copy(argv[0], dst, flags, follow, 0);
+		return mv(argv[0], dst, flags);
 
-	/* multiple copy : dst must be a directory */
+	/* multiple move : dst must be a directory */
 	if (argc > 2 && !dst_is_dir) {
 		fprintf(stderr, "%s: not a directory\n", dst);
 		exit(1);
 	}
 
-	/* copy all files */
+	/* move all files */
 	while (argc-- > 1) {
 		src = *argv++;
 		
@@ -109,8 +101,8 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		/* copy file */
-		ret |= copy(src, buf, flags, follow, 0);
+		/* move file */
+		ret |= mv(src, buf, flags);
 	}
 
 	return ret;
