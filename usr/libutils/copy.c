@@ -102,7 +102,7 @@ static int cp_file(const char *src, const char *dst, int flags, const struct sta
 		bp = buf;
 
 		while (sn > 0) {
-			dn = write(dfd, buf, sn);
+			dn = write(dfd, bp, sn);
 			if (dn < 0) {
 				perror(dst);
 				ret = 1;
