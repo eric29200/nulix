@@ -43,6 +43,7 @@ extern char **environ;
 #define SYS_uname		122
 #define SYS_readv		145
 #define SYS_writev		146
+#define SYS_nanosleep		162
 #define SYS_getcwd		183
 #define SYS_getdents64		220
 #define SYS_fchownat		298
@@ -82,5 +83,6 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsize);
 char *getcwd(char *buf, size_t size);
 int chdir(const char *path);
 int gethostname(char *name, size_t len);
+unsigned sleep(unsigned seconds);
 
 #endif

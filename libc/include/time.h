@@ -29,5 +29,6 @@ struct tm {
 
 time_t time(time_t *tloc);
 int clock_gettime(clockid_t clockid, struct timespec *tp);
+int nanosleep(const struct timespec *req, struct timespec *rem);
 
 #endif
