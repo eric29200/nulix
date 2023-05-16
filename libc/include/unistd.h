@@ -81,5 +81,6 @@ gid_t getegid();
 ssize_t readlink(const char *pathname, char *buf, size_t bufsize);
 char *getcwd(char *buf, size_t size);
 int chdir(const char *path);
+int gethostname(char *name, size_t len);
 
 #endif

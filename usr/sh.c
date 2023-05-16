@@ -6,7 +6,6 @@
 #include <pwd.h>
 #include <limits.h>
 #include <ctype.h>
-#include <sys/utsname.h>
 #include <sys/wait.h>
 
 #define USERNAME_SIZE		1024
@@ -26,7 +25,6 @@ static void init_prompt_values()
 {
 	bool user_set = false, home_set = false;
 	struct passwd *passwd;
-	struct utsname buf;
 	uid_t uid;
 	char *s;
 
@@ -71,8 +69,7 @@ static void init_prompt_values()
 		snprintf(username, USERNAME_SIZE, "%d\n", uid);
 	
 	/* get hostname */
-	if (uname(&buf) == 0)
-		strncpy(hostname, buf.nodename, HOSTNAME_SIZE);
+	gethostname(hostname, HOSTNAME_SIZE - 1);
 }
 
 /*
