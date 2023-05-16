@@ -5,9 +5,9 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <sys/stat.h>
- 
-static char buf[PATH_MAX];
 
+#include "libutils/build_path.h"
+ 
 /*
  * Check if name is a directory.
  */
@@ -22,27 +22,6 @@ static bool isdir(const char *name)
 }
 
 /*
- * Build link name.
- */
-static char *build_link_name(const char *name, char *target)
-{
-	char *s;
-
-	if (!name || *name == 0)
-		return target;
-
-	s = strrchr(target, '/');
-	if (s)
-		target = s + 1;
-
-	strcpy(buf, name);
-	strcat(buf, "/");
-	strcat(buf, target);
-
-	return buf;
-}
-
-/*
  * Usage.
  */
 static void usage(const char *name)
@@ -52,7 +31,7 @@ static void usage(const char *name)
 
 int main(int argc, char **argv)
 {
-	char *lastarg, *target, *name;
+	char *lastarg, *srcname, dstname[PATH_MAX];
 	bool dirflag;
 	int i;
 
@@ -88,20 +67,23 @@ int main(int argc, char **argv)
 
 	for (i = 1; i < argc - 1; i++) {
 		/* check target link */
-		target = argv[i];
-		if (access(target, 0) < 0) {
-			perror(target);
+		srcname = argv[i];
+		if (access(srcname, 0) < 0) {
+			perror(srcname);
 			continue;
 		}
 
 		/* build link name */
-		name = lastarg;
 		if (dirflag)
-			name = build_link_name(name, target);
+			build_path(lastarg, srcname, dstname, PATH_MAX);
+		else
+			strncpy(dstname, lastarg, PATH_MAX);
+
+		printf("%s -> %s\n", srcname, dstname);
 
 		/* create link */
-		if (link(target, name) < 0) {
-			perror(name);
+		if (link(srcname, dstname) < 0) {
+			perror(dstname);
 			continue;
 		}
 	}
