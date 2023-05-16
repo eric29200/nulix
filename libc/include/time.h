@@ -2,12 +2,15 @@
 #define _LIBC_TIME_H_
 
 #include <stdio.h>
+#include <stdint.h>
 
 #define CLOCK_REALTIME		0
+#define CLOCK_MONOTONIC		1
 
 struct timespec {
 	time_t			tv_sec;
 	long			tv_nsec;
+	long			pad;
 };
 
 struct tm {
