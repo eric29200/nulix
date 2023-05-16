@@ -5,6 +5,11 @@
 */*/*.o
 */*/*/*.o
 */*/*/*/*.o
+*.a
+*/*.a
+*/*/*.a
+*/*/*/*.a
+*/*/*/*/*.a
 *.bin
 *.iso
 */*.bin
@@ -17,7 +22,6 @@ root/*
 ports/build/*
 musl/musl-build
 musl/musl-install
-libc/libc.a
 tmp/*
 usr/build
 traffic.pcap
