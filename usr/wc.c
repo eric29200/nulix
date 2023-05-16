@@ -145,6 +145,10 @@ int main(int argc, char **argv)
 
 		/* count */
 		ret |= wc(fp, *argv++, flags);
+
+		/* close file */
+		if (fp != stdin && fclose(fp))
+			ret = 1;
 	}
 
 	/* print total */
