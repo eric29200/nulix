@@ -33,7 +33,7 @@ static int __out(FILE *fp, const char *str, size_t len)
 /*
  * Print a string.
  */
-static int prints(FILE *fp, const char *str, int width, int flags)
+static int prints(FILE *fp, const char *str, int width, int precision, int flags)
 {
 	size_t len = strlen(str);
 	char padchar;
@@ -41,6 +41,10 @@ static int prints(FILE *fp, const char *str, int width, int flags)
 
 	/* set padchar */
 	padchar = flags & FLAG_ZERO ? '0' : ' ';
+
+	/* fix len */
+	if (precision > 0 && (size_t) precision < len)
+		len = precision;
 
 	/* fix width */
 	width -= len;
@@ -75,7 +79,7 @@ static int printi(FILE *fp, intmax_t i, int base, int sign, int width, int flags
 	if (i == 0) {
 		buf[0] = '0';
 		buf[1] = 0;
-		return prints(fp, buf, width, flags);
+		return prints(fp, buf, width, -1, flags);
 	}
 
 	/* negative value */
@@ -109,7 +113,7 @@ static int printi(FILE *fp, intmax_t i, int base, int sign, int width, int flags
 	}
 
 	/* print digits */
-	return n + prints(fp, s, width, flags);
+	return n + prints(fp, s, width, -1, flags);
 }
 
 /*
@@ -140,7 +144,7 @@ static inline intmax_t __get_val(va_list *ap, int length_modifier)
  */
 static int printf_core(FILE *fp, const char *format, va_list ap)
 {
-	int n = 0, i, width, flags, length_modifier;
+	int n = 0, i, width, precision, flags, length_modifier;
 	char c[2];
 
 	while (*format) {
@@ -185,6 +189,16 @@ static int printf_core(FILE *fp, const char *format, va_list ap)
 		for (width = 0; *format >= '0' && *format <= '9'; format++)
 			width = width * 10 + *format - '0';
 
+		/* get precision */
+		if (*format == '.') {
+			format++;
+
+			for (precision = 0; *format >= '0' && *format <= '9'; format++)
+				precision = precision * 10 + *format - '0';
+		} else {
+			precision = -1;
+		}
+
 		/* end of string */
 		if (!*format)
 			goto out;
@@ -218,10 +232,10 @@ static int printf_core(FILE *fp, const char *format, va_list ap)
 			case 'c':
 			 	c[0] = va_arg(ap, int);
 				c[1] = 0;
-				n += prints(fp, c, width, flags);
+				n += prints(fp, c, width, precision, flags);
 				break;
 			case 's':
-				n += prints(fp, va_arg(ap, char *), width, flags);
+				n += prints(fp, va_arg(ap, char *), width, precision, flags);
 				break;
 			case 'd':
 			case 'i':
