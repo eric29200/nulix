@@ -28,6 +28,9 @@ struct tm {
 };
 
 time_t time(time_t *tloc);
+time_t mktime(struct tm *tm);
+struct tm *localtime(const time_t *timep);
+size_t strftime(char *s, size_t max, const char *format, const struct tm *tm);
 int clock_gettime(clockid_t clockid, struct timespec *tp);
 int nanosleep(const struct timespec *req, struct timespec *rem);
 
