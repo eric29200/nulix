@@ -39,10 +39,18 @@
 
 /* global variables */
 static int sort_flags = 0;
-static char format[16] = "%s";
 static int nr_cols = 80;
 static int nr_entries_per_line = 0;
 static int entries_line_cpt = 0;
+
+/* formats */
+static char format_name[16];
+static char format_inode[16];
+static char format_size[16];
+static char format_size_str[16];
+static char format_nlink[16];
+static char format_major[16];
+static char format_minor[16];
 
 /*
  * Stack entry.
@@ -325,7 +333,7 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 
 	/* print inode */
 	if (flags & FLAG_INODE)
-		printf("%5lu ", entry->ino);
+		printf(format_inode, entry->ino);
 
 	/* ls -l */
 	if (flags & FLAG_LONG) {
@@ -334,7 +342,7 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 		printf("%s ", mode);
 
 		/* print number of links */
-		printf("%4ld ", entry->nlink);
+		printf(format_nlink, entry->nlink);
 
 		/* print user */
 		pwd = getpwuid(entry->uid);
@@ -356,9 +364,9 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 		if (S_ISBLK(entry->mode) || S_ISCHR(entry->mode))
 			printf("%4u, %4u ", major(entry->rdev), minor(entry->rdev));
 		else if (flags & FLAG_HUMAN_READABLE)
-			printf("%10.10s ", __human_size(entry->size, buf, sizeof(buf)));
+			printf(format_size_str, __human_size(entry->size, buf, sizeof(buf)));
 		else
-			printf("%10lu ", entry->size);
+			printf(format_size, entry->size);
 
 		/* get time */
 		tm = localtime(&entry->time);
@@ -408,10 +416,10 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 	}
 
 	/* print filename */
-	printf(format, filename);
+	printf(format_name, filename);
 
 	/* print link target */
-	if (S_ISLNK(entry->mode)) {
+	if (S_ISLNK(entry->mode) & (flags & FLAG_LONG)) {
 		len = readlink(entry->name, buf, sizeof(buf) - 1);
 		if (len > 0) {
 			buf[len] = 0;
@@ -427,19 +435,36 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 }
 
 /*
- * Set filename format.
+ * Set formats.
  */
-static void set_name_format(struct stack_t *stack, int flags)
+static void set_formats(struct stack_t *stack, int flags)
 {
-	int maxlen = 0, len, i;
+	static char buf[32];
+	size_t len, len1, len2, inode_len = 0, max_name = 0;
+	dev_t max_major = 0, max_minor = 0;
+	nlink_t max_nlink = 0;
+	off_t max_size = 0;
+	ino_t max_ino = 0;
 	char *s;
+	int i;
 
-	/* ls -l = default format "%s" */
-	if (flags & (FLAG_LONG | FLAG_ONEPERLINE))
-		return;
-
-	/* find maximum filename length */
+	/* find maximum values */
 	for (i = 0; i < stack->size; i++) {
+		/* find maximum attributes */
+		if (stack->entries[i].ino > max_ino)
+			max_ino = stack->entries[i].ino;
+		if (stack->entries[i].size > max_size)
+			max_size = stack->entries[i].size;
+		if (stack->entries[i].nlink > max_nlink)
+			max_nlink = stack->entries[i].nlink;
+		if (S_ISBLK(stack->entries[i].mode) || S_ISCHR(stack->entries[i].mode)) {
+			if (major(stack->entries[i].rdev) > max_major)
+				max_major = major(stack->entries[i].rdev);
+			if (minor(stack->entries[i].rdev) > max_minor)
+				max_minor = minor(stack->entries[i].rdev);
+		}
+
+		/* find maximum name length */
 		s = strrchr(stack->entries[i].name, '/');
 		if (s)
 			s++;
@@ -447,16 +472,51 @@ static void set_name_format(struct stack_t *stack, int flags)
 			s = stack->entries[i].name;
 
 		len = strlen(s);
-		if (len > maxlen)
-			maxlen = len;
+		if (len > max_name)
+			max_name = len;
 	}
 
-	/* limit number of columns */
-	maxlen += 2;
-	nr_entries_per_line = (nr_cols - 1) / (flags & FLAG_INODE ? maxlen + 6 : maxlen);
+	/* set inode format */
+	if (flags & FLAG_INODE) {
+		inode_len = len = snprintf(buf, sizeof(buf), "%lu", max_ino);
+		sprintf(format_inode, "%%%dlu ", len);
+	}
 
-	/* set format */
-	sprintf(format, "%%-%d.%ds", maxlen, maxlen);
+	if (flags & FLAG_LONG) {
+		/* set major format */
+		len1 = snprintf(buf, sizeof(buf), "%lu,", max_major);
+		sprintf(format_major, "%%%dd ", len1);
+
+		/* set minor format */
+		len2 = snprintf(buf, sizeof(buf), "%lu ", max_minor);
+		sprintf(format_minor, "%%%dd ", len2);
+
+		/* set size format */
+		len = snprintf(buf, sizeof(buf), "%lu", max_size);
+		if (len > len1 + len2) {
+			sprintf(format_size, "%%%dd ", len);
+			sprintf(format_size_str, "%%%d.%ds ", len, len);
+		} else {
+			sprintf(format_size, "%%%dd ", len1 + len2);
+			sprintf(format_size_str, "%%%d.%ds ", len1 + len2, len1 + len2);
+		}
+
+		/* set nlink format */
+		len = snprintf(buf, sizeof(buf), "%lu", max_nlink);
+		sprintf(format_nlink, "%%%dd ", len, len);
+	}
+
+	/* set name format */
+	if (flags & (FLAG_LONG | FLAG_ONEPERLINE)) {
+		sprintf(format_name, "%%s");
+	} else {
+		/* limit number of columns */
+		max_name += 2;
+		nr_entries_per_line = (nr_cols - 1) / (flags & FLAG_INODE ? max_name + inode_len + 1 : max_name);
+
+		/* set format */
+		sprintf(format_name, "%%-%d.%ds", max_name, max_name);
+	}
 }
 
 /*
@@ -612,8 +672,8 @@ int main(int argc, char **argv)
 
 	/* ls all files/dirs */
 	while (stack_files.size || stack_dirs.size) {
-		/* set filename format */
-		set_name_format(&stack_files, flags);
+		/* set formats */
+		set_formats(&stack_files, flags);
 
 		/* ls files */
 		while (stack_files.size) {
