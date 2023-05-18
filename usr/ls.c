@@ -9,10 +9,11 @@
 #include <dirent.h>
 #include <pwd.h>
 #include <grp.h>
+#include <termios.h>
+#include <sys/ioctl.h>
 #include <sys/dev.h>
 #include <sys/stat.h>
 
-#define COLS			80
 #define STACK_GROW_SIZE		64
 #define LOGIN_NAME_MAX		256
 #define GROUP_NAME_MAX		256
@@ -35,8 +36,9 @@
 /* global variables */
 static int sort_flags = 0;
 static char format[16] = "%s";
-static int cols = 0;
-static int col = 0;
+static int nr_cols = 80;
+static int nr_entries_per_line = 0;
+static int entries_line_cpt = 0;
 
 /*
  * Stack entry.
@@ -412,8 +414,8 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 	}
 
 	/* print end of line */
-	if ((flags & (FLAG_LONG | FLAG_ONEPERLINE)) || ++col == cols) {
-		col = 0;
+	if ((flags & (FLAG_LONG | FLAG_ONEPERLINE)) || ++entries_line_cpt == nr_entries_per_line) {
+		entries_line_cpt = 0;
 		fputc('\n', stdout);
 	}
 }
@@ -423,7 +425,7 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
  */
 static void set_name_format(struct stack_t *stack, int flags)
 {
-	int maxlen = 0, maxlen2, len, i;
+	int maxlen = 0, len, i;
 	char *s;
 
 	/* ls -l = default format "%s" */
@@ -445,8 +447,7 @@ static void set_name_format(struct stack_t *stack, int flags)
 
 	/* limit number of columns */
 	maxlen += 2;
-	maxlen2 = flags & FLAG_INODE ? maxlen + 6 : maxlen;
-	cols = (COLS - 1) / maxlen2;
+	nr_entries_per_line = (nr_cols - 1) / (flags & FLAG_INODE ? maxlen + 6 : maxlen);
 
 	/* set format */
 	sprintf(format, "%%-%d.%ds", maxlen, maxlen);
@@ -467,6 +468,7 @@ int main(int argc, char **argv)
 	struct stack_entry_t *entry;
 	char *def[] = { ".", NULL };
 	const char *name = argv[0];
+	struct winsize ws;
 	struct stat st;
 	char *p;
 
@@ -539,9 +541,11 @@ int main(int argc, char **argv)
 	if (argc > 1)
 		flags |= FLAG_MULTIPLE;
 
-	/* not a tty : one per line */
-	if (!isatty(STDOUT_FILENO))
+	/* not a tty : one entry per line */
+	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) < 0)
 		flags |= FLAG_ONEPERLINE;
+	else
+		nr_cols = ws.ws_col;
 
 	/* make entries */
 	for (; *argv; argv++) {
@@ -596,8 +600,8 @@ int main(int argc, char **argv)
 				ret = 1;
 			} else if (strcmp(entry->name, ".") != 0) {
 				/* new line */
-				if (col) {
-					col = 0;
+				if (entries_line_cpt) {
+					entries_line_cpt = 0;
 					fputc('\n', stdout);
 				}
 
@@ -616,7 +620,7 @@ int main(int argc, char **argv)
 	}
 
 	/* last line */
-	if (!(flags & (FLAG_LONG || FLAG_ONEPERLINE)) && col)
+	if (!(flags & (FLAG_LONG || FLAG_ONEPERLINE)) && entries_line_cpt)
 		fputc('\n', stdout);
 
 	return ret;
