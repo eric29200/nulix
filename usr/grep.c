@@ -101,7 +101,7 @@ static int grep(const char *word, const char *filename, int flags)
 		/* line must be '\n' terminated */
 		len = strlen(buf);
 		if (*(buf + len - 1) != '\n')
-			goto err_line_length;
+			goto out;
 
 		/* search word in line */
 		if (search(buf, word, flags)) {
@@ -117,14 +117,9 @@ static int grep(const char *word, const char *filename, int flags)
 		}
 	}
 
-	/* close file */
+out:
 	fclose(fp);
-
 	return 0;
-err_line_length:
-	fprintf(stderr, "%s: line too long\n", filename);
-	fclose(fp);
-	return 1;
 }
 
 /*
