@@ -30,6 +30,7 @@
 #define FLAG_CLASS		(1 << 5)
 #define FLAG_MULTIPLE		(1 << 6)
 #define FLAG_ONEPERLINE		(1 << 7)
+#define FLAG_HUMAN_READABLE	(1 << 8)
 
 #define FLAG_SORT_TIME		(1 << 0)
 #define FLAG_SORT_SIZE		(1 << 1)
@@ -354,6 +355,8 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 		/* print size or major/minor numbers */
 		if (S_ISBLK(entry->mode) || S_ISCHR(entry->mode))
 			printf("%4u, %4u ", major(entry->rdev), minor(entry->rdev));
+		else if (flags & FLAG_HUMAN_READABLE)
+			printf("%10.10s ", __human_size(entry->size, buf, sizeof(buf)));
 		else
 			printf("%10lu ", entry->size);
 
@@ -475,6 +478,7 @@ static void usage(const char *name)
 	fprintf(stderr, "\t-S,\t\t\t\tsort by size\n");
 	fprintf(stderr, "\t-r, --reverse\t\t\treverse order while sorting\n");
 	fprintf(stderr, "\t-U,\t\t\t\tdo not sort\n");
+	fprintf(stderr, "\t-h, --human-readable\t\tprint sizes in human readable format\n");
 }
 
 /* options */
@@ -492,6 +496,7 @@ struct option long_opts[] = {
 	{ 0,			no_argument,	0,	'S'		},
 	{ "reverse",		no_argument,	0,	'r'		},
 	{ 0,			no_argument,	0,	'U'		},
+	{ "human-readable",	no_argument,	0,	'h'		},
 	{ 0,			0,		0,	0		},
 };
 
@@ -506,7 +511,7 @@ int main(int argc, char **argv)
 	struct stat st;
 
 	/* get options */
-	while ((c = getopt_long(argc, argv, "ldiaAF1RtSrU", long_opts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "ldiaAF1RtSrUh", long_opts, NULL)) != -1) {
 		switch (c) {
 			case 'l':
 				flags |= FLAG_LONG;
@@ -529,6 +534,9 @@ int main(int argc, char **argv)
 				break;
 			case '1':
 				flags |= FLAG_ONEPERLINE;
+				break;
+			case 'h':
+				flags |= FLAG_HUMAN_READABLE;
 				break;
 			case 'R':
 				recursive = -1;

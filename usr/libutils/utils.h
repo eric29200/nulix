@@ -11,5 +11,6 @@
 
 int __build_path(char *dirname, char *filename, char *buf, int bufsiz);
 int __copy(const char *src, const char *dst, int flags, int follow, int level);
+char *__human_size(off_t size, char *buf, size_t buflen);
 
 #endif

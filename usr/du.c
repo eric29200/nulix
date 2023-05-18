@@ -17,33 +17,14 @@
 static int du(const char *filename, int flags, int follow, int level, off_t *size);
 
 /*
- * Print a size in most suitable format.
- */
-static char *human_size(off_t size)
-{
-	static const char postfixes[] = "BKMGTPE";
-	static char buf[32];
-	size_t i;
-	off_t n;
-
-	for (n = size, i = 0; n >= 1024 && i < strlen(postfixes); i++)
-		n /= 1024;
-
-	if (!i)
-		snprintf(buf, sizeof(buf), "%ju", (uintmax_t) size);
-	else
-		snprintf(buf, sizeof(buf), "%ju%c", n, postfixes[i]);
-
-	return buf;
-}
-
-/*
  * Print a file size.
  */
 static void print_size(const char *filename, off_t size, int flags)
 {
+	static char buf[32];
+
 	if (flags & FLAG_HUMAN_READABLE)
-		printf("%s\t%s\n", human_size(size * BLKSIZE), filename);
+		printf("%s\t%s\n", __human_size(size * BLKSIZE, buf, sizeof(buf)), filename);
 	else
 		printf("%jd\t%s\n", (intmax_t) size, filename);
 }
