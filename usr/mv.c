@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/stat.h>
+#include <getopt.h>
 
+#include "libutils/opt.h"
 #include "libutils/build_path.h"
 
 #define FLAG_FORCE	(1 << 0)
@@ -33,46 +35,53 @@ static int mv(const char *src, const char *dst, int flags)
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s [-fv] source [...] target\n", name);
+	fprintf(stderr, "\t  , --help\t\tprint help and exit\n");
+	fprintf(stderr, "\t-f, --force\t\tdo not ask confirmation\n");
+	fprintf(stderr, "\t-v, --verbose\t\texplain what is being done\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",	no_argument,	0,	OPT_HELP	},
+	{ "force",	no_argument,	0,	'f'		},
+	{ "verbose",	no_argument,	0,	'v'		},
+	{ 0,		0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
 	const char *name = argv[0];
-	int flags = 0, ret = 0;
-	char *src, *dst, *p;
+	int flags = 0, ret = 0, c;
 	char buf[BUFSIZ];
+	char *src, *dst;
 	bool dst_is_dir;
 	struct stat st;
 
-	/* check arguments */
-	if (argc < 3) {
-		usage(argv[0]);
-		exit(1);
-	}
-
-	/* parse options */
-	while (argv[1] && argv[1][0] == '-') {
-		for (p = &argv[1][1]; *p; p++) {
-			switch (*p) {
-				case 'f':
-					flags |= FLAG_FORCE;
-					break;
-				case 'v':
-					flags |= FLAG_VERBOSE;
-					break;
-				default:
-					usage(name);
-					exit(1);
-			}
+	/* get options */
+	while ((c = getopt_long(argc, argv, "", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 'f':
+				flags |= FLAG_FORCE;
+				break;
+			case 'v':
+				flags |= FLAG_VERBOSE;
+				break;
+			case  OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
 		}
-
-		argc--;
-		argv++;
 	}
 
-	/* update arguments position */
-	argv++;
-	if (--argc < 2) {
+	/* skip options */
+	argc -= optind;
+	argv += optind;
+
+	/* check arguments */
+	if (argc < 2) {
 		usage(name);
 		exit(1);
 	}

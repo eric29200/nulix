@@ -10,9 +10,12 @@
 #include <pwd.h>
 #include <grp.h>
 #include <termios.h>
+#include <getopt.h>
 #include <sys/ioctl.h>
 #include <sys/dev.h>
 #include <sys/stat.h>
+
+#include "libutils/opt.h"
 
 #define STACK_GROW_SIZE		64
 #define LOGIN_NAME_MAX		256
@@ -458,79 +461,108 @@ static void set_name_format(struct stack_t *stack, int flags)
  */
 static void usage(const char *name)
 {
-	fprintf(stderr, "Usage: %s [-ldiaAF1RtsrU] [name ...]\n", name);
+	fprintf(stderr, "Usage: %s [-ldiaAF1RtSrU] [name ...]\n", name);
+	fprintf(stderr, "\t  , --help\t\t\tprint help and exit\n");
+	fprintf(stderr, "\t-l,\t\t\t\tuse a long listing format\n");
+	fprintf(stderr, "\t-d, --directory\t\t\tlist directories themselves, not their contents\n");
+	fprintf(stderr, "\t-i, --inode\t\t\tprint the inode number of each file\n");
+	fprintf(stderr, "\t-a, --all\t\t\tdo not ignore entries starting with .\n");
+	fprintf(stderr, "\t-A, --almost-all\t\tdo not list implied . and ..\n");
+	fprintf(stderr, "\t-F, --classify\t\t\tappend class indicator\n");
+	fprintf(stderr, "\t-1,\t\t\t\tlist one file per line\n");
+	fprintf(stderr, "\t-R, --recursive\t\t\tlist subdirectories recursiverly\n");
+	fprintf(stderr, "\t-t,\t\t\t\tsort by time\n");
+	fprintf(stderr, "\t-S,\t\t\t\tsort by size\n");
+	fprintf(stderr, "\t-r, --reverse\t\t\treverse order while sorting\n");
+	fprintf(stderr, "\t-U,\t\t\t\tdo not sort\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",		no_argument,	0,	OPT_HELP	},
+	{ 0,			no_argument,	0,	'l'		},
+	{ "directory",		no_argument,	0,	'd'		},
+	{ "inode",		no_argument,	0,	'i'		},
+	{ "all",		no_argument,	0,	'a'		},
+	{ "almost-all",		no_argument,	0,	'A'		},
+	{ "classify",		no_argument,	0,	'F'		},
+	{ 0,			no_argument,	0,	'1'		},
+	{ "recursive",		no_argument,	0,	'R'		},
+	{ 0,			no_argument,	0,	't'		},
+	{ 0,			no_argument,	0,	'S'		},
+	{ "reverse",		no_argument,	0,	'r'		},
+	{ 0,			no_argument,	0,	'U'		},
+	{ 0,			0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
+	int flags = 0, recursive = 1, ret = 0, c;
 	struct stack_t stack_files, stack_dirs;
-	int flags = 0, recursive = 1, ret = 0;
 	struct stack_entry_t *entry;
 	char *def[] = { ".", NULL };
 	const char *name = argv[0];
 	struct winsize ws;
 	struct stat st;
-	char *p;
 
-	/* skip program name */
-	argc--;
-	argv++;
+	/* get options */
+	while ((c = getopt_long(argc, argv, "ldiaAF1RtSrU", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 'l':
+				flags |= FLAG_LONG;
+				break;
+			case 'd':
+				flags |= FLAG_DIR;
+				recursive = 0;
+				break;
+			case 'i':
+				flags |= FLAG_INODE;
+				break;
+			case 'a':
+				flags |= FLAG_ALL;
+				break;
+			case 'A':
+				flags |= FLAG_ALLX;
+				break;
+			case 'F':
+				flags |= FLAG_CLASS;
+				break;
+			case '1':
+				flags |= FLAG_ONEPERLINE;
+				break;
+			case 'R':
+				recursive = -1;
+				break;
+			case 't':
+				sort_flags |= FLAG_SORT_TIME;
+				break;
+			case 'S':
+				sort_flags |= FLAG_SORT_SIZE;
+				break;
+			case 'r':
+				sort_flags |= FLAG_SORT_REVERSE;
+				break;
+			case 'U':
+				sort_flags |= FLAG_SORT_NO;
+				break;
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
+		}
+	}
+
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
 	/* init stacks */
 	stack_init(&stack_files);
 	stack_init(&stack_dirs);
 	
-	/* parse options */
-	while (*argv && argv[0][0] == '-') {
-		for (p = &argv[0][1]; *p; p++) {
-			switch (*p) {
-				case 'l':
-					flags |= FLAG_LONG;
-					break;
-				case 'd':
-					flags |= FLAG_DIR;
-					recursive = 0;
-					break;
-				case 'i':
-					flags |= FLAG_INODE;
-					break;
-				case 'a':
-					flags |= FLAG_ALL;
-					break;
-				case 'A':
-					flags |= FLAG_ALLX;
-					break;
-				case 'F':
-					flags |= FLAG_CLASS;
-					break;
-				case '1':
-					flags |= FLAG_ONEPERLINE;
-					break;
-				case 'R':
-					recursive = -1;
-					break;
-				case 't':
-					sort_flags |= FLAG_SORT_TIME;
-					break;
-				case 'S':
-					sort_flags |= FLAG_SORT_SIZE;
-					break;
-				case 'r':
-					sort_flags |= FLAG_SORT_REVERSE;
-					break;
-				case 'U':
-					sort_flags |= FLAG_SORT_NO;
-					break;
-				default:
-					usage(name);
-					exit(1);
-			}
-		}
-
-		argc--;
-		argv++;
-	}
-
 	/* no argument : ls . */
 	if (!argc) {
 		argv = def;

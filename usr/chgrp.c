@@ -4,6 +4,9 @@
 #include <errno.h>
 #include <grp.h>
 #include <sys/stat.h>
+#include <getopt.h>
+
+#include "libutils/opt.h"
 
 /*
  * Get gid from decimal string.
@@ -43,30 +46,55 @@ static void __gid_from_name(const char *name, gid_t *gid)
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s { group_name | group_id } file [...]\n", name);
+	fprintf(stderr, "\t  , --help\t\tprint help and exit\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",	no_argument,	0,	OPT_HELP	},
+	{ 0,		0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
+	const char *name = argv[0];
 	struct stat statbuf;
 	gid_t gid;
+	int i, c;
 	char *s;
-	int i;
+
+	/* get options */
+	while ((c = getopt_long(argc, argv, "", long_opts, NULL)) != -1) {
+		switch (c) {
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
+		}
+	}
+
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
 	/* check arguments */
-	if (argc < 3) {
-		usage(argv[0]);
+	if (argc < 2) {
+		usage(name);
 		exit(1);
 	}
 
 	/* get gid */
-	s = argv[1];
+	s = argv[0];
 	if (*s >= '0' && *s <= '9')
 		__gid_from_decimal(s, &gid);
 	else
 		__gid_from_name(s, &gid);
 
 	/* chown arguments */
-	for (i = 2; i < argc; i++)
+	for (i = 1; i < argc; i++)
 		if (stat(argv[i], &statbuf) < 0 || chown(argv[i], statbuf.st_uid, gid) < 0)
 			perror(argv[i]);
 

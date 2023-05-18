@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <getopt.h>
 #include <fcntl.h>
+
+#include "libutils/opt.h"
 
 /*
  * Write a buffer to a file.
@@ -28,37 +31,45 @@ static int write_full(int fd, char *buf, size_t len)
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s [-a] [file ...]\n", name);
+	fprintf(stderr, "\t-a, --append\t\tappend to files\n");
+	fprintf(stderr, "\t  , --help\t\tprint help and exit\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",	no_argument,	0,	OPT_HELP	},
+	{ "append",	no_argument,	0,	'a'		},
+	{ 0,		0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
 	mode_t mode = O_WRONLY | O_CREAT;
 	const char *name = argv[0];
-	char buf[BUFSIZ], *p;
-	int ret = 0, *fds;
+	int ret = 0, *fds, c;
+	char buf[BUFSIZ];
 	size_t nfds, i;
 	ssize_t n;
 
-	/* skip program name */
-	argc--;
-	argv++;
-
-	/* parse arguments */
-	while (*argv && argv[0][0] == '-') {
-		for (p = &argv[0][1]; *p; p++) {
-			switch(*p) {
-				case 'a':
-					mode |= O_APPEND;
-					break;
-				default:
-					usage(name);
-					exit(1);
-			}
+	/* get options */
+	while ((c = getopt_long(argc, argv, "a", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 'a':
+				mode |= O_APPEND;
+				break;
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
 		}
-
-		argc--;
-		argv++;
 	}
+
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
 	/* allocate file descriptors array */
 	nfds = argc + 1;

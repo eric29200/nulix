@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <utime.h>
+#include <getopt.h>
+
+#include "libutils/opt.h"
 
 /*
  * Usage.
@@ -10,24 +13,50 @@
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s [-c] file [...]\n", name);
+	fprintf(stderr, "\t-c, --no-create\t\tdo not create any files\n");
+	fprintf(stderr, "\t  , --help\t\tprint help and exit\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",	no_argument,	0,	OPT_HELP	},
+	{ "no-create",	no_argument,	0,	'c'		},
+	{ 0,		0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
-	int no_create = 0, fd, ret = 0, i;
+	int no_create = 0, fd, ret = 0, i, c;
+	const char *name = argv[0];
+
+	/* get options */
+	while ((c = getopt_long(argc, argv, "c", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 'c':
+				no_create = 1;
+				break;
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
+		}
+	}
+
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
 	/* check arguments */
-	if (argc < 2) {
-		usage(argv[0]);
+	if (!argc) {
+		usage(name);
 		exit(1);
 	}
 
-	/* get argument */
-	if (argv[1][0] == '-' && argv[1][1] == 'c')
-		no_create = 1;
-
 	/* touch files */
-	for (i = no_create + 1; i < argc; i++) {
+	for (i = 0; i < argc; i++) {
 		/* no create : change file date */
 		if (no_create) {
 			ret |= utime(argv[i], NULL);

@@ -7,7 +7,10 @@
 #include <dirent.h>
 #include <limits.h>
 #include <errno.h>
+#include <getopt.h>
 #include <sys/stat.h>
+
+#include "libutils/opt.h"
 
 #define FLAG_FORCE		(1 << 0)
 #define FLAG_INTERACT		(1 << 1)
@@ -130,13 +133,6 @@ static int rm(const char *name, int flags, int level)
 		printf("rm: remove %s ? ", name);
 		if (!yes())
 			return 0;
-	}
-
-	/* interactive rm */
-	if (flags & FLAG_INTERACT) {
-		printf("rm: remove %s ? ", name);
-		if (!yes())
-			return 0;
 	} else if (!S_ISLNK(statbuf.st_mode) && access(name, 02) < 0) {
 		printf("rm: override protection for %s ? ", name);
 		if (!yes())
@@ -158,51 +154,66 @@ static int rm(const char *name, int flags, int level)
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s [-rfi] file [...]\n", name);
+	fprintf(stderr, "\t  , --help\t\tprint help and exit\n");
+	fprintf(stderr, "\t-r, --recursive\t\tremove directories and their contents recursively\n");
+	fprintf(stderr, "\t-f, --force\t\tignore nonexistent files and arguments, never prompt\n");
+	fprintf(stderr, "\t-i, \t\t\tprompt before every removal\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",	no_argument,	0,	OPT_HELP	},
+	{ "recursive",	no_argument,	0,	'r'		},
+	{ "force",	no_argument,	0,	'f'		},
+	{ 0,		no_argument,	0,	'i'		},
+	{ 0,		0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
+	int flags = 0, ret = 0, c, i;
 	const char *name = argv[0];
-	int flags = 0, ret = 0;
-	char *p;
+
+	/* get options */
+	while ((c = getopt_long(argc, argv, "fir", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 'f':
+				flags |= FLAG_FORCE;
+				break;
+			case 'i':
+				flags |= FLAG_INTERACT;
+				break;
+			case 'r':
+				flags |= FLAG_RECURSIVE;
+				break;
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
+		}
+	}
+
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
 	/* check arguments */
-	if (argc < 2) {
-		usage(argv[0]);
+	if (!argc) {
+		usage(name);
 		exit(1);
 	}
 
-	/* parse options */
-	while (argv[1] && argv[1][0] == '-') {
-		for (p = &argv[1][1]; *p; p++) {
-			switch (*p) {
-				case 'f':
-					flags |= FLAG_FORCE;
-					break;
-				case 'i':
-					flags |= FLAG_INTERACT;
-					break;
-				case 'r':
-					flags |= FLAG_RECURSIVE;
-					break;
-				default:
-					usage(name);
-					exit(1);
-			}
-		}
-
-		argc--;
-		argv++;
-	}
-
 	/* remove files */
-	while (--argc > 0) {
-		if (dotname(*++argv)) {
+	for (i = 0; i < argc; i++) {
+		if (dotname(argv[i])) {
 			fprintf(stderr, "%s : cannot remove '.' and '..'\n", name);
 			continue;
 		}
 
-		ret += rm(*argv, flags, 0);
+		ret += rm(argv[i], flags, 0);
 	}
 
 	return ret;

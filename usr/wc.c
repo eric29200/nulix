@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <getopt.h>
+
+#include "libutils/opt.h"
 
 #define FLAG_NR_CHARS		(1 << 0)
 #define FLAG_NR_WORDS		(1 << 1)
@@ -86,46 +89,60 @@ static int wc(FILE *fp, const char *filename, int flags)
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s [-cwl] [file ...]\n", name);
+	fprintf(stderr, "\t  , --help\t\tprint help and exit\n");
+	fprintf(stderr, "\t-c, --bytes\t\tprint number of bytes\n");
+	fprintf(stderr, "\t-w, --words\t\tprint number of words\n");
+	fprintf(stderr, "\t-l, --lines\t\tprint number of lines\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",	no_argument,	0,	OPT_HELP	},
+	{ "bytes",	no_argument,	0,	'c'		},
+	{ "words",	no_argument,	0,	'w'		},
+	{ "lines",	no_argument,	0,	'l'		},
+	{ 0,		0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
 	const char *name = argv[0];
-	int flags = 0, ret = 0;
+	int flags = 0, ret = 0, c;
 	bool several = false;
 	FILE *fp;
-	char *p;
 
-	/* parse options */
-	while (argv[1] && argv[1][0] == '-') {
-		for (p = &argv[1][1]; *p; p++) {
-			switch (*p) {
-				case 'c':
-					flags |= FLAG_NR_CHARS;
-					break;
-				case 'w':
-					flags |= FLAG_NR_WORDS;
-					break;
-				case 'l':
-					flags |= FLAG_NR_LINES;
-					break;
-				default:
-					usage(name);
-					exit(1);
-			}
+	/* get options */
+	while ((c = getopt_long(argc, argv, "cwl", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 'c':
+				flags |= FLAG_NR_CHARS;
+				break;
+			case 'w':
+				flags |= FLAG_NR_WORDS;
+				break;
+			case 'l':
+				flags |= FLAG_NR_LINES;
+				break;
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
 		}
-
-		argc--;
-		argv++;
 	}
+
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
 	/* default flags */
 	if (!flags)
 		flags = FLAG_NR_CHARS | FLAG_NR_WORDS | FLAG_NR_LINES;
 
-	/* update argument position */
-	argv++;
-	if (--argc == 0)
+	/* use stdin */
+	if (!argc)
 		return wc(stdin, NULL, flags);
 
 	/* several files ? */

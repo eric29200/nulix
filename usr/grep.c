@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <getopt.h>
+
+#include "libutils/opt.h"
 
 #define FLAG_IGNORECASE		(1 << 0)
 #define FLAG_TELLLINE		(1 << 1)
@@ -130,40 +133,51 @@ err_line_length:
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s [-in] string file1 [file2 ...]\n", name);
+	fprintf(stderr, "\t-i, --ignore-case\t\tignore case\n");
+	fprintf(stderr, "\t-n, --line-number\t\tprefix each line with the line number within its input file\n");
+	fprintf(stderr, "\t  , --help\t\t\tprint help and exit\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",		no_argument,	0,	OPT_HELP	},
+	{ "ignore-case",	no_argument,	0,	'i'		},
+	{ "line-number",	no_argument,	0,	'n'		},
+	{ 0,			0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
-	char *p, *name = argv[0], *word;
-	int flags = 0, ret;
+	const char *name = argv[0];
+	int flags = 0, ret, c;
+	char *word;
 
-	/* parse options */
-	while (argv[1] && argv[1][0] == '-') {
-		for (p = &argv[1][1]; *p; p++) {
-			switch (*p) {
-				case 'i':
-					flags |= FLAG_IGNORECASE;
-					break;
-				case 'n':
-					flags |= FLAG_TELLLINE;
-					break;
-				default:
-					usage(name);
-					exit(1);
-			}
+	/* get options */
+	while ((c = getopt_long(argc, argv, "in", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 'i':
+				flags |= FLAG_IGNORECASE;
+				break;
+			case 'n':
+				flags |= FLAG_TELLLINE;
+				break;
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
 		}
-
-		argc--;
-		argv++;
 	}
 
-	/* update args position */
-	argc--;
-	argv++;
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
 	/* check arguments */
 	if (argc < 2) {
-		usage(argv[0]);
+		usage(name);
 		exit(1);
 	}
 

@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <getopt.h>
 #include <unistd.h>
+
+#include "libutils/opt.h"
  
  /*
   * Remove a directory.
@@ -38,32 +41,52 @@ static int rm_dir(const char *name, int parent)
  */
 static void usage(const char *name)
 {
-	fprintf(stderr, "Usage: %s directory [...]\n", name);
+	fprintf(stderr, "Usage: %s [-p] directory [...]\n", name);
+	fprintf(stderr, "\t-p, --parents\t\tremove directory and its parents\n");
+	fprintf(stderr, "\t  , --help\t\tprint help and exit\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",	no_argument,	0,	OPT_HELP	},
+	{ "parents",	no_argument,	0,	'p'		},
+	{ 0,		0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
-	int parent = 0, ret = 0, i;
+	int parent = 0, ret = 0, i, c;
+	const char *name = argv[0];
 	size_t len;
 
+	/* get options */
+	while ((c = getopt_long(argc, argv, "p", long_opts, NULL)) != -1) {
+		switch (c) {
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			case 'p':
+				parent = 1;
+				break;
+			default:
+				exit(1);
+				break;
+		}
+	}
+
+	/* skip options */
+	argc -= optind;
+	argv += optind;
+
 	/* check arguments */
-	if (argc < 2) {
-		usage(argv[0]);
+	if (!argc) {
+		usage(name);
 		exit(1);
 	}
 
-	/* parent argument */
-	if (argv[1][0] == '-' && argv[1][1] == 'p')
-		parent = 1;
-
 	/* remove directories */
-	for (i = parent + 1; i < argc; i++) {
-		/* check name */
-		if (argv[i][0] == '-') {
-			usage(argv[0]);
-			exit(1);
-		}
-
+	for (i = 0; i < argc; i++) {
 		/* remove end slashs */
 		for (len = strlen(argv[i]); argv[i][len - 1] == '/' && len > 1; len--)
 			argv[i][len - 1] = 0;

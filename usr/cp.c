@@ -9,10 +9,12 @@
 #include <utime.h>
 #include <libgen.h>
 #include <stdbool.h>
+#include <getopt.h>
 #include <sys/stat.h>
 
 #include "libutils/build_path.h"
 #include "libutils/copy.h"
+#include "libutils/opt.h"
 
 /*
  * Usage.
@@ -20,70 +22,89 @@
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s [-RvfapHLP] source [...] target\n", name);
+	fprintf(stderr, "\t  , --help\t\t\tprint help and exit\n");
+	fprintf(stderr, "\t-R, --recursive\t\t\tcopy directories recursiverly\n");
+	fprintf(stderr, "\t-v, --verbose\t\t\texplain what is being done\n");
+	fprintf(stderr, "\t-f, --force\t\t\tif any existing file cannot be opened, remove it and try again\n");
+	fprintf(stderr, "\t-a, --archive\t\t\tpreserve all attributes\n");
+	fprintf(stderr, "\t-p,\t\t\t\tpreserve mode, ownership and timestamps\n");
+	fprintf(stderr, "\t-H, --dereference-args\t\tdereference only symlinks from command line\n");
+	fprintf(stderr, "\t-L, --dereference\t\tderference all symbolic links\n");
+	fprintf(stderr, "\t-P, --no-dereference\t\tdon't follow any symbolic links (default)\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",		no_argument,	0,	OPT_HELP	},
+	{ "recursive",		no_argument,	0,	'R'		},
+	{ "verbose",		no_argument,	0,	'v'		},
+	{ "force",		no_argument,	0,	'f'		},
+	{ "archive",		no_argument,	0,	'a'		},
+	{ 0,			no_argument,	0,	'p'		},
+	{ "dereference-args",	no_argument,	0,	'H'		},
+	{ "dereference",	no_argument,	0,	'L'		},
+	{ "dereference",	no_argument,	0,	'P'		},
+	{ 0,			0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
-	int flags = 0, ret = 0, follow = 0;
+	int flags = 0, ret = 0, follow = 0, c;
 	const char *name = argv[0];
-	char *p, *src, *dst;
 	char buf[BUFSIZ];
+	char *src, *dst;
 	bool dst_is_dir;
 	struct stat st;
 
-	/* check arguments */
-	if (argc < 3) {
-		usage(argv[0]);
-		exit(1);
+	/* get options */
+	while ((c = getopt_long(argc, argv, "RvfapHLP", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 'f':
+				flags |= FLAG_CP_FORCE;
+				break;
+			case 'R':
+			case 'r':
+				flags |= FLAG_CP_RECURSIVE;
+				break;
+			case 'v':
+				flags |= FLAG_CP_VERBOSE;
+				break;
+			case 'a':
+				flags |= FLAG_CP_RECURSIVE;
+				flags |= FLAG_CP_PRESERVE_ATTR;
+				flags |= FLAG_CP_PRESERVE_MODE;
+				break;
+			case 'p':
+				flags |= FLAG_CP_PRESERVE_MODE;
+				break;
+			case 'H':
+			case 'L':
+			case 'P':
+				follow = c;
+				break;
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
+		}
 	}
 
-	/* parse options */
-	while (argv[1] && argv[1][0] == '-') {
-		for (p = &argv[1][1]; *p; p++) {
-			switch (*p) {
-				case 'f':
-					flags |= FLAG_CP_FORCE;
-					break;
-				case 'R':
-				case 'r':
-					flags |= FLAG_CP_RECURSIVE;
-					break;
-				case 'v':
-					flags |= FLAG_CP_VERBOSE;
-					break;
-				case 'a':
-					flags |= FLAG_CP_RECURSIVE;
-					flags |= FLAG_CP_PRESERVE_ATTR;
-					flags |= FLAG_CP_PRESERVE_MODE;
-					break;
-				case 'p':
-					flags |= FLAG_CP_PRESERVE_MODE;
-					break;
-				case 'H':
-				case 'L':
-				case 'P':
-				 	follow = *p;
-					break;
-				default:
-					usage(name);
-					exit(1);
-			}
-		}
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
-		argc--;
-		argv++;
+	/* check arguments */
+	if (argc < 2) {
+		usage(name);
+		exit(1);
 	}
 
 	/* default follow */
 	if (!follow)
 		follow = flags & FLAG_CP_RECURSIVE ? 'P' : 'L';
-
-	/* update arguments position */
-	argv++;
-	if (--argc < 2) {
-		usage(name);
-		exit(1);
-	}
 
 	/* check if dst is a directory */
 	dst = argv[argc - 1];

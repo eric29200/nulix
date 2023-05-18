@@ -5,7 +5,9 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <getopt.h>
 
+#include "libutils/opt.h"
 #include "libutils/build_path.h"
  
 /*
@@ -27,30 +29,60 @@ static bool isdir(const char *name)
 static void usage(const char *name)
 {
 	fprintf(stderr, "Usage: %s [-s] link_target link_name\n", name);
+	fprintf(stderr, "\t-s, --symbolic\t\tcreate symbolic links\n");
+	fprintf(stderr, "\t  , --help\t\tprint help and exit\n");
 }
+
+/* options */
+struct option long_opts[] = {
+	{ "help",	no_argument,	0,	OPT_HELP	},
+	{ "symbolic",	no_argument,	0,	's'		},
+	{ 0,		0,		0,	0		},
+};
 
 int main(int argc, char **argv)
 {
 	char *lastarg, *srcname, dstname[PATH_MAX];
+	const char *name = argv[0];
+	int i, c, symbolic = 0;
 	bool dirflag;
-	int i;
+
+	/* get options */
+	while ((c = getopt_long(argc, argv, "s", long_opts, NULL)) != -1) {
+		switch (c) {
+			case 's':
+				symbolic = 1;
+				break;
+			case OPT_HELP:
+				usage(name);
+				exit(0);
+				break;
+			default:
+				exit(1);
+				break;
+		}
+	}
+
+	/* skip options */
+	argc -= optind;
+	argv += optind;
 
 	/* check arguments */
-	if (argc < 3) {
-		usage(argv[0]);
+	if (argc < 2) {
+		usage(name);
 		exit(1);
 	}
 
-	/* symbolic link */
-	if (argv[1][0] == '-') {
-		if (strcmp(argv[1], "-s") != 0 || argc != 4) {
-			usage(argv[0]);
+	/* create symbolic link */
+	if (symbolic) {
+		if (argc != 2) {
+			usage(name);
 			exit(1);
 		}
 
 		/* create symbolic link */
-		if (symlink(argv[2], argv[3]) < 0) {
-			perror(argv[3]);
+		if (symlink(argv[0], argv[1]) < 0) {
+			perror(argv[0]);
 			exit(1);
 		}
 
@@ -60,12 +92,12 @@ int main(int argc, char **argv)
 	/* mutiple arguments : last argument must be a directory */
 	lastarg = argv[argc - 1];
 	dirflag = isdir(lastarg);
-	if (argc > 3 && !dirflag) {
+	if (argc > 2 && !dirflag) {
 		fprintf(stderr, "%s: not a directory\n", lastarg);
 		exit(1);
 	}
 
-	for (i = 1; i < argc - 1; i++) {
+	for (i = 0; i < argc - 1; i++) {
 		/* check target link */
 		srcname = argv[i];
 		if (access(srcname, 0) < 0) {
