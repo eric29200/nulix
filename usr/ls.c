@@ -163,7 +163,7 @@ static int stack_entry_compare(const void *a1, const void *a2)
 	else if (sort_flags & FLAG_SORT_SIZE)
 		return SIGN(reverse * (e1->size - e2->size));
 
-	return reverse * strcmp(e2->name, e1->name);
+	return reverse * strcasecmp(e2->name, e1->name);
 }
 
 /*
