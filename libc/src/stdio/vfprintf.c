@@ -158,7 +158,7 @@ static int printf_core(FILE *fp, const char *format, va_list ap)
 
 		/* %% = % character */
 		if (*++format == '%') {
-			n += __out(fp, format, 1);
+			n += __out(fp, format++, 1);
 			continue;
 		}
 
