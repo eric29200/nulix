@@ -17,10 +17,21 @@
 
 #include "libutils/utils.h"
 
+#define OPT_COLOR		((OPT_HELP) + 100)
+
 #define STACK_GROW_SIZE		64
 #define LOGIN_NAME_MAX		256
 #define GROUP_NAME_MAX		256
 #define SIGN(val)		(((val) > 0) - ((val) < 0))
+
+#define COLOR_NO		""
+#define COLOR_LINK		"\033[1;36m"
+#define COLOR_DIR		"\033[1;34m"
+#define COLOR_DEV		"\033[1;33m"
+#define COLOR_FIFO		"\033[33m"
+#define COLOR_SOCK		"\033[1;35m"
+#define COLOR_EXE		"\033[1;32m"
+#define COLOR_DEFAULT		"\033[0m"
 
 #define FLAG_LONG		(1 << 0)
 #define FLAG_DIR		(1 << 1)
@@ -31,6 +42,7 @@
 #define FLAG_MULTIPLE		(1 << 6)
 #define FLAG_ONEPERLINE		(1 << 7)
 #define FLAG_HUMAN_READABLE	(1 << 8)
+#define FLAG_COLOR		(1 << 9)
 
 #define FLAG_SORT_TIME		(1 << 0)
 #define FLAG_SORT_SIZE		(1 << 1)
@@ -323,7 +335,7 @@ err:
  */
 static void ls_entry(const struct stack_entry_t *entry, int flags)
 {
-	char buf[PATH_MAX], *filename, *classp;
+	char buf[PATH_MAX], *filename, *classp, *color_start, *color_end;
 	char mode[] = "----------";
 	struct passwd *pwd;
 	struct group *grp;
@@ -398,6 +410,25 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 			class = '=';
 	}
 
+	/* choose color */
+	color_start = color_end = COLOR_NO;
+	if (flags & FLAG_COLOR) {
+		if (S_ISLNK(entry->mode))
+			color_start = COLOR_LINK;
+		else if (S_ISDIR(entry->mode))
+			color_start = COLOR_DIR;
+		else if (S_ISFIFO(entry->mode))
+			color_start = COLOR_FIFO;
+		else if (S_ISSOCK(entry->mode))
+			color_start = COLOR_SOCK;
+		else if (S_ISCHR(entry->mode) || S_ISBLK(entry->mode))
+			color_start = COLOR_DEV;
+		else if (S_IEXEC & entry->mode)
+			color_start = COLOR_EXE;
+
+		if (*color_start)
+			color_end = COLOR_DEFAULT;
+	}
 
 	/* copy filename to buffer */
 	len = strlen(entry->name);
@@ -416,7 +447,9 @@ static void ls_entry(const struct stack_entry_t *entry, int flags)
 	}
 
 	/* print filename */
+	printf("%s", color_start);
 	printf(format_name, filename);
+	printf("%s", color_end);
 
 	/* print link target */
 	if (S_ISLNK(entry->mode) & (flags & FLAG_LONG)) {
@@ -544,6 +577,7 @@ static void usage(const char *name)
 /* options */
 struct option long_opts[] = {
 	{ "help",		no_argument,	0,	OPT_HELP	},
+	{ "color",		no_argument,	0,	OPT_COLOR	},
 	{ 0,			no_argument,	0,	'l'		},
 	{ "directory",		no_argument,	0,	'd'		},
 	{ "inode",		no_argument,	0,	'i'		},
@@ -597,6 +631,9 @@ int main(int argc, char **argv)
 				break;
 			case 'h':
 				flags |= FLAG_HUMAN_READABLE;
+				break;
+			case OPT_COLOR:
+				flags |= FLAG_COLOR;
 				break;
 			case 'R':
 				recursive = -1;
