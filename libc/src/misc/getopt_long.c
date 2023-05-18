@@ -3,10 +3,10 @@
 #include <getopt.h>
 
 static char *nextchar = NULL;
-static char *optarg = NULL;
-static int optind = 1;
-static int opterr = 1;
-static int optopt = 0;
+char *optarg = NULL;
+int optind = 1;
+int opterr = 1;
+int optopt = 0;
 
 static int __parse_opt_long(char *const argv[], const struct option *longopts, int *longindex)
 {
