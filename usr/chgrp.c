@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <getopt.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 /*
  * Get gid from decimal string.

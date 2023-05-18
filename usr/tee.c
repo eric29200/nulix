@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <fcntl.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 /*
  * Write a buffer to a file.

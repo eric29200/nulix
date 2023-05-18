@@ -4,8 +4,7 @@
 #include <sys/stat.h>
 #include <getopt.h>
 
-#include "libutils/opt.h"
-#include "libutils/build_path.h"
+#include "libutils/utils.h"
 
 #define FLAG_FORCE	(1 << 0)
 #define FLAG_VERBOSE	(1 << 1)
@@ -105,7 +104,7 @@ int main(int argc, char **argv)
 		src = *argv++;
 		
 		/* build destination path */
-		if (build_path(dst, src, buf, BUFSIZ)) {
+		if (__build_path(dst, src, buf, BUFSIZ)) {
 			ret = 1;
 			continue;
 		}

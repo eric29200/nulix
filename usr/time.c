@@ -5,7 +5,7 @@
 #include <getopt.h>
 #include <sys/wait.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 /*
  * Usage.

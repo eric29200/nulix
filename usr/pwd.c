@@ -6,7 +6,7 @@
 #include <getopt.h>
 #include <sys/stat.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 /*
  * Usage.

@@ -10,7 +10,7 @@
 #include <getopt.h>
 #include <sys/stat.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define FLAG_FORCE		(1 << 0)
 #define FLAG_INTERACT		(1 << 1)

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 /*
  * Usage.

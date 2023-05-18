@@ -8,13 +8,12 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-#include "build_path.h"
-#include "copy.h"
+#include "utils.h"
 
 /*
  * Copy a link.
  */
-static int cp_link(const char *src, const char *dst, int flags)
+static int __cp_link(const char *src, const char *dst, int flags)
 {
 	char target[PATH_MAX];
 	int n;
@@ -43,7 +42,7 @@ static int cp_link(const char *src, const char *dst, int flags)
 /*
  * Copy a node.
  */
-static int cp_nod(const struct stat *src_statbuf, const char *dst, int flags)
+static int __cp_nod(const struct stat *src_statbuf, const char *dst, int flags)
 {
 	/* unlink destination */
 	if ((flags & FLAG_CP_FORCE) && unlink(dst) < 0 && errno != ENOENT) {
@@ -63,7 +62,7 @@ static int cp_nod(const struct stat *src_statbuf, const char *dst, int flags)
 /*
  * Copy a regular file.
  */
-static int cp_file(const char *src, const char *dst, int flags, const struct stat *src_statbuf)
+static int __cp_file(const char *src, const char *dst, int flags, const struct stat *src_statbuf)
 {
 	int sfd, dfd, sn, dn, ret = 0;
 	char buf[BUFSIZ], *bp;
@@ -130,7 +129,7 @@ static int cp_file(const char *src, const char *dst, int flags, const struct sta
 /*
  * Copy a directory.
  */
-static int cp_dir(const char *src, const char *dst, int flags, int follow, int level, const struct stat *src_statbuf)
+static int __cp_dir(const char *src, const char *dst, int flags, int follow, int level, const struct stat *src_statbuf)
 {
 	char src_path[PATH_MAX], dst_path[PATH_MAX];
 	struct dirent *entry;
@@ -164,19 +163,19 @@ static int cp_dir(const char *src, const char *dst, int flags, int follow, int l
 			continue;
 
 		/* build src path */
-		if (build_path((char *) src, entry->d_name, src_path, PATH_MAX)) {
+		if (__build_path((char *) src, entry->d_name, src_path, PATH_MAX)) {
 			ret = 1;
 			continue;
 		}
 
 		/* build dst path */
-		if (build_path((char *) dst, entry->d_name, dst_path, PATH_MAX)) {
+		if (__build_path((char *) dst, entry->d_name, dst_path, PATH_MAX)) {
 			ret = 1;
 			continue;
 		}
 
 		/* recusrive copy */
-		ret |= copy(src_path, dst_path, flags, follow, level + 1);
+		ret |= __copy(src_path, dst_path, flags, follow, level + 1);
 	}
 
 	/* close directory */
@@ -188,7 +187,7 @@ static int cp_dir(const char *src, const char *dst, int flags, int follow, int l
 /*
  * Copy.
  */
-int copy(const char *src, const char *dst, int flags, int follow, int level)
+int __copy(const char *src, const char *dst, int flags, int follow, int level)
 {
 	struct stat st, st_src, st_dst;
 	int stat_flags = 0, ret;
@@ -219,13 +218,13 @@ int copy(const char *src, const char *dst, int flags, int follow, int level)
 
 	/* copy */
 	if (S_ISLNK(st.st_mode))
-		ret = cp_link(src, dst, flags);
+		ret = __cp_link(src, dst, flags);
 	else if (S_ISDIR(st.st_mode))
-		ret = cp_dir(src, dst, flags, follow, level, &st);
+		ret = __cp_dir(src, dst, flags, follow, level, &st);
 	else if ((flags & FLAG_CP_PRESERVE_ATTR) && (S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode) || S_ISSOCK(st.st_mode) || S_ISFIFO(st.st_mode)))
-		ret = cp_nod(&st, dst, flags);
+		ret = __cp_nod(&st, dst, flags);
 	else
-		ret = cp_file(src, dst, flags, &st);
+		ret = __cp_file(src, dst, flags, &st);
 
 	/* on error return */
 	if (ret)

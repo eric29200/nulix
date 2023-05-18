@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define CLEAR_SEQ	"\x1b[H\x1b[2J"
 

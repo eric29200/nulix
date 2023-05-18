@@ -3,7 +3,7 @@
 #include <getopt.h>
 #include <sys/utsname.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define FLAG_SYSNAME		(1 << 0)
 #define FLAG_NODENAME		(1 << 1)

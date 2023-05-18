@@ -5,7 +5,7 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
  
  /*
   * Remove a directory.

@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <sys/stat.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define mkdev(major, minor)	((major) << 8 | (minor))
 

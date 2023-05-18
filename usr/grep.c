@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <getopt.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define FLAG_IGNORECASE		(1 << 0)
 #define FLAG_TELLLINE		(1 << 1)

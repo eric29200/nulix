@@ -15,7 +15,7 @@
 #include <sys/dev.h>
 #include <sys/stat.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define STACK_GROW_SIZE		64
 #define LOGIN_NAME_MAX		256

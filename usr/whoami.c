@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <pwd.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 /*
  * Usage.

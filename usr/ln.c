@@ -7,8 +7,7 @@
 #include <sys/stat.h>
 #include <getopt.h>
 
-#include "libutils/opt.h"
-#include "libutils/build_path.h"
+#include "libutils/utils.h"
  
 /*
  * Check if name is a directory.
@@ -107,7 +106,7 @@ int main(int argc, char **argv)
 
 		/* build link name */
 		if (dirflag)
-			build_path(lastarg, srcname, dstname, PATH_MAX);
+			__build_path(lastarg, srcname, dstname, PATH_MAX);
 		else
 			strncpy(dstname, lastarg, PATH_MAX);
 

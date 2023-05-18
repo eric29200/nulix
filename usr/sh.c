@@ -9,7 +9,7 @@
 #include <getopt.h>
 #include <sys/wait.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define USERNAME_SIZE		1024
 #define HOSTNAME_SIZE		256

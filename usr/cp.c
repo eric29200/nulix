@@ -12,9 +12,7 @@
 #include <getopt.h>
 #include <sys/stat.h>
 
-#include "libutils/build_path.h"
-#include "libutils/copy.h"
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 /*
  * Usage.
@@ -112,7 +110,7 @@ int main(int argc, char **argv)
 
 	/* simple copy */
 	if (argc == 2 && !dst_is_dir)
-		return copy(argv[0], dst, flags, follow, 0);
+		return __copy(argv[0], dst, flags, follow, 0);
 
 	/* multiple copy : dst must be a directory */
 	if (argc > 2 && !dst_is_dir) {
@@ -125,13 +123,13 @@ int main(int argc, char **argv)
 		src = *argv++;
 		
 		/* build destination path */
-		if (build_path(dst, src, buf, BUFSIZ)) {
+		if (__build_path(dst, src, buf, BUFSIZ)) {
 			ret = 1;
 			continue;
 		}
 
 		/* copy file */
-		ret |= copy(src, buf, flags, follow, 0);
+		ret |= __copy(src, buf, flags, follow, 0);
 	}
 
 	return ret;

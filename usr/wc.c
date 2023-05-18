@@ -4,7 +4,7 @@
 #include <ctype.h>
 #include <getopt.h>
 
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define FLAG_NR_CHARS		(1 << 0)
 #define FLAG_NR_WORDS		(1 << 1)

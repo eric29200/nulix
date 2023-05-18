@@ -5,7 +5,7 @@
 /*
  * Build a path.
  */
-int build_path(char *dirname, char *filename, char *buf, int bufsiz)
+int __build_path(char *dirname, char *filename, char *buf, int bufsiz)
 {
 	size_t dirname_len = strlen(dirname);
 	int len, i;

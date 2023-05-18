@@ -7,8 +7,7 @@
 #include <getopt.h>
 #include <sys/stat.h>
 
-#include "libutils/build_path.h"
-#include "libutils/opt.h"
+#include "libutils/utils.h"
 
 #define FLAG_HUMAN_READABLE	(1 << 0)
 
@@ -74,7 +73,7 @@ static int du_dir(const char *dirname, int flags, int follow, int level, off_t *
 			continue;
 
 		/* build file path */
-		if (build_path((char *) dirname, entry->d_name, file_path, PATH_MAX)) {
+		if (__build_path((char *) dirname, entry->d_name, file_path, PATH_MAX)) {
 			ret = 1;
 			continue;
 		}
