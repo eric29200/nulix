@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 	/* no file : stdin */
 	if (!argc)
 		return head(stdin, "<stdin>", nr_lines);
-	
+
 	/* several files ? */
 	several = argc > 1;
 

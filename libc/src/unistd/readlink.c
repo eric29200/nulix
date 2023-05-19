@@ -16,6 +16,6 @@ ssize_t readlink(const char *pathname, char *buf, size_t bufsize)
 
 	if (buf == dummy && ret > 0)
 		ret = 0;
-	
+
 	return __syscall_ret(ret);
 }

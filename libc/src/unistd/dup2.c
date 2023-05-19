@@ -9,7 +9,7 @@ int dup2(int oldfd, int newfd)
 	for (;;) {
 		ret = __syscall2(SYS_dup2, oldfd, newfd);
 		if (ret != -EBUSY)
-			break;	
+			break;
 	}
 
 	return __syscall_ret(ret);

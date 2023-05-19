@@ -63,7 +63,7 @@ out:
 static struct heap_block_t *__request_space(struct heap_block_t *last, size_t size)
 {
 	struct heap_block_t *block;
-	
+
 	/* grow heap */
 	block = __grow_heap(size + sizeof(struct heap_block_t));
 

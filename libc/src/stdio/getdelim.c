@@ -19,7 +19,7 @@ ssize_t getdelim(char **lineptr, size_t *size, int delim, FILE *fp)
 		return -1;
 	}
 
-	/* init string */	
+	/* init string */
 	if (!*lineptr)
 		*lineptr = NULL;
 

@@ -32,7 +32,7 @@ static int rm_dir(const char *name, int parent)
 		line[1] = 0;
 		first = 0;
 	}
-	
+
 	return ret && first;
 }
 

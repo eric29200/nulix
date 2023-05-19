@@ -70,7 +70,7 @@ static void init_prompt_values()
 	/* else user uid */
 	if (!user_set)
 		snprintf(username, USERNAME_SIZE, "%d\n", uid);
-	
+
 	/* get hostname */
 	gethostname(hostname, HOSTNAME_SIZE - 1);
 }
@@ -128,7 +128,7 @@ static int execute_cmd()
 	/* empty command */
 	if (!argc)
 		return 0;
-	
+
 	/* arguments must be NULL terminated */
 	argv[argc] = NULL;
 

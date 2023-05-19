@@ -148,7 +148,7 @@ static void stack_push(struct stack_t *stack, char *name, struct stat *st)
 		stack->entries[stack->size].ino = st->st_ino;
 		stack->entries[stack->size].rdev = st->st_rdev;
 	}
-	
+
 	stack->entries[stack->size++].name = name;
 }
 
@@ -667,7 +667,7 @@ int main(int argc, char **argv)
 	/* init stacks */
 	stack_init(&stack_files);
 	stack_init(&stack_dirs);
-	
+
 	/* no argument : ls . */
 	if (!argc) {
 		argv = def;

@@ -8,7 +8,7 @@ int getc(FILE *fp)
 
 	/* character in buffer */
 	if (fp->rpos != fp->rend)
-		return *(fp)->rpos++;	
+		return *(fp)->rpos++;
 
 	/* else read it */
 	if (!__to_read(fp) && fp->read(fp, &c, 1) == 1)

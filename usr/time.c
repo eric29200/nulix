@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	time_t secs, msecs;
 	int status, c;
 	pid_t pid;
-	
+
 	/* get options */
 	while ((c = getopt_long(argc, argv, "", long_opts, NULL)) != -1) {
 		switch (c) {

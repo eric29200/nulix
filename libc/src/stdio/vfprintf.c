@@ -26,7 +26,7 @@ static int __out(FILE *fp, const char *str, size_t len)
 {
 	if (!ferror(fp))
 		__fwritex((const unsigned char *) str, len, fp);
-	
+
 	return len;
 }
 
@@ -48,7 +48,7 @@ static int prints(FILE *fp, const char *str, int width, int precision, int flags
 
 	/* fix width */
 	width -= len;
-	
+
 	/* pad left */
 	if (!(flags & FLAG_MINUS))
 		for (; width > 0; width--)
@@ -262,7 +262,7 @@ out:
 int vfprintf(FILE *fp, const char *format, va_list ap)
 {
 	int ret;
-	
+
 	ret = printf_core(fp, format, ap);
 	if (ferror(fp))
 		return -1;

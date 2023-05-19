@@ -119,7 +119,7 @@ static int rm(const char *name, int flags, int level)
 	if (ret < 0) {
 		if (flags & FLAG_FORCE)
 			return 0;
-	
+
 		fprintf(stderr, "rm: %s: no such file\n", name);
 		return 1;
 	}

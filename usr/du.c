@@ -39,7 +39,7 @@ static int du_dir(const char *dirname, int flags, int follow, int level, off_t *
 	int ret = 0;
 	DIR *dirp;
 	off_t s;
-	
+
 	/* open directory */
 	dirp = opendir(dirname);
 	if (!dirp) {
@@ -82,7 +82,7 @@ static int du(const char *filename, int flags, int follow, int level, off_t *siz
 
 	/* reset size */
 	*size = 0;
-	
+
 	/* follow links ? */
 	if (follow == 'P' || (follow == 'H' && level))
 		stat_flags |= AT_SYMLINK_NOFOLLOW;

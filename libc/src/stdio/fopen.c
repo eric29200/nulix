@@ -35,7 +35,7 @@ FILE *fopen(const char *pathname, const char *mode)
 	if (fp)
 		return fp;
 
-	/* on failure close file */	
+	/* on failure close file */
 	__syscall1(SYS_close, fd);
 	return NULL;
 }

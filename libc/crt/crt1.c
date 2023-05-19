@@ -14,7 +14,7 @@ void _start_c(long *p)
 	char **argv, **envp;
 	int argc, code;
 
-	/* get argc, argv and envp */	
+	/* get argc, argv and envp */
 	argc = p[0];
 	argv = (void *) (p + 1);
 	envp = argv + argc + 1;

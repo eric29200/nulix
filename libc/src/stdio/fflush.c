@@ -22,7 +22,7 @@ int fflush(FILE *fp)
 	if (fp->wpos != fp->wbase) {
 		fp->write(fp, 0, 0);
 		if (!fp->wpos)
-			return EOF;	
+			return EOF;
 	}
 
 	/* sync read position */

@@ -74,6 +74,6 @@ int execvpe(const char *file, char *const argv[], char *const envp[])
 
 	if (seen_access)
 		errno = EACCES;
-	
+
 	return -1;
 }

@@ -49,7 +49,7 @@ static int getlines(FILE *fp)
 			lines[nr_lines - 1][len + 1] = 0;
 		}
 	}
-	
+
 	ret = 0;
 out:
 	free(line);

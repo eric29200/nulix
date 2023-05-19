@@ -29,7 +29,7 @@ static int __cp_link(const char *src, const char *dst, int flags)
 		perror(dst);
 		return 1;
 	}
-		
+
 	/* create new link */
 	if (symlink(target, dst) < 0) {
 		perror(dst);
@@ -49,7 +49,7 @@ static int __cp_nod(const struct stat *src_statbuf, const char *dst, int flags)
 		perror(dst);
 		return 1;
 	}
-		
+
 	/* create new link */
 	if (mknod(dst, src_statbuf->st_mode, src_statbuf->st_rdev) < 0) {
 		perror(dst);
@@ -205,13 +205,13 @@ int __copy(const char *src, const char *dst, int flags, int follow, int level)
 	/* don't follow links ? */
 	if (follow == 'P' || (follow == 'H' && level))
 		stat_flags |= AT_SYMLINK_NOFOLLOW;
-	
+
 	/* stat src file */
 	if (fstatat(AT_FDCWD, src, &st, stat_flags) < 0) {
 		perror(src);
 		return 1;
 	}
-	
+
 	/* print copy */
 	if (flags & FLAG_CP_VERBOSE)
 		printf("'%s' -> '%s'\n", src, dst);

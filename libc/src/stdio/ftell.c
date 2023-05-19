@@ -19,5 +19,5 @@ long ftell(FILE *fp)
 	else if (fp->wbase)
 		pos += fp->wpos - fp->wbase;
 
-	return pos;	
+	return pos;
 }

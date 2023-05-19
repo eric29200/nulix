@@ -30,7 +30,7 @@ size_t __stdio_read(FILE *fp, unsigned char *buf, size_t len)
 	/* nothing to buffer */
 	if (cnt <= (ssize_t) iov[0].iov_len)
 		return cnt;
-	
+
 	/* buffer */
 	fp->rpos = fp->buf;
 	fp->rend = fp->buf + cnt - iov[0].iov_len;

@@ -45,7 +45,7 @@ static int __parse_opt_long(int argc, char *const argv[], const struct option *l
 		optopt = 0;
 		return '?';
 	}
-		
+
 	/* handle '=' */
 	if (eq) {
 		/* check if option takes an argument */
@@ -99,7 +99,7 @@ int getopt_long(int argc, char *const argv[], const char *optstring, const struc
 
 			if (*nextchar != '-')
 				return -1;
-			
+
 			if (!*++nextchar)
 				return -1;
 
@@ -116,7 +116,7 @@ int getopt_long(int argc, char *const argv[], const char *optstring, const struc
 				}
 			}
 		}
-	
+
 	 	/* no option to parse */
 		if (!*nextchar) {
 			nextchar = NULL;

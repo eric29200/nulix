@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 
 	/* several files ? */
 	several = argc > 1;
-	
+
 	/* wc all files */
 	while (argc-- > 0) {
 		/* use stdin or open file */

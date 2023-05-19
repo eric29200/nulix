@@ -23,7 +23,7 @@ size_t __fwritex(const unsigned char *ptr, size_t len, FILE *fp)
 			n = fp->write(fp, ptr, i);
 			if (n < i)
 				return n;
-			
+
 			ptr += i;
 			len -= i;
 		}

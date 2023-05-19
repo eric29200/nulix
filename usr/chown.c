@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 		else
 			__uid_from_name(us, &uid);
 	}
-	
+
 	/* get gid */
 	if (gs) {
 		if (*gs >= '0' && *gs <= '9')
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 			if (!gs)
 				gid = statbuf.st_gid;
 		}
-		
+
 		/* chown file */
 		if (chown(argv[i], uid, gid) < 0)
 			perror(argv[i]);

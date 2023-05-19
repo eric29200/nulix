@@ -102,7 +102,7 @@ int main(int argc, char **argv)
 	/* move all files */
 	while (argc-- > 1) {
 		src = *argv++;
-		
+
 		/* build destination path */
 		if (__build_path(dst, src, buf, BUFSIZ)) {
 			ret = 1;

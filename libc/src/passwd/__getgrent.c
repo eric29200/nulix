@@ -58,7 +58,7 @@ int __getgrent(FILE *fp, struct group *gr, char **line, size_t *size, char ***me
 		/* get users list */
 		*s++ = 0;
 		mems = s;
-	
+
 		break;
 	}
 

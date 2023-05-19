@@ -33,7 +33,7 @@ static bool search_ignorecase(char *str, const char *word)
 			continue;
 		}
 
-		/* update length and return if end of word */	
+		/* update length and return if end of word */
 		len++;
 		if (!*++w)
 			return true;
@@ -108,7 +108,7 @@ static int grep(const char *word, const char *filename, int flags)
 			/* print filename */
 			printf("%s:", filename);
 
-			/* print line number */	
+			/* print line number */
 			if (flags & FLAG_TELLLINE)
 				printf("%ld:", line);
 

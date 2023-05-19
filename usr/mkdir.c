@@ -23,7 +23,7 @@ static int make_dir(const char *name, mode_t mode, int parent)
 	if (line && parent) {
 		while (line > iname && *line == '/')
 			line--;
-		
+
 		line[1] = 0;
 		if (*line != '/')
 			make_dir(iname, mode, 1);
