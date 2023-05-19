@@ -37,6 +37,7 @@ extern char **environ;
 #define SYS_getegid		50
 #define SYS_ioctl		54
 #define SYS_fcntl		55
+#define SYS_setpgid		57
 #define SYS_umask		60
 #define SYS_dup2		63
 #define SYS_symlink		83
@@ -87,5 +88,6 @@ int chdir(const char *path);
 int gethostname(char *name, size_t len);
 unsigned sleep(unsigned seconds);
 pid_t getpid();
+int setpgid(pid_t pid, pid_t pgid);
 
 #endif
