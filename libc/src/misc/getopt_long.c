@@ -8,23 +8,22 @@ int optind = 1;
 int opterr = 1;
 int optopt = 0;
 
-static int __parse_opt_long(char *const argv[], const struct option *longopts, int *longindex)
+static int __parse_opt_long(int argc, char *const argv[], const struct option *longopts, int *longindex)
 {
 	char tmp[strlen(nextchar) + 1];
 	int found, i;
 	char *eq;
+
+	/* reset optarg */
+	optarg = NULL;
 
 	/* copy option string */
 	strcpy(tmp, nextchar);
 
 	/* handle '=' */
 	eq = strchr(tmp, '=');
-	if (eq) {
-		*eq = 0;
-		optarg = nextchar + (eq - tmp + 1);
-	} else {
-		optarg = NULL;
-	}
+	if (eq)
+		*eq++ = 0;
 
 	/* try to found long option */
 	found = -1;
@@ -47,9 +46,30 @@ static int __parse_opt_long(char *const argv[], const struct option *longopts, i
 		return '?';
 	}
 		
-	/* set argument if required */
-	if (longopts[found].has_arg == required_argument && !optarg)
+	/* handle '=' */
+	if (eq) {
+		/* check if option takes an argument */
+		if (longopts[found].has_arg == no_argument) {
+			optopt = longopts[found].val;
+
+			if (opterr)
+				fprintf(stderr, "%s: option does not take an argument\n", tmp);
+
+			return '?';
+		}
+
+		/* set argument */
+		optarg = nextchar + (eq - tmp);
+	} else if (longopts[found].has_arg == required_argument) {
+		if (optind + 1 >= argc) {
+			if (opterr)
+				fprintf(stderr, "%s: option requires an argument\n", tmp);
+
+			return '?';
+		}
+
 		optarg = argv[++optind];
+	}
 
 	nextchar = NULL;
 	optind++;
@@ -92,7 +112,7 @@ int getopt_long(int argc, char *const argv[], const char *optstring, const struc
 
 				if (longopts) {
 					nextchar++;
-					return __parse_opt_long(argv, longopts, longindex);
+					return __parse_opt_long(argc, argv, longopts, longindex);
 				}
 			}
 		}
@@ -114,17 +134,22 @@ int getopt_long(int argc, char *const argv[], const char *optstring, const struc
 			return '?';
 		}
 
-		/* hadle ':' */
+		/* handle ':' */
 		optout = *nextchar;
 		if (opt[1] == ':') {
 			if (nextchar[1]) {
 				optarg = &nextchar[1];
 				nextchar = NULL;
 				optind++;
-			} else {
+			} else if (optind + 1 < argc) {
 				optarg = argv[optind + 1];
 				nextchar = NULL;
 				optind += 2;
+			} else {
+				if (opterr)
+					fprintf(stderr, "%c: option requires an argument\n", opt[0]);
+
+				return '?';
 			}
 		} else {
 			nextchar++;
