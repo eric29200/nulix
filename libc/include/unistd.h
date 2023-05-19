@@ -23,6 +23,7 @@ extern char **environ;
 #define SYS_mknod		14
 #define SYS_chmod		15
 #define SYS_lseek		19
+#define SYS_getpid		20
 #define SYS_getuid		24
 #define SYS_access		33
 #define SYS_kill		37
@@ -85,5 +86,6 @@ char *getcwd(char *buf, size_t size);
 int chdir(const char *path);
 int gethostname(char *name, size_t len);
 unsigned sleep(unsigned seconds);
+pid_t getpid();
 
 #endif
