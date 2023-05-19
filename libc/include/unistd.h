@@ -61,6 +61,7 @@ int execv(const char *pathname, char *const argv[]);
 int execve(const char *pathname, char *const argv[], char *const envp[]);
 int execvp(const char *file, char *const argv[]);
 int execvpe(const char *file, char *const argv[], char *const envp[]);
+int execl(const char *pathname, const char *arg, ...);
 ssize_t read(int fd, void *buf, size_t count);
 ssize_t write(int fd, const void *buf, size_t count);
 int close(int fd);
