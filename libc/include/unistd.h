@@ -89,5 +89,6 @@ int gethostname(char *name, size_t len);
 unsigned sleep(unsigned seconds);
 pid_t getpid();
 int setpgid(pid_t pid, pid_t pgid);
+int tcsetpgrp(int fd, pid_t pgrp);
 
 #endif
