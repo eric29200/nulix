@@ -26,7 +26,7 @@ run_mine:
 		-device rtl8139,netdev=nulix_net,id=nulix_nic			\
 		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap
 
-run:
+run_ports:
 	make -j$(NJOBS) -C kernel
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
