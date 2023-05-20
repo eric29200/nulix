@@ -546,9 +546,8 @@ static void keyboard_handler(struct registers_t *regs)
 
 		if (type >= 0xF0) {
 			type -= 0xF0;
-			if (type == KT_LETTER) {
+			if (type == KT_LETTER)
 				type = KT_LATIN;
-			}
 
 			/* handle key */
 			(*key_handler[type])(key_sym & 0xFF, up_flag);
