@@ -26,7 +26,6 @@ mkdir tmp >& /dev/null
 sudo mount ${LOOP_DEVICE}p1 tmp
 
 # create root folders
-sudo mkdir -p tmp/etc
 sudo mkdir -p tmp/dev
 sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt

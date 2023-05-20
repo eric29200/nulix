@@ -8,7 +8,9 @@ LIBUTILS 	= libutils/libutils.a
 LIBUTILS_SRC	= $(wildcard libutils/*.c)
 LIBUTILS_OBJ	= $(LIBUTILS_SRC:.c=.o)
 
-PROGS		= init ls printenv yes logname whoami echo true false clear basename dirname touch cat chmod chown chgrp cmp mkdir mknod mkfifo ln rm rmdir cp mv uname sh grep wc head tail hostname time du sleep link unlink pwd which tee date sort uniq kill
+PROGS		= init ls printenv yes logname whoami echo true false clear basename dirname touch cat chmod chown chgrp cmp mkdir	\
+			mknod mkfifo ln rm rmdir cp mv uname sh grep wc head tail hostname time du sleep link unlink pwd which tee date	\
+			sort uniq kill loadkeys
 
 all: $(LIBUTILS) $(PROGS)
 
