@@ -69,7 +69,7 @@ static void init_prompt_values()
 
 	/* else user uid */
 	if (!user_set)
-		snprintf(username, USERNAME_SIZE, "%d\n", uid);
+		snprintf(username, USERNAME_SIZE, "%d", uid);
 
 	/* get hostname */
 	gethostname(hostname, HOSTNAME_SIZE - 1);
