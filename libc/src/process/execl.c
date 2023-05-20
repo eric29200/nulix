@@ -18,7 +18,9 @@ int execl(const char *pathname, const char *arg, ...)
 		argv[0] = (char *) arg;
 		for (i = 1; i < argc; i++)
 			argv[i] = va_arg(ap, char *);
+		argv[i] = NULL;
 		va_end(ap);
+
 
 		return execv(pathname, argv);
 	}
