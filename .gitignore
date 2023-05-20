@@ -13,10 +13,7 @@
 *.bin
 *.iso
 */*.bin
-hda.img
-hdb.img
-hdc.img
-hdd.img
+*.img
 sysroot/*
 root/*
 ports/build/*
