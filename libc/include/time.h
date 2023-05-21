@@ -7,6 +7,11 @@
 #define CLOCK_REALTIME		0
 #define CLOCK_MONOTONIC		1
 
+struct timeval {
+	time_t			tv_sec;
+	time_t			tv_usec;
+};
+
 struct timespec {
 	time_t			tv_sec;
 	long			tv_nsec;

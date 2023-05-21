@@ -56,6 +56,13 @@ static inline long __syscall5(long nr, long a1, long a2, long a3, long a4, long 
 	return ret;
 }
 
+static inline long __syscall6(long nr, long a1, long a2, long a3, long a4, long a5, long a6)
+{
+	long ret;
+	__asm__ __volatile__("int $0x80" : "=a"(ret) : "0"(nr), "b"(a1), "c"(a2), "d"(a3), "S"(a4), "D"(a5), "g"(a6));
+	return ret;
+}
+
 static inline long syscall0(long nr)
 {
 	return __syscall_ret(__syscall0(nr));
@@ -84,6 +91,11 @@ static inline long syscall4(long nr, long a1, long a2, long a3, long a4)
 static inline long syscall5(long nr, long a1, long a2, long a3, long a4, long a5)
 {
 	return __syscall_ret(__syscall5(nr, a1, a2, a3, a4, a5));
+}
+
+static inline long syscall6(long nr, long a1, long a2, long a3, long a4, long a5, long a6)
+{
+	return __syscall_ret(__syscall6(nr, a1, a2, a3, a4, a5, a6));
 }
 
 #endif

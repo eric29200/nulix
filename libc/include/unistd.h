@@ -44,6 +44,7 @@ extern char **environ;
 #define SYS_readlink		85
 #define SYS_wait4		114
 #define SYS_uname		122
+#define SYS_select		142
 #define SYS_readv		145
 #define SYS_writev		146
 #define SYS_nanosleep		162
@@ -53,6 +54,7 @@ extern char **environ;
 #define SYS_getdents64		220
 #define SYS_fchownat		298
 #define SYS_fstatat64		300
+#define SYS_pselect6		308
 #define SYS_utimensat		320
 #define SYS_clock_gettime64	403
 
