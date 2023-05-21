@@ -11,6 +11,7 @@ typedef unsigned		uid_t;
 typedef unsigned		gid_t;
 typedef long long		time_t;
 typedef int			clockid_t;
+typedef long			clock_t;
 typedef unsigned long long	dev_t;
 typedef unsigned		nlink_t;
 
