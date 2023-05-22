@@ -10,16 +10,15 @@
 #include <sys/wait.h>
 
 #include "../libutils/libutils.h"
+#include "readline.h"
 
 #define USERNAME_SIZE		1024
 #define HOSTNAME_SIZE		256
-#define CMD_LINE_SIZE		BUFSIZ
 
 static char username[USERNAME_SIZE];
 static char hostname[HOSTNAME_SIZE];
 static char homepath[PATH_MAX];
 static char cwd[PATH_MAX];
-static char cmd_line[CMD_LINE_SIZE];
 
 /*
  * Init prompt values.
@@ -105,7 +104,7 @@ static int __cmd_cd(int argc, char **argv)
 /*
  * Execute a command.
  */
-static int execute_cmd()
+static int execute_cmd(char *cmd_line)
 {
 	int argc, ret = 0, status;
 	char *argv[ARG_MAX], *s;
@@ -125,19 +124,18 @@ static int execute_cmd()
 		len = 0;
 	}
 
-	/* empty command */
-	if (!argc)
-		return 0;
+	/* add last argument */
+	if (argc < ARG_MAX - 1 && len)
+		argv[argc++] = s - len;
 
 	/* arguments must be NULL terminated */
 	argv[argc] = NULL;
 
 	/* builtin commands */
-	if (strcmp(argv[0], "exit") == 0) {
+	if (strcmp(argv[0], "exit") == 0)
 		return __cmd_exit();
-	} else if (strcmp(argv[0], "cd") == 0) {
+	else if (strcmp(argv[0], "cd") == 0)
 		return __cmd_cd(argc, argv);
-	}
 
 	/* fork */
 	pid = fork();
@@ -166,8 +164,14 @@ static int execute_cmd()
  */
 static int sh_interactive()
 {
+	char *cmd_line = NULL;
+	struct rline_ctx ctx;
+
 	/* init prompt */
 	init_prompt_values();
+
+	/* init readline context */
+	rline_init_ctx(&ctx);
 
 	for (;;) {
 		/* get current working directory */
@@ -178,12 +182,15 @@ static int sh_interactive()
 		fflush(stdout);
 
 		/* get next command */
-		if (!fgets(cmd_line, CMD_LINE_SIZE, stdin))
+		if (rline_read_line(&ctx, &cmd_line) <= 0)
 			continue;
 
 		/* execute command */
-		execute_cmd();
+		execute_cmd(cmd_line);
 	}
+
+	/* exit readline context */
+	rline_exit_ctx(&ctx);
 
 	return 0;
 }

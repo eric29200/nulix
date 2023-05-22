@@ -7,6 +7,20 @@ typedef unsigned int tcflag_t;
 
 #define NCCS		32
 
+#define ISIG		0000001
+#define ICANON		0000002
+#define ECHO		0000010
+#define ECHOE		0000020
+#define ECHOK		0000040
+#define ECHONL		0000100
+#define NOFLSH		0000200
+#define TOSTOP		0000400
+#define IEXTEN		0100000
+
+#define TCSANOW		0
+#define TCSADRAIN	1
+#define TCSAFLUSH	2
+
 /*
  * Window size structure.
  */
