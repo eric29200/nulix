@@ -106,27 +106,16 @@ static int __cmd_cd(int argc, char **argv)
  */
 static int execute_cmd(char *cmd_line)
 {
-	int argc, ret = 0, status;
-	char *argv[ARG_MAX], *s;
-	size_t len;
+	int argc = 0, ret = 0, status;
+	char *argv[ARG_MAX], *arg;
 	pid_t pid;
 
 	/* parse arguments */
-	for (s = cmd_line, len = 0, argc = 0; *s && argc < ARG_MAX - 1; s++) {
-		if (!isspace(*s)) {
-			len++;
-			continue;
-		}
-
-		*s = 0;
-		if (len) 
-			argv[argc++] = s - len;
-		len = 0;
+	arg = strtok(cmd_line, " ");
+	while (arg) {
+		argv[argc++] = arg;
+		arg = strtok(NULL, " ");
 	}
-
-	/* add last argument */
-	if (argc < ARG_MAX - 1 && len)
-		argv[argc++] = s - len;
 
 	/* arguments must be NULL terminated */
 	argv[argc] = NULL;
