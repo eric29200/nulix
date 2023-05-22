@@ -146,21 +146,42 @@ static void delete_char(struct rline_ctx *ctx, int move_pos)
 }
 
 /*
- * Read an escape sequence.
+ * Handle an escape sequence.
  */
-static int read_escape_seq()
+static void handle_escape_sequence(struct rline_ctx *ctx)
 {
-	int c;
+	/* sequence must begin with '[' */
+	if (getc(stdin) != '[')
+		return;
 
-	c = getc(stdin);
-	if (c != '[')
-		return -1;
-
-	c = getc(stdin);
-	if (c < 0)
-		return -1;
-
-	return c;
+	switch (getc(stdin)) {
+		case KEY_DELETE:
+			getc(stdin);
+			delete_char(ctx, 0);
+			break;
+		case KEY_LEFT:
+			move_cursor(ctx, -1);
+			break;
+		case KEY_RIGHT:
+			move_cursor(ctx, 1);
+			break;
+		case KEY_HOME:
+			move_start_line(ctx);
+			break;
+		case KEY_END:
+			move_end_line(ctx);
+			break;
+		case '1':
+			if (getc(stdin) == '~')
+				move_start_line(ctx);
+			break;
+		case '4':
+			if (getc(stdin) == '~')
+				move_end_line(ctx);
+			break;
+		default:
+			break;
+	}
 }
 
 /*
@@ -168,7 +189,7 @@ static int read_escape_seq()
  */
 ssize_t rline_read_line(struct rline_ctx *ctx, char **line)
 {
-	int c, esc;
+	int c;
 
 	/* reset line */
 	memset(ctx->line, 0, ctx->len);
@@ -191,29 +212,7 @@ ssize_t rline_read_line(struct rline_ctx *ctx, char **line)
 				delete_char(ctx, -1);
 				break;
 			case ESCAPE:
-				esc = read_escape_seq();
-
-				switch (esc) {
-					case KEY_DELETE:
-						getc(stdin);
-						delete_char(ctx, 0);
-						break;
-					case KEY_LEFT:
-						move_cursor(ctx, -1);
-						break;
-					case KEY_RIGHT:
-						move_cursor(ctx, 1);
-						break;
-					case KEY_HOME:
-						move_start_line(ctx);
-						break;
-					case KEY_END:
-						move_end_line(ctx);
-						break;
-					default:
-						break;
-				}
-
+				handle_escape_sequence(ctx);
 				break;
 			default:
 				if (add_char(ctx, c))
