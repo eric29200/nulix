@@ -1,6 +1,6 @@
 KERNEL		= kernel/kernel.bin
 ISO		= nulix.iso
-NJOBS		= 8
+NJOBS		= $(shell nproc)
 MEM_SIZE	= 512M
 DISK		= hda.img
 DISK_MINE	= hda_mine.img

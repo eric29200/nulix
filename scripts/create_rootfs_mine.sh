@@ -34,8 +34,7 @@ sudo mkdir -p tmp/bin
 sudo mkdir -p tmp/sbin
 
 # populate disk
-sudo cp -R usr/build/* tmp/bin/
-sudo cp -R usr/build/init tmp/sbin/
+sudo cp -R usr/build/* tmp/
 sudo cp -R rootbase/* tmp/
 
 # chown root
