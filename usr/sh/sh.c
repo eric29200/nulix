@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <pwd.h>
+#include <time.h>
 #include <limits.h>
 #include <ctype.h>
 #include <getopt.h>
@@ -155,6 +156,8 @@ static int sh_interactive()
 {
 	char *cmd_line = NULL;
 	struct rline_ctx ctx;
+	struct tm *tm;
+	time_t t;
 
 	/* init prompt */
 	init_prompt_values();
@@ -166,8 +169,12 @@ static int sh_interactive()
 		/* get current working directory */
 		getcwd(cwd, PATH_MAX);
 
+		/* get current time */
+		time(&t);
+		tm = localtime(&t);
+
 		/* print prompt */
-		printf("%s@%s:%s> ", username, hostname, cwd);
+		printf("[%02d:%02d]\33[1m%s\33[0m@%s:\33[1m%s\33[0m> ", tm->tm_hour, tm->tm_min, username, hostname, cwd);
 		fflush(stdout);
 
 		/* get next command */
