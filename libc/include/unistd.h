@@ -31,6 +31,7 @@ extern char **environ;
 #define SYS_mkdir		39
 #define SYS_rmdir		40
 #define SYS_dup			41
+#define SYS_pipe		42
 #define SYS_brk			45
 #define SYS_getgid		47
 #define SYS_geteuid		49
