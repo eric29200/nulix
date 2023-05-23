@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <ctype.h>
 #include <getopt.h>
+#include <signal.h>
 #include <sys/wait.h>
 
 #include "../libutils/libutils.h"
@@ -127,6 +128,15 @@ static int execute_cmdline(char *cmd_line)
 }
 
 /*
+ * SIGINT handler.
+ */
+static void sigint_handler()
+{
+	printf("\n");
+	fflush(stdout);
+}
+
+/*
  * Interactive shell.
  */
 static int sh_interactive()
@@ -135,6 +145,10 @@ static int sh_interactive()
 	struct rline_ctx ctx;
 	struct tm *tm;
 	time_t t;
+
+	/* install signal handlers */
+	if (signal(SIGINT, sigint_handler))
+		perror("SIGINT");
 
 	/* init prompt */
 	init_prompt_values();
