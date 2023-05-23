@@ -185,11 +185,40 @@ static void handle_escape_sequence(struct rline_ctx *ctx)
 }
 
 /*
+ * Set read mode.
+ */
+static void rline_set_read_mode(struct rline_ctx *ctx)
+{
+	struct termios termios;
+
+	/* save termios */
+	tcgetattr(STDOUT_FILENO, &ctx->termios);
+
+	/* disable canonical mode, input echo and signals */
+	memcpy(&termios, &ctx->termios, sizeof(struct termios));
+	termios.c_lflag &= ~(ICANON | ECHO | ISIG);
+	tcsetattr(STDOUT_FILENO, TCSAFLUSH, &termios);
+}
+
+/*
+ * Unset read mode.
+ */
+static void rline_unset_read_mode(struct rline_ctx *ctx)
+{
+	/* restore initial termios */
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &ctx->termios);
+}
+
+/*
  * Read a line.
  */
 ssize_t rline_read_line(struct rline_ctx *ctx, char **line)
 {
+	ssize_t ret = -1;
 	int c;
+
+	/* set read mode */
+	rline_set_read_mode(ctx);
 
 	/* reset line */
 	ctx->len = ctx->pos = 0;
@@ -229,9 +258,10 @@ out:
 	if (ctx->line && !(*line = strndup(ctx->line, ctx->len)))
 		goto err;
 
-	return ctx->len;
+	ret = ctx->len;
 err:
-	return -1;
+	rline_unset_read_mode(ctx);
+	return ret;
 }
 
 /*
@@ -239,17 +269,7 @@ err:
  */
 void rline_init_ctx(struct rline_ctx *ctx)
 {
-	struct termios termios;
-
 	memset(ctx, 0, sizeof(struct rline_ctx));
-
-	/* save termios */
-	tcgetattr(STDOUT_FILENO, &ctx->termios);
-
-	/* disable canonical mode, input echo and signals */
-	memcpy(&termios, &ctx->termios, sizeof(struct termios));
-	termios.c_lflag &= ~(ICANON | ECHO | ISIG);
-	tcsetattr(STDOUT_FILENO, TCSAFLUSH, &termios);
 }
 
 /*
@@ -257,9 +277,6 @@ void rline_init_ctx(struct rline_ctx *ctx)
  */
 void rline_exit_ctx(struct rline_ctx *ctx)
 {
-	/* restore initial termios */
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &ctx->termios);
- 
 	if (ctx) {
 		if (ctx->line)
 			free(ctx->line);
