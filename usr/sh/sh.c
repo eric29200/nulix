@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <signal.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 
 #include "../libutils/libutils.h"
@@ -71,13 +72,72 @@ static int tokenize(char *str, char **tokens, size_t tokens_len, char *delim)
 }
 
 /*
+ * Input redirection.
+ */
+static int input_redirection(char *cmd)
+{
+	char *tokens[2], *filename;
+	int fd;
+
+	if (tokenize(cmd, tokens, 2, "<") <= 1)
+		return STDIN_FILENO;
+
+	/* trim filename */
+	filename = strtok(tokens[1], " ");
+
+	/* open input file */
+	fd = open(filename, O_RDONLY, 0);
+	if (fd < 0) {
+		perror(filename);
+		return -1;
+	}
+
+	return fd;
+}
+
+/*
+ * Output redirection.
+ */
+static int output_redirection(char *cmd)
+{
+	char *tokens[2], *filename;
+	int fd;
+
+	if (tokenize(cmd, tokens, 2, ">") <= 1)
+		return STDOUT_FILENO;
+
+	/* trim filename */
+	filename = strtok(tokens[1], " ");
+
+	/* open output file */
+	fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+	if (fd < 0) {
+		perror(filename);
+		return -1;
+	}
+
+	return fd;
+}
+
+/*
  * Execute a command.
  */
 static int execute_cmd(char *cmd)
 {
 	int argc, ret = 0, status;
 	char *argv[ARG_MAX];
+	int fd_in, fd_out;
 	pid_t pid;
+
+	/* input redirection */
+	fd_in = input_redirection(cmd);
+	if (fd_in < 0)
+		return -1;
+
+	/* output redirection */
+	fd_out = output_redirection(cmd);
+	if (fd_out < 0)
+		return -1;
 
 	/* parse arguments (argv must be NULL terminated) */
 	argc = tokenize(cmd, argv, ARG_MAX, " ");
@@ -85,7 +145,7 @@ static int execute_cmd(char *cmd)
 
 	/* try builtin commands */
 	if (cmd_builtin(argc, argv, &ret) == 0)
-		return ret;
+		goto out;
 
 	/* fork */
 	pid = fork();
@@ -93,6 +153,18 @@ static int execute_cmd(char *cmd)
 		perror("fork");
 		ret = 1;
 	} else if (pid == 0) {
+		/* redirect stdin */
+		if (fd_in != STDIN_FILENO) {
+			dup2(fd_in, STDIN_FILENO);
+			close(fd_in);
+		}
+
+		/* redirect stdout */
+		if (fd_out != STDOUT_FILENO) {
+			dup2(fd_out, STDOUT_FILENO);
+			close(fd_out);
+		}
+
 		/* execute command */
 		ret = execvpe(argv[0], argv, environ);
 		if (ret < 0)
@@ -105,6 +177,13 @@ static int execute_cmd(char *cmd)
 		if (waitpid(pid, &status, 0) < 0)
 			perror("waitpid");
 	}
+
+out:
+	/* close redirections */
+	if (fd_in != STDIN_FILENO)
+		close(fd_in);
+	if (fd_out != STDOUT_FILENO)
+		close(fd_out);
 
 	return ret;
 }
