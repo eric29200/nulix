@@ -1,5 +1,5 @@
-#ifndef _LIBREADLINE_H_
-#define _LIBREADLINE_H_
+#ifndef _SH_READLINE_H_
+#define _SH_READLINE_H_
 
 #include <stdio.h>
 #include <termios.h>
@@ -14,7 +14,6 @@ struct rline_ctx {
 	size_t		len;		/* current line length */
 	size_t		pos;		/* current position in line */
 };
-
 
 void rline_init_ctx(struct rline_ctx *ctx);
 void rline_exit_ctx(struct rline_ctx *ctx);

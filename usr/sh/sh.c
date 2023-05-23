@@ -12,13 +12,13 @@
 
 #include "../libutils/libutils.h"
 #include "readline.h"
+#include "cmd.h"
 
 #define USERNAME_SIZE		1024
 #define HOSTNAME_SIZE		256
 
 static char username[USERNAME_SIZE];
 static char hostname[HOSTNAME_SIZE];
-static char homepath[PATH_MAX];
 static char cwd[PATH_MAX];
 
 /*
@@ -26,7 +26,6 @@ static char cwd[PATH_MAX];
  */
 static void init_prompt_values()
 {
-	bool user_set = false, home_set = false;
 	struct passwd *passwd;
 	uid_t uid;
 	char *s;
@@ -34,98 +33,58 @@ static void init_prompt_values()
 	/* reset values */
 	memset(username, 0, USERNAME_SIZE);
 	memset(hostname, 0, HOSTNAME_SIZE);
-	memset(homepath, 0, PATH_MAX);
 	memset(cwd, 0, PATH_MAX);
-
-	/* get user from env */
-	s = getenv("USER");
-	if (s) {
-		strncpy(username, s, USERNAME_SIZE);
-		user_set = true;
-	}
-
-	/* get home from env */
-	s = getenv("HOME");
-	if (s) {
-		strncpy(homepath, s, PATH_MAX);
-		home_set = true;
-	}
-
-	/* get passwd */
-	if (!user_set || !home_set) {
-		uid = geteuid();
-		passwd = getpwuid(uid);
-
-		if (passwd && !user_set) {
-			strncpy(username, passwd->pw_name, USERNAME_SIZE);
-			user_set = true;
-		}
-
-		if (passwd && !home_set) {
-			strncpy(homepath, passwd->pw_dir, PATH_MAX);
-			home_set = true;
-		}
-	}
-
-	/* else user uid */
-	if (!user_set)
-		snprintf(username, USERNAME_SIZE, "%d", uid);
 
 	/* get hostname */
 	gethostname(hostname, HOSTNAME_SIZE - 1);
+
+	/* get user from env */
+	s = getenv("USER");
+	if (s) 
+		return;
+
+	/* get passwd */
+	uid = geteuid();
+	passwd = getpwuid(uid);
+	if (passwd)
+		strncpy(username, passwd->pw_name, USERNAME_SIZE);
+	else
+		snprintf(username, USERNAME_SIZE, "%d", uid);
 }
 
 /*
- * Exit command.
+ * Tokenize a string.
  */
-static int __cmd_exit()
+static int tokenize(char *str, char **tokens, size_t tokens_len, char *delim)
 {
-	exit(0);
+	size_t n = 0;
+	char *token;
 
-	return 0;
-}
-
-/*
- * Change dir command.
- */
-static int __cmd_cd(int argc, char **argv)
-{
-	char *path = argc > 1 ? argv[1] : homepath;
-	int ret;
-
-	ret = chdir(path);
-	if (ret < 0) {
-		perror(path);
-		return 1;
+	token = strtok(str, delim);
+	while (token && n < tokens_len) {
+		tokens[n++] = token;
+		token = strtok(NULL, delim);
 	}
 
-	return 0;
+	return n;
 }
 
 /*
  * Execute a command.
  */
-static int execute_cmd(char *cmd_line)
+static int execute_cmd(char *cmd)
 {
-	int argc = 0, ret = 0, status;
-	char *argv[ARG_MAX], *arg;
+	int argc, ret = 0, status;
+	char *argv[ARG_MAX];
 	pid_t pid;
 
-	/* parse arguments */
-	arg = strtok(cmd_line, " ");
-	while (arg) {
-		argv[argc++] = arg;
-		arg = strtok(NULL, " ");
-	}
-
-	/* arguments must be NULL terminated */
+	/* parse arguments (argv must be NULL terminated) */
+	argc = tokenize(cmd, argv, ARG_MAX, " ");
 	argv[argc] = NULL;
 
-	/* builtin commands */
-	if (strcmp(argv[0], "exit") == 0)
-		return __cmd_exit();
-	else if (strcmp(argv[0], "cd") == 0)
-		return __cmd_cd(argc, argv);
+	/* try builtin commands */
+	if (cmd_builtin(argc, argv, &ret) == 0)
+		return ret;
 
 	/* fork */
 	pid = fork();
@@ -145,6 +104,24 @@ static int execute_cmd(char *cmd_line)
 		if (waitpid(pid, &status, 0) < 0)
 			perror("waitpid");
 	}
+
+	return ret;
+}
+
+/*
+ * Execute a command line.
+ */
+static int execute_cmdline(char *cmd_line)
+{
+	int nr_cmds, i, ret = 0;
+	char *cmds[ARG_MAX];
+
+	/* parse commands */
+	nr_cmds = tokenize(cmd_line, cmds, ARG_MAX, ";");
+
+	/* execute commands */
+	for (i = 0; i < nr_cmds; i++)
+		ret |= execute_cmd(cmds[i]);
 
 	return ret;
 }
@@ -182,7 +159,7 @@ static int sh_interactive()
 			continue;
 
 		/* execute command */
-		execute_cmd(cmd_line);
+		execute_cmdline(cmd_line);
 	}
 
 	/* exit readline context */
