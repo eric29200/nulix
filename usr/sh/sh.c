@@ -174,7 +174,8 @@ static int execute_cmd(char *cmd)
 		exit(ret);
 	} else {
 		/* wait for whild */
-		if (waitpid(pid, &status, 0) < 0)
+		while ((ret = waitpid(pid, &status, 0)) == 0);
+		if (ret < 0)
 			perror("waitpid");
 	}
 
