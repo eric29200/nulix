@@ -106,7 +106,7 @@ static int add_char(struct rline_ctx *ctx, int c)
 
 end:
 	/* render line */
-	printf("%s", ctx->line + ctx->pos);
+	fwrite(ctx->line + ctx->pos, 1, ctx->len + 1 - ctx->pos, stdout);
 
 	/* update line length/position */
 	ctx->len++;
@@ -134,14 +134,14 @@ static void delete_char(struct rline_ctx *ctx, int move_pos)
 	ctx->pos += move_pos;
 	for (i = ctx->pos; i < ctx->len - 1; i++)
 		ctx->line[i] = ctx->line[i + 1];
-	ctx->line[i] = 0;
 
 	/* update line length */
 	ctx->len--;
 
 	/* render line */
 	move_to(move_pos);
-	printf("%s ", ctx->line + ctx->pos);
+	fwrite(ctx->line + ctx->pos, 1, ctx->len - ctx->pos, stdout);
+	fputc(' ', stdout);
 	move_left(ctx->len - ctx->pos + 1);
 }
 
@@ -192,7 +192,6 @@ ssize_t rline_read_line(struct rline_ctx *ctx, char **line)
 	int c;
 
 	/* reset line */
-	memset(ctx->line, 0, ctx->len);
 	ctx->len = ctx->pos = 0;
 	*line = NULL;
 
@@ -204,7 +203,7 @@ ssize_t rline_read_line(struct rline_ctx *ctx, char **line)
 
 		switch (c) {
 			case KEY_ENTER:
-				putc('\n', stdout);
+				fputc('\n', stdout);
 				goto out;
 			case KEY_TAB:
 				break;
@@ -227,7 +226,7 @@ ssize_t rline_read_line(struct rline_ctx *ctx, char **line)
 
 out:
 	/* set line */
-	if (ctx->line && !(*line = strdup(ctx->line)))
+	if (ctx->line && !(*line = strndup(ctx->line, ctx->len)))
 		goto err;
 
 	return ctx->len;
