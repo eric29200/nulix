@@ -263,6 +263,43 @@ static int sh_interactive()
 }
 
 /*
+ * Execute shell script.
+ */
+static int sh_script(const char *filename)
+{
+	char *cmd_line = NULL;
+	size_t n = 0;
+	ssize_t len;
+	FILE *fp;
+
+	/* open input file */
+	fp = fopen(filename, "r");
+	if (!fp) {
+		perror(filename);
+		return 1;
+	}
+	
+	/* execute each line */
+	while ((len = getline(&cmd_line, &n, fp)) > 0) {
+		/* remove last eol */
+		if (cmd_line[len - 1] == '\n')
+			cmd_line[len - 1] = 0;
+
+		/* execute command */
+		execute_cmdline(cmd_line);
+	}
+
+	/* free command line */
+	if (cmd_line)
+		free(cmd_line);
+
+	/* close input file */
+	fclose(fp);
+
+	return 0;
+}
+
+/*
  * Usage.
  */
 static void usage(const char *name)
@@ -299,11 +336,9 @@ int main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	/* check arguments */
-	if (argc) {
-		usage(name);
-		exit(1);
-	}
-
-	return sh_interactive();
+	/* no argument : interactive shell */
+	if (!argc)
+		return sh_interactive();
+	else
+		return sh_script(*argv);
 }
