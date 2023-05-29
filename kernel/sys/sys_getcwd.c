@@ -35,7 +35,7 @@ static struct dirent64_t *find_dirent(int fd, struct dirent64_t *dirp, ino_t ino
 /*
  * Prepend directory entry to buffer.
  */
-static int preprend_dirent(char *buf, size_t size, size_t max_size, struct dirent64_t *dirent)
+static int prepend_dirent(char *buf, size_t size, size_t max_size, struct dirent64_t *dirent)
 {
 	size_t dirent_name_len, nb_shift;
 	int i;
@@ -95,6 +95,10 @@ int sys_getcwd(char *buf, size_t size)
 
 	/* walk up until root directory */
 	for (fd = AT_FDCWD, inode = current_task->fs->cwd; inode != current_task->fs->root;) {
+		/* cross mount point */
+		if (inode == inode->i_sb->s_root_inode)
+			inode = inode->i_sb->s_covered;
+
 		/* open parent directory */
 		parent_fd = do_open(fd, "..", O_RDONLY, 0);
 		if (parent_fd < 0)
@@ -106,7 +110,7 @@ int sys_getcwd(char *buf, size_t size)
 			break;
 
 		/* prepend directory entry */
-		n = preprend_dirent(buf, n, size - 1, dirent);
+		n = prepend_dirent(buf, n, size - 1, dirent);
 
 		/* close current directory */
 		if (fd >= 0)
