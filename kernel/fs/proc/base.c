@@ -317,9 +317,6 @@ static int proc_fd_lookup(struct inode_t *dir, const char *name, size_t name_len
 	pid_t pid;
 	int fd;
 
-	/* unused name length */
-	UNUSED(name_len);
-
 	/* dir must be a directory */
 	if (!dir)
 		return -ENOENT;
@@ -328,8 +325,28 @@ static int proc_fd_lookup(struct inode_t *dir, const char *name, size_t name_len
 		return -ENOENT;
 	}
 
-	/* get task */
+	/* get pid */
 	pid = dir->i_ino >> 16;
+
+	/* current directory */
+	if (!name_len || (name_len == 1 && name[0] == '.')) {
+		*res_inode = dir;
+		return 0;
+	}
+
+	/* parent directory */
+	if (name_len == 2 && name[0] == '.' && name[1] == '.') {
+		   *res_inode = iget(dir->i_sb, (pid << 16) + PROC_PID_INO);
+		   if (!*res_inode) {
+			iput(dir);
+			return -ENOENT;
+		   }
+
+		   iput(dir);
+		   return 0;
+	    }
+
+	/* get task */
 	task = find_task(pid);
 	if (!task) {
 		iput(dir);
@@ -530,7 +547,10 @@ static int proc_base_lookup(struct inode_t *dir, const char *name, size_t name_l
 	}
 
 	/* create a fake inode */
-	ino = dir->i_ino - PROC_PID_INO + de->ino;
+	if (de->ino == 1)
+		ino = 1;
+	else
+		ino = dir->i_ino - PROC_PID_INO + de->ino;
 
 	/* get inode */
 	*res_inode = iget(dir->i_sb, ino);
@@ -557,4 +577,3 @@ struct inode_operations_t proc_base_iops = {
 	.fops			= &proc_base_fops,
 	.lookup			= proc_base_lookup,
 };
-
