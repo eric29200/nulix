@@ -22,6 +22,53 @@ static struct inode_t *follow_link(struct inode_t *dir, struct inode_t *inode, i
 }
 
 /*
+ * Lookup a file.
+ */
+static int lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+{
+	struct super_block_t *sb;
+
+	/* reset result inode */
+	*res_inode = NULL;
+
+	/* no parent directory */
+	if (!dir)
+		return -ENOENT;
+
+	/* special cases */
+	if (name_len == 2 && name[0] == '.' && name[1] == '.') {
+		/* .. in root = root */
+		if (dir == current_task->fs->root) {
+			*res_inode = dir;
+			return 0;
+		}
+
+		/* cross mount point */
+		sb = dir->i_sb;
+		if (dir == sb->s_root_inode) {
+			iput(dir);
+			dir = sb->s_covered;
+			if (!dir)
+				return -ENOENT;
+			dir->i_ref++;
+		}
+	}
+
+	/* lookup not implemented */
+	if (!dir->i_op || !dir->i_op->lookup)
+		return -ENOTDIR;
+
+	/* dir */
+	if (!name_len) {
+		*res_inode = dir;
+		return 0;
+	}
+
+	/* real lookup */
+	return dir->i_op->lookup(dir, name, name_len, res_inode);
+}
+
+/*
  * Resolve a path name to the inode of the top most directory.
  */
 static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pathname, const char **basename, size_t *basename_len)
@@ -29,7 +76,6 @@ static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pa
 	struct inode_t *inode, *tmp;
 	const char *name;
 	size_t name_len;
-	int err;
 
 	/* absolute or relative path */
 	if (*pathname == '/') {
@@ -68,16 +114,9 @@ static struct inode_t *dir_namei(int dirfd, struct inode_t *base, const char *pa
 		if (!name_len)
 			continue;
 
-		/* lookup not implemented */
+		/* lookup */
 		inode->i_ref++;
-		if (!inode->i_op || !inode->i_op->lookup) {
-			iput(inode);
-			return NULL;
-		}
-
-		/* lookup file */
-		err = inode->i_op->lookup(inode, name, name_len, &tmp);
-		if (err) {
+		if (lookup(inode, name, name_len, &tmp)) {
 			iput(inode);
 			return NULL;
 		}
@@ -101,7 +140,6 @@ struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int
 	struct inode_t *dir, *inode;
 	const char *basename;
 	size_t basename_len;
-	int err;
 
 	/* use directly dir fd */
 	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
@@ -121,16 +159,9 @@ struct inode_t *namei(int dirfd, struct inode_t *base, const char *pathname, int
 	if (!basename_len)
 		return dir;
 
-	/* lookup not implemented */
-	if (!dir->i_op || !dir->i_op->lookup) {
-		iput(dir);
-		return NULL;
-	}
-
 	/* lookup file */
 	dir->i_ref++;
-	err = dir->i_op->lookup(dir, basename, basename_len, &inode);
-	if (err) {
+	if (lookup(dir, basename, basename_len, &inode)) {
 		iput(dir);
 		return NULL;
 	}
@@ -176,16 +207,9 @@ int open_namei(int dirfd, struct inode_t *base, const char *pathname, int flags,
 	mode &= ~current_task->fs->umask & 0777;
 	mode |= S_IFREG;
 
-	/* lookup not implemented */
-	if (!dir->i_op || !dir->i_op->lookup) {
-		iput(dir);
-		return -EPERM;
-	}
-
 	/* lookup inode */
 	dir->i_ref++;
-	err = dir->i_op->lookup(dir, basename, basename_len, &inode);
-	if (err) {
+	if (lookup(dir, basename, basename_len, &inode)) {
 		/* no such entry */
 		if (!(flags & O_CREAT)) {
 			iput(dir);
@@ -482,7 +506,7 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
 
 	/* check if target already exists */
 	if (flags & RENAME_NOREPLACE) {
-		ret = new_dir->i_op->lookup(new_dir, new_basename, new_basename_len, &tmp);
+		ret = lookup(new_dir, new_basename, new_basename_len, &tmp);
 		if (ret == 0) {
 			/* do not allow to replace directory */
 			if (S_ISDIR(tmp->i_mode)) {
