@@ -147,6 +147,7 @@
 #define __NR_getsockname		367
 #define __NR_getpeername		368
 #define __NR_sendto			369
+#define __NR_sendmsg			370
 #define __NR_recvfrom			371
 #define __NR_recvmsg			372
 #define __NR_shutdown			373
@@ -233,6 +234,7 @@ int sys_renameat(int olddirfd, const char *oldpath, int newdirfd, const char *ne
 int sys_renameat2(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
 int sys_socket(int domain, int type, int protocol);
 int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
+int sys_sendmsg(int sockfd, const struct msghdr_t *msg, int flags);
 int sys_recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen);
 int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout);
