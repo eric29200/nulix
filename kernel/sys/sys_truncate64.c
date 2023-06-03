@@ -5,7 +5,7 @@
 /*
  * Truncate system call.
  */
-int sys_truncate64(const char *pathname, off64_t length)
+int sys_truncate64(const char *pathname, off_t length)
 {
 	struct inode_t *inode;
 	int ret;

@@ -3,7 +3,7 @@
 /*
  * Fadvise system call (ignore this system call).
  */
-int sys_fadvise64(int fd, off64_t offset, off64_t len, int advice)
+int sys_fadvise64(int fd, off_t offset, off_t len, int advice)
 {
 	UNUSED(fd);
 	UNUSED(offset);

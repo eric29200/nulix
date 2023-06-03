@@ -142,7 +142,7 @@ void truncate_inode_pages(struct inode_t *inode, off_t start)
 		/* partial page truncate */
 		offset = start - offset;
 		if (offset < PAGE_SIZE)
-			memset((void *) (PAGE_ADDRESS(page) + offset), 0, PAGE_SIZE - offset);
+			memset((void *) (uint32_t) (PAGE_ADDRESS(page) + offset), 0, PAGE_SIZE - offset);
 	}
 }
 

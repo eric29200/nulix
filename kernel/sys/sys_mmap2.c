@@ -5,7 +5,7 @@
 /*
  * Memory map 2 system call.
  */
-void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off64_t pgoffset)
+void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
 	struct file_t *filp = NULL;
 
