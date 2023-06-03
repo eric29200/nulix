@@ -137,6 +137,7 @@
 #define __NR_renameat2			353
 #define __NR_getrandom			355
 #define __NR_socket			359
+#define __NR_socketpair			360
 #define __NR_bind			361
 #define __NR_connect			362
 #define __NR_listen			363
@@ -288,5 +289,6 @@ int sys_shutdown(int sockfd, int how);
 int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fifth);
 int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid);
 int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid);
+int sys_socketpair(int domain, int type, int protocol, int sv[2]);
 
 #endif

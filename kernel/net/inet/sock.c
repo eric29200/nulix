@@ -424,6 +424,17 @@ static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *
 }
 
 /*
+ * Connect a pair of sockets.
+ */
+static int inet_socketpair(struct socket_t *sock1, struct socket_t *sock2)
+{
+	UNUSED(sock1);
+	UNUSED(sock2);
+
+	return -EOPNOTSUPP;
+}
+
+/*
  * Inet operations.
  */
 struct prot_ops inet_ops = {
@@ -442,4 +453,5 @@ struct prot_ops inet_ops = {
 	.getsockname	= inet_getsockname,
 	.getsockopt	= inet_getsockopt,
 	.setsockopt	= inet_setsockopt,
+	.socketpair	= inet_socketpair,
 };

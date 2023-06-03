@@ -128,11 +128,25 @@ static struct socket_t *sock_lookup(struct inode_t *inode)
 {
 	int i;
 
+	if (!inode)
+		return NULL;
+
 	for (i = 0; i < NR_SOCKETS; i++)
 		if (sockets[i].inode == inode)
 			return &sockets[i];
 
 	return NULL;
+}
+
+/*
+ * Find socket on a file descriptor.
+ */
+static struct socket_t *sockfd_lookup(int fd)
+{
+	if (fd < 0 || fd >= NR_FILE || !current_task->files->filp[fd])
+		return NULL;
+
+	return sock_lookup(current_task->files->filp[fd]->f_inode);
 }
 
 /*
@@ -677,4 +691,48 @@ int do_setsockopt(int sockfd, int level, int optname, void *optval, size_t optle
 		return -EINVAL;
 
 	return sock->ops->setsockopt(sock, level, optname, optval, optlen);
+}
+
+/*
+ * Create a pair of connected sockets.
+ */
+int do_socketpair(int domain, int type, int protocol, int sv[2])
+{
+	struct socket_t *sock1, *sock2;
+	int fd1, fd2, ret;
+
+	/* create first socket */
+	fd1 = sys_socket(domain, type, protocol);
+	if (fd1 < 0)
+		return fd1;
+
+	/* create second socket */
+	fd2 = sys_socket(domain, type, protocol);
+	if (fd2 < 0) {
+		sys_close(fd1);
+		return fd2;
+	}
+
+	/* get sockets */
+	sock1 = sockfd_lookup(fd1);
+	sock2 = sockfd_lookup(fd2);
+	if (!sock1 || !sock2 || !sock1->ops->socketpair) {
+		sys_close(fd1);
+		sys_close(fd2);
+		return -EINVAL;
+	}
+
+	/* connect sockets */
+	ret = sock1->ops->socketpair(sock1, sock2);
+	if (ret < 0) {
+		sys_close(fd1);
+		sys_close(fd2);
+		return ret;
+	}
+
+	/* set output */
+	sv[0] = fd1;
+	sv[1] = fd2;
+
+	return 0;
 }
