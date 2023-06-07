@@ -61,6 +61,4 @@ int task_signal(pid_t pid, int sig);
 int task_signal_group(pid_t pgrp, int sig);
 int task_signal_all(int sig);
 
-int do_signal(struct registers_t *regs);
-
 #endif

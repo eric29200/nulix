@@ -88,6 +88,7 @@
 #define __NR_poll			168
 #define __NR_rt_sigaction		174
 #define __NR_rt_sigprocmask		175
+#define __NR_rt_sigsuspend		179
 #define __NR_pread64			180
 #define __NR_getcwd			183
 #define __NR_vfork			190
@@ -292,5 +293,6 @@ int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fift
 int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid);
 int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid);
 int sys_socketpair(int domain, int type, int protocol, int sv[2]);
+int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
 
 #endif

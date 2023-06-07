@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <x86/system.h>
 
 #define NSIGS		(SIGUNUSED + 1)
 
@@ -48,6 +49,8 @@
 #define SIG_DFL		((sighandler_t) 0)	/* default signal handler */
 #define SIG_IGN		((sighandler_t) 1)	/* ignore signal handler */
 #define SIG_ERR		((sighandler_t) -1)	/* error signal handler */
+
+#define sigmask(sig)	(1UL << ((sig) - 1))
 
 typedef void (*sighandler_t)(int);
 
@@ -118,5 +121,19 @@ static inline int sigdelset(sigset_t *set, int sig)
 
 	return 0;
 }
+
+/*
+ * Delete signals from a signal set.
+ */
+static inline void sigdelsetmask(sigset_t *set, unsigned long mask)
+{
+	*set &= ~mask;
+}
+
+int do_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact);
+int do_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+int do_sigreturn();
+int do_sigsuspend(sigset_t *newset);
+int do_signal(struct registers_t *regs);
 
 #endif

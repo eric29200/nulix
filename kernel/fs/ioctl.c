@@ -28,6 +28,9 @@ int do_ioctl(int fd, int request, unsigned long arg)
 				filp->f_flags &= ~O_NONBLOCK;
 
 			return 0;
+		case FIONREAD:
+			*((int *) arg) = filp->f_inode->i_size - filp->f_pos;
+			return 0;
 		default:
 			/* ioctl not implemented */
 			if (!filp->f_op || !filp->f_op->ioctl)

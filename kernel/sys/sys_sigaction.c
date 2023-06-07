@@ -6,19 +6,5 @@
  */
 int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact)
 {
-	if (signum <= 0 || signum > NSIGS)
-		return -EINVAL;
-
-	/* SIGSTOP and SIGKILL actions can't be redefined */
-	if (signum == SIGSTOP || signum == SIGKILL)
-		return -EINVAL;
-
-	/* save old action */
-	if (oldact)
-		*oldact = current_task->sig->action[signum - 1];
-
-	/* set new action */
-	current_task->sig->action[signum - 1] = *act;
-
-	return 0;
+	return do_sigaction(signum, act, oldact);
 }

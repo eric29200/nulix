@@ -77,6 +77,7 @@
 #define AT_REMOVEDIR		0x200	 		/* remove a directory */
 
 #define FIONBIO			0x5421
+#define FIONREAD		0x541B
 
 #define FMODE_READ		1
 #define FMODE_WRITE		2
