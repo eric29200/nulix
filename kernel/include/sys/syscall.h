@@ -113,6 +113,7 @@
 #define __NR_getdents64			220
 #define __NR_fcntl64			221
 #define __NR_gettid			224
+#define __NR_tkill			238
 #define __NR_set_thread_area		243
 #define __NR_get_thread_area		244
 #define __NR_exit_group			252
@@ -294,5 +295,6 @@ int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid);
 int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid);
 int sys_socketpair(int domain, int type, int protocol, int sv[2]);
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
+int sys_tkill(pid_t pid, int sig);
 
 #endif
