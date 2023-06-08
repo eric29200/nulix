@@ -6,7 +6,7 @@
 /*
  * Ioctl system call.
  */
-int do_ioctl(int fd, int request, unsigned long arg)
+int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 {
 	struct file_t *filp;
 	int on;

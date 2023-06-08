@@ -203,7 +203,7 @@ static int get_mount_point(const char *mount_point, struct inode_t **res_inode)
 /*
  * Mount a file system.
  */
-int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags)
+static int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags)
 {
 	struct inode_t *mount_point_dir = NULL;
 	struct super_block_t *sb;
@@ -242,6 +242,41 @@ err:
 
 	kfree(sb);
 	return err;
+}
+
+/*
+ * Mount system call.
+ */
+int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data)
+{
+	struct file_system_t *fs;
+	struct inode_t *inode;
+	dev_t dev = 0;
+
+	/* find file system type */
+	fs = get_filesystem(type);
+	if (!fs)
+		return -ENODEV;
+
+	/* if filesystem requires dev, find it */
+	if (fs->requires_dev) {
+		/* find device's inode */
+		inode = namei(AT_FDCWD, NULL, dev_name, 1);
+		if (!inode)
+			return -EACCES;
+
+		/* must be a block device */
+		if (!S_ISBLK(inode->i_mode)) {
+			iput(inode);
+			return -ENOTBLK;
+		}
+
+		/* get device */
+		dev = inode->i_rdev;
+		iput(inode);
+	}
+
+	return do_mount(fs, dev, dev_name, dir_name, data, flags);
 }
 
 /*
@@ -321,7 +356,7 @@ static int fs_may_umount(struct super_block_t *sb)
 /*
  * Unmount a file system.
  */
-int do_umount(const char *target, int flags)
+static int do_umount(const char *target, int flags)
 {
 	struct super_block_t *sb;
 	struct inode_t *inode;
@@ -368,4 +403,12 @@ int do_umount(const char *target, int flags)
 		sb->s_op->put_super(sb);
 
 	return 0;
+}
+
+/*
+ * Umount2 system call.
+ */
+int sys_umount2(const char *target, int flags)
+{
+	return do_umount(target, flags);
 }

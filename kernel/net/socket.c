@@ -261,7 +261,7 @@ struct file_operations_t socket_fops = {
 /*
  * Create a socket.
  */
-int do_socket(int domain, int type, int protocol)
+int sys_socket(int domain, int type, int protocol)
 {
 	struct socket_t *sock;
 	int sockfd, ret;
@@ -299,7 +299,7 @@ int do_socket(int domain, int type, int protocol)
 /*
  * Bind system call (attach an address to a socket).
  */
-int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
+int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock;
 
@@ -322,7 +322,7 @@ int do_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 /*
  * Connect system call.
  */
-int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
+int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock;
 
@@ -345,7 +345,7 @@ int do_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 /*
  * Listen system call.
  */
-int do_listen(int sockfd, int backlog)
+int sys_listen(int sockfd, int backlog)
 {
 	struct socket_t *sock;
 
@@ -370,7 +370,7 @@ int do_listen(int sockfd, int backlog)
 /*
  * Accept system call.
  */
-int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
+int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock, *new_sock;
 	int new_sockfd, ret;
@@ -427,7 +427,7 @@ int do_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 /*
  * Send to system call.
  */
-int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen)
+int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen)
 {
 	struct socket_t *sock;
 	struct iovec_t iovec;
@@ -471,7 +471,7 @@ int do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct s
 /*
  * Send a message system call.
  */
-int do_sendmsg(int sockfd, const struct msghdr_t *msg, int flags)
+int sys_sendmsg(int sockfd, const struct msghdr_t *msg, int flags)
 {
 	struct socket_t *sock;
 	struct file_t *filp;
@@ -496,7 +496,7 @@ int do_sendmsg(int sockfd, const struct msghdr_t *msg, int flags)
 /*
  * Receive from system call.
  */
-int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen)
+int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen)
 {
 	struct socket_t *sock;
 	struct iovec_t iovec;
@@ -539,7 +539,7 @@ int do_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct socka
 /*
  * Receive a message system call.
  */
-int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
+int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 {
 	struct socket_t *sock;
 	struct file_t *filp;
@@ -564,7 +564,7 @@ int do_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 /*
  * Shutdown system call.
  */
-int do_shutdown(int sockfd, int how)
+int sys_shutdown(int sockfd, int how)
 {
 	struct socket_t *sock;
 
@@ -587,7 +587,7 @@ int do_shutdown(int sockfd, int how)
 /*
  * Get peer name system call.
  */
-int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
+int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
 	struct socket_t *sock;
 
@@ -610,7 +610,7 @@ int do_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 /*
  * Get sock name system call.
  */
-int do_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
+int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
 	struct socket_t *sock;
 
@@ -667,7 +667,7 @@ static int sock_setsockopt(struct socket_t *sock, int optname, void *optval, siz
 /*
  * Get socket options system call.
  */
-int do_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
+int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
 {
 	struct socket_t *sock;
 
@@ -694,7 +694,7 @@ int do_getsockopt(int sockfd, int level, int optname, void *optval, size_t optle
 /*
  * Set socket options system call.
  */
-int do_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
+int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
 {
 	struct socket_t *sock;
 
@@ -721,7 +721,7 @@ int do_setsockopt(int sockfd, int level, int optname, void *optval, size_t optle
 /*
  * Create a pair of connected sockets.
  */
-int do_socketpair(int domain, int type, int protocol, int sv[2])
+int sys_socketpair(int domain, int type, int protocol, int sv[2])
 {
 	struct socket_t *sock1, *sock2;
 	int fd1, fd2, ret;

@@ -9,7 +9,7 @@
 /*
  * Stat64 system call.
  */
-int do_stat64(struct inode_t *inode, struct stat64_t *statbuf)
+static int do_stat64(struct inode_t *inode, struct stat64_t *statbuf)
 {
 	/* memzero statbuf */
 	memset(statbuf, 0, sizeof(struct stat64_t));
@@ -33,9 +33,85 @@ int do_stat64(struct inode_t *inode, struct stat64_t *statbuf)
 }
 
 /*
+ * Stat64 system call.
+ */
+int sys_stat64(const char *pathname, struct stat64_t *statbuf)
+{
+	struct inode_t *inode;
+	int ret;
+
+	/* get inode */
+	inode = namei(AT_FDCWD, NULL, pathname, 1);
+	if (!inode)
+		return -ENOENT;
+
+	/* do stat */
+	ret = do_stat64(inode, statbuf);
+
+	/* release inode */
+	iput(inode);
+	return ret;
+}
+
+/*
+ * Lstat64 system call.
+ */
+int sys_lstat64(const char *pathname, struct stat64_t *statbuf)
+{
+	struct inode_t *inode;
+	int ret;
+
+	/* get inode */
+	inode = namei(AT_FDCWD, NULL, pathname, 0);
+	if (!inode)
+		return -ENOENT;
+
+	/* do stat */
+	ret = do_stat64(inode, statbuf);
+
+	/* release inode */
+	iput(inode);
+	return ret;
+}
+
+/*
+ * Fstat64 system call.
+ */
+int sys_fstat64(int fd, struct stat64_t *statbuf)
+{
+	/* check fd */
+	if (fd >= NR_OPEN || !current_task->files->filp[fd])
+		return -EINVAL;
+
+	/* do stat */
+	return do_stat64(current_task->files->filp[fd]->f_inode, statbuf);
+}
+
+/*
+ * Fstatat64 system call.
+ */
+int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int flags)
+{
+	struct inode_t *inode;
+	int ret;
+
+	/* get inode */
+	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (!inode)
+		return -ENOENT;
+
+	/* do stat */
+	ret = do_stat64(inode, statbuf);
+
+	/* release inode */
+	iput(inode);
+	return ret;
+}
+
+/*
  * Statx system call.
  */
-int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
+int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
 {
 	struct inode_t *inode;
 

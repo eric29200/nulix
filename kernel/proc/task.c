@@ -39,8 +39,8 @@ static void init_entry(struct task_t *task)
 		goto err;
 
 	/* dup stdin, stdout, stderr */
-	do_dup(ret);
-	do_dup(ret);
+	sys_dup(ret);
+	sys_dup(ret);
 
 	/* load init process */
 	ret = sys_execve("/sbin/init", argv, NULL);
@@ -641,4 +641,108 @@ void destroy_task(struct task_t *task)
 
 	/* free task */
 	kfree(task);
+}
+
+/*
+ * Fork system call.
+ */
+pid_t sys_fork()
+{
+	return do_fork(0, 0);
+}
+
+/*
+ * Vfork system call..
+ */
+pid_t sys_vfork()
+{
+	return sys_fork();
+}
+
+/*
+ * Clone system call.
+ */
+int sys_clone(uint32_t flags, uint32_t newsp)
+{
+	return do_fork(flags, newsp);
+}
+
+/*
+ * Copy strings to binary arguments structure.
+ */
+static void copy_strings(struct binargs_t *bargs, char *const argv[], char *const envp[])
+{
+	char *str, *p = bargs->buf;
+	int i;
+
+	/* copy argv */
+	for (i = 0; i < bargs->argc; i++) {
+		str = argv[i];
+		while (*str)
+			*p++ = *str++;
+		*p++ = 0;
+	}
+
+	/* copy envp */
+	for (i = 0; i < bargs->envc; i++) {
+		str = envp[i];
+		while (*str)
+			*p++ = *str++;
+		*p++ = 0;
+	}
+}
+
+/*
+ * Init binary arguments.
+ */
+static int bargs_init(struct binargs_t *bargs, char *const argv[], char *const envp[])
+{
+	int i;
+
+	/* reset barg */
+	memset(bargs, 0, sizeof(struct binargs_t));
+
+	/* get argc */
+	for (i = 0; argv && argv[i]; i++)
+		bargs->argv_len += strlen(argv[i]) + 1;
+	bargs->argc = i;
+
+	/* get envc */
+	for (i = 0; envp && envp[i]; i++)
+		bargs->envp_len += strlen(envp[i]) + 1;
+	bargs->envc = i;
+
+	/* check total size */
+	if (bargs->argv_len + bargs->envp_len > PAGE_SIZE)
+		return -ENOMEM;
+
+	/* allocate buffer */
+	bargs->buf = (char *) kmalloc(bargs->argv_len + bargs->envp_len);
+	if (!bargs->buf)
+		return -ENOMEM;
+
+	return 0;
+}
+
+/*
+ * Execve system call.
+ */
+int sys_execve(const char *path, char *const argv[], char *const envp[])
+{
+	struct binargs_t bargs;
+	int ret;
+
+	/* init binary arguments */
+	ret = bargs_init(&bargs, argv, envp);
+	if (ret)
+		goto out;
+
+	/* copy argv/envp to binary arguments structure */
+	copy_strings(&bargs, argv, envp);
+
+	/* load elf binary */
+	ret = elf_load(path, &bargs);
+out:
+	kfree(bargs.buf);
+	return ret;
 }

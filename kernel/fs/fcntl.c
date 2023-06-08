@@ -19,7 +19,7 @@ static int dupfd(int oldfd, int newfd)
 /*
  * Dup2 system call.
  */
-int do_dup2(int oldfd, int newfd)
+int sys_dup2(int oldfd, int newfd)
 {
 	int ret;
 
@@ -45,7 +45,7 @@ int do_dup2(int oldfd, int newfd)
 /*
  * Dup system call.
  */
-int do_dup(int oldfd)
+int sys_dup(int oldfd)
 {
 	int newfd;
 
@@ -81,7 +81,7 @@ static int dup_after(int oldfd, int min_slot)
 /*
  * Fcntl system call.
  */
-int do_fcntl(int fd, int cmd, unsigned long arg)
+int sys_fcntl(int fd, int cmd, unsigned long arg)
 {
 	struct file_t *filp;
 	int ret = 0;

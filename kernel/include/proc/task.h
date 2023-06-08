@@ -148,4 +148,14 @@ void task_exit_files(struct task_t *task);
 void task_exit_mmap(struct mm_struct *mm);
 void task_release_mmap(struct task_t *task);
 
+
+pid_t sys_fork();
+pid_t sys_vfork();
+int sys_clone(uint32_t flags, uint32_t newsp);
+int sys_execve(const char *path, char *const argv[], char *const envp[]);
+void sys_exit(int status);
+void sys_exit_group(int status);
+pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
+pid_t sys_wait4(pid_t pid, int *wstatus, int options, struct rusage_t *rusage);
+
 #endif

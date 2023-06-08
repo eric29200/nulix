@@ -13,6 +13,7 @@
 #include <fs/iso_i.h>
 #include <proc/wait.h>
 #include <mm/mm.h>
+#include <uio.h>
 #include <time.h>
 
 #define NR_INODE			4096
@@ -243,44 +244,81 @@ int block_write(struct buffer_head_t *bh);
 /* filemap operations */
 int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma);
 
-/* system calls */
-int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags);
+/* generic operations */
 int do_mount_root(dev_t dev, const char *dev_name);
-int do_umount(const char *target, int flags);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(struct file_t *filp);
 ssize_t do_read(struct file_t *filp, char *buf, int count);
 ssize_t do_write(struct file_t *filp, const char *buf, int count);
 off_t do_lseek(struct file_t *filp, off_t offset, int whence);
-int do_pread64(struct file_t *filp, void *buf, size_t count, off_t offset);
-int do_ioctl(int fd, int request, unsigned long arg);
-int do_stat64(struct inode_t *inode, struct stat64_t *statbuf);
-int do_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
-int do_faccessat(int dirfd, const char *pathname, int flags);
-int do_mkdir(int dirfd, const char *pathname, mode_t mode);
-int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
-ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize);
-int do_symlink(const char *target, int newdirfd, const char *linkpath);
-int do_unlink(int dirfd, const char *pathname);
-int do_rmdir(int dirfd, const char *pathname);
-int do_getdents64(int fd, void *dirp, size_t count);
-int do_pipe(int pipefd[2], int flags);
-int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
-int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout);
-int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct kernel_timeval_t *timeout);
-int do_chmod(int dirfd, const char *pathname, mode_t mode);
-int do_chroot(const char *path);
-int do_fchmod(int fd, mode_t mode);
-int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev);
-int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags);
-int do_fchown(int fd, uid_t owner, gid_t group);
 int do_truncate(struct inode_t *inode, off_t length);
-int do_ftruncate(int fd, off_t length);
-int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t *times, int flags);
-int do_fcntl(int fd, int cmd, unsigned long arg);
-int do_dup(int oldfd);
-int do_dup2(int oldfd, int newfd);
-int do_statfs64(struct inode_t *inode, struct statfs64_t *buf);
+
+/* system calls */
+int sys_access(const char *filename, mode_t mode);
+int sys_faccessat(int dirfd, const char *pathname, int flags);
+int sys_faccessat2(int dirfd, const char *pathname, int flags);
+int sys_fadvise64(int fd, off_t offset, off_t len, int advice);
+int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data);
+int sys_umount2(const char *target, int flags);
+int sys_open(const char *pathname, int flags, mode_t mode);
+int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode);
+int sys_creat(const char *pathname, mode_t mode);
+int sys_close(int fd);
+int sys_chmod(const char *pathname, mode_t mode);
+int sys_fchmod(int fd, mode_t mode);
+int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flags);
+int sys_chown(const char *pathname, uid_t owner, gid_t group);
+int sys_fchown(int fd, uid_t owner, gid_t group);
+int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags);
+int sys_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags);
+int sys_chroot(const char *path);
+int sys_chdir(const char *path);
+int sys_fchdir(int fd);
+int sys_getcwd(char *buf, size_t size);
+int sys_dup(int oldfd);
+int sys_dup2(int oldfd, int newfd);
+int sys_fcntl(int fd, int cmd, unsigned long arg);
+int sys_ioctl(int fd, unsigned long request, unsigned long arg);
+int sys_mkdir(const char *filename, mode_t mode);
+int sys_mkdirat(int dirfd, const char *pathname, mode_t mode);
+int sys_link(const char *oldpath, const char *newpath);
+int sys_linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags);
+int sys_symlink(const char *target, const char *linkpath);
+int sys_symlinkat(const char *target, int newdirfd, const char *linkpath);
+int sys_unlink(const char *pathname);
+int sys_unlinkat(int dirfd, const char *pathname, int flags);
+int sys_rmdir(const char *pathname);
+ssize_t sys_readlink(const char *pathname, char *buf, size_t bufsize);
+ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsize);
+int sys_rename(const char *oldpath, const char *newpath);
+int sys_renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath);
+int sys_renameat2(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags);
+int sys_mknod(const char *pathname, mode_t mode, dev_t dev);
+int sys_pipe(int pipefd[2]);
+int sys_pipe2(int pipefd[2], int flags);
+off_t sys_lseek(int fd, off_t offset, int whence);
+int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence);
+int sys_read(int fd, char *buf, int count);
+int sys_write(int fd, const char *buf, int count);
+ssize_t sys_readv(int fd, const struct iovec_t *iov, int iovcnt);
+ssize_t sys_writev(int fd, const struct iovec_t *iov, int iovcnt);
+int sys_pread64(int fd, void *buf, size_t count, off_t offset);
+int sys_copy_file_range(int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, unsigned int flags);
+int sys_getdents64(int fd, void *dirp, size_t count);
+int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout);
+int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval_t *timeout);
+int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout, sigset_t *sigmask);
+int sys_stat64(const char *pathname, struct stat64_t *statbuf);
+int sys_lstat64(const char *pathname, struct stat64_t *statbuf);
+int sys_fstat64(int fd, struct stat64_t *statbuf);
+int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int flags);
+int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf);
+int sys_statfs64(const char *path, size_t size, struct statfs64_t *buf);
+int sys_fstatfs64(int fd, struct statfs64_t *buf);
+int sys_truncate64(const char *pathname, off_t length);
+int sys_ftruncate64(int fd, off_t length);
+int sys_sync();
+int sys_fsync(int fd);
 
 /*
  * Compute block size in bits from block in size in byte.

@@ -251,7 +251,7 @@ int open_namei(int dirfd, struct inode_t *base, const char *pathname, int flags,
 /*
  * Make dir system call.
  */
-int do_mkdir(int dirfd, const char *pathname, mode_t mode)
+static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 {
 	struct inode_t *dir;
 	const char *basename;
@@ -284,9 +284,25 @@ int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 }
 
 /*
+ * Mkdir system call.
+ */
+int sys_mkdir(const char *filename, mode_t mode)
+{
+	return do_mkdir(AT_FDCWD, filename, mode);
+}
+
+/*
+ * Mkdirat system call.
+ */
+int sys_mkdirat(int dirfd, const char *pathname, mode_t mode)
+{
+	return do_mkdir(dirfd, pathname, mode);
+}
+
+/*
  * Link system call (make a new name for a file = hard link).
  */
-int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
+static int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
 {
 	struct inode_t *old_inode, *dir;
 	const char *basename;
@@ -335,9 +351,26 @@ int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath
 }
 
 /*
+ * Link system call (make a new name for a file = hard link).
+ */
+int sys_link(const char *oldpath, const char *newpath)
+{
+	return do_link(AT_FDCWD, oldpath, AT_FDCWD, newpath);
+}
+
+/*
+ * Linkat system call.
+ */
+int sys_linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, int flags)
+{
+	UNUSED(flags);
+	return do_link(olddirfd, oldpath, newdirfd, newpath);
+}
+
+/*
  * Symbolic link system call.
  */
-int do_symlink(const char *target, int newdirfd, const char *linkpath)
+static int do_symlink(const char *target, int newdirfd, const char *linkpath)
 {
 	struct inode_t *dir;
 	const char *basename;
@@ -370,41 +403,25 @@ int do_symlink(const char *target, int newdirfd, const char *linkpath)
 }
 
 /*
- * Unlink system call (remove a file).
+ * Create symbolic link system call.
  */
-int do_unlink(int dirfd, const char *pathname)
+int sys_symlink(const char *target, const char *linkpath)
 {
-	struct inode_t *dir;
-	const char *basename;
-	size_t basename_len;
-	int err;
+	return do_symlink(target, AT_FDCWD, linkpath);
+}
 
-	/* get parent directory */
-	dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
-	if (!dir)
-		return -ENOENT;
-
-	/* check name length */
-	if (!basename_len) {
-		iput(dir);
-		return -ENOENT;
-	}
-
-	/* unlink not implemented */
-	if (!dir->i_op || !dir->i_op->unlink) {
-		iput(dir);
-		return -EPERM;
-	}
-
-	/* unlink file */
-	err = dir->i_op->unlink(dir, basename, basename_len);
-	return err;
+/*
+ * Create symbolic link system call.
+ */
+int sys_symlinkat(const char *target, int newdirfd, const char *linkpath)
+{
+	return do_symlink(target, newdirfd, linkpath);
 }
 
 /*
  * Rmdir system call (remove a directory).
  */
-int do_rmdir(int dirfd, const char *pathname)
+static int do_rmdir(int dirfd, const char *pathname)
 {
 	struct inode_t *dir;
 	const char *basename;
@@ -434,9 +451,68 @@ int do_rmdir(int dirfd, const char *pathname)
 }
 
 /*
+ * Rmdir system call.
+ */
+int sys_rmdir(const char *pathname)
+{
+	return do_rmdir(AT_FDCWD, pathname);
+}
+
+/*
+ * Unlink system call (remove a file).
+ */
+static int do_unlink(int dirfd, const char *pathname)
+{
+	struct inode_t *dir;
+	const char *basename;
+	size_t basename_len;
+	int err;
+
+	/* get parent directory */
+	dir = dir_namei(dirfd, NULL, pathname, &basename, &basename_len);
+	if (!dir)
+		return -ENOENT;
+
+	/* check name length */
+	if (!basename_len) {
+		iput(dir);
+		return -ENOENT;
+	}
+
+	/* unlink not implemented */
+	if (!dir->i_op || !dir->i_op->unlink) {
+		iput(dir);
+		return -EPERM;
+	}
+
+	/* unlink file */
+	err = dir->i_op->unlink(dir, basename, basename_len);
+	return err;
+}
+
+/*
+ * Unlink system call.
+ */
+int sys_unlink(const char *pathname)
+{
+	return do_unlink(AT_FDCWD, pathname);
+}
+
+/*
+ * Unlink at system call.
+ */
+int sys_unlinkat(int dirfd, const char *pathname, int flags)
+{
+	if (flags & AT_REMOVEDIR)
+		return do_rmdir(dirfd, pathname);
+
+	return do_unlink(dirfd, pathname);
+}
+
+/*
  * Read value of a symbolic link.
  */
-ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
+static ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
 {
 	struct inode_t *inode;
 
@@ -456,9 +532,25 @@ ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
 }
 
 /*
+ * Read a symbolic link system call.
+ */
+ssize_t sys_readlink(const char *pathname, char *buf, size_t bufsize)
+{
+	return do_readlink(AT_FDCWD, pathname, buf, bufsize);
+}
+
+/*
+ * Read a symbolic link system call.
+ */
+ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsize)
+{
+	return do_readlink(dirfd, pathname, buf, bufsize);
+}
+
+/*
  * Rename a file.
  */
-int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags)
+static int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags)
 {
 	const char *old_basename, *new_basename;
 	size_t old_basename_len, new_basename_len;
@@ -526,9 +618,33 @@ int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpa
 }
 
 /*
+ * Rename system call.
+ */
+int sys_rename(const char *oldpath, const char *newpath)
+{
+	return do_rename(AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
+}
+
+/*
+ * Rename at system call.
+ */
+int sys_renameat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
+{
+	return do_rename(olddirfd, oldpath, newdirfd, newpath, 0);
+}
+
+/*
+ * Rename at system call.
+ */
+int sys_renameat2(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags)
+{
+	return do_rename(olddirfd, oldpath, newdirfd, newpath, flags);
+}
+
+/*
  * Mknod system call.
  */
-int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
+static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 {
 	const char *basename;
 	size_t basename_len;
@@ -546,4 +662,12 @@ int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 	}
 
 	return dir->i_op->mknod(dir, basename, basename_len, mode, dev);
+}
+
+/*
+ * Mknod system call.
+ */
+int sys_mknod(const char *pathname, mode_t mode, dev_t dev)
+{
+	return do_mknod(AT_FDCWD, pathname, mode, dev);
 }

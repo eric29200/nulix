@@ -236,7 +236,7 @@ static struct inode_t *get_pipe_inode()
 /*
  * Pipe system call.
  */
-int do_pipe(int pipefd[2], int flags)
+static int do_pipe(int pipefd[2], int flags)
 {
 	struct file_t *filps[2];
 	struct inode_t *inode;
@@ -301,4 +301,20 @@ int do_pipe(int pipefd[2], int flags)
 	pipefd[1] = fd[1];
 
 	return 0;
+}
+
+/*
+ * Pipe system call.
+ */
+int sys_pipe(int pipefd[2])
+{
+	return do_pipe(pipefd, 0);
+}
+
+/*
+ * Pipe2 system call.
+ */
+int sys_pipe2(int pipefd[2], int flags)
+{
+	return do_pipe(pipefd, flags);
 }

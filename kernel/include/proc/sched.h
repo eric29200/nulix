@@ -61,4 +61,21 @@ int task_signal(pid_t pid, int sig);
 int task_signal_group(pid_t pgrp, int sig);
 int task_signal_all(int sig);
 
+pid_t sys_getpid();
+pid_t sys_getppid();
+pid_t sys_getpgid(pid_t pid);
+pid_t sys_gettid();
+uid_t sys_getuid();
+gid_t sys_getgid();
+gid_t sys_getegid();
+uid_t sys_geteuid();
+int sys_getsid(pid_t pid);
+int sys_setpgid(pid_t pid, pid_t pgid);
+int sys_setuid(uid_t uid);
+int sys_setgid(gid_t gid);
+int sys_setsid();
+int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid);
+int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid);
+int sys_setgroups(size_t size, const gid_t *list);
+
 #endif

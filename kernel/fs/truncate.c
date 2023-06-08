@@ -25,9 +25,29 @@ int do_truncate(struct inode_t *inode, off_t length)
 }
 
 /*
+ * Truncate system call.
+ */
+int sys_truncate64(const char *pathname, off_t length)
+{
+	struct inode_t *inode;
+	int ret;
+
+	/* get inode */
+	inode = namei(AT_FDCWD, NULL, pathname, 1);
+	if (!inode)
+		return -ENOENT;
+
+	/* truncate */
+	ret = do_truncate(inode, length);
+
+	iput(inode);
+	return ret;
+}
+
+/*
  * File truncate system call.
  */
-int do_ftruncate(int fd, off_t length)
+static int do_ftruncate(int fd, off_t length)
 {
 	struct inode_t *inode;
 
@@ -39,4 +59,12 @@ int do_ftruncate(int fd, off_t length)
 	inode = current_task->files->filp[fd]->f_inode;
 
 	return do_truncate(inode, length);
+}
+
+/*
+ * File truncate system call.
+ */
+int sys_ftruncate64(int fd, off_t length)
+{
+	return do_ftruncate(fd, length);
 }

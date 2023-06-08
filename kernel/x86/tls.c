@@ -13,7 +13,7 @@ void load_tls()
 /*
  * Get thread area.
  */
-int do_get_thread_area(struct user_desc_t *u_info)
+int sys_get_thread_area(struct user_desc_t *u_info)
 {
 	int idx = u_info->entry_number;
 
@@ -30,7 +30,7 @@ int do_get_thread_area(struct user_desc_t *u_info)
 /*
  * Set thread area.
  */
-int do_set_thread_area(struct user_desc_t *u_info)
+int sys_set_thread_area(struct user_desc_t *u_info)
 {
 	int idx = u_info->entry_number;
 
@@ -50,4 +50,13 @@ int do_set_thread_area(struct user_desc_t *u_info)
 	load_tls();
 
 	return 0;
+}
+
+/*
+ * Set pointer to thread id system call.
+ */
+pid_t sys_set_tid_address(int *tidptr)
+{
+	UNUSED(tidptr);
+	return current_task->pid;
 }

@@ -19,8 +19,9 @@ struct user_desc_t {
 };
 
 
-int do_get_thread_area(struct user_desc_t *u_info);
-int do_set_thread_area(struct user_desc_t *u_info);
 void load_tls();
+int sys_get_thread_area(struct user_desc_t *u_info);
+int sys_set_thread_area(struct user_desc_t *u_info);
+pid_t sys_set_tid_address(int *tidptr);
 
 #endif

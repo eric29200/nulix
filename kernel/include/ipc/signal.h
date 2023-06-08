@@ -130,10 +130,13 @@ static inline void sigdelsetmask(sigset_t *set, unsigned long mask)
 	*set &= ~mask;
 }
 
-int do_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact);
-int do_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
-int do_sigreturn();
-int do_sigsuspend(sigset_t *newset);
-int do_signal(struct registers_t *regs);
+int do_signal(struct registers_t *regs);;
+int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
+int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
+int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact);
+int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+int sys_sigreturn();
+int sys_kill(pid_t pid, int sig);
+int sys_tkill(pid_t pid, int sig);
 
 #endif

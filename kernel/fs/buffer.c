@@ -362,6 +362,26 @@ void bsync_dev(dev_t dev)
 }
 
 /*
+ * Sync system call.
+ */
+int sys_sync()
+{
+	/* sync all buffers */
+	bsync();
+
+	return 0;
+}
+
+/*
+ * Fsync system call (don't do anything because all block buffers should be clean).
+ */
+int sys_fsync(int fd)
+{
+	UNUSED(fd);
+	return 0;
+}
+
+/*
  * Read a page.
  */
 int generic_readpage(struct inode_t *inode, struct page_t *page)

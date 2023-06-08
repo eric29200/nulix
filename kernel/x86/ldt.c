@@ -1,4 +1,4 @@
-#include <sys/syscall.h>
+#include <stdio.h>
 
 /*
  * Modify ldt entry system call.

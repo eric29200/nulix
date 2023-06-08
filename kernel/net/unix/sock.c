@@ -349,7 +349,7 @@ static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 			return -EADDRINUSE;
 	} else {
 		/* create socket file */
-		ret = do_mknod(AT_FDCWD, sunaddr->sun_path, S_IFSOCK | S_IRWXUGO, 0);
+		ret = sys_mknod(sunaddr->sun_path, S_IFSOCK | S_IRWXUGO, 0);
 		if (ret)
 			return ret;
 

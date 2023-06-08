@@ -65,4 +65,6 @@ struct ipc_perm_t *ipc_rm_id(int id);
 int ipc_build_id(int id, int seq);
 struct ipc_perm_t *ipc_get(int id);
 
+int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fifth);
+
 #endif

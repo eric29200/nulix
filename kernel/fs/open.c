@@ -94,6 +94,30 @@ err:
 }
 
 /*
+ * Open system call.
+ */
+int sys_open(const char *pathname, int flags, mode_t mode)
+{
+	return do_open(AT_FDCWD, pathname, flags, mode);
+}
+
+/*
+ * Creat system call.
+ */
+int sys_creat(const char *pathname, mode_t mode)
+{
+	return do_open(AT_FDCWD, pathname, O_CREAT | O_TRUNC, mode);
+}
+
+/*
+ * Openat system call.
+ */
+int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode)
+{
+	return do_open(dirfd, pathname, flags, mode);
+}
+
+/*
  * Close system call.
  */
 int do_close(struct file_t *filp)
@@ -121,9 +145,30 @@ int do_close(struct file_t *filp)
 }
 
 /*
+ * Close system call.
+ */
+int sys_close(int fd)
+{
+	int ret;
+
+	/* check file descriptor */
+	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd])
+		return -EINVAL;
+
+	/* close file */
+	ret = do_close(current_task->files->filp[fd]);
+	if (ret)
+		return ret;
+
+	FD_CLR(fd, &current_task->files->close_on_exec);
+	current_task->files->filp[fd] = NULL;
+	return 0;
+}
+
+/*
  * Chmod system call.
  */
-int do_chmod(int dirfd, const char *pathname, mode_t mode)
+static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 {
 	struct inode_t *inode;
 
@@ -145,9 +190,17 @@ int do_chmod(int dirfd, const char *pathname, mode_t mode)
 }
 
 /*
+ * Chmod system call.
+ */
+int sys_chmod(const char *pathname, mode_t mode)
+{
+	return do_chmod(AT_FDCWD, pathname, mode);
+}
+
+/*
  * Fchmod system call.
  */
-int do_fchmod(int fd, mode_t mode)
+static int do_fchmod(int fd, mode_t mode)
 {
 	struct inode_t *inode;
 
@@ -170,9 +223,26 @@ int do_fchmod(int fd, mode_t mode)
 }
 
 /*
+ * Fchmod system call.
+ */
+int sys_fchmod(int fd, mode_t mode)
+{
+	return do_fchmod(fd, mode);
+}
+
+/*
+ * Fchmodat system call.
+ */
+int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flags)
+{
+	UNUSED(flags);
+	return do_chmod(dirfd, pathname, mode);
+}
+
+/*
  * Chown system call.
  */
-int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags)
+static int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags)
 {
 	struct inode_t *inode;
 
@@ -191,9 +261,17 @@ int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned
 }
 
 /*
+ * Chown system call.
+ */
+int sys_chown(const char *pathname, uid_t owner, gid_t group)
+{
+	return do_chown(AT_FDCWD, pathname, owner, group, 0);
+}
+
+/*
  * Fchown system call.
  */
-int do_fchown(int fd, uid_t owner, gid_t group)
+static int do_fchown(int fd, uid_t owner, gid_t group)
 {
 	struct inode_t *inode;
 
@@ -211,9 +289,25 @@ int do_fchown(int fd, uid_t owner, gid_t group)
 }
 
 /*
+ * Fchown system call.
+ */
+int sys_fchown(int fd, uid_t owner, gid_t group)
+{
+	return do_fchown(fd, owner, group);
+}
+
+/*
+ * Fchownat system call.
+ */
+int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags)
+{
+	return do_chown(dirfd, pathname, owner, group, flags);
+}
+
+/*
  * Utimensat system call.
  */
-int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t *times, int flags)
+static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t *times, int flags)
 {
 	struct inode_t *inode;
 
@@ -238,9 +332,25 @@ int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t *times
 }
 
 /*
+ * Utimensat system call.
+ */
+int sys_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags)
+{
+	struct kernel_timeval_t ktimes[2];
+
+	/* convert times to kernel timevals */
+	if (times) {
+		timespec_to_kernel_timeval(&times[0], &ktimes[0]);
+		timespec_to_kernel_timeval(&times[1], &ktimes[1]);
+	}
+
+	return do_utimensat(dirfd, pathname, times ? ktimes : NULL, flags);
+}
+
+/*
  * Chroot system call.
  */
-int do_chroot(const char *path)
+int sys_chroot(const char *path)
 {
 	struct inode_t *inode;
 

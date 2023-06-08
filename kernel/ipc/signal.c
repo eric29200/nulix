@@ -8,31 +8,9 @@
 extern void return_user_mode(struct registers_t *regs);
 
 /*
- * Change action taken by a process on receipt of a signal.
- */
-int do_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact)
-{
-	if (signum <= 0 || signum > NSIGS)
-		return -EINVAL;
-
-	/* SIGSTOP and SIGKILL actions can't be redefined */
-	if (signum == SIGSTOP || signum == SIGKILL)
-		return -EINVAL;
-
-	/* save old action */
-	if (oldact)
-		*oldact = current_task->sig->action[signum - 1];
-
-	/* set new action */
-	current_task->sig->action[signum - 1] = *act;
-
-	return 0;
-}
-
-/*
  * Change blocked signals.
  */
-int do_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
+static int do_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 {
 	/* save current sigset */
 	if (oldset)
@@ -54,16 +32,6 @@ int do_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	return 0;
 }
 
-/*
- * Signal return .
- */
-int do_sigreturn()
-{
-	/* restore saved registers before signal handler */
-	memcpy(&current_task->user_regs, &current_task->signal_regs, sizeof(struct registers_t));
-
-	return 0;
-}
 
 /*
  * Signal return trampoline (this code is executed in user mode).
@@ -76,29 +44,6 @@ static int sigreturn()
 	__asm__ __volatile__("int $0x80" : "=a" (ret) : "0" (__NR_sigreturn));
 
 	return ret;
-}
-
-/*
- * Wait for signal.
- */
-int do_sigsuspend(sigset_t *newset)
-{
-	struct registers_t *regs = (struct registers_t *) &newset;
-
-	/* set new sigmask */
-	current_task->saved_sigmask = current_task->sigmask;
-	sigdelsetmask(newset, ~BLOCKABLE);
-	current_task->sigmask = *newset;
-
-	/* wait for signal */
-	regs->eax = -EINTR;
-	for (;;) {
-		current_task->state = TASK_SLEEPING;
-		schedule();
-
-		if (do_signal(regs))
-			return -EINTR;
-	}
 }
 
 /*
@@ -178,4 +123,116 @@ out:
 	}
 
 	return 0;
+}
+
+/*
+ * Wait for a signal system call.
+ */
+int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
+{
+	struct registers_t *regs = (struct registers_t *) &newset;
+
+	UNUSED(sigsetsize);
+
+	/* set new sigmask */
+	current_task->saved_sigmask = current_task->sigmask;
+	sigdelsetmask(newset, ~BLOCKABLE);
+	current_task->sigmask = *newset;
+
+	/* wait for signal */
+	regs->eax = -EINTR;
+	for (;;) {
+		current_task->state = TASK_SLEEPING;
+		schedule();
+
+		if (do_signal(regs))
+			return -EINTR;
+	}
+}
+
+/*
+ * Sigaction system call (= change action taken by a process on receipt of a specific signal).
+ */
+int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact)
+{
+	if (signum <= 0 || signum > NSIGS)
+		return -EINVAL;
+
+	/* SIGSTOP and SIGKILL actions can't be redefined */
+	if (signum == SIGSTOP || signum == SIGKILL)
+		return -EINVAL;
+
+	/* save old action */
+	if (oldact)
+		*oldact = current_task->sig->action[signum - 1];
+
+	/* set new action */
+	current_task->sig->action[signum - 1] = *act;
+
+	return 0;
+}
+
+/*
+ * Change blocked signals system call.
+ */
+int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize)
+{
+	UNUSED(sigsetsize);
+	return do_sigprocmask(how, set, oldset);
+}
+
+/*
+ * Change blocked signals system call.
+ */
+int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
+{
+	return do_sigprocmask(how, set, oldset);
+}
+
+/*
+ * Signal return system call.
+ */
+int sys_sigreturn()
+{
+	/* restore saved registers before signal handler */
+	memcpy(&current_task->user_regs, &current_task->signal_regs, sizeof(struct registers_t));
+
+	return 0;
+}
+
+/*
+ * Kill system call (send a signal to a process).
+ */
+int sys_kill(pid_t pid, int sig)
+{
+	/* check signal number (0 is ok : means check permission but do not send signal) */
+	if (sig < 0 || sig >= NSIGS)
+		return -EINVAL;
+
+	/* send signal to process identified by pid */
+	if (pid > 0)
+		return task_signal(pid, sig);
+
+	/* send signal to all processes in the group of current task */
+	if (pid == 0)
+		return task_signal_group(current_task->pgrp, sig);
+
+	/* send signal to all processes (except init) */
+	if (pid == -1)
+		task_signal_all(sig);
+
+	/* signal to all processes in the group -pid */
+	return task_signal_group(-pid, sig);
+}
+
+/*
+ * Thread kill system call (send a signal to a process).
+ */
+int sys_tkill(pid_t pid, int sig)
+{
+	/* only valid for single tasks */
+	if (pid <= 0)
+		return -EINVAL;
+
+	return sys_kill(pid, sig);
 }

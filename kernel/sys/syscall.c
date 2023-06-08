@@ -1,7 +1,11 @@
 #include <sys/syscall.h>
-#include <x86/interrupt.h>
 #include <proc/sched.h>
-#include <string.h>
+#include <fs/fs.h>
+#include <net/socket.h>
+#include <ipc/ipc.h>
+#include <sys/sys.h>
+#include <x86/ldt.h>
+#include <x86/tls.h>
 #include <stdio.h>
 
 /* system calls table */

@@ -410,3 +410,115 @@ void vmtruncate(struct inode_t *inode, off_t offset)
 	if (!list_empty(&inode->i_mmap))
 		printf("vmtruncate() not implemented");
 }
+
+/*
+ * Memory map system call.
+ */
+void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+{
+	struct file_t *filp = NULL;
+
+	/* get file */
+	if (fd >= 0) {
+		if (fd >= NR_OPEN || !current_task->files->filp[fd])
+			return NULL;
+
+		filp = current_task->files->filp[fd];
+	}
+
+	return do_mmap((uint32_t) addr, length, prot, flags, filp, offset);
+}
+
+/*
+ * Memory map 2 system call.
+ */
+void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
+{
+	struct file_t *filp = NULL;
+
+	/* get file */
+	if (fd >= 0) {
+		if (fd >= NR_OPEN || !current_task->files->filp[fd])
+			return NULL;
+
+		filp = current_task->files->filp[fd];
+	}
+
+	return do_mmap((uint32_t) addr, length, prot, flags, filp, pgoffset * PAGE_SIZE);
+}
+
+/*
+ * Memory unmap system call.
+ */
+int sys_munmap(void *addr, size_t length)
+{
+	return do_munmap((uint32_t) addr, length);
+}
+
+/*
+ * Memory region remap system call.
+ */
+void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address)
+{
+	return do_mremap((uint32_t) old_address, old_size, new_size, flags, (uint32_t) new_address);
+}
+
+/*
+ * Madvise system call.
+ */
+int sys_madvise(void *addr, size_t length, int advice)
+{
+	UNUSED(addr);
+	UNUSED(length);
+	UNUSED(advice);
+	return 0;
+}
+
+/*
+ * Mprotect system call.
+ */
+int sys_mprotect(void *addr, size_t len, int prot)
+{
+	UNUSED(addr);
+	UNUSED(len);
+	UNUSED(prot);
+	return 0;
+}
+
+/*
+ * Change data segment end address.
+ */
+uint32_t sys_brk(uint32_t brk)
+{
+	uint32_t newbrk, oldbrk;
+
+	/* current brk is asked */
+	if (brk < current_task->mm->end_text)
+		goto out;
+
+	/* grow brk, without new page */
+	newbrk = PAGE_ALIGN_UP(brk);
+	oldbrk = PAGE_ALIGN_UP(current_task->mm->end_brk);
+	if (oldbrk == newbrk)
+		goto set_brk;
+
+	/* shrink brk */
+	if (brk <= current_task->mm->end_brk) {
+		if (do_munmap(newbrk, oldbrk - newbrk) == 0)
+			goto set_brk;
+		goto out;
+	}
+
+	/* check against existing mapping */
+	if (find_vma_intersection(current_task, oldbrk, newbrk + PAGE_SIZE))
+		goto out;
+
+	/* map new pages */
+	if (do_mmap(oldbrk, newbrk - oldbrk, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0) != (void *) oldbrk)
+		goto out;
+
+set_brk:
+	current_task->mm->end_brk = brk;
+out:
+	return current_task->mm->end_brk;
+}

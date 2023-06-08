@@ -1,5 +1,5 @@
-#include <sys/syscall.h>
-#include <mm/mm.h>
+#include <fs/fs.h>
+#include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
 

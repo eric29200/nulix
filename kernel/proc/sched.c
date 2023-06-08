@@ -362,3 +362,192 @@ int task_signal_all(int sig)
 
 	return 0;
 }
+
+/*
+ * Get pid system call.
+ */
+pid_t sys_getpid()
+{
+	return current_task->pid;
+}
+
+/*
+ * Get parent pid system call.
+ */
+pid_t sys_getppid()
+{
+	if (current_task->parent)
+		return current_task->parent->pid;
+
+	/* init process : no father */
+	return current_task->pid;
+}
+
+/*
+ * Get process group id system call.
+ */
+pid_t sys_getpgid(pid_t pid)
+{
+	struct task_t *task;
+
+	/* get matching task or current task */
+	if (pid == 0)
+		task = current_task;
+	else
+		task = get_task(pid);
+
+	/* no matching task */
+	if (task == NULL)
+		return -1;
+
+	/* get process group id */
+	return task->pgrp;
+}
+
+/*
+ * Get thread id system call.
+ */
+pid_t sys_gettid()
+{
+	return current_task->pid;
+}
+
+/*
+ * Get user id system call.
+ */
+uid_t sys_getuid()
+{
+	return current_task->uid;
+}
+
+/*
+ * Get group id system call.
+ */
+gid_t sys_getgid()
+{
+	return current_task->gid;
+}
+
+/*
+ * Get effective group id system call.
+ */
+gid_t sys_getegid()
+{
+	return current_task->egid;
+}
+
+/*
+ * Get effective user id system call.
+ */
+uid_t sys_geteuid()
+{
+	return current_task->euid;
+}
+
+/*
+ * Get session id system call.
+ */
+int sys_getsid(pid_t pid)
+{
+	struct task_t *task;
+
+	/* return current session */
+	if (!pid)
+		return current_task->session;
+
+	/* return matching process session */
+	task = find_task(pid);
+	if (task)
+		return task->session;
+
+	return -ESRCH;
+}
+
+/*
+ * Set process group id system call.
+ */
+int sys_setpgid(pid_t pid, pid_t pgid)
+{
+	struct task_t *task;
+
+	/* get matching task or current task */
+	if (pid == 0)
+		task = current_task;
+	else
+		task = get_task(pid);
+
+	/* no matching task */
+	if (task == NULL)
+		return -1;
+
+	/* set process group id (if pgid = 0, set task process group id to its pid */
+	if (pgid == 0)
+		task->pgrp = task->pid;
+	else
+		task->pgrp = pgid;
+
+	return 0;
+}
+
+/*
+ * Set user id system call.
+ */
+int sys_setuid(uid_t uid)
+{
+	current_task->uid = uid;
+	return 0;
+}
+
+/*
+ * Set group id system call.
+ */
+int sys_setgid(gid_t gid)
+{
+	current_task->gid = gid;
+	return 0;
+}
+
+/*
+ * Set session id system call.
+ */
+int sys_setsid()
+{
+	current_task->leader = 1;
+	current_task->pgrp = current_task->pid;
+	current_task->session = current_task->pid;
+	current_task->tty = NULL;
+
+	return current_task->session;
+}
+
+/*
+ * Set gid system call.
+ */
+int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
+{
+	UNUSED(rgid);
+	UNUSED(egid);
+	UNUSED(sgid);
+	return 0;
+}
+
+/*
+ * Set uid system call.
+ */
+int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
+{
+	UNUSED(ruid);
+	UNUSED(euid);
+	UNUSED(suid);
+	return 0;
+}
+
+/*
+ * Set groups system call.
+ */
+int sys_setgroups(size_t size, const gid_t *list)
+{
+	UNUSED(size);
+	UNUSED(list);
+	return 0;
+}

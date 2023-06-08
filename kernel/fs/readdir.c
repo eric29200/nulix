@@ -6,7 +6,7 @@
 /*
  * Get directory entries system call.
  */
-int do_getdents64(int fd, void *dirp, size_t count)
+static int do_getdents64(int fd, void *dirp, size_t count)
 {
 	struct file_t *filp;
 
@@ -40,4 +40,13 @@ int filldir(struct dirent64_t *dirent, const char *name, size_t name_len, ino_t 
 	dirent->d_name[name_len] = 0;
 
 	return 0;
+}
+
+/*
+ * Get directory entries system call.
+ */
+
+int sys_getdents64(int fd, void *dirp, size_t count)
+{
+	return do_getdents64(fd, dirp, count);
 }

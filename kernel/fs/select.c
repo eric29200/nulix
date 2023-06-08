@@ -57,7 +57,7 @@ static void do_pollfd(struct pollfd_t *fds, int *count, struct select_table_t *w
 /*
  * Poll system call.
  */
-int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
+static int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 {
 	struct select_table_t wait_table, *wait;
 	struct select_table_entry_t *entry;
@@ -106,6 +106,14 @@ int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 }
 
 /*
+ * Poll system call.
+ */
+int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout)
+{
+	return do_poll(fds, nfds, timeout);
+}
+
+/*
  * Check events on a file.
  */
 static int __select_check(int fd, uint16_t mask, struct select_table_t *wait)
@@ -127,7 +135,7 @@ static int __select_check(int fd, uint16_t mask, struct select_table_t *wait)
 /*
  * Select system call.
  */
-int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct kernel_timeval_t *timeout)
+static int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct kernel_timeval_t *timeout)
 {
 	fd_set_t res_readfds, res_writefds, res_exceptfds;
 	struct select_table_t wait_table, *wait;
@@ -252,4 +260,53 @@ end_check:
 		return -EINTR;
 
 	return count;
+}
+
+/*
+ * Select system call.
+ */
+int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval_t *timeout)
+{
+	struct kernel_timeval_t tv;
+
+	if (timeout)
+		old_timeval_to_kernel_timeval(timeout, &tv);
+
+	return do_select(nfds, readfds, writefds, exceptfds, timeout ? &tv : NULL);
+}
+
+/*
+ * Pselect6 system call.
+ */
+int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout, sigset_t *sigmask)
+{
+	struct kernel_timeval_t tv;
+	sigset_t current_sigmask;
+	int ret;
+
+	/* handle sigmask */
+	if (sigmask) {
+		/* save current sigmask */
+		current_sigmask = current_task->sigmask;
+
+		/* set new sigmask (do not mask SIGKILL and SIGSTOP) */
+		current_task->sigmask = *sigmask;
+		sigdelset(&current_task->sigmask, SIGKILL);
+		sigdelset(&current_task->sigmask, SIGSTOP);
+	}
+
+	/* convert timespec to kernel timeval */
+	if (timeout)
+		timespec_to_kernel_timeval(timeout, &tv);
+
+	/* select */
+	ret = do_select(nfds, readfds, writefds, exceptfds, timeout ? &tv : NULL);
+
+	/* restore sigmask and delete masked pending signals */
+	if (ret == -EINTR && sigmask)
+		current_task->saved_sigmask = current_sigmask;
+	else if (sigmask)
+		current_task->sigmask = current_sigmask;
+
+	return ret;
 }

@@ -39,4 +39,12 @@ struct vm_area_t *find_vma_next(struct task_t *task, uint32_t addr);
 struct vm_area_t *find_vma_intersection(struct task_t *task, uint32_t start, uint32_t end);
 void vmtruncate(struct inode_t *inode, off_t offset);
 
+void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset);
+int sys_munmap(void *addr, size_t length);
+void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address);
+int sys_madvise(void *addr, size_t length, int advice);
+int sys_mprotect(void *addr, size_t len, int prot);
+uint32_t sys_brk(uint32_t brk);
+
 #endif
