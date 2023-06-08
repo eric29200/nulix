@@ -3,7 +3,6 @@ ISO		= nulix.iso
 NJOBS		= $(shell nproc)
 MEM_SIZE	= 512M
 DISK		= hda.img
-DISK_MINE	= hda_mine.img
 QEMU		= kvm
 args		= `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
