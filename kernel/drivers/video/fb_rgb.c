@@ -241,6 +241,27 @@ static int fb_rgb_get_var(struct framebuffer_t *fb, struct fb_var_screeninfo *va
 }
 
 /*
+ * Put framebuffer variable informations.
+ */
+static int fb_rgb_put_var(struct framebuffer_t *fb, struct fb_var_screeninfo *var)
+{
+	/* set informations */
+	fb->real_width = var->xres;
+	fb->real_height = var->yres;
+	fb->real_width = var->xres_virtual;
+	fb->real_height = var->yres_virtual;
+	fb->bpp = var->bits_per_pixel;
+	fb->tag_fb->framebuffer_red_field_position = var->red.offset;
+	fb->tag_fb->framebuffer_red_mask_size = var->red.length;
+	fb->tag_fb->framebuffer_green_field_position = var->green.offset;
+	fb->tag_fb->framebuffer_green_mask_size = var->green.length;
+	fb->tag_fb->framebuffer_blue_field_position = var->blue.offset;
+	fb->tag_fb->framebuffer_blue_mask_size = var->blue.length;
+
+	return 0;
+}
+
+/*
  * RGB frame buffer operations.
  */
 struct framebuffer_ops_t fb_rgb_ops = {
@@ -252,4 +273,5 @@ struct framebuffer_ops_t fb_rgb_ops = {
 	.show_cursor		= fb_rgb_show_cursor,
 	.get_fix		= fb_rgb_get_fix,
 	.get_var		= fb_rgb_get_var,
+	.put_var		= fb_rgb_put_var,
 };

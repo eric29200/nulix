@@ -121,6 +121,7 @@ struct framebuffer_ops_t {
 	void			(*show_cursor)(struct framebuffer_t *, int);
 	int			(*get_fix)(struct framebuffer_t *, struct fb_fix_screeninfo *);
 	int			(*get_var)(struct framebuffer_t *, struct fb_var_screeninfo *);
+	int			(*put_var)(struct framebuffer_t *, struct fb_var_screeninfo *);
 };
 
 /*
