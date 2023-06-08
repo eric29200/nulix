@@ -42,7 +42,7 @@ function download_port() {
 		SRC_DIR=$SRC_FILENAME
 	else
 		mkdir -p build/src ; cd build/src
-		#wget -c $URL -O $SRC_FILENAME
+		wget -c $URL -O $SRC_FILENAME
 	fi
 
 	# go back to build directory
