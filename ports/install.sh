@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("pkgconf" "libncurses" "termcap" "zlib" "openssl" "libpng" "expat" "freetype2" "fontconfig" "util-linux")
+BASE_PORTS=("pkgconf" "libncurses" "termcap" "zlib" "openssl" "libpng" "expat" "freetype2" "fontconfig" "util-linux" "tinyx")
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
@@ -42,7 +42,7 @@ function download_port() {
 		SRC_DIR=$SRC_FILENAME
 	else
 		mkdir -p build/src ; cd build/src
-		wget -c $URL -O $SRC_FILENAME
+		#wget -c $URL -O $SRC_FILENAME
 	fi
 
 	# go back to build directory
@@ -60,21 +60,21 @@ function extract_port() {
 	fi
 
 	# create build directory
-	rm -rf $PORT
-	mkdir -p $PORT
+	#rm -rf $PORT
+	#mkdir -p $PORT
 	cd $PORT
 
 	# extract sources
 	SRC_EXTENSION=`echo $SRC_FILENAME | awk -F '.' '{ print $(NF-1)"."$NF }'`
 	SRC_EXTENSION1=`echo $SRC_FILENAME | awk -F '.' '{ print $NF }'`
 	if [[ $SRC_EXTENSION == "tar.gz" || $SRC_EXTENSION1 == "tgz" ]]; then
-		tar -xzvf "../src/"$SRC_FILENAME
+		#tar -xzvf "../src/"$SRC_FILENAME
 		SRC_DIR=`tar --list -zf "../src/"$SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	elif [[ $SRC_EXTENSION == "tar.bz2" ]]; then
-		tar -xjvf "../src/"$SRC_FILENAME
+		#tar -xjvf "../src/"$SRC_FILENAME
 		SRC_DIR=`tar --list -jf "../src/"$SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	elif [[ $SRC_EXTENSION == "tar.xz" ]]; then
-		tar -xvf "../src/"$SRC_FILENAME
+		#tar -xvf "../src/"$SRC_FILENAME
 		SRC_DIR=`tar --list -f "../src/"$SRC_FILENAME | head -1 | awk -F '/' '{ print $1 }'`
 	else
 		echo "Error : cannot extract file $SRC_FILENAME"
@@ -166,6 +166,13 @@ fi
 # for each port
 for PORT in ${PORTS[@]}; do
 	cd $BASE_DIR
+
+	# specific script for tinyx
+	if [[ $PORT == "tinyx" ]]; then
+		cd ../
+		./ports/install_tinyx.sh
+		continue
+	fi
 
 	# download and extract
 	check_port
