@@ -85,6 +85,7 @@ int do_signal(struct registers_t *regs)
 				current_task->state = TASK_STOPPED;
 				current_task->exit_code = sig;
 				task_wakeup_all(&current_task->parent->wait_child_exit);
+				schedule();
 				goto out;
 			default:
 				sys_exit(sig);
