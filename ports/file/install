@@ -1,6 +1,6 @@
 VERSION="5.41"
 SRC_FILENAME="file-"$VERSION".tar.gz"
-URL="http://ftp.astron.com/pub/file/"$SRC_FILENAME
+URL="ftp://ftp.astron.com/pub/file/"$SRC_FILENAME
 
 function configure_port() {
 	./configure								\
