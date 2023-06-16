@@ -149,7 +149,6 @@ static const void *syscalls[] = {
 	[__NR_ipc]			= sys_ipc,
 	[__NR_setresuid]		= sys_setresuid,
 	[__NR_setresgid]		= sys_setresgid,
-	[__NR_socketpair]		= sys_socketpair,
 	[__NR_rt_sigsuspend]		= sys_rt_sigsuspend,
 	[__NR_tkill]			= sys_tkill,
 };

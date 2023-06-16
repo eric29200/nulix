@@ -129,7 +129,6 @@
 #define __NR_renameat2			353
 #define __NR_getrandom			355
 #define __NR_socket			359
-#define __NR_socketpair			360
 #define __NR_bind			361
 #define __NR_connect			362
 #define __NR_listen			363
