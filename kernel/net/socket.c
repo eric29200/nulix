@@ -8,9 +8,6 @@
 #include <fcntl.h>
 #include <uio.h>
 
-/* sockets table */
-static struct socket_t sockets[NR_SOCKETS];
-
 /* socket file operations */
 struct file_operations_t socket_fops;
 
@@ -19,28 +16,27 @@ struct file_operations_t socket_fops;
  */
 static struct socket_t *sock_alloc()
 {
-	int i;
-
-	/* find a free socket */
-	for (i = 0; i < NR_SOCKETS; i++)
-		if (sockets[i].state == SS_FREE)
-			break;
-
-	/* no free sockets */
-	if (i >= NR_SOCKETS)
-		return NULL;
-
-	/* reset socket */
-	memset(&sockets[i], 0, sizeof(struct socket_t));
+	struct inode_t *inode;
+	struct socket_t *sock;
 
 	/* get an empty inode */
-	sockets[i].inode = get_empty_inode(NULL);
-	if (!sockets[i].inode) {
-		sockets[i].state = SS_FREE;
+	inode = get_empty_inode(NULL);
+	if (!inode)
 		return NULL;
-	}
 
-	return &sockets[i];
+	/* set inode */
+	inode->i_mode = S_IFSOCK;
+	inode->i_sock = 1;
+	inode->i_uid = current_task->uid;
+	inode->i_gid = current_task->gid;
+
+	/* set socket */
+	sock = &inode->u.socket_i;
+	memset(sock, 0, sizeof(struct socket_t));
+	sock->state = SS_UNCONNECTED;
+	sock->inode = inode;
+
+	return sock;
 }
 
 /*
@@ -54,6 +50,9 @@ static void sock_release(struct socket_t *sock)
 
 	/* mark socket free */
 	sock->state = SS_FREE;
+
+	/* release inode */
+	iput(sock->inode);
 }
 
 /*
@@ -94,28 +93,10 @@ static int get_fd(struct inode_t *inode)
 }
 
 /*
- * Find socket on an inode.
- */
-static struct socket_t *sock_lookup(struct inode_t *inode)
-{
-	int i;
-
-	if (!inode)
-		return NULL;
-
-	for (i = 0; i < NR_SOCKETS; i++)
-		if (sockets[i].inode == inode)
-			return &sockets[i];
-
-	return NULL;
-}
-
-/*
  * Find socket on a file descriptor.
  */
 static struct socket_t *sockfd_lookup(int fd, struct file_t **filpp, int *err)
 {
-	struct socket_t *sock;
 	struct file_t *filp;
 
 	/* check file descriptor */
@@ -124,10 +105,9 @@ static struct socket_t *sockfd_lookup(int fd, struct file_t **filpp, int *err)
 		return NULL;
 	}
 
-	/* get socket */
+	/* get file */
 	filp = current_task->files->filp[fd];
-	sock = sock_lookup(filp->f_inode);
-	if (!sock) {
+	if (!filp->f_inode || !filp->f_inode->i_sock) {
 		*err = -ENOTSOCK;
 		return NULL;
 	}
@@ -136,7 +116,7 @@ static struct socket_t *sockfd_lookup(int fd, struct file_t **filpp, int *err)
 	if (filpp)
 		*filpp = filp;
 
-	return sock;
+	return &filp->f_inode->u.socket_i;
 }
 
 /*
@@ -144,22 +124,13 @@ static struct socket_t *sockfd_lookup(int fd, struct file_t **filpp, int *err)
  */
 static int sock_close(struct file_t *filp)
 {
-	struct socket_t *sock;
-	int err = 0;
+	if (!filp->f_inode)
+		return 0;
 
-	/* get socket */
-	sock = sock_lookup(filp->f_inode);
-	if (!sock)
-		return -EINVAL;
+	/* release socket */
+	sock_release(&filp->f_inode->u.socket_i);
 
-	/* close protocol operation */
-	if (sock->ops && sock->ops->close)
-		err = sock->ops->close(sock);
-
-	/* free socket */
-	sock_release(sock);
-
-	return err;
+	return 0;
 }
 
 /*
@@ -171,9 +142,7 @@ static int sock_poll(struct file_t *filp, struct select_table_t *wait)
 	int mask = 0;
 
 	/* get socket */
-	sock = sock_lookup(filp->f_inode);
-	if (!sock)
-		return -EINVAL;
+	sock = &filp->f_inode->u.socket_i;
 
 	/* check if there is a message in the queue */
 	if (sock->ops && sock->ops->poll)
@@ -192,9 +161,7 @@ static int sock_read(struct file_t *filp, char *buf, int len)
 	struct iovec_t iov;
 
 	/* get socket */
-	sock = sock_lookup(filp->f_inode);
-	if (!sock)
-		return -EINVAL;
+	sock = &filp->f_inode->u.socket_i;
 
 	/* receive message not implemented */
 	if (!sock->ops || !sock->ops->recvmsg)
@@ -220,9 +187,7 @@ static int sock_write(struct file_t *filp, const char *buf, int len)
 	struct iovec_t iov;
 
 	/* get socket */
-	sock = sock_lookup(filp->f_inode);
-	if (!sock)
-		return -EINVAL;
+	sock = &filp->f_inode->u.socket_i;
 
 	/* send message not implemented */
 	if (!sock->ops || !sock->ops->sendmsg)

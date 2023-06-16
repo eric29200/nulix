@@ -151,15 +151,6 @@ static int unix_release(struct socket_t *sock)
 }
 
 /*
- * Close a socket.
- */
-static int unix_close(struct socket_t *sock)
-{
-	UNUSED(sock);
-	return 0;
-}
-
-/*
  * Poll on a socket.
  */
 static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
@@ -615,7 +606,6 @@ struct prot_ops unix_ops = {
 	.create		= unix_create,
 	.dup		= unix_dup,
 	.release	= unix_release,
-	.close		= unix_close,
 	.poll		= unix_poll,
 	.recvmsg	= unix_recvmsg,
 	.sendmsg	= unix_sendmsg,

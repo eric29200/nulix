@@ -152,30 +152,15 @@ static int inet_release(struct socket_t *sock)
 		skb_free(skb);
 	}
 
+	/* protocol close */
+	if (sk->protinfo.af_inet.prot->close)
+		sk->protinfo.af_inet.prot->close(sk);
+
 	/* remove inet socket */
 	list_del(&sk->list);
 
 	/* release inet socket */
 	kfree(sock->data);
-
-	return 0;
-}
-
-/*
- * Close a socket.
- */
-static int inet_close(struct socket_t *sock)
-{
-	struct sock_t *sk;
-
-	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
-	if (!sk)
-		return -EINVAL;
-
-	/* close protocol operation */
-	if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->close)
-		return sk->protinfo.af_inet.prot->close(sk);
 
 	return 0;
 }
@@ -465,7 +450,6 @@ struct prot_ops inet_ops = {
 	.create		= inet_create,
 	.dup		= inet_dup,
 	.release	= inet_release,
-	.close		= inet_close,
 	.poll		= inet_poll,
 	.recvmsg	= inet_recvmsg,
 	.sendmsg	= inet_sendmsg,
