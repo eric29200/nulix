@@ -57,54 +57,26 @@ static void sock_release(struct socket_t *sock)
 }
 
 /*
- * Create a socket.
+ * Get a file slot.
  */
-static int sock_create(int domain, int type)
+static int get_fd(struct inode_t *inode)
 {
-	struct prot_ops *sock_ops;
-	struct socket_t *sock;
 	struct file_t *filp;
 	int fd;
 
-	/* only internet sockets */
-	switch (domain) {
-		case AF_INET:
-			sock_ops = &inet_ops;
-			break;
-		case AF_UNIX:
-			sock_ops = &unix_ops;
-			break;
-		default:
-			return -EINVAL;
-	}
-
-	/* allocate a socket */
-	sock = sock_alloc();
-	if (!sock)
-		return -EMFILE;
-
-	/* set socket */
-	sock->state = SS_UNCONNECTED;
-	sock->family = domain;
-	sock->type = type;
-	sock->ops = sock_ops;
-
 	/* get a new empty file */
 	filp = get_empty_filp();
-	if (!filp) {
-		sock_release(sock);
+	if (!filp)
 		return -EMFILE;
-	}
 
 	/* find a free file slot */
-	for (fd = 0; fd < NR_FILE; fd++)
+	for (fd = 0; fd < NR_OPEN; fd++)
 		if (!current_task->files->filp[fd])
 			break;
 
 	/* no free slot */
-	if (fd >= NR_FILE) {
+	if (fd >= NR_OPEN) {
 		filp->f_ref = 0;
-		sock_release(sock);
 		return -EMFILE;
 	}
 
@@ -115,7 +87,7 @@ static int sock_create(int domain, int type)
 	current_task->files->filp[fd]->f_flags = 0;
 	current_task->files->filp[fd]->f_pos = 0;
 	current_task->files->filp[fd]->f_ref = 1;
-	current_task->files->filp[fd]->f_inode = sock->inode;
+	current_task->files->filp[fd]->f_inode = inode;
 	current_task->files->filp[fd]->f_op = &socket_fops;
 
 	return fd;
@@ -281,22 +253,33 @@ struct file_operations_t socket_fops = {
  */
 int sys_socket(int domain, int type, int protocol)
 {
+
+	struct prot_ops *sock_ops;
 	struct socket_t *sock;
-	int sockfd, err;
+	int err, fd;
 
-	/* create a new socket */
-	sockfd = sock_create(domain, type);
-	if (sockfd < 0)
-		return sockfd;
+	/* choose protocol operations */
+	switch (domain) {
+		case AF_INET:
+			sock_ops = &inet_ops;
+			break;
+		case AF_UNIX:
+			sock_ops = &unix_ops;
+			break;
+		default:
+			return -EINVAL;
+	}
 
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
-
-	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	/* allocate a socket */
+	sock = sock_alloc();
 	if (!sock)
-		return -EINVAL;
+		return -EMFILE;
+
+	/* set socket */
+	sock->state = SS_UNCONNECTED;
+	sock->family = domain;
+	sock->type = type;
+	sock->ops = sock_ops;
 
 	/* create not implemented */
 	if (!sock->ops || !sock->ops->create) {
@@ -311,7 +294,14 @@ int sys_socket(int domain, int type, int protocol)
 		return err;
 	}
 
-	return sockfd;
+	/* get a file slot */
+	fd = get_fd(sock->inode);
+	if (fd < 0) {
+		sock_release(sock);
+		return -EINVAL;
+	}
+
+	return fd;
 }
 
 /*
@@ -382,7 +372,7 @@ int sys_listen(int sockfd, int backlog)
 int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock, *new_sock;
-	int new_sockfd, err;
+	int fd, err;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -392,37 +382,41 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 	if (!sock)
 		return err;
 
-	/* create new socket */
-	new_sockfd = sock_create(sock->family, sock->type);
-	if (new_sockfd < 0)
-		return new_sockfd;
-
-	/* find new socket */
-	new_sock = sockfd_lookup(new_sockfd, NULL, &err);
+	/* allocate a new socket */
+	new_sock = sock_alloc();
 	if (!new_sock)
-		return err;
+		return -ENOSR;
 
 	/* duplicate socket */
+	new_sock->type = sock->type;
+	new_sock->ops = sock->ops;
 	err = sock->ops->dup(sock, new_sock);
-	if (err) {
-		sys_close(new_sockfd);
+	if (err < 0) {
+		sock_release(new_sock);
 		return err;
 	}
 
 	/* accept not implemented */
 	if (!new_sock->ops || !new_sock->ops->accept) {
-		sys_close(new_sockfd);
+		sock_release(new_sock);
 		return -EINVAL;
 	}
 
 	/* call accept protocol */
 	err = new_sock->ops->accept(sock, new_sock, addr);
 	if (err < 0) {
-		sys_close(new_sockfd);
+		sock_release(new_sock);
 		return err;
 	}
 
-	return new_sockfd;
+	/* get a file slot */
+	fd = get_fd(new_sock->inode);
+	if (fd < 0) {
+		sock_release(new_sock);
+		return -EINVAL;
+	}
+
+	return fd;
 }
 
 /*
