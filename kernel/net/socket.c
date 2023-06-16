@@ -9,7 +9,7 @@
 #include <uio.h>
 
 /* sockets table */
-struct socket_t sockets[NR_SOCKETS];
+static struct socket_t sockets[NR_SOCKETS];
 
 /* socket file operations */
 struct file_operations_t socket_fops;

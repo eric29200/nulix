@@ -41,6 +41,7 @@ struct sock_t {
 		struct unix_opt_t	af_unix;
 		struct inet_opt_t	af_inet;
 	} protinfo;
+	struct list_head_t		list;
 	struct list_head_t		skb_list;
 };
 

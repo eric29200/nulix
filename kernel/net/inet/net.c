@@ -12,9 +12,6 @@
 static struct net_device_t net_devices[NR_NET_DEVICES];
 static int nb_net_devices = 0;
 
-/* sockets (defined in socket.c) */
-extern struct socket_t sockets[NR_SOCKETS];
-
 /*
  * Compute checksum.
  */
@@ -34,36 +31,6 @@ uint16_t net_checksum(void *data, size_t size)
 	ret = ~chksum;
 
 	return ret;
-}
-
-/*
- * Deliver a packet to sockets.
- */
-static void skb_deliver_to_sockets(struct sk_buff_t *skb)
-{
-	struct sock_t *sk;
-	int i, ret;
-
-	/* find matching sockets */
-	for (i = 0; i < NR_SOCKETS; i++) {
-		/* free or non inet socket */
-		if (sockets[i].state == SS_FREE || sockets[i].family != AF_INET)
-			continue;
-
-		/* get inet socket */
-		sk = (struct sock_t *) sockets[i].data;
-		if (!sk)
-			continue;
-
-		/* handle packet */
-		if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->handle) {
-			ret = sk->protinfo.af_inet.prot->handle(sk, skb);
-
-			/* wake up waiting processes */
-			if (ret == 0)
-				task_wakeup_all(&sk->sock->wait);
-		}
-	}
 }
 
 /*
