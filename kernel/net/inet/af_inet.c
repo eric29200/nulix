@@ -1,4 +1,4 @@
-#include <net/inet/sock.h>
+#include <net/sock.h>
 #include <net/inet/ip.h>
 #include <net/inet/net.h>
 #include <drivers/net/rtl8139.h>
@@ -79,10 +79,10 @@ static int inet_create(struct socket_t *sock, int protocol)
 
 	/* set socket */
 	memset(sk, 0, sizeof(struct sock_t));
-	sk->dev = rtl8139_get_net_device();
+	sk->protinfo.af_inet.dev = rtl8139_get_net_device();
 	sk->protocol = protocol;
 	sk->sock = sock;
-	sk->prot = prot;
+	sk->protinfo.af_inet.prot = prot;
 	INIT_LIST_HEAD(&sk->skb_list);
 
 	return 0;
@@ -143,8 +143,8 @@ static int inet_close(struct socket_t *sock)
 		return -EINVAL;
 
 	/* close protocol operation */
-	if (sk->prot && sk->prot->close)
-		return sk->prot->close(sk);
+	if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->close)
+		return sk->protinfo.af_inet.prot->close(sk);
 
 	return 0;
 }
@@ -189,10 +189,10 @@ static int inet_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 		return -EINVAL;
 
 	/* recvmsg not implemented */
-	if (!sk->prot || !sk->prot->recvmsg)
+	if (!sk->protinfo.af_inet.prot || !sk->protinfo.af_inet.prot->recvmsg)
 		return -EINVAL;
 
-	return sk->prot->recvmsg(sk, msg, nonblock, flags);
+	return sk->protinfo.af_inet.prot->recvmsg(sk, msg, nonblock, flags);
 }
 
 /*
@@ -208,10 +208,10 @@ static int inet_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int n
 		return -EINVAL;
 
 	/* sendmsg not implemented */
-	if (!sk->prot || !sk->prot->sendmsg)
+	if (!sk->protinfo.af_inet.prot || !sk->protinfo.af_inet.prot->sendmsg)
 		return -EINVAL;
 
-	return sk->prot->sendmsg(sk, msg, nonblock, flags);
+	return sk->protinfo.af_inet.prot->sendmsg(sk, msg, nonblock, flags);
 }
 
 /*
@@ -250,20 +250,20 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 			continue;
 
 		/* already mapped */
-		if (src_sin->sin_port && src_sin->sin_port == sk->src_sin.sin_port)
+		if (src_sin->sin_port && src_sin->sin_port == sk->protinfo.af_inet.src_sin.sin_port)
 			return -ENOSPC;
 	}
 
 	/* set default address */
 	if (!src_sin->sin_addr)
-		src_sin->sin_addr = inet_iton(sk->dev->ip_addr);
+		src_sin->sin_addr = inet_iton(sk->protinfo.af_inet.dev->ip_addr);
 
 	/* allocate a dynamic port */
 	if (!src_sin->sin_port)
 		src_sin->sin_port = htons(get_next_free_port());
 
 	/* copy address */
-	memcpy(&sk->src_sin, src_sin, sizeof(struct sockaddr));
+	memcpy(&sk->protinfo.af_inet.src_sin, src_sin, sizeof(struct sockaddr));
 
 	return 0;
 }
@@ -287,17 +287,17 @@ static int inet_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 		return -EINVAL;
 
 	/* accept not implemented */
-	if (!sk_new->prot || !sk_new->prot->accept)
+	if (!sk_new->protinfo.af_inet.prot || !sk_new->protinfo.af_inet.prot->accept)
 		return -EINVAL;
 
 	/* accept */
-	ret = sk_new->prot->accept(sk, sk_new);
+	ret = sk_new->protinfo.af_inet.prot->accept(sk, sk_new);
 	if (ret)
 		return ret;
 
 	/* set accepted address */
 	if (addr)
-		memcpy(addr, &sk_new->dst_sin, sizeof(struct sockaddr_in));
+		memcpy(addr, &sk_new->protinfo.af_inet.dst_sin, sizeof(struct sockaddr_in));
 
 	return 0;
 }
@@ -331,16 +331,16 @@ static int inet_connect(struct socket_t *sock, const struct sockaddr *addr, size
 		return -EINVAL;
 
 	/* allocate a dynamic port */
-	sk->src_sin.sin_port = htons(get_next_free_port());
+	sk->protinfo.af_inet.src_sin.sin_port = htons(get_next_free_port());
 
 	/* copy address */
-	memcpy(&sk->dst_sin, addr, sizeof(struct sockaddr));
+	memcpy(&sk->protinfo.af_inet.dst_sin, addr, sizeof(struct sockaddr));
 
 	/* connect not implemented */
-	if (!sk->prot || !sk->prot->connect)
+	if (!sk->protinfo.af_inet.prot || !sk->protinfo.af_inet.prot->connect)
 		return -EINVAL;
 
-	return sk->prot->connect(sk);
+	return sk->protinfo.af_inet.prot->connect(sk);
 }
 
 /*
@@ -360,8 +360,8 @@ static int inet_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t
 	memset(addr, 0, sizeof(struct sockaddr));
 	sin = (struct sockaddr_in *) addr;
 	sin->sin_family = AF_INET;
-	sin->sin_port = sk->dst_sin.sin_port;
-	sin->sin_addr = sk->dst_sin.sin_addr;
+	sin->sin_port = sk->protinfo.af_inet.dst_sin.sin_port;
+	sin->sin_addr = sk->protinfo.af_inet.dst_sin.sin_addr;
 	*addrlen = sizeof(struct sockaddr_in);
 
 	return 0;
@@ -384,8 +384,8 @@ static int inet_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 	memset(addr, 0, sizeof(struct sockaddr));
 	sin = (struct sockaddr_in *) addr;
 	sin->sin_family = AF_INET;
-	sin->sin_port = sk->src_sin.sin_port;
-	sin->sin_addr = sk->src_sin.sin_addr;
+	sin->sin_port = sk->protinfo.af_inet.src_sin.sin_port;
+	sin->sin_addr = sk->protinfo.af_inet.src_sin.sin_addr;
 	*addrlen = sizeof(struct sockaddr_in);
 
 	return 0;

@@ -1,5 +1,4 @@
-#include <net/sk_buff.h>
-#include <net/inet/sock.h>
+#include <net/sock.h>
 #include <net/inet/net.h>
 #include <net/inet/ethernet.h>
 #include <net/inet/ip.h>
@@ -129,11 +128,11 @@ static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 
 	/* build ethernet header */
 	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
-	ethernet_build_header(skb->eth_header, sk->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0, IPV4_DEFAULT_TTL, sk->protocol, sk->dev->ip_addr, dest_ip);
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0, IPV4_DEFAULT_TTL, sk->protocol, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* copy ip message */
 	buf = (struct ip_header_t *) skb_put(skb, len);
@@ -143,7 +142,7 @@ static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 	}
 
 	/* send message */
-	net_transmit(sk->dev, skb);
+	net_transmit(sk->protinfo.af_inet.dev, skb);
 
 	return len;
 }

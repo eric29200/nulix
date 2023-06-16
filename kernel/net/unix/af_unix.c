@@ -1,4 +1,4 @@
-#include <net/unix/un.h>
+#include <net/unix/af_unix.h>
 #include <net/sk_buff.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
@@ -15,15 +15,15 @@ extern struct socket_t sockets[NR_SOCKETS];
 /*
  * Find a UNIX socket.
  */
-static struct unix_sock_t *unix_find_socket_by_inode(struct inode_t *inode)
+static unix_socket_t *unix_find_socket_by_inode(struct inode_t *inode)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk;
 	int i;
 
 	for (i = 0; i < NR_SOCKETS; i++) {
 		if (sockets[i].family == AF_UNIX) {
-			sk = (struct unix_sock_t *) sockets[i].data;
-			if (sk && sk->inode == inode)
+			sk = (unix_socket_t *) sockets[i].data;
+			if (sk && sk->protinfo.af_unix.inode == inode)
 				return sk;
 		}
 	}
@@ -34,15 +34,15 @@ static struct unix_sock_t *unix_find_socket_by_inode(struct inode_t *inode)
 /*
  * Find a UNIX socket.
  */
-static struct unix_sock_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen)
+static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk;
 	int i;
 
 	for (i = 0; i < NR_SOCKETS; i++) {
 		if (sockets[i].family == AF_UNIX) {
-			sk = (struct unix_sock_t *) sockets[i].data;
-			if (sk && sk->sunaddr_len == addrlen && memcmp(&sk->sunaddr, sunaddr, addrlen) == 0)
+			sk = (unix_socket_t *) sockets[i].data;
+			if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0)
 				return sk;
 		}
 	}
@@ -53,7 +53,7 @@ static struct unix_sock_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr,
 /*
  * Find other UNIX socket.
  */
-static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, struct unix_sock_t **res)
+static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_socket_t **res)
 {
 	struct inode_t *inode;
 	int ret = 0;
@@ -89,22 +89,22 @@ static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, struct u
  */
 static int unix_create(struct socket_t *sock, int protocol)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk;
 
 	/* check protocol */
 	if (protocol != 0)
 		return -EINVAL;
 
 	/* allocate UNIX socket */
-	sock->data = sk = (struct unix_sock_t *) kmalloc(sizeof(struct unix_sock_t));
+	sock->data = sk = (unix_socket_t *) kmalloc(sizeof(unix_socket_t));
 	if (!sk)
 		return -ENOMEM;
 
 	/* set UNIX socket */
-	memset(sk, 0, sizeof(struct unix_sock_t));
+	memset(sk, 0, sizeof(unix_socket_t));
 	sk->protocol = protocol;
 	sk->sock = sock;
-	sk->other = NULL;
+	sk->protinfo.af_unix.other = NULL;
 	INIT_LIST_HEAD(&sk->skb_list);
 
 	return 0;
@@ -115,10 +115,10 @@ static int unix_create(struct socket_t *sock, int protocol)
  */
 static int unix_dup(struct socket_t *sock, struct socket_t *sock_new)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk;
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
@@ -130,16 +130,16 @@ static int unix_dup(struct socket_t *sock, struct socket_t *sock_new)
  */
 static int unix_release(struct socket_t *sock)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk;
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return 0;
 
 	/* release inode */
-	if (sk->inode)
-		iput(sk->inode);
+	if (sk->protinfo.af_unix.inode)
+		iput(sk->protinfo.af_unix.inode);
 
 	/* release UNIX socket */
 	kfree(sock->data);
@@ -161,20 +161,20 @@ static int unix_close(struct socket_t *sock)
  */
 static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk;
 	int mask = 0;
 
 	/* get inet socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
 	/* check if there is a message in the queue */
-	if (!list_empty(&sk->skb_list) || sk->shutdown & RCV_SHUTDOWN)
+	if (!list_empty(&sk->skb_list) || sk->protinfo.af_unix.shutdown & RCV_SHUTDOWN)
 		mask |= POLLIN;
 
 	/* check if socket can write */
-	if (sk->sock->state != SS_DEAD || sk->shutdown & SEND_SHUTDOWN)
+	if (sk->sock->state != SS_DEAD || sk->protinfo.af_unix.shutdown & SEND_SHUTDOWN)
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */
@@ -188,7 +188,7 @@ static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
  */
 static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonblock, int flags)
 {
-	struct unix_sock_t *sk, *from;
+	unix_socket_t *sk, *from;
 	size_t n, i, len, count = 0;
 	struct sk_buff_t *skb;
 	void *buf;
@@ -197,7 +197,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 	UNUSED(flags);
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
@@ -212,7 +212,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 			break;
 
 		/* socket is down */
-		if (sk->shutdown & RCV_SHUTDOWN)
+		if (sk->protinfo.af_unix.shutdown & RCV_SHUTDOWN)
 			return 0;
 
 		/* non blocking */
@@ -241,8 +241,8 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 
 	/* set source address */
 	if (skb->sock && skb->sock->data) {
-		from = (struct unix_sock_t *) skb->sock->data;
-		memcpy(msg->msg_name, &from->sunaddr, from->sunaddr_len);
+		from = (unix_socket_t *) skb->sock->data;
+		memcpy(msg->msg_name, &from->protinfo.af_unix.sunaddr, from->protinfo.af_unix.sunaddr_len);
 	}
 
 	/* remove and free socket buffer or remember position packet */
@@ -265,7 +265,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int nonblock, int flags)
 {
 	struct sockaddr_un *sunaddr = msg->msg_name;
-	struct unix_sock_t *sk, *other;
+	unix_socket_t *sk, *other;
 	struct sk_buff_t *skb;
 	size_t len, i;
 	void *buf;
@@ -276,7 +276,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int n
 	UNUSED(nonblock);
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
@@ -286,7 +286,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int n
 		if (ret)
 			return ret;
 	} else {
-		other = sk->other;
+		other = sk->protinfo.af_unix.other;
 		if (!other)
 			return -ENOTCONN;
 	}
@@ -326,7 +326,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int n
 static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
-	struct unix_sock_t *sk;
+	unix_socket_t *sk;
 	int ret;
 
 	/* check address length */
@@ -334,12 +334,12 @@ static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 		return -EINVAL;
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
 	/* socket already bound */
-	if (sk->sunaddr_len || sk->inode)
+	if (sk->protinfo.af_unix.sunaddr_len || sk->protinfo.af_unix.inode)
 		return -EBUSY;
 
 	/* abstract socket */
@@ -354,15 +354,15 @@ static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 			return ret;
 
 		/* get inode */
-		ret = open_namei(AT_FDCWD, NULL, sunaddr->sun_path, 0, S_IFSOCK, &sk->inode);
+		ret = open_namei(AT_FDCWD, NULL, sunaddr->sun_path, 0, S_IFSOCK, &sk->protinfo.af_unix.inode);
 		if (ret)
 			return ret;
 	}
 
 	/* set socket address */
-	memcpy(&sk->sunaddr, addr, addrlen);
-	sk->sunaddr.sun_path[addrlen - UN_PATH_OFFSET] = 0;
-	sk->sunaddr_len = addrlen;
+	memcpy(&sk->protinfo.af_unix.sunaddr, addr, addrlen);
+	sk->protinfo.af_unix.sunaddr.sun_path[addrlen - UN_PATH_OFFSET] = 0;
+	sk->protinfo.af_unix.sunaddr_len = addrlen;
 
 	return 0;
 }
@@ -372,7 +372,7 @@ static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
  */
 static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct sockaddr *addr)
 {
-	struct unix_sock_t *sk, *sk_new;
+	unix_socket_t *sk, *sk_new, *other;
 	struct list_head_t *pos;
 	struct sk_buff_t *skb;
 
@@ -381,8 +381,8 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 		return -EINVAL;
 
 	/* get UNIX sockets */
-	sk = (struct unix_sock_t *) sock->data;
-	sk_new = (struct unix_sock_t *) sock_new->data;
+	sk = (unix_socket_t *) sock->data;
+	sk_new = (unix_socket_t *) sock_new->data;
 	if (!sk || !sk_new)
 		return -EINVAL;
 
@@ -398,19 +398,19 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 
 			/* set new socket */
 			sock_new->state = SS_CONNECTED;
-			sk_new->other = (struct unix_sock_t *) skb->sock->data;
-			((struct unix_sock_t *) skb->sock->data)->other = sk_new;
+			other = sk_new->protinfo.af_unix.other = (unix_socket_t *) skb->sock->data;
+			sk_new->protinfo.af_unix.other = sk_new;
 
 			/* set destination address */
-			memcpy(addr, &sk_new->other->sunaddr, sizeof(struct sockaddr_un));
+			memcpy(addr, &other->protinfo.af_unix.sunaddr, sizeof(struct sockaddr_un));
 
 			/* free socket buffer */
 			list_del(&skb->list);
 			skb_free(skb);
 
 			/* set other socket connected and wake up eventual clients connecting */
-			sk_new->other->sock->state = SS_CONNECTED;
-			task_wakeup_all(&sk_new->other->sock->wait);
+			sk_new->protinfo.af_unix.other->sock->state = SS_CONNECTED;
+			task_wakeup_all(&sk_new->protinfo.af_unix.other->sock->wait);
 
 			return 0;
 		}
@@ -432,12 +432,12 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
-	struct unix_sock_t *sk, *other;
+	unix_socket_t *sk, *other;
 	struct sk_buff_t *skb;
 	int ret;
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
@@ -448,7 +448,7 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size
 
 	/* datagramm socket : just connect */
 	if (sock->type == SOCK_DGRAM) {
-		sk->other = other;
+		sk->protinfo.af_unix.other = other;
 		sock->state = SS_CONNECTED;
 		return 0;
 	}
@@ -466,7 +466,7 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size
 	task_wakeup_all(&other->sock->wait);
 
 	/* set socket */
-	sk->other = other;
+	sk->protinfo.af_unix.other = other;
 	sock->state = SS_CONNECTING;
 
 	/* wait for an accept */
@@ -487,25 +487,28 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size
  */
 static int unix_shutdown(struct socket_t *sock, int how)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk, *other;
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
+	/* get other socket */
+	other = sk->protinfo.af_unix.other;
+
  	/* shutdown send */
 	if (how & SEND_SHUTDOWN) {
-		sk->shutdown |= SEND_SHUTDOWN;
-		if (sk->other)
-			sk->other->shutdown |= RCV_SHUTDOWN;
+		sk->protinfo.af_unix.shutdown |= SEND_SHUTDOWN;
+		if (other)
+			other->protinfo.af_unix.shutdown |= RCV_SHUTDOWN;
 	}
 
 	/* shutdown receive */
 	if (how & RCV_SHUTDOWN) {
-		sk->shutdown |= RCV_SHUTDOWN;
-		if (sk->other)
-			sk->other->shutdown |= SEND_SHUTDOWN;
+		sk->protinfo.af_unix.shutdown |= RCV_SHUTDOWN;
+		if (other)
+			other->protinfo.af_unix.shutdown |= SEND_SHUTDOWN;
 	}
 
 	return 0;
@@ -516,18 +519,19 @@ static int unix_shutdown(struct socket_t *sock, int how)
  */
 static int unix_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t *addrlen)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk, *other;
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
 	/* copy destination address */
-	if (sk->other) {
+	other = sk->protinfo.af_unix.other;
+	if (other) {
 		memset(addr, 0, sizeof(struct sockaddr));
-		memcpy(addr, &sk->other->sunaddr, sk->other->sunaddr_len);
-		*addrlen = sk->other->sunaddr_len;
+		memcpy(addr, &other->protinfo.af_unix.sunaddr, other->protinfo.af_unix.sunaddr_len);
+		*addrlen = other->protinfo.af_unix.sunaddr_len;
 	}
 
 	return 0;
@@ -538,17 +542,17 @@ static int unix_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t
  */
 static int unix_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t *addrlen)
 {
-	struct unix_sock_t *sk;
+	unix_socket_t *sk;
 
 	/* get UNIX socket */
-	sk = (struct unix_sock_t *) sock->data;
+	sk = (unix_socket_t *) sock->data;
 	if (!sk)
 		return -EINVAL;
 
 	/* copy destination address */
 	memset(addr, 0, sizeof(struct sockaddr));
-	memcpy(addr, &sk->sunaddr, sk->sunaddr_len);
-	*addrlen = sk->sunaddr_len;
+	memcpy(addr, &sk->protinfo.af_unix.sunaddr, sk->protinfo.af_unix.sunaddr_len);
+	*addrlen = sk->protinfo.af_unix.sunaddr_len;
 
 	return 0;
 }
@@ -590,11 +594,11 @@ static int unix_setsockopt(struct socket_t *sock, int level, int optname, void *
  */
 static int unix_socketpair(struct socket_t *sock1, struct socket_t *sock2)
 {
-	struct unix_sock_t *sk1 = sock1->data, *sk2 = sock2->data;
+	unix_socket_t *sk1 = sock1->data, *sk2 = sock2->data;
 
 	/* connect sockets */
-	sk1->other = sk2;
-	sk2->other = sk1;
+	sk1->protinfo.af_unix.other = sk2;
+	sk2->protinfo.af_unix.other = sk1;
 	sock1->state = SS_CONNECTED;
 	sock2->state = SS_CONNECTED;
 

@@ -1,5 +1,5 @@
+#include <net/sock.h>
 #include <net/inet/tcp.h>
-#include <net/inet/sock.h>
 #include <net/inet/net.h>
 #include <net/inet/ethernet.h>
 #include <proc/sched.h>
@@ -94,7 +94,7 @@ static struct sk_buff_t *tcp_create_skb(struct sock_t *sk, uint16_t flags, void 
 	void *buf;
 
 	/* get destination IP */
-	inet_ntoi(sk->dst_sin.sin_addr, dest_ip);
+	inet_ntoi(sk->protinfo.af_inet.dst_sin.sin_addr, dest_ip);
 
 	/* allocate a socket buffer */
 	skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + sizeof(struct tcp_header_t) + len);
@@ -103,30 +103,30 @@ static struct sk_buff_t *tcp_create_skb(struct sock_t *sk, uint16_t flags, void 
 
 	/* build ethernet header */
 	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
-	ethernet_build_header(skb->eth_header, sk->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
 	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + sizeof(struct tcp_header_t) + len, 0,
-			IPV4_DEFAULT_TTL, IP_PROTO_TCP, sk->dev->ip_addr, dest_ip);
+			IPV4_DEFAULT_TTL, IP_PROTO_TCP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* build tcp header */
 	skb->h.tcp_header = (struct tcp_header_t *) skb_put(skb, sizeof(struct tcp_header_t));
-	tcp_build_header(skb->h.tcp_header, ntohs(sk->src_sin.sin_port), ntohs(sk->dst_sin.sin_port),
-			 sk->seq_no, sk->ack_no, ETHERNET_MAX_MTU, flags);
+	tcp_build_header(skb->h.tcp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(sk->protinfo.af_inet.dst_sin.sin_port),
+			 sk->protinfo.af_inet.seq_no, sk->protinfo.af_inet.ack_no, ETHERNET_MAX_MTU, flags);
 
 	/* copy message */
 	buf = skb_put(skb, len);
 	memcpy(buf, msg, len);
 
 	/* compute tcp checksum */
-	skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sk->dev->ip_addr, dest_ip, len);
+	skb->h.tcp_header->chksum = tcp_checksum(skb->h.tcp_header, sk->protinfo.af_inet.dev->ip_addr, dest_ip, len);
 
 	/* update sequence */
 	if (len)
-		sk->seq_no += len;
+		sk->protinfo.af_inet.seq_no += len;
 	else if ((flags & TCPCB_FLAG_SYN) || (flags & TCPCB_FLAG_FIN))
-		sk->seq_no += 1;
+		sk->protinfo.af_inet.seq_no += 1;
 
 	return skb;
 }
@@ -150,33 +150,33 @@ static int tcp_reply_ack(struct sock_t *sk, struct sk_buff_t *skb, uint16_t flag
 
 	/* build ethernet header */
 	skb_ack->eth_header = (struct ethernet_header_t *) skb_put(skb_ack, sizeof(struct ethernet_header_t));
-	ethernet_build_header(skb_ack->eth_header, sk->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	ethernet_build_header(skb_ack->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb_ack->nh.ip_header = (struct ip_header_t *) skb_put(skb_ack, sizeof(struct ip_header_t));
 	ip_build_header(skb_ack->nh.ip_header, 0, sizeof(struct ip_header_t) + sizeof(struct tcp_header_t), 0,
-			IPV4_DEFAULT_TTL, IP_PROTO_TCP, sk->dev->ip_addr, dest_ip);
+			IPV4_DEFAULT_TTL, IP_PROTO_TCP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* compute ack number */
 	len = tcp_data_length(skb);
-	sk->ack_no = ntohl(skb->h.tcp_header->seq) + len;
+	sk->protinfo.af_inet.ack_no = ntohl(skb->h.tcp_header->seq) + len;
 	if (!len)
-		sk->ack_no += 1;
+		sk->protinfo.af_inet.ack_no += 1;
 
 	/* build tcp header */
 	skb_ack->h.tcp_header = (struct tcp_header_t *) skb_put(skb_ack, sizeof(struct tcp_header_t));
-	tcp_build_header(skb_ack->h.tcp_header, ntohs(sk->src_sin.sin_port), ntohs(skb->h.tcp_header->src_port),
-			 sk->seq_no, sk->ack_no, ETHERNET_MAX_MTU, flags);
+	tcp_build_header(skb_ack->h.tcp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(skb->h.tcp_header->src_port),
+			 sk->protinfo.af_inet.seq_no, sk->protinfo.af_inet.ack_no, ETHERNET_MAX_MTU, flags);
 
 	/* compute tcp checksum */
-	skb_ack->h.tcp_header->chksum = tcp_checksum(skb_ack->h.tcp_header, sk->dev->ip_addr, dest_ip, 0);
+	skb_ack->h.tcp_header->chksum = tcp_checksum(skb_ack->h.tcp_header, sk->protinfo.af_inet.dev->ip_addr, dest_ip, 0);
 
 	/* transmit ACK message */
-	net_transmit(sk->dev, skb_ack);
+	net_transmit(sk->protinfo.af_inet.dev, skb_ack);
 
 	/* update sequence */
 	if (flags & TCPCB_FLAG_SYN || flags & TCPCB_FLAG_FIN)
-		sk->seq_no += 1;
+		sk->protinfo.af_inet.seq_no += 1;
 
 	return 0;
 }
@@ -189,8 +189,8 @@ static int tcp_reset(struct sock_t *sk, uint32_t seq_no)
 	struct sk_buff_t *skb;
 
 	/* set sequence number */
-	sk->seq_no = ntohl(seq_no);
-	sk->ack_no = 0;
+	sk->protinfo.af_inet.seq_no = ntohl(seq_no);
+	sk->protinfo.af_inet.ack_no = 0;
 
 	/* create a RST packet */
 	skb = tcp_create_skb(sk, TCPCB_FLAG_RST, NULL, 0);
@@ -198,7 +198,7 @@ static int tcp_reset(struct sock_t *sk, uint32_t seq_no)
 		return -EINVAL;
 
 	/* transmit SYN message */
-	net_transmit(sk->dev, skb);
+	net_transmit(sk->protinfo.af_inet.dev, skb);
 
 	return 0;
 }
@@ -217,12 +217,12 @@ static int tcp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 		return -EINVAL;
 
 	/* check destination */
-	if (sk->src_sin.sin_port != skb->h.tcp_header->dst_port)
+	if (sk->protinfo.af_inet.src_sin.sin_port != skb->h.tcp_header->dst_port)
 		return -EINVAL;
 
 	/* check source */
 	if ((sk->sock->state == SS_CONNECTED || sk->sock->state == SS_CONNECTING)
-	    && sk->dst_sin.sin_port != skb->h.tcp_header->src_port)
+	    && sk->protinfo.af_inet.dst_sin.sin_port != skb->h.tcp_header->src_port)
 		return -EINVAL;
 
 	/* compute data length */
@@ -413,7 +413,7 @@ static int tcp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 			return -EINVAL;
 
 		/* transmit message */
-		net_transmit(sk->dev, skb);
+		net_transmit(sk->protinfo.af_inet.dev, skb);
 
 		len += msg->msg_iov->iov_len;
 	}
@@ -429,8 +429,8 @@ static int tcp_connect(struct sock_t *sk)
 	struct sk_buff_t *skb;
 
 	/* generate sequence */
-	sk->seq_no = ntohl(rand());
-	sk->ack_no = 0;
+	sk->protinfo.af_inet.seq_no = ntohl(rand());
+	sk->protinfo.af_inet.ack_no = 0;
 
 	/* create SYN message */
 	skb = tcp_create_skb(sk, TCPCB_FLAG_SYN, NULL, 0);
@@ -438,7 +438,7 @@ static int tcp_connect(struct sock_t *sk)
 		return -EINVAL;
 
 	/* transmit SYN message */
-	net_transmit(sk->dev, skb);
+	net_transmit(sk->protinfo.af_inet.dev, skb);
 
 	/* set socket state */
 	sk->sock->state = SS_CONNECTING;
@@ -476,12 +476,12 @@ static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 
 			/* set new socket */
 			sk_new->sock->state = SS_CONNECTED;
-			memcpy(&sk_new->src_sin, &sk->src_sin, sizeof(struct sockaddr));
-			sk_new->dst_sin.sin_family = AF_INET;
-			sk_new->dst_sin.sin_port = skb->h.tcp_header->src_port;
-			sk_new->dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
-			sk_new->seq_no = ntohl(1);
-			sk_new->ack_no = ntohl(skb->h.tcp_header->seq) + 1;
+			memcpy(&sk_new->protinfo.af_inet.src_sin, &sk->protinfo.af_inet.src_sin, sizeof(struct sockaddr));
+			sk_new->protinfo.af_inet.dst_sin.sin_family = AF_INET;
+			sk_new->protinfo.af_inet.dst_sin.sin_port = skb->h.tcp_header->src_port;
+			sk_new->protinfo.af_inet.dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+			sk_new->protinfo.af_inet.seq_no = ntohl(1);
+			sk_new->protinfo.af_inet.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
 
 			/* free socket buffer */
 			list_del(&skb->list);
@@ -495,8 +495,8 @@ static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 				skb->h.tcp_header = (struct tcp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
 
 				/* move socket buffer */
-				if (sk_new->dst_sin.sin_port == skb->h.tcp_header->src_port
-				    && sk_new->dst_sin.sin_addr == inet_iton(skb->nh.ip_header->src_addr)) {
+				if (sk_new->protinfo.af_inet.dst_sin.sin_port == skb->h.tcp_header->src_port
+				    && sk_new->protinfo.af_inet.dst_sin.sin_addr == inet_iton(skb->nh.ip_header->src_addr)) {
 					list_del(&skb->list);
 					list_add_tail(&skb->list, &sk_new->skb_list);
 				}
@@ -532,7 +532,7 @@ static int tcp_close(struct sock_t *sk)
 	/* send FIN message */
 	skb = tcp_create_skb(sk, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, NULL, 0);
 	if (skb)
-		net_transmit(sk->dev, skb);
+		net_transmit(sk->protinfo.af_inet.dev, skb);
 
 	/* wait for ACK message */
 wait_for_ack:

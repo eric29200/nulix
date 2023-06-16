@@ -1,8 +1,9 @@
+#include <net/sock.h>
+#include <net/socket.h>
 #include <net/inet/udp.h>
 #include <net/inet/net.h>
 #include <net/inet/ip.h>
 #include <net/inet/ethernet.h>
-#include <net/inet/sock.h>
 #include <proc/sched.h>
 #include <uio.h>
 #include <string.h>
@@ -40,7 +41,7 @@ static int udp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 		return -EINVAL;
 
 	/* check destination */
-	if (sk->src_sin.sin_port != skb->h.udp_header->dst_port)
+	if (sk->protinfo.af_inet.src_sin.sin_port != skb->h.udp_header->dst_port)
 		return -EINVAL;
 
 	/* clone socket buffer */
@@ -85,16 +86,16 @@ static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 
 	/* build ethernet header */
 	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
-	ethernet_build_header(skb->eth_header, sk->dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
 	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + sizeof(struct udp_header_t) + len, 0,
-			IPV4_DEFAULT_TTL, IP_PROTO_UDP, sk->dev->ip_addr, dest_ip);
+			IPV4_DEFAULT_TTL, IP_PROTO_UDP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* build udp header */
 	skb->h.udp_header = (struct udp_header_t *) skb_put(skb, sizeof(struct udp_header_t));
-	udp_build_header(skb->h.udp_header, ntohs(sk->src_sin.sin_port), ntohs(dest_addr_in->sin_port), sizeof(struct udp_header_t) + len);
+	udp_build_header(skb->h.udp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(dest_addr_in->sin_port), sizeof(struct udp_header_t) + len);
 
 	/* copy message */
 	buf = skb_put(skb, len);
@@ -104,7 +105,7 @@ static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 	}
 
 	/* transmit message */
-	net_transmit(sk->dev, skb);
+	net_transmit(sk->protinfo.af_inet.dev, skb);
 
 	return len;
 }

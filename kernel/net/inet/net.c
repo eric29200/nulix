@@ -1,5 +1,5 @@
+#include <net/sock.h>
 #include <net/inet/net.h>
-#include <net/inet/sock.h>
 #include <net/inet/ethernet.h>
 #include <net/inet/arp.h>
 #include <net/inet/ip.h>
@@ -56,8 +56,8 @@ static void skb_deliver_to_sockets(struct sk_buff_t *skb)
 			continue;
 
 		/* handle packet */
-		if (sk->prot && sk->prot->handle) {
-			ret = sk->prot->handle(sk, skb);
+		if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->handle) {
+			ret = sk->protinfo.af_inet.prot->handle(sk, skb);
 
 			/* wake up waiting processes */
 			if (ret == 0)
