@@ -141,12 +141,30 @@ static struct socket_t *sock_lookup(struct inode_t *inode)
 /*
  * Find socket on a file descriptor.
  */
-static struct socket_t *sockfd_lookup(int fd)
+static struct socket_t *sockfd_lookup(int fd, struct file_t **filpp, int *err)
 {
-	if (fd < 0 || fd >= NR_FILE || !current_task->files->filp[fd])
-		return NULL;
+	struct socket_t *sock;
+	struct file_t *filp;
 
-	return sock_lookup(current_task->files->filp[fd]->f_inode);
+	/* check file descriptor */
+	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd]) {
+		*err = -EBADF;
+		return NULL;
+	}
+
+	/* get socket */
+	filp = current_task->files->filp[fd];
+	sock = sock_lookup(filp->f_inode);
+	if (!sock) {
+		*err = -ENOTSOCK;
+		return NULL;
+	}
+
+	/* set filpp */
+	if (filpp)
+		*filpp = filp;
+
+	return sock;
 }
 
 /*
@@ -155,7 +173,7 @@ static struct socket_t *sockfd_lookup(int fd)
 static int sock_close(struct file_t *filp)
 {
 	struct socket_t *sock;
-	int ret = 0;
+	int err = 0;
 
 	/* get socket */
 	sock = sock_lookup(filp->f_inode);
@@ -164,12 +182,12 @@ static int sock_close(struct file_t *filp)
 
 	/* close protocol operation */
 	if (sock->ops && sock->ops->close)
-		ret = sock->ops->close(sock);
+		err = sock->ops->close(sock);
 
 	/* free socket */
 	sock_release(sock);
 
-	return ret;
+	return err;
 }
 
 /*
@@ -264,7 +282,7 @@ struct file_operations_t socket_fops = {
 int sys_socket(int domain, int type, int protocol)
 {
 	struct socket_t *sock;
-	int sockfd, ret;
+	int sockfd, err;
 
 	/* create a new socket */
 	sockfd = sock_create(domain, type);
@@ -287,10 +305,10 @@ int sys_socket(int domain, int type, int protocol)
 	}
 
 	/* create socket */
-	ret = sock->ops->create(sock, protocol);
-	if (ret) {
+	err = sock->ops->create(sock, protocol);
+	if (err) {
 		sock_release(sock);
-		return ret;
+		return err;
 	}
 
 	return sockfd;
@@ -302,15 +320,12 @@ int sys_socket(int domain, int type, int protocol)
 int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* bind not implemented */
 	if (!sock->ops || !sock->ops->bind)
@@ -325,15 +340,12 @@ int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* connect not implemented */
 	if (!sock->ops || !sock->ops->connect)
@@ -348,18 +360,15 @@ int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 int sys_listen(int sockfd, int backlog)
 {
 	struct socket_t *sock;
+	int err;
 
 	/* unused backlog */
 	UNUSED(backlog);
 
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
-
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* update socket state */
 	sock->state = SS_LISTENING;
@@ -373,39 +382,31 @@ int sys_listen(int sockfd, int backlog)
 int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 {
 	struct socket_t *sock, *new_sock;
-	int new_sockfd, ret;
+	int new_sockfd, err;
 
 	/* unused address length */
 	UNUSED(addrlen);
 
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
-
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* create new socket */
 	new_sockfd = sock_create(sock->family, sock->type);
 	if (new_sockfd < 0)
 		return new_sockfd;
 
-	/* check socket file descriptor */
-	if (new_sockfd < 0 || new_sockfd >= NR_OPEN || current_task->files->filp[new_sockfd] == NULL)
-		return -EBADF;
-
-	/* find socket */
-	new_sock = sock_lookup(current_task->files->filp[new_sockfd]->f_inode);
+	/* find new socket */
+	new_sock = sockfd_lookup(new_sockfd, NULL, &err);
 	if (!new_sock)
-		return -EINVAL;
+		return err;
 
 	/* duplicate socket */
-	ret = sock->ops->dup(sock, new_sock);
-	if (ret) {
+	err = sock->ops->dup(sock, new_sock);
+	if (err) {
 		sys_close(new_sockfd);
-		return ret;
+		return err;
 	}
 
 	/* accept not implemented */
@@ -415,10 +416,10 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 	}
 
 	/* call accept protocol */
-	ret = new_sock->ops->accept(sock, new_sock, addr);
-	if (ret < 0) {
+	err = new_sock->ops->accept(sock, new_sock, addr);
+	if (err < 0) {
 		sys_close(new_sockfd);
-		return ret;
+		return err;
 	}
 
 	return new_sockfd;
@@ -433,19 +434,15 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	struct iovec_t iovec;
 	struct file_t *filp;
 	struct msghdr_t msg;
+	int err;
 
 	/* unused address length */
 	UNUSED(addrlen);
 
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
-
 	/* find socket */
-	filp = current_task->files->filp[sockfd];
-	sock = sock_lookup(filp->f_inode);
+	sock = sockfd_lookup(sockfd, &filp, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* send message not implemented */
 	if (!sock->ops || !sock->ops->sendmsg)
@@ -475,16 +472,12 @@ int sys_sendmsg(int sockfd, const struct msghdr_t *msg, int flags)
 {
 	struct socket_t *sock;
 	struct file_t *filp;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	filp = current_task->files->filp[sockfd];
-	sock = sock_lookup(filp->f_inode);
+	sock = sockfd_lookup(sockfd, &filp, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* send message not implemented */
 	if (!sock->ops || !sock->ops->sendmsg)
@@ -502,19 +495,15 @@ int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sock
 	struct iovec_t iovec;
 	struct file_t *filp;
 	struct msghdr_t msg;
+	int err;
 
 	/* unused address length */
 	UNUSED(addrlen);
 
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
-
 	/* find socket */
-	filp = current_task->files->filp[sockfd];
-	sock = sock_lookup(filp->f_inode);
+	sock = sockfd_lookup(sockfd, &filp, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* receive message not implemented */
 	if (!sock->ops || !sock->ops->recvmsg)
@@ -543,16 +532,12 @@ int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 {
 	struct socket_t *sock;
 	struct file_t *filp;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	filp = current_task->files->filp[sockfd];
-	sock = sock_lookup(filp->f_inode);
+	sock = sockfd_lookup(sockfd, &filp, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* receive message not implemented */
 	if (!sock->ops || !sock->ops->recvmsg)
@@ -567,15 +552,12 @@ int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
 int sys_shutdown(int sockfd, int how)
 {
 	struct socket_t *sock;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* shutdown not implemented */
 	if (!sock->ops || !sock->ops->shutdown)
@@ -590,15 +572,12 @@ int sys_shutdown(int sockfd, int how)
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
 	struct socket_t *sock;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* getpeername not implemented */
 	if (!sock->ops || !sock->ops->getpeername)
@@ -613,15 +592,12 @@ int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
 	struct socket_t *sock;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* getsockname not implemented */
 	if (!sock->ops || !sock->ops->getsockname)
@@ -670,15 +646,12 @@ static int sock_setsockopt(struct socket_t *sock, int optname, void *optval, siz
 int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
 {
 	struct socket_t *sock;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* socket options */
 	if (level == SOL_SOCKET)
@@ -697,15 +670,12 @@ int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t optl
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
 {
 	struct socket_t *sock;
-
-	/* check socket file descriptor */
-	if (sockfd < 0 || sockfd >= NR_OPEN || current_task->files->filp[sockfd] == NULL)
-		return -EBADF;
+	int err;
 
 	/* find socket */
-	sock = sock_lookup(current_task->files->filp[sockfd]->f_inode);
+	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
-		return -EINVAL;
+		return err;
 
 	/* socket options */
 	if (level == SOL_SOCKET)
@@ -724,7 +694,7 @@ int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optl
 int sys_socketpair(int domain, int type, int protocol, int sv[2])
 {
 	struct socket_t *sock1, *sock2;
-	int fd1, fd2, ret;
+	int fd1, fd2, err;
 
 	/* create first socket */
 	fd1 = sys_socket(domain, type, protocol);
@@ -738,26 +708,34 @@ int sys_socketpair(int domain, int type, int protocol, int sv[2])
 		return fd2;
 	}
 
-	/* get sockets */
-	sock1 = sockfd_lookup(fd1);
-	sock2 = sockfd_lookup(fd2);
-	if (!sock1 || !sock2 || !sock1->ops->socketpair) {
-		sys_close(fd1);
-		sys_close(fd2);
-		return -EINVAL;
+	/* get first socket */
+	sock1 = sockfd_lookup(fd1, NULL, &err);
+	if (!sock1)
+		goto err_release;
+
+	/* get second socket */
+	sock2 = sockfd_lookup(fd2, NULL, &err);
+	if (!sock2)
+		goto err_release;
+
+	/* socketpair not implemented */
+	if (!sock1->ops->socketpair) {
+		err = -EINVAL;
+		goto err_release;
 	}
 
 	/* connect sockets */
-	ret = sock1->ops->socketpair(sock1, sock2);
-	if (ret < 0) {
-		sys_close(fd1);
-		sys_close(fd2);
-		return ret;
-	}
+	err = sock1->ops->socketpair(sock1, sock2);
+	if (err < 0)
+		goto err_release;
 
 	/* set output */
 	sv[0] = fd1;
 	sv[1] = fd2;
 
 	return 0;
+err_release:
+	sys_close(fd1);
+	sys_close(fd2);
+	return err;
 }
