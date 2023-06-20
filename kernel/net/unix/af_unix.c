@@ -148,15 +148,6 @@ static int unix_release(struct socket_t *sock)
 }
 
 /*
- * Close a socket.
- */
-static int unix_close(struct socket_t *sock)
-{
-	UNUSED(sock);
-	return 0;
-}
-
-/*
  * Poll on a socket.
  */
 static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
@@ -590,29 +581,12 @@ static int unix_setsockopt(struct socket_t *sock, int level, int optname, void *
 }
 
 /*
- * Connect a pair of sockets.
- */
-static int unix_socketpair(struct socket_t *sock1, struct socket_t *sock2)
-{
-	unix_socket_t *sk1 = sock1->data, *sk2 = sock2->data;
-
-	/* connect sockets */
-	sk1->protinfo.af_unix.other = sk2;
-	sk2->protinfo.af_unix.other = sk1;
-	sock1->state = SS_CONNECTED;
-	sock2->state = SS_CONNECTED;
-
-	return 0;
-}
-
-/*
  * UNIX operations.
  */
 struct prot_ops unix_ops = {
 	.create		= unix_create,
 	.dup		= unix_dup,
 	.release	= unix_release,
-	.close		= unix_close,
 	.poll		= unix_poll,
 	.recvmsg	= unix_recvmsg,
 	.sendmsg	= unix_sendmsg,
@@ -624,5 +598,4 @@ struct prot_ops unix_ops = {
 	.getsockname	= unix_getsockname,
 	.getsockopt	= unix_getsockopt,
 	.setsockopt	= unix_setsockopt,
-	.socketpair	= unix_socketpair,
 };

@@ -4,8 +4,6 @@
 #include <proc/wait.h>
 #include <stddef.h>
 
-#define NR_SOCKETS		32
-
 /* addresses families */
 #define AF_UNIX		 	1
 #define AF_INET			2
@@ -107,7 +105,6 @@ struct prot_ops {
 	int (*create)(struct socket_t *, int);
 	int (*dup)(struct socket_t *, struct socket_t *);
 	int (*release)(struct socket_t *);
-	int (*close)(struct socket_t *);
 	int (*poll)(struct socket_t *, struct select_table_t *);
 	int (*recvmsg)(struct socket_t *, struct msghdr_t *, int, int);
 	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int, int);
@@ -119,7 +116,6 @@ struct prot_ops {
 	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockopt)(struct socket_t *, int, int, void *, size_t);
 	int (*setsockopt)(struct socket_t *, int, int, void *, size_t);
-	int (*socketpair)(struct socket_t *, struct socket_t *);
 };
 
 /* protocole operations */
@@ -141,6 +137,5 @@ int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
-int sys_socketpair(int domain, int type, int protocol, int sv[2]);
 
 #endif

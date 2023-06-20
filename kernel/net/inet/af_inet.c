@@ -153,28 +153,13 @@ static int inet_release(struct socket_t *sock)
 		skb_free(skb);
 	}
 
+	/* protocol close */
+	if (sk->protinfo.af_inet.prot->close)
+		sk->protinfo.af_inet.prot->close(sk);
+
 	/* release inet socket */
 	list_del(&sk->list);
 	kfree(sock->data);
-
-	return 0;
-}
-
-/*
- * Close a socket.
- */
-static int inet_close(struct socket_t *sock)
-{
-	struct sock_t *sk;
-
-	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
-	if (!sk)
-		return -EINVAL;
-
-	/* close protocol operation */
-	if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->close)
-		return sk->protinfo.af_inet.prot->close(sk);
 
 	return 0;
 }
@@ -447,24 +432,12 @@ static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *
 }
 
 /*
- * Connect a pair of sockets.
- */
-static int inet_socketpair(struct socket_t *sock1, struct socket_t *sock2)
-{
-	UNUSED(sock1);
-	UNUSED(sock2);
-
-	return -EOPNOTSUPP;
-}
-
-/*
  * Inet operations.
  */
 struct prot_ops inet_ops = {
 	.create		= inet_create,
 	.dup		= inet_dup,
 	.release	= inet_release,
-	.close		= inet_close,
 	.poll		= inet_poll,
 	.recvmsg	= inet_recvmsg,
 	.sendmsg	= inet_sendmsg,
@@ -476,5 +449,4 @@ struct prot_ops inet_ops = {
 	.getsockname	= inet_getsockname,
 	.getsockopt	= inet_getsockopt,
 	.setsockopt	= inet_setsockopt,
-	.socketpair	= inet_socketpair,
 };
