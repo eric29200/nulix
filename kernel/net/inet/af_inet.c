@@ -9,8 +9,34 @@
 #include <stderr.h>
 #include <math.h>
 
+/* inet sockets */
+static LIST_HEAD(inet_sockets);
+
 static uint16_t dyn_port = 0;
-extern struct socket_t sockets[NR_SOCKETS];
+
+/*
+ * Deliver a packet to sockets.
+ */
+void net_deliver_skb(struct sk_buff_t *skb)
+{
+	struct list_head_t *pos;
+	struct sock_t *sk;
+	int ret;
+
+	/* find matching sockets */
+	list_for_each(pos, &inet_sockets) {
+		sk = list_entry(pos, struct sock_t, list);
+
+		/* handle packet */
+		if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->handle) {
+			ret = sk->protinfo.af_inet.prot->handle(sk, skb);
+
+			/* wake up waiting processes */
+			if (ret == 0)
+				task_wakeup_all(&sk->sock->wait);
+		}
+	}
+}
 
 /*
  * Get next free port.
@@ -85,6 +111,9 @@ static int inet_create(struct socket_t *sock, int protocol)
 	sk->protinfo.af_inet.prot = prot;
 	INIT_LIST_HEAD(&sk->skb_list);
 
+	/* insert in sockets list */
+	list_add_tail(&sk->list, &inet_sockets);
+
 	return 0;
 }
 
@@ -125,6 +154,7 @@ static int inet_release(struct socket_t *sock)
 	}
 
 	/* release inet socket */
+	list_del(&sk->list);
 	kfree(sock->data);
 
 	return 0;
@@ -221,7 +251,7 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 {
 	struct sockaddr_in *src_sin;
 	struct sock_t *sk, *sk_tmp;
-	int i;
+	struct list_head_t *pos;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -235,15 +265,8 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 	src_sin = (struct sockaddr_in *) addr;
 
 	/* check if asked port is already mapped */
-	for (i = 0; i < NR_SOCKETS; i++) {
-		/* different domain : skip */
-		if (!sockets[i].state || sockets[i].family != AF_INET)
-			continue;
-
-		/* get inet socket */
-		sk_tmp = (struct sock_t *) sockets[i].data;
-		if (!sk_tmp)
-			continue;
+	list_for_each(pos, &inet_sockets) {
+		sk_tmp = list_entry(pos, struct sock_t, list);
 
 		/* different protocol : skip */
 		if (sk->protocol != sk_tmp->protocol)

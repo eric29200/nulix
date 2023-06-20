@@ -9,23 +9,21 @@
 #include <fcntl.h>
 #include <uio.h>
 
-/* sockets table */
-extern struct socket_t sockets[NR_SOCKETS];
+/* UNIX sockets */
+static LIST_HEAD(unix_sockets);
 
 /*
  * Find a UNIX socket.
  */
 static unix_socket_t *unix_find_socket_by_inode(struct inode_t *inode)
 {
+	struct list_head_t *pos;
 	unix_socket_t *sk;
-	int i;
 
-	for (i = 0; i < NR_SOCKETS; i++) {
-		if (sockets[i].family == AF_UNIX) {
-			sk = (unix_socket_t *) sockets[i].data;
-			if (sk && sk->protinfo.af_unix.inode == inode)
-				return sk;
-		}
+	list_for_each(pos, &unix_sockets) {
+		sk = list_entry(pos, unix_socket_t, list);
+		if (sk && sk->protinfo.af_unix.inode == inode)
+			return sk;
 	}
 
 	return NULL;
@@ -36,15 +34,13 @@ static unix_socket_t *unix_find_socket_by_inode(struct inode_t *inode)
  */
 static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen)
 {
+	struct list_head_t *pos;
 	unix_socket_t *sk;
-	int i;
 
-	for (i = 0; i < NR_SOCKETS; i++) {
-		if (sockets[i].family == AF_UNIX) {
-			sk = (unix_socket_t *) sockets[i].data;
-			if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0)
-				return sk;
-		}
+	list_for_each(pos, &unix_sockets) {
+		sk = list_entry(pos, unix_socket_t, list);
+		if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0)
+			return sk;
 	}
 
 	return NULL;
@@ -107,6 +103,9 @@ static int unix_create(struct socket_t *sock, int protocol)
 	sk->protinfo.af_unix.other = NULL;
 	INIT_LIST_HEAD(&sk->skb_list);
 
+	/* insert in sockets list */
+	list_add_tail(&sk->list, &unix_sockets);
+
 	return 0;
 }
 
@@ -142,6 +141,7 @@ static int unix_release(struct socket_t *sock)
 		iput(sk->protinfo.af_unix.inode);
 
 	/* release UNIX socket */
+	list_del(&sk->list);
 	kfree(sock->data);
 
 	return 0;
