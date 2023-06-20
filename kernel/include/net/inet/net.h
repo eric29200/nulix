@@ -33,6 +33,5 @@ void skb_handle(struct sk_buff_t *skb);
 uint16_t net_checksum(void *data, size_t size);
 void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb);
 void net_transmit(struct net_device_t *net_dev, struct sk_buff_t *skb);
-void skb_deliver_to_sockets(struct sk_buff_t *skb);
 
 #endif

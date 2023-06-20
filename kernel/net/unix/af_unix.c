@@ -9,21 +9,23 @@
 #include <fcntl.h>
 #include <uio.h>
 
-/* UNIX sockets */
-static LIST_HEAD(unix_sockets);
+/* sockets table */
+extern struct socket_t sockets[NR_SOCKETS];
 
 /*
  * Find a UNIX socket.
  */
 static unix_socket_t *unix_find_socket_by_inode(struct inode_t *inode)
 {
-	struct list_head_t *pos;
 	unix_socket_t *sk;
+	int i;
 
-	list_for_each(pos, &unix_sockets) {
-		sk = list_entry(pos, unix_socket_t, list);
-		if (sk && sk->protinfo.af_unix.inode == inode)
-			return sk;
+	for (i = 0; i < NR_SOCKETS; i++) {
+		if (sockets[i].family == AF_UNIX) {
+			sk = (unix_socket_t *) sockets[i].data;
+			if (sk && sk->protinfo.af_unix.inode == inode)
+				return sk;
+		}
 	}
 
 	return NULL;
@@ -34,13 +36,15 @@ static unix_socket_t *unix_find_socket_by_inode(struct inode_t *inode)
  */
 static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen)
 {
-	struct list_head_t *pos;
 	unix_socket_t *sk;
+	int i;
 
-	list_for_each(pos, &unix_sockets) {
-		sk = list_entry(pos, unix_socket_t, list);
-		if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0)
-			return sk;
+	for (i = 0; i < NR_SOCKETS; i++) {
+		if (sockets[i].family == AF_UNIX) {
+			sk = (unix_socket_t *) sockets[i].data;
+			if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0)
+				return sk;
+		}
 	}
 
 	return NULL;
@@ -101,11 +105,7 @@ static int unix_create(struct socket_t *sock, int protocol)
 	sk->protocol = protocol;
 	sk->sock = sock;
 	sk->protinfo.af_unix.other = NULL;
-	INIT_LIST_HEAD(&sk->list);
 	INIT_LIST_HEAD(&sk->skb_list);
-
-	/* insert UNIX socket */
-	list_add(&sk->list, &unix_sockets);
 
 	return 0;
 }
@@ -141,12 +141,18 @@ static int unix_release(struct socket_t *sock)
 	if (sk->protinfo.af_unix.inode)
 		iput(sk->protinfo.af_unix.inode);
 
-	/* remove UNIX socket */
-	list_del(&sk->list);
-
 	/* release UNIX socket */
 	kfree(sock->data);
 
+	return 0;
+}
+
+/*
+ * Close a socket.
+ */
+static int unix_close(struct socket_t *sock)
+{
+	UNUSED(sock);
 	return 0;
 }
 
@@ -584,12 +590,29 @@ static int unix_setsockopt(struct socket_t *sock, int level, int optname, void *
 }
 
 /*
+ * Connect a pair of sockets.
+ */
+static int unix_socketpair(struct socket_t *sock1, struct socket_t *sock2)
+{
+	unix_socket_t *sk1 = sock1->data, *sk2 = sock2->data;
+
+	/* connect sockets */
+	sk1->protinfo.af_unix.other = sk2;
+	sk2->protinfo.af_unix.other = sk1;
+	sock1->state = SS_CONNECTED;
+	sock2->state = SS_CONNECTED;
+
+	return 0;
+}
+
+/*
  * UNIX operations.
  */
 struct prot_ops unix_ops = {
 	.create		= unix_create,
 	.dup		= unix_dup,
 	.release	= unix_release,
+	.close		= unix_close,
 	.poll		= unix_poll,
 	.recvmsg	= unix_recvmsg,
 	.sendmsg	= unix_sendmsg,
@@ -601,4 +624,5 @@ struct prot_ops unix_ops = {
 	.getsockname	= unix_getsockname,
 	.getsockopt	= unix_getsockopt,
 	.setsockopt	= unix_setsockopt,
+	.socketpair	= unix_socketpair,
 };

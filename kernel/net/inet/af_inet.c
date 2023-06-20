@@ -10,31 +10,7 @@
 #include <math.h>
 
 static uint16_t dyn_port = 0;
-static LIST_HEAD(inet_sockets);
-
-/*
- * Deliver a packet to sockets.
- */
-void skb_deliver_to_sockets(struct sk_buff_t *skb)
-{
-	struct list_head_t *pos;
-	struct sock_t *sk;
-	int ret;
-
-	/* find matching sockets */
-	list_for_each(pos, &inet_sockets) {
-		sk = list_entry(pos, struct sock_t, list);
-
-		/* handle packet */
-		if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->handle) {
-			ret = sk->protinfo.af_inet.prot->handle(sk, skb);
-
-			/* wake up waiting processes */
-			if (ret == 0)
-				task_wakeup_all(&sk->sock->wait);
-		}
-	}
-}
+extern struct socket_t sockets[NR_SOCKETS];
 
 /*
  * Get next free port.
@@ -107,11 +83,7 @@ static int inet_create(struct socket_t *sock, int protocol)
 	sk->protocol = protocol;
 	sk->sock = sock;
 	sk->protinfo.af_inet.prot = prot;
-	INIT_LIST_HEAD(&sk->list);
 	INIT_LIST_HEAD(&sk->skb_list);
-
-	/* add inet socket */
-	list_add(&sk->list, &inet_sockets);
 
 	return 0;
 }
@@ -152,15 +124,27 @@ static int inet_release(struct socket_t *sock)
 		skb_free(skb);
 	}
 
-	/* protocol close */
-	if (sk->protinfo.af_inet.prot->close)
-		sk->protinfo.af_inet.prot->close(sk);
-
-	/* remove inet socket */
-	list_del(&sk->list);
-
 	/* release inet socket */
 	kfree(sock->data);
+
+	return 0;
+}
+
+/*
+ * Close a socket.
+ */
+static int inet_close(struct socket_t *sock)
+{
+	struct sock_t *sk;
+
+	/* get inet socket */
+	sk = (struct sock_t *) sock->data;
+	if (!sk)
+		return -EINVAL;
+
+	/* close protocol operation */
+	if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->close)
+		return sk->protinfo.af_inet.prot->close(sk);
 
 	return 0;
 }
@@ -237,7 +221,7 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 {
 	struct sockaddr_in *src_sin;
 	struct sock_t *sk, *sk_tmp;
-	struct list_head_t *pos;
+	int i;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -251,8 +235,15 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 	src_sin = (struct sockaddr_in *) addr;
 
 	/* check if asked port is already mapped */
-	list_for_each(pos, &inet_sockets) {
-		sk_tmp = list_entry(pos, struct sock_t, list);
+	for (i = 0; i < NR_SOCKETS; i++) {
+		/* different domain : skip */
+		if (!sockets[i].state || sockets[i].family != AF_INET)
+			continue;
+
+		/* get inet socket */
+		sk_tmp = (struct sock_t *) sockets[i].data;
+		if (!sk_tmp)
+			continue;
 
 		/* different protocol : skip */
 		if (sk->protocol != sk_tmp->protocol)
@@ -433,12 +424,24 @@ static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *
 }
 
 /*
+ * Connect a pair of sockets.
+ */
+static int inet_socketpair(struct socket_t *sock1, struct socket_t *sock2)
+{
+	UNUSED(sock1);
+	UNUSED(sock2);
+
+	return -EOPNOTSUPP;
+}
+
+/*
  * Inet operations.
  */
 struct prot_ops inet_ops = {
 	.create		= inet_create,
 	.dup		= inet_dup,
 	.release	= inet_release,
+	.close		= inet_close,
 	.poll		= inet_poll,
 	.recvmsg	= inet_recvmsg,
 	.sendmsg	= inet_sendmsg,
@@ -450,4 +453,5 @@ struct prot_ops inet_ops = {
 	.getsockname	= inet_getsockname,
 	.getsockopt	= inet_getsockopt,
 	.setsockopt	= inet_setsockopt,
+	.socketpair	= inet_socketpair,
 };

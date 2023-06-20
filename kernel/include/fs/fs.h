@@ -11,7 +11,6 @@
 #include <fs/pipe_i.h>
 #include <fs/tmp_i.h>
 #include <fs/iso_i.h>
-#include <net/socket.h>
 #include <proc/wait.h>
 #include <mm/mm.h>
 #include <uio.h>
@@ -93,7 +92,6 @@ struct inode_t {
 	dev_t				i_rdev;
 	char				i_pipe;
 	char				i_shm;
-	char				i_sock;
 	struct inode_t *		i_mount;
 	struct list_head_t		i_pages;
 	struct list_head_t		i_mmap;
@@ -105,7 +103,6 @@ struct inode_t {
 		struct pipe_inode_info_t	pipe_i;
 		struct tmpfs_inode_info_t	tmp_i;
 		struct isofs_inode_info_t	iso_i;
-		struct socket_t			socket_i;
 		void *				generic_i;
 	} u;
 };
