@@ -47,9 +47,6 @@ static void sock_release(struct socket_t *sock)
 	if (sock->ops && sock->ops->release)
 		sock->ops->release(sock);
 
-	/* mark socket free */
-	sock->state = SS_FREE;
-
 	/* release inode */
 	iput(sock->inode);
 }

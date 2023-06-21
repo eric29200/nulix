@@ -92,7 +92,7 @@ static int unix_create(struct socket_t *sock, int protocol)
 		return -EINVAL;
 
 	/* allocate UNIX socket */
-	sock->data = sk = (unix_socket_t *) kmalloc(sizeof(unix_socket_t));
+	sk = (unix_socket_t *) kmalloc(sizeof(unix_socket_t));
 	if (!sk)
 		return -ENOMEM;
 
@@ -102,6 +102,7 @@ static int unix_create(struct socket_t *sock, int protocol)
 	sk->sock = sock;
 	sk->protinfo.af_unix.other = NULL;
 	INIT_LIST_HEAD(&sk->skb_list);
+	sock->sk = sk;
 
 	/* insert in sockets list */
 	list_add_tail(&sk->list, &unix_sockets);
@@ -117,7 +118,7 @@ static int unix_dup(struct socket_t *sock, struct socket_t *sock_new)
 	unix_socket_t *sk;
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -132,7 +133,7 @@ static int unix_release(struct socket_t *sock)
 	unix_socket_t *sk;
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return 0;
 
@@ -142,7 +143,7 @@ static int unix_release(struct socket_t *sock)
 
 	/* release UNIX socket */
 	list_del(&sk->list);
-	kfree(sock->data);
+	kfree(sk);
 
 	return 0;
 }
@@ -156,7 +157,7 @@ static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
 	int mask = 0;
 
 	/* get inet socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -188,7 +189,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 	UNUSED(flags);
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -231,8 +232,8 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 	}
 
 	/* set source address */
-	if (skb->sock && skb->sock->data) {
-		from = (unix_socket_t *) skb->sock->data;
+	if (skb->sock && skb->sock->sk) {
+		from = skb->sock->sk;
 		memcpy(msg->msg_name, &from->protinfo.af_unix.sunaddr, from->protinfo.af_unix.sunaddr_len);
 	}
 
@@ -267,7 +268,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int n
 	UNUSED(nonblock);
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -325,7 +326,7 @@ static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 		return -EINVAL;
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -372,8 +373,8 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 		return -EINVAL;
 
 	/* get UNIX sockets */
-	sk = (unix_socket_t *) sock->data;
-	sk_new = (unix_socket_t *) sock_new->data;
+	sk = sock->sk;
+	sk_new = sock_new->sk;
 	if (!sk || !sk_new)
 		return -EINVAL;
 
@@ -389,7 +390,7 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 
 			/* set new socket */
 			sock_new->state = SS_CONNECTED;
-			other = sk_new->protinfo.af_unix.other = (unix_socket_t *) skb->sock->data;
+			other = sk_new->protinfo.af_unix.other = sock->sk;
 			sk_new->protinfo.af_unix.other = sk_new;
 
 			/* set destination address */
@@ -428,7 +429,7 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size
 	int ret;
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -481,7 +482,7 @@ static int unix_shutdown(struct socket_t *sock, int how)
 	unix_socket_t *sk, *other;
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -513,7 +514,7 @@ static int unix_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t
 	unix_socket_t *sk, *other;
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -536,7 +537,7 @@ static int unix_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 	unix_socket_t *sk;
 
 	/* get UNIX socket */
-	sk = (unix_socket_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 

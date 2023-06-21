@@ -95,7 +95,7 @@ struct socket_t {
 	struct prot_ops *	ops;
 	struct wait_queue_t *	wait;
 	struct inode_t *	inode;
-	void *			data;
+	struct sock_t *		sk;
 };
 
 /*

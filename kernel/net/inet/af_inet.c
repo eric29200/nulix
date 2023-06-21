@@ -99,8 +99,8 @@ static int inet_create(struct socket_t *sock, int protocol)
 	}
 
 	/* allocate inet socket */
-	sock->data = sk = kmalloc(sizeof(struct sock_t));
-	if (!sock->data)
+	sk = kmalloc(sizeof(struct sock_t));
+	if (!sk)
 		return -ENOMEM;
 
 	/* set socket */
@@ -110,6 +110,7 @@ static int inet_create(struct socket_t *sock, int protocol)
 	sk->sock = sock;
 	sk->protinfo.af_inet.prot = prot;
 	INIT_LIST_HEAD(&sk->skb_list);
+	sock->sk = sk;
 
 	/* insert in sockets list */
 	list_add_tail(&sk->list, &inet_sockets);
@@ -125,7 +126,7 @@ static int inet_dup(struct socket_t *sock, struct socket_t *sock_new)
 	struct sock_t *sk;
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return 0;
 
@@ -142,7 +143,7 @@ static int inet_release(struct socket_t *sock)
 	struct sock_t *sk;
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return 0;
 
@@ -159,7 +160,7 @@ static int inet_release(struct socket_t *sock)
 
 	/* release inet socket */
 	list_del(&sk->list);
-	kfree(sock->data);
+	kfree(sk);
 
 	return 0;
 }
@@ -173,7 +174,7 @@ static int inet_poll(struct socket_t *sock, struct select_table_t *wait)
 	int mask = 0;
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -199,7 +200,7 @@ static int inet_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 	struct sock_t *sk;
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -218,7 +219,7 @@ static int inet_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int n
 	struct sock_t *sk;
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -242,7 +243,7 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 	UNUSED(addrlen);
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -285,12 +286,12 @@ static int inet_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 	int ret;
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
 	/* get new inet socket */
-	sk_new = (struct sock_t *) sock_new->data;
+	sk_new = sock_new->sk;
 	if (!sk_new)
 		return -EINVAL;
 
@@ -334,7 +335,7 @@ static int inet_connect(struct socket_t *sock, const struct sockaddr *addr, size
 	UNUSED(addrlen);
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -360,7 +361,7 @@ static int inet_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t
 	struct sock_t *sk;
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
@@ -384,7 +385,7 @@ static int inet_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 	struct sock_t *sk;
 
 	/* get inet socket */
-	sk = (struct sock_t *) sock->data;
+	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
