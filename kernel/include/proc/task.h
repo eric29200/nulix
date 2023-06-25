@@ -130,10 +130,12 @@ struct task_registers_t {
  */
 struct binargs_t {
 	char	*buf;
+	char	*p;
 	int	argc;
 	int	argv_len;
 	int	envc;
 	int	envp_len;
+	char	dont_free;
 };
 
 struct task_t *create_kernel_thread(void (*func)(void *), void *arg);
@@ -148,6 +150,10 @@ void task_exit_files(struct task_t *task);
 void task_exit_mmap(struct mm_struct *mm);
 void task_release_mmap(struct task_t *task);
 
+void copy_strings(struct binargs_t *bargs, int argc, char **argv);
+int binary_load(const char *path, struct binargs_t *bargs);
+int elf_load(const char *path, struct binargs_t *bargs);
+int script_load(const char *path, struct binargs_t *bargs);
 
 pid_t sys_fork();
 pid_t sys_vfork();
