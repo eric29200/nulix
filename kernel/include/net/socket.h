@@ -158,5 +158,6 @@ int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t *optlen);
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
+int sys_socketcall(int call, unsigned long *args);
 
 #endif

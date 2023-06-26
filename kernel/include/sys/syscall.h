@@ -55,6 +55,7 @@
 #define __NR_mmap			90
 #define __NR_munmap			91
 #define __NR_fchmod			94
+#define __NR_socketcall			102
 #define __NR_setitimer			104
 #define __NR_wait4			114
 #define __NR_sysinfo			116
