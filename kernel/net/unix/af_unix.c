@@ -552,7 +552,7 @@ static int unix_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 /*
  * Get socket options system call.
  */
-static int unix_getsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t optlen)
+static int unix_getsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t *optlen)
 {
 	UNUSED(sock);
 	UNUSED(level);

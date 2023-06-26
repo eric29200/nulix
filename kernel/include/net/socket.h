@@ -51,6 +51,25 @@
 #define SO_RCVTIMEO		20
 #define SO_SNDTIMEO		21
 
+/* system calls */
+#define SYS_SOCKET		1
+#define SYS_BIND		2
+#define SYS_CONNECT		3
+#define SYS_LISTEN		4
+#define SYS_ACCEPT		5
+#define SYS_GETSOCKNAME		6
+#define SYS_GETPEERNAME		7
+#define SYS_SOCKETPAIR		8
+#define SYS_SEND		9
+#define SYS_RECV		10
+#define SYS_SENDTO		11
+#define SYS_RECVFROM		12
+#define SYS_SHUTDOWN		13
+#define SYS_SETSOCKOPT		14
+#define SYS_GETSOCKOPT		15
+#define SYS_SENDMSG		16
+#define SYS_RECVMSG		17
+
 /*
  * Socket address.
  */
@@ -114,7 +133,7 @@ struct prot_ops {
 	int (*shutdown)(struct socket_t *, int);
 	int (*getpeername)(struct socket_t *, struct sockaddr *, size_t *);
 	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
-	int (*getsockopt)(struct socket_t *, int, int, void *, size_t);
+	int (*getsockopt)(struct socket_t *, int, int, void *, size_t *);
 	int (*setsockopt)(struct socket_t *, int, int, void *, size_t);
 };
 
@@ -127,15 +146,17 @@ int sys_socket(int domain, int type, int protocol);
 int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen);
 int sys_listen(int sockfd, int backlog);
-int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen);
+int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen);
+int sys_send(int sockfd, const void * buf, size_t len, int flags);
 int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
 int sys_sendmsg(int sockfd, const struct msghdr_t *msg, int flags);
-int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen);
+int sys_recv(int sockfd, void *buf, size_t size, int flags);
+int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t *addrlen);
 int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
 int sys_shutdown(int sockfd, int how);
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);
-int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
+int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t *optlen);
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 
 #endif

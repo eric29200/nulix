@@ -336,7 +336,7 @@ int sys_listen(int sockfd, int backlog)
 /*
  * Accept system call.
  */
-int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
+int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
 	struct socket_t *sock, *new_sock;
 	int fd, err;
@@ -384,6 +384,14 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t addrlen)
 	}
 
 	return fd;
+}
+
+/*
+ * Send system call.
+ */
+int sys_send(int sockfd, const void * buf, size_t len, int flags)
+{
+	return sys_sendto(sockfd, buf, len, flags, NULL, 0);
 }
 
 /*
@@ -448,9 +456,17 @@ int sys_sendmsg(int sockfd, const struct msghdr_t *msg, int flags)
 }
 
 /*
+ * Receive system call.
+ */
+int sys_recv(int sockfd, void *buf, size_t size, int flags)
+{
+	return sys_recvfrom(sockfd, buf, size, flags, NULL, NULL);
+}
+
+/*
  * Receive from system call.
  */
-int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t addrlen)
+int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t *addrlen)
 {
 	struct socket_t *sock;
 	struct iovec_t iovec;
@@ -570,7 +586,7 @@ int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 /*
  * Get socket options.
  */
-static int sock_getsockopt(struct socket_t *sock, int optname, void *optval, size_t optlen)
+static int sock_getsockopt(struct socket_t *sock, int optname, void *optval, size_t *optlen)
 {
 	UNUSED(sock);
 	UNUSED(optval);
@@ -604,7 +620,7 @@ static int sock_setsockopt(struct socket_t *sock, int optname, void *optval, siz
 /*
  * Get socket options system call.
  */
-int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
+int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t *optlen)
 {
 	struct socket_t *sock;
 	int err;
@@ -647,4 +663,71 @@ int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optl
 		return -EINVAL;
 
 	return sock->ops->setsockopt(sock, level, optname, optval, optlen);
+}
+
+/*
+ * Socketcall system call.
+ */
+int sys_socketcall(int call, unsigned long *args)
+{
+	int err;
+
+	/* check call */
+	if(call < 1|| call > SYS_RECVMSG)
+		return -EINVAL;
+
+	switch(call) {
+		case SYS_SOCKET:
+			err = sys_socket(args[0], args[1], args[2]);
+			break;
+		case SYS_BIND:
+			err = sys_bind(args[0], (struct sockaddr *) args[1], args[2]);
+			break;
+		case SYS_CONNECT:
+			err = sys_connect(args[0], (struct sockaddr *) args[1], args[2]);
+			break;
+		case SYS_LISTEN:
+			err = sys_listen(args[0], args[1]);
+			break;
+		case SYS_ACCEPT:
+			err = sys_accept(args[0], (struct sockaddr *) args[1], (size_t *) args[2]);
+			break;
+		case SYS_GETSOCKNAME:
+			err = sys_getsockname(args[0],(struct sockaddr *) args[1], (size_t *) args[2]);
+			break;
+		case SYS_GETPEERNAME:
+			err = sys_getpeername(args[0], (struct sockaddr *) args[1], (size_t *) args[2]);
+			break;
+		case SYS_SEND:
+			err = sys_send(args[0], (void *) args[1], args[2], args[3]);
+			break;
+		case SYS_SENDTO:
+			err = sys_sendto(args[0],(void *) args[1], args[2], args[3], (struct sockaddr *) args[4], args[5]);
+			break;
+		case SYS_RECV:
+			err = sys_recv(args[0], (void *) args[1], args[2], args[3]);
+			break;
+		case SYS_RECVFROM:
+			err = sys_recvfrom(args[0], (void *) args[1], args[2], args[3], (struct sockaddr *) args[4], (size_t *) args[5]);
+			break;
+		case SYS_SHUTDOWN:
+			err = sys_shutdown(args[0], args[1]);
+			break;
+		case SYS_SETSOCKOPT:
+			err = sys_setsockopt(args[0], args[1], args[2], (char *) args[3], args[4]);
+			break;
+		case SYS_GETSOCKOPT:
+			err = sys_getsockopt(args[0], args[1], args[2], (char *) args[3], (size_t *) args[4]);
+			break;
+		case SYS_SENDMSG:
+			err = sys_sendmsg(args[0], (struct msghdr_t *) args[1], args[2]);
+			break;
+		case SYS_RECVMSG:
+			err = sys_recvmsg(args[0], (struct msghdr_t *) args[1], args[2]);
+			break;
+		default:
+			err = -EINVAL;
+			break;
+	}
+	return err;
 }

@@ -403,7 +403,7 @@ static int inet_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 /*
  * Get socket options system call.
  */
-static int inet_getsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t optlen)
+static int inet_getsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t *optlen)
 {
 	UNUSED(sock);
 	UNUSED(level);
