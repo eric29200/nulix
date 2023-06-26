@@ -108,6 +108,7 @@
 #define __NR_get_thread_area		244
 #define __NR_exit_group			252
 #define __NR_set_tid_address		258
+#define __NR_clock_gettime32		265
 #define __NR_statfs64			268
 #define __NR_fstatfs64			269
 #define __NR_fadvise64			272

@@ -8,6 +8,7 @@
 #include <sys/utsname.h>
 
 int sys_clock_gettime64(clockid_t clockid, struct timespec_t *tp);
+int sys_clock_gettime32(clockid_t clockid, struct old_timespec_t *tp);
 int sys_getrandom(void *buf, size_t buflen, unsigned int flags);
 int sys_getrusage(int who, struct rusage_t *ru);
 int sys_nanosleep(const struct old_timespec_t *req, struct old_timespec_t *rem);
