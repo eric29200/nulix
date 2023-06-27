@@ -317,7 +317,7 @@ static void csi_J(struct vc_t *vc, int vpar)
 	switch (vpar) {
 		case 0:								/* erase from cursor to end of display */
 			start = fb->buf + fb->y * fb->width + fb->x;
-			count = fb->width * fb->height - fb->y * fb->width + fb->x;
+			count = fb->width * fb->height - (fb->y * fb->width + fb->x);
 			break;
 		case 1:								/* erase from start of display to cursor */
 			start = fb->buf;
