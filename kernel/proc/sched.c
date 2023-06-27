@@ -125,7 +125,7 @@ void schedule()
 		task = list_entry(pos, struct task_t, list);
 		if (task && task->timeout && task->timeout < jiffies) {
 			task->timeout = 0;
-			
+
 			if (task->state == TASK_SLEEPING)
 				task->state = TASK_RUNNING;
 		}

@@ -122,7 +122,7 @@ static int sock_close(struct file_t *filp)
 {
 	if (!filp->f_inode)
 		return 0;
-	
+
 	/* release socket */
 	sock_release(&filp->f_inode->u.socket_i);
 

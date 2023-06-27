@@ -57,7 +57,7 @@ int script_load(const char *path, struct binargs_t *bargs)
 	for ( ; *s && *s != ' ' && *s != '\t'; s++)
  		if (*s == '/')
 			interp_name = s + 1;
-	
+
 	/* trim interpreter */
 	while (*s == ' ' || *s == '\t')
 		*s++ = 0;
