@@ -14,6 +14,7 @@ int script_load(const char *path, struct binargs_t *bargs)
 	char buf[128];
 	int fd, ret;
 	ssize_t n;
+	size_t t;
 
 	/* open file */
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
@@ -73,6 +74,12 @@ int script_load(const char *path, struct binargs_t *bargs)
 	bargs_new.envp_len = bargs->envp_len;
 	bargs_new.dont_free = 0;
 
+	/* add old arguments (remove first = script name) */
+	if (bargs->argc > 1) {
+		bargs_new.argc += bargs->argc - 1;
+		bargs_new.argv_len += bargs->argv_len - strlen(bargs->buf) - 1;
+	}
+
 	/* allocate buffer */
 	bargs_new.buf = bargs_new.p = (char *) kmalloc(bargs_new.argv_len + bargs_new.envp_len);
 	if (!bargs_new.buf)
@@ -83,6 +90,13 @@ int script_load(const char *path, struct binargs_t *bargs)
 	copy_strings(&bargs_new, 1, (char **) &path);
 	if(i_arg)
 		copy_strings(&bargs_new, 1, &i_arg);
+
+	/* copy old arguments */
+	if (bargs->argc > 1) {
+		t = strlen(bargs->buf) + 1;
+		memcpy(bargs_new.p, bargs->buf + t, bargs->argv_len - t);
+		bargs_new.p += bargs->argv_len - t;
+	}
 
 	/* copy environ */
 	memcpy(bargs_new.p, bargs->buf + bargs->argv_len, bargs->envp_len);
