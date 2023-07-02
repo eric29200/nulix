@@ -19,6 +19,8 @@
 #define PROC_PID_CMDLINE_INO	11
 #define PROC_PID_ENVIRON_INO	12
 #define PROC_PID_FD_INO		13
+#define PROC_NET_INO		14
+#define PROC_NET_DEV_INO	15
 
 /*
  * Procfs dir entry.
@@ -53,6 +55,8 @@ extern struct inode_operations_t proc_cmdline_iops;
 extern struct inode_operations_t proc_environ_iops;
 extern struct inode_operations_t proc_fd_iops;
 extern struct inode_operations_t proc_fd_link_iops;
+extern struct inode_operations_t proc_net_iops;
+extern struct inode_operations_t proc_net_dev_iops;
 
 /*
  * Test if a name matches a directory entry.

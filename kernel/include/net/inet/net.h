@@ -15,6 +15,7 @@
  * Network device.
  */
 struct net_device_t {
+	char *			name;
 	uint32_t		io_base;
 	uint8_t			irq;
 	uint8_t			mac_addr[6];
@@ -28,6 +29,11 @@ struct net_device_t {
 	void			(*send_packet)(struct sk_buff_t *);
 };
 
+/* network devices */
+extern struct net_device_t net_devices[NR_NET_DEVICES];
+extern int nr_net_devices;
+
+/* network prototypes */
 struct net_device_t *register_net_device(uint32_t io_base);
 void skb_handle(struct sk_buff_t *skb);
 uint16_t net_checksum(void *data, size_t size);

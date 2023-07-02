@@ -57,6 +57,14 @@ int proc_read_inode(struct inode_t *inode)
 				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
 				inode->i_op = &proc_loadavg_iops;
 				break;
+			case PROC_NET_INO:
+				inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
+				inode->i_nlinks = 2;
+				inode->i_op = &proc_net_iops;
+				break;
+			case PROC_NET_DEV_INO:
+				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+				inode->i_op = &proc_net_dev_iops;
 				break;
 			default:
 				inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;

@@ -50,4 +50,3 @@ struct file_operations_t proc_kstat_fops = {
 struct inode_operations_t proc_kstat_iops = {
 	.fops		= &proc_kstat_fops,
 };
-

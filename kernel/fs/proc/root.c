@@ -20,6 +20,7 @@ static struct proc_dir_entry_t root_dir[] = {
 	{ PROC_SELF_INO,	4,	"self" },
 	{ PROC_MEMINFO_INO,	7,	"meminfo" },
 	{ PROC_LOADAVG_INO,	7,	"loadavg" },
+	{ PROC_NET_INO,		3,	"net" },
 };
 
 /*

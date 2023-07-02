@@ -7,10 +7,11 @@
 #include <net/inet/udp.h>
 #include <net/inet/tcp.h>
 #include <proc/sched.h>
+#include <stdio.h>
 
 /* network devices */
-static struct net_device_t net_devices[NR_NET_DEVICES];
-static int nb_net_devices = 0;
+struct net_device_t net_devices[NR_NET_DEVICES];
+int nr_net_devices = 0;
 
 /*
  * Compute checksum.
@@ -157,22 +158,40 @@ static void net_handler_thread(void *arg)
 struct net_device_t *register_net_device(uint32_t io_base)
 {
 	struct net_device_t *net_dev;
+	char tmp[32];
+	size_t len;
 
 	/* network devices table full */
-	if (nb_net_devices >= NR_NET_DEVICES)
+	if (nr_net_devices >= NR_NET_DEVICES)
 		return NULL;
 
 	/* set net device */
-	net_dev = &net_devices[nb_net_devices++];
+	net_dev = &net_devices[nr_net_devices];
 	net_dev->io_base = io_base;
 	net_dev->wait = NULL;
 	INIT_LIST_HEAD(&net_dev->skb_input_list);
 	INIT_LIST_HEAD(&net_dev->skb_output_list);
 
+	/* set name */
+	len = sprintf(tmp, "eth%d", nr_net_devices);
+	
+	/* allocate name */
+	net_dev->name = (char *) kmalloc(len + 1);
+	if (!net_dev->name)
+		return NULL;
+
+	/* set name */
+	memcpy(net_dev->name, tmp, len + 1);
+
 	/* create kernel thread to handle receive packets */
 	net_dev->thread = create_kernel_thread(net_handler_thread, net_dev);
-	if (!net_dev->thread)
+	if (!net_dev->thread) {
+		kfree(net_dev->name);
 		return NULL;
+	}
+
+	/* update number of net devices */
+	nr_net_devices++;
 
 	return net_dev;
 }
