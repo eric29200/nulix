@@ -167,6 +167,7 @@ struct net_device_t *register_net_device(uint32_t io_base)
 
 	/* set net device */
 	net_dev = &net_devices[nr_net_devices];
+	net_dev->index = nr_net_devices;
 	net_dev->io_base = io_base;
 	net_dev->wait = NULL;
 	INIT_LIST_HEAD(&net_dev->skb_input_list);
@@ -194,6 +195,23 @@ struct net_device_t *register_net_device(uint32_t io_base)
 	nr_net_devices++;
 
 	return net_dev;
+}
+
+/*
+ * Find a network device.
+ */
+struct net_device_t *net_device_find(const char *name)
+{
+	int i;
+
+	if (!name)
+		return NULL;
+
+	for (i = 0; i < nr_net_devices; i++)
+		if (strcmp(net_devices[i].name, name) == 0)
+			return &net_devices[i];
+
+	return NULL;
 }
 
 /*

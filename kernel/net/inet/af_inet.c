@@ -1,6 +1,7 @@
 #include <net/sock.h>
 #include <net/inet/ip.h>
 #include <net/inet/net.h>
+#include <net/if.h>
 #include <drivers/net/rtl8139.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
@@ -433,6 +434,36 @@ static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *
 }
 
 /*
+ * Ioctl on a INET socket.
+ */
+static int inet_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
+{
+	struct net_device_t *net_dev;
+	struct ifreq *ifr;
+
+	UNUSED(sock);
+
+	switch (cmd) {
+		case SIOCGIFINDEX:
+			ifr = (struct ifreq *) arg;
+
+			/* get network device */
+			net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
+			if (!net_dev)
+				return -EINVAL;
+
+			ifr->ifr_ifru.ifru_ivalue = net_dev->index;
+			return 0;
+		default:
+			printf("INET socket : unknown ioctl cmd %x\n", cmd);
+			return -EINVAL;
+	}
+
+
+	return -EINVAL;
+}
+
+/*
  * Inet operations.
  */
 struct prot_ops inet_ops = {
@@ -440,6 +471,7 @@ struct prot_ops inet_ops = {
 	.dup		= inet_dup,
 	.release	= inet_release,
 	.poll		= inet_poll,
+	.ioctl		= inet_ioctl,
 	.recvmsg	= inet_recvmsg,
 	.sendmsg	= inet_sendmsg,
 	.bind		= inet_bind,

@@ -150,6 +150,21 @@ static int sock_poll(struct file_t *filp, struct select_table_t *wait)
 }
 
 /*
+ * Ioctl on a socket.
+ */
+static int sock_ioctl(struct file_t *filp, int cmd, unsigned long arg)
+{
+	struct socket_t *sock;
+
+	/* get socket */
+	sock = &filp->f_inode->u.socket_i;
+	if (!sock)
+		return -EINVAL;
+
+	return sock->ops->ioctl(sock, cmd, arg);
+}
+
+/*
  * Socket read.
  */
 static int sock_read(struct file_t *filp, char *buf, int len)
@@ -212,6 +227,7 @@ struct file_operations_t socket_fops = {
 	.read		= sock_read,
 	.write		= sock_write,
 	.poll		= sock_poll,
+	.ioctl		= sock_ioctl,
 	.close		= sock_close,
 };
 

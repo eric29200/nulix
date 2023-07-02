@@ -582,6 +582,19 @@ static int unix_setsockopt(struct socket_t *sock, int level, int optname, void *
 }
 
 /*
+ * Ioctl on a UNIX socket.
+ */
+static int unix_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
+{
+	UNUSED(sock);
+	UNUSED(arg);
+
+	printf("UNIX socket : unknown ioctl cmd %x\n", cmd);
+
+	return -EINVAL;
+}
+
+/*
  * UNIX operations.
  */
 struct prot_ops unix_ops = {
@@ -589,6 +602,7 @@ struct prot_ops unix_ops = {
 	.dup		= unix_dup,
 	.release	= unix_release,
 	.poll		= unix_poll,
+	.ioctl		= unix_ioctl,
 	.recvmsg	= unix_recvmsg,
 	.sendmsg	= unix_sendmsg,
 	.bind		= unix_bind,
