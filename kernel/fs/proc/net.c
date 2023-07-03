@@ -100,12 +100,15 @@ static int proc_net_dev_read(struct file_t *filp, char *buf, int count)
 	int i;
 
 	/* print header */
-	len = sprintf(tmp_buf, "Inter-|   Receive                  |  Transmit\n"
-		" face |bytes\tpackets errs drop fifo frame compressed multicast|bytes\tpackets errs drop fifo colls carrier compressed\n");
+	sprintf(tmp_buf, "Inter-|   Receive                            "
+		"                    |  Transmit\n"
+		" face |bytes    packets errs drop fifo frame "
+		"compressed multicast|bytes    packets errs "
+		"drop fifo colls carrier compressed\n");
 
 	/* print interfaces */
 	for (i = 0; i < nr_net_devices; i++)
-		len += sprintf(tmp_buf + len, "%s: No statistics available.\n", net_devices[i].name);
+		len += sprintf(tmp_buf + len, "%s: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n", net_devices[i].name);
 
 	/* file position after end */
 	if (filp->f_pos >= len)
