@@ -100,7 +100,7 @@ static int proc_net_dev_read(struct file_t *filp, char *buf, int count)
 	int i;
 
 	/* print header */
-	sprintf(tmp_buf, "Inter-|   Receive                            "
+	len = sprintf(tmp_buf, "Inter-|   Receive                            "
 		"                    |  Transmit\n"
 		" face |bytes    packets errs drop fifo frame "
 		"compressed multicast|bytes    packets errs "
