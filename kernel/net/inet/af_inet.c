@@ -439,6 +439,7 @@ static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *
 static int inet_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
 {
 	struct net_device_t *net_dev;
+	struct ifconf *ifc;
 	struct ifreq *ifr;
 
 	UNUSED(sock);
@@ -454,6 +455,9 @@ static int inet_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
 
 			ifr->ifr_ifru.ifru_ivalue = net_dev->index;
 			return 0;
+		case SIOCGIFCONF:
+			ifc = (struct ifconf *) arg;
+			return net_device_ifconf(ifc);
 		default:
 			printf("INET socket : unknown ioctl cmd %x\n", cmd);
 			return -EINVAL;

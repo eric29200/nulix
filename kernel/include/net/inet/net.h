@@ -2,6 +2,7 @@
 #define _NET_H_
 
 #include <net/sk_buff.h>
+#include <net/if.h>
 
 #define NR_NET_DEVICES			4
 #define NET_HANDLE_FREQ_MS		10
@@ -37,6 +38,7 @@ extern int nr_net_devices;
 /* network prototypes */
 struct net_device_t *register_net_device(uint32_t io_base);
 struct net_device_t *net_device_find(const char *name);
+int net_device_ifconf(struct ifconf *ifc);
 void skb_handle(struct sk_buff_t *skb);
 uint16_t net_checksum(void *data, size_t size);
 void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb);

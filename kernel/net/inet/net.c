@@ -6,6 +6,7 @@
 #include <net/inet/icmp.h>
 #include <net/inet/udp.h>
 #include <net/inet/tcp.h>
+#include <net/if.h>
 #include <proc/sched.h>
 #include <stdio.h>
 
@@ -212,6 +213,41 @@ struct net_device_t *net_device_find(const char *name)
 			return &net_devices[i];
 
 	return NULL;
+}
+
+/*
+ * Get network devices configuration.
+ */
+int net_device_ifconf(struct ifconf *ifc)
+{
+	size_t size = ifc->ifc_len;
+	struct ifreq ifr;
+	int i, done = 0;
+
+	/* for each network device */
+	for (i = 0; i < nr_net_devices; i++) {
+		if (size < sizeof(struct ifreq))
+			break;
+
+		/* reset interface */
+		memset(&ifr, 0, sizeof(struct ifreq));
+
+		/* set name */
+		strcpy(ifr.ifr_ifrn.ifrn_name, net_devices[i].name);
+
+		/* set address */
+		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_family = AF_INET;
+		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_addr = inet_iton(net_devices[i].ip_addr);
+
+		/* update length */
+		size -= sizeof(struct ifreq);
+		done += sizeof(struct ifreq);
+	}
+
+	/* set length */
+	ifc->ifc_len = done;
+
+	return 0;
 }
 
 /*

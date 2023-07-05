@@ -3,6 +3,7 @@
 
 #define	IFNAMSIZ			16
 
+#define SIOCGIFCONF			0x8912
 #define SIOCGIFINDEX			0x8933
 
 /*
@@ -38,6 +39,17 @@ struct ifreq {
 		char			ifru_newname[IFNAMSIZ];
 		char *			ifru_data;
 	} ifr_ifru;
+};
+
+/*
+ * Interface configuration.
+ */
+struct ifconf {
+	int				ifc_len;
+	union {
+		char *			ifcu_buf;
+		struct ifreq *		ifcu_req;
+	} ifc_ifcu;
 };
 
 #endif
