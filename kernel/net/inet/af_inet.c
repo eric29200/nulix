@@ -438,33 +438,31 @@ static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *
  */
 static int inet_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
 {
-	struct net_device_t *net_dev;
-	struct ifconf *ifc;
-	struct ifreq *ifr;
-
+	/* unused socket */
 	UNUSED(sock);
 
 	switch (cmd) {
-		case SIOCGIFINDEX:
-			ifr = (struct ifreq *) arg;
-
-			/* get network device */
-			net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
-			if (!net_dev)
-				return -EINVAL;
-
-			ifr->ifr_ifru.ifru_ivalue = net_dev->index;
-			return 0;
 		case SIOCGIFCONF:
-			ifc = (struct ifconf *) arg;
-			return net_device_ifconf(ifc);
+			return net_device_ifconf((struct ifconf *) arg);
+		case SIOCGIFINDEX:
+		case SIOCGIFFLAGS:
+		case SIOCSIFFLAGS:
+		case SIOCGIFHWADDR:
+		case SIOCGIFMETRIC:
+		case SIOCGIFMTU:
+		case SIOCGIFMAP:
+		case SIOCGIFTXQLEN:
+		case SIOCGIFADDR:
+		case SIOCSIFADDR:
+		case SIOCGIFDSTADDR:
+		case SIOCGIFBRDADDR:
+		case SIOCGIFNETMASK:
+		case SIOCSIFNETMASK:
+			return net_device_ioctl(cmd, (struct ifreq *) arg);
 		default:
 			printf("INET socket : unknown ioctl cmd %x\n", cmd);
 			return -EINVAL;
 	}
-
-
-	return -EINVAL;
 }
 
 /*

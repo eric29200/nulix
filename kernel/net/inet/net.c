@@ -9,6 +9,7 @@
 #include <net/if.h>
 #include <proc/sched.h>
 #include <stdio.h>
+#include <stderr.h>
 
 /* network devices */
 struct net_device_t net_devices[NR_NET_DEVICES];
@@ -156,7 +157,7 @@ static void net_handler_thread(void *arg)
 /*
  * Register a network device.
  */
-struct net_device_t *register_net_device(uint32_t io_base)
+struct net_device_t *register_net_device(uint32_t io_base, uint16_t type)
 {
 	struct net_device_t *net_dev;
 	char tmp[32];
@@ -168,6 +169,7 @@ struct net_device_t *register_net_device(uint32_t io_base)
 
 	/* set net device */
 	net_dev = &net_devices[nr_net_devices];
+	net_dev->type = type;
 	net_dev->index = nr_net_devices;
 	net_dev->io_base = io_base;
 	net_dev->wait = NULL;
@@ -201,7 +203,7 @@ struct net_device_t *register_net_device(uint32_t io_base)
 /*
  * Find a network device.
  */
-struct net_device_t *net_device_find(const char *name)
+static struct net_device_t *net_device_find(const char *name)
 {
 	int i;
 
@@ -216,36 +218,83 @@ struct net_device_t *net_device_find(const char *name)
 }
 
 /*
+ * Network device ioctl.
+ */
+int net_device_ioctl(int cmd, struct ifreq *ifr)
+{
+	struct net_device_t *net_dev;
+
+	/* get network device */
+	net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
+	if (!net_dev)
+		return -EINVAL;
+
+	switch (cmd) {
+		case SIOCGIFINDEX:
+			ifr->ifr_ifru.ifru_ivalue = net_dev->index;
+			break;
+		case SIOCGIFFLAGS:
+			ifr->ifr_ifru.ifru_flags = net_dev->flags;
+			break;
+		case SIOCSIFFLAGS:
+			net_dev->flags = ifr->ifr_ifru.ifru_flags;
+			break;
+		case SIOCGIFADDR:
+		 	((struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr)->sin_addr = inet_iton(net_dev->ip_addr);
+		 	((struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr)->sin_family = AF_INET;
+			break;
+		case SIOCSIFADDR:
+		 	inet_ntoi(((struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr)->sin_addr, net_dev->ip_addr);
+			break;
+		case SIOCGIFNETMASK:
+		 	((struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr)->sin_addr = inet_iton(net_dev->ip_netmask);
+		 	((struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr)->sin_family = AF_INET;
+			break;
+		case SIOCSIFNETMASK:
+		 	inet_ntoi(((struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr)->sin_addr, net_dev->ip_netmask);
+			break;
+		case SIOCGIFHWADDR:
+		 	memcpy(ifr->ifr_ifru.ifru_hwaddr.sa_data, net_dev->mac_addr, 6);
+			ifr->ifr_ifru.ifru_hwaddr.sa_family = net_dev->type;
+			break;
+		default:
+			printf("INET socket : unknown ioctl cmd %x\n", cmd);
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+/*
  * Get network devices configuration.
  */
 int net_device_ifconf(struct ifconf *ifc)
 {
-	size_t size = ifc->ifc_len;
+	char *pos = ifc->ifc_ifcu.ifcu_buf;
+	size_t len = ifc->ifc_len;
 	struct ifreq ifr;
-	int i, done = 0;
+	int i;
 
 	/* for each network device */
 	for (i = 0; i < nr_net_devices; i++) {
-		if (size < sizeof(struct ifreq))
+		if (len < sizeof(struct ifreq))
 			break;
 
-		/* reset interface */
+		/* set name/address */
 		memset(&ifr, 0, sizeof(struct ifreq));
-
-		/* set name */
 		strcpy(ifr.ifr_ifrn.ifrn_name, net_devices[i].name);
-
-		/* set address */
 		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_family = AF_INET;
 		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_addr = inet_iton(net_devices[i].ip_addr);
 
-		/* update length */
-		size -= sizeof(struct ifreq);
-		done += sizeof(struct ifreq);
+		/* copy to ifconf */
+		memcpy(pos, &ifr, sizeof(struct ifreq));
+		pos += sizeof(struct ifreq);
+		len -= sizeof(struct ifreq);
 	}
 
 	/* set length */
-	ifc->ifc_len = done;
+	ifc->ifc_len = pos - ifc->ifc_ifcu.ifcu_buf;
+	ifc->ifc_ifcu.ifcu_req = (struct ifreq *) ifc->ifc_ifcu.ifcu_buf;
 
 	return 0;
 }

@@ -3,6 +3,7 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <net/inet/net.h>
+#include <net/inet/arp.h>
 #include <net/sk_buff.h>
 #include <mm/mm.h>
 #include <stderr.h>
@@ -117,7 +118,7 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	io_base = pci_dev->bar0 & ~(0x3);
 
 	/* register net device */
-	rtl8139_net_dev = register_net_device(io_base);
+	rtl8139_net_dev = register_net_device(io_base, ARPHRD_ETHER);
 	if (!rtl8139_net_dev)
 		return -ENOSPC;
 

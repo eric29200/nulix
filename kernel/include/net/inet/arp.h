@@ -9,6 +9,8 @@
 #define ARP_TABLE_SIZE		512
 #define ARP_REQUEST_WAIT_MS	200
 
+#define ARPHRD_ETHER 		1
+
 /*
  * ARP header.
  */
