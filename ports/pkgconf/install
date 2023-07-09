@@ -1,8 +1,9 @@
 VERSION="1.8.0"
-SRC_FILENAME="pkgconf-"$VERSION".tar.xz"
-URL="https://distfiles.dereferenced.org/pkgconf/"$SRC_FILENAME
+SRC_FILENAME="pkgconf-"$VERSION".tar.gz"
+URL="https://github.com/pkgconf/pkgconf/archive/refs/tags/"$SRC_FILENAME
 
 function configure_port() {
+	autoreconf -i
 	./configure								\
 		--prefix=$SYSROOT						\
 		CC=gcc LD=ld

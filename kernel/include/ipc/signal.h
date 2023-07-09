@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <time.h>
 #include <x86/system.h>
 
 #define NSIGS		(SIGUNUSED + 1)
@@ -133,6 +134,7 @@ static inline void sigdelsetmask(sigset_t *set, unsigned long mask)
 int do_signal(struct registers_t *regs);;
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
+int sys_rt_sigtimedwait(const sigset_t *sigset, void *info, const struct timespec_t *uts, size_t sigsetsize);
 int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact);
 int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
 int sys_sigreturn();

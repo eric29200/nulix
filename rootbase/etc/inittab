@@ -1,14 +1,6 @@
-id:1:initdefault:
+::sysinit:/etc/init.d/rcS
 
-l0:0:wait:/etc/init.d/rc 0
-l1:1:wait:/etc/init.d/rc 1
-l2:2:wait:/etc/init.d/rc 2
-l3:3:wait:/etc/init.d/rc 3
-l4:4:wait:/etc/init.d/rc 4
-l5:5:wait:/etc/init.d/rc 5
-l6:6:wait:/etc/init.d/rc 6
-
-1:1:respawn:/sbin/agetty tty1
-2:1:respawn:/sbin/agetty tty2
-3:1:respawn:/sbin/agetty tty3
-4:1:respawn:/sbin/agetty tty4
+tty1::respawn:/sbin/getty 38400 tty1
+tty2::respawn:/sbin/getty 38400 tty2
+tty3::respawn:/sbin/getty 38400 tty3
+tty4::respawn:/sbin/getty 38400 tty4

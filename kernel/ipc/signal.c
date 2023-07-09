@@ -237,3 +237,15 @@ int sys_tkill(pid_t pid, int sig)
 
 	return sys_kill(pid, sig);
 }
+
+/*
+ * Wait for a signal.
+ */
+int sys_rt_sigtimedwait(const sigset_t *usigset, void *info, const struct timespec_t *uts, size_t sigsetsize)
+{
+	UNUSED(usigset);
+	UNUSED(info);
+	UNUSED(uts);
+	UNUSED(sigsetsize);
+	return 0;
+}

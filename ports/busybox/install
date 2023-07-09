@@ -11,5 +11,5 @@ function build_port() {
 }
 
 function install_port() {
-	cp busybox $SYSROOT"/usr/bin/"
+	make install CC=$CC LD=$LD AR=$AR AS=$AS
 }

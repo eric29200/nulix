@@ -153,6 +153,7 @@ static const void *syscalls[] = {
 	[__NR_rt_sigsuspend]		= sys_rt_sigsuspend,
 	[__NR_tkill]			= sys_tkill,
 	[__NR_socketcall]		= sys_socketcall,
+	[__NR_rt_sigtimedwait]		= sys_rt_sigtimedwait,
 };
 
 /*

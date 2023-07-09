@@ -79,6 +79,7 @@
 #define __NR_poll			168
 #define __NR_rt_sigaction		174
 #define __NR_rt_sigprocmask		175
+#define __NR_rt_sigtimedwait		177
 #define __NR_rt_sigsuspend		179
 #define __NR_pread64			180
 #define __NR_getcwd			183
