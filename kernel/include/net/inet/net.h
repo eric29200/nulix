@@ -39,6 +39,7 @@ extern int nr_net_devices;
 
 /* network prototypes */
 struct net_device_t *register_net_device(uint32_t io_base, uint16_t type);
+struct net_device_t *net_device_find(const char *name);
 int net_device_ioctl(int cmd, struct ifreq *ifr);
 int net_device_ifconf(struct ifconf *ifc);
 void skb_handle(struct sk_buff_t *skb);

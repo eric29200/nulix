@@ -1,6 +1,7 @@
 #include <net/sock.h>
 #include <net/inet/ip.h>
 #include <net/inet/net.h>
+#include <net/inet/route.h>
 #include <net/if.h>
 #include <drivers/net/rtl8139.h>
 #include <proc/sched.h>
@@ -459,6 +460,8 @@ static int inet_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
 		case SIOCGIFNETMASK:
 		case SIOCSIFNETMASK:
 			return net_device_ioctl(cmd, (struct ifreq *) arg);
+		case SIOCADDRT:
+			return ip_route_new((struct rtentry_t *) arg);
 		default:
 			printf("INET socket : unknown ioctl cmd %x\n", cmd);
 			return -EINVAL;

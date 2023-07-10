@@ -40,6 +40,7 @@
 #define	ENOSR		63	/* Out of streams resources */
 #define	ENOTSOCK	88	/* Socket operation on non-socket */
 #define	EOPNOTSUPP	95	/* Operation not supported on transport endpoint */
+#define	EAFNOSUPPORT	97	/* Address family not supported by protocol */
 #define	EADDRINUSE	98	/* Address already in use */
 #define ENOTCONN	107	/* Transport endpoint is not connected */
 #define ECONNREFUSED	111	/* Connection refused */

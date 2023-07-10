@@ -18,6 +18,7 @@
 #define SIOCGIFINDEX			0x8933
 #define SIOCGIFTXQLEN			0x8942
 #define SIOCGIFMAP			0x8970
+#define SIOCADDRT			0x890B
 
 /*
  * Device mapping.

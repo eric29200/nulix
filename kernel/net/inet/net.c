@@ -203,7 +203,7 @@ struct net_device_t *register_net_device(uint32_t io_base, uint16_t type)
 /*
  * Find a network device.
  */
-static struct net_device_t *net_device_find(const char *name)
+struct net_device_t *net_device_find(const char *name)
 {
 	int i;
 
