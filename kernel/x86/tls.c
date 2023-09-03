@@ -13,7 +13,7 @@ void load_tls()
 /*
  * Get thread area.
  */
-int sys_get_thread_area(struct user_desc_t *u_info)
+int sys_get_thread_area(struct user_desc *u_info)
 {
 	int idx = u_info->entry_number;
 
@@ -22,7 +22,7 @@ int sys_get_thread_area(struct user_desc_t *u_info)
 		return -EINVAL;
 
 	/* copy TLS */
-	memcpy(u_info, &current_task->tls, sizeof(struct user_desc_t));
+	memcpy(u_info, &current_task->tls, sizeof(struct user_desc));
 
 	return 0;
 }
@@ -30,7 +30,7 @@ int sys_get_thread_area(struct user_desc_t *u_info)
 /*
  * Set thread area.
  */
-int sys_set_thread_area(struct user_desc_t *u_info)
+int sys_set_thread_area(struct user_desc *u_info)
 {
 	int idx = u_info->entry_number;
 
@@ -44,7 +44,7 @@ int sys_set_thread_area(struct user_desc_t *u_info)
 
 	/* set TLS */
 	u_info->entry_number = idx;
-	memcpy(&current_task->tls, u_info, sizeof(struct user_desc_t));
+	memcpy(&current_task->tls, u_info, sizeof(struct user_desc));
 
 	/* load TLS */
 	load_tls();

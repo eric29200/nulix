@@ -2,13 +2,13 @@
 #include <fcntl.h>
 
 /* root entry */
-static struct devfs_entry_t *root_entry = NULL;
+static struct devfs_entry *root_entry = NULL;
 static ino_t devfs_next_ino = DEVFS_ROOT_INO;
 
 /*
  * Test if a name matches a directory entry.
  */
-static inline int devfs_name_match(const char *name, size_t len, struct devfs_entry_t *de)
+static inline int devfs_name_match(const char *name, size_t len, struct devfs_entry *de)
 {
 	return len == de->name_len && strncmp(name, de->name, len) == 0;
 }
@@ -16,10 +16,10 @@ static inline int devfs_name_match(const char *name, size_t len, struct devfs_en
 /*
  * Find an entry inside a directory.
  */
-static struct devfs_entry_t *devfs_find_entry(struct devfs_entry_t *dir, const char *name, size_t name_len)
+static struct devfs_entry *devfs_find_entry(struct devfs_entry *dir, const char *name, size_t name_len)
 {
-	struct devfs_entry_t *de;
-	struct list_head_t *pos;
+	struct devfs_entry *de;
+	struct list_head *pos;
 
 	/* "." and ".." entries */
 	if (name_len == 1 && name[0] == '.')
@@ -29,7 +29,7 @@ static struct devfs_entry_t *devfs_find_entry(struct devfs_entry_t *dir, const c
 
 	/* find entry */
 	list_for_each(pos, &dir->u.dir.entries) {
-		de = list_entry(pos, struct devfs_entry_t, list);
+		de = list_entry(pos, struct devfs_entry, list);
 		if (devfs_name_match(name, name_len, de))
 			return de;
 	}
@@ -40,17 +40,17 @@ static struct devfs_entry_t *devfs_find_entry(struct devfs_entry_t *dir, const c
 /*
  * Allocate a new entry.
  */
-static struct devfs_entry_t *devfs_alloc_entry(const char *name, size_t name_len, mode_t mode)
+static struct devfs_entry *devfs_alloc_entry(const char *name, size_t name_len, mode_t mode)
 {
-	struct devfs_entry_t *de;
+	struct devfs_entry *de;
 
 	/* allocate new entry */
-	de = (struct devfs_entry_t *) kmalloc(sizeof(struct devfs_entry_t));
+	de = (struct devfs_entry *) kmalloc(sizeof(struct devfs_entry));
 	if (!de)
 		return NULL;
 
 	/* set entry */
-	memset(de, 0, sizeof(struct devfs_entry_t));
+	memset(de, 0, sizeof(struct devfs_entry));
 	de->ino = devfs_next_ino++;
 	de->name_len = name_len;
 	de->mode = mode;
@@ -73,7 +73,7 @@ err:
 /*
  * Free an entry.
  */
-static void devfs_free_entry(struct devfs_entry_t *de)
+static void devfs_free_entry(struct devfs_entry *de)
 {
 	if (!de)
 		return;
@@ -87,7 +87,7 @@ static void devfs_free_entry(struct devfs_entry_t *de)
 /*
  * Get root entry.
  */
-struct devfs_entry_t *devfs_get_root_entry()
+struct devfs_entry *devfs_get_root_entry()
 {
 	if (root_entry)
 		return root_entry;
@@ -106,7 +106,7 @@ struct devfs_entry_t *devfs_get_root_entry()
 /*
  * Find an entry.
  */
-struct devfs_entry_t *devfs_find(struct devfs_entry_t *dir, const char *name, size_t name_len)
+struct devfs_entry *devfs_find(struct devfs_entry *dir, const char *name, size_t name_len)
 {
 	/* use root directory */
 	if (!dir)
@@ -123,9 +123,9 @@ struct devfs_entry_t *devfs_find(struct devfs_entry_t *dir, const char *name, si
 /*
  * Register a device.
  */
-struct devfs_entry_t *devfs_register(struct devfs_entry_t *dir, const char *name, mode_t mode, dev_t dev)
+struct devfs_entry *devfs_register(struct devfs_entry *dir, const char *name, mode_t mode, dev_t dev)
 {
-	struct devfs_entry_t *de;
+	struct devfs_entry *de;
 	size_t name_len;
 
 	/* must be a device */
@@ -163,7 +163,7 @@ struct devfs_entry_t *devfs_register(struct devfs_entry_t *dir, const char *name
 /*
  * Unregister an entry.
  */
-void devfs_unregister(struct devfs_entry_t *de)
+void devfs_unregister(struct devfs_entry *de)
 {
 	/* can't unregister directories */
 	if (!de || S_ISDIR(de->mode))
@@ -183,9 +183,9 @@ void devfs_unregister(struct devfs_entry_t *de)
 /*
  * Create a directory.
  */
-struct devfs_entry_t *devfs_mkdir(struct devfs_entry_t *dir, const char *name)
+struct devfs_entry *devfs_mkdir(struct devfs_entry *dir, const char *name)
 {
-	struct devfs_entry_t *de;
+	struct devfs_entry *de;
 	size_t name_len;
 
 	/* use root directory */
@@ -219,9 +219,9 @@ struct devfs_entry_t *devfs_mkdir(struct devfs_entry_t *dir, const char *name)
 /*
  * Create a symbolic link.
  */
-struct devfs_entry_t *devfs_symlink(struct devfs_entry_t *dir, const char *name, const char *linkname)
+struct devfs_entry *devfs_symlink(struct devfs_entry *dir, const char *name, const char *linkname)
 {
-	struct devfs_entry_t *de;
+	struct devfs_entry *de;
 	size_t name_len;
 
 	/* use root directory */

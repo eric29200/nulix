@@ -4,7 +4,7 @@
 /*
  * System info structure.
  */
-struct sysinfo_t {
+struct sysinfo {
 	long		uptime;
 	unsigned long	loads[3];
 	unsigned long	totalram;

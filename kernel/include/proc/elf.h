@@ -91,7 +91,7 @@
 /*
  * ELF header.
  */
-struct elf_header_t {
+struct elf_header {
 		uint8_t		e_ident[EI_NIDENT];	/* magic number */
 		uint16_t	e_type;			/* object file type */
 		uint16_t	e_machine;		/* architecture */
@@ -111,7 +111,7 @@ struct elf_header_t {
 /*
  * ELF program header.
  */
-struct elf_prog_header_t {
+struct elf_prog_header {
 		uint32_t	p_type;			/* segment type */
 		uint32_t	p_offset;		/* segment file offset */
 		uint32_t	p_vaddr;		/* segment virtual address */
@@ -122,6 +122,6 @@ struct elf_prog_header_t {
 		uint32_t	p_align;		/* segment alignment */
 };
 
-int elf_load(const char *path, struct binargs_t *bargs);
+int elf_load(const char *path, struct binargs *bargs);
 
 #endif

@@ -10,7 +10,7 @@
 /*
  * Base process directory.
  */
-static struct proc_dir_entry_t base_dir[] = {
+static struct proc_dir_entry base_dir[] = {
 	{ PROC_PID_INO,		1,	"." },
 	{ PROC_ROOT_INO,	2,	".." },
 	{ PROC_PID_STAT_INO,	4,	"stat" },
@@ -32,9 +32,9 @@ static char proc_states[] = {
 /*
  * Read process stat.
  */
-static int proc_stat_read(struct file_t *filp, char *buf, int count)
+static int proc_stat_read(struct file *filp, char *buf, int count)
 {
-	struct task_t *task;
+	struct task *task;
 	char tmp_buf[1024];
 	size_t len;
 	pid_t pid;
@@ -81,24 +81,24 @@ static int proc_stat_read(struct file_t *filp, char *buf, int count)
 /*
  * Stat file operations.
  */
-struct file_operations_t proc_stat_fops = {
+struct file_operations proc_stat_fops = {
 	.read		= proc_stat_read,
 };
 
 /*
  * Stat inode operations.
  */
-struct inode_operations_t proc_stat_iops = {
+struct inode_operations proc_stat_iops = {
 	.fops		= &proc_stat_fops,
 };
 
 /*
  * Read process command line.
  */
-static int proc_cmdline_read(struct file_t *filp, char *buf, int count)
+static int proc_cmdline_read(struct file *filp, char *buf, int count)
 {
 	char tmp_buf[PAGE_SIZE], *p, *arg_str;
-	struct task_t *task;
+	struct task *task;
 	uint32_t arg;
 	size_t len;
 	pid_t pid;
@@ -150,24 +150,24 @@ static int proc_cmdline_read(struct file_t *filp, char *buf, int count)
 /*
  * Cmdline file operations.
  */
-struct file_operations_t proc_cmdline_fops = {
+struct file_operations proc_cmdline_fops = {
 	.read		= proc_cmdline_read,
 };
 
 /*
  * Cmdline inode operations.
  */
-struct inode_operations_t proc_cmdline_iops = {
+struct inode_operations proc_cmdline_iops = {
 	.fops		= &proc_cmdline_fops,
 };
 
 /*
  * Read process environ.
  */
-static int proc_environ_read(struct file_t *filp, char *buf, int count)
+static int proc_environ_read(struct file *filp, char *buf, int count)
 {
 	char tmp_buf[PAGE_SIZE], *p, *environ_str;
-	struct task_t *task;
+	struct task *task;
 	uint32_t environ;
 	size_t len;
 	pid_t pid;
@@ -219,24 +219,24 @@ static int proc_environ_read(struct file_t *filp, char *buf, int count)
 /*
  * Environ file operations.
  */
-struct file_operations_t proc_environ_fops = {
+struct file_operations proc_environ_fops = {
 	.read		= proc_environ_read,
 };
 
 /*
  * Environ inode operations.
  */
-struct inode_operations_t proc_environ_iops = {
+struct inode_operations proc_environ_iops = {
 	.fops		= &proc_environ_fops,
 };
 
 /*
  * Get directory entries.
  */
-static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
+static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct dirent64_t *dirent = (struct dirent64_t *) dirp;
-	struct task_t *task;
+	struct dirent64 *dirent = (struct dirent64 *) dirp;
+	struct task *task;
 	size_t name_len, i;
 	int fd, n = 0, ret;
 	char fd_s[16];
@@ -255,7 +255,7 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 		filp->f_pos++;
 	}
 
@@ -269,7 +269,7 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 		filp->f_pos++;
 	}
 
@@ -298,7 +298,7 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next dir entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 
 		/* update file position */
 		filp->f_pos++;
@@ -310,9 +310,9 @@ static int proc_fd_getdents64(struct file_t *filp, void *dirp, size_t count)
 /*
  * Lookup for a file.
  */
-static int proc_fd_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+static int proc_fd_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
-	struct task_t *task;
+	struct task *task;
 	ino_t ino;
 	pid_t pid;
 	int fd;
@@ -377,14 +377,14 @@ static int proc_fd_lookup(struct inode_t *dir, const char *name, size_t name_len
 /*
  * Process file descriptors operations.
  */
-struct file_operations_t proc_fd_fops = {
+struct file_operations proc_fd_fops = {
 	.getdents64		= proc_fd_getdents64,
 };
 
 /*
  * Process file descriptors inode operations.
  */
-struct inode_operations_t proc_fd_iops = {
+struct inode_operations proc_fd_iops = {
 	.fops			= &proc_fd_fops,
 	.lookup			= proc_fd_lookup,
 };
@@ -392,9 +392,9 @@ struct inode_operations_t proc_fd_iops = {
 /*
  * Follow fd link.
  */
-static int proc_fd_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
+static int proc_fd_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
-	struct task_t *task;
+	struct task *task;
 	pid_t pid;
 	int fd;
 
@@ -430,10 +430,10 @@ static int proc_fd_follow_link(struct inode_t *dir, struct inode_t *inode, int f
 /*
  * Read fd link.
  */
-static ssize_t proc_fd_readlink(struct inode_t *inode, char *buf, size_t bufsize)
+static ssize_t proc_fd_readlink(struct inode *inode, char *buf, size_t bufsize)
 {
-	struct task_t *task;
-	struct file_t *filp;
+	struct task *task;
+	struct file *filp;
 	char tmp[32];
 	size_t len;
 	pid_t pid;
@@ -481,7 +481,7 @@ static ssize_t proc_fd_readlink(struct inode_t *inode, char *buf, size_t bufsize
 /*
  * Fd link inode operations.
  */
-struct inode_operations_t proc_fd_link_iops = {
+struct inode_operations proc_fd_link_iops = {
 	.readlink	= proc_fd_readlink,
 	.follow_link	= proc_fd_follow_link,
 };
@@ -489,9 +489,9 @@ struct inode_operations_t proc_fd_link_iops = {
 /*
  * Get directory entries.
  */
-static int proc_base_getdents64(struct file_t *filp, void *dirp, size_t count)
+static int proc_base_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct dirent64_t *dirent;
+	struct dirent64 *dirent;
 	int n, ret;
 	pid_t pid;
 	size_t i;
@@ -500,7 +500,7 @@ static int proc_base_getdents64(struct file_t *filp, void *dirp, size_t count)
 	pid = filp->f_inode->i_ino >> 16;
 
 	/* read root dir entries */
-	for (i = filp->f_pos, n = 0, dirent = (struct dirent64_t *) dirp; i < NR_BASE_DIRENTRY; i++, filp->f_pos++) {
+	for (i = filp->f_pos, n = 0, dirent = (struct dirent64 *) dirp; i < NR_BASE_DIRENTRY; i++, filp->f_pos++) {
 		/* fill in directory entry */ 
 		ret = filldir(dirent, base_dir[i].name, base_dir[i].name_len, (pid << 16) + base_dir[i].ino, count);
 		if (ret)
@@ -509,7 +509,7 @@ static int proc_base_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next dir entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 	}
 
 	return n;
@@ -518,9 +518,9 @@ static int proc_base_getdents64(struct file_t *filp, void *dirp, size_t count)
 /*
  * Lookup for a file.
  */
-static int proc_base_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+static int proc_base_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
-	struct proc_dir_entry_t *de;
+	struct proc_dir_entry *de;
 	ino_t ino;
 	size_t i;
 
@@ -566,14 +566,14 @@ static int proc_base_lookup(struct inode_t *dir, const char *name, size_t name_l
 /*
  * Process file operations.
  */
-struct file_operations_t proc_base_fops = {
+struct file_operations proc_base_fops = {
 	.getdents64		= proc_base_getdents64,
 };
 
 /*
  * Process inode operations.
  */
-struct inode_operations_t proc_base_iops = {
+struct inode_operations proc_base_iops = {
 	.fops			= &proc_base_fops,
 	.lookup			= proc_base_lookup,
 };

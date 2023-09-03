@@ -5,7 +5,7 @@
 /*
  * Release a super block.
  */
-static void proc_put_super(struct super_block_t *sb)
+static void proc_put_super(struct super_block *sb)
 {
 	sb->s_dev = 0;
 }
@@ -13,7 +13,7 @@ static void proc_put_super(struct super_block_t *sb)
 /*
  * Superblock operations.
  */
-static struct super_operations_t proc_sops = {
+static struct super_operations proc_sops = {
 	.put_super		= proc_put_super,
 	.read_inode		= proc_read_inode,
 	.write_inode		= proc_write_inode,
@@ -24,7 +24,7 @@ static struct super_operations_t proc_sops = {
 /*
  * Read super block.
  */
-static int proc_read_super(struct super_block_t *sb, void *data, int silent)
+static int proc_read_super(struct super_block *sb, void *data, int silent)
 {
 	/* unused data */
 	UNUSED(data);
@@ -48,9 +48,9 @@ static int proc_read_super(struct super_block_t *sb, void *data, int silent)
 /*
  * Get statistics on file system.
  */
-void proc_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+void proc_statfs(struct super_block *sb, struct statfs64 *buf)
 {
-	memset(buf, 0, sizeof(struct statfs64_t));
+	memset(buf, 0, sizeof(struct statfs64));
 	buf->f_type = sb->s_magic;
 	buf->f_bsize = sb->s_blocksize;
 }
@@ -58,7 +58,7 @@ void proc_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 /*
  * Proc file system.
  */
-static struct file_system_t proc_fs = {
+static struct file_system proc_fs = {
 	.name		= "proc",
 	.requires_dev	= 0,
 	.read_super	= proc_read_super,

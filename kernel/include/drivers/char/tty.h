@@ -52,49 +52,49 @@
 /*
  * TTY driver.
  */
-struct tty_t;
-struct tty_driver_t {
-	ssize_t			(*write)(struct tty_t *);				/* write function */
-	int			(*ioctl)(struct tty_t *, int, unsigned long);		/* ioctl function */
-	int			(*close)(struct tty_t *);				/* close function */
-	struct termios_t	termios;						/* terminal i/o */
+struct tty;
+struct tty_driver {
+	ssize_t			(*write)(struct tty *);					/* write function */
+	int			(*ioctl)(struct tty *, int, unsigned long);		/* ioctl function */
+	int			(*close)(struct tty *);					/* close function */
+	struct termios		termios;						/* terminal i/o */
 };
 
 /*
  * TTY structure.
  */
-struct tty_t {
+struct tty {
 	int			count;							/* reference count */
 	pid_t			session;						/* session id */
 	pid_t			pgrp;							/* process group id */
-	struct ring_buffer_t	read_queue;						/* read queue */
-	struct ring_buffer_t	write_queue;						/* write queue */
-	struct ring_buffer_t	cooked_queue;						/* cooked queue */
+	struct ring_buffer	read_queue;						/* read queue */
+	struct ring_buffer	write_queue;						/* write queue */
+	struct ring_buffer	cooked_queue;						/* cooked queue */
 	int			canon_data;						/* canon data */
-	struct winsize_t	winsize;						/* window size */
-	struct termios_t	termios;						/* terminal i/o */
-	struct wait_queue_t *	wait;							/* wait queue */
-	struct tty_t *		link;							/* linked tty */
-	struct tty_driver_t *	driver;							/* tty driver */
+	struct winsize		winsize;						/* window size */
+	struct termios		termios;						/* terminal i/o */
+	struct wait_queue *	wait;							/* wait queue */
+	struct tty *		link;							/* linked tty */
+	struct tty_driver *	driver;							/* tty driver */
 	void *			driver_data;						/* tty driver data */
 };
 
 /* tty functions */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
-int tty_init_dev(struct tty_t *tty, struct tty_driver_t *driver);
-void tty_destroy(struct tty_t *tty);
-void tty_do_cook(struct tty_t *tty);
+int tty_init_dev(struct tty *tty, struct tty_driver *driver);
+void tty_destroy(struct tty *tty);
+void tty_do_cook(struct tty *tty);
 void tty_change(int n);
 void tty_complete_change(int n);
 void disassociate_ctty();
 
 /* inode operations */
-extern struct inode_operations_t tty_iops;
-extern struct inode_operations_t ptm_iops;
-extern struct inode_operations_t pts_iops;
+extern struct inode_operations tty_iops;
+extern struct inode_operations ptm_iops;
+extern struct inode_operations pts_iops;
 
 /* global ttys */
-extern struct tty_t tty_table[NR_TTYS];
+extern struct tty tty_table[NR_TTYS];
 extern int fg_console;
 
 #endif

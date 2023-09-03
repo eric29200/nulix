@@ -17,10 +17,10 @@
 /*
  * Shared memory segment structure.
  */
-struct shmid_t {
-	struct ipc_perm_t	shm_perm;
+struct shmid {
+	struct ipc_perm		shm_perm;
 	int			shm_id;
-	struct file_t *		shm_filp;
+	struct file *		shm_filp;
 	int			shm_size;
 	int			shm_nattch;
 	time_t			shm_atime;
@@ -33,8 +33,8 @@ struct shmid_t {
 /*
  * Shared memory user data structure.
  */
-struct shmid_ds_t {
-	struct ipc_perm_t 	shm_perm;
+struct shmid_ds {
+	struct ipc_perm 	shm_perm;
 	size_t 			shm_segsz;
 	uint32_t 		__shm_atime_lo;
 	uint32_t		__shm_atime_hi;
@@ -55,7 +55,7 @@ struct shmid_ds_t {
 
 int do_shmget(int key, int size, int shmflg);
 int do_shmat(int shmid, char *shmaddr, int shmflg, uint32_t *addr_ret);
-int do_shmctl(int shmid, int cmd, struct shmid_ds_t *buf);
+int do_shmctl(int shmid, int cmd, struct shmid_ds *buf);
 int do_shmdt(char *shmaddr);
 
 #endif

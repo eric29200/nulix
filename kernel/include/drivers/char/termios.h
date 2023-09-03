@@ -46,7 +46,7 @@
 /*
  * Window size structure.
  */
-struct winsize_t {
+struct winsize {
 	unsigned short ws_row;
 	unsigned short ws_col;
 	unsigned short ws_xpixel;
@@ -58,7 +58,7 @@ struct winsize_t {
 /*
  * Termios structure.
  */
-struct termios_t {
+struct termios {
 	tcflag_t	c_iflag;
 	tcflag_t	c_oflag;
 	tcflag_t	c_cflag;

@@ -13,7 +13,7 @@
 /*
  * Poll file descriptore.
  */
-struct pollfd_t {
+struct pollfd {
 	int		fd;
 	uint16_t	events;
 	uint16_t	revents;

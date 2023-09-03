@@ -6,11 +6,11 @@
 /*
  * Read a file.
  */
-int isofs_file_read(struct file_t *filp, char *buf, int count)
+int isofs_file_read(struct file *filp, char *buf, int count)
 {
-	struct super_block_t *sb = filp->f_inode->i_sb;
+	struct super_block *sb = filp->f_inode->i_sb;
 	size_t pos, nb_chars, left;
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 
 	/* adjust size */
 	if (filp->f_pos + count > filp->f_inode->i_size)

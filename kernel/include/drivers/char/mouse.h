@@ -5,6 +5,6 @@
 
 int init_mouse();
 
-extern struct inode_operations_t mouse_iops;
+extern struct inode_operations mouse_iops;
 
 #endif

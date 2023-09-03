@@ -6,7 +6,7 @@
 /*
  * I/O vectors structure.
  */
-struct iovec_t {
+struct iovec {
 	void *	iov_base;
 	size_t	iov_len;
 };

@@ -6,7 +6,7 @@
 /*
  * Minix in memory inode.
  */
-struct minix_inode_info_t {
+struct minix_inode_info {
 	uint32_t		i_zone[10];
 };
 

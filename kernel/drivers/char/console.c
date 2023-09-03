@@ -12,11 +12,11 @@
 #include <kd.h>
 
 /* consoles table */
-static struct vc_t console_table[NR_CONSOLES];
+static struct vc console_table[NR_CONSOLES];
 int fg_console;
 
 /* processes waiting for console activation */
-struct wait_queue_t *vt_activate_wq = NULL;
+struct wait_queue *vt_activate_wq = NULL;
 
 /* ansi color table */
 static uint8_t ansi_color_table[] = {
@@ -41,7 +41,7 @@ static uint8_t ansi_color_table[] = {
 /*
  * Reset a virtual console.
  */
-static void reset_vc(struct vc_t *vc)
+static void reset_vc(struct vc *vc)
 {
 	vc->vc_mode = KD_TEXT;
 	kbd_table[vc->vc_num].kbd_mode = VC_XLATE;
@@ -61,8 +61,8 @@ static void reset_vc(struct vc_t *vc)
  */
 static void console_complete_change(int n)
 {
-	struct framebuffer_t *fb;
-	struct vc_t *vc_new;
+	struct framebuffer *fb;
+	struct vc *vc_new;
 
 	/* check console */
 	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
@@ -100,7 +100,7 @@ static void console_complete_change(int n)
  */
 void console_change(int n)
 {
-	struct vc_t *vc;
+	struct vc *vc;
 
 	/* check console */
 	if (n < 0 || n >= NR_CONSOLES || n == fg_console)
@@ -132,7 +132,7 @@ void console_change(int n)
 /*
  * Default console attributes.
  */
-static void console_default_attr(struct vc_t *vc)
+static void console_default_attr(struct vc *vc)
 {
 	vc->vc_intensity = 1;
 	vc->vc_reverse = 0;
@@ -142,7 +142,7 @@ static void console_default_attr(struct vc_t *vc)
 /*
  * Update console attributes.
  */
-static void console_update_attr(struct vc_t *vc)
+static void console_update_attr(struct vc *vc)
 {
 	vc->vc_attr = vc->vc_color;
 
@@ -158,9 +158,9 @@ static void console_update_attr(struct vc_t *vc)
 /*
  * Scroll up from bottom to top.
  */
-static void console_scrup(struct vc_t *vc, uint32_t top, uint32_t bottom, size_t nr)
+static void console_scrup(struct vc *vc, uint32_t top, uint32_t bottom, size_t nr)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 	uint16_t *dest, *src;
 
 	/* limit to bottom */
@@ -187,9 +187,9 @@ static void console_scrup(struct vc_t *vc, uint32_t top, uint32_t bottom, size_t
 /*
  * Scroll down from top to bottom.
  */
-static void console_scrdown(struct vc_t *vc, uint32_t top, uint32_t bottom, size_t nr)
+static void console_scrdown(struct vc *vc, uint32_t top, uint32_t bottom, size_t nr)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 	uint16_t *src, *dest;
 
 	/* limit to bottom */
@@ -216,9 +216,9 @@ static void console_scrdown(struct vc_t *vc, uint32_t top, uint32_t bottom, size
 /*
  * Insert a character at current position.
  */
-static void insert_char(struct vc_t *vc)
+static void insert_char(struct vc *vc)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 	uint16_t *src, *dest;
 
 	/* move each character of current line to right */
@@ -234,9 +234,9 @@ static void insert_char(struct vc_t *vc)
 /*
  * Handle escape P sequences (delete characters).
  */
-static void csi_P(struct vc_t *vc, uint32_t nr)
+static void csi_P(struct vc *vc, uint32_t nr)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 	uint16_t *p;
 
 	if (nr > vc->fb.width - vc->fb.x)
@@ -257,9 +257,9 @@ static void csi_P(struct vc_t *vc, uint32_t nr)
 /*
  * Handle escape M sequences (delete lines).
  */
-static void csi_M(struct vc_t *vc, uint32_t nr)
+static void csi_M(struct vc *vc, uint32_t nr)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	if (nr > vc->fb.height - vc->fb.y)
 		nr = vc->fb.height - vc->fb.y;
@@ -273,9 +273,9 @@ static void csi_M(struct vc_t *vc, uint32_t nr)
 /*
  * Handle escape K sequences (erase line or part of line).
  */
-static void csi_K(struct vc_t *vc, int vpar)
+static void csi_K(struct vc *vc, int vpar)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 	uint16_t *start = fb->buf + fb->y * fb->width + fb->x;
 	uint32_t count;
 	int offset;
@@ -308,9 +308,9 @@ static void csi_K(struct vc_t *vc, int vpar)
 /*
  * Handle escape J sequences (delete screen or part of the screen).
  */
-static void csi_J(struct vc_t *vc, int vpar)
+static void csi_J(struct vc *vc, int vpar)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 	uint16_t *start;
 	size_t count;
 
@@ -342,7 +342,7 @@ static void csi_J(struct vc_t *vc, int vpar)
 /*
  * Handle escape m sequences (change console attributes).
  */
-static void csi_m(struct vc_t *vc)
+static void csi_m(struct vc *vc)
 {
 	size_t i;
 
@@ -400,9 +400,9 @@ static void csi_m(struct vc_t *vc)
 /*
  * Handle escape L sequences (scroll down).
  */
-static void csi_L(struct vc_t *vc, uint32_t nr)
+static void csi_L(struct vc *vc, uint32_t nr)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	if (nr > fb->height - fb->y)
 		nr = fb->height - fb->y;
@@ -415,9 +415,9 @@ static void csi_L(struct vc_t *vc, uint32_t nr)
 /*
  * Insert characters at current position.
  */
-static void csi_at(struct vc_t *vc, uint32_t nr)
+static void csi_at(struct vc *vc, uint32_t nr)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	if (nr > fb->width)
 		nr = fb->width;
@@ -431,9 +431,9 @@ static void csi_at(struct vc_t *vc, uint32_t nr)
 /*
  * Handle escape X sequences (erase characters).
  */
-static void csi_X(struct vc_t *vc, uint32_t nr)
+static void csi_X(struct vc *vc, uint32_t nr)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	if (nr == 0)
 		nr = 1;
@@ -451,7 +451,7 @@ static void csi_X(struct vc_t *vc, uint32_t nr)
 /*
  * Set console mode.
  */
-static void console_set_mode(struct vc_t *vc, int on_off)
+static void console_set_mode(struct vc *vc, int on_off)
 {
 	size_t i;
 
@@ -474,7 +474,7 @@ static void console_set_mode(struct vc_t *vc, int on_off)
 /*
  * Do a carriage return.
  */
-static void console_cr(struct vc_t *vc)
+static void console_cr(struct vc *vc)
 {
 	vc->fb.x = 0;
 	vc->vc_need_wrap = 0;
@@ -483,9 +483,9 @@ static void console_cr(struct vc_t *vc)
 /*
  * Do a line feed.
  */
-static void console_lf(struct vc_t *vc)
+static void console_lf(struct vc *vc)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	if (fb->y + 1 == vc->vc_bottom)
 		console_scrup(vc, vc->vc_top, vc->vc_bottom, 1);
@@ -498,9 +498,9 @@ static void console_lf(struct vc_t *vc)
 /*
  * Scroll down if needed.
  */
-static void console_ri(struct vc_t *vc)
+static void console_ri(struct vc *vc)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	/* don't scroll if not needed */
 	if (fb->y == vc->vc_top)
@@ -514,7 +514,7 @@ static void console_ri(struct vc_t *vc)
 /*
  * Do a back space.
  */
-static void console_bs(struct vc_t *vc)
+static void console_bs(struct vc *vc)
 {
 	if (vc->fb.x) {
 		vc->fb.x--;
@@ -525,9 +525,9 @@ static void console_bs(struct vc_t *vc)
 /*
  * Print a character on the console.
  */
-static void console_putc(struct vc_t *vc, uint16_t tc)
+static void console_putc(struct vc *vc, uint16_t tc)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	/* wrap if needed */
 	if (vc->vc_need_wrap) {
@@ -550,9 +550,9 @@ static void console_putc(struct vc_t *vc, uint16_t tc)
 /*
  * Go to (x ; y).
  */
-static void console_gotoxy(struct vc_t *vc, uint32_t x, uint32_t y)
+static void console_gotoxy(struct vc *vc, uint32_t x, uint32_t y)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	if (x >= fb->width)
 		fb->x = fb->width - 1;
@@ -570,7 +570,7 @@ static void console_gotoxy(struct vc_t *vc, uint32_t x, uint32_t y)
 /*
  * Respond a string to tty.
  */
-static void console_respond_string(struct tty_t *tty, char *p)
+static void console_respond_string(struct tty *tty, char *p)
 {
 	while (*p) {
 		ring_buffer_putc(&tty->read_queue, *p);
@@ -581,7 +581,7 @@ static void console_respond_string(struct tty_t *tty, char *p)
 /*
  * Report console cursor.
  */
-static void console_cursor_report(struct tty_t *tty, struct vc_t *vc)
+static void console_cursor_report(struct tty *tty, struct vc *vc)
 {
 	char buf[40];
 
@@ -592,7 +592,7 @@ static void console_cursor_report(struct tty_t *tty, struct vc_t *vc)
 /*
  * Report console status.
  */
-static void console_status_report(struct tty_t *tty)
+static void console_status_report(struct tty *tty)
 {
 	console_respond_string(tty, "\033[0n");	/* Terminal ok */
 }
@@ -600,9 +600,9 @@ static void console_status_report(struct tty_t *tty)
 /*
  * Handle control characters.
  */
-static void console_do_control(struct tty_t *tty, struct vc_t *vc, uint8_t c)
+static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 {
-	struct framebuffer_t *fb = &vc->fb;
+	struct framebuffer *fb = &vc->fb;
 
 	/* handle special character */
 	switch (c) {
@@ -853,10 +853,10 @@ static void console_do_control(struct tty_t *tty, struct vc_t *vc, uint8_t c)
 /*
  * Write to TTY.
  */
-static ssize_t console_write(struct tty_t *tty)
+static ssize_t console_write(struct tty *tty)
 {
 	ssize_t count = 0;
-	struct vc_t *vc;
+	struct vc *vc;
 	uint16_t tc;
 	uint8_t c;
 
@@ -916,15 +916,15 @@ static int vt_waitactive(int n)
 /*
  * Console ioctl.
  */
-static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
+static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 {
 	int i, new_func_len, old_func_len, newvt;
 	uint16_t *key_map, mask;
-	struct kbsentry_t *kbse;
+	struct kbsentry *kbse;
 	struct vt_stat *vtstat;
-	struct kbentry_t *kbe;
-	struct kbd_t *kbd;
-	struct vc_t *vc;
+	struct kbentry *kbe;
+	struct kbd *kbd;
+	struct vc *vc;
 	char *old_func;
 
 	/* get console and keyboard */
@@ -942,7 +942,7 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			vc->vc_mode = *((uint8_t *) arg);
 			return 0;
 		case KDGKBENT:
-			kbe = (struct kbentry_t *) arg;
+			kbe = (struct kbentry *) arg;
 			if (!kbe)
 				return -EINVAL;
 
@@ -961,7 +961,7 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			return 0;
 		case KDSKBENT:
 			/* check keyboard entry */
-			kbe = (struct kbentry_t *) arg;
+			kbe = (struct kbentry *) arg;
 			if (!kbe)
 				return -EINVAL;
 			if (KTYP(kbe->kb_value) >= NR_TYPES)
@@ -986,7 +986,7 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 			return 0;
 		case KDSKBSENT:
 			/* get function entry */
-			kbse = (struct kbsentry_t *) arg;
+			kbse = (struct kbsentry *) arg;
 			if (!kbse)
 				return -EINVAL;
 
@@ -1117,10 +1117,10 @@ static int console_ioctl(struct tty_t *tty, int request, unsigned long arg)
 /*
  * Console driver.
  */
-static struct tty_driver_t console_driver = {
+static struct tty_driver console_driver = {
 	.write		= console_write,
 	.ioctl		= console_ioctl,
-	.termios 	= (struct termios_t) {
+	.termios 	= (struct termios) {
 				.c_iflag	= ICRNL | IXON,
 				.c_oflag	= OPOST | ONLCR,
 				.c_cflag	= B38400 | CS8 | CREAD | HUPCL,
@@ -1135,9 +1135,9 @@ static struct tty_driver_t console_driver = {
  */
 int init_console(struct multiboot_tag_framebuffer *tag_fb)
 {
-	struct tty_t *tty;
+	struct tty *tty;
 	char tty_name[32];
-	struct vc_t *vc;
+	struct vc *vc;
 	int i, ret;
 
 	/* init consoles */

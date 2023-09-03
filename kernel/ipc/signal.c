@@ -5,7 +5,7 @@
 
 #define BLOCKABLE		(~(sigmask(SIGKILL) | sigmask(SIGSTOP)))
 
-extern void return_user_mode(struct registers_t *regs);
+extern void return_user_mode(struct registers *regs);
 
 /*
  * Change blocked signals.
@@ -49,9 +49,9 @@ static int sigreturn()
 /*
  * Handle signal of current task.
  */
-int do_signal(struct registers_t *regs)
+int do_signal(struct registers *regs)
 {
-	struct sigaction_t *act;
+	struct sigaction *act;
 	uint32_t *esp;
 	int sig;
 
@@ -95,10 +95,10 @@ int do_signal(struct registers_t *regs)
 
 	/* signal in system call : restore user registers */
 	if (current_task->in_syscall)
-		memcpy(regs, &current_task->user_regs, sizeof(struct registers_t));
+		memcpy(regs, &current_task->user_regs, sizeof(struct registers));
 
 	/* save interrupt registers, to restore it at the end of signal */
-	memcpy(&current_task->signal_regs, regs, sizeof(struct registers_t));
+	memcpy(&current_task->signal_regs, regs, sizeof(struct registers));
 
 	/* prepare a stack for signal handler */
 	esp = (uint32_t *) regs->useresp;
@@ -131,7 +131,7 @@ out:
  */
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 {
-	struct registers_t *regs = (struct registers_t *) &newset;
+	struct registers *regs = (struct registers *) &newset;
 
 	UNUSED(sigsetsize);
 
@@ -154,7 +154,7 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 /*
  * Sigaction system call (= change action taken by a process on receipt of a specific signal).
  */
-int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact)
+int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 {
 	if (signum <= 0 || signum > NSIGS)
 		return -EINVAL;
@@ -196,7 +196,7 @@ int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 int sys_sigreturn()
 {
 	/* restore saved registers before signal handler */
-	memcpy(&current_task->user_regs, &current_task->signal_regs, sizeof(struct registers_t));
+	memcpy(&current_task->user_regs, &current_task->signal_regs, sizeof(struct registers));
 
 	return 0;
 }
@@ -241,7 +241,7 @@ int sys_tkill(pid_t pid, int sig)
 /*
  * Wait for a signal.
  */
-int sys_rt_sigtimedwait(const sigset_t *usigset, void *info, const struct timespec_t *uts, size_t sigsetsize)
+int sys_rt_sigtimedwait(const sigset_t *usigset, void *info, const struct timespec *uts, size_t sigsetsize)
 {
 	UNUSED(usigset);
 	UNUSED(info);

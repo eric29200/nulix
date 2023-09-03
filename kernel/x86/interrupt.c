@@ -45,7 +45,7 @@ void register_interrupt_handler(uint8_t n, isr_t handler)
 /*
  * Interrupt service routine handler.
  */
-void isr_handler(struct registers_t *regs)
+void isr_handler(struct registers *regs)
 {
 	isr_t handler;
 

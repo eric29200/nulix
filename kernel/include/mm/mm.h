@@ -17,36 +17,36 @@
 /*
  * Virtual memory area structure.
  */
-struct vm_area_t {
+struct vm_area {
 	uint32_t			vm_start;
 	uint32_t			vm_end;
 	uint16_t			vm_flags;
 	uint32_t			vm_page_prot;
 	off_t				vm_offset;
-	struct inode_t *		vm_inode;
-	struct vm_operations_t *	vm_ops;
-	struct list_head_t		list;
-	struct list_head_t		list_share;
+	struct inode *			vm_inode;
+	struct vm_operations *		vm_ops;
+	struct list_head		list;
+	struct list_head		list_share;
 };
 
 /*
  * Virtual memory area operations.
  */
-struct vm_operations_t {
-	void (*open)(struct vm_area_t *);
-	void (*close)(struct vm_area_t *);
-	struct page_t *(*nopage)(struct vm_area_t *, uint32_t address);
+struct vm_operations {
+	void (*open)(struct vm_area *);
+	void (*close)(struct vm_area *);
+	struct page *(*nopage)(struct vm_area *, uint32_t address);
 };
 
 void init_mem(uint32_t start, uint32_t end);
 void *kmalloc(uint32_t size);
 void *kmalloc_align(uint32_t size);
 void kfree(void *p);
-struct page_t *__get_free_page();
+struct page *__get_free_page();
 void *get_free_page();
-void __free_page(struct page_t *page);
+void __free_page(struct page *page);
 void free_page(void *address);
 void reclaim_pages();
-void truncate_inode_pages(struct inode_t *inode, off_t start);
+void truncate_inode_pages(struct inode *inode, off_t start);
 
 #endif

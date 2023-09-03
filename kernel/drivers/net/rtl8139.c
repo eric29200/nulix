@@ -10,7 +10,7 @@
 #include <string.h>
 
 /* Realtek 8139 device */
-static struct net_device_t *rtl8139_net_dev = NULL;
+static struct net_device *rtl8139_net_dev = NULL;
 
 /* transmit buffers */
 static void *tx_buffer[4];
@@ -22,7 +22,7 @@ static void *rx_buffer = NULL;
 /*
  * Send a packet.
  */
-static void rtl8139_send_packet(struct sk_buff_t *skb)
+static void rtl8139_send_packet(struct sk_buff *skb)
 {
 	/* copy packet to tx buffer */
 	memcpy(tx_buffer[tx_cur], skb->head, skb->len);
@@ -40,16 +40,16 @@ static void rtl8139_send_packet(struct sk_buff_t *skb)
  */
 static void rtl8139_receive_packet()
 {
-	struct rtl8139_rx_header_t *rx_header;
-	struct sk_buff_t *skb;
+	struct rtl8139_rx_header *rx_header;
+	struct sk_buff *skb;
 	uint16_t rx_buf_ptr;
 
 	/* handle all received packets */
 	while ((inb(rtl8139_net_dev->io_base + 0x37) & 0x01) == 0) {
 		/* get packet header */
 		rx_buf_ptr = inw(rtl8139_net_dev->io_base + 0x38) + 0x10;
-		rx_header = (struct rtl8139_rx_header_t *) (rx_buffer + rx_buf_ptr);
-		rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header_t) + 3) & ~(0x3);
+		rx_header = (struct rtl8139_rx_header *) (rx_buffer + rx_buf_ptr);
+		rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header) + 3) & ~(0x3);
 
 		/* allocate a socket buffer */
 		skb = skb_alloc(rx_header->size);
@@ -59,7 +59,7 @@ static void rtl8139_receive_packet()
 
 			/* copy data into socket buffer */
 			skb_put(skb, rx_header->size);
-			memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header_t), rx_header->size);
+			memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header), rx_header->size);
 
 			/* handle socket buffer */
 			net_handle(rtl8139_net_dev, skb);
@@ -73,7 +73,7 @@ static void rtl8139_receive_packet()
 /*
  * Realtek 8139 IRQ handler.
  */
-void rtl8139_irq_handler(struct registers_t *regs)
+void rtl8139_irq_handler(struct registers *regs)
 {
 	int status;
 
@@ -95,7 +95,7 @@ void rtl8139_irq_handler(struct registers_t *regs)
 /*
  * Get Realtek 8139 network device.
  */
-struct net_device_t *rtl8139_get_net_device()
+struct net_device *rtl8139_get_net_device()
 {
 	return rtl8139_net_dev;
 }
@@ -105,7 +105,7 @@ struct net_device_t *rtl8139_get_net_device()
  */
 int init_rtl8139()
 {
-	struct pci_device_t *pci_dev;
+	struct pci_device *pci_dev;
 	uint32_t io_base, pci_cmd;
 	int i;
 

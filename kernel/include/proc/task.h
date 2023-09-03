@@ -28,7 +28,7 @@
  */
 struct mm_struct {
 	int				count;				/* reference counter */
-	struct page_directory_t *	pgd;				/* page directory */
+	struct page_directory *		pgd;				/* page directory */
 	uint32_t			start_text;			/* user text segment start */
 	uint32_t			end_text;			/* user text segment end */
 	uint32_t			start_brk;			/* user data segment start */
@@ -37,7 +37,7 @@ struct mm_struct {
 	uint32_t			arg_end;			/* end argument */
 	uint32_t			env_start;			/* start environ */
 	uint32_t			env_end;			/* end environ */
-	struct list_head_t		vm_list;			/* virtual memory areas */
+	struct list_head		vm_list;			/* virtual memory areas */
 };
 
 /*
@@ -46,7 +46,7 @@ struct mm_struct {
 struct files_struct {
 	int				count;				/* reference counter */
 	fd_set_t			close_on_exec;			/* close on exec bitmap */
-	struct file_t *			filp[NR_OPEN];			/* opened files */
+	struct file *			filp[NR_OPEN];			/* opened files */
 };
 
 /*
@@ -55,8 +55,8 @@ struct files_struct {
 struct fs_struct {
 	int				count;				/* reference counter */
 	uint16_t			umask;				/* umask */
-	struct inode_t *		cwd;				/* current working directory */
-	struct inode_t *		root;				/* root directory */
+	struct inode *			cwd;				/* current working directory */
+	struct inode *			root;				/* root directory */
 };
 
 /*
@@ -64,13 +64,13 @@ struct fs_struct {
  */
 struct signal_struct {
 	int				count;				/* reference counter */
-	struct sigaction_t		action[NSIGS];			/* signal handlers */
+	struct sigaction		action[NSIGS];			/* signal handlers */
 };
 
 /*
  * Kernel task structure.
  */
-struct task_t {
+struct task {
 	uint32_t			flags;				/* process flags */
 	pid_t				pid;				/* process id */
 	pid_t				pgrp;				/* process group id */
@@ -84,14 +84,14 @@ struct task_t {
 	gid_t				gid;				/* group id */
 	gid_t				egid;				/* effective group id */
 	gid_t				sgid;				/* saved group id */
-	struct tty_t *			tty;				/* attached tty */
+	struct tty *			tty;				/* attached tty */
 	time_t				utime;				/* amount of time (in jiffies) that this process has been scheduled in user mode */
 	time_t				stime;				/* amount of time (in jiffies) that this process has been scheduled in kernel mode */
 	time_t				cutime;				/* amount of time (in jiffies) that this process's waited-for children have been scheduled in user mode */
 	time_t				cstime;				/* amount of time (int jiffies) that this process's waited-for children have been scheduled in user mode */
 	time_t				start_time;			/* time process started after system boot */
 	int			 	exit_code;			/* exit code */
-	struct task_t *		 	parent;				/* parent process */
+	struct task *		 	parent;				/* parent process */
 	uint32_t			kernel_stack;			/* kernel stack */
 	uint32_t			esp;				/* kernel stack pointer */
 	time_t				timeout;			/* timeout (used by sleep) */
@@ -99,24 +99,24 @@ struct task_t {
 	sigset_t			sigmask;			/* signals mask */
 	sigset_t			saved_sigmask;			/* saved signals mask */
 	char				in_syscall;			/* process in system call */
-	struct rlimit_t			rlim[RLIM_NLIMITS];		/* resource limits */
-	struct registers_t		user_regs;			/* saved registers at syscall entry */
-	struct registers_t		signal_regs;			/* saved registers at signal entry */
-	struct user_desc_t		tls;				/* Thread Local Storage address */
-	struct timer_event_t		sig_tm;				/* signal timer */
-	struct wait_queue_t *		wait_child_exit;		/* wait queue for child exit */
+	struct rlimit			rlim[RLIM_NLIMITS];		/* resource limits */
+	struct registers		user_regs;			/* saved registers at syscall entry */
+	struct registers		signal_regs;			/* saved registers at signal entry */
+	struct user_desc		tls;				/* Thread Local Storage address */
+	struct timer_event		sig_tm;				/* signal timer */
+	struct wait_queue *		wait_child_exit;		/* wait queue for child exit */
 	struct fs_struct *		fs;				/* file system stuff */
 	struct files_struct *		files;				/* opened files */
 	struct mm_struct *		mm;				/* memory regions */
 	struct signal_struct *		sig;				/* signals */
-	struct semaphore_t *		vfork_sem;			/* vfork semaphore */
-	struct list_head_t		list;				/* next process */
+	struct semaphore *		vfork_sem;			/* vfork semaphore */
+	struct list_head		list;				/* next process */
 };
 
 /*
  * Registers structure.
  */
-struct task_registers_t {
+struct task_registers {
 	uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
 	uint32_t eip;
 	uint32_t return_address;
@@ -128,7 +128,7 @@ struct task_registers_t {
 /*
  * Binary arguments.
  */
-struct binargs_t {
+struct binargs {
 	char	*buf;
 	char	*p;
 	int	argc;
@@ -138,22 +138,22 @@ struct binargs_t {
 	char	dont_free;
 };
 
-struct task_t *create_kernel_thread(void (*func)(void *), void *arg);
-struct task_t *create_init_task(struct task_t *parent);
+struct task *create_kernel_thread(void (*func)(void *), void *arg);
+struct task *create_init_task(struct task *parent);
 int do_fork(uint32_t clone_flags, uint32_t user_sp);
-void destroy_task(struct task_t *task);
-struct task_t *get_task(pid_t pid);
+void destroy_task(struct task *task);
+struct task *get_task(pid_t pid);
 struct mm_struct *task_dup_mm(struct mm_struct *mm);
-void task_exit_signals(struct task_t *task);
-void task_exit_fs(struct task_t *task);
-void task_exit_files(struct task_t *task);
+void task_exit_signals(struct task *task);
+void task_exit_fs(struct task *task);
+void task_exit_files(struct task *task);
 void task_exit_mmap(struct mm_struct *mm);
-void task_release_mmap(struct task_t *task);
+void task_release_mmap(struct task *task);
 
-void copy_strings(struct binargs_t *bargs, int argc, char **argv);
-int binary_load(const char *path, struct binargs_t *bargs);
-int elf_load(const char *path, struct binargs_t *bargs);
-int script_load(const char *path, struct binargs_t *bargs);
+void copy_strings(struct binargs *bargs, int argc, char **argv);
+int binary_load(const char *path, struct binargs *bargs);
+int elf_load(const char *path, struct binargs *bargs);
+int script_load(const char *path, struct binargs *bargs);
 
 pid_t sys_fork();
 pid_t sys_vfork();
@@ -162,6 +162,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[]);
 void sys_exit(int status);
 void sys_exit_group(int status);
 pid_t sys_waitpid(pid_t pid, int *wstatus, int options);
-pid_t sys_wait4(pid_t pid, int *wstatus, int options, struct rusage_t *rusage);
+pid_t sys_wait4(pid_t pid, int *wstatus, int options, struct rusage *rusage);
 
 #endif

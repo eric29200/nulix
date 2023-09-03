@@ -6,10 +6,10 @@
 /*
  * Get a group descriptor.
  */
-struct ext2_group_desc_t *ext2_get_group_desc(struct super_block_t *sb, uint32_t block_group, struct buffer_head_t **bh)
+struct ext2_group_desc *ext2_get_group_desc(struct super_block *sb, uint32_t block_group, struct buffer_head **bh)
 {
-	struct ext2_sb_info_t *sbi = ext2_sb(sb);
-	struct ext2_group_desc_t *desc;
+	struct ext2_sb_info *sbi = ext2_sb(sb);
+	struct ext2_group_desc *desc;
 	uint32_t group_desc, offset;
 
 	/* check block group */
@@ -23,7 +23,7 @@ struct ext2_group_desc_t *ext2_get_group_desc(struct super_block_t *sb, uint32_t
 		return NULL;
 
 	/* group block buffer of group descriptor */
-	desc = (struct ext2_group_desc_t *) sbi->s_group_desc[group_desc]->b_data;
+	desc = (struct ext2_group_desc *) sbi->s_group_desc[group_desc]->b_data;
 	if (bh)
 		*bh = sbi->s_group_desc[group_desc];
 
@@ -33,9 +33,9 @@ struct ext2_group_desc_t *ext2_get_group_desc(struct super_block_t *sb, uint32_t
 /*
  * Read the blocks bitmap of a block group.
  */
-static struct buffer_head_t *ext2_read_block_bitmap(struct super_block_t *sb, uint32_t block_group)
+static struct buffer_head *ext2_read_block_bitmap(struct super_block *sb, uint32_t block_group)
 {
-	struct ext2_group_desc_t *gdp;
+	struct ext2_group_desc *gdp;
 
 	/* get group descriptor */
 	gdp = ext2_get_group_desc(sb, block_group, NULL);
@@ -49,11 +49,11 @@ static struct buffer_head_t *ext2_read_block_bitmap(struct super_block_t *sb, ui
 /*
  * Create a new Ext2 block (try goal block first).
  */
-int ext2_new_block(struct inode_t *inode, uint32_t goal)
+int ext2_new_block(struct inode *inode, uint32_t goal)
 {
-	struct ext2_sb_info_t *sbi = ext2_sb(inode->i_sb);
-	struct buffer_head_t *gdp_bh, *bitmap_bh;
-	struct ext2_group_desc_t *gdp;
+	struct ext2_sb_info *sbi = ext2_sb(inode->i_sb);
+	struct buffer_head *gdp_bh, *bitmap_bh;
+	struct ext2_group_desc *gdp;
 	uint32_t group_no, bgi;
 	int grp_alloc_block;
 
@@ -120,11 +120,11 @@ allocated:
 /*
  * Free a Ext2 block.
  */
-int ext2_free_block(struct inode_t *inode, uint32_t block)
+int ext2_free_block(struct inode *inode, uint32_t block)
 {
-	struct ext2_sb_info_t *sbi = ext2_sb(inode->i_sb);
-	struct buffer_head_t *bitmap_bh, *gdp_bh, *bh;
-	struct ext2_group_desc_t *gdp;
+	struct ext2_sb_info *sbi = ext2_sb(inode->i_sb);
+	struct buffer_head *bitmap_bh, *gdp_bh, *bh;
+	struct ext2_group_desc *gdp;
 	uint32_t block_group, bit;
 
 	/* check block number */

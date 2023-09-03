@@ -12,7 +12,7 @@
 #include <dev.h>
 
 /* direct frame buffer */
-static struct framebuffer_t direct_fb;
+static struct framebuffer direct_fb;
 
 /*
  * Init direct frame buffer.
@@ -36,7 +36,7 @@ int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
 /*
  * Init the framebuffer.
  */
-int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct)
+int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct)
 {
 	int ret;
 
@@ -95,7 +95,7 @@ err:
 /*
  * Open a frame buffer.
  */
-static int fb_open(struct file_t *filp)
+static int fb_open(struct file *filp)
 {
 	UNUSED(filp);
 	return 0;
@@ -104,7 +104,7 @@ static int fb_open(struct file_t *filp)
 /*
  * Read a framebuffer.
  */
-static int fb_read(struct file_t *filp, char *buf, int n)
+static int fb_read(struct file *filp, char *buf, int n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -115,9 +115,9 @@ static int fb_read(struct file_t *filp, char *buf, int n)
 /*
  * Write to a frame buffer.
  */
-static int fb_write(struct file_t *filp, const char *buf, int n)
+static int fb_write(struct file *filp, const char *buf, int n)
 {
-	struct framebuffer_t *fb = &direct_fb;
+	struct framebuffer *fb = &direct_fb;
 
 	/* check position */
 	if (filp->f_pos > fb->real_width * fb->real_height * fb->bpp / 8)
@@ -139,9 +139,9 @@ static int fb_write(struct file_t *filp, const char *buf, int n)
 /*
  * Framebuffer ioctl.
  */
-int fb_ioctl(struct file_t *filp, int request, unsigned long arg)
+int fb_ioctl(struct file *filp, int request, unsigned long arg)
 {
-	struct framebuffer_t *fb = &direct_fb;
+	struct framebuffer *fb = &direct_fb;
 	int ret = 0;
 
 	switch (request) {
@@ -171,9 +171,9 @@ int fb_ioctl(struct file_t *filp, int request, unsigned long arg)
 /*
  * Framebuffer mmap.
  */
-static int fb_mmap(struct inode_t *inode, struct vm_area_t *vma)
+static int fb_mmap(struct inode *inode, struct vm_area *vma)
 {
-	struct framebuffer_t *fb = &direct_fb;
+	struct framebuffer *fb = &direct_fb;
 	int ret;
 
 	/* offset must be page aligned */
@@ -199,7 +199,7 @@ static int fb_mmap(struct inode_t *inode, struct vm_area_t *vma)
 /*
  * Framebuffer file operations.
  */
-static struct file_operations_t fb_fops = {
+static struct file_operations fb_fops = {
 	.open		= fb_open,
 	.read		= fb_read,
 	.write		= fb_write,
@@ -210,6 +210,6 @@ static struct file_operations_t fb_fops = {
 /*
  * Framebuffer inode operations.
  */
-struct inode_operations_t fb_iops = {
+struct inode_operations fb_iops = {
 	.fops	= &fb_fops,
 };

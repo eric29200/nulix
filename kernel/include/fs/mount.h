@@ -6,13 +6,13 @@
 /*
  * Mounted file system structure.
  */
-struct vfs_mount_t {
+struct vfs_mount {
 	dev_t			mnt_dev;
 	char *			mnt_devname;
 	char *			mnt_dirname;
 	unsigned int		mnt_flags;
-	struct super_block_t *	mnt_sb;
-	struct list_head_t	mnt_list;
+	struct super_block *	mnt_sb;
+	struct list_head	mnt_list;
 };
 
 #endif

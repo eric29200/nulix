@@ -5,7 +5,7 @@
 /*
  * Update cursor.
  */
-static void fb_text_update_cursor(struct framebuffer_t *fb)
+static void fb_text_update_cursor(struct framebuffer *fb)
 {
 	uint16_t pos = fb->y * fb->width + fb->x;
 
@@ -19,7 +19,7 @@ static void fb_text_update_cursor(struct framebuffer_t *fb)
 /*
  * Show/Hide cursor.
  */
-static void fb_text_show_cursor(struct framebuffer_t *fb, int on_off)
+static void fb_text_show_cursor(struct framebuffer *fb, int on_off)
 {
 	uint8_t status;
 
@@ -42,7 +42,7 @@ static void fb_text_show_cursor(struct framebuffer_t *fb, int on_off)
 /*
  * Update a frame buffer region.
  */
-static void fb_text_update_region(struct framebuffer_t *fb, uint32_t start, uint32_t len)
+static void fb_text_update_region(struct framebuffer *fb, uint32_t start, uint32_t len)
 {
 	uint16_t *fb_buf = (uint16_t *) fb->addr;
 	uint32_t i;
@@ -54,7 +54,7 @@ static void fb_text_update_region(struct framebuffer_t *fb, uint32_t start, uint
 /*
  * Scroll framebuffer.
  */
-static void fb_text_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
+static void fb_text_scroll_up(struct framebuffer *fb, uint32_t top, uint32_t bottom, size_t nr)
 {
 	uint16_t *src, *dest;
 
@@ -70,7 +70,7 @@ static void fb_text_scroll_up(struct framebuffer_t *fb, uint32_t top, uint32_t b
 /*
  * Scroll down from top to bottom.
  */
-static void fb_text_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t bottom, size_t nr)
+static void fb_text_scroll_down(struct framebuffer *fb, uint32_t top, uint32_t bottom, size_t nr)
 {
 	uint16_t *src, *dest;
 
@@ -86,7 +86,7 @@ static void fb_text_scroll_down(struct framebuffer_t *fb, uint32_t top, uint32_t
 /*
  * Init framebuffer.
  */
-static int fb_text_init(struct framebuffer_t *fb)
+static int fb_text_init(struct framebuffer *fb)
 {
 	fb->width = fb->real_width;
 	fb->height = fb->real_height;
@@ -98,7 +98,7 @@ static int fb_text_init(struct framebuffer_t *fb)
 /*
  * Text frame buffer operations.
  */
-struct framebuffer_ops_t fb_text_ops = {
+struct framebuffer_ops fb_text_ops = {
 	.init			= fb_text_init,
 	.update_region		= fb_text_update_region,
 	.scroll_up		= fb_text_scroll_up,

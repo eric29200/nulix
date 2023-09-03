@@ -393,14 +393,14 @@ extern const int max_vals[];
 /*
  * Keyboard structure.
  */
-struct kbd_t {
+struct kbd {
 	uint8_t		kbd_mode;
 	uint8_t		kbd_led_mode;
 	uint8_t		kbd_led_flag_state;
 	uint8_t		kbd_default_led_flag_state;
 };
 
-extern struct kbd_t kbd_table[NR_CONSOLES];
+extern struct kbd kbd_table[NR_CONSOLES];
 extern uint16_t *key_maps[MAX_NR_KEYMAPS];
 extern uint16_t plain_map[NR_KEYS];
 extern uint8_t *func_table[MAX_NR_FUNCS];

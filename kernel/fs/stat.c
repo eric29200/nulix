@@ -9,10 +9,10 @@
 /*
  * Stat64 system call.
  */
-static int do_stat64(struct inode_t *inode, struct stat64_t *statbuf)
+static int do_stat64(struct inode *inode, struct stat64 *statbuf)
 {
 	/* memzero statbuf */
-	memset(statbuf, 0, sizeof(struct stat64_t));
+	memset(statbuf, 0, sizeof(struct stat64));
 
 	/* fill in statbuf */
 	statbuf->__st_ino = inode->i_ino;
@@ -35,9 +35,9 @@ static int do_stat64(struct inode_t *inode, struct stat64_t *statbuf)
 /*
  * Stat64 system call.
  */
-int sys_stat64(const char *pathname, struct stat64_t *statbuf)
+int sys_stat64(const char *pathname, struct stat64 *statbuf)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 	int ret;
 
 	/* get inode */
@@ -56,9 +56,9 @@ int sys_stat64(const char *pathname, struct stat64_t *statbuf)
 /*
  * Lstat64 system call.
  */
-int sys_lstat64(const char *pathname, struct stat64_t *statbuf)
+int sys_lstat64(const char *pathname, struct stat64 *statbuf)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 	int ret;
 
 	/* get inode */
@@ -77,7 +77,7 @@ int sys_lstat64(const char *pathname, struct stat64_t *statbuf)
 /*
  * Fstat64 system call.
  */
-int sys_fstat64(int fd, struct stat64_t *statbuf)
+int sys_fstat64(int fd, struct stat64 *statbuf)
 {
 	/* check fd */
 	if (fd >= NR_OPEN || !current_task->files->filp[fd])
@@ -90,9 +90,9 @@ int sys_fstat64(int fd, struct stat64_t *statbuf)
 /*
  * Fstatat64 system call.
  */
-int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int flags)
+int sys_fstatat64(int dirfd, const char *pathname, struct stat64 *statbuf, int flags)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 	int ret;
 
 	/* get inode */
@@ -111,9 +111,9 @@ int sys_fstatat64(int dirfd, const char *pathname, struct stat64_t *statbuf, int
 /*
  * Statx system call.
  */
-int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx_t *statbuf)
+int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statbuf)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* unused mask */
 	UNUSED(mask);
@@ -124,7 +124,7 @@ int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, str
 		return -ENOENT;
 
 	/* reset stat buf */
-	memset(statbuf, 0, sizeof(struct statx_t));
+	memset(statbuf, 0, sizeof(struct statx));
 
 	/* set stat buf */
 	statbuf->stx_mask |= STATX_BASIC_STATS;

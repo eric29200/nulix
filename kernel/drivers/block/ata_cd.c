@@ -5,7 +5,7 @@
 /*
  * Wait for operation completion.
  */
-static int ata_cd_wait(struct ata_device_t *device)
+static int ata_cd_wait(struct ata_device *device)
 {
 	uint8_t status; 
 
@@ -24,7 +24,7 @@ static int ata_cd_wait(struct ata_device_t *device)
 /*
  * Read a sector from an ata device.
  */
-static int ata_cd_read_sector(struct ata_device_t *device, uint32_t sector, char *buf)
+static int ata_cd_read_sector(struct ata_device *device, uint32_t sector, char *buf)
 {
 	uint8_t command[12];
 	int ret;
@@ -69,7 +69,7 @@ static int ata_cd_read_sector(struct ata_device_t *device, uint32_t sector, char
 /*
  * Read from an ata device.
  */
-static int ata_cd_read(struct ata_device_t *device, struct buffer_head_t *bh, uint32_t start_sector)
+static int ata_cd_read(struct ata_device *device, struct buffer_head *bh, uint32_t start_sector)
 {
 	uint32_t nb_sectors, sector;
 	size_t i;
@@ -92,7 +92,7 @@ static int ata_cd_read(struct ata_device_t *device, struct buffer_head_t *bh, ui
 /*
  * Init an ata cd device.
  */
-int ata_cd_init(struct ata_device_t *device)
+int ata_cd_init(struct ata_device *device)
 {
 	device->read = ata_cd_read;
 	device->write = NULL;

@@ -6,7 +6,7 @@
 /*
  * Init a ring buffer.
  */
-int ring_buffer_init(struct ring_buffer_t *rb, size_t capacity)
+int ring_buffer_init(struct ring_buffer *rb, size_t capacity)
 {
 	/* check capacity */
 	if (!rb || capacity <= 0)
@@ -30,7 +30,7 @@ int ring_buffer_init(struct ring_buffer_t *rb, size_t capacity)
 /*
  * Destroy a ring buffer.
  */
-void ring_buffer_destroy(struct ring_buffer_t *rb)
+void ring_buffer_destroy(struct ring_buffer *rb)
 {
 	if (rb && rb->buffer)
 		kfree(rb->buffer);
@@ -39,7 +39,7 @@ void ring_buffer_destroy(struct ring_buffer_t *rb)
 /*
  * Read from a ring buffer.
  */
-size_t ring_buffer_read(struct ring_buffer_t *rb, uint8_t *buf, size_t n)
+size_t ring_buffer_read(struct ring_buffer *rb, uint8_t *buf, size_t n)
 {
 	size_t i;
 
@@ -70,7 +70,7 @@ size_t ring_buffer_read(struct ring_buffer_t *rb, uint8_t *buf, size_t n)
 /*
  * Write to a ring buffer.
  */
-size_t ring_buffer_write(struct ring_buffer_t *rb, const uint8_t *buf, size_t n)
+size_t ring_buffer_write(struct ring_buffer *rb, const uint8_t *buf, size_t n)
 {
 	size_t i;
 
@@ -101,7 +101,7 @@ size_t ring_buffer_write(struct ring_buffer_t *rb, const uint8_t *buf, size_t n)
 /*
  * Put a character in a ring buffer (does not block = if buffer is full, it fails).
  */
-int ring_buffer_putc(struct ring_buffer_t *rb, uint8_t c)
+int ring_buffer_putc(struct ring_buffer *rb, uint8_t c)
 {
 	if (ring_buffer_full(rb))
 		return -EAGAIN;
@@ -123,7 +123,7 @@ int ring_buffer_putc(struct ring_buffer_t *rb, uint8_t c)
 /*
  * Flush a ring buffer.
  */
-void ring_buffer_flush(struct ring_buffer_t *rb)
+void ring_buffer_flush(struct ring_buffer *rb)
 {
 	/* flush buffer */
 	rb->size = 0;

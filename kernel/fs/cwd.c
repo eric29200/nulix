@@ -6,9 +6,9 @@
 /*
  * Find a directory entry by its inode.
  */
-static struct dirent64_t *find_dirent(int fd, struct dirent64_t *dirp, ino_t ino)
+static struct dirent64 *find_dirent(int fd, struct dirent64 *dirp, ino_t ino)
 {
-	struct dirent64_t *dirent;
+	struct dirent64 *dirent;
 	int entries_size, n;
 
 	for (;;) {
@@ -25,7 +25,7 @@ static struct dirent64_t *find_dirent(int fd, struct dirent64_t *dirp, ino_t ino
 
 			/* go to next directory entry */
 			n += dirent->d_reclen;
-			dirent = (struct dirent64_t *) ((char *) dirent + dirent->d_reclen);
+			dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
 		}
 	}
 
@@ -35,7 +35,7 @@ static struct dirent64_t *find_dirent(int fd, struct dirent64_t *dirp, ino_t ino
 /*
  * Prepend directory entry to buffer.
  */
-static int prepend_dirent(char *buf, size_t size, size_t max_size, struct dirent64_t *dirent)
+static int prepend_dirent(char *buf, size_t size, size_t max_size, struct dirent64 *dirent)
 {
 	size_t dirent_name_len, nb_shift;
 	int i;
@@ -75,8 +75,8 @@ static int prepend_dirent(char *buf, size_t size, size_t max_size, struct dirent
 int sys_getcwd(char *buf, size_t size)
 {
 	int parent_fd = -1, fd = -1, n = 0;
-	struct dirent64_t *dirp, *dirent;
-	struct inode_t *inode;
+	struct dirent64 *dirp, *dirent;
+	struct inode *inode;
 
 	/* check size */
 	if (size < 2)

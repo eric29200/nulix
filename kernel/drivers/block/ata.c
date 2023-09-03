@@ -10,7 +10,7 @@
 #include <dev.h>
 
 /* ata devices */
-static struct ata_device_t ata_devices[NR_ATA_DEVICES] = {
+static struct ata_device ata_devices[NR_ATA_DEVICES] = {
 	{
 		.id 		= 0,
 		.bus 		= ATA_PRIMARY,
@@ -43,7 +43,7 @@ static size_t ata_blocksizes[NR_ATA_DEVICES * NR_PARTITIONS] = { 0, };
 /*
  * Get an ata device.
  */
-static struct ata_device_t *ata_get_device(dev_t dev)
+static struct ata_device *ata_get_device(dev_t dev)
 {
 	int id;
 
@@ -62,7 +62,7 @@ static struct ata_device_t *ata_get_device(dev_t dev)
 /*
  * Get partition start sector.
  */
-static uint32_t ata_get_start_sector(struct ata_device_t *device, dev_t dev)
+static uint32_t ata_get_start_sector(struct ata_device *device, dev_t dev)
 {
 	int partition_nr;
 
@@ -77,9 +77,9 @@ static uint32_t ata_get_start_sector(struct ata_device_t *device, dev_t dev)
 /*
  * Read from an ata device.
  */
-int ata_read(struct buffer_head_t *bh)
+int ata_read(struct buffer_head *bh)
 {
-	struct ata_device_t *device;
+	struct ata_device *device;
 	uint32_t start_sector;
 
 	/* get ata device */
@@ -96,9 +96,9 @@ int ata_read(struct buffer_head_t *bh)
 /*
  * Write to an ata device.
  */
-int ata_write(struct buffer_head_t *bh)
+int ata_write(struct buffer_head *bh)
 {
-	struct ata_device_t *device;
+	struct ata_device *device;
 	uint32_t start_sector;
 
 	/* get ata device */
@@ -115,7 +115,7 @@ int ata_write(struct buffer_head_t *bh)
 /*
  * Poll for identification.
  */
-static int ata_poll_identify(struct ata_device_t *device)
+static int ata_poll_identify(struct ata_device *device)
 {
 	uint8_t status;
 	uint16_t id;
@@ -157,7 +157,7 @@ out:
 /*
  * Detect an ATA device.
  */
-static int ata_detect(struct ata_device_t *device)
+static int ata_detect(struct ata_device *device)
 {
 	int ret;
 
@@ -204,7 +204,7 @@ err:
 /*
  * Irq handler.
  */
-static void ata_irq_handler(struct registers_t *regs)
+static void ata_irq_handler(struct registers *regs)
 {
 	UNUSED(regs);
 }
@@ -242,7 +242,7 @@ int init_ata()
 /*
  * ATA file operations.
  */
-static struct file_operations_t ata_fops = {
+static struct file_operations ata_fops = {
 	.read		= generic_block_read,
 	.write		= generic_block_write,
 };
@@ -250,6 +250,6 @@ static struct file_operations_t ata_fops = {
 /*
  * ATA inode operations.
  */
-struct inode_operations_t ata_iops = {
+struct inode_operations ata_iops = {
 	.fops		= &ata_fops,
 };

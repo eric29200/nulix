@@ -58,7 +58,7 @@ typedef void (*sighandler_t)(int);
 /*
  * Signal action structure.
  */
-struct sigaction_t {
+struct sigaction {
 	sighandler_t	sa_handler;
 	int		sa_flags;
 	sigset_t	sa_mask;
@@ -131,11 +131,11 @@ static inline void sigdelsetmask(sigset_t *set, unsigned long mask)
 	*set &= ~mask;
 }
 
-int do_signal(struct registers_t *regs);;
+int do_signal(struct registers *regs);
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
-int sys_rt_sigtimedwait(const sigset_t *sigset, void *info, const struct timespec_t *uts, size_t sigsetsize);
-int sys_sigaction(int signum, const struct sigaction_t *act, struct sigaction_t *oldact);
+int sys_rt_sigtimedwait(const sigset_t *sigset, void *info, const struct timespec *uts, size_t sigsetsize);
+int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
 int sys_sigreturn();
 int sys_kill(pid_t pid, int sig);

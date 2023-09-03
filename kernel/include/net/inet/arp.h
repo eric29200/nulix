@@ -14,7 +14,7 @@
 /*
  * ARP header.
  */
-struct arp_header_t {
+struct arp_header {
 	uint16_t	hardware_type;
 	uint16_t	protocol;
 	uint8_t		hardware_addr_len;
@@ -29,16 +29,16 @@ struct arp_header_t {
 /*
  * ARP table entry.
  */
-struct arp_table_entry_t {
+struct arp_table_entry {
 	uint8_t		mac_addr[6];
 	uint8_t		ip_addr[4];
 };
 
-void arp_receive(struct sk_buff_t *skb);
-struct arp_table_entry_t *arp_lookup(struct net_device_t *dev, uint8_t *ip_addr, int block);
-void arp_add_table(struct arp_header_t *arp_header);
-void arp_reply_request(struct sk_buff_t *skb);
-void arp_build_header(struct arp_header_t *arp_header, uint16_t op_code,
+void arp_receive(struct sk_buff *skb);
+struct arp_table_entry *arp_lookup(struct net_device *dev, uint8_t *ip_addr, int block);
+void arp_add_table(struct arp_header *arp_header);
+void arp_reply_request(struct sk_buff *skb);
+void arp_build_header(struct arp_header *arp_header, uint16_t op_code,
 		      uint8_t *src_hardware_addr, uint8_t *src_protocol_addr,
 		      uint8_t *dst_hardware_addr, uint8_t *dst_protocol_addr);
 

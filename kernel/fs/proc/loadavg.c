@@ -10,17 +10,17 @@
 /*
  * Read load average.
  */
-static int proc_loadavg_read(struct file_t *filp, char *buf, int count)
+static int proc_loadavg_read(struct file *filp, char *buf, int count)
 {
 	int ntasks = 0, nrun = 0, a, b, c;
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct list_head *pos;
+	struct task *task;
 	char tmp_buf[256];
 	size_t len;
 
 	/* get number of tasks */
 	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		ntasks++;
 
 		if (task->state == TASK_RUNNING)
@@ -60,14 +60,14 @@ static int proc_loadavg_read(struct file_t *filp, char *buf, int count)
 /*
  * Load average file operations.
  */
-struct file_operations_t proc_loadavg_fops = {
+struct file_operations proc_loadavg_fops = {
 	.read		= proc_loadavg_read,
 };
 
 /*
  * Load average inode operations.
  */
-struct inode_operations_t proc_loadavg_iops = {
+struct inode_operations proc_loadavg_iops = {
 	.fops		= &proc_loadavg_fops,
 };
 

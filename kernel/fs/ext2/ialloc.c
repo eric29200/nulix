@@ -8,9 +8,9 @@
 /*
  * Read the inodes bitmap of a block group.
  */
-static struct buffer_head_t *ext2_read_inode_bitmap(struct super_block_t *sb, uint32_t block_group)
+static struct buffer_head *ext2_read_inode_bitmap(struct super_block *sb, uint32_t block_group)
 {
-	struct ext2_group_desc_t *gdp;
+	struct ext2_group_desc *gdp;
 
 	/* get group descriptor */
 	gdp = ext2_get_group_desc(sb, block_group, NULL);
@@ -24,13 +24,13 @@ static struct buffer_head_t *ext2_read_inode_bitmap(struct super_block_t *sb, ui
 /*
  * Create a new Ext2 inode.
  */
-struct inode_t *ext2_new_inode(struct inode_t *dir, mode_t mode)
+struct inode *ext2_new_inode(struct inode *dir, mode_t mode)
 {
-	struct ext2_sb_info_t *sbi = ext2_sb(dir->i_sb);
-	struct buffer_head_t *gdp_bh, *bitmap_bh;
-	struct ext2_group_desc_t *gdp;
+	struct ext2_sb_info *sbi = ext2_sb(dir->i_sb);
+	struct buffer_head *gdp_bh, *bitmap_bh;
+	struct ext2_group_desc *gdp;
 	uint32_t group_no, bgi;
-	struct inode_t *inode;
+	struct inode *inode;
 	int i;
 
 	/* get an empty inode */
@@ -133,11 +133,11 @@ allocated:
 /*
  * Free a Ext2 inode.
  */
-int ext2_free_inode(struct inode_t *inode)
+int ext2_free_inode(struct inode *inode)
 {
-	struct buffer_head_t *bitmap_bh, *gdp_bh;
-	struct ext2_group_desc_t *gdp;
-	struct ext2_sb_info_t *sbi;
+	struct buffer_head *bitmap_bh, *gdp_bh;
+	struct ext2_group_desc *gdp;
+	struct ext2_sb_info *sbi;
 	uint32_t block_group, bit;
 
 	/* check inode */

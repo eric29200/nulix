@@ -8,7 +8,7 @@
 /*
  * Read stat.
  */
-static int proc_kstat_read(struct file_t *filp, char *buf, int count)
+static int proc_kstat_read(struct file *filp, char *buf, int count)
 {
 	char tmp_buf[256];
 	size_t len;
@@ -40,13 +40,13 @@ static int proc_kstat_read(struct file_t *filp, char *buf, int count)
 /*
  * Stat file operations.
  */
-struct file_operations_t proc_kstat_fops = {
+struct file_operations proc_kstat_fops = {
 	.read		= proc_kstat_read,
 };
 
 /*
  * Stat inode operations.
  */
-struct inode_operations_t proc_kstat_iops = {
+struct inode_operations proc_kstat_iops = {
 	.fops		= &proc_kstat_fops,
 };

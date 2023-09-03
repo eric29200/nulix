@@ -25,7 +25,7 @@
 /*
  * Procfs dir entry.
  */
-struct proc_dir_entry_t {
+struct proc_dir_entry {
 	ino_t	ino;
 	size_t	name_len;
 	char *	name;
@@ -35,33 +35,33 @@ struct proc_dir_entry_t {
 int init_proc_fs();
 
 /* inode operations */
-int proc_read_inode(struct inode_t *inode);
-int proc_write_inode(struct inode_t *inode);
-int proc_put_inode(struct inode_t *inode);
-void proc_statfs(struct super_block_t *sb, struct statfs64_t *buf);
+int proc_read_inode(struct inode *inode);
+int proc_write_inode(struct inode *inode);
+int proc_put_inode(struct inode *inode);
+void proc_statfs(struct super_block *sb, struct statfs64 *buf);
 
 /* inode operations */
-extern struct inode_operations_t proc_root_iops;
-extern struct inode_operations_t proc_base_iops;
-extern struct inode_operations_t proc_uptime_iops;
-extern struct inode_operations_t proc_loadavg_iops;
-extern struct inode_operations_t proc_filesystems_iops;
-extern struct inode_operations_t proc_mounts_iops;
-extern struct inode_operations_t proc_self_iops;
-extern struct inode_operations_t proc_kstat_iops;
-extern struct inode_operations_t proc_meminfo_iops;
-extern struct inode_operations_t proc_stat_iops;
-extern struct inode_operations_t proc_cmdline_iops;
-extern struct inode_operations_t proc_environ_iops;
-extern struct inode_operations_t proc_fd_iops;
-extern struct inode_operations_t proc_fd_link_iops;
-extern struct inode_operations_t proc_net_iops;
-extern struct inode_operations_t proc_net_dev_iops;
+extern struct inode_operations proc_root_iops;
+extern struct inode_operations proc_base_iops;
+extern struct inode_operations proc_uptime_iops;
+extern struct inode_operations proc_loadavg_iops;
+extern struct inode_operations proc_filesystems_iops;
+extern struct inode_operations proc_mounts_iops;
+extern struct inode_operations proc_self_iops;
+extern struct inode_operations proc_kstat_iops;
+extern struct inode_operations proc_meminfo_iops;
+extern struct inode_operations proc_stat_iops;
+extern struct inode_operations proc_cmdline_iops;
+extern struct inode_operations proc_environ_iops;
+extern struct inode_operations proc_fd_iops;
+extern struct inode_operations proc_fd_link_iops;
+extern struct inode_operations proc_net_iops;
+extern struct inode_operations proc_net_dev_iops;
 
 /*
  * Test if a name matches a directory entry.
  */
-static inline int proc_match(const char *name, size_t len, struct proc_dir_entry_t *de)
+static inline int proc_match(const char *name, size_t len, struct proc_dir_entry *de)
 {
 	return len == de->name_len && strncmp(name, de->name, len) == 0;
 }

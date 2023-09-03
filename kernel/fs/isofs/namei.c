@@ -14,14 +14,14 @@ static inline int isofs_name_match(const char *name1, size_t len1, const char *n
 /*
  * Find an entry inside a directory.
  */
-static struct buffer_head_t *isofs_find_entry(struct inode_t *dir, const char *name, size_t name_len, ino_t *res_ino, ino_t *backlink_ino)
+static struct buffer_head *isofs_find_entry(struct inode *dir, const char *name, size_t name_len, ino_t *res_ino, ino_t *backlink_ino)
 {
 	char name_tmp[ISOFS_MAX_NAME_LEN + 1], de_tmp[4096];
 	uint32_t offset, block, f_pos = 0, next_offset;
-	struct isofs_inode_info_t *isofs_inode;
-	struct iso_directory_record_t *de;
-	struct super_block_t *sb;
-	struct buffer_head_t *bh;
+	struct isofs_inode_info *isofs_inode;
+	struct iso_directory_record *de;
+	struct super_block *sb;
+	struct buffer_head *bh;
 	size_t name_len_tmp;
 	int de_len;
 	ino_t ino;
@@ -68,7 +68,7 @@ static struct buffer_head_t *isofs_find_entry(struct inode_t *dir, const char *n
 		}
 
 		/* get directory entry and compute inode */
-		de = (struct iso_directory_record_t *) (bh->b_data + offset);
+		de = (struct iso_directory_record *) (bh->b_data + offset);
 		ino = (block << sb->s_blocksize_bits) + (offset & (sb->s_blocksize - 1));
 		de_len = *((unsigned char *) de);
 
@@ -146,9 +146,9 @@ static struct buffer_head_t *isofs_find_entry(struct inode_t *dir, const char *n
 /*
  * Lookup for a file in a directory.
  */
-int isofs_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+int isofs_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
-	struct buffer_head_t *bh = NULL;
+	struct buffer_head *bh = NULL;
 	ino_t ino, backlink;
 
 	/* check dir */

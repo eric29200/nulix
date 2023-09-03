@@ -9,7 +9,7 @@
 uint32_t placement_address = 0;
 
 /* kernel heap */
-struct heap_t *kheap = NULL;
+struct heap *kheap = NULL;
 
 /*
  * Allocate memory (internal function).

@@ -39,7 +39,7 @@
 #define MOUSE_ENABLE_DEV	0xF4
 
 /* mouse static variables */
-static struct ring_buffer_t mouse_rb;
+static struct ring_buffer mouse_rb;
 static uint8_t mouse_byte[MOUSE_EVENT_SIZE];
 static int mouse_cycle = 0;
 
@@ -145,7 +145,7 @@ static void mouse_compute_event()
 /*
  * Mouse interrupt handler.
  */
-static void mouse_handler(struct registers_t *regs)
+static void mouse_handler(struct registers *regs)
 {
 	int status, value;
 
@@ -189,7 +189,7 @@ static void mouse_handler(struct registers_t *regs)
 /*
  * Open a mouse buffer.
  */
-static int mouse_open(struct file_t *filp)
+static int mouse_open(struct file *filp)
 {
 	UNUSED(filp);
 	return 0;
@@ -198,7 +198,7 @@ static int mouse_open(struct file_t *filp)
 /*
  * Read a mouse.
  */
-static int mouse_read(struct file_t *filp, char *buf, int n)
+static int mouse_read(struct file *filp, char *buf, int n)
 {
 	int ret;
 
@@ -220,7 +220,7 @@ static int mouse_read(struct file_t *filp, char *buf, int n)
 /*
  * Writ to a mouse.
  */
-static int mouse_write(struct file_t *filp, const char *buf, int n)
+static int mouse_write(struct file *filp, const char *buf, int n)
 {
 	int i;
 
@@ -236,7 +236,7 @@ static int mouse_write(struct file_t *filp, const char *buf, int n)
 /*
  * Poll a mouse.
  */
-static int mouse_poll(struct file_t *filp, struct select_table_t *wait)
+static int mouse_poll(struct file *filp, struct select_table *wait)
 {
 	int mask = POLLOUT;
 
@@ -258,7 +258,7 @@ static int mouse_poll(struct file_t *filp, struct select_table_t *wait)
  */
 int init_mouse()
 {
-	struct devfs_entry_t *de_input;
+	struct devfs_entry *de_input;
 	int ret;
 
 	/* create mouse buffer */
@@ -311,7 +311,7 @@ int init_mouse()
 /*
  * Mouse file operations.
  */
-static struct file_operations_t mouse_fops = {
+static struct file_operations mouse_fops = {
 	.open		= mouse_open,
 	.read		= mouse_read,
 	.write		= mouse_write,
@@ -321,6 +321,6 @@ static struct file_operations_t mouse_fops = {
 /*
  * Mouse inode operations.
  */
-struct inode_operations_t mouse_iops = {
+struct inode_operations mouse_iops = {
 	.fops		= &mouse_fops,
 };

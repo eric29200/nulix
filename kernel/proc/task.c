@@ -13,12 +13,12 @@
 
 /* switch to user mode (defined in x86/scheduler.s) */
 extern void enter_user_mode(uint32_t esp, uint32_t eip, uint32_t return_address);
-extern void return_user_mode(struct registers_t *regs);
+extern void return_user_mode(struct registers *regs);
 
 /*
  * Kernel fork trampoline.
  */
-static void task_user_entry(struct task_t *task)
+static void task_user_entry(struct task *task)
 {
 	/* return to user mode */
 	tss_set_stack(0x10, task->kernel_stack);
@@ -28,7 +28,7 @@ static void task_user_entry(struct task_t *task)
 /*
  * Init (process 1) entry.
  */
-static void init_entry(struct task_t *task)
+static void init_entry(struct task *task)
 {
 	char *argv[] = { "init", NULL };
 	int ret;
@@ -57,7 +57,7 @@ err:
 /*
  * Copy flags.
  */
-static int task_copy_flags(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
+static int task_copy_flags(struct task *task, struct task *parent, uint32_t clone_flags)
 {
 	uint32_t new_flags = parent ? parent->flags : 0;
 
@@ -77,7 +77,7 @@ static int task_copy_flags(struct task_t *task, struct task_t *parent, uint32_t 
 /*
  * Copy signal handlers.
  */
-static int task_copy_signals(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
+static int task_copy_signals(struct task *task, struct task *parent, uint32_t clone_flags)
 {
 	/* clone files */
 	if (clone_flags & CLONE_SIGHAND) {
@@ -115,7 +115,7 @@ static int task_copy_signals(struct task_t *task, struct task_t *parent, uint32_
 /*
  * Copy resource limits.
  */
-static int task_copy_rlim(struct task_t *task, struct task_t *parent)
+static int task_copy_rlim(struct task *task, struct task *parent)
 {
 	int i;
 
@@ -145,9 +145,9 @@ static int task_copy_rlim(struct task_t *task, struct task_t *parent)
  */
 struct mm_struct *task_dup_mm(struct mm_struct *mm)
 {
-	struct vm_area_t *vm_parent, *vm_child;
+	struct vm_area *vm_parent, *vm_child;
 	struct mm_struct *mm_new;
-	struct list_head_t *pos;
+	struct list_head *pos;
 
 	/* allocate memory structure */
 	mm_new = (struct mm_struct *) kmalloc(sizeof(struct mm_struct));
@@ -173,13 +173,13 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	/* copy virtual memory areas */
 	if (mm) {
 		list_for_each(pos, &mm->vm_list) {
-			vm_parent = list_entry(pos, struct vm_area_t, list);
-			vm_child = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
+			vm_parent = list_entry(pos, struct vm_area, list);
+			vm_child = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 			if (!vm_child)
 				goto err;
 
 			/* copy memory area */
-			memset(vm_child, 0, sizeof(struct vm_area_t));
+			memset(vm_child, 0, sizeof(struct vm_area));
 			vm_child->vm_start = vm_parent->vm_start;
 			vm_child->vm_end = vm_parent->vm_end;
 			vm_child->vm_flags = vm_parent->vm_flags;
@@ -210,7 +210,7 @@ err:
 /*
  * Copy memory areas.
  */
-static int task_copy_mm(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
+static int task_copy_mm(struct task *task, struct task *parent, uint32_t clone_flags)
 {
 	/* clone mm struct */
 	if (clone_flags & CLONE_VM) {
@@ -233,7 +233,7 @@ static int task_copy_mm(struct task_t *task, struct task_t *parent, uint32_t clo
 /*
  * Copy file system informations.
  */
-static int task_copy_fs(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
+static int task_copy_fs(struct task *task, struct task *parent, uint32_t clone_flags)
 {
 	/* clone fs */
 	if (clone_flags & CLONE_FS) {
@@ -277,7 +277,7 @@ static int task_copy_fs(struct task_t *task, struct task_t *parent, uint32_t clo
 /*
  * Copy files.
  */
-static int task_copy_files(struct task_t *task, struct task_t *parent, uint32_t clone_flags)
+static int task_copy_files(struct task *task, struct task *parent, uint32_t clone_flags)
 {
 	int i;
 
@@ -317,11 +317,11 @@ static int task_copy_files(struct task_t *task, struct task_t *parent, uint32_t 
 /*
  * Copy thread.
  */
-static int task_copy_thread(struct task_t *task, struct task_t *parent, uint32_t user_sp)
+static int task_copy_thread(struct task *task, struct task *parent, uint32_t user_sp)
 {
 	/* duplicate parent registers */
 	if (parent) {
-		memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers_t));
+		memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers));
 		task->user_regs.eax = 0;
 	}
 
@@ -335,7 +335,7 @@ static int task_copy_thread(struct task_t *task, struct task_t *parent, uint32_t
 /*
  * Exit signals.
  */
-void task_exit_signals(struct task_t *task)
+void task_exit_signals(struct task *task)
 {
 	struct signal_struct *sig = task->sig;
 
@@ -350,7 +350,7 @@ void task_exit_signals(struct task_t *task)
 /*
  * Exit file system.
  */
-void task_exit_fs(struct task_t *task)
+void task_exit_fs(struct task *task)
 {
 	struct fs_struct *fs = task->fs;
 
@@ -368,7 +368,7 @@ void task_exit_fs(struct task_t *task)
 /*
  * Exit opened files.
  */
-void task_exit_files(struct task_t *task)
+void task_exit_files(struct task *task)
 {
 	struct files_struct *files = task->files;
 	int i;
@@ -391,12 +391,12 @@ void task_exit_files(struct task_t *task)
  */
 void task_exit_mmap(struct mm_struct *mm)
 {
-	struct list_head_t *pos, *n;
-	struct vm_area_t *vm_area;
+	struct list_head *pos, *n;
+	struct vm_area *vm_area;
 
 	/* free memory regions */
 	list_for_each_safe(pos, n, &mm->vm_list) {
-		vm_area = list_entry(pos, struct vm_area_t, list);
+		vm_area = list_entry(pos, struct vm_area, list);
 		if (vm_area) {
 			/* release inode */
 			if (vm_area->vm_ops && vm_area->vm_ops->close)
@@ -415,7 +415,7 @@ void task_exit_mmap(struct mm_struct *mm)
 /*
  * Exit memory.
  */
-static void task_exit_mm(struct task_t *task)
+static void task_exit_mm(struct task *task)
 {
 	struct mm_struct *mm = task->mm;
 
@@ -437,7 +437,7 @@ static void task_exit_mm(struct task_t *task)
 /*
  * Release mmap : wake up parent sleeping on vfork semaphore.
  */
-void task_release_mmap(struct task_t *task)
+void task_release_mmap(struct task *task)
 {
 	if (task->flags & CLONE_VFORK)
 		up(task->parent->vfork_sem);
@@ -446,18 +446,18 @@ void task_release_mmap(struct task_t *task)
 /*
  * Create and init a task.
  */
-static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, uint32_t user_sp, int kernel_thread)
+static struct task *create_task(struct task *parent, uint32_t clone_flags, uint32_t user_sp, int kernel_thread)
 {
-	struct task_t *task;
+	struct task *task;
 	void *stack;
 
 	/* create task */
-	task = (struct task_t *) kmalloc(sizeof(struct task_t));
+	task = (struct task *) kmalloc(sizeof(struct task));
 	if (!task)
 		return NULL;
 
 	/* reset task */
-	memset(task, 0, sizeof(struct task_t));
+	memset(task, 0, sizeof(struct task));
 
 	/* allocate stack */
 	stack = (void *) kmalloc(STACK_SIZE);
@@ -467,7 +467,7 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 	/* set stack */
 	memset(stack, 0, STACK_SIZE);
 	task->kernel_stack = (uint32_t) stack + STACK_SIZE;
-	task->esp = task->kernel_stack - sizeof(struct task_registers_t);
+	task->esp = task->kernel_stack - sizeof(struct task_registers);
 
 	/* init task */
 	task->pid = kernel_thread ? 0 : get_next_pid();
@@ -490,10 +490,10 @@ static struct task_t *create_task(struct task_t *parent, uint32_t clone_flags, u
 	/* copy task name and TLS */
 	if (parent) {
 		memcpy(task->name, parent->name, TASK_NAME_LEN);
-		memcpy(&task->tls, &parent->tls, sizeof(struct user_desc_t));
+		memcpy(&task->tls, &parent->tls, sizeof(struct user_desc));
 	} else {
 		memset(task->name, 0, TASK_NAME_LEN);
-		memset(&task->tls, 0, sizeof(struct user_desc_t));
+		memset(&task->tls, 0, sizeof(struct user_desc));
 	}
 
 	/* copy task */
@@ -533,10 +533,10 @@ err_stack:
 /*
  * Create kernel thread.
  */
-struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
+struct task *create_kernel_thread(void (*func)(void *), void *arg)
 {
-	struct task_registers_t *regs;
-	struct task_t *task;
+	struct task_registers *regs;
+	struct task *task;
 
 	/* create task */
 	task = create_task(NULL, 0, 0, 1);
@@ -544,8 +544,8 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->esp;
-	memset(regs, 0, sizeof(struct task_registers_t));
+	regs = (struct task_registers *) task->esp;
+	memset(regs, 0, sizeof(struct task_registers));
 
 	/* set eip to function */
 	regs->parameter1 = (uint32_t) arg;
@@ -563,9 +563,9 @@ struct task_t *create_kernel_thread(void (*func)(void *), void *arg)
  */
 int do_fork(uint32_t clone_flags, uint32_t user_sp)
 {
-	struct task_registers_t *regs;
-	struct semaphore_t sem;
-	struct task_t *task;
+	struct task_registers *regs;
+	struct semaphore sem;
+	struct task *task;
 
 	/* create task */
 	task = create_task(current_task, clone_flags, user_sp, 0);
@@ -573,8 +573,8 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 		return -EINVAL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->esp;
-	memset(regs, 0, sizeof(struct task_registers_t));
+	regs = (struct task_registers *) task->esp;
+	memset(regs, 0, sizeof(struct task_registers));
 
 	/* set eip to function */
 	regs->parameter1 = (uint32_t) task;
@@ -597,10 +597,10 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 /*
  * Create init process.
  */
-struct task_t *create_init_task(struct task_t *parent)
+struct task *create_init_task(struct task *parent)
 {
-	struct task_registers_t *regs;
-	struct task_t *task;
+	struct task_registers *regs;
+	struct task *task;
 
 	/* create task */
 	task = create_task(parent, 0, 0, 0);
@@ -608,8 +608,8 @@ struct task_t *create_init_task(struct task_t *parent)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers_t *) task->esp;
-	memset(regs, 0, sizeof(struct task_registers_t));
+	regs = (struct task_registers *) task->esp;
+	memset(regs, 0, sizeof(struct task_registers));
 
 	/* set eip */
 	regs->parameter1 = (uint32_t) task;
@@ -625,7 +625,7 @@ struct task_t *create_init_task(struct task_t *parent)
 /*
  * Destroy a task.
  */
-void destroy_task(struct task_t *task)
+void destroy_task(struct task *task)
 {
 	if (!task)
 		return;

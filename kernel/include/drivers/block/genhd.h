@@ -10,7 +10,7 @@
 /*
  * Disk partition.
  */
-struct partition_t {
+struct partition {
 	uint32_t		start_sect;			/* starting sector counting from 0 */
 	uint32_t		nr_sects;			/* nr of sectors in partition */
 };
@@ -18,16 +18,16 @@ struct partition_t {
 /*
  * Disk partitions.
  */
-struct gendisk_t {
+struct gendisk {
 	dev_t			dev;				/* device number */
 	char			name[DISK_NAME_LEN];		/* disk name */
-	struct partition_t 	partitions[NR_PARTITIONS];	/* partitions */
+	struct partition 	partitions[NR_PARTITIONS];	/* partitions */
 };
 
 /*
  * Msdos partition.
  */
-struct msdos_partition_t {
+struct msdos_partition {
 	uint8_t			boot_ind;			/* 0x80 - active */
 	uint8_t			head;				/* starting head */
 	uint8_t			sector;				/* starting sector */
@@ -40,6 +40,6 @@ struct msdos_partition_t {
 	uint32_t		nr_sects;			/* nr of sectors in partition */
 };
 
-void check_partition(struct gendisk_t *hd, dev_t dev);
+void check_partition(struct gendisk *hd, dev_t dev);
 
 #endif

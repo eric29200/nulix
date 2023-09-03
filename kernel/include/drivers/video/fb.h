@@ -41,7 +41,7 @@
 #define FB_VISUAL_DIRECTCOLOR		4	/* Direct color */
 #define FB_VISUAL_STATIC_PSEUDOCOLOR	5	/* Pseudo color readonly */
 
-struct framebuffer_t;
+struct framebuffer;
 
 /*
  * Framebuffer fix informations.
@@ -112,22 +112,22 @@ struct fb_var_screeninfo {
 /*
  * Frame buffer operations.
  */
-struct framebuffer_ops_t {
-	int			(*init)(struct framebuffer_t *);
-	void			(*update_region)(struct framebuffer_t *, uint32_t, uint32_t);
-	void			(*scroll_up)(struct framebuffer_t *, uint32_t, uint32_t, size_t);
-	void			(*scroll_down)(struct framebuffer_t *, uint32_t, uint32_t, size_t);
-	void			(*update_cursor)(struct framebuffer_t *);
-	void			(*show_cursor)(struct framebuffer_t *, int);
-	int			(*get_fix)(struct framebuffer_t *, struct fb_fix_screeninfo *);
-	int			(*get_var)(struct framebuffer_t *, struct fb_var_screeninfo *);
-	int			(*put_var)(struct framebuffer_t *, struct fb_var_screeninfo *);
+struct framebuffer_ops {
+	int			(*init)(struct framebuffer *);
+	void			(*update_region)(struct framebuffer *, uint32_t, uint32_t);
+	void			(*scroll_up)(struct framebuffer *, uint32_t, uint32_t, size_t);
+	void			(*scroll_down)(struct framebuffer *, uint32_t, uint32_t, size_t);
+	void			(*update_cursor)(struct framebuffer *);
+	void			(*show_cursor)(struct framebuffer *, int);
+	int			(*get_fix)(struct framebuffer *, struct fb_fix_screeninfo *);
+	int			(*get_var)(struct framebuffer *, struct fb_var_screeninfo *);
+	int			(*put_var)(struct framebuffer *, struct fb_var_screeninfo *);
 };
 
 /*
  * Frame buffer structure.
  */
-struct framebuffer_t {
+struct framebuffer {
 	uint32_t				addr;
 	uint16_t				type;
 	uint32_t				pitch;
@@ -136,7 +136,7 @@ struct framebuffer_t {
 	uint32_t				real_width;
 	uint32_t				real_height;
 	uint8_t					bpp;
-	struct font_desc_t *			font;
+	struct font_desc *			font;
 	uint32_t				x;
 	uint32_t				y;
 	uint32_t				cursor_x;
@@ -144,17 +144,17 @@ struct framebuffer_t {
 	uint16_t *				buf;
 	int					active;
 	struct multiboot_tag_framebuffer *	tag_fb;
-	struct framebuffer_ops_t	*	ops;
+	struct framebuffer_ops *		ops;
 };
 
-int init_framebuffer(struct framebuffer_t *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct);
+int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct);
 int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb);
 
 /* frame buffers */
-extern struct framebuffer_ops_t fb_text_ops;
-extern struct framebuffer_ops_t fb_rgb_ops;
+extern struct framebuffer_ops fb_text_ops;
+extern struct framebuffer_ops fb_rgb_ops;
 
 /* frame buffer inode operations */
-extern struct inode_operations_t fb_iops;
+extern struct inode_operations fb_iops;
 
 #endif

@@ -17,7 +17,7 @@ static LIST_HEAD(vfs_mounts_list);
 /*
  * Register a file system.
  */
-int register_filesystem(struct file_system_t *fs)
+int register_filesystem(struct file_system *fs)
 {
 	if (!fs)
 		return -EINVAL;
@@ -31,17 +31,17 @@ int register_filesystem(struct file_system_t *fs)
 /*
  * Get a file system.
  */
-struct file_system_t *get_filesystem(const char *name)
+struct file_system *get_filesystem(const char *name)
 {
-	struct file_system_t *fs;
-	struct list_head_t *pos;
+	struct file_system *fs;
+	struct list_head *pos;
 
 	if (!name)
 		return NULL;
 
 	/* search file system */
 	list_for_each(pos, &fs_list) {
-		fs = list_entry(pos, struct file_system_t, list);
+		fs = list_entry(pos, struct file_system, list);
 		if (strcmp(fs->name, name) == 0)
 			return fs;
 	}
@@ -54,8 +54,8 @@ struct file_system_t *get_filesystem(const char *name)
  */
 int get_filesystem_list(char *buf, int count)
 {
-	struct file_system_t *fs;
-	struct list_head_t *pos;
+	struct file_system *fs;
+	struct list_head *pos;
 	int len = 0;
 
 	list_for_each(pos, &fs_list) {
@@ -63,7 +63,7 @@ int get_filesystem_list(char *buf, int count)
 		if (len >= count - 80)
 			break;
 
-		fs = list_entry(pos, struct file_system_t, list);
+		fs = list_entry(pos, struct file_system, list);
 		len += sprintf(buf + len, "%s\t%s\n", fs->requires_dev ? "" : "nodev", fs->name);
 	}
 
@@ -75,8 +75,8 @@ int get_filesystem_list(char *buf, int count)
  */
 int get_vfs_mount_list(char *buf, int count)
 {
-	struct vfs_mount_t *vfs_mount;
-	struct list_head_t *pos;
+	struct vfs_mount *vfs_mount;
+	struct list_head *pos;
 	int len = 0;
 
 	list_for_each(pos, &vfs_mounts_list) {
@@ -84,7 +84,7 @@ int get_vfs_mount_list(char *buf, int count)
 		if (len >= count - 160)
 			break;
 
-		vfs_mount = list_entry(pos, struct vfs_mount_t, mnt_list);
+		vfs_mount = list_entry(pos, struct vfs_mount, mnt_list);
 		len += sprintf(buf + len, "%s %s %s %s 0 0\n",
 			       vfs_mount->mnt_devname,
 			       vfs_mount->mnt_dirname,
@@ -98,12 +98,12 @@ int get_vfs_mount_list(char *buf, int count)
 /*
  * Add a mounted file system.
  */
-static int add_vfs_mount(dev_t dev, const char *dev_name, const char *dir_name, int flags, struct super_block_t *sb)
+static int add_vfs_mount(dev_t dev, const char *dev_name, const char *dir_name, int flags, struct super_block *sb)
 {
-	struct vfs_mount_t *vfs_mount;
+	struct vfs_mount *vfs_mount;
 
 	/* allocate a new mount fs */
-	vfs_mount = (struct vfs_mount_t *) kmalloc(sizeof(struct vfs_mount_t));
+	vfs_mount = (struct vfs_mount *) kmalloc(sizeof(struct vfs_mount));
 	if (!vfs_mount)
 		return -ENOMEM;
 
@@ -150,14 +150,14 @@ err:
 /*
  * Remove a mounted file system.
  */
-static void del_vfs_mount(struct super_block_t *sb)
+static void del_vfs_mount(struct super_block *sb)
 {
-	struct vfs_mount_t *vfs_mount;
-	struct list_head_t *pos;
+	struct vfs_mount *vfs_mount;
+	struct list_head *pos;
 
 	/* find mounted file system */
 	list_for_each(pos, &vfs_mounts_list) {
-		vfs_mount = list_entry(pos, struct vfs_mount_t, mnt_list);
+		vfs_mount = list_entry(pos, struct vfs_mount, mnt_list);
 		if (vfs_mount->mnt_sb == sb)
 			goto found;
 	}
@@ -178,7 +178,7 @@ found:
 /*
  * Get mount point inode.
  */
-static int get_mount_point(const char *mount_point, struct inode_t **res_inode)
+static int get_mount_point(const char *mount_point, struct inode **res_inode)
 {
 	/* get mount point */
 	*res_inode = namei(AT_FDCWD, NULL, mount_point, 1);
@@ -203,14 +203,14 @@ static int get_mount_point(const char *mount_point, struct inode_t **res_inode)
 /*
  * Mount a file system.
  */
-static int do_mount(struct file_system_t *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags)
+static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags)
 {
-	struct inode_t *mount_point_dir = NULL;
-	struct super_block_t *sb;
+	struct inode *mount_point_dir = NULL;
+	struct super_block *sb;
 	int err;
 
 	/* allocate a super block */
-	sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
+	sb = (struct super_block *) kmalloc(sizeof(struct super_block));
 	if (!sb)
 		return -ENOMEM;
 
@@ -249,8 +249,8 @@ err:
  */
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data)
 {
-	struct file_system_t *fs;
-	struct inode_t *inode;
+	struct file_system *fs;
+	struct inode *inode;
 	dev_t dev = 0;
 
 	/* find file system type */
@@ -284,13 +284,13 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
  */
 int do_mount_root(dev_t dev, const char *dev_name)
 {
-	struct file_system_t *fs;
-	struct super_block_t *sb;
-	struct list_head_t *pos;
+	struct file_system *fs;
+	struct super_block *sb;
+	struct list_head *pos;
 	int err;
 
 	/* allocate a super block */
-	sb = (struct super_block_t *) kmalloc(sizeof(struct super_block_t));
+	sb = (struct super_block *) kmalloc(sizeof(struct super_block));
 	if (!sb)
 		return -ENOMEM;
 
@@ -300,7 +300,7 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	/* try all file systems */
 	list_for_each(pos, &fs_list) {
 		/* test only dev file systems */
-		fs = list_entry(pos, struct file_system_t, list);
+		fs = list_entry(pos, struct file_system, list);
 		if (!fs->requires_dev)
 			continue;
 
@@ -333,9 +333,9 @@ found:
 /*
  * Check if a file system can be unmounted.
  */
-static int fs_may_umount(struct super_block_t *sb)
+static int fs_may_umount(struct super_block *sb)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 	int i;
 
 	for (i = 0; i < NR_INODE; i++) {
@@ -358,8 +358,8 @@ static int fs_may_umount(struct super_block_t *sb)
  */
 static int do_umount(const char *target, int flags)
 {
-	struct super_block_t *sb;
-	struct inode_t *inode;
+	struct super_block *sb;
+	struct inode *inode;
 
 	/* unused flags */
 	UNUSED(flags);

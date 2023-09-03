@@ -8,9 +8,9 @@ extern uint32_t kernel_stack;
 extern void gdt_flush(uint32_t);
 extern void tss_flush();
 
-struct gdt_entry_t gdt_entries[6];
-struct gdt_ptr_t gdt_ptr;
-struct tss_entry_t tss_entry;
+struct gdt_entry gdt_entries[6];
+struct gdt_ptr gdt_ptr;
+struct tss_entry tss_entry;
 
 /*
  * Set tss stack.
@@ -51,7 +51,7 @@ void init_gdt()
 
 	/* set tss */
 	tss_base = (uint32_t) &tss_entry;
-	tss_limit = tss_base + sizeof(struct tss_entry_t);
+	tss_limit = tss_base + sizeof(struct tss_entry);
 
 	/* create kernel and user code/data segments */
 	gdt_set_gate(0, 0, 0, 0, 0);				/* NULL segement : always needed */
@@ -62,7 +62,7 @@ void init_gdt()
 	gdt_set_gate(5, tss_base, tss_limit, 0xE9, 0x00);	/* Task State Segment */
 
 	/* init tss */
-	memset((void *) &tss_entry, 0, sizeof(struct tss_entry_t));
+	memset((void *) &tss_entry, 0, sizeof(struct tss_entry));
 	tss_entry.ss0 = 0x10;
 	tss_entry.esp0 = 0x0;
 	tss_entry.cs = 0x0B;
@@ -71,7 +71,7 @@ void init_gdt()
 	tss_entry.ds = 0x13;
 	tss_entry.fs = 0x13;
 	tss_entry.gs = 0x13;
-	tss_entry.iomap_base = sizeof(struct tss_entry_t);
+	tss_entry.iomap_base = sizeof(struct tss_entry);
 
 	/* flush gdt */
 	gdt_flush((uint32_t) &gdt_ptr);

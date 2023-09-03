@@ -16,12 +16,12 @@
 /*
  * Reception header.
  */
-struct rtl8139_rx_header_t {
+struct rtl8139_rx_header {
 	uint16_t status;
 	uint16_t size;
 };
 
 int init_rtl8139();
-struct net_device_t *rtl8139_get_net_device();
+struct net_device *rtl8139_get_net_device();
 
 #endif

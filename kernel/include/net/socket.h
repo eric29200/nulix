@@ -81,10 +81,10 @@ struct sockaddr {
 /*
  * Message header.
  */
-struct msghdr_t {
+struct msghdr {
 	void *			msg_name;
 	size_t			msg_namelen;
-	struct iovec_t *	msg_iov;
+	struct iovec *		msg_iov;
 	size_t			msg_iovlen;
 	void *			msg_control;
 	size_t			msg_controllen;
@@ -107,35 +107,35 @@ typedef enum {
 /*
  * Socket structure.
  */
-struct socket_t {
+struct socket {
 	uint16_t		family;
 	uint16_t		type;
 	socket_state_t		state;
 	struct prot_ops *	ops;
-	struct wait_queue_t *	wait;
-	struct inode_t *	inode;
-	struct sock_t *		sk;
+	struct wait_queue *	wait;
+	struct inode *		inode;
+	struct sock *		sk;
 };
 
 /*
  * Protocol operations.
  */
 struct prot_ops {
-	int (*create)(struct socket_t *, int);
-	int (*dup)(struct socket_t *, struct socket_t *);
-	int (*release)(struct socket_t *);
-	int (*poll)(struct socket_t *, struct select_table_t *);
-	int (*ioctl)(struct socket_t *, int, unsigned long);
-	int (*recvmsg)(struct socket_t *, struct msghdr_t *, int, int);
-	int (*sendmsg)(struct socket_t *, const struct msghdr_t *, int, int);
-	int (*bind)(struct socket_t *, const struct sockaddr *, size_t);
-	int (*accept)(struct socket_t *, struct socket_t *, struct sockaddr *);
-	int (*connect)(struct socket_t *, const struct sockaddr *, size_t);
-	int (*shutdown)(struct socket_t *, int);
-	int (*getpeername)(struct socket_t *, struct sockaddr *, size_t *);
-	int (*getsockname)(struct socket_t *, struct sockaddr *, size_t *);
-	int (*getsockopt)(struct socket_t *, int, int, void *, size_t *);
-	int (*setsockopt)(struct socket_t *, int, int, void *, size_t);
+	int (*create)(struct socket *, int);
+	int (*dup)(struct socket *, struct socket *);
+	int (*release)(struct socket *);
+	int (*poll)(struct socket *, struct select_table *);
+	int (*ioctl)(struct socket *, int, unsigned long);
+	int (*recvmsg)(struct socket *, struct msghdr *, int, int);
+	int (*sendmsg)(struct socket *, const struct msghdr *, int, int);
+	int (*bind)(struct socket *, const struct sockaddr *, size_t);
+	int (*accept)(struct socket *, struct socket *, struct sockaddr *);
+	int (*connect)(struct socket *, const struct sockaddr *, size_t);
+	int (*shutdown)(struct socket *, int);
+	int (*getpeername)(struct socket *, struct sockaddr *, size_t *);
+	int (*getsockname)(struct socket *, struct sockaddr *, size_t *);
+	int (*getsockopt)(struct socket *, int, int, void *, size_t *);
+	int (*setsockopt)(struct socket *, int, int, void *, size_t);
 };
 
 /* protocole operations */
@@ -150,10 +150,10 @@ int sys_listen(int sockfd, int backlog);
 int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_send(int sockfd, const void * buf, size_t len, int flags);
 int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen);
-int sys_sendmsg(int sockfd, const struct msghdr_t *msg, int flags);
+int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags);
 int sys_recv(int sockfd, void *buf, size_t size, int flags);
 int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t *addrlen);
-int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags);
+int sys_recvmsg(int sockfd, struct msghdr *msg, int flags);
 int sys_shutdown(int sockfd, int how);
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);

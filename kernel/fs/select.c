@@ -8,9 +8,9 @@
 /*
  * Free a select table.
  */
-static void free_wait(struct select_table_t *st)
+static void free_wait(struct select_table *st)
 {
-	struct select_table_entry_t *entry = st->entry + st->nr;
+	struct select_table_entry *entry = st->entry + st->nr;
 
 	while (st->nr > 0) {
 		st->nr--;
@@ -22,9 +22,9 @@ static void free_wait(struct select_table_t *st)
 /*
  * Poll a list of file descriptors.
  */
-static void do_pollfd(struct pollfd_t *fds, int *count, struct select_table_t *wait)
+static void do_pollfd(struct pollfd *fds, int *count, struct select_table *wait)
 {
-	struct file_t *filp;
+	struct file *filp;
 	uint32_t mask = 0;
 	int fd;
 
@@ -57,15 +57,15 @@ static void do_pollfd(struct pollfd_t *fds, int *count, struct select_table_t *w
 /*
  * Poll system call.
  */
-static int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
+static int do_poll(struct pollfd *fds, size_t ndfs, int timeout)
 {
-	struct select_table_t wait_table, *wait;
-	struct select_table_entry_t *entry;
+	struct select_table wait_table, *wait;
+	struct select_table_entry *entry;
 	int count = 0;
 	size_t i;
 
 	/* allocate table entry */
-	entry = (struct select_table_entry_t *) get_free_page();
+	entry = (struct select_table_entry *) get_free_page();
 	if (!entry)
 		return -ENOMEM;
 
@@ -108,7 +108,7 @@ static int do_poll(struct pollfd_t *fds, size_t ndfs, int timeout)
 /*
  * Poll system call.
  */
-int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout)
+int sys_poll(struct pollfd *fds, size_t nfds, int timeout)
 {
 	return do_poll(fds, nfds, timeout);
 }
@@ -116,9 +116,9 @@ int sys_poll(struct pollfd_t *fds, size_t nfds, int timeout)
 /*
  * Check events on a file.
  */
-static int __select_check(int fd, uint16_t mask, struct select_table_t *wait)
+static int __select_check(int fd, uint16_t mask, struct select_table *wait)
 {
-	struct pollfd_t pollfd;
+	struct pollfd pollfd;
 	int count;
 
 	/* set poll structure */
@@ -135,11 +135,11 @@ static int __select_check(int fd, uint16_t mask, struct select_table_t *wait)
 /*
  * Select system call.
  */
-static int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct kernel_timeval_t *timeout)
+static int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct kernel_timeval *timeout)
 {
 	fd_set_t res_readfds, res_writefds, res_exceptfds;
-	struct select_table_t wait_table, *wait;
-	struct select_table_entry_t *entry;
+	struct select_table wait_table, *wait;
+	struct select_table_entry *entry;
 	int i, max = -1, count;
 	uint32_t set, j;
 
@@ -182,7 +182,7 @@ end_check:
 	count = 0;
 
 	/* allocate table entry */
-	entry = (struct select_table_entry_t *) get_free_page();
+	entry = (struct select_table_entry *) get_free_page();
 	if (!entry)
 		return -ENOMEM;
 
@@ -265,9 +265,9 @@ end_check:
 /*
  * Select system call.
  */
-int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval_t *timeout)
+int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *timeout)
 {
-	struct kernel_timeval_t tv;
+	struct kernel_timeval tv;
 
 	if (timeout)
 		old_timeval_to_kernel_timeval(timeout, &tv);
@@ -278,9 +278,9 @@ int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *except
 /*
  * Pselect6 system call.
  */
-int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec_t *timeout, sigset_t *sigmask)
+int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec *timeout, sigset_t *sigmask)
 {
-	struct kernel_timeval_t tv;
+	struct kernel_timeval tv;
 	sigset_t current_sigmask;
 	int ret;
 

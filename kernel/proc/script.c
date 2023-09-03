@@ -6,11 +6,11 @@
 /*
  * Load a script.
  */
-int script_load(const char *path, struct binargs_t *bargs)
+int script_load(const char *path, struct binargs *bargs)
 {
 	char *s, *interp, *interp_name, *i_arg = NULL;
-	struct binargs_t bargs_new;
-	struct file_t *filp;
+	struct binargs bargs_new;
+	struct file *filp;
 	char buf[128];
 	int fd, ret;
 	ssize_t n;

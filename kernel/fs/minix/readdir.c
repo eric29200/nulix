@@ -7,11 +7,11 @@
 /*
  * Get directory entries system call.
  */
-int minix_getdents64(struct file_t *filp, void *dirp, size_t count)
+int minix_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct minix_sb_info_t *sbi = minix_sb(filp->f_inode->i_sb);
-	struct minix3_dir_entry_t *de3;
-	struct dirent64_t *dirent;
+	struct minix_sb_info *sbi = minix_sb(filp->f_inode->i_sb);
+	struct minix3_dir_entry *de3;
+	struct dirent64 *dirent;
 	int entries_size, ret;
 	size_t name_len;
 	char *name;
@@ -27,7 +27,7 @@ int minix_getdents64(struct file_t *filp, void *dirp, size_t count)
 	de3 = de;
 
 	/* walk through all entries */
-	for (entries_size = 0, dirent = (struct dirent64_t *) dirp;;) {
+	for (entries_size = 0, dirent = (struct dirent64 *) dirp;;) {
 		/* read minix dir entry */
 		if (minix_file_read(filp, (char *) de, sbi->s_dirsize) != sbi->s_dirsize)
 			goto out;
@@ -51,7 +51,7 @@ int minix_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next entry */
 		count -= dirent->d_reclen;
 		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((char *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
 	}
 
 out:

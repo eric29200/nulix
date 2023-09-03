@@ -14,12 +14,12 @@
 #include <kd.h>
 
 /* global ttys table */
-struct tty_t tty_table[NR_TTYS];
+struct tty tty_table[NR_TTYS];
 
 /*
  * Lookup for a tty.
  */
-static struct tty_t *tty_lookup(dev_t dev)
+static struct tty *tty_lookup(dev_t dev)
 {
 	/* current task tty */
 	if (dev == DEV_TTY)
@@ -47,9 +47,9 @@ static struct tty_t *tty_lookup(dev_t dev)
 /*
  * Open a TTY.
  */
-static int tty_open(struct file_t *filp)
+static int tty_open(struct file *filp)
 {
-	struct tty_t *tty;
+	struct tty *tty;
 	int noctty;
 	dev_t dev;
 
@@ -85,7 +85,7 @@ static int tty_open(struct file_t *filp)
 /*
  * Check tty count.
  */
-static int tty_check_count(struct tty_t *tty)
+static int tty_check_count(struct tty *tty)
 {
 	int count = 0, i;
 
@@ -100,9 +100,9 @@ static int tty_check_count(struct tty_t *tty)
 /*
  * Close a TTY.
  */
-static int tty_close(struct file_t *filp)
+static int tty_close(struct file *filp)
 {
-	struct tty_t *tty = filp->f_private;
+	struct tty *tty = filp->f_private;
 
 	/* specifice close */
 	if (tty->driver && tty->driver->close)
@@ -121,9 +121,9 @@ static int tty_close(struct file_t *filp)
 /*
  * Read TTY.
  */
-static int tty_read(struct file_t *filp, char *buf, int n)
+static int tty_read(struct file *filp, char *buf, int n)
 {
-	struct tty_t *tty;
+	struct tty *tty;
 	int count = 0;
 	uint8_t c;
 
@@ -162,7 +162,7 @@ static int tty_read(struct file_t *filp, char *buf, int n)
 /*
  * Post a character to tty.
  */
-static int opost(struct tty_t *tty, uint8_t c)
+static int opost(struct tty *tty, uint8_t c)
 {
 	int space;
 
@@ -203,7 +203,7 @@ static int opost(struct tty_t *tty, uint8_t c)
 /*
  * Output/Echo a character.
  */
-static void out_char(struct tty_t *tty, uint8_t c)
+static void out_char(struct tty *tty, uint8_t c)
 {
 	if (ISCNTRL(c) && !ISSPACE(c) && L_ECHOCTL(tty)) {
 		opost(tty, '^');
@@ -218,7 +218,7 @@ static void out_char(struct tty_t *tty, uint8_t c)
 /*
  * Cook input characters.
  */
-void tty_do_cook(struct tty_t *tty)
+void tty_do_cook(struct tty *tty)
 {
 	uint8_t c;
 
@@ -285,9 +285,9 @@ void tty_do_cook(struct tty_t *tty)
 /*
  * Write to TTY.
  */
-static int tty_write(struct file_t *filp, const char *buf, int n)
+static int tty_write(struct file *filp, const char *buf, int n)
 {
-	struct tty_t *tty;
+	struct tty *tty;
 	int i;
 
 	/* get tty */
@@ -315,10 +315,10 @@ static int tty_write(struct file_t *filp, const char *buf, int n)
 /*
  * Set tty's session.
  */
-static int tiocsctty(struct tty_t *tty)
+static int tiocsctty(struct tty *tty)
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct list_head *pos;
+	struct task *task;
 
 	/* nothing to do */
 	if (current_task->leader && current_task->session == tty->session)
@@ -331,7 +331,7 @@ static int tiocsctty(struct tty_t *tty)
 	/* this tty is already the controlling tty for another session group */
 	if (tty->session > 0) {
 		list_for_each(pos, &current_task->list) {
-			task = list_entry(pos, struct task_t, list);
+			task = list_entry(pos, struct task, list);
 			if (task->tty == tty)
 				task->tty = NULL;
 		}
@@ -348,7 +348,7 @@ static int tiocsctty(struct tty_t *tty)
 /*
  * Flush tty input.
  */
-static void tty_flush_input(struct tty_t *tty)
+static void tty_flush_input(struct tty *tty)
 {
 	ring_buffer_flush(&tty->read_queue);
 	ring_buffer_flush(&tty->cooked_queue);
@@ -361,7 +361,7 @@ static void tty_flush_input(struct tty_t *tty)
 /*
  * Flush tty output.
  */
-static void tty_flush_output(struct tty_t *tty)
+static void tty_flush_output(struct tty *tty)
 {
 	ring_buffer_flush(&tty->write_queue);
 
@@ -377,9 +377,9 @@ static void tty_flush_output(struct tty_t *tty)
  */
 void disassociate_ctty()
 {
-	struct tty_t *tty = current_task->tty;
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct tty *tty = current_task->tty;
+	struct list_head *pos;
+	struct task *task;
 
 	if (!tty)
 		return;
@@ -396,7 +396,7 @@ void disassociate_ctty()
 
 	/* clear tty for all processes in the session group */
 	list_for_each(pos, &current_task->list) {
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (task->session == current_task->session)
 			task->tty = NULL;
 	}
@@ -405,9 +405,9 @@ void disassociate_ctty()
 /*
  * TTY ioctl.
  */
-int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
+int tty_ioctl(struct file *filp, int request, unsigned long arg)
 {
-	struct tty_t *tty;
+	struct tty *tty;
 	int ret;
 
 	/* get tty */
@@ -417,19 +417,19 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 
 	switch (request) {
 		case TCGETS:
-			memcpy((struct termios_t *) arg, &tty->termios, sizeof(struct termios_t));
+			memcpy((struct termios *) arg, &tty->termios, sizeof(struct termios));
 			break;
 		case TCSETS:
 		case TCSETSW:
 		case TCSETSF:
-			memcpy(&tty->termios, (struct termios_t *) arg, sizeof(struct termios_t));
+			memcpy(&tty->termios, (struct termios *) arg, sizeof(struct termios));
 			tty->canon_data = 0;
 			break;
 		case TIOCGWINSZ:
-			memcpy((struct winsize_t *) arg, &tty->winsize, sizeof(struct winsize_t));
+			memcpy((struct winsize *) arg, &tty->winsize, sizeof(struct winsize));
 			break;
 		case TIOCSWINSZ:
-			memcpy(&tty->winsize, (struct winsize_t *) arg, sizeof(struct winsize_t));
+			memcpy(&tty->winsize, (struct winsize *) arg, sizeof(struct winsize));
 			break;
 		case TIOCGPGRP:
 			*((pid_t *) arg) = tty->pgrp;
@@ -490,7 +490,7 @@ int tty_ioctl(struct file_t *filp, int request, unsigned long arg)
 /*
  * Check if there is some data to read.
  */
-static int tty_input_available(struct tty_t *tty)
+static int tty_input_available(struct tty *tty)
 {
 	if (L_CANON(tty))
 		return tty->canon_data > 0;
@@ -501,9 +501,9 @@ static int tty_input_available(struct tty_t *tty)
 /*
  * Poll a tty.
  */
-static int tty_poll(struct file_t *filp, struct select_table_t *wait)
+static int tty_poll(struct file *filp, struct select_table *wait)
 {
-	struct tty_t *tty;
+	struct tty *tty;
 	int mask = 0;
 
 	/* get tty */
@@ -528,11 +528,11 @@ static int tty_poll(struct file_t *filp, struct select_table_t *wait)
 /*
  * Init a tty.
  */
-int tty_init_dev(struct tty_t *tty, struct tty_driver_t *driver)
+int tty_init_dev(struct tty *tty, struct tty_driver *driver)
 {
 	int ret;
 
-	memset(tty, 0, sizeof(struct tty_t));
+	memset(tty, 0, sizeof(struct tty));
 	tty->driver = driver;
 
 	/* init read queue */
@@ -559,7 +559,7 @@ int tty_init_dev(struct tty_t *tty, struct tty_driver_t *driver)
 /*
  * Destroy a tty.
  */
-void tty_destroy(struct tty_t *tty)
+void tty_destroy(struct tty *tty)
 {
 	ring_buffer_destroy(&tty->read_queue);
 	ring_buffer_destroy(&tty->write_queue);
@@ -574,7 +574,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 	int ret;
 
 	/* reset ttys */
-	memset(tty_table, 0, sizeof(struct tty_t) * NR_TTYS);
+	memset(tty_table, 0, sizeof(struct tty) * NR_TTYS);
 
 	/* init ptys */
 	ret = init_pty();
@@ -592,7 +592,7 @@ int init_tty(struct multiboot_tag_framebuffer *tag_fb)
 /*
  * Tty file operations.
  */
-static struct file_operations_t tty_fops = {
+static struct file_operations tty_fops = {
 	.open		= tty_open,
 	.close		= tty_close,
 	.read		= tty_read,
@@ -604,6 +604,6 @@ static struct file_operations_t tty_fops = {
 /*
  * Tty inode operations.
  */
-struct inode_operations_t tty_iops = {
+struct inode_operations tty_iops = {
 	.fops		= &tty_fops,
 };

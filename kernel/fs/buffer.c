@@ -15,13 +15,13 @@
 /* global buffer table */
 static int nr_buffer = 0;
 static int buffer_htable_bits = 0;
-static struct buffer_head_t *buffer_table = NULL;
-static struct htable_link_t **buffer_htable = NULL;
+static struct buffer_head *buffer_table = NULL;
+static struct htable_link **buffer_htable = NULL;
 
 /* buffers lists */
 static char buffersize_index[9] = { -1, 0, 1, -1, 2, -1, -1, -1, 3 };
-static struct list_head_t unused_list;
-static struct list_head_t free_list[NR_SIZES];
+static struct list_head unused_list;
+static struct list_head free_list[NR_SIZES];
 
 /* block size of devices */
 size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
@@ -60,9 +60,9 @@ void set_blocksize(dev_t dev, size_t blocksize)
 /*
  * Get an unused buffer.
  */
-static struct buffer_head_t *get_unused_buffer()
+static struct buffer_head *get_unused_buffer()
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 
 	/* no more unused buffers */
 	if (list_empty(&unused_list)) {
@@ -75,7 +75,7 @@ static struct buffer_head_t *get_unused_buffer()
 	}
 
 	/* get first free unused buffer */
-	bh = list_first_entry(&unused_list, struct buffer_head_t, b_list);
+	bh = list_first_entry(&unused_list, struct buffer_head, b_list);
 	list_del(&bh->b_list);
 
 	return bh;
@@ -84,18 +84,18 @@ static struct buffer_head_t *get_unused_buffer()
 /*
  * Put a buffer in unused list.
  */ 
-static void put_unused_buffer(struct buffer_head_t *bh)
+static void put_unused_buffer(struct buffer_head *bh)
 {
-	memset(bh, 0, sizeof(struct buffer_head_t));
+	memset(bh, 0, sizeof(struct buffer_head));
 	list_add(&bh->b_list, &unused_list);
 }
 
 /*
  * Create new buffers.
  */
-static struct buffer_head_t *create_buffers(void *page, size_t size)
+static struct buffer_head *create_buffers(void *page, size_t size)
 {
-	struct buffer_head_t *bh, *head, *tail;
+	struct buffer_head *bh, *head, *tail;
 	int offset;
 
 	/* create buffers */
@@ -138,7 +138,7 @@ err:
 static int refill_freelist(size_t blocksize)
 {
 	size_t isize = BUFSIZE_INDEX(blocksize);
-	struct buffer_head_t *bh, *tmp;
+	struct buffer_head *bh, *tmp;
 	void *page;
 
 	/* get a new page */
@@ -169,15 +169,15 @@ static int refill_freelist(size_t blocksize)
 /*
  * Find a buffer in hash table.
  */
-static struct buffer_head_t *find_buffer(dev_t dev, uint32_t block, size_t blocksize)
+static struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize)
 {
-	struct htable_link_t *node;
-	struct buffer_head_t *bh;
+	struct htable_link *node;
+	struct buffer_head *bh;
 
 	/* try to find buffer in cache */
 	node = htable_lookup(buffer_htable, block, buffer_htable_bits);
 	while (node) {
-		bh = htable_entry(node, struct buffer_head_t, b_htable);
+		bh = htable_entry(node, struct buffer_head, b_htable);
 		if (bh->b_block == block && bh->b_dev == dev && bh->b_size == blocksize) {
 			bh->b_ref++;
 			return bh;
@@ -192,10 +192,10 @@ static struct buffer_head_t *find_buffer(dev_t dev, uint32_t block, size_t block
 /*
  * Get a buffer (from cache or create one).
  */
-struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
+struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize)
 {
 	size_t isize = BUFSIZE_INDEX(blocksize);
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 
 	/* try to find buffer in cache */
 	bh = find_buffer(dev, block, blocksize);
@@ -212,7 +212,7 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 	}
 
 	/* get first free buffer */
-	bh = list_first_entry(&free_list[isize], struct buffer_head_t, b_list);
+	bh = list_first_entry(&free_list[isize], struct buffer_head, b_list);
 	list_del(&bh->b_list);
 
 	/* set buffer */
@@ -231,9 +231,9 @@ struct buffer_head_t *getblk(dev_t dev, uint32_t block, size_t blocksize)
 /*
  * Read a block from a device.
  */
-struct buffer_head_t *bread(dev_t dev, uint32_t block, size_t blocksize)
+struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 
 	/* get buffer */
 	bh = getblk(dev, block, blocksize);
@@ -253,7 +253,7 @@ struct buffer_head_t *bread(dev_t dev, uint32_t block, size_t blocksize)
 /*
  * Write a block buffer.
  */
-int bwrite(struct buffer_head_t *bh)
+int bwrite(struct buffer_head *bh)
 {
 	int ret;
 
@@ -272,7 +272,7 @@ int bwrite(struct buffer_head_t *bh)
 /*
  * Release a buffer.
  */
-void brelse(struct buffer_head_t *bh)
+void brelse(struct buffer_head *bh)
 {
 	if (!bh)
 		return;
@@ -288,9 +288,9 @@ void brelse(struct buffer_head_t *bh)
 /*
  * Try to free a buffer.
  */
-void try_to_free_buffer(struct buffer_head_t *bh)
+void try_to_free_buffer(struct buffer_head *bh)
 {
-	struct buffer_head_t *tmp, *tmp1;
+	struct buffer_head *tmp, *tmp1;
 	uint32_t page;
 
 	/* already freed */
@@ -384,10 +384,10 @@ int sys_fsync(int fd)
 /*
  * Read a page.
  */
-int generic_readpage(struct inode_t *inode, struct page_t *page)
+int generic_readpage(struct inode *inode, struct page *page)
 {
-	struct super_block_t *sb = inode->i_sb;
-	struct buffer_head_t *bh, *next, *tmp;
+	struct super_block *sb = inode->i_sb;
+	struct buffer_head *bh, *next, *tmp;
 	uint32_t block, address;
 	int nr, i;
 
@@ -448,7 +448,7 @@ int binit()
 	buffer_htable_bits = blksize_bits(nr_buffer);
 
 	/* allocate buffers */
-	nr = 1 + nr_buffer * sizeof(struct buffer_head_t) / PAGE_SIZE;
+	nr = 1 + nr_buffer * sizeof(struct buffer_head) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
 		addr = get_free_page();
@@ -464,7 +464,7 @@ int binit()
 	}
 
 	/* allocate buffers hash table */
-	nr = 1 + nr_buffer * sizeof(struct htable_link_t *) / PAGE_SIZE;
+	nr = 1 + nr_buffer * sizeof(struct htable_link *) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
 		addr = get_free_page();

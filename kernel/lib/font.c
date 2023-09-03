@@ -5,7 +5,7 @@
 /*
  * Fonts table.
  */
-static struct font_desc_t *fonts[] = {
+static struct font_desc *fonts[] = {
 	&font_lat9_8x8,
 	&font_lat9_8x10,
 	&font_lat9_8x12,
@@ -16,7 +16,7 @@ static struct font_desc_t *fonts[] = {
 /*
  * Find a font.
  */
-struct font_desc_t *font_find(size_t width, size_t height)
+struct font_desc *font_find(size_t width, size_t height)
 {
 	size_t i;
 

@@ -6,9 +6,9 @@
 /*
  * Read an inode.
  */
-int proc_read_inode(struct inode_t *inode)
+int proc_read_inode(struct inode *inode)
 {
-	struct task_t *task;
+	struct task *task;
 	ino_t ino;
 	pid_t pid;
 	int fd;
@@ -127,7 +127,7 @@ int proc_read_inode(struct inode_t *inode)
 /*
  * Write an inode.
  */
-int proc_write_inode(struct inode_t *inode)
+int proc_write_inode(struct inode *inode)
 {
 	/* procfs is read only */
 	inode->i_dirt = 0;
@@ -137,7 +137,7 @@ int proc_write_inode(struct inode_t *inode)
 /*
  * Release an inode.
  */
-int proc_put_inode(struct inode_t *inode)
+int proc_put_inode(struct inode *inode)
 {
 	if (!inode->i_ref)
 		clear_inode(inode);

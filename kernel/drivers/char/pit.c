@@ -15,7 +15,7 @@
 
 /* current jiffies */
 volatile time_t jiffies = 0;
-struct kernel_timeval_t xtimes = { 0, 0 };
+struct kernel_timeval xtimes = { 0, 0 };
 
 /* Time Stamp Counter variables */
 static uint32_t tsc_quotient;
@@ -105,7 +105,7 @@ static uint32_t calibrate_tsc()
 /*
  * PIT handler.
  */
-static void pit_handler(struct registers_t *regs)
+static void pit_handler(struct registers *regs)
 {
 	uint32_t time_offset;
 

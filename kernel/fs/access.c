@@ -9,7 +9,7 @@
  */
 static int do_faccessat(int dirfd, const char *pathname, int flags)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* check inode */
 	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);

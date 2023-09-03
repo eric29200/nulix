@@ -8,7 +8,7 @@
 /*
  * Test file names equality.
  */
-static inline int ext2_name_match(const char *name, size_t len, struct ext2_dir_entry_t *de)
+static inline int ext2_name_match(const char *name, size_t len, struct ext2_dir_entry *de)
 {
 	/* check dir entry */
 	if (!de || !de->d_inode || len > EXT2_NAME_LEN)
@@ -20,10 +20,10 @@ static inline int ext2_name_match(const char *name, size_t len, struct ext2_dir_
 /*
  * Find a Ext2 entry in a directory.
  */
-static struct buffer_head_t *ext2_find_entry(struct inode_t *dir, const char *name, size_t name_len, struct ext2_dir_entry_t **res_de)
+static struct buffer_head *ext2_find_entry(struct inode *dir, const char *name, size_t name_len, struct ext2_dir_entry **res_de)
 {
-	struct buffer_head_t *bh = NULL;
-	struct ext2_dir_entry_t *de;
+	struct buffer_head *bh = NULL;
+	struct ext2_dir_entry *de;
 	uint32_t offset, block, pos;
 
 	/* read block by block */
@@ -36,7 +36,7 @@ static struct buffer_head_t *ext2_find_entry(struct inode_t *dir, const char *na
 		/* read all entries in block */
 		while (offset < dir->i_size && offset < dir->i_sb->s_blocksize) {
 			/* check next entry */
-			de = (struct ext2_dir_entry_t *) (bh->b_data + offset);
+			de = (struct ext2_dir_entry *) (bh->b_data + offset);
 			if (de->d_rec_len <= 0) {
 				brelse(bh);
 				return NULL;
@@ -71,10 +71,10 @@ static struct buffer_head_t *ext2_find_entry(struct inode_t *dir, const char *na
 /*
  * Add a Ext2 entry in a directory.
  */
-static int ext2_add_entry(struct inode_t *dir, const char *name, size_t name_len, struct inode_t *inode)
+static int ext2_add_entry(struct inode *dir, const char *name, size_t name_len, struct inode *inode)
 {
-	struct ext2_dir_entry_t *de, *de1;
-	struct buffer_head_t *bh = NULL;
+	struct ext2_dir_entry *de, *de1;
+	struct buffer_head *bh = NULL;
 	uint16_t rec_len;
 	uint32_t offset;
 
@@ -91,7 +91,7 @@ static int ext2_add_entry(struct inode_t *dir, const char *name, size_t name_len
 		return -EIO;
 
 	/* find a free entry */
-	for (de = (struct ext2_dir_entry_t *) bh->b_data, offset = 0;;) {
+	for (de = (struct ext2_dir_entry *) bh->b_data, offset = 0;;) {
 		/* read next block */
 		if ((char *) de >= bh->b_data + dir->i_sb->s_blocksize) {
 			/* release previous block */
@@ -103,7 +103,7 @@ static int ext2_add_entry(struct inode_t *dir, const char *name, size_t name_len
 				return -EIO;
 
 			/* get first entry */
-			de = (struct ext2_dir_entry_t *) bh->b_data;
+			de = (struct ext2_dir_entry *) bh->b_data;
 
 			/* update directory size and create a new null entry */
 			if (offset >= dir->i_size) {
@@ -125,7 +125,7 @@ static int ext2_add_entry(struct inode_t *dir, const char *name, size_t name_len
 				|| (de->d_rec_len >= EXT2_DIR_REC_LEN(de->d_name_len) + rec_len)) {
 			/* null entry : adjust record length */
 			if (de->d_inode) {
-				de1 = (struct ext2_dir_entry_t *) ((char *) de + EXT2_DIR_REC_LEN(de->d_name_len));
+				de1 = (struct ext2_dir_entry *) ((char *) de + EXT2_DIR_REC_LEN(de->d_name_len));
 				de1->d_rec_len = de->d_rec_len - EXT2_DIR_REC_LEN(de->d_name_len);
 				de->d_rec_len = EXT2_DIR_REC_LEN(de->d_name_len);
 				de = de1;
@@ -136,7 +136,7 @@ static int ext2_add_entry(struct inode_t *dir, const char *name, size_t name_len
 
 		/* go to next entry */
 		offset += de->d_rec_len;
-		de = (struct ext2_dir_entry_t *) ((char *) de + de->d_rec_len);
+		de = (struct ext2_dir_entry *) ((char *) de + de->d_rec_len);
 	}
 
 	brelse(bh);
@@ -162,13 +162,13 @@ found_entry:
 /*
  * Delete an entry in a directory (by merging it with the previous entry).
  */
-static int ext2_delete_entry(struct ext2_dir_entry_t *dir, struct buffer_head_t *bh)
+static int ext2_delete_entry(struct ext2_dir_entry *dir, struct buffer_head *bh)
 {
-	struct ext2_dir_entry_t *de, *pde;
+	struct ext2_dir_entry *de, *pde;
 	size_t i;
 
 	/* find dir entry */
-	for (i = 0, pde = NULL, de = (struct ext2_dir_entry_t *) bh->b_data; i < bh->b_size;) {
+	for (i = 0, pde = NULL, de = (struct ext2_dir_entry *) bh->b_data; i < bh->b_size;) {
 		/* check entry */
 		if (de->d_rec_len <= 0)
 			return -EIO;
@@ -188,7 +188,7 @@ static int ext2_delete_entry(struct ext2_dir_entry_t *dir, struct buffer_head_t 
 		/* go to next entry */
 		i += de->d_rec_len;
 		pde = de;
-		de = (struct ext2_dir_entry_t *) ((char *) de + de->d_rec_len);
+		de = (struct ext2_dir_entry *) ((char *) de + de->d_rec_len);
 	}
 
 	return -ENOENT;
@@ -197,10 +197,10 @@ static int ext2_delete_entry(struct ext2_dir_entry_t *dir, struct buffer_head_t 
 /*
  * Check if a directory is empty.
  */
-static int ext2_empty_dir(struct inode_t *inode)
+static int ext2_empty_dir(struct inode *inode)
 {
-	struct ext2_dir_entry_t *de, *de1;
-	struct buffer_head_t *bh;
+	struct ext2_dir_entry *de, *de1;
+	struct buffer_head *bh;
 	uint32_t offset;
 
 	/* check directory size : must contain '.' and '..' */
@@ -217,8 +217,8 @@ static int ext2_empty_dir(struct inode_t *inode)
 	}
 
 	/* get first 2 entries */
-	de = (struct ext2_dir_entry_t *) bh->b_data;
-	de1 = (struct ext2_dir_entry_t *) ((char *) de + de->d_rec_len);
+	de = (struct ext2_dir_entry *) bh->b_data;
+	de1 = (struct ext2_dir_entry *) ((char *) de + de->d_rec_len);
 
 	/* first 2 entries must be '.' and '..' */
 	if (de->d_inode != inode->i_ino || !de1->d_inode || strcmp(".", de->d_name) || strcmp("..", de1->d_name)) {
@@ -228,7 +228,7 @@ static int ext2_empty_dir(struct inode_t *inode)
 
 	/* try to find an entry */
 	offset = de->d_rec_len + de1->d_rec_len;
-	de = (struct ext2_dir_entry_t *) ((char *) de1 + de1->d_rec_len);
+	de = (struct ext2_dir_entry *) ((char *) de1 + de1->d_rec_len);
 	while (offset < inode->i_size) {
 		/* read next block */
 		if ((char *) de >= bh->b_data + inode->i_sb->s_blocksize) {
@@ -244,7 +244,7 @@ static int ext2_empty_dir(struct inode_t *inode)
 			}
 
 			/* get first entry */
-			de = (struct ext2_dir_entry_t *) bh->b_data;
+			de = (struct ext2_dir_entry *) bh->b_data;
 		}
 
 		/* check entry */
@@ -261,7 +261,7 @@ static int ext2_empty_dir(struct inode_t *inode)
 
 		/* go to next entry */
 		offset += de->d_rec_len;
-		de = (struct ext2_dir_entry_t *) ((char *) de + de->d_rec_len);
+		de = (struct ext2_dir_entry *) ((char *) de + de->d_rec_len);
 	}
 
 	/* no entry */
@@ -272,10 +272,10 @@ static int ext2_empty_dir(struct inode_t *inode)
 /*
  * Lookup for a file in a directory.
  */
-int ext2_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+int ext2_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
-	struct ext2_dir_entry_t *de;
-	struct buffer_head_t *bh;
+	struct ext2_dir_entry *de;
+	struct buffer_head *bh;
 	ino_t ino;
 
 	/* check dir */
@@ -315,9 +315,9 @@ int ext2_lookup(struct inode_t *dir, const char *name, size_t name_len, struct i
 /*
  * Create a file in a directory.
  */
-int ext2_create(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, struct inode_t **res_inode)
+int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
 {
-	struct inode_t *inode, *tmp;
+	struct inode *inode, *tmp;
 	ino_t ino;
 	int err;
 
@@ -374,11 +374,11 @@ int ext2_create(struct inode_t *dir, const char *name, size_t name_len, mode_t m
 /*
  * Make a Ext2 directory.
  */
-int ext2_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mode)
+int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode)
 {
-	struct ext2_dir_entry_t *de;
-	struct buffer_head_t *bh;
-	struct inode_t *inode;
+	struct ext2_dir_entry *de;
+	struct buffer_head *bh;
+	struct inode *inode;
 	int err;
 
 	/* check if file exists */
@@ -412,14 +412,14 @@ int ext2_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mo
 	}
 
 	/* add '.' entry */
-	de = (struct ext2_dir_entry_t *) bh->b_data;
+	de = (struct ext2_dir_entry *) bh->b_data;
 	de->d_inode = inode->i_ino;
 	de->d_name_len = 1;
 	de->d_rec_len = EXT2_DIR_REC_LEN(de->d_name_len);
 	strcpy(de->d_name, ".");
 
 	/* add '.' entry */
-	de = (struct ext2_dir_entry_t *) ((char *) de + de->d_rec_len);
+	de = (struct ext2_dir_entry *) ((char *) de + de->d_rec_len);
 	de->d_inode = dir->i_ino;
 	de->d_name_len = 2;
 	de->d_rec_len = inode->i_sb->s_blocksize - EXT2_DIR_REC_LEN(1);
@@ -452,11 +452,11 @@ int ext2_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mo
 /*
  * Remove a directory.
  */
-int ext2_rmdir(struct inode_t *dir, const char *name, size_t name_len)
+int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
 {
-	struct ext2_dir_entry_t *de;
-	struct buffer_head_t *bh;
-	struct inode_t *inode;
+	struct ext2_dir_entry *de;
+	struct buffer_head *bh;
+	struct inode *inode;
 	ino_t ino;
 	int err;
 
@@ -523,10 +523,10 @@ out:
 /*
  * Make a new name for a file (= hard link).
  */
-int ext2_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, size_t name_len)
+int ext2_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len)
 {
-	struct ext2_dir_entry_t *de;
-	struct buffer_head_t *bh;
+	struct ext2_dir_entry *de;
+	struct buffer_head *bh;
 	int err;
 
 	/* check if new file exists */
@@ -561,11 +561,11 @@ int ext2_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, 
 /*
  * Unlink (remove) a file.
  */
-int ext2_unlink(struct inode_t *dir, const char *name, size_t name_len)
+int ext2_unlink(struct inode *dir, const char *name, size_t name_len)
 {
-	struct ext2_dir_entry_t *de;
-	struct buffer_head_t *bh;
-	struct inode_t *inode;
+	struct ext2_dir_entry *de;
+	struct buffer_head *bh;
+	struct inode *inode;
 	ino_t ino, err = 0;
 
 	/* get directory entry */
@@ -619,9 +619,9 @@ out:
 /*
  * Write a symbolic link on first data block.
  */
-static int ext2_block_symlink(struct inode_t *inode, const char *target)
+static int ext2_block_symlink(struct inode *inode, const char *target)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	size_t i;
 
 	/* read create first block */
@@ -647,11 +647,11 @@ static int ext2_block_symlink(struct inode_t *inode, const char *target)
 /*
  * Create a symbolic link.
  */
-int ext2_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target)
+int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const char *target)
 {
-	struct ext2_dir_entry_t *de;
-	struct buffer_head_t *bh;
-	struct inode_t *inode;
+	struct ext2_dir_entry *de;
+	struct buffer_head *bh;
+	struct inode *inode;
 	size_t target_len;
 	int err;
 
@@ -710,12 +710,12 @@ err:
 /*
  * Rename a file.
  */
-int ext2_rename(struct inode_t *old_dir, const char *old_name, size_t old_name_len,
-		struct inode_t *new_dir, const char *new_name, size_t new_name_len)
+int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
+		struct inode *new_dir, const char *new_name, size_t new_name_len)
 {
-	struct inode_t *old_inode = NULL, *new_inode = NULL;
-	struct buffer_head_t *old_bh = NULL, *new_bh = NULL;
-	struct ext2_dir_entry_t *old_de, *new_de;
+	struct inode *old_inode = NULL, *new_inode = NULL;
+	struct buffer_head *old_bh = NULL, *new_bh = NULL;
+	struct ext2_dir_entry *old_de, *new_de;
 	ino_t old_ino, new_ino;
 	int err;
 
@@ -798,9 +798,9 @@ out:
 /*
  * Create a node.
  */
-int ext2_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
+int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
 {
-	struct inode_t *inode, *tmp;
+	struct inode *inode, *tmp;
 	int err;
 
 	/* check directory */

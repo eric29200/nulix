@@ -17,7 +17,7 @@
 /*
  * Check header file
  */
-static int elf_check(struct elf_header_t *elf_header)
+static int elf_check(struct elf_header *elf_header)
 {
 	if (elf_header->e_ident[EI_MAG0] != ELFMAG0
 	    || elf_header->e_ident[EI_MAG1] != ELFMAG1
@@ -47,7 +47,7 @@ static int elf_check(struct elf_header_t *elf_header)
 /*
  * Create ELF table.
  */
-static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_str, struct elf_header_t *elf_header,
+static int elf_create_tables(struct binargs *bargs, uint32_t *sp, char *args_str, struct elf_header *elf_header,
 			     uint32_t load_addr, uint32_t load_bias, uint32_t interp_load_addr)
 {
 	int i;
@@ -83,7 +83,7 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
 #define AUX_ENT(id, val)	*sp++ = id; *sp++ = val;
 	AUX_ENT(AT_PAGESZ, PAGE_SIZE);
 	AUX_ENT(AT_PHDR, load_addr + elf_header->e_phoff);
-	AUX_ENT(AT_PHENT, sizeof(struct elf_prog_header_t));
+	AUX_ENT(AT_PHENT, sizeof(struct elf_prog_header));
 	AUX_ENT(AT_PHNUM, elf_header->e_phnum);
 	AUX_ENT(AT_BASE, interp_load_addr);
 	AUX_ENT(AT_FLAGS, 0);
@@ -103,11 +103,11 @@ static int elf_create_tables(struct binargs_t *bargs, uint32_t *sp, char *args_s
 int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t *elf_entry)
 {
 	int fd, ret, off, elf_type, elf_prot, load_addr_set = 0;
-	struct elf_prog_header_t *ph, *last_ph;
+	struct elf_prog_header *ph, *last_ph;
 	uint32_t i, load_addr = 0, start, end;
-	struct elf_header_t *elf_header;
+	struct elf_header *elf_header;
 	char *buf, *buf_mmap;
-	struct file_t *filp;
+	struct file *filp;
 
 	/* open file */
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
@@ -123,21 +123,21 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 	}
 
 	/* read first block */
-	if ((size_t) do_read(filp, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
+	if ((size_t) do_read(filp, buf, PAGE_SIZE) < sizeof(struct elf_header)) {
 		ret = -EINVAL;
 		goto out;
 	}
 
 	/* check elf header */
-	elf_header = (struct elf_header_t *) buf;
+	elf_header = (struct elf_header *) buf;
 	ret = elf_check(elf_header);
 	if (ret != 0)
 		goto out;
 
 	/* read each elf segment */
-	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
+	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header)) {
 		/* load segment */
-		ph = (struct elf_prog_header_t *) (buf + off);
+		ph = (struct elf_prog_header *) (buf + off);
 		if (ph->p_type == PT_LOAD) {
 			elf_type = MAP_PRIVATE;
 			elf_prot = 0;
@@ -290,14 +290,14 @@ err_sig:
 /*
  * Load an ELF file in memory.
  */
-int elf_load(const char *path, struct binargs_t *bargs)
+int elf_load(const char *path, struct binargs *bargs)
 {
 	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
 	int fd, off, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *buf, *elf_intepreter = NULL;
-	struct elf_prog_header_t *ph, *last_ph = NULL;
-	struct elf_header_t *elf_header;
-	struct file_t *filp;
+	struct elf_prog_header *ph, *last_ph = NULL;
+	struct elf_header *elf_header;
+	struct file *filp;
 	void *buf_mmap;
 
 	/* open file */
@@ -318,13 +318,13 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	}
 
 	/* read first block */
-	if ((size_t) do_read(filp, buf, PAGE_SIZE) < sizeof(struct elf_header_t)) {
+	if ((size_t) do_read(filp, buf, PAGE_SIZE) < sizeof(struct elf_header)) {
 		ret = -EINVAL;
 		goto out;
 	}
 
 	/* check elf header */
-	elf_header = (struct elf_header_t *) buf;
+	elf_header = (struct elf_header *) buf;
 	ret = elf_check(elf_header);
 	if (ret != 0)
 		goto out;
@@ -340,9 +340,9 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	elf_entry = elf_header->e_entry;
 
 	/* check if an ELF interpreter is needed */
-	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
+	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header)) {
 		/* load segment */
-		ph = (struct elf_prog_header_t *) (buf + off);
+		ph = (struct elf_prog_header *) (buf + off);
 		if (ph->p_type == PT_INTERP) {
 			/* allocate interpreter path */
 			elf_intepreter = (char *) kmalloc(ph->p_filesz);
@@ -367,9 +367,9 @@ int elf_load(const char *path, struct binargs_t *bargs)
 	}
 
 	/* read each elf segment */
-	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header_t)) {
+	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header)) {
 		/* load segment */
-		ph = (struct elf_prog_header_t *) (buf + off);
+		ph = (struct elf_prog_header *) (buf + off);
 		if (ph->p_type == PT_LOAD) {
 			elf_type = MAP_PRIVATE;
 			elf_prot = 0;

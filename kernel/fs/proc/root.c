@@ -10,7 +10,7 @@
 /*
  * Root fs directory.
  */
-static struct proc_dir_entry_t root_dir[] = {
+static struct proc_dir_entry root_dir[] = {
 	{ PROC_ROOT_INO,	1, 	"." },
 	{ PROC_ROOT_INO,	2,	".." },
 	{ PROC_UPTIME_INO,	6,	"uptime" },
@@ -26,12 +26,12 @@ static struct proc_dir_entry_t root_dir[] = {
 /*
  * Root read dir.
  */
-static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
+static int proc_root_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct dirent64_t *dirent = (struct dirent64_t *) dirp;
-	struct list_head_t *pos;
+	struct dirent64 *dirent = (struct dirent64 *) dirp;
+	struct list_head *pos;
 	int name_len, ret, n;
-	struct task_t *task;
+	struct task *task;
 	char pid_s[16];
 	size_t i;
 
@@ -45,14 +45,14 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next dir entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 	}
 
 	/* add all processes */
 	i = NR_ROOT_DIRENTRY;
 	list_for_each(pos, &tasks_list) {
 		/* skip init task */
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (!task || !task->pid)
 			continue;
 
@@ -69,7 +69,7 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next dir entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 
 		/* update file position */
 		filp->f_pos++;
@@ -81,9 +81,9 @@ static int proc_root_getdents64(struct file_t *filp, void *dirp, size_t count)
 /*
  * Root dir lookup.
  */
-static int proc_root_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+static int proc_root_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
-	struct task_t *task;
+	struct task *task;
 	pid_t pid;
 	ino_t ino;
 	size_t i;
@@ -130,14 +130,14 @@ static int proc_root_lookup(struct inode_t *dir, const char *name, size_t name_l
 /*
  * Root file operations.
  */
-struct file_operations_t proc_root_fops = {
+struct file_operations proc_root_fops = {
 	.getdents64		= proc_root_getdents64,
 };
 
 /*
  * Root inode operations.
  */
-struct inode_operations_t proc_root_iops = {
+struct inode_operations proc_root_iops = {
 	.fops			= &proc_root_fops,
 	.lookup			= proc_root_lookup,
 };

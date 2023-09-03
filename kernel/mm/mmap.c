@@ -16,13 +16,13 @@ uint32_t protection_map[16] = {
 /*
  * Find a memory region.
  */
-struct vm_area_t *find_vma(struct task_t *task, uint32_t addr)
+struct vm_area *find_vma(struct task *task, uint32_t addr)
 {
-	struct list_head_t *pos;
-	struct vm_area_t *vm;
+	struct list_head *pos;
+	struct vm_area *vm;
 
 	list_for_each(pos, &task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area_t, list);
+		vm = list_entry(pos, struct vm_area, list);
 		if (addr < vm->vm_start)
 			break;
 		if (addr < vm->vm_end)
@@ -35,13 +35,13 @@ struct vm_area_t *find_vma(struct task_t *task, uint32_t addr)
 /*
  * Find previous memory region.
  */
-struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr)
+struct vm_area *find_vma_prev(struct task *task, uint32_t addr)
 {
-	struct vm_area_t *vm, *vm_prev = NULL;
-	struct list_head_t *pos;
+	struct vm_area *vm, *vm_prev = NULL;
+	struct list_head *pos;
 
 	list_for_each(pos, &task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area_t, list);
+		vm = list_entry(pos, struct vm_area, list);
 		if (addr < vm->vm_end)
 			break;
 
@@ -54,13 +54,13 @@ struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr)
 /*
  * Find next memory region.
  */
-struct vm_area_t *find_vma_next(struct task_t *task, uint32_t addr)
+struct vm_area *find_vma_next(struct task *task, uint32_t addr)
 {
-	struct list_head_t *pos;
-	struct vm_area_t *vm;
+	struct list_head *pos;
+	struct vm_area *vm;
 
 	list_for_each(pos, &task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area_t, list);
+		vm = list_entry(pos, struct vm_area, list);
 		if (addr < vm->vm_start)
 			return vm;
 	}
@@ -70,16 +70,16 @@ struct vm_area_t *find_vma_next(struct task_t *task, uint32_t addr)
 /*
  * Find first vm intersecting start <-> end.
  */
-struct vm_area_t *find_vma_intersection(struct task_t *task, uint32_t start, uint32_t end)
+struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_t end)
 {
-	struct vm_area_t *vm_prev, *vm_next = NULL;
+	struct vm_area *vm_prev, *vm_next = NULL;
 
 	/* find previous and next vma */
 	vm_prev = find_vma_prev(task, start);
 	if (vm_prev)
 		vm_next = list_next_entry_or_null(vm_prev, &task->mm->vm_list, list);
 	else if (!list_empty(&task->mm->vm_list))
-		vm_next = list_first_entry(&task->mm->vm_list, struct vm_area_t, list);
+		vm_next = list_first_entry(&task->mm->vm_list, struct vm_area, list);
 
 	/* check next vma */
 	if (vm_next && end > vm_next->vm_start)
@@ -91,18 +91,18 @@ struct vm_area_t *find_vma_intersection(struct task_t *task, uint32_t start, uin
 /*
  * Generic mmap.
  */
-static struct vm_area_t *generic_mmap(uint32_t addr, size_t len, int prot, int flags, struct file_t *filp, off_t offset)
+static struct vm_area *generic_mmap(uint32_t addr, size_t len, int prot, int flags, struct file *filp, off_t offset)
 {
-	struct vm_area_t *vm, *vm_prev;
+	struct vm_area *vm, *vm_prev;
 	int ret;
 
 	/* create new memory region */
-	vm = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
+	vm = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 	if (!vm)
 		return NULL;
 
 	/* set new memory region */
-	memset(vm, 0, sizeof(struct vm_area_t));
+	memset(vm, 0, sizeof(struct vm_area));
 	vm->vm_start = addr;
 	vm->vm_end = addr + len;
 	vm->vm_flags = prot & (VM_READ | VM_WRITE | VM_EXEC);
@@ -148,8 +148,8 @@ err:
  */
 static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 {
-	struct vm_area_t *vm, *vm_prev, *vm_next = NULL;
-	struct list_head_t *pos;
+	struct vm_area *vm, *vm_prev, *vm_next = NULL;
+	struct list_head *pos;
 
 	/* fixed address */
 	if (flags & MAP_FIXED) {
@@ -167,7 +167,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 		if (vm_prev)
 			vm_next = list_next_entry_or_null(vm_prev, &current_task->mm->vm_list, list);
 		else if (!list_empty(&current_task->mm->vm_list))
-			vm_next = list_first_entry(&current_task->mm->vm_list, struct vm_area_t, list);
+			vm_next = list_first_entry(&current_task->mm->vm_list, struct vm_area, list);
 
 		/* addr is available */
 		if (!vm_next || *addr + len <= vm_next->vm_start)
@@ -177,7 +177,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 	/* find a memory region */
 	*addr = UMAP_START;
 	list_for_each(pos, &current_task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area_t, list);
+		vm = list_entry(pos, struct vm_area, list);
 		if (*addr + len <= vm->vm_start)
 			break;
 		if (vm->vm_end > *addr)
@@ -194,9 +194,9 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 /*
  * Memory map system call.
  */
-void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file_t *filp, off_t offset)
+void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file *filp, off_t offset)
 {
-	struct vm_area_t *vm = NULL;
+	struct vm_area *vm = NULL;
 
 	/* check flags */
 	if (!filp && (flags & MAP_TYPE) != MAP_PRIVATE)
@@ -226,10 +226,10 @@ void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file_t *fil
 /*
  * Unmap a region (create a hole if needed).
  */
-static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
+static int unmap_fixup(struct vm_area *vm, uint32_t addr, size_t len)
 {
 	uint32_t end = addr + len;
-	struct vm_area_t *vm_new;
+	struct vm_area *vm_new;
 
 	/* unmap the whole area */
 	if (addr == vm->vm_start && end == vm->vm_end) {
@@ -249,12 +249,12 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
 		vm->vm_start = end;
 	} else {
 		/* create new memory region */
-		vm_new = (struct vm_area_t *) kmalloc(sizeof(struct vm_area_t));
+		vm_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 		if (!vm_new)
 			return -ENOMEM;
 
 		/* set new memory region = after the hole */
-		memset(vm_new, 0, sizeof(struct vm_area_t));
+		memset(vm_new, 0, sizeof(struct vm_area));
 		vm_new->vm_start = end;
 		vm_new->vm_end = vm->vm_end;
 		vm_new->vm_flags = vm->vm_flags;
@@ -282,8 +282,8 @@ static int unmap_fixup(struct vm_area_t *vm, uint32_t addr, size_t len)
  */
 int do_munmap(uint32_t addr, size_t len)
 {
-	struct list_head_t *pos, *n;
-	struct vm_area_t *vm;
+	struct list_head *pos, *n;
+	struct vm_area *vm;
 	uint32_t start, end;
 
 	/* add must be page aligned */
@@ -295,7 +295,7 @@ int do_munmap(uint32_t addr, size_t len)
 
 	/* find regions to unmap */
 	list_for_each_safe(pos, n, &current_task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area_t, list);
+		vm = list_entry(pos, struct vm_area, list);
 		if (addr >= vm->vm_end)
 			continue;
 		if (addr + len <= vm->vm_start)
@@ -320,7 +320,7 @@ int do_munmap(uint32_t addr, size_t len)
  */
 void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
 {
-	struct vm_area_t *vma, *vma_next;
+	struct vm_area *vma, *vma_next;
 	int ret;
 
 	/* check flags */
@@ -403,7 +403,7 @@ err:
 /*
  * Truncate memory regions.
  */
-void vmtruncate(struct inode_t *inode, off_t offset)
+void vmtruncate(struct inode *inode, off_t offset)
 {
 	UNUSED(offset);
 
@@ -416,7 +416,7 @@ void vmtruncate(struct inode_t *inode, off_t offset)
  */
 void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 {
-	struct file_t *filp = NULL;
+	struct file *filp = NULL;
 
 	/* get file */
 	if (fd >= 0) {
@@ -434,7 +434,7 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off
  */
 void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
-	struct file_t *filp = NULL;
+	struct file *filp = NULL;
 
 	/* get file */
 	if (fd >= 0) {

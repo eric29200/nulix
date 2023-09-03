@@ -12,7 +12,7 @@
 #include <stderr.h>
 
 /* network devices */
-struct net_device_t net_devices[NR_NET_DEVICES];
+struct net_device net_devices[NR_NET_DEVICES];
 int nr_net_devices = 0;
 
 /*
@@ -39,7 +39,7 @@ uint16_t net_checksum(void *data, size_t size)
 /*
  * Handle a socket buffer.
  */
-void skb_handle(struct sk_buff_t *skb)
+void skb_handle(struct sk_buff *skb)
 {
 	/* decode ethernet header */
 	ethernet_receive(skb);
@@ -105,9 +105,9 @@ void skb_handle(struct sk_buff_t *skb)
  */
 static void net_handler_thread(void *arg)
 {
-	struct net_device_t *net_dev = (struct net_device_t *) arg;
-	struct list_head_t *pos1, *n1, *pos2, *n2;
-	struct sk_buff_t *skb;
+	struct net_device *net_dev = (struct net_device *) arg;
+	struct list_head *pos1, *n1, *pos2, *n2;
+	struct sk_buff *skb;
 	uint32_t flags;
 	int ret;
 
@@ -118,7 +118,7 @@ static void net_handler_thread(void *arg)
 		/* handle incoming packets */
 		list_for_each_safe(pos1, n1, &net_dev->skb_input_list) {
 			/* get packet */
-			skb = list_entry(pos1, struct sk_buff_t, list);
+			skb = list_entry(pos1, struct sk_buff, list);
 			list_del(&skb->list);
 
 			/* handle packet */
@@ -131,7 +131,7 @@ static void net_handler_thread(void *arg)
 		/* handle outcoming packets */
 		list_for_each_safe(pos2, n2, &net_dev->skb_output_list) {
 			/* get packet */
-			skb = list_entry(pos2, struct sk_buff_t, list);
+			skb = list_entry(pos2, struct sk_buff, list);
 
 			/* rebuild ethernet header */
 			ret = ethernet_rebuild_header(net_dev, skb);
@@ -157,9 +157,9 @@ static void net_handler_thread(void *arg)
 /*
  * Register a network device.
  */
-struct net_device_t *register_net_device(uint32_t io_base, uint16_t type)
+struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 {
-	struct net_device_t *net_dev;
+	struct net_device *net_dev;
 	char tmp[32];
 	size_t len;
 
@@ -203,7 +203,7 @@ struct net_device_t *register_net_device(uint32_t io_base, uint16_t type)
 /*
  * Find a network device.
  */
-struct net_device_t *net_device_find(const char *name)
+struct net_device *net_device_find(const char *name)
 {
 	int i;
 
@@ -222,7 +222,7 @@ struct net_device_t *net_device_find(const char *name)
  */
 int net_device_ioctl(int cmd, struct ifreq *ifr)
 {
-	struct net_device_t *net_dev;
+	struct net_device *net_dev;
 
 	/* get network device */
 	net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
@@ -302,7 +302,7 @@ int net_device_ifconf(struct ifconf *ifc)
 /*
  * Handle network packet (put it in device queue).
  */
-void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb)
+void net_handle(struct net_device *net_dev, struct sk_buff *skb)
 {
 	if (!skb)
 		return;
@@ -317,7 +317,7 @@ void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb)
 /*
  * Transmit a network packet (put it in device queue).
  */
-void net_transmit(struct net_device_t *net_dev, struct sk_buff_t *skb)
+void net_transmit(struct net_device *net_dev, struct sk_buff *skb)
 {
 	if (!skb)
 		return;

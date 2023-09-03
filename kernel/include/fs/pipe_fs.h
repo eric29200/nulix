@@ -12,7 +12,7 @@
 /*
  * Pipe inode.
  */
-struct pipe_inode_info_t {
+struct pipe_inode_info {
 	uint32_t	i_zone[2];
 };
 

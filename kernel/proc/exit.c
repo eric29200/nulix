@@ -7,8 +7,8 @@
  */
 void sys_exit(int status)
 {
-	struct list_head_t *pos;
-	struct task_t *child;
+	struct list_head *pos;
+	struct task *child;
 
 	/* delete timer */
 	if (current_task->sig_tm.list.next)
@@ -30,7 +30,7 @@ void sys_exit(int status)
 
 	/* give children to init */
 	list_for_each(pos, &current_task->list) {
-		child = list_entry(pos, struct task_t, list);
+		child = list_entry(pos, struct task, list);
 		if (child->parent == current_task) {
 			child->parent = init_task;
 			if (child->state == TASK_ZOMBIE)
@@ -59,8 +59,8 @@ void sys_exit_group(int status)
  */
 pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct list_head *pos;
+	struct task *task;
 	int has_children;
 	pid_t child_pid;
 
@@ -70,7 +70,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 
 		/* search zombie child */
 		list_for_each(pos, &current_task->list) {
-			task = list_entry(pos, struct task_t, list);
+			task = list_entry(pos, struct task, list);
 
 			/* check task (see man waitpid) */
 			if (pid > 0 && task->pid != pid)
@@ -130,7 +130,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 /*
  * Wait 4 system call.
  */
-pid_t sys_wait4(pid_t pid, int *wstatus, int options, struct rusage_t *rusage)
+pid_t sys_wait4(pid_t pid, int *wstatus, int options, struct rusage *rusage)
 {
 	UNUSED(rusage);
 	return sys_waitpid(pid, wstatus, options);

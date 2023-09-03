@@ -11,14 +11,14 @@
 /*
  * Directory operations.
  */
-struct file_operations_t minix_dir_fops = {
+struct file_operations minix_dir_fops = {
 	.getdents64		= minix_getdents64,
 };
 
 /*
  * File operations.
  */
-struct file_operations_t minix_file_fops = {
+struct file_operations minix_file_fops = {
 	.read			= minix_file_read,
 	.write			= minix_file_write,
 	.mmap			= generic_file_mmap,
@@ -27,7 +27,7 @@ struct file_operations_t minix_file_fops = {
 /*
  * Minix symbolic link inode operations.
  */
-struct inode_operations_t minix_symlink_iops = {
+struct inode_operations minix_symlink_iops = {
 	.follow_link		= minix_follow_link,
 	.readlink		= minix_readlink,
 };
@@ -35,7 +35,7 @@ struct inode_operations_t minix_symlink_iops = {
 /*
  * Minix file inode operations.
  */
-struct inode_operations_t minix_file_iops = {
+struct inode_operations minix_file_iops = {
 	.fops			= &minix_file_fops,
 	.truncate		= minix_truncate,
 	.bmap			= minix_bmap,
@@ -45,7 +45,7 @@ struct inode_operations_t minix_file_iops = {
 /*
  * Minix directory inode operations.
  */
-struct inode_operations_t minix_dir_iops = {
+struct inode_operations minix_dir_iops = {
 	.fops			= &minix_dir_fops,
 	.lookup			= minix_lookup,
 	.create			= minix_create,
@@ -62,11 +62,11 @@ struct inode_operations_t minix_dir_iops = {
 /*
  * Read a Minix V2 inode on disk.
  */
-int minix_read_inode(struct inode_t *inode)
+int minix_read_inode(struct inode *inode)
 {
-	struct minix_sb_info_t *sbi = minix_sb(inode->i_sb);
-	struct minix2_inode_t *raw_inode;
-	struct buffer_head_t *bh;
+	struct minix_sb_info *sbi = minix_sb(inode->i_sb);
+	struct minix2_inode *raw_inode;
+	struct buffer_head *bh;
 	int inodes_per_block, i;
 	uint32_t block;
 
@@ -75,7 +75,7 @@ int minix_read_inode(struct inode_t *inode)
 		return -EINVAL;
 
 	/* compute inode store block */
-	inodes_per_block = inode->i_sb->s_blocksize / sizeof(struct minix2_inode_t);
+	inodes_per_block = inode->i_sb->s_blocksize / sizeof(struct minix2_inode);
 	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks + (inode->i_ino - 1) / inodes_per_block;
 
 	/* read inode store block */
@@ -86,7 +86,7 @@ int minix_read_inode(struct inode_t *inode)
 	}
 
 	/* get raw inode */
-	raw_inode = &((struct minix2_inode_t *) bh->b_data)[(inode->i_ino - 1) % inodes_per_block];
+	raw_inode = &((struct minix2_inode *) bh->b_data)[(inode->i_ino - 1) % inodes_per_block];
 
 	/* set inode */
 	inode->i_mode = raw_inode->i_mode;
@@ -125,16 +125,16 @@ int minix_read_inode(struct inode_t *inode)
 /*
  * Write a Minix V2/V3 inode on disk.
  */
-int minix_write_inode(struct inode_t *inode)
+int minix_write_inode(struct inode *inode)
 {
-	struct minix_sb_info_t *sbi = minix_sb(inode->i_sb);
-	struct minix2_inode_t *raw_inode;
-	struct buffer_head_t *bh;
+	struct minix_sb_info *sbi = minix_sb(inode->i_sb);
+	struct minix2_inode *raw_inode;
+	struct buffer_head *bh;
 	int inodes_per_block, i;
 	uint32_t block;
 
 	/* compute inode store block */
-	inodes_per_block = inode->i_sb->s_blocksize / sizeof(struct minix2_inode_t);
+	inodes_per_block = inode->i_sb->s_blocksize / sizeof(struct minix2_inode);
 	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks + (inode->i_ino - 1) / inodes_per_block;
 
 	/* read inode store block */
@@ -145,7 +145,7 @@ int minix_write_inode(struct inode_t *inode)
 	}
 
 	/* get raw inode */
-	raw_inode = &((struct minix2_inode_t *) bh->b_data)[(inode->i_ino - 1) % inodes_per_block];
+	raw_inode = &((struct minix2_inode *) bh->b_data)[(inode->i_ino - 1) % inodes_per_block];
 
 	/* set on disk inode */
 	raw_inode->i_mode = inode->i_mode;
@@ -172,7 +172,7 @@ int minix_write_inode(struct inode_t *inode)
 /*
  * Put an inode.
  */
-int minix_put_inode(struct inode_t *inode)
+int minix_put_inode(struct inode *inode)
 {
 	/* check inode */
 	if (!inode)
@@ -191,7 +191,7 @@ int minix_put_inode(struct inode_t *inode)
 /*
  * Get an inode buffer.
  */
-static struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int create)
+static struct buffer_head *inode_getblk(struct inode *inode, int nr, int create)
 {
 	/* create block if needed */
 	if (create && !inode->u.minix_i.i_zone[nr])
@@ -208,7 +208,7 @@ static struct buffer_head_t *inode_getblk(struct inode_t *inode, int nr, int cre
 /*
  * Get a block buffer.
  */
-static struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_head_t *bh, int block, int create)
+static struct buffer_head *block_getblk(struct inode *inode, struct buffer_head *bh, int block, int create)
 {
 	int i;
 
@@ -237,10 +237,10 @@ static struct buffer_head_t *block_getblk(struct inode_t *inode, struct buffer_h
 /*
  * Get or create a buffer.
  */
-struct buffer_head_t *minix_getblk(struct inode_t *inode, int block, int create)
+struct buffer_head *minix_getblk(struct inode *inode, int block, int create)
 {
-	struct super_block_t *sb = inode->i_sb;
-	struct buffer_head_t *bh;
+	struct super_block *sb = inode->i_sb;
+	struct buffer_head *bh;
 
 	/* check block number */
 	if (block < 0 || (uint32_t) block >= minix_sb(sb)->s_max_size / sb->s_blocksize)
@@ -276,7 +276,7 @@ struct buffer_head_t *minix_getblk(struct inode_t *inode, int block, int create)
 /*
  * Get a block number.
  */
-static int inode_bmap(struct inode_t *inode, int nr)
+static int inode_bmap(struct inode *inode, int nr)
 {
 	return inode->u.minix_i.i_zone[nr];
 }
@@ -284,7 +284,7 @@ static int inode_bmap(struct inode_t *inode, int nr)
 /*
  * Get a block number.
  */
-static int block_bmap(struct buffer_head_t *bh, int nr)
+static int block_bmap(struct buffer_head *bh, int nr)
 {
 	int ret;
 
@@ -299,9 +299,9 @@ static int block_bmap(struct buffer_head_t *bh, int nr)
 /*
  * Get a block number.
  */
-int minix_bmap(struct inode_t *inode, int block)
+int minix_bmap(struct inode *inode, int block)
 {
-	struct super_block_t *sb = inode->i_sb;
+	struct super_block *sb = inode->i_sb;
 	int i;
 
 	/* check block number */

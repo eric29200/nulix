@@ -6,11 +6,11 @@
 /*
  * Read a file.
  */
-int minix_file_read(struct file_t *filp, char *buf, int count)
+int minix_file_read(struct file *filp, char *buf, int count)
 {
-	struct super_block_t *sb = filp->f_inode->i_sb;
+	struct super_block *sb = filp->f_inode->i_sb;
 	size_t pos, nb_chars, left;
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 
 	/* adjust size */
 	if (filp->f_pos + count > filp->f_inode->i_size)
@@ -48,11 +48,11 @@ int minix_file_read(struct file_t *filp, char *buf, int count)
 /*
  * Write to a file.
  */
-int minix_file_write(struct file_t *filp, const char *buf, int count)
+int minix_file_write(struct file *filp, const char *buf, int count)
 {
-	struct super_block_t *sb = filp->f_inode->i_sb;
+	struct super_block *sb = filp->f_inode->i_sb;
 	size_t pos, nb_chars, left;
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)

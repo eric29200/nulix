@@ -18,27 +18,27 @@ static inline int tmpfs_name_match(const char *name1, size_t len1, const char *n
 /*
  * Find an entry inside a directory.
  */
-static struct tmpfs_dir_entry_t *tmpfs_find_entry(struct inode_t *dir, const char *name, int name_len)
+static struct tmpfs_dir_entry *tmpfs_find_entry(struct inode *dir, const char *name, int name_len)
 {
 	int nb_entries_per_page, i;
-	struct tmpfs_dir_entry_t *de;
-	struct list_head_t *pos;
-	struct page_t *page;
+	struct tmpfs_dir_entry *de;
+	struct list_head *pos;
+	struct page *page;
 
 	/* check file name length */
 	if (name_len <= 0 || name_len > TMPFS_NAME_LEN)
 		return NULL;
 
 	/* compute number of entries per page */
-	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry_t);
+	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
 
 	/* walk through all pages */
 	list_for_each(pos, &dir->u.tmp_i.i_pages) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 
 		/* walk through all entries */
 		for (i = 0; i < nb_entries_per_page; i++) {
-			de = (struct tmpfs_dir_entry_t *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry_t));
+			de = (struct tmpfs_dir_entry *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry));
 			if (tmpfs_name_match(name, name_len, de->d_name, TMPFS_NAME_LEN))
 				return de;
 		}
@@ -50,28 +50,28 @@ static struct tmpfs_dir_entry_t *tmpfs_find_entry(struct inode_t *dir, const cha
 /*
  * Check if a directory is empty.
  */
-static int tmpfs_empty_dir(struct inode_t *dir)
+static int tmpfs_empty_dir(struct inode *dir)
 {
 	int nb_entries_per_page, i, first_page;
-	struct tmpfs_dir_entry_t *de;
-	struct list_head_t *pos;
-	struct page_t *page;
+	struct tmpfs_dir_entry *de;
+	struct list_head *pos;
+	struct page *page;
 
 	/* check if dir is a directory */
 	if (S_ISREG(dir->i_mode))
 		return 0;
 
 	/* compute number of entries per page */
-	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry_t);
+	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
 
 	/* walk through all pages */
 	first_page = 1;
 	list_for_each(pos, &dir->u.tmp_i.i_pages) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 
 		/* walk through all entries */
 		for (i = 0; i < nb_entries_per_page; i++) {
-			de = (struct tmpfs_dir_entry_t *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry_t));
+			de = (struct tmpfs_dir_entry *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry));
 
 			/* skip first 2 entries "." and ".." */
 			if (first_page && i < 2)
@@ -91,28 +91,28 @@ static int tmpfs_empty_dir(struct inode_t *dir)
 /*
  * Add a directory entry.
  */
-int tmpfs_add_entry(struct inode_t *dir, const char *name, int name_len, struct inode_t *inode)
+int tmpfs_add_entry(struct inode *dir, const char *name, int name_len, struct inode *inode)
 {
 	int nb_entries_per_page, i, ret;
-	struct tmpfs_dir_entry_t *de;
-	struct list_head_t *pos;
-	struct page_t *page;
+	struct tmpfs_dir_entry *de;
+	struct list_head *pos;
+	struct page *page;
 
 	/* check file name */
 	if (name_len <= 0 || name_len > TMPFS_NAME_LEN)
 		return -EINVAL;
 
 	/* compute number of entries per page */
-	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry_t);
+	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
 
 retry:
 	/* walk through all pages */
 	list_for_each(pos, &dir->u.tmp_i.i_pages) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 
 		/* walk through all entries */
 		for (i = 0; i < nb_entries_per_page; i++) {
-			de = (struct tmpfs_dir_entry_t *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry_t));
+			de = (struct tmpfs_dir_entry *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry));
 			if (!de->d_inode)
 				goto found;
 		}
@@ -139,9 +139,9 @@ found:
 /*
  * Directory lookup.
  */
-int tmpfs_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+int tmpfs_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
-	struct tmpfs_dir_entry_t *de;
+	struct tmpfs_dir_entry *de;
 
 	/* dir must be a directory */
 	if (!dir)
@@ -172,9 +172,9 @@ int tmpfs_lookup(struct inode_t *dir, const char *name, size_t name_len, struct 
 /*
  * Create a file in a directory.
  */
-int tmpfs_create(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, struct inode_t **res_inode)
+int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
 {
-	struct inode_t *inode, *tmp;
+	struct inode *inode, *tmp;
 	int ret;
 
 	/* check directory */
@@ -218,9 +218,9 @@ int tmpfs_create(struct inode_t *dir, const char *name, size_t name_len, mode_t 
 /*
  * Make a new name for a file = hard link.
  */
-int tmpfs_link(struct inode_t *old_inode, struct inode_t *dir, const char *name, size_t name_len)
+int tmpfs_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len)
 {
-	struct tmpfs_dir_entry_t *de;
+	struct tmpfs_dir_entry *de;
 	int ret;
 
 	/* check if new file exists */
@@ -254,10 +254,10 @@ int tmpfs_link(struct inode_t *old_inode, struct inode_t *dir, const char *name,
 /*
  * Remove a file.
  */
-int tmpfs_unlink(struct inode_t *dir, const char *name, size_t name_len)
+int tmpfs_unlink(struct inode *dir, const char *name, size_t name_len)
 {
-	struct tmpfs_dir_entry_t *de;
-	struct inode_t *inode;
+	struct tmpfs_dir_entry *de;
+	struct inode *inode;
 
 	/* get directory entry */
 	de = tmpfs_find_entry(dir, name, name_len);
@@ -281,7 +281,7 @@ int tmpfs_unlink(struct inode_t *dir, const char *name, size_t name_len)
 	}
 
 	/* reset directory entry */
-	memset(de, 0, sizeof(struct tmpfs_dir_entry_t));
+	memset(de, 0, sizeof(struct tmpfs_dir_entry));
 
 	/* update directory */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
@@ -302,11 +302,11 @@ int tmpfs_unlink(struct inode_t *dir, const char *name, size_t name_len)
 /*
  * Create a symbolic link.
  */
-int tmpfs_symlink(struct inode_t *dir, const char *name, size_t name_len, const char *target)
+int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const char *target)
 {
-	struct tmpfs_dir_entry_t *de;
-	struct inode_t *inode;
-	struct page_t *page;
+	struct tmpfs_dir_entry *de;
+	struct inode *inode;
+	struct page *page;
 	char *buf;
 	int ret, i;
 
@@ -327,7 +327,7 @@ int tmpfs_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
 	}
 
 	/* get first page */
-	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page_t, list);
+	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page, list);
 	buf = (char *) PAGE_ADDRESS(page);
 
 	/* write file name on first page */
@@ -363,10 +363,10 @@ int tmpfs_symlink(struct inode_t *dir, const char *name, size_t name_len, const 
 /*
  * Create a directory.
  */
-int tmpfs_mkdir(struct inode_t *dir, const char *name, size_t name_len, mode_t mode)
+int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode)
 {
-	struct tmpfs_dir_entry_t *de;
-	struct inode_t *inode;
+	struct tmpfs_dir_entry *de;
+	struct inode *inode;
 	int ret;
 
 	/* check if file exists */
@@ -417,10 +417,10 @@ err:
 /*
  * Remove a directory.
  */
-int tmpfs_rmdir(struct inode_t *dir, const char *name, size_t name_len)
+int tmpfs_rmdir(struct inode *dir, const char *name, size_t name_len)
 {
-	struct tmpfs_dir_entry_t *de;
-	struct inode_t *inode;
+	struct tmpfs_dir_entry *de;
+	struct inode *inode;
 
 	/* check if file exists */
 	de = tmpfs_find_entry(dir, name, name_len);
@@ -451,7 +451,7 @@ int tmpfs_rmdir(struct inode_t *dir, const char *name, size_t name_len)
 	}
 
 	/* reset entry */
-	memset(de, 0, sizeof(struct tmpfs_dir_entry_t));
+	memset(de, 0, sizeof(struct tmpfs_dir_entry));
 
 	/* update dir */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
@@ -473,11 +473,11 @@ int tmpfs_rmdir(struct inode_t *dir, const char *name, size_t name_len)
 /*
  * Rename a file.
  */
-int tmpfs_rename(struct inode_t *old_dir, const char *old_name, size_t old_name_len,
-	         struct inode_t *new_dir, const char *new_name, size_t new_name_len)
+int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
+	         struct inode *new_dir, const char *new_name, size_t new_name_len)
 {
-	struct inode_t *old_inode = NULL, *new_inode = NULL;
-	struct tmpfs_dir_entry_t *old_de, *new_de;
+	struct inode *old_inode = NULL, *new_inode = NULL;
+	struct tmpfs_dir_entry *old_de, *new_de;
 	int ret;
 
 	/* find old entry */
@@ -548,9 +548,9 @@ out:
 /*
  * Create a node.
  */
-int tmpfs_mknod(struct inode_t *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
+int tmpfs_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
 {
-	struct inode_t *inode, *tmp;
+	struct inode *inode, *tmp;
 	int ret;
 
 	/* check directory */

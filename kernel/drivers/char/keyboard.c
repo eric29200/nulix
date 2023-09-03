@@ -10,8 +10,8 @@
 static uint8_t k_down[NR_SHIFT] = { 0, };
 
 /* keyboards table */
-struct kbd_t kbd_table[NR_CONSOLES];
-static struct tty_t *tty = NULL;
+struct kbd kbd_table[NR_CONSOLES];
+static struct tty *tty = NULL;
 
 /* keyboard state */
 static int shift_state = 0;
@@ -469,11 +469,11 @@ static uint8_t scan_key()
 /*
  * Keyboard handler.
  */
-static void keyboard_handler(struct registers_t *regs)
+static void keyboard_handler(struct registers *regs)
 {
 	uint8_t scan_code, key_code = 0, type, shift_final;
 	uint16_t *key_map, key_sym;
-	struct kbd_t *kbd;
+	struct kbd *kbd;
 	char up_flag;
 
 	/* unused registers */
@@ -564,11 +564,11 @@ end:
  */
 void init_keyboard()
 {
-	struct kbd_t kbd0;
+	struct kbd kbd0;
 	int i;
 
  	/* set keyboard */
-	memset(&kbd0, 0, sizeof(struct kbd_t));
+	memset(&kbd0, 0, sizeof(struct kbd));
 	kbd0.kbd_default_led_flag_state = KBD_DEFLEDS;
 	kbd0.kbd_led_flag_state = kbd0.kbd_default_led_flag_state;
 	kbd0.kbd_led_mode = LED_SHOW_FLAGS;

@@ -8,7 +8,7 @@
 /*
  * Open null device.
  */
-static int null_open(struct file_t *filp)
+static int null_open(struct file *filp)
 {
 	UNUSED(filp);
 	return 0;
@@ -17,7 +17,7 @@ static int null_open(struct file_t *filp)
 /*
  * Close null device.
  */
-static int null_close(struct file_t *filp)
+static int null_close(struct file *filp)
 {
 	UNUSED(filp);
 	return 0;
@@ -26,7 +26,7 @@ static int null_close(struct file_t *filp)
 /*
  * Read null device.
  */
-static int null_read(struct file_t *filp, char *buf, int n)
+static int null_read(struct file *filp, char *buf, int n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -37,7 +37,7 @@ static int null_read(struct file_t *filp, char *buf, int n)
 /*
  * Write to null device.
  */
-static int null_write(struct file_t *filp, const char *buf, int n)
+static int null_write(struct file *filp, const char *buf, int n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -48,7 +48,7 @@ static int null_write(struct file_t *filp, const char *buf, int n)
 /*
  * Null device file operations.
  */
-static struct file_operations_t null_fops = {
+static struct file_operations null_fops = {
 	.open		= null_open,
 	.close		= null_close,
 	.read		= null_read,
@@ -58,7 +58,7 @@ static struct file_operations_t null_fops = {
 /*
  * Null device inode operations.
  */
-struct inode_operations_t null_iops = {
+struct inode_operations null_iops = {
 	.fops		= &null_fops,
 };
 

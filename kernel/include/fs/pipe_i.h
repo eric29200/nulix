@@ -23,13 +23,13 @@
 /*
  * Pipefs in memory inode.
  */
-struct pipe_inode_info_t {
+struct pipe_inode_info {
 	char *			i_base;
 	int			i_start;
 	int			i_len;
 	size_t			i_readers;
 	size_t			i_writers;
-	struct wait_queue_t *	i_wait;
+	struct wait_queue *	i_wait;
 };
 
 #endif

@@ -6,7 +6,7 @@
 /*
  * File systems statistics.
  */
-struct statfs64_t {
+struct statfs64 {
 	uint32_t	f_type;
 	uint32_t	f_bsize;
 	uint64_t	f_blocks;

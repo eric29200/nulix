@@ -7,9 +7,9 @@
 /*
  * Fill a page.
  */
-static struct page_t *fill_page(struct inode_t *inode, off_t offset)
+static struct page *fill_page(struct inode *inode, off_t offset)
 {
-	struct page_t *page;
+	struct page *page;
 	uint32_t new_page;
 
 	/* try to get page from cache */
@@ -35,10 +35,10 @@ static struct page_t *fill_page(struct inode_t *inode, off_t offset)
 /*
  * Handle a page fault = read page from file.
  */
-static struct page_t *filemap_nopage(struct vm_area_t *vma, uint32_t address)
+static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 {
-	struct inode_t *inode = vma->vm_inode;
-	struct page_t *page, *new_page;
+	struct inode *inode = vma->vm_inode;
+	struct page *page, *new_page;
 	uint32_t offset;
 
 	/* page align address */
@@ -70,7 +70,7 @@ static struct page_t *filemap_nopage(struct vm_area_t *vma, uint32_t address)
 /*
  * Open a memory region.
  */
-void filemap_open(struct vm_area_t *vma)
+void filemap_open(struct vm_area *vma)
 {
 	vma->vm_inode->i_ref++;
 	list_add(&vma->list_share, &vma->vm_inode->i_mmap);
@@ -79,7 +79,7 @@ void filemap_open(struct vm_area_t *vma)
 /*
  * Close a memory region.
  */
-void filemap_close(struct vm_area_t *vma)
+void filemap_close(struct vm_area *vma)
 {
 	list_del(&vma->list_share);
 	iput(vma->vm_inode);
@@ -88,7 +88,7 @@ void filemap_close(struct vm_area_t *vma)
 /*
  * File mapping operations.
  */
-static struct vm_operations_t file_mmap = {
+static struct vm_operations file_mmap = {
 	.open		= filemap_open,
 	.close		= filemap_close,
 	.nopage		= filemap_nopage,
@@ -97,7 +97,7 @@ static struct vm_operations_t file_mmap = {
 /*
  * Generic mmap file.
  */
-int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
+int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 {
 	/* inode must be a regular file */
 	if (!inode->i_sb || !S_ISREG(inode->i_mode))
@@ -122,14 +122,14 @@ int generic_file_mmap(struct inode_t *inode, struct vm_area_t *vma)
 /*
  * Truncate inode pages.
  */
-void truncate_inode_pages(struct inode_t *inode, off_t start)
+void truncate_inode_pages(struct inode *inode, off_t start)
 {
-	struct list_head_t *pos, *n;
-	struct page_t *page;
+	struct list_head *pos, *n;
+	struct page *page;
 	off_t offset;
 
 	list_for_each_safe(pos, n, &inode->i_pages) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 		offset = page->offset;
 
 		/* full page truncate */
@@ -149,9 +149,9 @@ void truncate_inode_pages(struct inode_t *inode, off_t start)
 /*
  * Update a page cache copy.
  */
-void update_vm_cache(struct inode_t *inode, const char *buf, size_t pos, size_t count)
+void update_vm_cache(struct inode *inode, const char *buf, size_t pos, size_t count)
 {
-	struct page_t *page;
+	struct page *page;
 	off_t offset;
 	size_t len;
 	void *addr;

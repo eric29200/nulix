@@ -8,9 +8,9 @@
 /*
  * Add a route.
  */
-int ip_route_new(struct rtentry_t *rt)
+int ip_route_new(struct rtentry *rt)
 {
-	struct net_device_t *net_dev;
+	struct net_device *net_dev;
 
 	/* check destination address */
 	if (rt->rt_dst.sa_family != AF_INET)

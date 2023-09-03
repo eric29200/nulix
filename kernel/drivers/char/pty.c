@@ -10,21 +10,21 @@
 #define PTY_NAME_LEN		64
 
 /* pty table */
-static struct pty_t pty_table[NR_PTYS];
+static struct pty pty_table[NR_PTYS];
 
 /* Pty master/slave operations (set on init_pty) */
-static struct file_operations_t ptm_fops;
-static struct file_operations_t pts_fops;
-struct inode_operations_t ptm_iops;
-struct inode_operations_t pts_iops;
+static struct file_operations ptm_fops;
+static struct file_operations pts_fops;
+struct inode_operations ptm_iops;
+struct inode_operations pts_iops;
 
 /* pty slave devfs directory */
-static struct devfs_entry_t *devfs_pts_dir = NULL;
+static struct devfs_entry *devfs_pts_dir = NULL;
 
 /*
  * Master/slave pty write.
  */
-static ssize_t pty_write(struct tty_t *tty)
+static ssize_t pty_write(struct tty *tty)
 {
 	ssize_t count = 0;
 	uint8_t c;
@@ -49,9 +49,9 @@ static ssize_t pty_write(struct tty_t *tty)
 /*
  * Slave pty driver.
  */
-static struct tty_driver_t pts_driver = {
+static struct tty_driver pts_driver = {
 	.write		= pty_write,
-	.termios 	= (struct termios_t) {
+	.termios 	= (struct termios) {
 				.c_iflag	= ICRNL | IXON,
 				.c_oflag	= OPOST | ONLCR,
 				.c_cflag	= B38400 | CS8 | CREAD | HUPCL,
@@ -64,9 +64,9 @@ static struct tty_driver_t pts_driver = {
 /*
  * Master pty ioctl.
  */
-static int ptm_ioctl(struct tty_t *tty, int request, unsigned long arg)
+static int ptm_ioctl(struct tty *tty, int request, unsigned long arg)
 {
-	struct pty_t *pty = tty->driver_data;
+	struct pty *pty = tty->driver_data;
 
 	switch (request) {
 		case TIOCGPTN:
@@ -84,11 +84,11 @@ static int ptm_ioctl(struct tty_t *tty, int request, unsigned long arg)
 /*
  * Master pty close.
  */
-static int ptm_close(struct tty_t *tty)
+static int ptm_close(struct tty *tty)
 {
-	struct pty_t *pty = tty->driver_data;
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct pty *pty = tty->driver_data;
+	struct list_head *pos;
+	struct task *task;
 
 	if (!tty->link)
 		return 0;
@@ -99,7 +99,7 @@ static int ptm_close(struct tty_t *tty)
 
 	/* send SIGHUP signal to processes attached to slave pty */
 	list_for_each(pos, &current_task->list) {
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (task->tty == tty->link) {
 			task_signal(task->pid, SIGHUP);
 			task_signal(task->pid, SIGCONT);
@@ -112,7 +112,7 @@ static int ptm_close(struct tty_t *tty)
 /*
  * Master pty driver.
  */
-static struct tty_driver_t ptm_driver = {
+static struct tty_driver ptm_driver = {
 	.write		= pty_write,
 	.ioctl		= ptm_ioctl,
 	.close		= ptm_close,
@@ -121,9 +121,9 @@ static struct tty_driver_t ptm_driver = {
 /*
  * Open PTY master = create a new pty master/slave.
  */
-static int ptmx_open(struct file_t *filp)
+static int ptmx_open(struct file *filp)
 {
-	struct tty_t *ptm = NULL, *pts = NULL;
+	struct tty *ptm = NULL, *pts = NULL;
 	char name[PTY_NAME_LEN];
 	int ret, i;
 
@@ -138,20 +138,20 @@ static int ptmx_open(struct file_t *filp)
 
 	/* create slave pty */
 	pts = &tty_table[NR_CONSOLES + i];
-	memset(pts, 0, sizeof(struct tty_t));
+	memset(pts, 0, sizeof(struct tty));
 	ret = tty_init_dev(pts, &pts_driver);
 	if (ret)
 		goto err;
 
 	/* create master pty */
 	ptm = &tty_table[NR_CONSOLES + NR_PTYS + i];
-	memset(ptm, 0, sizeof(struct tty_t));
+	memset(ptm, 0, sizeof(struct tty));
 	ret = tty_init_dev(ptm, &ptm_driver);
 	if (ret)
 		goto err;
 
 	/* reset master termios */
-	memset(&ptm->termios, 0, sizeof(struct termios_t));
+	memset(&ptm->termios, 0, sizeof(struct termios));
 
 	/* create slave pty node */
 	sprintf(name, "%d", i);
@@ -179,9 +179,9 @@ static int ptmx_open(struct file_t *filp)
 err:
 	/* free device */
 	if (ptm)
-		memset(ptm, 0, sizeof(struct tty_t));
+		memset(ptm, 0, sizeof(struct tty));
 	if (pts)
-		memset(pts, 0, sizeof(struct tty_t));
+		memset(pts, 0, sizeof(struct tty));
 	return ret;
 }
 

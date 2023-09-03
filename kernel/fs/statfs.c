@@ -6,7 +6,7 @@
 /*
  * Get statistics on file system.
  */
-static int do_statfs64(struct inode_t *inode, struct statfs64_t *buf)
+static int do_statfs64(struct inode *inode, struct statfs64 *buf)
 {
 	/* check if statfs is implemented */
 	if (!inode || !inode->i_sb || !inode->i_sb->s_op || !inode->i_sb->s_op->statfs)
@@ -21,9 +21,9 @@ static int do_statfs64(struct inode_t *inode, struct statfs64_t *buf)
 /*
  * Statfs system call.
  */
-int sys_statfs64(const char *path, size_t size, struct statfs64_t *buf)
+int sys_statfs64(const char *path, size_t size, struct statfs64 *buf)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 	int ret;
 
 	/* check buffer size */
@@ -47,9 +47,9 @@ int sys_statfs64(const char *path, size_t size, struct statfs64_t *buf)
 /*
  * Fstatfs system call.
  */
-int sys_fstatfs64(int fd, struct statfs64_t *buf)
+int sys_fstatfs64(int fd, struct statfs64 *buf)
 {
-	struct file_t *filp;
+	struct file *filp;
 
 	/* check output buffer */
 	if (!buf)

@@ -4,19 +4,19 @@
 /*
  * Get directory entries.
  */
-int ext2_getdents64(struct file_t *filp, void *dirp, size_t count)
+int ext2_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct super_block_t *sb = filp->f_inode->i_sb;
-	struct inode_t *inode = filp->f_inode;
-	struct buffer_head_t *bh = NULL;
-	struct ext2_dir_entry_t *de;
-	struct dirent64_t *dirent;
+	struct super_block *sb = filp->f_inode->i_sb;
+	struct inode *inode = filp->f_inode;
+	struct buffer_head *bh = NULL;
+	struct ext2_dir_entry *de;
+	struct dirent64 *dirent;
 	int entries_size = 0, ret;
 	uint32_t offset, block;
 
 	/* get start offset */
 	offset = filp->f_pos & (sb->s_blocksize - 1);
-	dirent = (struct dirent64_t *) dirp;
+	dirent = (struct dirent64 *) dirp;
 
 	/* read block by block */
 	while (filp->f_pos < inode->i_size) {
@@ -31,7 +31,7 @@ int ext2_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* read all entries in block */
 		while (filp->f_pos < inode->i_size && offset < sb->s_blocksize) {
 			/* check next entry */
-			de = (struct ext2_dir_entry_t *) (bh->b_data + offset);
+			de = (struct ext2_dir_entry *) (bh->b_data + offset);
 			if (de->d_rec_len <= 0) {
 				brelse(bh);
 				return entries_size;
@@ -57,7 +57,7 @@ int ext2_getdents64(struct file_t *filp, void *dirp, size_t count)
 			/* go to next entry */
 			count -= dirent->d_reclen;
 			entries_size += dirent->d_reclen;
-			dirent = (struct dirent64_t *) ((char *) dirent + dirent->d_reclen);
+			dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
 
 			/* update file position */
 			filp->f_pos += de->d_rec_len;

@@ -11,54 +11,54 @@
 /*
  * Receive/decode an ICMP packet.
  */
-void icmp_receive(struct sk_buff_t *skb)
+void icmp_receive(struct sk_buff *skb)
 {
-	skb->h.icmp_header = (struct icmp_header_t *) skb->data;
-	skb_pull(skb, sizeof(struct icmp_header_t));
+	skb->h.icmp_header = (struct icmp_header *) skb->data;
+	skb_pull(skb, sizeof(struct icmp_header));
 
 	/* recompute checksum */
 	skb->h.icmp_header->chksum = 0;
-	skb->h.icmp_header->chksum = net_checksum(skb->h.icmp_header, skb->size - sizeof(struct ethernet_header_t) - sizeof(struct ip_header_t));
+	skb->h.icmp_header->chksum = net_checksum(skb->h.icmp_header, skb->size - sizeof(struct ethernet_header) - sizeof(struct ip_header));
 }
 
 /*
  * Reply to an ICMP echo request.
  */
-void icmp_reply_echo(struct sk_buff_t *skb)
+void icmp_reply_echo(struct sk_buff *skb)
 {
-	struct sk_buff_t *skb_reply;
+	struct sk_buff *skb_reply;
 	uint16_t data_len, ip_len;
 
 	/* compute data length */
 	ip_len = ntohs(skb->nh.ip_header->length);
-	data_len = ip_len - sizeof(struct ip_header_t) - sizeof(struct icmp_header_t);
+	data_len = ip_len - sizeof(struct ip_header) - sizeof(struct icmp_header);
 
 	/* allocate reply */
-	skb_reply = (struct sk_buff_t *) skb_alloc(sizeof(struct ethernet_header_t)
-						   + sizeof(struct ip_header_t)
-						   + sizeof(struct icmp_header_t)
-						   + data_len);
+	skb_reply = (struct sk_buff *) skb_alloc(sizeof(struct ethernet_header)
+						 + sizeof(struct ip_header)
+						 + sizeof(struct icmp_header)
+						 + data_len);
 	if (!skb_reply)
 		return;
 
 	/* build ethernet header */
-	skb_reply->eth_header = (struct ethernet_header_t *) skb_put(skb_reply, sizeof(struct ethernet_header_t));
+	skb_reply->eth_header = (struct ethernet_header *) skb_put(skb_reply, sizeof(struct ethernet_header));
 	ethernet_build_header(skb_reply->eth_header, skb->dev->mac_addr, skb->eth_header->src_mac_addr, ETHERNET_TYPE_IP);
 
 	/* build ip header */
-	skb_reply->nh.ip_header = (struct ip_header_t *) skb_put(skb_reply, sizeof(struct ip_header_t));
+	skb_reply->nh.ip_header = (struct ip_header *) skb_put(skb_reply, sizeof(struct ip_header));
 	ip_build_header(skb_reply->nh.ip_header, skb->nh.ip_header->tos, ip_len, ntohs(skb->nh.ip_header->id),
 			skb->nh.ip_header->ttl, IP_PROTO_ICMP, skb->dev->ip_addr, skb->nh.ip_header->src_addr);
 
 	/* copy icmp header */
-	skb_reply->h.icmp_header = (struct icmp_header_t *) skb_put(skb_reply, sizeof(struct icmp_header_t) + data_len);
-	memcpy(skb_reply->h.icmp_header, skb->h.icmp_header, sizeof(struct icmp_header_t) + data_len);
+	skb_reply->h.icmp_header = (struct icmp_header *) skb_put(skb_reply, sizeof(struct icmp_header) + data_len);
+	memcpy(skb_reply->h.icmp_header, skb->h.icmp_header, sizeof(struct icmp_header) + data_len);
 
 	/* set reply */
 	skb_reply->h.icmp_header->type = 0;
 	skb_reply->h.icmp_header->code = 0;
 	skb_reply->h.icmp_header->chksum = 0;
-	skb_reply->h.icmp_header->chksum = net_checksum(skb_reply->h.icmp_header, sizeof(struct icmp_header_t) + data_len);
+	skb_reply->h.icmp_header->chksum = net_checksum(skb_reply->h.icmp_header, sizeof(struct icmp_header) + data_len);
 
 	/* transmit reply */
 	net_transmit(skb->dev, skb_reply);
@@ -67,9 +67,9 @@ void icmp_reply_echo(struct sk_buff_t *skb)
 /*
  * Handle an ICMP packet.
  */
-static int icmp_handle(struct sock_t *sk, struct sk_buff_t *skb)
+static int icmp_handle(struct sock *sk, struct sk_buff *skb)
 {
-	struct sk_buff_t *skb_new;
+	struct sk_buff *skb_new;
 
 	/* check protocol */
 	if (sk->protocol != skb->nh.ip_header->protocol)
@@ -89,10 +89,10 @@ static int icmp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 /*
  * Send an ICMP message.
  */
-static int icmp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblock, int flags)
+static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, int flags)
 {
 	struct sockaddr_in *dest_addr_in;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	uint8_t dest_ip[4];
 	size_t len, i;
 	void *buf;
@@ -111,20 +111,20 @@ static int icmp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonbl
 		len += msg->msg_iov[i].iov_len;
 
 	/* allocate a socket buffer */
-	skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + len);
+	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + len);
 	if (!skb)
 		return -ENOMEM;
 
 	/* build ethernet header */
-	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
+	skb->eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
 	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
-	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0, IPV4_DEFAULT_TTL, IP_PROTO_ICMP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
+	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + len, 0, IPV4_DEFAULT_TTL, IP_PROTO_ICMP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* copy icmp message */
-	skb->h.icmp_header = buf = (struct icmp_header_t *) skb_put(skb, len);
+	skb->h.icmp_header = buf = (struct icmp_header *) skb_put(skb, len);
 	for (i = 0; i < msg->msg_iovlen; i++) {
 		memcpy(buf, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
 		buf += msg->msg_iov[i].iov_len;
@@ -143,11 +143,11 @@ static int icmp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonbl
 /*
  * Receive an ICMP message.
  */
-static int icmp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, int flags)
+static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int flags)
 {
 	size_t len, n, count = 0;
 	struct sockaddr_in *sin;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	void *buf;
 	size_t i;
 
@@ -173,13 +173,13 @@ static int icmp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, i
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sk->skb_list, struct sk_buff_t, list);
+	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
 
 	/* get IP header */
-	skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
 
 	/* get ICMP header */
-	skb->h.icmp_header = (struct icmp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
+	skb->h.icmp_header = (struct icmp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
 
 	/* get message */
 	buf = skb->h.icmp_header + sk->msg_position;
@@ -219,7 +219,7 @@ static int icmp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, i
 /*
  * ICMP protocol.
  */
-struct proto_t icmp_proto = {
+struct proto icmp_proto = {
 	.handle		= icmp_handle,
 	.recvmsg	= icmp_recvmsg,
 	.sendmsg	= icmp_sendmsg,

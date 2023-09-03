@@ -9,14 +9,14 @@ static ino_t tmpfs_next_ino = TMPFS_ROOT_INO;
 /*
  * Directory operations.
  */
-static struct file_operations_t tmpfs_dir_fops = {
+static struct file_operations tmpfs_dir_fops = {
 	.getdents64		= tmpfs_getdents64,
 };
 
 /*
  * File operations.
  */
-static struct file_operations_t tmpfs_file_fops = {
+static struct file_operations tmpfs_file_fops = {
 	.read			= tmpfs_file_read,
 	.write			= tmpfs_file_write,
 	.mmap			= generic_file_mmap,
@@ -25,7 +25,7 @@ static struct file_operations_t tmpfs_file_fops = {
 /*
  * Symbolic link inode operations.
  */
-static struct inode_operations_t tmpfs_symlink_iops = {
+static struct inode_operations tmpfs_symlink_iops = {
 	.follow_link		= tmpfs_follow_link,
 	.readlink		= tmpfs_readlink,
 };
@@ -33,7 +33,7 @@ static struct inode_operations_t tmpfs_symlink_iops = {
 /*
  * File inode operations.
  */
-static struct inode_operations_t tmpfs_file_iops = {
+static struct inode_operations tmpfs_file_iops = {
 	.fops			= &tmpfs_file_fops,
 	.truncate		= tmpfs_truncate,
 	.readpage		= tmpfs_readpage,
@@ -42,7 +42,7 @@ static struct inode_operations_t tmpfs_file_iops = {
 /*
  * Directory inode operations.
  */
-static struct inode_operations_t tmpfs_dir_iops = {
+static struct inode_operations tmpfs_dir_iops = {
 	.fops			= &tmpfs_dir_fops,
 	.lookup			= tmpfs_lookup,
 	.create			= tmpfs_create,
@@ -59,9 +59,9 @@ static struct inode_operations_t tmpfs_dir_iops = {
 /*
  * Create a new inode.
  */
-struct inode_t *tmpfs_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev)
+struct inode *tmpfs_new_inode(struct super_block *sb, mode_t mode, dev_t dev)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* get an empty new inode */
 	inode = get_empty_inode(sb);
@@ -106,7 +106,7 @@ struct inode_t *tmpfs_new_inode(struct super_block_t *sb, mode_t mode, dev_t dev
 /*
  * Read an inode.
  */
-int tmpfs_read_inode(struct inode_t *inode)
+int tmpfs_read_inode(struct inode *inode)
 {
 	UNUSED(inode);
 	return -ENOENT;
@@ -115,7 +115,7 @@ int tmpfs_read_inode(struct inode_t *inode)
 /*
  * Write an inode.
  */
-int tmpfs_write_inode(struct inode_t *inode)
+int tmpfs_write_inode(struct inode *inode)
 {
 	/* nothing to do */
 	UNUSED(inode);
@@ -125,7 +125,7 @@ int tmpfs_write_inode(struct inode_t *inode)
 /*
  * Put an inode.
  */
-int tmpfs_put_inode(struct inode_t *inode)
+int tmpfs_put_inode(struct inode *inode)
 {
 	/* check inode */
 	if (!inode)
@@ -149,10 +149,10 @@ int tmpfs_put_inode(struct inode_t *inode)
 /*
  * Grow an inode size.
  */
-int tmpfs_inode_grow_size(struct inode_t *inode, size_t size)
+int tmpfs_inode_grow_size(struct inode *inode, size_t size)
 {
-	struct list_head_t pages_list, *pos, *n;
-	struct page_t *page;
+	struct list_head pages_list, *pos, *n;
+	struct page *page;
 	int nb_pages, i;
 
 	/* no need to grow */
@@ -180,7 +180,7 @@ int tmpfs_inode_grow_size(struct inode_t *inode, size_t size)
 
 	/* add all pages to inode */
 	list_for_each_safe(pos, n, &pages_list) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 		list_del(&page->list);
 		list_add_tail(&page->list, &inode->u.tmp_i.i_pages);
 	}
@@ -192,7 +192,7 @@ int tmpfs_inode_grow_size(struct inode_t *inode, size_t size)
 err:
 	/* free all pages */
 	list_for_each_safe(pos, n, &pages_list) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 		__free_page(page);
 	}
 

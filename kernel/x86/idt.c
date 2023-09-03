@@ -3,8 +3,8 @@
 #include <stddef.h>
 #include <string.h>
 
-struct idt_entry_t idt_entries[256];
-struct idt_ptr_t idt_ptr;
+struct idt_entry idt_entries[256];
+struct idt_ptr idt_ptr;
 
 extern void idt_flush(uint32_t);
 
@@ -26,11 +26,11 @@ static void idt_set_gate(uint32_t num, uint32_t base, uint16_t selector, uint8_t
  */
 void init_idt()
 {
-	idt_ptr.limit = sizeof(struct idt_entry_t) * 256 - 1;
+	idt_ptr.limit = sizeof(struct idt_entry) * 256 - 1;
 	idt_ptr.base = (uint32_t) &idt_entries;
 
 	/* memzero idt entries */
-	memset(&idt_entries, 0, sizeof(struct idt_entry_t) * 256);
+	memset(&idt_entries, 0, sizeof(struct idt_entry) * 256);
 
 	/* remap irq table */
 	outb(0x20, 0x11);

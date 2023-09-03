@@ -33,7 +33,7 @@
 /*
  * Keyboard entry.
  */
-struct kbentry_t {
+struct kbentry {
 	uint8_t		kb_table;
 	uint8_t		kb_index;
 	uint16_t	kb_value;
@@ -42,7 +42,7 @@ struct kbentry_t {
 /*
  * Keyboard function entry.
  */
-struct kbsentry_t {
+struct kbsentry {
 	uint8_t		kb_func;
 	uint8_t		kb_string[256];
 };

@@ -31,31 +31,31 @@
 /*
  * Check if a process has pending signals.
  */
-static inline int signal_pending(struct task_t *task)
+static inline int signal_pending(struct task *task)
 {
 	return task->sigpend & ~(task->sigmask);
 }
 
 extern unsigned long avenrun[];				/* Load averages */
 
-extern struct task_t *init_task;
-extern struct task_t *current_task;
-extern struct list_head_t tasks_list;
+extern struct task *init_task;
+extern struct task *current_task;
+extern struct list_head tasks_list;
 extern pid_t last_pid;
 
 int init_scheduler(void (*kinit_func)());
 int spawn_init();
-struct task_t *find_task(pid_t pid);
+struct task *find_task(pid_t pid);
 pid_t get_next_pid();
 void schedule();
 
-void add_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait);
-void remove_wait_queue(struct wait_queue_t *wait);
+void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait);
+void remove_wait_queue(struct wait_queue *wait);
 
-void select_wait(struct wait_queue_t **wait_address, struct select_table_t *st);
-void task_sleep(struct wait_queue_t **wq);
-void task_wakeup(struct wait_queue_t **wq);
-void task_wakeup_all(struct wait_queue_t **wq);
+void select_wait(struct wait_queue **wait_address, struct select_table *st);
+void task_sleep(struct wait_queue **wq);
+void task_wakeup(struct wait_queue **wq);
+void task_wakeup_all(struct wait_queue **wq);
 
 int task_signal(pid_t pid, int sig);
 int task_signal_group(pid_t pgrp, int sig);

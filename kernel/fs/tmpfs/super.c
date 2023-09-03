@@ -6,9 +6,9 @@
 /*
  * Get statistics on file system.
  */
-static void tmpfs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+static void tmpfs_statfs(struct super_block *sb, struct statfs64 *buf)
 {
-	memset(buf, 0, sizeof(struct statfs64_t));
+	memset(buf, 0, sizeof(struct statfs64));
 	buf->f_type = sb->s_magic;
 	buf->f_bsize = sb->s_blocksize;
 }
@@ -16,7 +16,7 @@ static void tmpfs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 /*
  * Release a super block.
  */
-static void tmpfs_put_super(struct super_block_t *sb)
+static void tmpfs_put_super(struct super_block *sb)
 {
 	sb->s_dev = 0;
 }
@@ -24,7 +24,7 @@ static void tmpfs_put_super(struct super_block_t *sb)
 /*
  * Superblock operations.
  */
-static struct super_operations_t tmpfs_sops = {
+static struct super_operations tmpfs_sops = {
 	.put_super		= tmpfs_put_super,
 	.read_inode		= tmpfs_read_inode,
 	.write_inode		= tmpfs_write_inode,
@@ -35,9 +35,9 @@ static struct super_operations_t tmpfs_sops = {
 /*
  * Create root inode.
  */
-static struct inode_t *tmpfs_mkroot(struct super_block_t *sb)
+static struct inode *tmpfs_mkroot(struct super_block *sb)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 	int ret;
 
 	/* create root inode */
@@ -65,7 +65,7 @@ err:
 /*
  * Read super block.
  */
-static int tmpfs_read_super(struct super_block_t *sb, void *data, int silent)
+static int tmpfs_read_super(struct super_block *sb, void *data, int silent)
 {
 	/* unused data */
 	UNUSED(data);
@@ -89,7 +89,7 @@ static int tmpfs_read_super(struct super_block_t *sb, void *data, int silent)
 /*
  * Tmp file system.
  */
-static struct file_system_t tmp_fs = {
+static struct file_system tmp_fs = {
 	.name		= "tmpfs",
 	.requires_dev	= 0,
 	.read_super	= tmpfs_read_super,

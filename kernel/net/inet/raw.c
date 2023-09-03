@@ -9,9 +9,9 @@
 /*
  * Handle a raw packet.
  */
-static int raw_handle(struct sock_t *sk, struct sk_buff_t *skb)
+static int raw_handle(struct sock *sk, struct sk_buff *skb)
 {
-	struct sk_buff_t *skb_new;
+	struct sk_buff *skb_new;
 
 	/* check protocol */
 	if (sk->protocol != skb->nh.ip_header->protocol)
@@ -31,11 +31,11 @@ static int raw_handle(struct sock_t *sk, struct sk_buff_t *skb)
 /*
  * Receive a rax message.
  */
-static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, int flags)
+static int raw_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int flags)
 {
 	size_t len, n, count = 0, i;
 	struct sockaddr_in *sin;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	void *buf;
 
 	/* sleep until we receive a packet */
@@ -57,10 +57,10 @@ static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, in
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sk->skb_list, struct sk_buff_t, list);
+	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
 
 	/* get IP header */
-	skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
 
 	/* get message */
 	buf = skb->nh.ip_header + sk->msg_position;
@@ -100,10 +100,10 @@ static int raw_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, in
 /*
  * Send a raw message.
  */
-static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblock, int flags)
+static int raw_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, int flags)
 {
 	struct sockaddr_in *dest_addr_in;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	uint8_t dest_ip[4];
 	size_t len, i;
 	void *buf;
@@ -122,20 +122,20 @@ static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 		len += msg->msg_iov[i].iov_len;
 
 	/* allocate a socket buffer */
-	skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + len);
+	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + len);
 	if (!skb)
 		return -ENOMEM;
 
 	/* build ethernet header */
-	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
+	skb->eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
 	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
-	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + len, 0, IPV4_DEFAULT_TTL, sk->protocol, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
+	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + len, 0, IPV4_DEFAULT_TTL, sk->protocol, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* copy ip message */
-	buf = (struct ip_header_t *) skb_put(skb, len);
+	buf = (struct ip_header *) skb_put(skb, len);
 	for (i = 0; i < msg->msg_iovlen; i++) {
 		memcpy(buf, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
 		buf += msg->msg_iov[i].iov_len;
@@ -150,7 +150,7 @@ static int raw_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 /*
  * Raw protocol.
  */
-struct proto_t raw_proto = {
+struct proto raw_proto = {
 	.handle		= raw_handle,
 	.recvmsg	= raw_recvmsg,
 	.sendmsg	= raw_sendmsg,

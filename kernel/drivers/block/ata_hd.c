@@ -6,7 +6,7 @@
 /*
  * Wait for operation completion.
  */
-static void ata_hd_wait(struct ata_device_t *device)
+static void ata_hd_wait(struct ata_device *device)
 {
 	int status, dstatus;
 
@@ -25,7 +25,7 @@ static void ata_hd_wait(struct ata_device_t *device)
 /*
  * Read sectors from an ata device.
  */
-static int ata_hd_read_sectors(struct ata_device_t *device, uint32_t sector, uint32_t nb_sectors, char *buf)
+static int ata_hd_read_sectors(struct ata_device *device, uint32_t sector, uint32_t nb_sectors, char *buf)
 {
 	/* set transfert size */
 	device->prdt[0].transfert_size = nb_sectors * ATA_SECTOR_SIZE;
@@ -60,7 +60,7 @@ static int ata_hd_read_sectors(struct ata_device_t *device, uint32_t sector, uin
 /*
  * Read from an ata device.
  */
-static int ata_hd_read(struct ata_device_t *device, struct buffer_head_t *bh, uint32_t start_sector)
+static int ata_hd_read(struct ata_device *device, struct buffer_head *bh, uint32_t start_sector)
 {
 	uint32_t nb_sectors, sector;
 
@@ -75,7 +75,7 @@ static int ata_hd_read(struct ata_device_t *device, struct buffer_head_t *bh, ui
 /*
  * Write sectors to an ata device.
  */
-static int ata_hd_write_sectors(struct ata_device_t *device, uint32_t sector, uint32_t nb_sectors, char *buf)
+static int ata_hd_write_sectors(struct ata_device *device, uint32_t sector, uint32_t nb_sectors, char *buf)
 {
 	/* copy buffer */
 	memcpy(device->buf, buf, nb_sectors * ATA_SECTOR_SIZE);
@@ -110,7 +110,7 @@ static int ata_hd_write_sectors(struct ata_device_t *device, uint32_t sector, ui
 /*
  * Write to an ata device.
  */
-static int ata_hd_write(struct ata_device_t *device, struct buffer_head_t *bh, uint32_t start_sector)
+static int ata_hd_write(struct ata_device *device, struct buffer_head *bh, uint32_t start_sector)
 {
 	uint32_t nb_sectors, sector;
 
@@ -125,9 +125,9 @@ static int ata_hd_write(struct ata_device_t *device, struct buffer_head_t *bh, u
 /*
  * Init an ata hard disk.
  */
-int ata_hd_init(struct ata_device_t *device)
+int ata_hd_init(struct ata_device *device)
 {
-	struct pci_device_t *ata_pci_device;
+	struct pci_device *ata_pci_device;
 	uint32_t cmd_reg;
 
 	/* no sectors */
@@ -140,7 +140,7 @@ int ata_hd_init(struct ata_device_t *device)
 		return -EINVAL;
 
 	/* allocate prdt */
-	device->prdt = kmalloc_align(sizeof(struct ata_prdt_t));
+	device->prdt = kmalloc_align(sizeof(struct ata_prdt));
 	if (!device->prdt)
 		return -ENOMEM;
 
@@ -152,7 +152,7 @@ int ata_hd_init(struct ata_device_t *device)
 	}
 
 	/* clear prdt and buffer */
-	memset(device->prdt, 0, sizeof(struct ata_prdt_t));
+	memset(device->prdt, 0, sizeof(struct ata_prdt));
 	memset(device->buf, 0, PAGE_SIZE);
 
 	/* set prdt */

@@ -3587,7 +3587,7 @@ static uint8_t fontdata_8x12[] = {
 
 };
 
-struct font_desc_t font_lat9_8x12 = {
+struct font_desc font_lat9_8x12 = {
 	.name		= "VGA8x12",
 	.width		= 8,
 	.height		= 12,

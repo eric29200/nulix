@@ -6,13 +6,13 @@
 /*
  * UDP header.
  */
-struct udp_header_t {
+struct udp_header {
 	uint16_t	src_port;
 	uint16_t	dst_port;
 	uint16_t	len;
 	uint16_t	chksum;
 };
 
-void udp_receive(struct sk_buff_t *skb);
+void udp_receive(struct sk_buff *skb);
 
 #endif

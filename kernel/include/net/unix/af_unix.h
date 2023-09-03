@@ -3,6 +3,6 @@
 
 #include <net/sock.h>
 
-typedef struct sock_t unix_socket_t;
+typedef struct sock unix_socket_t;
 
 #endif

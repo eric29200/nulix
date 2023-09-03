@@ -83,7 +83,7 @@ static int dup_after(int oldfd, int min_slot)
  */
 int sys_fcntl(int fd, int cmd, unsigned long arg)
 {
-	struct file_t *filp;
+	struct file *filp;
 	int ret = 0;
 
 	/* check fd */

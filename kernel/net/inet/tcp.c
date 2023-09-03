@@ -10,17 +10,17 @@
 /*
  * Compute TCP checksum.
  */
-static uint16_t tcp_checksum(struct tcp_header_t *tcp_header, uint8_t *src_address, uint8_t *dst_address, size_t len)
+static uint16_t tcp_checksum(struct tcp_header *tcp_header, uint8_t *src_address, uint8_t *dst_address, size_t len)
 {
 	uint16_t *chunk, ret;
 	uint32_t chksum;
 	size_t size;
 
 	/* compute size = tcp header + len */
-	size = sizeof(struct tcp_header_t) + len;
+	size = sizeof(struct tcp_header) + len;
 
 	/* build TCP check header */
-	struct tcp_check_header_t tcp_check_header = {
+	struct tcp_check_header tcp_check_header = {
 		.src_address		= inet_iton(src_address),
 		.dst_address		= inet_iton(dst_address),
 		.zero			= 0,
@@ -29,7 +29,7 @@ static uint16_t tcp_checksum(struct tcp_header_t *tcp_header, uint8_t *src_addre
 	};
 
 	/* compute check sum on TCP check header */
-	size = sizeof(struct tcp_check_header_t);
+	size = sizeof(struct tcp_check_header);
 	for (chksum = 0, chunk = (uint16_t *) &tcp_check_header; size > 1; size -= 2)
 		chksum += *chunk++;
 
@@ -37,7 +37,7 @@ static uint16_t tcp_checksum(struct tcp_header_t *tcp_header, uint8_t *src_addre
 		chksum += *((uint8_t *) chunk);
 
 	/* compute check sum on TCP header */
-	size = sizeof(struct tcp_header_t) + len;
+	size = sizeof(struct tcp_header) + len;
 	for (chunk = (uint16_t *) tcp_header; size > 1; size -= 2)
 		chksum += *chunk++;
 
@@ -54,7 +54,7 @@ static uint16_t tcp_checksum(struct tcp_header_t *tcp_header, uint8_t *src_addre
 /*
  * Build a TCP header.
  */
-static void tcp_build_header(struct tcp_header_t *tcp_header, uint16_t src_port, uint16_t dst_port,
+static void tcp_build_header(struct tcp_header *tcp_header, uint16_t src_port, uint16_t dst_port,
 			     uint32_t seq, uint32_t ack_seq, uint16_t window, uint16_t flags)
 {
 	tcp_header->src_port = htons(src_port);
@@ -62,7 +62,7 @@ static void tcp_build_header(struct tcp_header_t *tcp_header, uint16_t src_port,
 	tcp_header->seq = htonl(seq);
 	tcp_header->ack_seq = htonl(ack_seq);
 	tcp_header->res1 = 0;
-	tcp_header->doff = sizeof(struct tcp_header_t) / 4;
+	tcp_header->doff = sizeof(struct tcp_header) / 4;
 	tcp_header->fin = (flags & TCPCB_FLAG_FIN) != 0;
 	tcp_header->syn = (flags & TCPCB_FLAG_SYN) != 0;
 	tcp_header->rst = (flags & TCPCB_FLAG_RST) != 0;
@@ -78,18 +78,18 @@ static void tcp_build_header(struct tcp_header_t *tcp_header, uint16_t src_port,
 /*
  * Receive/decode a TCP packet.
  */
-void tcp_receive(struct sk_buff_t *skb)
+void tcp_receive(struct sk_buff *skb)
 {
-	skb->h.tcp_header = (struct tcp_header_t *) skb->data;
-	skb_pull(skb, sizeof(struct tcp_header_t));
+	skb->h.tcp_header = (struct tcp_header *) skb->data;
+	skb_pull(skb, sizeof(struct tcp_header));
 }
 
 /*
  * Create a TCP message.
  */
-static struct sk_buff_t *tcp_create_skb(struct sock_t *sk, uint16_t flags, void *msg, size_t len)
+static struct sk_buff *tcp_create_skb(struct sock *sk, uint16_t flags, void *msg, size_t len)
 {
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	uint8_t dest_ip[4];
 	void *buf;
 
@@ -97,21 +97,21 @@ static struct sk_buff_t *tcp_create_skb(struct sock_t *sk, uint16_t flags, void 
 	inet_ntoi(sk->protinfo.af_inet.dst_sin.sin_addr, dest_ip);
 
 	/* allocate a socket buffer */
-	skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + sizeof(struct tcp_header_t) + len);
+	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct tcp_header) + len);
 	if (!skb)
 		return NULL;
 
 	/* build ethernet header */
-	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
+	skb->eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
 	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
-	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + sizeof(struct tcp_header_t) + len, 0,
+	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + sizeof(struct tcp_header) + len, 0,
 			IPV4_DEFAULT_TTL, IP_PROTO_TCP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* build tcp header */
-	skb->h.tcp_header = (struct tcp_header_t *) skb_put(skb, sizeof(struct tcp_header_t));
+	skb->h.tcp_header = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header));
 	tcp_build_header(skb->h.tcp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(sk->protinfo.af_inet.dst_sin.sin_port),
 			 sk->protinfo.af_inet.seq_no, sk->protinfo.af_inet.ack_no, ETHERNET_MAX_MTU, flags);
 
@@ -134,9 +134,9 @@ static struct sk_buff_t *tcp_create_skb(struct sock_t *sk, uint16_t flags, void 
 /*
  * Reply a ACK message.
  */
-static int tcp_reply_ack(struct sock_t *sk, struct sk_buff_t *skb, uint16_t flags)
+static int tcp_reply_ack(struct sock *sk, struct sk_buff *skb, uint16_t flags)
 {
-	struct sk_buff_t *skb_ack;
+	struct sk_buff *skb_ack;
 	uint8_t dest_ip[4];
 	int len;
 
@@ -144,17 +144,17 @@ static int tcp_reply_ack(struct sock_t *sk, struct sk_buff_t *skb, uint16_t flag
 	inet_ntoi(inet_iton(skb->nh.ip_header->src_addr), dest_ip);
 
 	/* allocate a socket buffer */
-	skb_ack = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + sizeof(struct tcp_header_t));
+	skb_ack = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct tcp_header));
 	if (!skb_ack)
 		return -ENOMEM;
 
 	/* build ethernet header */
-	skb_ack->eth_header = (struct ethernet_header_t *) skb_put(skb_ack, sizeof(struct ethernet_header_t));
+	skb_ack->eth_header = (struct ethernet_header *) skb_put(skb_ack, sizeof(struct ethernet_header));
 	ethernet_build_header(skb_ack->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
-	skb_ack->nh.ip_header = (struct ip_header_t *) skb_put(skb_ack, sizeof(struct ip_header_t));
-	ip_build_header(skb_ack->nh.ip_header, 0, sizeof(struct ip_header_t) + sizeof(struct tcp_header_t), 0,
+	skb_ack->nh.ip_header = (struct ip_header *) skb_put(skb_ack, sizeof(struct ip_header));
+	ip_build_header(skb_ack->nh.ip_header, 0, sizeof(struct ip_header) + sizeof(struct tcp_header), 0,
 			IPV4_DEFAULT_TTL, IP_PROTO_TCP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* compute ack number */
@@ -164,7 +164,7 @@ static int tcp_reply_ack(struct sock_t *sk, struct sk_buff_t *skb, uint16_t flag
 		sk->protinfo.af_inet.ack_no += 1;
 
 	/* build tcp header */
-	skb_ack->h.tcp_header = (struct tcp_header_t *) skb_put(skb_ack, sizeof(struct tcp_header_t));
+	skb_ack->h.tcp_header = (struct tcp_header *) skb_put(skb_ack, sizeof(struct tcp_header));
 	tcp_build_header(skb_ack->h.tcp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(skb->h.tcp_header->src_port),
 			 sk->protinfo.af_inet.seq_no, sk->protinfo.af_inet.ack_no, ETHERNET_MAX_MTU, flags);
 
@@ -184,9 +184,9 @@ static int tcp_reply_ack(struct sock_t *sk, struct sk_buff_t *skb, uint16_t flag
 /*
  * Reset a TCP connection.
  */
-static int tcp_reset(struct sock_t *sk, uint32_t seq_no)
+static int tcp_reset(struct sock *sk, uint32_t seq_no)
 {
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 
 	/* set sequence number */
 	sk->protinfo.af_inet.seq_no = ntohl(seq_no);
@@ -206,9 +206,9 @@ static int tcp_reset(struct sock_t *sk, uint32_t seq_no)
 /*
  * Handle a TCP packet.
  */
-static int tcp_handle(struct sock_t *sk, struct sk_buff_t *skb)
+static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 {
-	struct sk_buff_t *skb_new;
+	struct sk_buff *skb_new;
 	uint16_t ack_flags;
 	uint32_t data_len;
 
@@ -295,11 +295,11 @@ out:
 /*
  * Receive a TCP message.
  */
-static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, int flags)
+static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int flags)
 {
 	size_t len, n, i, count = 0;
 	struct sockaddr_in *sin;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	void *buf;
 
 	/* sleep until we receive a packet */
@@ -329,13 +329,13 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, in
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sk->skb_list, struct sk_buff_t, list);
+	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
 
 	/* get IP header */
-	skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
 
 	/* get TCP header */
-	skb->h.tcp_header = (struct tcp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
+	skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
 
 	/* get message */
 	buf = tcp_data(skb) + sk->msg_position;
@@ -375,9 +375,9 @@ static int tcp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, in
 /*
  * Send a TCP message.
  */
-static int tcp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblock, int flags)
+static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, int flags)
 {
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	size_t i;
 	int len;
 
@@ -424,9 +424,9 @@ static int tcp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 /*
  * Create a TCP connection.
  */
-static int tcp_connect(struct sock_t *sk)
+static int tcp_connect(struct sock *sk)
 {
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 
 	/* generate sequence */
 	sk->protinfo.af_inet.seq_no = ntohl(rand());
@@ -449,10 +449,10 @@ static int tcp_connect(struct sock_t *sk)
 /*
  * Accept a TCP connection.
  */
-static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
+static int tcp_accept(struct sock *sk, struct sock *sk_new)
 {
-	struct list_head_t *pos, *n;
-	struct sk_buff_t *skb;
+	struct list_head *pos, *n;
+	struct sk_buff *skb;
 
 	for (;;) {
 		/* signal received : restart system call */
@@ -462,13 +462,13 @@ static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 		/* for each received packet */
 		list_for_each(pos, &sk->skb_list) {
 			/* get socket buffer */
-			skb = list_entry(pos, struct sk_buff_t, list);
+			skb = list_entry(pos, struct sk_buff, list);
 
 			/* get IP header */
-			skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+			skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
 
 			/* get TCP header */
-			skb->h.tcp_header = (struct tcp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
+			skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
 
 			/* not a SYN message : go to next packet */
 			if (!skb->h.tcp_header->syn)
@@ -490,9 +490,9 @@ static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 			/* move buffers to new socket */
 			list_for_each_safe(pos, n, &sk->skb_list) {
 				/* decode socket buffer */
-				skb = list_entry(pos, struct sk_buff_t, list);
-				skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
-				skb->h.tcp_header = (struct tcp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
+				skb = list_entry(pos, struct sk_buff, list);
+				skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
+				skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
 
 				/* move socket buffer */
 				if (sk_new->protinfo.af_inet.dst_sin.sin_port == skb->h.tcp_header->src_port
@@ -519,9 +519,9 @@ static int tcp_accept(struct sock_t *sk, struct sock_t *sk_new)
 /*
  * Close a TCP connection.
  */
-static int tcp_close(struct sock_t *sk)
+static int tcp_close(struct sock *sk)
 {
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 
 	/* socket no connected : no need to send FIN message */
 	if (sk->sock->state != SS_CONNECTED) {
@@ -551,7 +551,7 @@ wait_for_ack:
 /*
  * TCP protocol.
  */
-struct proto_t tcp_proto = {
+struct proto tcp_proto = {
 	.handle		= tcp_handle,
 	.close		= tcp_close,
 	.recvmsg	= tcp_recvmsg,

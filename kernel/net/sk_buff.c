@@ -5,16 +5,16 @@
 /*
  * Allocate a socket buffer.
  */
-struct sk_buff_t *skb_alloc(size_t size)
+struct sk_buff *skb_alloc(size_t size)
 {
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	uint8_t *data;
 
 	/* allocate socket buffer */
-	skb = (struct sk_buff_t *) kmalloc(sizeof(struct sk_buff_t));
+	skb = (struct sk_buff *) kmalloc(sizeof(struct sk_buff));
 	if (!skb)
 		return NULL;
-	memset(skb, 0, sizeof(struct sk_buff_t));
+	memset(skb, 0, sizeof(struct sk_buff));
 
 	/* allocate data */
 	skb->size = size;
@@ -38,9 +38,9 @@ struct sk_buff_t *skb_alloc(size_t size)
 /*
  * Clone a socket buffer.
  */
-struct sk_buff_t *skb_clone(struct sk_buff_t *skb)
+struct sk_buff *skb_clone(struct sk_buff *skb)
 {
-	struct sk_buff_t *skb_new;
+	struct sk_buff *skb_new;
 
 	/* allocate a new socket buffer */
 	skb_new = skb_alloc(skb->size);
@@ -59,7 +59,7 @@ struct sk_buff_t *skb_clone(struct sk_buff_t *skb)
 /*
  * Free a socket buffer.
  */
-void skb_free(struct sk_buff_t *skb)
+void skb_free(struct sk_buff *skb)
 {
 	kfree(skb->head);
 	kfree(skb);

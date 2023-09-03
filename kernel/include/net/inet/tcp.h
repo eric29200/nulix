@@ -18,7 +18,7 @@
 /*
  * TCP header.
  */
-struct tcp_header_t {
+struct tcp_header {
 	uint16_t	src_port;
 	uint16_t	dst_port;
 	uint32_t	seq;
@@ -40,7 +40,7 @@ struct tcp_header_t {
 /*
  * TCP check header.
  */
-struct tcp_check_header_t {
+struct tcp_check_header {
 	uint32_t	src_address;
 	uint32_t	dst_address;
 	uint8_t		zero;
@@ -48,20 +48,20 @@ struct tcp_check_header_t {
 	uint16_t	len;
 };
 
-void tcp_receive(struct sk_buff_t *skb);
+void tcp_receive(struct sk_buff *skb);
 
 /*
  * Get TCP options length.
  */
-static inline uint16_t tcp_option_length(struct sk_buff_t *skb)
+static inline uint16_t tcp_option_length(struct sk_buff *skb)
 {
-	return skb->h.tcp_header->doff * 4 - sizeof(struct tcp_header_t);
+	return skb->h.tcp_header->doff * 4 - sizeof(struct tcp_header);
 }
 
 /*
  * Get TCP data length.
  */
-static inline uint16_t tcp_data_length(struct sk_buff_t *skb)
+static inline uint16_t tcp_data_length(struct sk_buff *skb)
 {
 	return ntohs(skb->nh.ip_header->length) - (skb->nh.ip_header->ihl + skb->h.tcp_header->doff) * 4;
 }
@@ -69,9 +69,9 @@ static inline uint16_t tcp_data_length(struct sk_buff_t *skb)
 /*
  * Get TCP data.
  */
-static inline void *tcp_data(struct sk_buff_t *skb)
+static inline void *tcp_data(struct sk_buff *skb)
 {
-	return (void *) skb->h.tcp_header + sizeof(struct tcp_header_t) + tcp_option_length (skb);
+	return (void *) skb->h.tcp_header + sizeof(struct tcp_header) + tcp_option_length (skb);
 }
 
 #endif

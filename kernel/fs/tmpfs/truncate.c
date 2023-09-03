@@ -3,14 +3,14 @@
 /*
  * Truncate an inode.
  */
-void tmpfs_truncate(struct inode_t *inode)
+void tmpfs_truncate(struct inode *inode)
 {
-	struct list_head_t *pos, *n;
-	struct page_t *page;
+	struct list_head *pos, *n;
+	struct page *page;
 	size_t offset = 0;
 
 	list_for_each_safe(pos, n, &inode->u.tmp_i.i_pages) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 
 		/* full/partial page free */
 		if (offset >= inode->i_size)

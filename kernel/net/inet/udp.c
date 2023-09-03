@@ -12,7 +12,7 @@
 /*
  * Build an UDP header.
  */
-static void udp_build_header(struct udp_header_t *udp_header, uint16_t src_port, uint16_t dst_port, uint16_t len)
+static void udp_build_header(struct udp_header *udp_header, uint16_t src_port, uint16_t dst_port, uint16_t len)
 {
 	udp_header->src_port = htons(src_port);
 	udp_header->dst_port = htons(dst_port);
@@ -23,18 +23,18 @@ static void udp_build_header(struct udp_header_t *udp_header, uint16_t src_port,
 /*
  * Receive/decode an UDP packet.
  */
-void udp_receive(struct sk_buff_t *skb)
+void udp_receive(struct sk_buff *skb)
 {
-	skb->h.udp_header = (struct udp_header_t *) skb->data;
-	skb_pull(skb, sizeof(struct udp_header_t));
+	skb->h.udp_header = (struct udp_header *) skb->data;
+	skb_pull(skb, sizeof(struct udp_header));
 }
 
 /*
  * Handle an UDP packet.
  */
-static int udp_handle(struct sock_t *sk, struct sk_buff_t *skb)
+static int udp_handle(struct sock *sk, struct sk_buff *skb)
 {
-	struct sk_buff_t *skb_new;
+	struct sk_buff *skb_new;
 
 	/* check protocol */
 	if (sk->protocol != skb->nh.ip_header->protocol)
@@ -58,10 +58,10 @@ static int udp_handle(struct sock_t *sk, struct sk_buff_t *skb)
 /*
  * Send an UDP message.
  */
-static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblock, int flags)
+static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, int flags)
 {
 	struct sockaddr_in *dest_addr_in;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	uint8_t dest_ip[4];
 	size_t len, i;
 	void *buf;
@@ -80,22 +80,22 @@ static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 		len += msg->msg_iov[i].iov_len;
 
 	/* allocate a socket buffer */
-	skb = skb_alloc(sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t) + sizeof(struct udp_header_t) + len);
+	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct udp_header) + len);
 	if (!skb)
 		return -ENOMEM;
 
 	/* build ethernet header */
-	skb->eth_header = (struct ethernet_header_t *) skb_put(skb, sizeof(struct ethernet_header_t));
+	skb->eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
 	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
-	skb->nh.ip_header = (struct ip_header_t *) skb_put(skb, sizeof(struct ip_header_t));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header_t) + sizeof(struct udp_header_t) + len, 0,
+	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + sizeof(struct udp_header) + len, 0,
 			IPV4_DEFAULT_TTL, IP_PROTO_UDP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* build udp header */
-	skb->h.udp_header = (struct udp_header_t *) skb_put(skb, sizeof(struct udp_header_t));
-	udp_build_header(skb->h.udp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(dest_addr_in->sin_port), sizeof(struct udp_header_t) + len);
+	skb->h.udp_header = (struct udp_header *) skb_put(skb, sizeof(struct udp_header));
+	udp_build_header(skb->h.udp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(dest_addr_in->sin_port), sizeof(struct udp_header) + len);
 
 	/* copy message */
 	buf = skb_put(skb, len);
@@ -113,11 +113,11 @@ static int udp_sendmsg(struct sock_t *sk, const struct msghdr_t *msg, int nonblo
 /*
  * Receive an UDP message.
  */
-static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, int flags)
+static int udp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int flags)
 {
 	size_t len, n, i, count = 0;
 	struct sockaddr_in *sin;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	void *buf;
 
 	/* sleep until we receive a packet */
@@ -139,16 +139,16 @@ static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, in
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sk->skb_list, struct sk_buff_t, list);
+	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
 
 	/* get IP header */
-	skb->nh.ip_header = (struct ip_header_t *) (skb->head + sizeof(struct ethernet_header_t));
+	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
 
 	/* get UDP header */
-	skb->h.udp_header = (struct udp_header_t *) (skb->head + sizeof(struct ethernet_header_t) + sizeof(struct ip_header_t));
+	skb->h.udp_header = (struct udp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
 
 	/* get message */
-	buf = (void *) skb->h.udp_header + sizeof(struct udp_header_t) + sk->msg_position;
+	buf = (void *) skb->h.udp_header + sizeof(struct udp_header) + sk->msg_position;
 	len = (void *) skb->end - buf;
 
 	/* copy message */
@@ -185,7 +185,7 @@ static int udp_recvmsg(struct sock_t *sk, struct msghdr_t *msg, int nonblock, in
 /*
  * UDP protocol.
  */
-struct proto_t udp_proto = {
+struct proto udp_proto = {
 	.handle		= udp_handle,
 	.recvmsg	= udp_recvmsg,
 	.sendmsg	= udp_sendmsg,

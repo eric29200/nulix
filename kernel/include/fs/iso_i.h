@@ -6,7 +6,7 @@
 /*
  * Isofs in memory inode.
  */
-struct isofs_inode_info_t {
+struct isofs_inode_info {
 	uint32_t	i_first_extent;
 	uint32_t	i_backlink;
 };

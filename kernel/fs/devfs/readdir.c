@@ -5,21 +5,21 @@
 /*
  * Get directory entries system call.
  */
-int devfs_getdents64(struct file_t *filp, void *dirp, size_t count)
+int devfs_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct devfs_entry_t *de_dir, *de;
-	struct dirent64_t *dirent;
-	struct list_head_t *pos;
+	struct devfs_entry *de_dir, *de;
+	struct dirent64 *dirent;
+	struct list_head *pos;
 	int ret, entries_size;
 	size_t i;
 
 	/* get devfs entry */
-	de_dir = (struct devfs_entry_t *) filp->f_inode->u.generic_i;
+	de_dir = (struct devfs_entry *) filp->f_inode->u.generic_i;
 	if (!S_ISDIR(de_dir->mode))
 		return -EINVAL;
 
 	/* init directory entry */
-	dirent = (struct dirent64_t *) dirp;
+	dirent = (struct dirent64 *) dirp;
 	entries_size = 0;
 
 	/* add "." entry */
@@ -32,7 +32,7 @@ int devfs_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next entry */
 		count -= dirent->d_reclen;
 		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 		filp->f_pos++;
 	}
 
@@ -46,14 +46,14 @@ int devfs_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next entry */
 		count -= dirent->d_reclen;
 		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 		filp->f_pos++;
 	}
 
 	/* walk through all entries */
 	i = 2;
 	list_for_each(pos, &de_dir->u.dir.entries) {
-		de = list_entry(pos, struct devfs_entry_t, list);
+		de = list_entry(pos, struct devfs_entry, list);
 
 		/* skip entries before offset */
 		if (filp->f_pos > i++)
@@ -68,7 +68,7 @@ int devfs_getdents64(struct file_t *filp, void *dirp, size_t count)
 		filp->f_pos++;
 		count -= dirent->d_reclen;
 		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((char *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
 	}
 
 	return entries_size;

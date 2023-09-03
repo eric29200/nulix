@@ -9,7 +9,7 @@
 /*
  * Net directory.
  */
-static struct proc_dir_entry_t net_dir[] = {
+static struct proc_dir_entry net_dir[] = {
 	{ PROC_NET_INO,		1, 	"." },
 	{ PROC_ROOT_INO,	2,	".." },
 	{ PROC_NET_DEV_INO,	3,	"dev" },
@@ -18,9 +18,9 @@ static struct proc_dir_entry_t net_dir[] = {
 /*
  * Read net dir.
  */
-static int proc_net_getdents64(struct file_t *filp, void *dirp, size_t count)
+static int proc_net_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct dirent64_t *dirent = (struct dirent64_t *) dirp;
+	struct dirent64 *dirent = (struct dirent64 *) dirp;
 	int ret, n;
 	size_t i;
 
@@ -34,7 +34,7 @@ static int proc_net_getdents64(struct file_t *filp, void *dirp, size_t count)
 		/* go to next dir entry */
 		count -= dirent->d_reclen;
 		n += dirent->d_reclen;
-		dirent = (struct dirent64_t *) ((void *) dirent + dirent->d_reclen);
+		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
 	}
 
 	return n;
@@ -43,7 +43,7 @@ static int proc_net_getdents64(struct file_t *filp, void *dirp, size_t count)
 /*
  * Lookup net dir.
  */
-static int proc_net_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+static int proc_net_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
 	ino_t ino;
 	size_t i;
@@ -78,14 +78,14 @@ static int proc_net_lookup(struct inode_t *dir, const char *name, size_t name_le
 /*
  * Net file operations.
  */
-struct file_operations_t proc_net_fops = {
+struct file_operations proc_net_fops = {
 	.getdents64		= proc_net_getdents64,
 };
 
 /*
  * Net inode operations.
  */
-struct inode_operations_t proc_net_iops = {
+struct inode_operations proc_net_iops = {
 	.fops			= &proc_net_fops,
 	.lookup			= proc_net_lookup,
 };
@@ -93,7 +93,7 @@ struct inode_operations_t proc_net_iops = {
 /*
  * Read net dev.
  */
-static int proc_net_dev_read(struct file_t *filp, char *buf, int count)
+static int proc_net_dev_read(struct file *filp, char *buf, int count)
 {
 	char tmp_buf[256];
 	size_t len;
@@ -128,13 +128,13 @@ static int proc_net_dev_read(struct file_t *filp, char *buf, int count)
 /*
  * Net dev file operations.
  */
-struct file_operations_t proc_net_dev_fops = {
+struct file_operations proc_net_dev_fops = {
 	.read		= proc_net_dev_read,
 };
 
 /*
  * Net dev inode operations.
  */
-struct inode_operations_t proc_net_dev_iops = {
+struct inode_operations proc_net_dev_iops = {
 	.fops		= &proc_net_dev_fops,
 };

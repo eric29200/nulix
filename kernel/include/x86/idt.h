@@ -6,7 +6,7 @@
 /*
  * Interrupt Descriptor Table entry.
  */
-struct idt_entry_t {
+struct idt_entry {
 	uint16_t	base_low;
 	uint16_t	selector;
 	uint8_t		zero;
@@ -17,7 +17,7 @@ struct idt_entry_t {
 /*
  * Interrupt Descriptor Table entry pointer.
  */
-struct idt_ptr_t {
+struct idt_ptr {
 	uint16_t	limit;
 	uint32_t	base;
 } __attribute__((packed));

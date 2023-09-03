@@ -11,7 +11,7 @@
 /*
  * Get character device driver.
  */
-struct inode_operations_t *char_get_driver(struct inode_t *inode)
+struct inode_operations *char_get_driver(struct inode *inode)
 {
 	/* not a character device */
 	if (!inode || !S_ISCHR(inode->i_mode))

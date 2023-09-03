@@ -7,7 +7,7 @@
 /*
  * Get block device driver.
  */
-struct inode_operations_t *block_get_driver(struct inode_t *inode)
+struct inode_operations *block_get_driver(struct inode *inode)
 {
 	/* not a block device */
 	if (!inode || !S_ISBLK(inode->i_mode))
@@ -23,10 +23,10 @@ struct inode_operations_t *block_get_driver(struct inode_t *inode)
 /*
  * Generic block read.
  */
-int generic_block_read(struct file_t *filp, char *buf, int count)
+int generic_block_read(struct file *filp, char *buf, int count)
 {
 	size_t blocksize, pos, nb_chars, left;
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	dev_t dev;
 
 	/* check size */
@@ -68,10 +68,10 @@ int generic_block_read(struct file_t *filp, char *buf, int count)
 /*
  * Generic block write.
  */
-int generic_block_write(struct file_t *filp, const char *buf, int count)
+int generic_block_write(struct file *filp, const char *buf, int count)
 {
 	size_t blocksize, pos, nb_chars, left;
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	dev_t dev;
 
 	/* check size */
@@ -114,7 +114,7 @@ int generic_block_write(struct file_t *filp, const char *buf, int count)
 /*
  * Read a block.
  */
-int block_read(struct buffer_head_t *bh)
+int block_read(struct buffer_head *bh)
 {
 	switch (major(bh->b_dev)) {
 		case DEV_ATA_MAJOR:
@@ -127,7 +127,7 @@ int block_read(struct buffer_head_t *bh)
 /*
  * Write a block.
  */
-int block_write(struct buffer_head_t *bh)
+int block_write(struct buffer_head *bh)
 {
 	switch (major(bh->b_dev)) {
 		case DEV_ATA_MAJOR:

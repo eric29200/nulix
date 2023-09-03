@@ -11,9 +11,9 @@
 /*
  * Free Ext2 direct blocks.
  */
-static void ext2_free_direct_blocks(struct inode_t *inode)
+static void ext2_free_direct_blocks(struct inode *inode)
 {
-	struct ext2_inode_info_t *ext2_inode = &inode->u.ext2_i;
+	struct ext2_inode_info *ext2_inode = &inode->u.ext2_i;
 	int i;
 
 	/* free direct blocks */
@@ -32,9 +32,9 @@ static void ext2_free_direct_blocks(struct inode_t *inode)
 /*
  * Free Ext2 single indirect blocks.
  */
-static void ext2_free_indirect_blocks(struct inode_t *inode, int offset, uint32_t *block, int addr_per_block)
+static void ext2_free_indirect_blocks(struct inode *inode, int offset, uint32_t *block, int addr_per_block)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	uint32_t *blocks;
 	int i;
 
@@ -79,9 +79,9 @@ static void ext2_free_indirect_blocks(struct inode_t *inode, int offset, uint32_
 /*
  * Free Ext2 double indirect blocks.
  */
-static void ext2_free_dindirect_blocks(struct inode_t *inode, int offset, uint32_t *block, int addr_per_block)
+static void ext2_free_dindirect_blocks(struct inode *inode, int offset, uint32_t *block, int addr_per_block)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	uint32_t *blocks;
 	int i;
 
@@ -126,9 +126,9 @@ static void ext2_free_dindirect_blocks(struct inode_t *inode, int offset, uint32
 /*
  * Free Ext2 triple indirect blocks.
  */
-static void ext2_free_tindirect_blocks(struct inode_t *inode, int offset, uint32_t *block, int addr_per_block)
+static void ext2_free_tindirect_blocks(struct inode *inode, int offset, uint32_t *block, int addr_per_block)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	uint32_t *blocks;
 	int i;
 
@@ -173,9 +173,9 @@ static void ext2_free_tindirect_blocks(struct inode_t *inode, int offset, uint32
 /*
  * Truncate a Ext2 inode.
  */
-void ext2_truncate(struct inode_t *inode)
+void ext2_truncate(struct inode *inode)
 {
-	struct ext2_inode_info_t *ext2_inode = &inode->u.ext2_i;
+	struct ext2_inode_info *ext2_inode = &inode->u.ext2_i;
 	int addr_per_block;
 
 	/* only allowed on regular files and directories */

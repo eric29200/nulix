@@ -15,9 +15,9 @@ static LIST_HEAD(unix_sockets);
 /*
  * Find a UNIX socket.
  */
-static unix_socket_t *unix_find_socket_by_inode(struct inode_t *inode)
+static unix_socket_t *unix_find_socket_by_inode(struct inode *inode)
 {
-	struct list_head_t *pos;
+	struct list_head *pos;
 	unix_socket_t *sk;
 
 	list_for_each(pos, &unix_sockets) {
@@ -34,7 +34,7 @@ static unix_socket_t *unix_find_socket_by_inode(struct inode_t *inode)
  */
 static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen)
 {
-	struct list_head_t *pos;
+	struct list_head *pos;
 	unix_socket_t *sk;
 
 	list_for_each(pos, &unix_sockets) {
@@ -51,7 +51,7 @@ static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size
  */
 static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_socket_t **res)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 	int ret = 0;
 
 	/* reset result socket */
@@ -83,7 +83,7 @@ static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_soc
 /*
  * Create a socket.
  */
-static int unix_create(struct socket_t *sock, int protocol)
+static int unix_create(struct socket *sock, int protocol)
 {
 	unix_socket_t *sk;
 
@@ -113,7 +113,7 @@ static int unix_create(struct socket_t *sock, int protocol)
 /*
  * Duplicate a socket.
  */
-static int unix_dup(struct socket_t *sock, struct socket_t *sock_new)
+static int unix_dup(struct socket *sock, struct socket *sock_new)
 {
 	unix_socket_t *sk;
 
@@ -128,7 +128,7 @@ static int unix_dup(struct socket_t *sock, struct socket_t *sock_new)
 /*
  * Release a socket.
  */
-static int unix_release(struct socket_t *sock)
+static int unix_release(struct socket *sock)
 {
 	unix_socket_t *sk;
 
@@ -151,7 +151,7 @@ static int unix_release(struct socket_t *sock)
 /*
  * Poll on a socket.
  */
-static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
+static int unix_poll(struct socket *sock, struct select_table *wait)
 {
 	unix_socket_t *sk;
 	int mask = 0;
@@ -178,11 +178,11 @@ static int unix_poll(struct socket_t *sock, struct select_table_t *wait)
 /*
  * Receive a message.
  */
-static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonblock, int flags)
+static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, int flags)
 {
 	unix_socket_t *sk, *from;
 	size_t n, i, len, count = 0;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	void *buf;
 
 	/* unused flags */
@@ -216,7 +216,7 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sk->skb_list, struct sk_buff_t, list);
+	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
 
 	/* get message */
 	buf = skb->head + sk->msg_position;
@@ -254,11 +254,11 @@ static int unix_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 /*
  * Send a message.
  */
-static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int nonblock, int flags)
+static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonblock, int flags)
 {
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	unix_socket_t *sk, *other;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	size_t len, i;
 	void *buf;
 	int ret;
@@ -315,7 +315,7 @@ static int unix_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int n
 /*
  * Bind system call (attach an address to a socket).
  */
-static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
+static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	unix_socket_t *sk;
@@ -362,11 +362,11 @@ static int unix_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 /*
  * Accept system call.
  */
-static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct sockaddr *addr)
+static int unix_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
 {
 	unix_socket_t *sk, *sk_new, *other;
-	struct list_head_t *pos;
-	struct sk_buff_t *skb;
+	struct list_head *pos;
+	struct sk_buff *skb;
 
 	/* socket must be listening */
 	if (sock->type != SOCK_STREAM || sock->state != SS_LISTENING)
@@ -386,7 +386,7 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 		/* for each received packet */
 		list_for_each(pos, &sk->skb_list) {
 			/* get socket buffer */
-			skb = list_entry(pos, struct sk_buff_t, list);
+			skb = list_entry(pos, struct sk_buff, list);
 
 			/* set new socket */
 			sock_new->state = SS_CONNECTED;
@@ -421,11 +421,11 @@ static int unix_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 /*
  * Connect system call.
  */
-static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
+static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	unix_socket_t *sk, *other;
-	struct sk_buff_t *skb;
+	struct sk_buff *skb;
 	int ret;
 
 	/* get UNIX socket */
@@ -477,7 +477,7 @@ static int unix_connect(struct socket_t *sock, const struct sockaddr *addr, size
 /*
  * Shutdown system call.
  */
-static int unix_shutdown(struct socket_t *sock, int how)
+static int unix_shutdown(struct socket *sock, int how)
 {
 	unix_socket_t *sk, *other;
 
@@ -509,7 +509,7 @@ static int unix_shutdown(struct socket_t *sock, int how)
 /*
  * Get peer name system call.
  */
-static int unix_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t *addrlen)
+static int unix_getpeername(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
 {
 	unix_socket_t *sk, *other;
 
@@ -532,7 +532,7 @@ static int unix_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t
 /*
  * Get sock name system call.
  */
-static int unix_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t *addrlen)
+static int unix_getsockname(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
 {
 	unix_socket_t *sk;
 
@@ -552,7 +552,7 @@ static int unix_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 /*
  * Get socket options system call.
  */
-static int unix_getsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t *optlen)
+static int unix_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen)
 {
 	UNUSED(sock);
 	UNUSED(level);
@@ -568,7 +568,7 @@ static int unix_getsockopt(struct socket_t *sock, int level, int optname, void *
 /*
  * Set socket options system call.
  */
-static int unix_setsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t optlen)
+static int unix_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen)
 {
 	UNUSED(sock);
 	UNUSED(level);
@@ -584,7 +584,7 @@ static int unix_setsockopt(struct socket_t *sock, int level, int optname, void *
 /*
  * Ioctl on a UNIX socket.
  */
-static int unix_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
+static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
 {
 	UNUSED(sock);
 	UNUSED(arg);

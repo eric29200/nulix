@@ -7,15 +7,15 @@
 /*
  * Semaphore structure.
  */
-struct semaphore_t {
-	int count;
-	struct wait_queue_t *wait;
+struct semaphore {
+	int 			count;
+	struct wait_queue *	wait;
 };
 
 /*
  * Init a semaphore.
  */
-static inline void init_semaphore(struct semaphore_t *sem, int count)
+static inline void init_semaphore(struct semaphore *sem, int count)
 {
 	sem->count = count;
 	sem->wait = NULL;
@@ -24,7 +24,7 @@ static inline void init_semaphore(struct semaphore_t *sem, int count)
 /*
  * Release a semaphore.
  */
-static inline void up(struct semaphore_t *sem)
+static inline void up(struct semaphore *sem)
 {
 	if (!sem)
 		return;
@@ -36,7 +36,7 @@ static inline void up(struct semaphore_t *sem)
 /*
  * Acquire a semaphore.
  */
-static inline void down(struct semaphore_t *sem)
+static inline void down(struct semaphore *sem)
 {
 	if (!sem)
 		return;

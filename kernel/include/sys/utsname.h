@@ -6,7 +6,7 @@
 /*
  * Uname structure.
  */
-struct utsname_t {
+struct utsname {
 	char sysname[UTSNAME_LEN];
 	char nodename[UTSNAME_LEN];
 	char release[UTSNAME_LEN];

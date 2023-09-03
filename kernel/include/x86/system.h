@@ -9,7 +9,7 @@
 #define USER_DATA_SEGMENT	0x20
 #define TSS_SEGMENT		0x28
 
-struct registers_t {
+struct registers {
 	uint32_t ds;
 	uint32_t edi;
 	uint32_t esi;

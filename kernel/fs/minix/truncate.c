@@ -10,7 +10,7 @@
 /*
  * Free direct blocks.
  */
-static void minix_free_direct_block(struct inode_t *inode)
+static void minix_free_direct_block(struct inode *inode)
 {
 	int i;
 
@@ -25,9 +25,9 @@ static void minix_free_direct_block(struct inode_t *inode)
 /*
  * Free single indirect blocks.
  */
-static void minix_free_indirect_blocks(struct inode_t *inode, int offset, uint32_t *block)
+static void minix_free_indirect_blocks(struct inode *inode, int offset, uint32_t *block)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	uint32_t *blocks;
 	size_t i;
 
@@ -63,9 +63,9 @@ static void minix_free_indirect_blocks(struct inode_t *inode, int offset, uint32
 /*
  * Free double indirect blocks.
  */
-static void minix_free_dindirect_blocks(struct inode_t *inode, int offset, uint32_t *block)
+static void minix_free_dindirect_blocks(struct inode *inode, int offset, uint32_t *block)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	uint32_t *blocks;
 	size_t i;
 
@@ -101,9 +101,9 @@ static void minix_free_dindirect_blocks(struct inode_t *inode, int offset, uint3
 /*
  * Free triple indirect blocks.
  */
-static void minix_free_tindirect_blocks(struct inode_t *inode, int offset, uint32_t *block)
+static void minix_free_tindirect_blocks(struct inode *inode, int offset, uint32_t *block)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	uint32_t *blocks;
 	size_t i;
 
@@ -139,7 +139,7 @@ static void minix_free_tindirect_blocks(struct inode_t *inode, int offset, uint3
 /*
  * Truncate an inode.
  */
-void minix_truncate(struct inode_t *inode)
+void minix_truncate(struct inode *inode)
 {
 	/* only allowed on regular files and directories */
 	if (!inode || !(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode)))

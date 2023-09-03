@@ -7,18 +7,18 @@
 #include <string.h>
 
 /* global inode table */
-struct inode_t *inode_table = NULL;
+struct inode *inode_table = NULL;
 static int inode_htable_bits = 0;
-static struct htable_link_t **inode_htable = NULL;
+static struct htable_link **inode_htable = NULL;
 
 /* inodes lists */
-static struct list_head_t free_inodes;
-static struct list_head_t used_inodes;
+static struct list_head free_inodes;
+static struct list_head used_inodes;
 
 /*
  * Insert an inode in hash table.
  */
-void insert_inode_hash(struct inode_t *inode)
+void insert_inode_hash(struct inode *inode)
 {
 	htable_insert(inode_htable, &inode->i_htable, inode->i_ino, inode_htable_bits);
 }
@@ -26,7 +26,7 @@ void insert_inode_hash(struct inode_t *inode)
 /*
  * Clear an inode.
  */
-void clear_inode(struct inode_t *inode)
+void clear_inode(struct inode *inode)
 {
 	/* truncate inode pages */
 	truncate_inode_pages(inode, 0);
@@ -34,7 +34,7 @@ void clear_inode(struct inode_t *inode)
 	/* clear inode */
 	list_del(&inode->i_list);
 	htable_delete(&inode->i_htable);
-	memset(inode, 0, sizeof(struct inode_t));
+	memset(inode, 0, sizeof(struct inode));
 
 	/* put it in free list */
 	list_add(&inode->i_list, &free_inodes);
@@ -43,21 +43,21 @@ void clear_inode(struct inode_t *inode)
 /*
  * Get an empty inode.
  */
-struct inode_t *get_empty_inode(struct super_block_t *sb)
+struct inode *get_empty_inode(struct super_block *sb)
 {
-	struct list_head_t *pos;
-	struct inode_t *inode;
+	struct list_head *pos;
+	struct inode *inode;
 
 	/* try to get a free inode */
 	if (!list_empty(&free_inodes)) {
-		inode = list_first_entry(&free_inodes, struct inode_t, i_list);
+		inode = list_first_entry(&free_inodes, struct inode, i_list);
 		goto found;
 	}
 
 	/* if no free inodes, try to grab a used one */
 	if (list_empty(&free_inodes)) {
 		list_for_each(pos, &used_inodes) {
-			inode = list_entry(pos, struct inode_t, i_list);
+			inode = list_entry(pos, struct inode, i_list);
 			if (!inode->i_ref) {
 				clear_inode(inode);
 				goto found;
@@ -83,15 +83,15 @@ found:
 /*
  * Find an inode in hash table.
  */
-struct inode_t *find_inode(struct super_block_t *sb, ino_t ino)
+struct inode *find_inode(struct super_block *sb, ino_t ino)
 {
-	struct htable_link_t *node;
-	struct inode_t *inode;
+	struct htable_link *node;
+	struct inode *inode;
 
 	/* try to find inode in cache */
 	node = htable_lookup(inode_htable, ino, inode_htable_bits);
 	while (node) {
-		inode = htable_entry(node, struct inode_t, i_htable);
+		inode = htable_entry(node, struct inode, i_htable);
 		if (inode->i_ino == ino && inode->i_sb == sb) {
 			inode->i_ref++;
 			return inode;
@@ -106,9 +106,9 @@ struct inode_t *find_inode(struct super_block_t *sb, ino_t ino)
 /*
  * Get an inode.
  */
-struct inode_t *iget(struct super_block_t *sb, ino_t ino)
+struct inode *iget(struct super_block *sb, ino_t ino)
 {
-	struct inode_t *inode, *tmp;
+	struct inode *inode, *tmp;
 	int ret;
 
 	/* try to find inode in table */
@@ -151,7 +151,7 @@ struct inode_t *iget(struct super_block_t *sb, ino_t ino)
 /*
  * Synchronize inode on disk.
  */
-static void sync_inode(struct inode_t *inode)
+static void sync_inode(struct inode *inode)
 {
 	/* write inode if needed */
 	if (inode->i_dirt && inode->i_sb) {
@@ -163,7 +163,7 @@ static void sync_inode(struct inode_t *inode)
 /*
  * Release an inode.
  */
-void iput(struct inode_t *inode)
+void iput(struct inode *inode)
 {
 	if (!inode)
 		return;
@@ -193,7 +193,7 @@ int iinit()
 	inode_htable_bits = blksize_bits(NR_INODE);
 
 	/* allocate inodes */
-	nr = 1 + NR_INODE * sizeof(struct inode_t) / PAGE_SIZE;
+	nr = 1 + NR_INODE * sizeof(struct inode) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
 		addr = get_free_page();
@@ -209,7 +209,7 @@ int iinit()
 	}
 
 	/* allocate inode hash table */
-	nr = 1 + NR_INODE * sizeof(struct htable_link_t *) / PAGE_SIZE;
+	nr = 1 + NR_INODE * sizeof(struct htable_link *) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
 		addr = get_free_page();

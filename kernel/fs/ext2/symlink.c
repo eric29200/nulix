@@ -6,7 +6,7 @@
 /*
  * Follow a link (inode will be released).
  */
-int ext2_fast_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
+int ext2_fast_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
 	char *target;
 	int ret;
@@ -38,7 +38,7 @@ int ext2_fast_follow_link(struct inode_t *dir, struct inode_t *inode, int flags,
 /*
  * Read value of a symbolic link.
  */
-ssize_t ext2_fast_readlink(struct inode_t *inode, char *buf, size_t bufsize)
+ssize_t ext2_fast_readlink(struct inode *inode, char *buf, size_t bufsize)
 {
 	char *target;
 	size_t len;
@@ -69,9 +69,9 @@ ssize_t ext2_fast_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 /*
  * Resolve a symbolic link.
  */
-int ext2_page_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
+int ext2_page_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	int ret;
 
 	*res_inode = NULL;
@@ -108,9 +108,9 @@ int ext2_page_follow_link(struct inode_t *dir, struct inode_t *inode, int flags,
 /*
  * Read value of a symbolic link.
  */
-ssize_t ext2_page_readlink(struct inode_t *inode, char *buf, size_t bufsize)
+ssize_t ext2_page_readlink(struct inode *inode, char *buf, size_t bufsize)
 {
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	size_t len;
 
 	/* inode must be link */

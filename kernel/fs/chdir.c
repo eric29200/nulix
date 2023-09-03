@@ -8,7 +8,7 @@
  */
 int sys_chdir(const char *path)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* get inode */
 	inode = namei(AT_FDCWD, NULL, path, 1);
@@ -35,7 +35,7 @@ int sys_chdir(const char *path)
  */
 int sys_fchdir(int fd)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* check fd */
 	if (fd >= NR_OPEN || !current_task->files->filp[fd])

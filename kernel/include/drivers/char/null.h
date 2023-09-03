@@ -3,7 +3,7 @@
 
 #include <fs/fs.h>
 
-extern struct inode_operations_t null_iops;
+extern struct inode_operations null_iops;
 
 int init_null();
 

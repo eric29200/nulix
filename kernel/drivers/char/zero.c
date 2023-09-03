@@ -8,7 +8,7 @@
 /*
  * Open zero device.
  */
-static int zero_open(struct file_t *filp)
+static int zero_open(struct file *filp)
 {
 	UNUSED(filp);
 	return 0;
@@ -17,7 +17,7 @@ static int zero_open(struct file_t *filp)
 /*
  * Close zero device.
  */
-static int zero_close(struct file_t *filp)
+static int zero_close(struct file *filp)
 {
 	UNUSED(filp);
 	return 0;
@@ -26,7 +26,7 @@ static int zero_close(struct file_t *filp)
 /*
  * Read zero device.
  */
-static int zero_read(struct file_t *filp, char *buf, int n)
+static int zero_read(struct file *filp, char *buf, int n)
 {
 	UNUSED(filp);
 	memset(buf, 0, n);
@@ -36,7 +36,7 @@ static int zero_read(struct file_t *filp, char *buf, int n)
 /*
  * Write to zero device.
  */
-static int zero_write(struct file_t *filp, const char *buf, int n)
+static int zero_write(struct file *filp, const char *buf, int n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -47,7 +47,7 @@ static int zero_write(struct file_t *filp, const char *buf, int n)
 /*
  * Zero device file operations.
  */
-static struct file_operations_t zero_fops = {
+static struct file_operations zero_fops = {
 	.open		= zero_open,
 	.close		= zero_close,
 	.read		= zero_read,
@@ -57,7 +57,7 @@ static struct file_operations_t zero_fops = {
 /*
  * Zero device inode operations.
  */
-struct inode_operations_t zero_iops = {
+struct inode_operations zero_iops = {
 	.fops		= &zero_fops,
 };
 

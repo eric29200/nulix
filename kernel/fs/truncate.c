@@ -6,7 +6,7 @@
 /*
  * Truncate system call.
  */
-int do_truncate(struct inode_t *inode, off_t length)
+int do_truncate(struct inode *inode, off_t length)
 {
 	/* set new size */
 	inode->i_size = length;
@@ -29,7 +29,7 @@ int do_truncate(struct inode_t *inode, off_t length)
  */
 int sys_truncate64(const char *pathname, off_t length)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 	int ret;
 
 	/* get inode */
@@ -49,7 +49,7 @@ int sys_truncate64(const char *pathname, off_t length)
  */
 static int do_ftruncate(int fd, off_t length)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* check file descriptor */
 	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])

@@ -72,7 +72,7 @@
 /*
  * ATA identification.
  */
-struct ata_identify_t {
+struct ata_identify {
 	uint16_t			flags;
 	uint16_t			unused1[9];
 	char				serial[20];
@@ -95,7 +95,7 @@ struct ata_identify_t {
 /*
  * ATA Physical Region Descriptor Table.
  */
-struct ata_prdt_t {
+struct ata_prdt {
 	uint32_t		buffer_phys;
 	uint16_t		transfert_size;
 	uint16_t		mark_end;
@@ -104,29 +104,29 @@ struct ata_prdt_t {
 /*
  * ATA device.
  */
-struct ata_device_t {
+struct ata_device {
 	int			id;
 	uint8_t			bus;
 	uint8_t			drive;
 	uint16_t		io_base;
-	struct ata_identify_t	identify;
+	struct ata_identify	identify;
 	char			is_atapi;
-	struct gendisk_t	hd;
-	struct ata_prdt_t	*prdt;
+	struct gendisk		hd;
+	struct ata_prdt *	prdt;
 	uint8_t *		buf;
 	uint32_t		bar4;
-	int			(*read)(struct ata_device_t *, struct buffer_head_t *, uint32_t);
-	int			(*write)(struct ata_device_t *, struct buffer_head_t *, uint32_t);
+	int			(*read)(struct ata_device *, struct buffer_head *, uint32_t);
+	int			(*write)(struct ata_device *, struct buffer_head *, uint32_t);
 };
 
 int init_ata();
-int ata_read(struct buffer_head_t *bh);
-int ata_write(struct buffer_head_t *bh);
+int ata_read(struct buffer_head *bh);
+int ata_write(struct buffer_head *bh);
 
 /* init functions */
-int ata_hd_init(struct ata_device_t *device);
-int ata_cd_init(struct ata_device_t *device);
+int ata_hd_init(struct ata_device *device);
+int ata_cd_init(struct ata_device *device);
 
-extern struct inode_operations_t ata_iops;
+extern struct inode_operations ata_iops;
 
 #endif

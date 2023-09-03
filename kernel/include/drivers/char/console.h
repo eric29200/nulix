@@ -57,7 +57,7 @@ struct vt_mode {
 /*
  * Console structure.
  */
-struct vc_t {
+struct vc {
 	int			vc_num;							/* console id */
 	uint32_t		vc_pars[NPARS];						/* escaped pars */
 	uint32_t		vc_npars;						/* number of escaped pars */
@@ -82,11 +82,11 @@ struct vc_t {
 	struct vt_mode		vt_mode;						/* vt mode (AUTO or PROCESS) */
 	pid_t			vt_pid;							/* vt pid */
 	int			vt_newvt;						/* new asked vt */
-	struct framebuffer_t	fb;							/* framebuffer */
+	struct framebuffer	fb;							/* framebuffer */
 };
 
 extern uint16_t console_translations[][256];
-extern struct wait_queue_t *vt_activate_wq;
+extern struct wait_queue *vt_activate_wq;
 
 int init_console();
 void console_change(int n);

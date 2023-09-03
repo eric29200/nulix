@@ -6,9 +6,9 @@
 /*
  * Directory lookup.
  */
-int devfs_lookup(struct inode_t *dir, const char *name, size_t name_len, struct inode_t **res_inode)
+int devfs_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
-	struct devfs_entry_t *de_dir, *de;
+	struct devfs_entry *de_dir, *de;
 
 	/* check directory */
 	if (!dir)

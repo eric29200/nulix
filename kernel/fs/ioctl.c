@@ -8,7 +8,7 @@
  */
 int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 {
-	struct file_t *filp;
+	struct file *filp;
 	int on;
 
 	/* check input args */

@@ -159,7 +159,7 @@ static const void *syscalls[] = {
 /*
  * System call dispatcher.
  */
-static void syscall_handler(struct registers_t *regs)
+static void syscall_handler(struct registers *regs)
 {
 	int ret;
 
@@ -170,7 +170,7 @@ static void syscall_handler(struct registers_t *regs)
 	}
 
 	/* save current registers */
-	memcpyb(&current_task->user_regs, regs, sizeof(struct registers_t));
+	memcpyb(&current_task->user_regs, regs, sizeof(struct registers));
 
 	/* execute system call */
 	current_task->in_syscall = 1;
@@ -178,7 +178,7 @@ static void syscall_handler(struct registers_t *regs)
 	current_task->in_syscall = 0;
 
 	/* restore registers and set return value */
-	memcpyb(regs, &current_task->user_regs, sizeof(struct registers_t));
+	memcpyb(regs, &current_task->user_regs, sizeof(struct registers));
 	regs->eax = ret;
 }
 

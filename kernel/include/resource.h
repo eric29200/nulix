@@ -23,9 +23,9 @@
 /*
  * Process usage statistics.
  */
-struct rusage_t {
-	struct timeval_t	ru_utime;	/* user CPU time used */
-	struct timeval_t	ru_stime; 	/* system CPU time used */
+struct rusage {
+	struct timeval		ru_utime;	/* user CPU time used */
+	struct timeval		ru_stime; 	/* system CPU time used */
 	long			ru_maxrss;	/* maximum resident set size */
 	long			ru_ixrss;	/* integral shared memory size */
 	long			ru_idrss;	/* integral unshared data size */
@@ -45,7 +45,7 @@ struct rusage_t {
 /*
  * Resource limit.
  */
-struct rlimit_t {
+struct rlimit {
 	uint32_t		rlim_cur;	/* soft limit */
 	uint32_t		rlim_max;	/* hard limit */
 };
@@ -53,7 +53,7 @@ struct rlimit_t {
 /*
  * Resource limit.
  */
-struct rlimit64_t {
+struct rlimit64 {
 	uint64_t		rlim_cur;	/* soft limit */
 	uint64_t		rlim_max;	/* hard limit */
 };

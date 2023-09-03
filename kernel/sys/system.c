@@ -12,7 +12,7 @@
 /*
  * Get time system call.
  */
-int sys_clock_gettime64(clockid_t clockid, struct timespec_t *tp)
+int sys_clock_gettime64(clockid_t clockid, struct timespec *tp)
 {
 	switch (clockid) {
 		case CLOCK_REALTIME:
@@ -34,7 +34,7 @@ int sys_clock_gettime64(clockid_t clockid, struct timespec_t *tp)
 /*
  * Get time system call.
  */
-int sys_clock_gettime32(clockid_t clockid, struct old_timespec_t *tp)
+int sys_clock_gettime32(clockid_t clockid, struct old_timespec *tp)
 {
 	switch (clockid) {
 		case CLOCK_REALTIME:
@@ -68,13 +68,13 @@ int sys_getrandom(void *buf, size_t buflen, unsigned int flags)
 /*
  * Get rusage system call.
  */
-int sys_getrusage(int who, struct rusage_t *ru)
+int sys_getrusage(int who, struct rusage *ru)
 {
 	if (who != RUSAGE_SELF && who != RUSAGE_CHILDREN)
 		return -EINVAL;
 
 	/* reset rusage */
-	memset(ru, 0, sizeof(struct rusage_t));
+	memset(ru, 0, sizeof(struct rusage));
 
 	return 0;
 }
@@ -82,7 +82,7 @@ int sys_getrusage(int who, struct rusage_t *ru)
 /*
  * Nano sleep system call.
  */
-int sys_nanosleep(const struct old_timespec_t *req, struct old_timespec_t *rem)
+int sys_nanosleep(const struct old_timespec *req, struct old_timespec *rem)
 {
 	time_t timeout;
 
@@ -126,9 +126,9 @@ int sys_pause()
 /*
  * Prlimit system call.
  */
-int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct rlimit64_t *old_limit)
+int sys_prlimit64(pid_t pid, int resource, struct rlimit64 *new_limit, struct rlimit64 *old_limit)
 {
-	struct task_t *task;
+	struct task *task;
 
 	/* check resource */
 	if (resource >= RLIM_NLIMITS)
@@ -150,7 +150,7 @@ int sys_prlimit64(pid_t pid, int resource, struct rlimit64_t *new_limit, struct 
 
 	/* get limit */
 	if (old_limit) {
-		memset(old_limit, 0, sizeof(struct rlimit64_t));
+		memset(old_limit, 0, sizeof(struct rlimit64));
 		old_limit->rlim_cur = task->rlim[resource].rlim_cur;
 		old_limit->rlim_max = task->rlim[resource].rlim_max;
 	}
@@ -225,7 +225,7 @@ static void itimer_handler(void *arg)
 /*
  * Set an interval timer (send SIGALRM signal at expiration).
  */
-int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerval_t *old_value)
+int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value)
 {
 	uint32_t expires_ms;
 
@@ -258,9 +258,9 @@ int sys_setitimer(int which, const struct itimerval_t *new_value, struct itimerv
 /*
  * System info system call.
  */
-int sys_sysinfo(struct sysinfo_t *info)
+int sys_sysinfo(struct sysinfo *info)
 {
-	memset(info, 0, sizeof(struct sysinfo_t));
+	memset(info, 0, sizeof(struct sysinfo));
 	info->uptime = jiffies / HZ;
 	info->totalram = 0;
 	return 0;
@@ -279,7 +279,7 @@ mode_t sys_umask(mode_t mask)
 /*
  * Uname system call.
  */
-int sys_uname(struct utsname_t *buf)
+int sys_uname(struct utsname *buf)
 {
 	if (!buf)
 		return -EINVAL;

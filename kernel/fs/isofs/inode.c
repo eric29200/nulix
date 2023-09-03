@@ -6,7 +6,7 @@
 /*
  * ISOFS file operations.
  */
-struct file_operations_t isofs_file_fops = {
+struct file_operations isofs_file_fops = {
 	.read		= isofs_file_read,
 	.mmap		= generic_file_mmap,
 };
@@ -14,14 +14,14 @@ struct file_operations_t isofs_file_fops = {
 /*
  * ISOFS directory operations.
  */
-struct file_operations_t isofs_dir_fops = {
+struct file_operations isofs_dir_fops = {
 	.getdents64	= isofs_getdents64,
 };
 
 /*
  * ISOFS file inode operations.
  */
-struct inode_operations_t isofs_file_iops = {
+struct inode_operations isofs_file_iops = {
 	.fops		= &isofs_file_fops,
 	.bmap		= isofs_bmap,
 	.readpage	= generic_readpage,
@@ -30,7 +30,7 @@ struct inode_operations_t isofs_file_iops = {
 /*
  * ISOFS directory inode operations.
  */
-struct inode_operations_t isofs_dir_iops = {
+struct inode_operations isofs_dir_iops = {
 	.fops		= &isofs_dir_fops,
 	.lookup		= isofs_lookup,
 };
@@ -38,12 +38,12 @@ struct inode_operations_t isofs_dir_iops = {
 /*
  * Read a ISOFS inode.
  */
-int isofs_read_inode(struct inode_t *inode)
+int isofs_read_inode(struct inode *inode)
 {
-	struct iso_directory_record_t *raw_inode;
-	struct super_block_t *sb = inode->i_sb;
+	struct iso_directory_record *raw_inode;
+	struct super_block *sb = inode->i_sb;
 	int offset, frag1, err = 0;
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 	void *cpnt = NULL;
 	uint32_t block;
 	uint8_t *pnt;
@@ -56,7 +56,7 @@ int isofs_read_inode(struct inode_t *inode)
 
 	/* get raw inode (= directory record) */
 	pnt = ((uint8_t *) bh->b_data + (inode->i_ino & (sb->s_blocksize - 1)));
-	raw_inode = (struct iso_directory_record_t *) pnt;
+	raw_inode = (struct iso_directory_record *) pnt;
 
 	/* if raw inode is on 2 blocks, copy it in memory */
 	if ((inode->i_ino & (sb->s_blocksize - 1)) + *pnt > sb->s_blocksize) {
@@ -88,7 +88,7 @@ int isofs_read_inode(struct inode_t *inode)
 
 		/* get full raw inode */
 		pnt = (uint8_t *) cpnt;
-		raw_inode = (struct iso_directory_record_t *) pnt;
+		raw_inode = (struct iso_directory_record *) pnt;
 	}
 
 	/* set inode */
@@ -124,9 +124,9 @@ int isofs_read_inode(struct inode_t *inode)
 /*
  * Get or create a buffer.
  */
-struct buffer_head_t *isofs_getblk(struct inode_t *inode, int block, int create)
+struct buffer_head *isofs_getblk(struct inode *inode, int block, int create)
 {
-	struct super_block_t *sb = inode->i_sb;
+	struct super_block *sb = inode->i_sb;
 
 	/* isofs is read only */
 	if (create)
@@ -144,7 +144,7 @@ struct buffer_head_t *isofs_getblk(struct inode_t *inode, int block, int create)
 /*
  * Get a block number.
  */
-int isofs_bmap(struct inode_t *inode, int block)
+int isofs_bmap(struct inode *inode, int block)
 {
 	if (block < 0)
 		return 0;

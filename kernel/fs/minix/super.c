@@ -7,10 +7,10 @@
 /*
  * Read super block.
  */
-static int minix_read_super(struct super_block_t *sb, void *data, int silent)
+static int minix_read_super(struct super_block *sb, void *data, int silent)
 {
-	struct minix3_super_block_t *msb3;
-	struct minix_sb_info_t *sbi;
+	struct minix3_super_block *msb3;
+	struct minix_sb_info *sbi;
 	int i, ret = -EINVAL;
 	uint32_t block;
 
@@ -18,7 +18,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 	UNUSED(data);
 
 	/* allocate minix super block */
-	sb->s_fs_info = sbi = (struct minix_sb_info_t *) kmalloc(sizeof(struct minix_sb_info_t));
+	sb->s_fs_info = sbi = (struct minix_sb_info *) kmalloc(sizeof(struct minix_sb_info));
 	if (!sbi)
 		return -ENOMEM;
 
@@ -33,7 +33,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 		goto err_bad_sb;
 
 	/* check super block */
-	msb3 = (struct minix3_super_block_t *) sbi->s_sbh->b_data;
+	msb3 = (struct minix3_super_block *) sbi->s_sbh->b_data;
 	if (msb3->s_magic != MINIX3_MAGIC)
 		goto err_bad_magic;
 
@@ -61,7 +61,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 	set_blocksize(sb->s_dev, sb->s_blocksize);
 
 	/* allocate inodes bitmap */
-	sbi->s_imap = (struct buffer_head_t **) kmalloc(sizeof(struct buffer_head_t *) * sbi->s_imap_blocks);
+	sbi->s_imap = (struct buffer_head **) kmalloc(sizeof(struct buffer_head *) * sbi->s_imap_blocks);
 	if (!sbi->s_imap) {
 		ret = -ENOMEM;
 		goto err_no_map;
@@ -81,7 +81,7 @@ static int minix_read_super(struct super_block_t *sb, void *data, int silent)
 	}
 
 	/* allocate zones bitmap */
-	sbi->s_zmap = (struct buffer_head_t **) kmalloc(sizeof(struct buffer_head_t *) * sbi->s_zmap_blocks);
+	sbi->s_zmap = (struct buffer_head **) kmalloc(sizeof(struct buffer_head *) * sbi->s_zmap_blocks);
 	if (!sbi->s_zmap) {
 		ret = -ENOMEM;
 		goto err_no_map;
@@ -152,11 +152,11 @@ err:
 /*
  * Get statistics on file system.
  */
-static void minix_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+static void minix_statfs(struct super_block *sb, struct statfs64 *buf)
 {
-	struct minix_sb_info_t *sbi = minix_sb(sb);
+	struct minix_sb_info *sbi = minix_sb(sb);
 
-	memset(buf, 0, sizeof(struct statfs64_t));
+	memset(buf, 0, sizeof(struct statfs64));
 	buf->f_type = sb->s_magic;
 	buf->f_bsize = sb->s_blocksize;
 	buf->f_blocks = (sbi->s_nzones - sbi->s_firstdatazone) << sbi->s_log_zone_size;
@@ -170,9 +170,9 @@ static void minix_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 /*
  * Release a super block.
  */
-static void minix_put_super(struct super_block_t *sb)
+static void minix_put_super(struct super_block *sb)
 {
-	struct minix_sb_info_t *sbi = minix_sb(sb);
+	struct minix_sb_info *sbi = minix_sb(sb);
 	int i;
 
 	/* release and free imap */
@@ -197,7 +197,7 @@ static void minix_put_super(struct super_block_t *sb)
 /*
  * Minix super operations.
  */
-struct super_operations_t minix_sops = {
+struct super_operations minix_sops = {
 	.put_super		= minix_put_super,
 	.read_inode		= minix_read_inode,
 	.write_inode		= minix_write_inode,
@@ -208,7 +208,7 @@ struct super_operations_t minix_sops = {
 /*
  * Minix file system.
  */
-static struct file_system_t minix_fs = {
+static struct file_system minix_fs = {
 	.name			= "minix",
 	.requires_dev		= 1,
 	.read_super		= minix_read_super,

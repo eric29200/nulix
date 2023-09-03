@@ -9,7 +9,7 @@
 /*
  * Read system call.
  */
-ssize_t do_read(struct file_t *filp, char *buf, int count)
+ssize_t do_read(struct file *filp, char *buf, int count)
 {
 	/* no data to read */
 	if (!count)
@@ -25,7 +25,7 @@ ssize_t do_read(struct file_t *filp, char *buf, int count)
 /*
  * Write system call.
  */
-ssize_t do_write(struct file_t *filp, const char *buf, int count)
+ssize_t do_write(struct file *filp, const char *buf, int count)
 {
 	/* no data to write */
 	if (!count)
@@ -41,7 +41,7 @@ ssize_t do_write(struct file_t *filp, const char *buf, int count)
 /*
  * Generic lseek.
  */
-off_t generic_lseek(struct file_t *filp, off_t offset, int whence)
+off_t generic_lseek(struct file *filp, off_t offset, int whence)
 {
 	off_t new_offset;
 
@@ -68,7 +68,7 @@ off_t generic_lseek(struct file_t *filp, off_t offset, int whence)
 /*
  * Lseek system call.
  */
-off_t do_lseek(struct file_t *filp, off_t offset, int whence)
+off_t do_lseek(struct file *filp, off_t offset, int whence)
 {
 	/* specific lseek */
 	if (filp->f_op && filp->f_op->lseek)
@@ -112,7 +112,7 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
 /*
  * Pread system call.
  */
-static int do_pread64(struct file_t *filp, void *buf, size_t count, off_t offset)
+static int do_pread64(struct file *filp, void *buf, size_t count, off_t offset)
 {
 	off_t offset_ori;
 	int ret;
@@ -169,7 +169,7 @@ int sys_write(int fd, const char *buf, int count)
 /*
  * Read data into multiple buffers.
  */
-ssize_t sys_readv(int fd, const struct iovec_t *iov, int iovcnt)
+ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 {
 	ssize_t ret = 0, n;
 	int i;
@@ -197,7 +197,7 @@ ssize_t sys_readv(int fd, const struct iovec_t *iov, int iovcnt)
 /*
  * Write data from multiple buffers.
  */
-ssize_t sys_writev(int fd, const struct iovec_t *iov, int iovcnt)
+ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 {
 	ssize_t ret = 0, n;
 	int i;

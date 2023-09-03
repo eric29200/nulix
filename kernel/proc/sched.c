@@ -10,17 +10,17 @@
 #include <stderr.h>
 
 LIST_HEAD(tasks_list);					/* active processes list */
-static struct task_t *kinit_task;			/* kernel init task (pid = 0) */
-struct task_t *init_task;				/* user init task (pid = 1) */
-struct task_t *current_task = NULL;			/* current task */
+static struct task *kinit_task;				/* kernel init task (pid = 0) */
+struct task *init_task;					/* user init task (pid = 1) */
+struct task *current_task = NULL;			/* current task */
 static pid_t next_pid = 1;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
 
-struct kernel_stat_t kstat;				/* kernel statistics */
+struct kernel_stat kstat;				/* kernel statistics */
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
-extern void return_user_mode(struct registers_t *regs);
+extern void return_user_mode(struct registers *regs);
 
 /* average run */
 unsigned long avenrun[3] = { 0, 0, 0 };
@@ -37,13 +37,13 @@ pid_t get_next_pid()
 /*
  * Find a task matching pid.
  */
-struct task_t *find_task(pid_t pid)
+struct task *find_task(pid_t pid)
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct list_head *pos;
+	struct task *task;
 
 	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (task->pid == pid)
 			return task;
 	}
@@ -57,7 +57,7 @@ struct task_t *find_task(pid_t pid)
 int init_scheduler(void (*kinit_func)())
 {
 	/* reset kernel stats */
-	memset(&kstat, 0, sizeof(struct kernel_stat_t));
+	memset(&kstat, 0, sizeof(struct kernel_stat));
 
 	/* create init task */
 	kinit_task = create_kernel_thread(kinit_func, NULL);
@@ -70,10 +70,10 @@ int init_scheduler(void (*kinit_func)())
 /*
  * Get next task to run.
  */
-static struct task_t *get_next_task()
+static struct task *get_next_task()
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct list_head *pos;
+	struct task *task;
 
 	/* first scheduler call : return kinit */
 	if (!current_task)
@@ -84,7 +84,7 @@ static struct task_t *get_next_task()
 		if (pos == &tasks_list)
 			continue;
 
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (task->state == TASK_RUNNING)
 			return task;
 	}
@@ -114,15 +114,15 @@ int spawn_init()
  */
 void schedule()
 {
-	struct task_t *prev_task, *task;
-	struct list_head_t *pos;
+	struct task *prev_task, *task;
+	struct list_head *pos;
 
 	/* update timers */
 	timer_update();
 
 	/* update timeout on all tasks and wake them if needed */
 	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (task && task->timeout && task->timeout < jiffies) {
 			task->timeout = 0;
 
@@ -152,10 +152,10 @@ void schedule()
 /*
  * Add to a wait queue.
  */
-void add_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait)
+void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait)
 {
-	struct wait_queue_t *next = WAIT_QUEUE_HEAD(wq);
-	struct wait_queue_t *head = *wq;
+	struct wait_queue *next = WAIT_QUEUE_HEAD(wq);
+	struct wait_queue *head = *wq;
 
 	if (head)
 		next = head;
@@ -167,13 +167,13 @@ void add_wait_queue(struct wait_queue_t **wq, struct wait_queue_t *wait)
 /*
  * Remove from a wait queue.
  */
-void remove_wait_queue(struct wait_queue_t *wait)
+void remove_wait_queue(struct wait_queue *wait)
 {
-	struct wait_queue_t *next = wait->next;
-	struct wait_queue_t *head = next;
+	struct wait_queue *next = wait->next;
+	struct wait_queue *head = next;
 
 	for (;;) {
-		struct wait_queue_t *nextlist = head->next;
+		struct wait_queue *nextlist = head->next;
 
 		if (nextlist == wait)
 			break;
@@ -187,9 +187,9 @@ void remove_wait_queue(struct wait_queue_t *wait)
 /*
  * Add wait queue to select table.
  */
-void select_wait(struct wait_queue_t **wait_address, struct select_table_t *st)
+void select_wait(struct wait_queue **wait_address, struct select_table *st)
 {
-	struct select_table_entry_t *entry;
+	struct select_table_entry *entry;
 
 	if (!st || !wait_address)
 		return;
@@ -211,9 +211,9 @@ void select_wait(struct wait_queue_t **wait_address, struct select_table_t *st)
 /*
  * Sleep on a wait queue.
  */
-void task_sleep(struct wait_queue_t **wq)
+void task_sleep(struct wait_queue **wq)
 {
-	struct wait_queue_t wait = { current_task, NULL };
+	struct wait_queue wait = { current_task, NULL };
 
 	/* set task's state */
 	current_task->state = TASK_SLEEPING;
@@ -231,9 +231,9 @@ void task_sleep(struct wait_queue_t **wq)
 /*
  * Wake up one task sleeping on a wait queue.
  */
-void task_wakeup(struct wait_queue_t **wq)
+void task_wakeup(struct wait_queue **wq)
 {
-	struct wait_queue_t *tmp;
+	struct wait_queue *tmp;
 
 	/* check first task */
 	if (!wq)
@@ -256,9 +256,9 @@ void task_wakeup(struct wait_queue_t **wq)
 /*
  * Wake up all tasks sleeping on a wait queue.
  */
-void task_wakeup_all(struct wait_queue_t **wq)
+void task_wakeup_all(struct wait_queue **wq)
 {
-	struct wait_queue_t *tmp;
+	struct wait_queue *tmp;
 
 	if (!wq)
 		return;
@@ -279,13 +279,13 @@ void task_wakeup_all(struct wait_queue_t **wq)
 /*
  * Get task with a pid.
  */
-struct task_t *get_task(pid_t pid)
+struct task *get_task(pid_t pid)
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct list_head *pos;
+	struct task *task;
 
 	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (task->pid == pid)
 			return task;
 	}
@@ -296,7 +296,7 @@ struct task_t *get_task(pid_t pid)
 /*
  * Send a signal to a task.
  */
-static void __task_signal(struct task_t *task, int sig)
+static void __task_signal(struct task *task, int sig)
 {
 	/* just check permission */
 	if (sig == 0)
@@ -315,7 +315,7 @@ static void __task_signal(struct task_t *task, int sig)
  */
 int task_signal(pid_t pid, int sig)
 {
-	struct task_t *task;
+	struct task *task;
 
 	/* get task */
 	task = get_task(pid);
@@ -333,12 +333,12 @@ int task_signal(pid_t pid, int sig)
  */
 int task_signal_group(pid_t pgrp, int sig)
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct list_head *pos;
+	struct task *task;
 	int ret = -ESRCH;
 
 	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (task->pgrp == pgrp) {
 			__task_signal(task, sig);
 			ret = 0;
@@ -353,11 +353,11 @@ int task_signal_group(pid_t pgrp, int sig)
  */
 int task_signal_all(int sig)
 {
-	struct list_head_t *pos;
-	struct task_t *task;
+	struct list_head *pos;
+	struct task *task;
 
 	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task_t, list);
+		task = list_entry(pos, struct task, list);
 		if (task->pid > 1)
 			__task_signal(task, sig);
 	}
@@ -390,7 +390,7 @@ pid_t sys_getppid()
  */
 pid_t sys_getpgid(pid_t pid)
 {
-	struct task_t *task;
+	struct task *task;
 
 	/* get matching task or current task */
 	if (pid == 0)
@@ -451,7 +451,7 @@ uid_t sys_geteuid()
  */
 int sys_getsid(pid_t pid)
 {
-	struct task_t *task;
+	struct task *task;
 
 	/* return current session */
 	if (!pid)
@@ -470,7 +470,7 @@ int sys_getsid(pid_t pid)
  */
 int sys_setpgid(pid_t pid, pid_t pgid)
 {
-	struct task_t *task;
+	struct task *task;
 
 	/* get matching task or current task */
 	if (pid == 0)

@@ -6,9 +6,9 @@
 /*
  * Get statistics on file system.
  */
-static void devfs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+static void devfs_statfs(struct super_block *sb, struct statfs64 *buf)
 {
-	memset(buf, 0, sizeof(struct statfs64_t));
+	memset(buf, 0, sizeof(struct statfs64));
 	buf->f_type = sb->s_magic;
 	buf->f_bsize = sb->s_blocksize;
 }
@@ -16,7 +16,7 @@ static void devfs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 /*
  * Release a super block.
  */
-static void devfs_put_super(struct super_block_t *sb)
+static void devfs_put_super(struct super_block *sb)
 {
 	sb->s_dev = 0;
 }
@@ -24,7 +24,7 @@ static void devfs_put_super(struct super_block_t *sb)
 /*
  * Superblock operations.
  */
-static struct super_operations_t devfs_sops = {
+static struct super_operations devfs_sops = {
 	.put_super		= devfs_put_super,
 	.read_inode		= devfs_read_inode,
 	.write_inode		= devfs_write_inode,
@@ -35,9 +35,9 @@ static struct super_operations_t devfs_sops = {
 /*
  * Read super block.
  */
-static int devfs_read_super(struct super_block_t *sb, void *data, int silent)
+static int devfs_read_super(struct super_block *sb, void *data, int silent)
 {
-	struct devfs_entry_t *root_entry;
+	struct devfs_entry *root_entry;
 	int ret = -EINVAL;
 
 	/* unused data */
@@ -72,7 +72,7 @@ err:
 /*
  * Dev file system.
  */
-static struct file_system_t dev_fs = {
+static struct file_system dev_fs = {
 	.name		= "devfs",
 	.requires_dev	= 0,
 	.read_super	= devfs_read_super,

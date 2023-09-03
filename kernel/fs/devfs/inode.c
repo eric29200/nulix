@@ -6,14 +6,14 @@
 /*
  * Directory operations.
  */
-static struct file_operations_t devfs_dir_fops = {
+static struct file_operations devfs_dir_fops = {
 	.getdents64		= devfs_getdents64,
 };
 
 /*
  * Directory inode operations.
  */
-static struct inode_operations_t devfs_dir_iops = {
+static struct inode_operations devfs_dir_iops = {
 	.fops			= &devfs_dir_fops,
 	.lookup			= devfs_lookup,
 };
@@ -21,7 +21,7 @@ static struct inode_operations_t devfs_dir_iops = {
 /*
  * Symbolic link inode operations.
  */
-static struct inode_operations_t devfs_symlink_iops = {
+static struct inode_operations devfs_symlink_iops = {
 	.follow_link		= devfs_follow_link,
 	.readlink		= devfs_readlink,
 };
@@ -29,7 +29,7 @@ static struct inode_operations_t devfs_symlink_iops = {
 /*
  * Read an inode.
  */
-int devfs_read_inode(struct inode_t *inode)
+int devfs_read_inode(struct inode *inode)
 {
 	UNUSED(inode);
 	return -ENOENT;
@@ -38,7 +38,7 @@ int devfs_read_inode(struct inode_t *inode)
 /*
  * Write an inode.
  */
-int devfs_write_inode(struct inode_t *inode)
+int devfs_write_inode(struct inode *inode)
 {
 	/* nothing to do */
 	UNUSED(inode);
@@ -48,7 +48,7 @@ int devfs_write_inode(struct inode_t *inode)
 /*
  * Put an inode.
  */
-int devfs_put_inode(struct inode_t *inode)
+int devfs_put_inode(struct inode *inode)
 {
 	/* check inode */
 	if (!inode)
@@ -71,9 +71,9 @@ int devfs_put_inode(struct inode_t *inode)
 /*
  * Get a devfs inode.
  */
-struct inode_t *devfs_iget(struct super_block_t *sb, struct devfs_entry_t *de)
+struct inode *devfs_iget(struct super_block *sb, struct devfs_entry *de)
 {
-	struct inode_t *inode, *tmp;
+	struct inode *inode, *tmp;
 
 	/* try to find inode in global table */
 	inode = find_inode(sb, de->ino);

@@ -5,7 +5,7 @@
 
 extern time_t startup_time;
 extern volatile time_t jiffies;
-extern struct kernel_timeval_t xtimes;
+extern struct kernel_timeval xtimes;
 
 #define HZ				100
 #define CURRENT_TIME			(startup_time + (jiffies / HZ))
@@ -23,7 +23,7 @@ extern struct kernel_timeval_t xtimes;
 /*
  * Kernel time value structure.
  */
-struct kernel_timeval_t {
+struct kernel_timeval {
 	time_t	tv_sec;			/* seconds */
 	time_t	tv_nsec;		/* nano seconds */
 };
@@ -31,7 +31,7 @@ struct kernel_timeval_t {
 /*
  * Time value structure.
  */
-struct timeval_t {
+struct timeval {
 	int64_t	tv_sec;			/* seconds */
 	int64_t	tv_usec;		/* micro seconds */
 };
@@ -39,7 +39,7 @@ struct timeval_t {
 /*
  * Time value structure.
  */
-struct old_timeval_t {
+struct old_timeval {
 	long	tv_sec;			/* seconds */
 	long	tv_usec;		/* micro seconds */
 };
@@ -47,7 +47,7 @@ struct old_timeval_t {
 /*
  * Time specifications.
  */
-struct timespec_t {
+struct timespec {
 	int64_t	tv_sec;			/* seconds */
 	int64_t	tv_nsec;		/* nano seconds */
 };
@@ -55,7 +55,7 @@ struct timespec_t {
 /*
  * Time specifications.
  */
-struct old_timespec_t {
+struct old_timespec {
 	long	tv_sec;			/* seconds */
 	long	tv_nsec;		/* nano seconds */
 };
@@ -63,7 +63,7 @@ struct old_timespec_t {
 /*
  * Timer value.
  */
-struct itimerval_t {
+struct itimerval {
 	int32_t it_interval_sec;	/* timer interval in seconds */
 	int32_t it_interval_usec;	/* timer interval in micro seconds */
 	int32_t it_value_sec;		/* current value in seconds */
@@ -83,7 +83,7 @@ static inline time_t ms_to_jiffies(uint32_t ms)
 /*
  * Convert timespec to kernel time value.
  */
-static inline void timespec_to_kernel_timeval(const struct timespec_t *ts, struct kernel_timeval_t *tv)
+static inline void timespec_to_kernel_timeval(const struct timespec *ts, struct kernel_timeval *tv)
 {
 	tv->tv_sec = ts->tv_sec;
 	tv->tv_nsec = ts->tv_nsec;
@@ -92,7 +92,7 @@ static inline void timespec_to_kernel_timeval(const struct timespec_t *ts, struc
 /*
  * Convert old time value to kernel time value.
  */
-static inline void old_timeval_to_kernel_timeval(const struct old_timeval_t *otv, struct kernel_timeval_t *tv)
+static inline void old_timeval_to_kernel_timeval(const struct old_timeval *otv, struct kernel_timeval *tv)
 {
 	tv->tv_sec = otv->tv_sec;
 	tv->tv_nsec = otv->tv_usec * 1000L;
@@ -101,7 +101,7 @@ static inline void old_timeval_to_kernel_timeval(const struct old_timeval_t *otv
 /*
  * Convert kernel time value to jiffies.
  */
-static inline time_t kernel_timeval_to_jiffies(const struct kernel_timeval_t *tv)
+static inline time_t kernel_timeval_to_jiffies(const struct kernel_timeval *tv)
 {
 	time_t nsec = tv->tv_nsec;
 
@@ -115,7 +115,7 @@ static inline time_t kernel_timeval_to_jiffies(const struct kernel_timeval_t *tv
 /*
  * Convert timespec to jiffies.
  */
-static inline time_t timespec_to_jiffies(const struct timespec_t *ts)
+static inline time_t timespec_to_jiffies(const struct timespec *ts)
 {
 	time_t nsec = ts->tv_nsec;
 
@@ -129,7 +129,7 @@ static inline time_t timespec_to_jiffies(const struct timespec_t *ts)
 /*
  * Convert jiffies to timespec.
  */
-static inline void jiffies_to_timespec(time_t jiffies, struct timespec_t *ts)
+static inline void jiffies_to_timespec(time_t jiffies, struct timespec *ts)
 {
 	ts->tv_sec = jiffies / HZ;
 	ts->tv_nsec = jiffies % HZ;
@@ -138,7 +138,7 @@ static inline void jiffies_to_timespec(time_t jiffies, struct timespec_t *ts)
 /*
  * Convert timespec to jiffies.
  */
-static inline time_t old_timespec_to_jiffies(const struct old_timespec_t *ts)
+static inline time_t old_timespec_to_jiffies(const struct old_timespec *ts)
 {
 	time_t nsec = ts->tv_nsec;
 
@@ -152,7 +152,7 @@ static inline time_t old_timespec_to_jiffies(const struct old_timespec_t *ts)
 /*
  * Convert jiffies to timespec.
  */
-static inline void jiffies_to_old_timespec(time_t jiffies, struct old_timespec_t *ts)
+static inline void jiffies_to_old_timespec(time_t jiffies, struct old_timespec *ts)
 {
 	ts->tv_nsec = (jiffies % HZ) * (1000000000L / HZ);
 	ts->tv_sec = jiffies / HZ;

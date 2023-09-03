@@ -4,34 +4,34 @@
 #include <stdio.h>
 #include <stderr.h>
 
-#define HEAP_BLOCK_DATA(block)			((uint32_t) (block) + sizeof(struct heap_block_t))
+#define HEAP_BLOCK_DATA(block)			((uint32_t) (block) + sizeof(struct heap_block))
 #define HEAP_BLOCK_ALIGNED(block)		(PAGE_ALIGNED(HEAP_BLOCK_DATA(block)))
 
 /*
  * Create a heap.
  */
-struct heap_t *heap_create(uint32_t start_address, size_t size)
+struct heap *heap_create(uint32_t start_address, size_t size)
 {
-	struct heap_t *heap;
+	struct heap *heap;
 
 	/* check heap size */
-	if (size <= sizeof(struct heap_block_t))
+	if (size <= sizeof(struct heap_block))
 		return NULL;
 
 	/* allocate new heap */
-	heap = kmalloc(sizeof(struct heap_t));
+	heap = kmalloc(sizeof(struct heap));
 	if (!heap)
 		return NULL;
 
 	/* set start/end addresses */
-	heap->first_block = (struct heap_block_t *) start_address;
+	heap->first_block = (struct heap_block *) start_address;
 	heap->start_address = start_address;
 	heap->end_address = start_address + size;
 	heap->size = size;
 
 	/* create first block */
 	heap->first_block->magic = HEAP_MAGIC;
-	heap->first_block->size = size - sizeof(struct heap_block_t);
+	heap->first_block->size = size - sizeof(struct heap_block);
 	heap->first_block->free = 1;
 	heap->first_block->prev = NULL;
 	heap->first_block->next = NULL;
@@ -43,9 +43,9 @@ struct heap_t *heap_create(uint32_t start_address, size_t size)
 /*
  * Find a free block.
  */
-static struct heap_block_t *heap_find_free_block(struct heap_t *heap, uint8_t page_aligned, size_t size)
+static struct heap_block *heap_find_free_block(struct heap *heap, uint8_t page_aligned, size_t size)
 {
-	struct heap_block_t *block;
+	struct heap_block *block;
 	uint32_t page_offset;
 
 	for (block = heap->first_block; block != NULL; block = block->next) {
@@ -69,9 +69,9 @@ static struct heap_block_t *heap_find_free_block(struct heap_t *heap, uint8_t pa
 /*
  * Allocate memory on the heap.
  */
-void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
+void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned)
 {
-	struct heap_block_t *block, *new_block;
+	struct heap_block *block, *new_block;
 	uint32_t page_offset;
 
 	/* find free block */
@@ -108,11 +108,11 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 	}
 
 	/* create new last free block with remaining size */
-	if (block == heap->last_block && block->size - size > sizeof(struct heap_block_t)) {
+	if (block == heap->last_block && block->size - size > sizeof(struct heap_block)) {
 		/* create new free block */
-		new_block = (struct heap_block_t *) (HEAP_BLOCK_DATA(block) + size);
+		new_block = (struct heap_block *) (HEAP_BLOCK_DATA(block) + size);
 		new_block->magic = HEAP_MAGIC;
-		new_block->size = block->size - size - sizeof(struct heap_block_t);
+		new_block->size = block->size - size - sizeof(struct heap_block);
 		new_block->free = 1;
 		new_block->prev = block;
 		new_block->next = NULL;
@@ -134,16 +134,16 @@ void *heap_alloc(struct heap_t *heap, size_t size, uint8_t page_aligned)
 /*
  * Free memory on the heap.
  */
-void heap_free(struct heap_t *heap, void *p)
+void heap_free(struct heap *heap, void *p)
 {
-	struct heap_block_t *block;
+	struct heap_block *block;
 
 	/* do not free NULL */
 	if (!p)
 		return;
 
 	/* mark block as free */
-	block = (struct heap_block_t *) ((uint32_t) p - sizeof(struct heap_block_t));
+	block = (struct heap_block *) ((uint32_t) p - sizeof(struct heap_block));
 
 	/* check if it's a heap block */
 	if (block->magic != HEAP_MAGIC)
@@ -154,7 +154,7 @@ void heap_free(struct heap_t *heap, void *p)
 
 	/* merge with right block */
 	if (block->next && block->next->free) {
-		block->size += block->next->size + sizeof(struct heap_block_t);
+		block->size += block->next->size + sizeof(struct heap_block);
 		block->next = block->next->next;
 
 		if (block->next)
@@ -167,9 +167,9 @@ void heap_free(struct heap_t *heap, void *p)
 /*
  * Dump the heap on the screen.
  */
-void heap_dump(struct heap_t *heap)
+void heap_dump(struct heap *heap)
 {
-	struct heap_block_t *block;
+	struct heap_block *block;
 
 	for (block = heap->first_block; block != NULL; block = block->next)
 		printf("%x\t%d\t%d\n", (uint32_t) block, block->size, block->free);

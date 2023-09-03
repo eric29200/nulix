@@ -24,7 +24,7 @@ static void random_unaligned(uint8_t *buf, size_t n)
 /*
  * Open random device.
  */
-static int random_open(struct file_t *filp)
+static int random_open(struct file *filp)
 {
 	UNUSED(filp);
 	return 0;
@@ -33,7 +33,7 @@ static int random_open(struct file_t *filp)
 /*
  * Close random device.
  */
-static int random_close(struct file_t *filp)
+static int random_close(struct file *filp)
 {
 	UNUSED(filp);
 	return 0;
@@ -42,7 +42,7 @@ static int random_close(struct file_t *filp)
 /*
  * Read random device.
  */
-static int random_read(struct file_t *filp, char *buf, int n)
+static int random_read(struct file *filp, char *buf, int n)
 {
 	uint32_t *buf32;
 	size_t iter, i;
@@ -70,7 +70,7 @@ static int random_read(struct file_t *filp, char *buf, int n)
 /*
  * Write to random device.
  */
-static int random_write(struct file_t *filp, const char *buf, int n)
+static int random_write(struct file *filp, const char *buf, int n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -81,7 +81,7 @@ static int random_write(struct file_t *filp, const char *buf, int n)
 /*
  * Random device file operations.
  */
-static struct file_operations_t random_fops = {
+static struct file_operations random_fops = {
 	.open		= random_open,
 	.close		= random_close,
 	.read		= random_read,
@@ -91,7 +91,7 @@ static struct file_operations_t random_fops = {
 /*
  * Random device inode operations.
  */
-struct inode_operations_t random_iops = {
+struct inode_operations random_iops = {
 	.fops		= &random_fops,
 };
 

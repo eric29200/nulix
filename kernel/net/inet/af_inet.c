@@ -19,15 +19,15 @@ static uint16_t dyn_port = 0;
 /*
  * Deliver a packet to sockets.
  */
-void net_deliver_skb(struct sk_buff_t *skb)
+void net_deliver_skb(struct sk_buff *skb)
 {
-	struct list_head_t *pos;
-	struct sock_t *sk;
+	struct list_head *pos;
+	struct sock *sk;
 	int ret;
 
 	/* find matching sockets */
 	list_for_each(pos, &inet_sockets) {
-		sk = list_entry(pos, struct sock_t, list);
+		sk = list_entry(pos, struct sock, list);
 
 		/* handle packet */
 		if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->handle) {
@@ -59,10 +59,10 @@ static uint16_t get_next_free_port()
 /*
  * Create a socket.
  */
-static int inet_create(struct socket_t *sock, int protocol)
+static int inet_create(struct socket *sock, int protocol)
 {
-	struct proto_t *prot = NULL;
-	struct sock_t *sk;
+	struct proto *prot = NULL;
+	struct sock *sk;
 
 	/* choose socket type */
 	switch (sock->type) {
@@ -101,12 +101,12 @@ static int inet_create(struct socket_t *sock, int protocol)
 	}
 
 	/* allocate inet socket */
-	sk = kmalloc(sizeof(struct sock_t));
+	sk = kmalloc(sizeof(struct sock));
 	if (!sk)
 		return -ENOMEM;
 
 	/* set socket */
-	memset(sk, 0, sizeof(struct sock_t));
+	memset(sk, 0, sizeof(struct sock));
 	sk->protinfo.af_inet.dev = rtl8139_get_net_device();
 	sk->protocol = protocol;
 	sk->sock = sock;
@@ -123,9 +123,9 @@ static int inet_create(struct socket_t *sock, int protocol)
 /*
  * Duplicate a socket.
  */
-static int inet_dup(struct socket_t *sock, struct socket_t *sock_new)
+static int inet_dup(struct socket *sock, struct socket *sock_new)
 {
-	struct sock_t *sk;
+	struct sock *sk;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -138,11 +138,11 @@ static int inet_dup(struct socket_t *sock, struct socket_t *sock_new)
 /*
  * Release a socket.
  */
-static int inet_release(struct socket_t *sock)
+static int inet_release(struct socket *sock)
 {
-	struct list_head_t *pos, *n;
-	struct sk_buff_t *skb;
-	struct sock_t *sk;
+	struct list_head *pos, *n;
+	struct sk_buff *skb;
+	struct sock *sk;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -151,7 +151,7 @@ static int inet_release(struct socket_t *sock)
 
 	/* free all remaining buffers */
 	list_for_each_safe(pos, n, &sk->skb_list) {
-		skb = list_entry(pos, struct sk_buff_t, list);
+		skb = list_entry(pos, struct sk_buff, list);
 		list_del(&skb->list);
 		skb_free(skb);
 	}
@@ -170,9 +170,9 @@ static int inet_release(struct socket_t *sock)
 /*
  * Poll on a socket.
  */
-static int inet_poll(struct socket_t *sock, struct select_table_t *wait)
+static int inet_poll(struct socket *sock, struct select_table *wait)
 {
-	struct sock_t *sk;
+	struct sock *sk;
 	int mask = 0;
 
 	/* get inet socket */
@@ -197,9 +197,9 @@ static int inet_poll(struct socket_t *sock, struct select_table_t *wait)
 /*
  * Receive a message.
  */
-static int inet_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonblock, int flags)
+static int inet_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, int flags)
 {
-	struct sock_t *sk;
+	struct sock *sk;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -216,9 +216,9 @@ static int inet_recvmsg(struct socket_t *sock, struct msghdr_t *msg, int nonbloc
 /*
  * Send a message.
  */
-static int inet_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int nonblock, int flags)
+static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, int nonblock, int flags)
 {
-	struct sock_t *sk;
+	struct sock *sk;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -235,11 +235,11 @@ static int inet_sendmsg(struct socket_t *sock, const struct msghdr_t *msg, int n
 /*
  * Bind system call (attach an address to a socket).
  */
-static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
+static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_in *src_sin;
-	struct sock_t *sk, *sk_tmp;
-	struct list_head_t *pos;
+	struct sock *sk, *sk_tmp;
+	struct list_head *pos;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -254,7 +254,7 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 
 	/* check if asked port is already mapped */
 	list_for_each(pos, &inet_sockets) {
-		sk_tmp = list_entry(pos, struct sock_t, list);
+		sk_tmp = list_entry(pos, struct sock, list);
 
 		/* different protocol : skip */
 		if (sk->protocol != sk_tmp->protocol)
@@ -282,9 +282,9 @@ static int inet_bind(struct socket_t *sock, const struct sockaddr *addr, size_t 
 /*
  * Accept system call.
  */
-static int inet_accept(struct socket_t *sock, struct socket_t *sock_new, struct sockaddr *addr)
+static int inet_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
 {
-	struct sock_t *sk, *sk_new;
+	struct sock *sk, *sk_new;
 	int ret;
 
 	/* get inet socket */
@@ -316,7 +316,7 @@ static int inet_accept(struct socket_t *sock, struct socket_t *sock_new, struct 
 /*
  * Shutdown system call.
  */
-static int inet_shutdown(struct socket_t *sock, int how)
+static int inet_shutdown(struct socket *sock, int how)
 {
 	UNUSED(sock);
 	UNUSED(how);
@@ -329,9 +329,9 @@ static int inet_shutdown(struct socket_t *sock, int how)
 /*
  * Connect system call.
  */
-static int inet_connect(struct socket_t *sock, const struct sockaddr *addr, size_t addrlen)
+static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
-	struct sock_t *sk;
+	struct sock *sk;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -357,10 +357,10 @@ static int inet_connect(struct socket_t *sock, const struct sockaddr *addr, size
 /*
  * Get peer name system call.
  */
-static int inet_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t *addrlen)
+static int inet_getpeername(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
 {
 	struct sockaddr_in *sin;
-	struct sock_t *sk;
+	struct sock *sk;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -381,10 +381,10 @@ static int inet_getpeername(struct socket_t *sock, struct sockaddr *addr, size_t
 /*
  * Get sock name system call.
  */
-static int inet_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t *addrlen)
+static int inet_getsockname(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
 {
 	struct sockaddr_in *sin;
-	struct sock_t *sk;
+	struct sock *sk;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -405,7 +405,7 @@ static int inet_getsockname(struct socket_t *sock, struct sockaddr *addr, size_t
 /*
  * Get socket options system call.
  */
-static int inet_getsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t *optlen)
+static int inet_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen)
 {
 	UNUSED(sock);
 	UNUSED(level);
@@ -421,7 +421,7 @@ static int inet_getsockopt(struct socket_t *sock, int level, int optname, void *
 /*
  * Set socket options system call.
  */
-static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *optval, size_t optlen)
+static int inet_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen)
 {
 	UNUSED(sock);
 	UNUSED(level);
@@ -437,7 +437,7 @@ static int inet_setsockopt(struct socket_t *sock, int level, int optname, void *
 /*
  * Ioctl on a INET socket.
  */
-static int inet_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
+static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 {
 	/* unused socket */
 	UNUSED(sock);
@@ -461,7 +461,7 @@ static int inet_ioctl(struct socket_t *sock, int cmd, unsigned long arg)
 		case SIOCSIFNETMASK:
 			return net_device_ioctl(cmd, (struct ifreq *) arg);
 		case SIOCADDRT:
-			return ip_route_new((struct rtentry_t *) arg);
+			return ip_route_new((struct rtentry *) arg);
 		default:
 			printf("INET socket : unknown ioctl cmd %x\n", cmd);
 			return -EINVAL;

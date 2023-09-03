@@ -6,7 +6,7 @@
 /*
  * Read meminfo.
  */
-static int proc_meminfo_read(struct file_t *filp, char *buf, int count)
+static int proc_meminfo_read(struct file *filp, char *buf, int count)
 {
 	char tmp_buf[256];
 	size_t len;
@@ -32,14 +32,14 @@ static int proc_meminfo_read(struct file_t *filp, char *buf, int count)
 /*
  * Meminfo file operations.
  */
-struct file_operations_t proc_meminfo_fops = {
+struct file_operations proc_meminfo_fops = {
 	.read		= proc_meminfo_read,
 };
 
 /*
  * Meminfo inode operations.
  */
-struct inode_operations_t proc_meminfo_iops = {
+struct inode_operations proc_meminfo_iops = {
 	.fops		= &proc_meminfo_fops,
 };
 

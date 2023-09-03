@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 /* PCI devices array */
-static struct pci_device_t pci_devices[NR_PCI_DEVICES];
+static struct pci_device pci_devices[NR_PCI_DEVICES];
 static int nb_pci_devices = 0;
 
 /*
@@ -92,7 +92,7 @@ static void pci_scan_bus(uint8_t bus)
 /*
  * Get a PCI device.
  */
-struct pci_device_t *pci_get_device(uint32_t vendor_id, uint32_t device_id)
+struct pci_device *pci_get_device(uint32_t vendor_id, uint32_t device_id)
 {
 	int i;
 
@@ -109,7 +109,7 @@ struct pci_device_t *pci_get_device(uint32_t vendor_id, uint32_t device_id)
 void init_pci()
 {
 	/* reset pci devices */
-	memset(pci_devices, 0, sizeof(struct pci_device_t) * NR_PCI_DEVICES);
+	memset(pci_devices, 0, sizeof(struct pci_device) * NR_PCI_DEVICES);
 
 	/* scan first bus */
 	pci_scan_bus(0);

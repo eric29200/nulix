@@ -8,14 +8,14 @@
 
 /* global pages */
 uint32_t nr_pages;
-struct page_t *page_table;
-static struct list_head_t free_pages;
-static struct list_head_t used_pages;
+struct page *page_table;
+static struct list_head free_pages;
+static struct list_head used_pages;
 static int page_htable_bits = 0;
-static struct htable_link_t **page_htable = NULL;
+static struct htable_link **page_htable = NULL;
 
 /* page directories */
-struct page_directory_t *kernel_pgd = NULL;
+struct page_directory *kernel_pgd = NULL;
 
 /* copy phsyical page (defined in x86/paging.s) */
 extern void copy_page_physical(uint32_t src, uint32_t dst);
@@ -31,9 +31,9 @@ static inline void flush_tlb(uint32_t address)
 /*
  * Get a free page.
  */
-struct page_t *__get_free_page()
+struct page *__get_free_page()
 {
-	struct page_t *page;
+	struct page *page;
 
 	/* try to get a page */
 	if (list_empty(&free_pages)) {
@@ -45,7 +45,7 @@ struct page_t *__get_free_page()
 	}
 
 	/* get first free page */
-	page = list_first_entry(&free_pages, struct page_t, list);
+	page = list_first_entry(&free_pages, struct page, list);
 	page->inode = NULL;
 	page->offset = 0;
 	page->buffers = NULL;
@@ -61,7 +61,7 @@ struct page_t *__get_free_page()
 /*
  * Free a page.
  */
-void __free_page(struct page_t *page)
+void __free_page(struct page *page)
 {
 	if (!page)
 		return;
@@ -79,7 +79,7 @@ void __free_page(struct page_t *page)
  */
 void *get_free_page()
 {
-	struct page_t *page;
+	struct page *page;
 
 	/* get a free page */
 	page = __get_free_page();
@@ -110,7 +110,7 @@ void free_page(void *address)
  */
 void reclaim_pages()
 {
-	struct page_t *page;
+	struct page *page;
 	uint32_t i;
 
 	for (i = 0; i < nr_pages; i++) {
@@ -144,7 +144,7 @@ void reclaim_pages()
 /*
  * Get or create a page table entry from pgd at virtual address.
  */
-static uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory_t *pgd)
+static uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory *pgd)
 {
 	uint32_t page_nr, table_idx;
 
@@ -158,7 +158,7 @@ static uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory_t
 
 	/* create a new page table */
 	if (make) {
-		pgd->tables[table_idx] = (struct page_table_t *) kmalloc_align(sizeof(struct page_table_t));
+		pgd->tables[table_idx] = (struct page_table *) kmalloc_align(sizeof(struct page_table));
 		if (!pgd->tables[table_idx])
 			return NULL;
 
@@ -178,7 +178,7 @@ static uint32_t *get_pte(uint32_t address, uint8_t make, struct page_directory_t
 /*
  * Set a page table entry.
  */
-static int set_pte(uint32_t *pte, int pgprot, struct page_t *page)
+static int set_pte(uint32_t *pte, int pgprot, struct page *page)
 {
 	/* check page */
 	if (!page)
@@ -197,9 +197,9 @@ static int set_pte(uint32_t *pte, int pgprot, struct page_t *page)
 /*
  * Map a page.
  */
-int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot)
+int map_page(uint32_t address, struct page_directory *pgd, int pgprot)
 {
-	struct page_t *page;
+	struct page *page;
 	uint32_t *pte;
 	int ret;
 
@@ -233,7 +233,7 @@ int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot)
 /*
  * Remap pages to physical address.
  */
-int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory_t *pgd, int pgprot)
+int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory *pgd, int pgprot)
 {
 	uint32_t address, page_idx, *pte;
 
@@ -254,7 +254,7 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct pag
 /*
  * Unmap a page.
  */
-static void unmap_page(uint32_t address, struct page_directory_t *pgd)
+static void unmap_page(uint32_t address, struct page_directory *pgd)
 {
 	uint32_t page_nr, table_idx, page_idx, *pte;
 
@@ -284,7 +284,7 @@ static void unmap_page(uint32_t address, struct page_directory_t *pgd)
 /*
  * Unmap pages.
  */
-void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd)
+void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory *pgd)
 {
 	uint32_t address;
 
@@ -296,9 +296,9 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_direc
 /*
  * Anonymous page mapping.
  */
-static int do_anonymous_page(struct vm_area_t *vma, uint32_t *pte)
+static int do_anonymous_page(struct vm_area *vma, uint32_t *pte)
 {
-	struct page_t *page;
+	struct page *page;
 	int ret;
 
 	/* try to get a page */
@@ -323,9 +323,9 @@ err:
 /*
  * Handle a no page fault.
  */
-static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t address)
+static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address)
 {
-	struct page_t *page;
+	struct page *page;
 	uint32_t *pte;
 
 	/* get page table entry */
@@ -355,10 +355,10 @@ static int do_no_page(struct task_t *task, struct vm_area_t *vma, uint32_t addre
 /*
  * Handle a read only page fault.
  */
-static int do_wp_page(struct task_t *task, uint32_t address)
+static int do_wp_page(struct task *task, uint32_t address)
 {
 	uint32_t *pte, page_idx;
-	struct page_t *page;
+	struct page *page;
 
 	/* get page table entry */
 	pte = get_pte(address, 0, task->mm->pgd);
@@ -380,9 +380,9 @@ static int do_wp_page(struct task_t *task, uint32_t address)
 /*
  * Page fault handler.
  */
-void page_fault_handler(struct registers_t *regs)
+void page_fault_handler(struct registers *regs)
 {
-	struct vm_area_t *vma;
+	struct vm_area *vma;
 	uint32_t fault_addr;
 	int ret;
 
@@ -453,7 +453,7 @@ bad_area:
 /*
  * Switch page directory.
  */
-void switch_page_directory(struct page_directory_t *pgd)
+void switch_page_directory(struct page_directory *pgd)
 {
 	uint32_t cr0;
 
@@ -470,19 +470,19 @@ void switch_page_directory(struct page_directory_t *pgd)
 /*
  * Clone a page table.
  */
-static struct page_table_t *clone_page_table(struct page_table_t *src)
+static struct page_table *clone_page_table(struct page_table *src)
 {
-	struct page_table_t *pgt;
-	struct page_t *page;
+	struct page_table *pgt;
+	struct page *page;
 	int ret, i;
 
 	/* create a new page table */
-	pgt = (struct page_table_t *) kmalloc_align(sizeof(struct page_table_t));
+	pgt = (struct page_table *) kmalloc_align(sizeof(struct page_table));
 	if (!pgt)
 		return NULL;
 
 	/* reset page table */
-	memset(pgt, 0, sizeof(struct page_table_t));
+	memset(pgt, 0, sizeof(struct page_table));
 
 	/* copy physical pages */
 	for (i = 0; i < 1024; i++) {
@@ -514,18 +514,18 @@ static struct page_table_t *clone_page_table(struct page_table_t *src)
 /*
  * Clone a page directory.
  */
-struct page_directory_t *clone_page_directory(struct page_directory_t *src)
+struct page_directory *clone_page_directory(struct page_directory *src)
 {
-	struct page_directory_t *ret;
+	struct page_directory *ret;
 	int i;
 
 	/* create a new page directory */
-	ret = (struct page_directory_t *) kmalloc_align(sizeof(struct page_directory_t));
+	ret = (struct page_directory *) kmalloc_align(sizeof(struct page_directory));
 	if (!ret)
 		return NULL;
 
 	/* reset page directory */
-	memset(ret, 0, sizeof(struct page_directory_t));
+	memset(ret, 0, sizeof(struct page_directory));
 
 	/* copy page tables */
 	for (i = 0; i < 1024; i++) {
@@ -553,9 +553,9 @@ struct page_directory_t *clone_page_directory(struct page_directory_t *src)
 /*
  * Free a page table.
  */
-static void free_page_table(struct page_table_t *pgt)
+static void free_page_table(struct page_table *pgt)
 {
-	struct page_t *page;
+	struct page *page;
 	uint32_t page_idx;
 	int i;
 
@@ -574,7 +574,7 @@ static void free_page_table(struct page_table_t *pgt)
 /*
  * Free a page directory.
  */
-void free_page_directory(struct page_directory_t *pgd)
+void free_page_directory(struct page_directory *pgd)
 {
 	int i;
 
@@ -593,9 +593,9 @@ void free_page_directory(struct page_directory_t *pgd)
 /*
  * Hash an inode/offset.
  */
-static inline uint32_t __page_hashfn(struct inode_t *inode, off_t offset)
+static inline uint32_t __page_hashfn(struct inode *inode, off_t offset)
 {
-#define i (((uint32_t) inode) / (sizeof(struct inode_t) & ~(sizeof(struct inode_t) - 1)))
+#define i (((uint32_t) inode) / (sizeof(struct inode) & ~(sizeof(struct inode) - 1)))
 #define o (offset >> PAGE_SHIFT)
 #define s(x) ((x) + ((x) >> page_htable_bits))
 	return s(i + o) & ((1 << page_htable_bits) - 1);
@@ -607,15 +607,15 @@ static inline uint32_t __page_hashfn(struct inode_t *inode, off_t offset)
 /*
  * Find a page in hash table.
  */
-struct page_t *find_page(struct inode_t *inode, off_t offset)
+struct page *find_page(struct inode *inode, off_t offset)
 {
-	struct htable_link_t *node;
-	struct page_t *page;
+	struct htable_link *node;
+	struct page *page;
 
 	/* try to find buffer in cache */
 	node = htable_lookup(page_htable, __page_hashfn(inode, offset), page_htable_bits);
 	while (node) {
-		page = htable_entry(node, struct page_t, htable);
+		page = htable_entry(node, struct page, htable);
 		if (page->inode == inode && page->offset == offset) {
 			page->count++;
 			return page;
@@ -630,7 +630,7 @@ struct page_t *find_page(struct inode_t *inode, off_t offset)
 /*
  * Cache a page.
  */
-void add_to_page_cache(struct page_t *page, struct inode_t *inode, off_t offset)
+void add_to_page_cache(struct page *page, struct inode *inode, off_t offset)
 {
 	/* set page */
 	page->count++;
@@ -657,7 +657,7 @@ int init_page_cache()
 	page_htable_bits = blksize_bits(nr_pages);
 
 	/* allocate page hash table */
-	nr = 1 + nr_pages * sizeof(struct htable_link_t *) / PAGE_SIZE;
+	nr = 1 + nr_pages * sizeof(struct htable_link *) / PAGE_SIZE;
 	for (i = 0; i < nr; i++) {
 		/* get a free page */
 		addr = (uint32_t) get_free_page();
@@ -669,7 +669,7 @@ int init_page_cache()
 
 		/* set buffer hash table */
 		if (i == 0)
-			page_htable = (struct htable_link_t **) addr;
+			page_htable = (struct htable_link **) addr;
 	}
 
 	return 0;
@@ -690,14 +690,14 @@ int init_paging(uint32_t start, uint32_t end)
 	nr_pages = end / PAGE_SIZE;
 
 	/* allocate kernel page directory */
-	kernel_pgd = (struct page_directory_t *) kmalloc_align(sizeof(struct page_directory_t));
-	memset(kernel_pgd, 0, sizeof(struct page_directory_t));
+	kernel_pgd = (struct page_directory *) kmalloc_align(sizeof(struct page_directory));
+	memset(kernel_pgd, 0, sizeof(struct page_directory));
 
 	/* allocate global page table after kernel heap */
 	last_kernel_addr = KHEAP_START + KHEAP_SIZE;
-	page_table = (struct page_t *) last_kernel_addr;
-	memset(page_table, 0, sizeof(struct page_t) * nr_pages);
-	last_kernel_addr += sizeof(struct page_t) * nr_pages;
+	page_table = (struct page *) last_kernel_addr;
+	memset(page_table, 0, sizeof(struct page) * nr_pages);
+	last_kernel_addr += sizeof(struct page) * nr_pages;
 
 	/* init pages */
 	INIT_LIST_HEAD(&free_pages);

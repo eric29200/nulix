@@ -6,7 +6,7 @@
 /*
  * Ext2 in memory inode.
  */
-struct ext2_inode_info_t {
+struct ext2_inode_info {
 	uint32_t	i_block_group;		/* Block group of this inode */
 	uint32_t	i_data[15];		/* Pointers to data blocks */
 	uint32_t	i_flags;		/* File flags */

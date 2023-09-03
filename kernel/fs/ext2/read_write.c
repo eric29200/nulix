@@ -5,10 +5,10 @@
 /*
  * Read a Ext2 file.
  */
-int ext2_file_read(struct file_t *filp, char *buf, int count)
+int ext2_file_read(struct file *filp, char *buf, int count)
 {
 	size_t pos, nb_chars, left;
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 
 	/* adjust size */
 	if (filp->f_pos + count > filp->f_inode->i_size)
@@ -50,10 +50,10 @@ out:
 /*
  * Write to a Ext2 file.
  */
-int ext2_file_write(struct file_t *filp, const char *buf, int count)
+int ext2_file_write(struct file *filp, const char *buf, int count)
 {
 	size_t pos, nb_chars, left;
-	struct buffer_head_t *bh;
+	struct buffer_head *bh;
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)

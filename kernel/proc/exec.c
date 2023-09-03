@@ -5,7 +5,7 @@
 /*
  * Copy strings to binary arguments structure.
  */
-void copy_strings(struct binargs_t *bargs, int argc, char **argv)
+void copy_strings(struct binargs *bargs, int argc, char **argv)
 {
 	char *str, *p = bargs->p;
 	int i;
@@ -25,12 +25,12 @@ void copy_strings(struct binargs_t *bargs, int argc, char **argv)
 /*
  * Init binary arguments.
  */
-static int bargs_init(struct binargs_t *bargs, char *const argv[], char *const envp[])
+static int bargs_init(struct binargs *bargs, char *const argv[], char *const envp[])
 {
 	int i;
 
 	/* reset barg */
-	memset(bargs, 0, sizeof(struct binargs_t));
+	memset(bargs, 0, sizeof(struct binargs));
 
 	/* get argc */
 	for (i = 0; argv && argv[i]; i++)
@@ -57,7 +57,7 @@ static int bargs_init(struct binargs_t *bargs, char *const argv[], char *const e
 /*
  * Load a binary file.
  */
-int binary_load(const char *path, struct binargs_t *bargs)
+int binary_load(const char *path, struct binargs *bargs)
 {
 	int ret;
 
@@ -74,7 +74,7 @@ int binary_load(const char *path, struct binargs_t *bargs)
  */
 int sys_execve(const char *path, char *const argv[], char *const envp[])
 {
-	struct binargs_t bargs;
+	struct binargs bargs;
 	int ret;
 
 	/* init binary arguments */

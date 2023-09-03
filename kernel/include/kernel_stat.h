@@ -6,11 +6,11 @@
 /*
  * Kernel statistics.
  */
-struct kernel_stat_t {
+struct kernel_stat {
 	uint32_t	interrupts;
 	uint32_t	context_switch;
 };
 
-extern struct kernel_stat_t kstat;
+extern struct kernel_stat kstat;
 
 #endif

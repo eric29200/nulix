@@ -8,10 +8,10 @@
 /*
  * Pty structure.
  */
-struct pty_t {
+struct pty {
 	int			p_num;		/* pty id */
 	int			p_count;	/* reference count */
-	struct devfs_entry_t *	de;		/* devfs entry */
+	struct devfs_entry *	de;		/* devfs entry */
 };
 
 int init_pty();

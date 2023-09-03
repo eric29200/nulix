@@ -8,7 +8,7 @@
 /*
  * Route entry.
  */
-struct rtentry_t {
+struct rtentry {
 	unsigned long	rt_pad1;
 	struct sockaddr	rt_dst;
 	struct sockaddr	rt_gateway;
@@ -24,6 +24,6 @@ struct rtentry_t {
 	unsigned short	rt_irtt;
 };
 
-int ip_route_new(struct rtentry_t *rt);
+int ip_route_new(struct rtentry *rt);
 
 #endif

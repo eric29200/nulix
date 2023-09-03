@@ -8,7 +8,7 @@
 /*
  * Stat64 structure.
  */
-struct stat64_t {
+struct stat64 {
 	unsigned long long	st_dev;
 	unsigned char		__pad0[4];
 	unsigned long		__st_ino;
@@ -33,7 +33,7 @@ struct stat64_t {
 /*
  * Statx timestamp structure.
  */
-struct statx_timestamp_t {
+struct statx_timestamp {
 	int64_t		tv_sec;
 	uint32_t	tv_nsec;
 	int32_t		pad;
@@ -42,7 +42,7 @@ struct statx_timestamp_t {
 /*
  * Statx file structure.
  */
-struct statx_t {
+struct statx {
 	uint32_t			stx_mask;
 	uint32_t			stx_blksize;
 	uint64_t			stx_attributes;
@@ -55,10 +55,10 @@ struct statx_t {
 	uint64_t			stx_size;
 	uint64_t			stx_blocks;
 	uint64_t			stx_attributes_mask;
-	struct statx_timestamp_t	stx_atime;
-	struct statx_timestamp_t	stx_btime;
-	struct statx_timestamp_t	stx_ctime;
-	struct statx_timestamp_t	stx_mtime;
+	struct statx_timestamp		stx_atime;
+	struct statx_timestamp		stx_btime;
+	struct statx_timestamp		stx_ctime;
+	struct statx_timestamp		stx_mtime;
 	uint32_t			stx_rdev_major;
 	uint32_t			stx_rdev_minor;
 	uint32_t			stx_dev_major;

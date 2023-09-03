@@ -56,50 +56,50 @@
 /* defined in paging.c */
 extern uint32_t placement_address;
 extern uint32_t nr_pages;
-extern struct page_t *page_table;
-extern struct page_directory_t *kernel_pgd;
+extern struct page *page_table;
+extern struct page_directory *kernel_pgd;
 
 /*
  * Page directory structure.
  */
-struct page_directory_t {
-	struct page_table_t * 	tables[1024];			/* pointers to page tables */
+struct page_directory {
+	struct page_table * 	tables[1024];			/* pointers to page tables */
 	uint32_t		tables_physical[1024];		/* pointers to page tables (physical addresses) */
 };
 
 /*
  * Page table structure.
  */
-struct page_table_t {
+struct page_table {
 	uint32_t 		pages[1024];				/* pages */
 };
 
 /*
  * Page structure.
  */
-struct page_t {
+struct page {
 	uint32_t		page;					/* page number */
 	int 			count;					/* reference count */
-	struct inode_t *	inode;					/* inode */
+	struct inode *		inode;					/* inode */
 	off_t			offset;					/* offset in inode */
-	struct buffer_head_t *	buffers;				/* buffers of this page */
-	struct list_head_t	list;					/* next page */
-	struct htable_link_t	htable;					/* page hash */
+	struct buffer_head *	buffers;				/* buffers of this page */
+	struct list_head	list;					/* next page */
+	struct htable_link	htable;					/* page hash */
 };
 
 int init_paging(uint32_t start, uint32_t end);
-int map_page(uint32_t address, struct page_directory_t *pgd, int pgprot);
-void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory_t *pgd);
-int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory_t *pgd, int pgprot);
-void switch_page_directory(struct page_directory_t *pgd);
-void page_fault_handler(struct registers_t *regs);
-struct page_directory_t *clone_page_directory(struct page_directory_t *pgd);
-void free_page_directory(struct page_directory_t *pgd);
+int map_page(uint32_t address, struct page_directory *pgd, int pgprot);
+void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory *pgd);
+int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory *pgd, int pgprot);
+void switch_page_directory(struct page_directory *pgd);
+void page_fault_handler(struct registers *regs);
+struct page_directory *clone_page_directory(struct page_directory *pgd);
+void free_page_directory(struct page_directory *pgd);
 
 /* page cache */
-struct page_t *find_page(struct inode_t *inode, off_t offset);
-void add_to_page_cache(struct page_t *page, struct inode_t *inode, off_t offset);
-void update_vm_cache(struct inode_t *inode, const char *buf, size_t pos, size_t count);
-void truncate_inode_pages(struct inode_t *inode, off_t start);
+struct page *find_page(struct inode *inode, off_t offset);
+void add_to_page_cache(struct page *page, struct inode *inode, off_t offset);
+void update_vm_cache(struct inode *inode, const char *buf, size_t pos, size_t count);
+void truncate_inode_pages(struct inode *inode, off_t start);
 
 #endif

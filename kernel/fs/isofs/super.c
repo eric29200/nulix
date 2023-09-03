@@ -7,20 +7,20 @@
 /*
  * Read super block.
  */
-static int isofs_read_super(struct super_block_t *sb, void *data, int silent)
+static int isofs_read_super(struct super_block *sb, void *data, int silent)
 {
-	struct iso_directory_record_t *root_dir;
-	struct iso_primary_descriptor_t *pri;
-	struct iso_volume_descriptor_t *vdp;
-	struct isofs_sb_info_t *sbi;
-	struct buffer_head_t *sbh;
+	struct iso_directory_record *root_dir;
+	struct iso_primary_descriptor *pri;
+	struct iso_volume_descriptor *vdp;
+	struct isofs_sb_info *sbi;
+	struct buffer_head *sbh;
 	int block, ret = -EINVAL;
 
 	/* unused data */
 	UNUSED(data);
 
 	/* allocate ISOFS super block */
-	sb->s_fs_info = sbi = (struct isofs_sb_info_t *) kmalloc(sizeof(struct isofs_sb_info_t));
+	sb->s_fs_info = sbi = (struct isofs_sb_info *) kmalloc(sizeof(struct isofs_sb_info));
 	if (!sbi)
 		return -ENOMEM;
 
@@ -37,7 +37,7 @@ static int isofs_read_super(struct super_block_t *sb, void *data, int silent)
 			goto err_primary_vol;
 
 		/* get volume descriptor */
-		vdp = (struct iso_volume_descriptor_t *) sbh->b_data;
+		vdp = (struct iso_volume_descriptor *) sbh->b_data;
 
 		/* check volume id */
 		if (strncmp(vdp->id, "CD001", sizeof(vdp->id)) == 0) {
@@ -46,7 +46,7 @@ static int isofs_read_super(struct super_block_t *sb, void *data, int silent)
 				goto err_primary_vol;
 
 			/* get primary descriptor */
-			pri = (struct iso_primary_descriptor_t *) vdp;
+			pri = (struct iso_primary_descriptor *) vdp;
 			break;
 		}
 
@@ -63,7 +63,7 @@ static int isofs_read_super(struct super_block_t *sb, void *data, int silent)
 		goto err_multivol;
 
 	/* get root directory record */
-	root_dir = (struct iso_directory_record_t *) pri->root_directory_record;
+	root_dir = (struct iso_directory_record *) pri->root_directory_record;
 
 	/* set super block */
 	sbi->s_nzones = isofs_num733(pri->volume_space_size);
@@ -106,11 +106,11 @@ err:
 /*
  * Get statistics on file system.
  */
-static void isofs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
+static void isofs_statfs(struct super_block *sb, struct statfs64 *buf)
 {
-	struct isofs_sb_info_t *sbi = isofs_sb(sb);
+	struct isofs_sb_info *sbi = isofs_sb(sb);
 
-	memset(buf, 0, sizeof(struct statfs64_t));
+	memset(buf, 0, sizeof(struct statfs64));
 	buf->f_type = sb->s_magic;
 	buf->f_bsize = sb->s_blocksize;
 	buf->f_blocks = sbi->s_nzones << (sbi->s_log_zone_size - sb->s_blocksize_bits);
@@ -124,9 +124,9 @@ static void isofs_statfs(struct super_block_t *sb, struct statfs64_t *buf)
 /*
  * Release a super block.
  */
-static void isofs_put_super(struct super_block_t *sb)
+static void isofs_put_super(struct super_block *sb)
 {
-	struct isofs_sb_info_t *sbi = isofs_sb(sb);
+	struct isofs_sb_info *sbi = isofs_sb(sb);
 
 	/* free super block */
 	kfree(sbi);
@@ -137,7 +137,7 @@ static void isofs_put_super(struct super_block_t *sb)
 /*
  * Isofs super operations.
  */
-struct super_operations_t isofs_sops = {
+struct super_operations isofs_sops = {
 	.put_super		= isofs_put_super,
 	.read_inode		= isofs_read_inode,
 	.statfs			= isofs_statfs,
@@ -146,7 +146,7 @@ struct super_operations_t isofs_sops = {
 /*
  * Isofs file system.
  */
-static struct file_system_t iso_fs = {
+static struct file_system iso_fs = {
 	.name			= "isofs",
 	.requires_dev		= 1,
 	.read_super		= isofs_read_super,

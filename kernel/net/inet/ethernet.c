@@ -8,7 +8,7 @@
 /*
  * Build an ethernet header.
  */
-void ethernet_build_header(struct ethernet_header_t *eth_header, uint8_t *src_mac_addr, uint8_t *dst_mac_addr, uint16_t type)
+void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_addr, uint8_t *dst_mac_addr, uint16_t type)
 {
 	memcpy(eth_header->src_mac_addr, src_mac_addr, 6);
 	if (dst_mac_addr)
@@ -19,9 +19,9 @@ void ethernet_build_header(struct ethernet_header_t *eth_header, uint8_t *src_ma
 /*
  * Rebuild an ethernet header (find destination MAC address).
  */
-int ethernet_rebuild_header(struct net_device_t *dev, struct sk_buff_t *skb)
+int ethernet_rebuild_header(struct net_device *dev, struct sk_buff *skb)
 {
-	struct arp_table_entry_t *arp_entry;
+	struct arp_table_entry *arp_entry;
 	uint8_t route_ip[4];
 
 	/* ARP request : do not rebuild header */
@@ -45,8 +45,8 @@ int ethernet_rebuild_header(struct net_device_t *dev, struct sk_buff_t *skb)
 /*
  * Receive/decode an ethernet packet.
  */
-void ethernet_receive(struct sk_buff_t *skb)
+void ethernet_receive(struct sk_buff *skb)
 {
-	skb->eth_header = (struct ethernet_header_t *) skb->data;
-	skb_pull(skb, sizeof(struct ethernet_header_t));
+	skb->eth_header = (struct ethernet_header *) skb->data;
+	skb_pull(skb, sizeof(struct ethernet_header));
 }

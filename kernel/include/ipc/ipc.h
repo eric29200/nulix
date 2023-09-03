@@ -30,7 +30,7 @@
 /*
  * IPC permissions.
  */
-struct ipc_perm_t {
+struct ipc_perm {
 	int			key;
 	uid_t			uid;
 	gid_t			gid;
@@ -43,27 +43,27 @@ struct ipc_perm_t {
 /*
  * IPC element.
  */
-struct ipc_id_t {
-	struct ipc_perm_t *	p;
+struct ipc_id {
+	struct ipc_perm *	p;
 };
 
 /*
  * IPC elements.
  */
-struct ipc_ids_t {
+struct ipc_ids {
 	int 			size;
 	int 			in_use;
 	int 			max_id;
 	uint16_t 		seq;
 	uint16_t 		seq_max;
-	struct ipc_id_t *	entries;
+	struct ipc_id *		entries;
 };
 
 int ipc_findkey(int key);
-int ipc_add_id(struct ipc_perm_t *new);
-struct ipc_perm_t *ipc_rm_id(int id);
+int ipc_add_id(struct ipc_perm *new);
+struct ipc_perm *ipc_rm_id(int id);
 int ipc_build_id(int id, int seq);
-struct ipc_perm_t *ipc_get(int id);
+struct ipc_perm *ipc_get(int id);
 
 int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fifth);
 

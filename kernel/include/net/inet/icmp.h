@@ -8,7 +8,7 @@
 /*
  * ICMP header.
  */
-struct icmp_header_t {
+struct icmp_header {
 	uint8_t		type;
 	uint8_t		code;
 	uint16_t	chksum;
@@ -21,7 +21,7 @@ struct icmp_header_t {
 	} un;
 };
 
-void icmp_receive(struct sk_buff_t *skb);
-void icmp_reply_echo(struct sk_buff_t *skb);
+void icmp_receive(struct sk_buff *skb);
+void icmp_reply_echo(struct sk_buff *skb);
 
 #endif

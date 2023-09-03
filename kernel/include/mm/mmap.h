@@ -30,14 +30,14 @@
 #define PROT_EXEC		0x4		/* page can be executed */
 #define PROT_NONE		0x0		/* page can not be accessed */
 
-void *do_mmap(uint32_t addr, size_t length, int prot, int flags, struct file_t *filp, off_t offset);
+void *do_mmap(uint32_t addr, size_t length, int prot, int flags, struct file *filp, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
 void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address);
-struct vm_area_t *find_vma(struct task_t *task, uint32_t addr);
-struct vm_area_t *find_vma_prev(struct task_t *task, uint32_t addr);
-struct vm_area_t *find_vma_next(struct task_t *task, uint32_t addr);
-struct vm_area_t *find_vma_intersection(struct task_t *task, uint32_t start, uint32_t end);
-void vmtruncate(struct inode_t *inode, off_t offset);
+struct vm_area *find_vma(struct task *task, uint32_t addr);
+struct vm_area *find_vma_prev(struct task *task, uint32_t addr);
+struct vm_area *find_vma_next(struct task *task, uint32_t addr);
+struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_t end);
+void vmtruncate(struct inode *inode, off_t offset);
 
 void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset);

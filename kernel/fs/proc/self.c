@@ -8,7 +8,7 @@
 /*
  * Follow self link.
  */
-static int proc_self_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
+static int proc_self_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
 	/* unused */
 	UNUSED(dir);
@@ -30,7 +30,7 @@ static int proc_self_follow_link(struct inode_t *dir, struct inode_t *inode, int
 /*
  * Read self link.
  */
-static ssize_t proc_self_readlink(struct inode_t *inode, char *buf, size_t bufsize)
+static ssize_t proc_self_readlink(struct inode *inode, char *buf, size_t bufsize)
 {
 	char tmp[32];
 	size_t len;
@@ -52,7 +52,7 @@ static ssize_t proc_self_readlink(struct inode_t *inode, char *buf, size_t bufsi
 /*
  * Self inode operations.
  */
-struct inode_operations_t proc_self_iops = {
+struct inode_operations proc_self_iops = {
 	.readlink	= proc_self_readlink,
 	.follow_link	= proc_self_follow_link,
 };

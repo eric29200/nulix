@@ -8,12 +8,12 @@
 #include <string.h>
 
 /* global file table */
-struct file_t filp_table[NR_FILE];
+struct file filp_table[NR_FILE];
 
 /*
  * Get an empty file.
  */
-struct file_t *get_empty_filp()
+struct file *get_empty_filp()
 {
 	int i;
 
@@ -33,8 +33,8 @@ struct file_t *get_empty_filp()
  */
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
-	struct inode_t *inode;
-	struct file_t *filp;
+	struct inode *inode;
+	struct file *filp;
 	int fd, ret;
 
 	/* find a free slot in current process */
@@ -89,7 +89,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 err:
 	if (filp->f_path)
 		kfree(filp->f_path);
-	memset(filp, 0, sizeof(struct file_t));
+	memset(filp, 0, sizeof(struct file));
 	return ret;
 }
 
@@ -120,7 +120,7 @@ int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode)
 /*
  * Close system call.
  */
-int do_close(struct file_t *filp)
+int do_close(struct file *filp)
 {
 	filp->f_ref--;
 
@@ -138,7 +138,7 @@ int do_close(struct file_t *filp)
 			kfree(filp->f_path);
 
 		/* clear inode */
-		memset(filp, 0, sizeof(struct file_t));
+		memset(filp, 0, sizeof(struct file));
 	}
 
 	return 0;
@@ -170,7 +170,7 @@ int sys_close(int fd)
  */
 static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* get inode */
 	inode = namei(dirfd, NULL, pathname, 1);
@@ -202,7 +202,7 @@ int sys_chmod(const char *pathname, mode_t mode)
  */
 static int do_fchmod(int fd, mode_t mode)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* check file descriptor */
 	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd])
@@ -244,7 +244,7 @@ int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flag
  */
 static int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* get inode */
 	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
@@ -273,7 +273,7 @@ int sys_chown(const char *pathname, uid_t owner, gid_t group)
  */
 static int do_fchown(int fd, uid_t owner, gid_t group)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* check file descriptor */
 	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd])
@@ -307,9 +307,9 @@ int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsi
 /*
  * Utimensat system call.
  */
-static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t *times, int flags)
+static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *times, int flags)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* get inode */
 	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
@@ -334,9 +334,9 @@ static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval_t
 /*
  * Utimensat system call.
  */
-int sys_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int flags)
+int sys_utimensat(int dirfd, const char *pathname, struct timespec *times, int flags)
 {
-	struct kernel_timeval_t ktimes[2];
+	struct kernel_timeval ktimes[2];
 
 	/* convert times to kernel timevals */
 	if (times) {
@@ -352,7 +352,7 @@ int sys_utimensat(int dirfd, const char *pathname, struct timespec_t *times, int
  */
 int sys_chroot(const char *path)
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* get inode */
 	inode = namei(AT_FDCWD, NULL, path, 1);

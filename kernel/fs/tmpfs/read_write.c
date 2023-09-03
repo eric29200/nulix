@@ -4,11 +4,11 @@
 /*
  * Read a file.
  */
-int tmpfs_file_read(struct file_t *filp, char *buf, int count)
+int tmpfs_file_read(struct file *filp, char *buf, int count)
 {
 	size_t page_offset, offset, nb_chars, left;
-	struct list_head_t *pos;
-	struct page_t *page;
+	struct list_head *pos;
+	struct page *page;
 
 	/* adjust size */
 	if (filp->f_pos + count > filp->f_inode->i_size)
@@ -21,7 +21,7 @@ int tmpfs_file_read(struct file_t *filp, char *buf, int count)
 	page_offset = 0;
 	left = count;
 	list_for_each(pos, &filp->f_inode->u.tmp_i.i_pages) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 		if (page_offset + PAGE_SIZE < filp->f_pos) {
 			page_offset += PAGE_SIZE;
 			continue;
@@ -53,11 +53,11 @@ int tmpfs_file_read(struct file_t *filp, char *buf, int count)
 /*
  * Write to a file.
  */
-int tmpfs_file_write(struct file_t *filp, const char *buf, int count)
+int tmpfs_file_write(struct file *filp, const char *buf, int count)
 {
 	size_t page_offset, left, offset, nb_chars;
-	struct list_head_t *pos;
-	struct page_t *page;
+	struct list_head *pos;
+	struct page *page;
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)
@@ -70,7 +70,7 @@ int tmpfs_file_write(struct file_t *filp, const char *buf, int count)
 	page_offset = 0;
 	left = count;
 	list_for_each(pos, &filp->f_inode->u.tmp_i.i_pages) {
-		page = list_entry(pos, struct page_t, list);
+		page = list_entry(pos, struct page, list);
 		if (page_offset + PAGE_SIZE < filp->f_pos) {
 			page_offset += PAGE_SIZE;
 			continue;
@@ -102,15 +102,15 @@ int tmpfs_file_write(struct file_t *filp, const char *buf, int count)
 /*
  * Read a page.
  */
-int tmpfs_readpage(struct inode_t *inode, struct page_t *page)
+int tmpfs_readpage(struct inode *inode, struct page *page)
 {
-	struct page_t *inode_page;
-	struct list_head_t *pos;
+	struct page *inode_page;
+	struct list_head *pos;
 	off_t offset = 0;
 
 	list_for_each(pos, &inode->u.tmp_i.i_pages) {
 		/* skip pages until offset */
-		inode_page = list_entry(pos, struct page_t, list);
+		inode_page = list_entry(pos, struct page, list);
 		if (offset != page->offset) {
 			offset += PAGE_SIZE;
 			continue;

@@ -15,7 +15,7 @@
 /*
  * Network device.
  */
-struct net_device_t {
+struct net_device {
 	char *			name;
 	uint8_t			index;
 	uint32_t		io_base;
@@ -26,26 +26,26 @@ struct net_device_t {
 	uint8_t			ip_route[4];
 	uint16_t		type;
 	uint16_t		flags;
-	struct task_t *		thread;
-	struct wait_queue_t *	wait;
-	struct list_head_t	skb_input_list;
-	struct list_head_t	skb_output_list;
-	void			(*send_packet)(struct sk_buff_t *);
+	struct task *		thread;
+	struct wait_queue *	wait;
+	struct list_head	skb_input_list;
+	struct list_head	skb_output_list;
+	void			(*send_packet)(struct sk_buff *);
 };
 
 /* network devices */
-extern struct net_device_t net_devices[NR_NET_DEVICES];
+extern struct net_device net_devices[NR_NET_DEVICES];
 extern int nr_net_devices;
 
 /* network prototypes */
-struct net_device_t *register_net_device(uint32_t io_base, uint16_t type);
-struct net_device_t *net_device_find(const char *name);
+struct net_device *register_net_device(uint32_t io_base, uint16_t type);
+struct net_device *net_device_find(const char *name);
 int net_device_ioctl(int cmd, struct ifreq *ifr);
 int net_device_ifconf(struct ifconf *ifc);
-void skb_handle(struct sk_buff_t *skb);
+void skb_handle(struct sk_buff *skb);
 uint16_t net_checksum(void *data, size_t size);
-void net_handle(struct net_device_t *net_dev, struct sk_buff_t *skb);
-void net_transmit(struct net_device_t *net_dev, struct sk_buff_t *skb);
-void net_deliver_skb(struct sk_buff_t *skb);
+void net_handle(struct net_device *net_dev, struct sk_buff *skb);
+void net_transmit(struct net_device *net_dev, struct sk_buff *skb);
+void net_deliver_skb(struct sk_buff *skb);
 
 #endif

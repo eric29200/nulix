@@ -5,9 +5,9 @@
 /*
  * Resolve a symbolic link.
  */
-int tmpfs_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mode_t mode, struct inode_t **res_inode)
+int tmpfs_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
-	struct page_t *page;
+	struct page *page;
 	int ret;
 
 	*res_inode = NULL;
@@ -29,7 +29,7 @@ int tmpfs_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mod
 	}
 
 	/* get first page */
-	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page_t, list);
+	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page, list);
 
 	/* release link inode */
 	iput(inode);
@@ -43,9 +43,9 @@ int tmpfs_follow_link(struct inode_t *dir, struct inode_t *inode, int flags, mod
 /*
  * Read value of a symbolic link.
  */
-ssize_t tmpfs_readlink(struct inode_t *inode, char *buf, size_t bufsize)
+ssize_t tmpfs_readlink(struct inode *inode, char *buf, size_t bufsize)
 {
-	struct page_t *page;
+	struct page *page;
 
 	/* inode must be link */
 	if (!S_ISLNK(inode->i_mode)) {
@@ -64,7 +64,7 @@ ssize_t tmpfs_readlink(struct inode_t *inode, char *buf, size_t bufsize)
 	}
 
 	/* get first page */
-	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page_t, list);
+	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page, list);
 
 	/* release inode */
 	iput(inode);

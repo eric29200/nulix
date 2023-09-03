@@ -8,15 +8,15 @@
 #include <uio.h>
 
 /* socket file operations */
-struct file_operations_t socket_fops;
+struct file_operations socket_fops;
 
 /*
  * Allocate a socket.
  */
-static struct socket_t *sock_alloc()
+static struct socket *sock_alloc()
 {
-	struct inode_t *inode;
-	struct socket_t *sock;
+	struct inode *inode;
+	struct socket *sock;
 
 	/* get an empty inode */
 	inode = get_empty_inode(NULL);
@@ -31,7 +31,7 @@ static struct socket_t *sock_alloc()
 
 	/* set socket */
 	sock = &inode->u.socket_i;
-	memset(sock, 0, sizeof(struct socket_t));
+	memset(sock, 0, sizeof(struct socket));
 	sock->state = SS_UNCONNECTED;
 	sock->inode = inode;
 
@@ -41,7 +41,7 @@ static struct socket_t *sock_alloc()
 /*
  * Release a socket.
  */
-static void sock_release(struct socket_t *sock)
+static void sock_release(struct socket *sock)
 {
 	/* release socket */
 	if (sock->ops && sock->ops->release)
@@ -54,9 +54,9 @@ static void sock_release(struct socket_t *sock)
 /*
  * Get a file slot.
  */
-static int get_fd(struct inode_t *inode)
+static int get_fd(struct inode *inode)
 {
-	struct file_t *filp;
+	struct file *filp;
 	int fd;
 
 	/* get a new empty file */
@@ -91,9 +91,9 @@ static int get_fd(struct inode_t *inode)
 /*
  * Find socket on a file descriptor.
  */
-static struct socket_t *sockfd_lookup(int fd, struct file_t **filpp, int *err)
+static struct socket *sockfd_lookup(int fd, struct file **filpp, int *err)
 {
-	struct file_t *filp;
+	struct file *filp;
 
 	/* check file descriptor */
 	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd]) {
@@ -118,7 +118,7 @@ static struct socket_t *sockfd_lookup(int fd, struct file_t **filpp, int *err)
 /*
  * Close a socket.
  */
-static int sock_close(struct file_t *filp)
+static int sock_close(struct file *filp)
 {
 	if (!filp->f_inode)
 		return 0;
@@ -132,9 +132,9 @@ static int sock_close(struct file_t *filp)
 /*
  * Poll on a socket.
  */
-static int sock_poll(struct file_t *filp, struct select_table_t *wait)
+static int sock_poll(struct file *filp, struct select_table *wait)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int mask = 0;
 
 	/* get socket */
@@ -152,9 +152,9 @@ static int sock_poll(struct file_t *filp, struct select_table_t *wait)
 /*
  * Ioctl on a socket.
  */
-static int sock_ioctl(struct file_t *filp, int cmd, unsigned long arg)
+static int sock_ioctl(struct file *filp, int cmd, unsigned long arg)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 
 	/* get socket */
 	sock = &filp->f_inode->u.socket_i;
@@ -167,11 +167,11 @@ static int sock_ioctl(struct file_t *filp, int cmd, unsigned long arg)
 /*
  * Socket read.
  */
-static int sock_read(struct file_t *filp, char *buf, int len)
+static int sock_read(struct file *filp, char *buf, int len)
 {
-	struct socket_t *sock;
-	struct msghdr_t msg;
-	struct iovec_t iov;
+	struct socket *sock;
+	struct msghdr msg;
+	struct iovec iov;
 
 	/* get socket */
 	sock = &filp->f_inode->u.socket_i;
@@ -183,7 +183,7 @@ static int sock_read(struct file_t *filp, char *buf, int len)
 		return -EINVAL;
 
 	/* build message */
-	memset(&msg, 0, sizeof(struct msghdr_t));
+	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	iov.iov_base = buf;
@@ -195,11 +195,11 @@ static int sock_read(struct file_t *filp, char *buf, int len)
 /*
  * Socket write.
  */
-static int sock_write(struct file_t *filp, const char *buf, int len)
+static int sock_write(struct file *filp, const char *buf, int len)
 {
-	struct socket_t *sock;
-	struct msghdr_t msg;
-	struct iovec_t iov;
+	struct socket *sock;
+	struct msghdr msg;
+	struct iovec iov;
 
 	/* get socket */
 	sock = &filp->f_inode->u.socket_i;
@@ -211,7 +211,7 @@ static int sock_write(struct file_t *filp, const char *buf, int len)
 		return -EINVAL;
 
 	/* build message */
-	memset(&msg, 0, sizeof(struct msghdr_t));
+	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	iov.iov_base = (char *) buf;
@@ -223,7 +223,7 @@ static int sock_write(struct file_t *filp, const char *buf, int len)
 /*
  * Socket file operations.
  */
-struct file_operations_t socket_fops = {
+struct file_operations socket_fops = {
 	.read		= sock_read,
 	.write		= sock_write,
 	.poll		= sock_poll,
@@ -238,7 +238,7 @@ int sys_socket(int domain, int type, int protocol)
 {
 
 	struct prot_ops *sock_ops;
-	struct socket_t *sock;
+	struct socket *sock;
 	int err, fd;
 
 	/* choose protocol operations */
@@ -292,7 +292,7 @@ int sys_socket(int domain, int type, int protocol)
  */
 int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int err;
 
 	/* find socket */
@@ -312,7 +312,7 @@ int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
  */
 int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int err;
 
 	/* find socket */
@@ -332,7 +332,7 @@ int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
  */
 int sys_listen(int sockfd, int backlog)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int err;
 
 	/* unused backlog */
@@ -354,7 +354,7 @@ int sys_listen(int sockfd, int backlog)
  */
 int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
-	struct socket_t *sock, *new_sock;
+	struct socket *sock, *new_sock;
 	int fd, err;
 
 	/* unused address length */
@@ -415,10 +415,10 @@ int sys_send(int sockfd, const void * buf, size_t len, int flags)
  */
 int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, size_t addrlen)
 {
-	struct socket_t *sock;
-	struct iovec_t iovec;
-	struct file_t *filp;
-	struct msghdr_t msg;
+	struct socket *sock;
+	struct iovec iovec;
+	struct msghdr msg;
+	struct file *filp;
 	int err;
 
 	/* unused address length */
@@ -453,10 +453,10 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 /*
  * Send a message system call.
  */
-int sys_sendmsg(int sockfd, const struct msghdr_t *msg, int flags)
+int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 {
-	struct socket_t *sock;
-	struct file_t *filp;
+	struct socket *sock;
+	struct file *filp;
 	int err;
 
 	/* find socket */
@@ -484,10 +484,10 @@ int sys_recv(int sockfd, void *buf, size_t size, int flags)
  */
 int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t *addrlen)
 {
-	struct socket_t *sock;
-	struct iovec_t iovec;
-	struct file_t *filp;
-	struct msghdr_t msg;
+	struct socket *sock;
+	struct iovec iovec;
+	struct msghdr msg;
+	struct file *filp;
 	int err;
 
 	/* unused address length */
@@ -521,10 +521,10 @@ int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sock
 /*
  * Receive a message system call.
  */
-int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
+int sys_recvmsg(int sockfd, struct msghdr *msg, int flags)
 {
-	struct socket_t *sock;
-	struct file_t *filp;
+	struct socket *sock;
+	struct file *filp;
 	int err;
 
 	/* find socket */
@@ -544,7 +544,7 @@ int sys_recvmsg(int sockfd, struct msghdr_t *msg, int flags)
  */
 int sys_shutdown(int sockfd, int how)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int err;
 
 	/* find socket */
@@ -564,7 +564,7 @@ int sys_shutdown(int sockfd, int how)
  */
 int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int err;
 
 	/* find socket */
@@ -584,7 +584,7 @@ int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
  */
 int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int err;
 
 	/* find socket */
@@ -602,7 +602,7 @@ int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 /*
  * Get socket options.
  */
-static int sock_getsockopt(struct socket_t *sock, int optname, void *optval, size_t *optlen)
+static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_t *optlen)
 {
 	UNUSED(sock);
 	UNUSED(optval);
@@ -616,7 +616,7 @@ static int sock_getsockopt(struct socket_t *sock, int optname, void *optval, siz
 /*
  * Set socket options.
  */
-static int sock_setsockopt(struct socket_t *sock, int optname, void *optval, size_t optlen)
+static int sock_setsockopt(struct socket *sock, int optname, void *optval, size_t optlen)
 {
 	UNUSED(sock);
 	UNUSED(optval);
@@ -638,7 +638,7 @@ static int sock_setsockopt(struct socket_t *sock, int optname, void *optval, siz
  */
 int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t *optlen)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int err;
 
 	/* find socket */
@@ -662,7 +662,7 @@ int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t *opt
  */
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen)
 {
-	struct socket_t *sock;
+	struct socket *sock;
 	int err;
 
 	/* find socket */
@@ -736,10 +736,10 @@ int sys_socketcall(int call, unsigned long *args)
 			err = sys_getsockopt(args[0], args[1], args[2], (char *) args[3], (size_t *) args[4]);
 			break;
 		case SYS_SENDMSG:
-			err = sys_sendmsg(args[0], (struct msghdr_t *) args[1], args[2]);
+			err = sys_sendmsg(args[0], (struct msghdr *) args[1], args[2]);
 			break;
 		case SYS_RECVMSG:
-			err = sys_recvmsg(args[0], (struct msghdr_t *) args[1], args[2]);
+			err = sys_recvmsg(args[0], (struct msghdr *) args[1], args[2]);
 			break;
 		default:
 			err = -EINVAL;

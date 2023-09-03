@@ -7,14 +7,14 @@
 
 #define SEQ_MULTIPLIER		(IPCMNI)
 
-static struct ipc_ids_t *ids = NULL;
+static struct ipc_ids *ids = NULL;
 
 /*
  * Find an IPC element with a given key. Returns IPC element id.
  */
 int ipc_findkey(int key)
 {
-	struct ipc_perm_t *p;
+	struct ipc_perm *p;
 	int id;
 
 	if (!ids)
@@ -37,7 +37,7 @@ static int ipc_init_ids(int size)
 	int id;
 
 	/* allocate ipc elements */
-	ids = (struct ipc_ids_t *) kmalloc(sizeof(struct ipc_ids_t));
+	ids = (struct ipc_ids *) kmalloc(sizeof(struct ipc_ids));
 	if (!ids)
 		return -ENOMEM;
 
@@ -49,7 +49,7 @@ static int ipc_init_ids(int size)
 	ids->seq_max = 0xFFFF;
 
 	/* allocate entries */
-	ids->entries = (struct ipc_id_t *) kmalloc(sizeof(struct ipc_id_t *) * size);
+	ids->entries = (struct ipc_id *) kmalloc(sizeof(struct ipc_id *) * size);
 	if (!ids->entries)
 		goto err;
 
@@ -67,7 +67,7 @@ err:
 /*
  * Add an IPC element.
  */
-int ipc_add_id(struct ipc_perm_t *new)
+int ipc_add_id(struct ipc_perm *new)
 {
 	int ret, id;
 
@@ -110,9 +110,9 @@ found:
 /*
  * Remove an IPC element.
  */
-struct ipc_perm_t *ipc_rm_id(int id)
+struct ipc_perm *ipc_rm_id(int id)
 {
-	struct ipc_perm_t *p;
+	struct ipc_perm *p;
 	int lid;
 
 	/* check id */
@@ -150,7 +150,7 @@ int ipc_build_id(int id, int seq)
 /*
  * Get an IPC element given an id.
  */
-struct ipc_perm_t *ipc_get(int id)
+struct ipc_perm *ipc_get(int id)
 {
 	if (id % SEQ_MULTIPLIER >= ids->size)
 		return NULL;
@@ -182,7 +182,7 @@ int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fift
 
 			return 0;
 		case SHMCTL:
-			return do_shmctl(first, second, (struct shmid_ds_t *) ptr);
+			return do_shmctl(first, second, (struct shmid_ds *) ptr);
 		case SHMDT:
 			return do_shmdt((char *) ptr);
 		default:

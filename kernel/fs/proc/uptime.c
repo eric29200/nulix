@@ -7,14 +7,14 @@
 /*
  * Read uptime.
  */
-static int proc_uptime_read(struct file_t *filp, char *buf, int count)
+static int proc_uptime_read(struct file *filp, char *buf, int count)
 {
-	struct task_t *init_task;
+	struct task *init_task;
 	char tmp_buf[256];
 	size_t len;
 
 	/* get init task */
-	init_task = list_first_entry(&tasks_list, struct task_t, list);
+	init_task = list_first_entry(&tasks_list, struct task, list);
 
 	/* print uptime in temporary buffer */
 	len = sprintf(tmp_buf, "%d.%d %d.%d\n", jiffies / HZ, jiffies % HZ, init_task->utime / HZ, init_task->utime % HZ);
@@ -37,14 +37,14 @@ static int proc_uptime_read(struct file_t *filp, char *buf, int count)
 /*
  * Uptime file operations.
  */
-struct file_operations_t proc_uptime_fops = {
+struct file_operations proc_uptime_fops = {
 	.read		= proc_uptime_read,
 };
 
 /*
  * Uptime inode operations.
  */
-struct inode_operations_t proc_uptime_iops = {
+struct inode_operations proc_uptime_iops = {
 	.fops		= &proc_uptime_fops,
 };
 

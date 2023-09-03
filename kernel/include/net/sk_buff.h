@@ -8,17 +8,17 @@
 /*
  * Socket buffer.
  */
-struct sk_buff_t {
-	struct net_device_t *		dev;
-	struct ethernet_header_t *	eth_header;
+struct sk_buff {
+	struct net_device *		dev;
+	struct ethernet_header *	eth_header;
 	struct {
-		struct icmp_header_t *	icmp_header;
-		struct udp_header_t *	udp_header;
-		struct tcp_header_t *	tcp_header;
+		struct icmp_header *	icmp_header;
+		struct udp_header *	udp_header;
+		struct tcp_header *	tcp_header;
 	} h;
 	struct {
-		struct arp_header_t *	arp_header;
-		struct ip_header_t *	ip_header;
+		struct arp_header *	arp_header;
+		struct ip_header *	ip_header;
 	} nh;
 	size_t				size;
 	size_t				len;
@@ -26,14 +26,14 @@ struct sk_buff_t {
 	uint8_t *			data;
 	uint8_t *			tail;
 	uint8_t *			end;
-	struct socket_t *		sock;
-	struct list_head_t		list;
+	struct socket *			sock;
+	struct list_head		list;
 };
 
 /*
  * Reserve some space in a socket buffer.
  */
-static inline void skb_reserve(struct sk_buff_t *skb, size_t len)
+static inline void skb_reserve(struct sk_buff *skb, size_t len)
 {
 	skb->data += len;
 	skb->tail += len;
@@ -42,7 +42,7 @@ static inline void skb_reserve(struct sk_buff_t *skb, size_t len)
 /*
  * Put data in a socket buffer.
  */
-static inline uint8_t *skb_put(struct sk_buff_t *skb, size_t len)
+static inline uint8_t *skb_put(struct sk_buff *skb, size_t len)
 {
 	uint8_t *ret = skb->tail;
 	skb->tail += len;
@@ -53,7 +53,7 @@ static inline uint8_t *skb_put(struct sk_buff_t *skb, size_t len)
 /*
  * Push data into a socket buffer.
  */
-static inline uint8_t *skb_push(struct sk_buff_t *skb, size_t len)
+static inline uint8_t *skb_push(struct sk_buff *skb, size_t len)
 {
 	skb->data -= len;
 	skb->len += len;
@@ -63,15 +63,15 @@ static inline uint8_t *skb_push(struct sk_buff_t *skb, size_t len)
 /*
  * Pull data from a socket buffer.
  */
-static inline uint8_t *skb_pull(struct sk_buff_t *skb, size_t len)
+static inline uint8_t *skb_pull(struct sk_buff *skb, size_t len)
 {
 	skb->data += len;
 	skb->len -= len;
 	return skb->data;
 }
 
-struct sk_buff_t *skb_alloc(size_t size);
-struct sk_buff_t *skb_clone(struct sk_buff_t *skb);
-void skb_free(struct sk_buff_t *skb);
+struct sk_buff *skb_alloc(size_t size);
+struct sk_buff *skb_clone(struct sk_buff *skb);
+void skb_free(struct sk_buff *skb);
 
 #endif

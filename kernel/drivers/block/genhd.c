@@ -8,7 +8,7 @@
 /*
  * Add a partition.
  */
-static int add_partition(struct gendisk_t *hd, int i, uint32_t start_sect, uint32_t nr_sects)
+static int add_partition(struct gendisk *hd, int i, uint32_t start_sect, uint32_t nr_sects)
 {
 	char partition_name[DISK_NAME_LEN];
 
@@ -32,14 +32,14 @@ static int add_partition(struct gendisk_t *hd, int i, uint32_t start_sect, uint3
 /*
  * Discover msdos partitions.
  */
-static int check_msdos_partition(struct gendisk_t *hd, dev_t dev)
+static int check_msdos_partition(struct gendisk *hd, dev_t dev)
 {
-	struct msdos_partition_t *partition;
-	struct buffer_head_t *bh;
+	struct msdos_partition *partition;
+	struct buffer_head *bh;
 	int i;
 
 	/* reset partitions */
-	memset(hd->partitions, 0, sizeof(struct partition_t) * NR_PARTITIONS);
+	memset(hd->partitions, 0, sizeof(struct partition) * NR_PARTITIONS);
 
 	/* read partition table */
 	bh = bread(dev, 0, 1024);
@@ -51,7 +51,7 @@ static int check_msdos_partition(struct gendisk_t *hd, dev_t dev)
 		goto out;
 
 	/* get first partition */
-	partition = (struct msdos_partition_t *) (bh->b_data + 0x1BE);
+	partition = (struct msdos_partition *) (bh->b_data + 0x1BE);
 
 	/* check partitions */
 	for (i = 1; i < 4; i++, partition++) {
@@ -73,7 +73,7 @@ static int check_msdos_partition(struct gendisk_t *hd, dev_t dev)
 /*
  * Discover partitions.
  */
-void check_partition(struct gendisk_t *hd, dev_t dev)
+void check_partition(struct gendisk *hd, dev_t dev)
 {
 	check_msdos_partition(hd, dev);
 }

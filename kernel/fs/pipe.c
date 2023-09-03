@@ -5,14 +5,14 @@
 #include <fcntl.h>
 
 /* global file table (defined in open.c) */
-extern struct file_t filp_table[NR_FILE];
+extern struct file filp_table[NR_FILE];
 
 /*
  * Read from a pipe.
  */
-static int pipe_read(struct file_t *filp, char *buf, int count)
+static int pipe_read(struct file *filp, char *buf, int count)
 {
-	struct inode_t *inode = filp->f_inode;
+	struct inode *inode = filp->f_inode;
 	int chars, size, read = 0;
 	char *pipebuf;
 
@@ -83,9 +83,9 @@ static int pipe_read(struct file_t *filp, char *buf, int count)
 /*
  * Write to a pipe.
  */
-static int pipe_write(struct file_t *filp, const char *buf, int count)
+static int pipe_write(struct file *filp, const char *buf, int count)
 {
-	struct inode_t *inode = filp->f_inode;
+	struct inode *inode = filp->f_inode;
 	int chars, free, written = 0;
 	char *pipebuf;
 
@@ -153,9 +153,9 @@ static int pipe_write(struct file_t *filp, const char *buf, int count)
 /*
  * Close a read pipe.
  */
-static int pipe_read_close(struct file_t *filp)
+static int pipe_read_close(struct file *filp)
 {
-	struct inode_t *inode = filp->f_inode;
+	struct inode *inode = filp->f_inode;
 
 	PIPE_READERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
@@ -169,9 +169,9 @@ static int pipe_read_close(struct file_t *filp)
 /*
  * Close a write pipe.
  */
-static int pipe_write_close(struct file_t *filp)
+static int pipe_write_close(struct file *filp)
 {
-	struct inode_t *inode = filp->f_inode;
+	struct inode *inode = filp->f_inode;
 
 	PIPE_WRITERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
@@ -185,7 +185,7 @@ static int pipe_write_close(struct file_t *filp)
 /*
  * Read pipe operations.
  */
-static struct file_operations_t read_pipe_fops = {
+static struct file_operations read_pipe_fops = {
 	.read		= pipe_read,
 	.close		= pipe_read_close,
 };
@@ -193,7 +193,7 @@ static struct file_operations_t read_pipe_fops = {
 /*
  * Write pipe operations.
  */
-static struct file_operations_t write_pipe_fops = {
+static struct file_operations write_pipe_fops = {
 	.write		= pipe_write,
 	.close		= pipe_write_close,
 };
@@ -201,9 +201,9 @@ static struct file_operations_t write_pipe_fops = {
 /*
  * Get a pipe inode.
  */
-static struct inode_t *get_pipe_inode()
+static struct inode *get_pipe_inode()
 {
-	struct inode_t *inode;
+	struct inode *inode;
 
 	/* get an empty inode */
 	inode = get_empty_inode(NULL);
@@ -238,8 +238,8 @@ static struct inode_t *get_pipe_inode()
  */
 static int do_pipe(int pipefd[2], int flags)
 {
-	struct file_t *filps[2];
-	struct inode_t *inode;
+	struct file *filps[2];
+	struct inode *inode;
 	int fd[2];
 	int i, j;
 

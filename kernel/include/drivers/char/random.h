@@ -3,7 +3,7 @@
 
 #include <fs/fs.h>
 
-extern struct inode_operations_t random_iops;
+extern struct inode_operations random_iops;
 
 int init_random();
 

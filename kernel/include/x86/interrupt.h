@@ -29,10 +29,10 @@
 #define irq_restore(x)		__restore_flags(x);
 
 /* common ISR and IRQ handlers */
-void isr_handler(struct registers_t *regs);
+void isr_handler(struct registers *regs);
 
 /* IRQ handler registration */
-typedef void (*isr_t)(struct registers_t *);
+typedef void (*isr_t)(struct registers *);
 void register_interrupt_handler(uint8_t n, isr_t handler);
 
 #endif

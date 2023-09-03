@@ -5,17 +5,16 @@
 #include <stderr.h>
 #include <fcntl.h>
 
-#define shm_get(id)		((struct shmid_t *) ipc_get(id))
+#define shm_get(id)		((struct shmid *) ipc_get(id))
 
-static struct file_operations_t shm_file_operations;
+static struct file_operations shm_file_operations;
 
 /*
  * Get a new shared memory inode.
  */
-static struct inode_t *shm_get_inode(mode_t mode, dev_t dev, int size)
+static struct inode *shm_get_inode(mode_t mode, dev_t dev, int size)
 {
-	struct inode_t *tmpfs_root_inode;
-	struct inode_t *inode;
+	struct inode *tmpfs_root_inode, *inode;
 
 	/* get tmpfs root inode */
 	tmpfs_root_inode = namei(AT_FDCWD, NULL, "/tmp", 0);
@@ -38,10 +37,10 @@ static struct inode_t *shm_get_inode(mode_t mode, dev_t dev, int size)
 /*
  * Set up a temporary file.
  */
-static struct file_t *shmem_file_setup(int size)
+static struct file *shmem_file_setup(int size)
 {
-	struct inode_t *inode;
-	struct file_t *filp;
+	struct inode *inode;
+	struct file *filp;
 
 	/* get an empty file */
 	filp = get_empty_filp();
@@ -69,15 +68,15 @@ static struct file_t *shmem_file_setup(int size)
 static int shm_newseg(int key, int size, int shmflg)
 {
 	int id, ret = -EINVAL;
-	struct file_t *filp;
-	struct shmid_t *shm;
+	struct file *filp;
+	struct shmid *shm;
 
 	/* check size */
 	if (size < SHMMIN || size > SHMMAX)
 		return -EINVAL;
 
 	/* allocate a new shared memory segment */
-	shm = (struct shmid_t *) kmalloc(sizeof(struct shmid_t));
+	shm = (struct shmid *) kmalloc(sizeof(struct shmid));
 	if (!shm)
 		return -ENOMEM;
 
@@ -121,7 +120,7 @@ no_file:
 /*
  * Destroy a memory segment.
  */
-int shm_destroy(struct shmid_t *shm)
+int shm_destroy(struct shmid *shm)
 {
 	/* remove ipc resource */
 	ipc_rm_id(shm->shm_id);
@@ -140,7 +139,7 @@ int shm_destroy(struct shmid_t *shm)
  */
 int do_shmget(int key, int size, int shmflg)
 {
-	struct shmid_t *shm;
+	struct shmid *shm;
 	int id;
 
 	/* private shm : create a new segment */
@@ -178,7 +177,7 @@ int do_shmget(int key, int size, int shmflg)
 int do_shmat(int shmid, char *shmaddr, int shmflg, uint32_t *addr_ret)
 {
 	uint32_t addr, flags, prot;
-	struct shmid_t *shm;
+	struct shmid *shm;
 	void *buf;
 
 	/* check shared memory id */
@@ -237,9 +236,9 @@ out:
 /*
  * Control a shared memory segment.
  */
-int do_shmctl(int shmid, int cmd, struct shmid_ds_t *buf)
+int do_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 {
-	struct shmid_t *shm;
+	struct shmid *shm;
 
 	if (cmd < 0 || shmid < 0)
 		return -EINVAL;
@@ -281,9 +280,9 @@ int do_shmctl(int shmid, int cmd, struct shmid_ds_t *buf)
 /*
  * Open a memory region.
  */
-void shm_open(struct vm_area_t *vma)
+void shm_open(struct vm_area *vma)
 {
-	struct shmid_t *shm = shm_get(vma->vm_inode->u.tmp_i.i_shmid);
+	struct shmid *shm = shm_get(vma->vm_inode->u.tmp_i.i_shmid);
 
 	shm->shm_atime = CURRENT_TIME;
 	shm->shm_lprid = current_task->pid;
@@ -293,9 +292,9 @@ void shm_open(struct vm_area_t *vma)
 /*
  * Close a memory region.
  */
-void shm_close(struct vm_area_t *vma)
+void shm_close(struct vm_area *vma)
 {
-	struct shmid_t *shm = shm_get(vma->vm_inode->u.tmp_i.i_shmid);
+	struct shmid *shm = shm_get(vma->vm_inode->u.tmp_i.i_shmid);
 
 	shm->shm_dtime = CURRENT_TIME;
 	shm->shm_lprid = current_task->pid;
@@ -308,11 +307,11 @@ void shm_close(struct vm_area_t *vma)
 /*
  * Handle a shared memory page fault.
  */
-static struct page_t *shm_nopage(struct vm_area_t *vma, uint32_t address)
+static struct page *shm_nopage(struct vm_area *vma, uint32_t address)
 {
-	struct inode_t *inode = vma->vm_inode;
+	struct inode *inode = vma->vm_inode;
 	uint32_t new_page, offset;
-	struct page_t *page;
+	struct page *page;
 
 	/* page align address */
 	address = PAGE_ALIGN_DOWN(address);
@@ -345,7 +344,7 @@ static struct page_t *shm_nopage(struct vm_area_t *vma, uint32_t address)
 /*
  * Shared memory page fault handler.
  */
-static struct vm_operations_t shm_vm_ops = {
+static struct vm_operations shm_vm_ops = {
 	.open		= shm_open,
 	.close		= shm_close,
 	.nopage		= shm_nopage,
@@ -356,7 +355,7 @@ static struct vm_operations_t shm_vm_ops = {
  */
 int do_shmdt(char *shmaddr)
 {
-	struct vm_area_t *vma;
+	struct vm_area *vma;
 
 	vma = find_vma(current_task, (uint32_t) shmaddr);
 	if (vma && vma->vm_ops == &shm_vm_ops)
@@ -368,9 +367,9 @@ int do_shmdt(char *shmaddr)
 /*
  * Shared memory mmap.
  */
-static int shm_mmap(struct inode_t *inode, struct vm_area_t *vma)
+static int shm_mmap(struct inode *inode, struct vm_area *vma)
 {
-	struct shmid_t *shm = shm_get(inode->u.tmp_i.i_shmid);
+	struct shmid *shm = shm_get(inode->u.tmp_i.i_shmid);
 
 	if (!S_ISREG(inode->i_mode))
 		return -EACCES;
@@ -393,6 +392,6 @@ static int shm_mmap(struct inode_t *inode, struct vm_area_t *vma)
 /*
  * Shared memory file operations.
  */
-static struct file_operations_t shm_file_operations = {
+static struct file_operations shm_file_operations = {
 	.mmap		= shm_mmap,
 };
