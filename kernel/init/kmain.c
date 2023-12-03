@@ -41,6 +41,11 @@ extern uint32_t kernel_end;
 /* grub framebuffer */
 static struct multiboot_tag_framebuffer *tag_fb;
 
+/* static IP address */
+static uint8_t default_ip_address[] = { 10, 0, 2, 15 };
+static uint8_t default_ip_netmask[] = { 255, 255, 255, 0 };
+static uint8_t default_ip_route[] = { 10, 0, 2, 2 };
+
 /*
  * Parse multiboot header.
  */
@@ -154,7 +159,7 @@ static void kinit()
 
 	/* init realtek 8139 device */
 	printf("[Kernel] Realtek 8139 card Init\n");
-	if (init_rtl8139() != 0)
+	if (init_rtl8139(default_ip_address, default_ip_netmask, default_ip_route) != 0)
 		printf("[Kernel] Realtek 8139 card Init error\n");
 
 	/* init ttys */

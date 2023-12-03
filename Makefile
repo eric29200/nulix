@@ -12,13 +12,13 @@ run:
 	make -j$(NJOBS) -C kernel
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
-	sudo $(QEMU)								\
+	$(QEMU)									\
 		-m $(MEM_SIZE)							\
 		-serial stdio 							\
 		-boot order=d 							\
 		-cdrom $(ISO) 							\
 		-drive format=raw,file=$(DISK)					\
-		-netdev tap,id=nulix_net					\
+		-netdev user,id=nulix_net					\
 		-device rtl8139,netdev=nulix_net,id=nulix_nic			\
 		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap
 
