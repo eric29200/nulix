@@ -15,7 +15,7 @@ int ip_route_new(struct rtentry *rt)
 	/* check destination address */
 	if (rt->rt_dst.sa_family != AF_INET)
 		return -EAFNOSUPPORT;
-	
+
 	/* interface must be specified */
 	if (!rt->rt_dev)
 		return -ENODEV;
@@ -30,6 +30,6 @@ int ip_route_new(struct rtentry *rt)
 		inet_ntoi(((struct sockaddr_in *) &rt->rt_gateway)->sin_addr, net_dev->ip_route);
 		return 0;
 	}
-		
+
 	return -EINVAL;
 }

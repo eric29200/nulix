@@ -1,0 +1,20 @@
+VERSION="2.3"
+SRC_FILENAME="inetutils-"$VERSION".tar.xz"
+URL="https://ftp.gnu.org/gnu/inetutils/"$SRC_FILENAME
+
+function configure_port() {
+	echo '#define PATH_PROCNET_DEV "/proc/net/dev"' >> ifconfig/system/linux.h 
+
+	./configure								\
+		--host=$HOST							\
+		--disable-threads						\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

@@ -1,0 +1,27 @@
+VERSION="4.0.0"
+SRC_FILENAME="procps-ng-"$VERSION".tar.xz"
+URL="https://sourceforge.net/projects/procps-ng/files/Production/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--disable-shared						\
+		--disable-nls							\
+		--disable-w							\
+		--disable-numa							\
+		--prefix="/usr"							\
+		CFLAGS="-D__thread=''" PKG_CONFIG=$PKG_CONFIG
+}
+
+function build_port() {
+	make -j$NJOBS V=1
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+
+	# fix libtool and pkgconfig
+	SYSROOT_ESC=$(echo $SYSROOT | sed 's/\//\\\//g')
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/libproc-2.pc"
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/libproc-2.la"
+}

@@ -38,6 +38,7 @@ sudo mkdir -p tmp/var/run
 sudo cp -R musl/musl-install/i386-linux-musl/lib tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/share tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/usr tmp/
+sudo cp -R musl/musl-install/i386-linux-musl/etc tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/bin tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/sbin tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
@@ -50,7 +51,7 @@ sudo rm -f tmp/bin/objcopy tmp/bin/ranlib tmp/bin/nm tmp/bin/readelf tmp/bin/str
 # create links
 mkdir -p tmp/bin
 sudo ln -s /usr/bin/bash tmp/bin/bash
-sudo ln -sf /usr/bin/bash tmp/bin/sh
+sudo ln -s /usr/bin/bash tmp/bin/sh
 sudo ln -s /proc/mounts tmp/etc/mtab
 
 # chown root

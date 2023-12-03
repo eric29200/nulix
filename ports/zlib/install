@@ -1,5 +1,5 @@
-VERSION="1.2.13"
-SRC_FILENAME="zlib-"$VERSION".tar.xz"
+VERSION="1.3"
+SRC_FILENAME="zlib-"$VERSION".tar.gz"
 URL="https://zlib.net/"$SRC_FILENAME
 
 function configure_port() {

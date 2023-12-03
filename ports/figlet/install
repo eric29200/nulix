@@ -1,0 +1,15 @@
+VERSION="2.2.5"
+SRC_FILENAME="figlet-"$VERSION".tar.gz"
+URL="http://ftp.figlet.org/pub/figlet/program/unix/"$SRC_FILENAME
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	make -j$NJOBS CC=$CC LD=$CC
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

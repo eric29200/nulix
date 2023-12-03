@@ -178,7 +178,7 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 
 	/* set name */
 	len = sprintf(tmp, "eth%d", nr_net_devices);
-	
+
 	/* allocate name */
 	net_dev->name = (char *) kmalloc(len + 1);
 	if (!net_dev->name)
