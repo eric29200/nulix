@@ -1,0 +1,22 @@
+VERSION="9e"
+SRC_FILENAME="jpegsrc.v"$VERSION".tar.gz"
+URL="http://www.ijg.org/files/jpegsrc.v9e.tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+
+	# fix libtool and pkgconfig
+	SYSROOT_ESC=$(echo $SYSROOT | sed 's/\//\\\//g')
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/libjpeg.pc"
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/libjpeg.la"
+}
