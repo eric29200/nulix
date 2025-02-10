@@ -8,7 +8,7 @@ function configure_port() {
 		--with-zlib							\
 		--with-bzlib							\
 		--with-screen=ncursesw						\
-		--with-ssl=$SYSROOT/include					\
+		--with-ssl=$SYSROOT/usr/include					\
 		--prefix="/usr"
 }
 
