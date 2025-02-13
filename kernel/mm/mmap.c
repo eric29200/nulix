@@ -401,6 +401,185 @@ err:
 }
 
 /*
+ * Change memory protection.
+ */
+static int mprotect_fixup_all(struct vm_area *vm, uint16_t newflags, uint32_t newprot)
+{
+	vm->vm_flags = newflags;
+	vm->vm_page_prot = newprot;
+	return 0;
+}
+
+/*
+ * Change memory protection (start of vm).
+ */
+static int mprotect_fixup_start(struct vm_area *vm, uint32_t end, uint16_t newflags, uint32_t newprot)
+{
+	struct vm_area *vm_new;
+
+	/* create new memory region */
+	vm_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!vm_new)
+		return -ENOMEM;
+
+	/* set new memory region */
+	*vm_new = *vm;
+	if (vm_new->vm_inode)
+		vm_new->vm_inode->i_ref++;
+	vm_new->vm_flags = newflags;
+	vm_new->vm_page_prot = newprot;
+
+	/* split region */
+	vm_new->vm_end = end;
+	vm->vm_start = end;
+	vm->vm_offset += vm->vm_start - vm_new->vm_start;
+
+	/* add new memory region before old one */
+	list_add_tail(&vm_new->list, &vm->list);
+
+	return 0;
+}
+
+/*
+ * Change memory protection (end of vm).
+ */
+static int mprotect_fixup_end(struct vm_area *vm, uint32_t start, uint16_t newflags, uint32_t newprot)
+{
+	struct vm_area *vm_new;
+
+	/* create new memory region */
+	vm_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!vm_new)
+		return -ENOMEM;
+
+	/* set new memory region */
+	*vm_new = *vm;
+	if (vm_new->vm_inode)
+		vm_new->vm_inode->i_ref++;
+	vm_new->vm_flags = newflags;
+	vm_new->vm_page_prot = newprot;
+
+	/* split region */
+	vm->vm_end = start;
+	vm_new->vm_start = start;
+	vm_new->vm_offset += vm_new->vm_start - vm->vm_start;
+
+	/* add new memory region after old one */
+	list_add(&vm_new->list, &vm->list);
+
+	return 0;
+}
+
+/*
+ * Change memory protection (middle of vm).
+ */
+static int mprotect_fixup_middle(struct vm_area *vm, uint32_t start, uint32_t end, uint16_t newflags, uint32_t newprot)
+{
+	UNUSED(vm);
+	UNUSED(start);
+	UNUSED(end);
+	UNUSED(newflags);
+	UNUSED(newprot);
+	printf("mprotect_fixup_middle() not implemented\n");
+	return -EINVAL;
+}
+
+/*
+ * Change memory protection (split memory region if needed).
+ */
+static int mprotect_fixup(struct vm_area *vm, uint32_t start, uint32_t end, uint16_t newflags)
+{
+	uint32_t newprot;
+	int ret;
+
+	/* nothing to do */
+	if (vm->vm_flags == newflags)
+		return 0;
+
+	/* get new protection */
+	newprot = protection_map[newflags & 0x0F];
+
+	/* fix and split */
+	if (vm->vm_start == start && vm->vm_end == end)
+		ret = mprotect_fixup_all(vm, newflags, newprot);
+	else if (vm->vm_start == start)
+		ret = mprotect_fixup_start(vm, end, newflags, newprot);
+	else if (vm->vm_end == end)
+		ret = mprotect_fixup_end(vm, start, newflags, newprot);
+	else
+		ret = mprotect_fixup_middle(vm, start, end, newflags, newprot);
+
+	return ret;
+}
+
+/*
+ * Memory region protect system call.
+ */
+int do_mprotect(uint32_t start, size_t size, int prot)
+{
+	struct vm_area *vm, *next;
+	uint32_t nstart, end, tmp;
+	uint16_t newflags;
+	int ret = 0;
+
+	/* address must be page aligned */
+	if (start & ~PAGE_MASK)
+		return -EINVAL;
+
+	/* page align length */
+	size = PAGE_ALIGN_UP(size);
+
+	/* check protocol */
+	if (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC))
+		return -EINVAL;
+
+	/* compute end address */
+	end = start + size;
+	if (end < start)
+		return -EINVAL;
+
+	/* empty region */
+	if (end == start)
+		return 0;
+
+	/* find first memory region */
+	vm = find_vma(current_task, start);
+	if (!vm)
+		return -EFAULT;
+
+	/* change memory regions */
+	for (nstart = start;;) {
+		/* compute new flags */
+		newflags = prot | (vm->vm_flags & ~(PROT_READ | PROT_WRITE | PROT_EXEC));
+
+		/* last memory region */
+		if (vm->vm_end >= end) {
+			ret = mprotect_fixup(vm, nstart, end, newflags);
+			break;
+		}
+
+		/* protect memory region */
+		tmp = vm->vm_end;
+		next = list_next_entry_or_null(vm, &current_task->mm->vm_list, list);
+		ret = mprotect_fixup(vm, nstart, tmp, newflags);
+		if (ret)
+			break;
+
+		/* go to next memory region */
+		nstart = tmp;
+		vm = next;
+
+		/* hole or no more regions */
+		if (!vm || vm->vm_start != nstart) {
+			ret = -EFAULT;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+/*
  * Truncate memory regions.
  */
 void vmtruncate(struct inode *inode, off_t offset)
@@ -479,10 +658,7 @@ int sys_madvise(void *addr, size_t length, int advice)
  */
 int sys_mprotect(void *addr, size_t len, int prot)
 {
-	UNUSED(addr);
-	UNUSED(len);
-	UNUSED(prot);
-	return 0;
+	return do_mprotect((uint32_t) addr, len, prot);
 }
 
 /*
