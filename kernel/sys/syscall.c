@@ -155,6 +155,7 @@ static const void *syscalls[] = {
 	[__NR_socketcall]		= sys_socketcall,
 	[__NR_rt_sigtimedwait]		= sys_rt_sigtimedwait,
 	[__NR_sendfile64]		= sys_sendfile64,
+	[__NR_syslog]			= sys_syslog,
 };
 
 /*
