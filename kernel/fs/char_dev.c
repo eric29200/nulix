@@ -26,7 +26,7 @@ struct inode_operations *char_get_driver(struct inode *inode)
 		return &zero_iops;
 
 	/* random driver */
-	if (inode->i_rdev == DEV_RANDOM)
+	if (inode->i_rdev == DEV_RANDOM || inode->i_rdev == DEV_URANDOM)
 		return &random_iops;
 
 	/* tty driver */
