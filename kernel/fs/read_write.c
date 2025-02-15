@@ -256,6 +256,7 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 {
 	struct file *filp_in, *filp_out;
 	ssize_t n, tot = 0;
+	size_t f_pos;
 	int buf_len;
 	void *buf;
 
@@ -273,6 +274,12 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 	buf = get_free_page();
 	if (!buf)
 		return -ENOMEM;
+
+	/* set input file position */
+	if (offset) {
+		f_pos = filp_in->f_pos;
+		filp_in->f_pos = *offset;
+	}
 
 	/* send */
 	while (count > 0) {
@@ -293,7 +300,10 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 	}
 
 	/* update offset */
-	*offset = filp_in->f_pos;
+	if (offset) {
+		*offset = filp_in->f_pos;
+		filp_in->f_pos = f_pos;
+	}
 
 	/* free page */
 	free_page(buf);
