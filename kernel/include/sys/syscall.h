@@ -106,6 +106,7 @@
 #define __NR_fcntl64			221
 #define __NR_gettid			224
 #define __NR_tkill			238
+#define __NR_sendfile64			239
 #define __NR_set_thread_area		243
 #define __NR_get_thread_area		244
 #define __NR_exit_group			252

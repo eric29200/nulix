@@ -239,6 +239,7 @@ int sys_pread64(int fd, void *buf, size_t count, off_t offset)
  */
 int sys_copy_file_range(int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, unsigned int flags)
 {
+	printf("copy_file_range() unimplemented\n");
 	UNUSED(fd_in);
 	UNUSED(off_in);
 	UNUSED(fd_out);
@@ -246,4 +247,56 @@ int sys_copy_file_range(int fd_in, off_t *off_in, int fd_out, off_t *off_out, si
 	UNUSED(len);
 	UNUSED(flags);
 	return 0;
+}
+
+/*
+ * Send file system call.
+ */
+ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
+{
+	struct file *filp_in, *filp_out;
+	ssize_t n, tot = 0;
+	int buf_len;
+	void *buf;
+
+	/* get input file */
+	if (fd_in >= NR_OPEN || fd_in < 0 || !current_task->files->filp[fd_in])
+		return -EBADF;
+	filp_in = current_task->files->filp[fd_in];
+	
+	/* get output file */
+	if (fd_out>= NR_OPEN || fd_out < 0 || !current_task->files->filp[fd_out])
+		return -EBADF;
+	filp_out = current_task->files->filp[fd_out];
+
+	/* get a free buffer */
+	buf = get_free_page();
+	if (!buf)
+		return -ENOMEM;
+
+	/* send */
+	while (count > 0) {
+		buf_len = PAGE_SIZE < count ? PAGE_SIZE : count;		
+
+		/* read from input file */
+		n = do_read(filp_in, buf, buf_len);
+		if (n <= 0)
+			break;
+		
+		/* write to output file */
+		n = do_write(filp_out, buf, n);
+		if (n <= 0)
+			break;
+	
+		count -= n;
+		tot += n;
+	}
+
+	/* update offset */
+	*offset = filp_in->f_pos;
+
+	/* free page */
+	free_page(buf);
+
+	return n < 0 ? n : tot;
 }

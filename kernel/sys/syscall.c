@@ -154,6 +154,7 @@ static const void *syscalls[] = {
 	[__NR_tkill]			= sys_tkill,
 	[__NR_socketcall]		= sys_socketcall,
 	[__NR_rt_sigtimedwait]		= sys_rt_sigtimedwait,
+	[__NR_sendfile64]		= sys_sendfile64,
 };
 
 /*
@@ -165,7 +166,8 @@ static void syscall_handler(struct registers *regs)
 
 	/* system call not handled */
 	if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL) {
-		printf("Unknown system call : %d (process %d @ %x)\n", regs->eax, current_task->pid, regs->eip);
+		if (regs->eax != 103)
+			printf("Unknown system call : %d (process %d @ %x)\n", regs->eax, current_task->pid, regs->eip);
 		return;
 	}
 
