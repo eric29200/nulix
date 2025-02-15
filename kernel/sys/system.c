@@ -23,6 +23,10 @@ int sys_clock_gettime64(clockid_t clockid, struct timespec *tp)
 			tp->tv_sec = xtimes.tv_sec;
 			tp->tv_nsec = xtimes.tv_nsec;
 			break;
+		case CLOCK_BOOTTIME:
+			tp->tv_sec = xtimes.tv_sec;
+			tp->tv_nsec = xtimes.tv_nsec;
+			break;
 		default:
 			printf("clock_gettime64 not implement on clockid=%d\n", clockid);
 			return -ENOSYS;
@@ -42,6 +46,10 @@ int sys_clock_gettime32(clockid_t clockid, struct old_timespec *tp)
 			tp->tv_nsec = xtimes.tv_nsec;
 			break;
 		case CLOCK_MONOTONIC:
+			tp->tv_sec = xtimes.tv_sec;
+			tp->tv_nsec = xtimes.tv_nsec;
+			break;
+		case CLOCK_BOOTTIME:
 			tp->tv_sec = xtimes.tv_sec;
 			tp->tv_nsec = xtimes.tv_nsec;
 			break;
