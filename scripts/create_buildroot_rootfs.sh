@@ -27,7 +27,7 @@ sudo mount ${LOOP_DEVICE}p1 tmp
 
 # populate disk
 cd tmp
-sudo tar -xvf ../buildroot/build/buildroot-2024.02.10/output/images/rootfs.tar.xz
+sudo tar -xf ../buildroot/build/buildroot-2024.02.10/output/images/rootfs.tar.xz
 cd ..
 
 # chown root

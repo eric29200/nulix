@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Buildroot -g2d6aff5a-dirty Configuration
+# Buildroot -g0c960865 Configuration
 #
 BR2_HAVE_DOT_CONFIG=y
 BR2_HOST_GCC_AT_LEAST_4_9=y
@@ -133,7 +133,7 @@ BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
 # BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD is not set
 BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y
-BR2_TOOLCHAIN_EXTERNAL_PATH="/home/eric/Projets/nulix/musl/musl-install1"
+BR2_TOOLCHAIN_EXTERNAL_PATH="/home/eric/Projets/nulix/musl/musl-build/output"
 BR2_TOOLCHAIN_EXTERNAL_MUSL=y
 BR2_PACKAGE_HAS_TOOLCHAIN_EXTERNAL=y
 BR2_PACKAGE_PROVIDES_TOOLCHAIN_EXTERNAL="toolchain-external-custom"
@@ -1111,7 +1111,7 @@ BR2_PACKAGE_FLASHROM_ARCH_SUPPORTS=y
 # BR2_PACKAGE_IPMIUTIL is not set
 # BR2_PACKAGE_IRDA_UTILS is not set
 # BR2_PACKAGE_IUCODE_TOOL is not set
-# BR2_PACKAGE_KBD is not set
+BR2_PACKAGE_KBD=y
 # BR2_PACKAGE_LCDPROC is not set
 
 #
