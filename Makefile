@@ -25,9 +25,6 @@ run:
 %:
 	@:
 
-musl:
-	./scripts/build_musl.sh
-
 world:
 	./scripts/build_world.csh
 	./scripts/create_rootfs.csh
