@@ -264,7 +264,7 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 	if (fd_in >= NR_OPEN || fd_in < 0 || !current_task->files->filp[fd_in])
 		return -EBADF;
 	filp_in = current_task->files->filp[fd_in];
-	
+
 	/* get output file */
 	if (fd_out>= NR_OPEN || fd_out < 0 || !current_task->files->filp[fd_out])
 		return -EBADF;
@@ -283,18 +283,18 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 
 	/* send */
 	while (count > 0) {
-		buf_len = PAGE_SIZE < count ? PAGE_SIZE : count;		
+		buf_len = PAGE_SIZE < count ? PAGE_SIZE : count;
 
 		/* read from input file */
 		n = do_read(filp_in, buf, buf_len);
 		if (n <= 0)
 			break;
-		
+
 		/* write to output file */
 		n = do_write(filp_out, buf, n);
 		if (n <= 0)
 			break;
-	
+
 		count -= n;
 		tot += n;
 	}

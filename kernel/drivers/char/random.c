@@ -102,7 +102,7 @@ int init_random()
 {
 	if (!devfs_register(NULL, "random", S_IFCHR | 0666, DEV_RANDOM))
 		return -ENOSPC;
-	
+
 	if (!devfs_register(NULL, "urandom", S_IFCHR | 0666, DEV_URANDOM))
 		return -ENOSPC;
 
