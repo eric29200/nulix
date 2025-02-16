@@ -17,7 +17,7 @@ tar -xzvf buildroot-2024.02.10.tar.gz
 # configure buildroot
 cd buildroot-2024.02.10
 cp ../../config .config
-sed -i "s|BR2_TOOLCHAIN_EXTERNAL_PATH=.*|BR2_TOOLCHAIN_EXTERNAL_PATH=\"$BASE_DIR\/musl\/musl-install\"|g" .config
+sed -i "s|BR2_TOOLCHAIN_EXTERNAL_PATH=.*|BR2_TOOLCHAIN_EXTERNAL_PATH=\"$BASE_DIR\/musl\/musl-build\/output\"|g" .config
 
 # build
 make -j$NJOBS

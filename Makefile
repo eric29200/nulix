@@ -27,7 +27,7 @@ run:
 
 port:
 	./ports/install.sh $(call args)
-	./scripts/create_rootfs.sh
+	./scripts/create_port_rootfs.sh
 
 clean:
 	make clean -C kernel
