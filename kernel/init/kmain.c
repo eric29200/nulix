@@ -133,16 +133,6 @@ static void kinit()
 	if (do_mount_root(ROOT_DEV, ROOT_DEV_NAME) != 0)
 		panic("Cannot mount root file system");
 
-	/* mount proc file system */
-	printf("[Kernel] Proc file system init\n");
-	if (sys_mount("proc", "/proc", "proc", MS_RDONLY, NULL) != 0)
-		panic("Cannot mount proc file system");
-
-	/* mount tmp file system */
-	printf("[Kernel] Tmp file system init\n");
-	if (sys_mount("tmp", "/tmp", "tmpfs", MS_RDONLY, NULL) != 0)
-		panic("Cannot mount tmp file system");
-
 	/* mount device file system */
 	printf("[Kernel] Device file system init\n");
 	if (sys_mount("dev", "/dev", "devfs", MS_RDONLY, NULL) != 0)

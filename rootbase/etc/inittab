@@ -1,5 +1,8 @@
 id:1:initdefault:
 
+si0::sysinit:/bin/mount -t proc proc /proc
+si1::sysinit:/bin/mount -a
+
 l0:0:wait:/etc/init.d/rc 0
 l1:1:wait:/etc/init.d/rc 1
 l2:2:wait:/etc/init.d/rc 2
