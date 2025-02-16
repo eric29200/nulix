@@ -611,6 +611,10 @@ static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 			return;
 		case 9:
 			fb->x = (fb->x + fb->bpp / 8) & ~0x03;
+			if (fb->x >= fb->width - 1) {
+				console_lf(vc);
+				console_cr(vc);
+			}
 			return;
 		case 10:
 		case 11:
