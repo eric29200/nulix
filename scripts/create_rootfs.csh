@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DISK=hdb.img
+DISK=hda.img
 DISK_SIZE=2G
 
 if [[ `basename $PWD` != "nulix" ]]; then
@@ -27,8 +27,11 @@ sudo mount ${LOOP_DEVICE}p1 tmp
 
 # populate disk
 cd tmp
-sudo tar -xf ../buildroot/build/buildroot-2024.02.10/output/images/rootfs.tar.xz
+sudo tar -xf ../buildroot/build/buildroot-2024.02.10/output/images/rootfs.tar
 cd ..
+sudo rm -rf tmp/etc/resolv.conf tmp/etc/init.d
+sudo cp -Rf rootbase/etc/* tmp/etc/
+sudo cp -Rf rootbase/root tmp/
 
 # chown root
 sudo chown -R 0:0 tmp/

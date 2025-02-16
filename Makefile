@@ -25,9 +25,13 @@ run:
 %:
 	@:
 
-port:
-	./ports/install.sh $(call args)
-	./scripts/create_port_rootfs.sh
+world:
+	./scripts/build_world.csh
+	./scripts/create_rootfs.csh
+
+world_full:
+	./scripts/build_world.csh FULL
+	./scripts/create_rootfs.csh
 
 clean:
 	make clean -C kernel
