@@ -152,6 +152,21 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 }
 
 /*
+ * Examine pending signals.
+ */
+int sys_rt_sigpending(sigset_t *set, size_t sigsetsize)
+{
+	UNUSED(sigsetsize);
+
+	if (!set)
+		return -EINVAL;
+
+	*set = current_task->sigpend;
+
+	return 0;
+}
+
+/*
  * Sigaction system call (= change action taken by a process on receipt of a specific signal).
  */
 int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)

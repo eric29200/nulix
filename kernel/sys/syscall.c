@@ -156,6 +156,7 @@ static const void *syscalls[] = {
 	[__NR_rt_sigtimedwait]		= sys_rt_sigtimedwait,
 	[__NR_sendfile64]		= sys_sendfile64,
 	[__NR_syslog]			= sys_syslog,
+	[__NR_rt_sigpending]		= sys_rt_sigpending,
 };
 
 /*
