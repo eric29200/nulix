@@ -21,5 +21,7 @@ musl/musl-build
 musl/musl-install
 tmp/*
 usr/build
+buildroot/build/
+buildroot/build/*
 traffic.pcap
 .vscode
