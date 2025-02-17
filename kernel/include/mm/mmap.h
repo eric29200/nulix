@@ -45,6 +45,7 @@ int sys_munmap(void *addr, size_t length);
 void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address);
 int sys_madvise(void *addr, size_t length, int advice);
 int sys_mprotect(void *addr, size_t len, int prot);
+int sys_mincore(void *addr, size_t len, unsigned char *vec);
 uint32_t sys_brk(uint32_t brk);
 
 #endif

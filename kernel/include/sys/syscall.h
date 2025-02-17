@@ -103,6 +103,7 @@
 #define __NR_chown32			212
 #define __NR_setuid32			213
 #define __NR_setgid32			214
+#define __NR_mincore			218
 #define __NR_madvise			219
 #define __NR_getdents64			220
 #define __NR_fcntl64			221

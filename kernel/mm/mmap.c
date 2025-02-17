@@ -698,3 +698,14 @@ set_brk:
 out:
 	return current_task->mm->end_brk;
 }
+
+/*
+ * Determine wether pages are resident in memory.
+ */
+int sys_mincore(void *addr, size_t len, unsigned char *vec)
+{
+	UNUSED(addr);
+	UNUSED(len);
+	UNUSED(vec);
+	return 0;
+}
