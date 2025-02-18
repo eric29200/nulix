@@ -208,7 +208,6 @@ int init_pty()
 	pts_fops = *tty_iops.fops;
 
 	/* register pty multiplexer */
-	printf("ok\n");
 	if (!devfs_register(NULL, "ptmx", S_IFCHR | 0666, DEV_PTMX))
 		return -ENOSPC;
 
