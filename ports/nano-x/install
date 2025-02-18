@@ -1,0 +1,19 @@
+SRC_FILENAME="microwindows"
+URL_GIT=1
+URL="https://github.com/ghaerr/microwindows"
+
+function configure_port() {
+	cd src
+	cp Configs/config.linux-fb config
+}
+
+function build_port() {
+	make -j$NJOBS CC=$CC CXX=$CXX LD=$LD AR=$AR AS=$AS RANLIB=$RANLIB
+}
+
+function install_port() {
+	mkdir -p $SYSROOT/usr/X11/bin
+	mkdir -p $SYSROOT/usr/X11/fonts
+	cp -Rv bin/* $SYSROOT/usr/X11/bin/
+	cp -Rv fonts/* $SYSROOT/usr/X11/fonts/
+}

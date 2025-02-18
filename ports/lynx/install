@@ -1,0 +1,21 @@
+VERSION="2.8.9rel.1"
+SRC_FILENAME="lynx"$VERSION".tar.bz2"
+URL="https://invisible-mirror.net/archives/lynx/tarballs/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--with-zlib							\
+		--with-bzlib							\
+		--with-screen=ncursesw						\
+		--with-ssl=$SYSROOT/usr/include					\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

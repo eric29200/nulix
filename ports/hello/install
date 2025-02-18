@@ -1,0 +1,19 @@
+VERSION="2.12.1"
+SRC_FILENAME="hello-"$VERSION".tar.gz"
+URL="https://ftp.gnu.org/gnu/hello/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--disable-nls							\
+		--disable-threads						\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

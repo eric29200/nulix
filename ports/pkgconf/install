@@ -1,0 +1,17 @@
+VERSION="1.8.0"
+SRC_FILENAME="pkgconf-"$VERSION".tar.xz"
+URL="https://distfiles.dereferenced.org/pkgconf/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--prefix=$SYSROOT						\
+		CC=gcc LD=ld
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install
+}

@@ -1,0 +1,20 @@
+VERSION="2.5.1"
+SRC_FILENAME="kbd-"$VERSION".tar.xz"
+URL="https://mirrors.edge.kernel.org/pub/linux/utils/kbd/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--disable-nls							\
+		--disable-vlock							\
+		--disable-shared						\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS V=1
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

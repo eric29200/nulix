@@ -1,0 +1,20 @@
+VERSION="1.3"
+SRC_FILENAME="zlib-"$VERSION".tar.gz"
+URL="https://www.zlib.net/fossils/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+
+	# fix libtool and pkgconfig
+	SYSROOT_ESC=$(echo $SYSROOT | sed 's/\//\\\//g')
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/zlib.pc"
+}
