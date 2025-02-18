@@ -278,7 +278,7 @@ int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *except
 /*
  * Pselect6 system call.
  */
-int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct timespec *timeout, sigset_t *sigmask)
+int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *timeout, sigset_t *sigmask)
 {
 	struct kernel_timeval tv;
 	sigset_t current_sigmask;
@@ -297,7 +297,7 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 
 	/* convert timespec to kernel timeval */
 	if (timeout)
-		timespec_to_kernel_timeval(timeout, &tv);
+		old_timeval_to_kernel_timeval(timeout, &tv);
 
 	/* select */
 	ret = do_select(nfds, readfds, writefds, exceptfds, timeout ? &tv : NULL);
