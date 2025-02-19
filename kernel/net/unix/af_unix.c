@@ -388,9 +388,8 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 			/* get socket buffer */
 			skb = list_entry(pos, struct sk_buff, list);
 
-			/* set new socket */
-			sock_new->state = SS_CONNECTED;
-			other = sk_new->protinfo.af_unix.other = skb->sock->sk;
+			/* get destination */
+			other = skb->sock->sk;
 
 			/* set destination address */
 			memcpy(addr, &other->protinfo.af_unix.sunaddr, sizeof(struct sockaddr_un));
@@ -399,8 +398,13 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 			list_del(&skb->list);
 			skb_free(skb);
 
+			/* set new socket */
+			sock_new->state = SS_CONNECTED;
+			sk_new->protinfo.af_unix.other = other;
+
 			/* set other socket connected and wake up eventual clients connecting */
-			sk_new->protinfo.af_unix.other->sock->state = SS_CONNECTED;
+			other->sock->state = SS_CONNECTED;
+			other->protinfo.af_unix.other = sk_new;
 			task_wakeup_all(&sk_new->protinfo.af_unix.other->sock->wait);
 
 			return 0;
