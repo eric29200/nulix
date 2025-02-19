@@ -293,11 +293,11 @@ err_sig:
 int elf_load(const char *path, struct binargs *bargs)
 {
 	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
+	char name[TASK_NAME_LEN], *buf = NULL, *elf_intepreter = NULL;
 	int fd, off, ret, elf_type, elf_prot, load_addr_set = 0;
-	char name[TASK_NAME_LEN], *buf, *elf_intepreter = NULL;
 	struct elf_prog_header *ph, *last_ph = NULL;
 	struct elf_header *elf_header;
-	struct file *filp;
+	struct file *filp = NULL;
 	void *buf_mmap;
 
 	/* open file */
@@ -305,6 +305,7 @@ int elf_load(const char *path, struct binargs *bargs)
 	if (fd < 0)
 		return fd;
 	filp = current_task->files->filp[fd];
+	filp->f_ref++;
 
 	/* save path */
 	strncpy(name, path, TASK_NAME_LEN - 1);
@@ -393,7 +394,7 @@ int elf_load(const char *path, struct binargs *bargs)
 					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
 					   elf_prot,
 					   elf_type,
-					   current_task->files->filp[fd],
+					   filp,
 					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
 			if (!buf_mmap) {
 				ret = -ENOMEM;
@@ -414,6 +415,9 @@ int elf_load(const char *path, struct binargs *bargs)
 			last_ph = ph;
 		}
 	}
+
+	/* release file */
+	do_close(filp);
 
 	/* no segment */
 	if (!last_ph) {
@@ -482,8 +486,11 @@ int elf_load(const char *path, struct binargs *bargs)
 	current_task->user_regs.eip = elf_entry;
 	current_task->user_regs.useresp = sp;
 out:
-	sys_close(fd);
-	kfree(elf_intepreter);
-	free_page(buf);
+	if (current_task->files->filp[fd])
+		sys_close(fd);
+	if (elf_intepreter)
+		kfree(elf_intepreter);
+	if (buf)
+		free_page(buf);
 	return ret;
 }
