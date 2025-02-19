@@ -390,8 +390,7 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 
 			/* set new socket */
 			sock_new->state = SS_CONNECTED;
-			other = sk_new->protinfo.af_unix.other = sock->sk;
-			sk_new->protinfo.af_unix.other = sk_new;
+			other = sk_new->protinfo.af_unix.other = skb->sock->sk;
 
 			/* set destination address */
 			memcpy(addr, &other->protinfo.af_unix.sunaddr, sizeof(struct sockaddr_un));
