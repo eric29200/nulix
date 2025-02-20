@@ -74,9 +74,6 @@ struct inode *devpts_iget(struct super_block *sb, struct devpts_entry *de)
 	else
 		goto err;
 
-	/* hash inode */
-	insert_inode_hash(inode);
-
 	return inode;
 err:
 	inode->i_nlinks = 0;
