@@ -86,8 +86,8 @@ function extract_port() {
 ############## Patch a port ##############
 ##########################################
 function patch_port() {
-	for PATCH in `find ../../$PORT -name "*.patch"`; do
-		patch -p0 < $PATCH
+	for PATCH in `find ../../../$PORT -name "*.patch"`; do
+		patch -p1 < $PATCH
 	done
 }
 
@@ -171,10 +171,10 @@ for PORT in ${PORTS[@]}; do
 	check_port
 	download_port
 	extract_port
-	patch_port
 
 	# build and install port
 	cd $SRC_DIR
+	patch_port
 	configure_port
 	build_port
 	install_port
