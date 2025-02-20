@@ -2,7 +2,6 @@
 #include <drivers/char/keyboard.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
-#include <fs/dev_fs.h>
 #include <mm/mm.h>
 #include <stdio.h>
 #include <string.h>
@@ -1140,7 +1139,6 @@ static struct tty_driver console_driver = {
 int init_console(struct multiboot_tag_framebuffer *tag_fb)
 {
 	struct tty *tty;
-	char tty_name[32];
 	struct vc *vc;
 	int i, ret;
 
@@ -1179,21 +1177,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 
 		/* attach console to tty */
 		tty->driver_data = vc;
-
-		/* register tty */
-		sprintf(tty_name, "tty%d", i);
-		if (!devfs_register(NULL, tty_name, S_IFCHR | 0644, DEV_TTY0 + i)) {
-			ret = -ENOSPC;
-			goto err;
-		}
 	}
-
-	/* register tty and console devices */
-	ret = -ENOSPC;
-	if (!devfs_register(NULL, "tty", S_IFCHR | 0644, DEV_TTY))
-		goto err;
-	if (!devfs_register(NULL, "console", S_IFCHR | 0644, DEV_CONSOLE))
-		goto err;
 
 	/* set current console to first console */
 	fg_console = 0;

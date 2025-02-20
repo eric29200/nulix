@@ -4,7 +4,6 @@
 #include <lib/ring_buffer.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
-#include <fs/dev_fs.h>
 #include <fs/fs.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -258,7 +257,6 @@ static int mouse_poll(struct file *filp, struct select_table *wait)
  */
 int init_mouse()
 {
-	struct devfs_entry *de_input;
 	int ret;
 
 	/* create mouse buffer */
@@ -287,23 +285,6 @@ int init_mouse()
 	mouse_write_dev(MOUSE_ENABLE_DEV);
 	mouse_write_cmd(MOUSE_INTS_ON);
 	mouse_poll_status_no_sleep();
-
-	/* register mouse device */
-	if (!devfs_register(NULL, "mouse", S_IFCHR | 0660, mkdev(DEV_MOUSE_MAJOR, 0)))
-		return -ENOSPC;
-
-	/* get or create /dev/input folder */
-	de_input = devfs_find(NULL, "input", 5);
-	if (!de_input)
-		de_input = devfs_mkdir(NULL, "input");
-
-	/* check input dir */
-	if (!de_input)
-		return -ENOSPC;
-
-	/* create input/mice symlink */
-	if (!devfs_symlink(de_input, "mice", "../mouse"))
-		return -ENOSPC;
 
 	return 0;
 }

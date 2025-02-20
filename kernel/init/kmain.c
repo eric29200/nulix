@@ -10,9 +10,6 @@
 #include <drivers/char/tty.h>
 #include <drivers/char/keyboard.h>
 #include <drivers/char/mouse.h>
-#include <drivers/char/zero.h>
-#include <drivers/char/null.h>
-#include <drivers/char/random.h>
 #include <drivers/pci/pci.h>
 #include <drivers/block/ata.h>
 #include <drivers/video/fb.h>
@@ -23,7 +20,6 @@
 #include <fs/ext2_fs.h>
 #include <fs/proc_fs.h>
 #include <fs/tmp_fs.h>
-#include <fs/dev_fs.h>
 #include <fs/iso_fs.h>
 #include <stdio.h>
 #include <string.h>
@@ -114,8 +110,6 @@ static void kinit()
 		panic("Cannot register proc file system");
 	if (init_tmp_fs() != 0)
 		panic("Cannot register tmp file system");
-	if (init_dev_fs() != 0)
-		panic("Cannot register device file system");
 	if (init_iso_fs() != 0)
 		panic("Cannot register iso file system");
 
@@ -132,11 +126,6 @@ static void kinit()
 	printf("[Kernel] Root file system init\n");
 	if (do_mount_root(ROOT_DEV, ROOT_DEV_NAME) != 0)
 		panic("Cannot mount root file system");
-
-	/* mount device file system */
-	printf("[Kernel] Device file system init\n");
-	if (sys_mount("dev", "/dev", "devfs", MS_RDONLY, NULL) != 0)
-		panic("Cannot mount device file system");
 
 	/* init keyboard */
 	printf("[Kernel] Keyboard Init\n");
@@ -161,21 +150,6 @@ static void kinit()
 	printf("[Kernel] Direct frame buffer Init\n");
 	if (init_framebuffer_direct(tag_fb))
 		panic("Cannot init direct frame buffer");
-
-	/* init zero device */
-	printf("[Kernel] Zero device Init\n");
-	if (init_zero())
-		panic("Cannot init zero device");
-
-	/* init null device */
-	printf("[Kernel] Null device Init\n");
-	if (init_null())
-		panic("Cannot init null device");
-
-	/* init random device */
-	printf("[Kernel] Random device Init\n");
-	if (init_random())
-		panic("Cannot init random device");
 
 	/* spawn init process */
 	if (spawn_init() != 0)

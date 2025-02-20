@@ -1,6 +1,5 @@
 #include <drivers/char/random.h>
 #include <sys/syscall.h>
-#include <fs/dev_fs.h>
 #include <stderr.h>
 #include <fcntl.h>
 #include <math.h>
@@ -94,17 +93,3 @@ static struct file_operations random_fops = {
 struct inode_operations random_iops = {
 	.fops		= &random_fops,
 };
-
-/*
- * Init random device.
- */
-int init_random()
-{
-	if (!devfs_register(NULL, "random", S_IFCHR | 0666, DEV_RANDOM))
-		return -ENOSPC;
-
-	if (!devfs_register(NULL, "urandom", S_IFCHR | 0666, DEV_URANDOM))
-		return -ENOSPC;
-
-	return 0;
-}

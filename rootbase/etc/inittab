@@ -1,7 +1,8 @@
 id:1:initdefault:
 
 si0::sysinit:/bin/mount -t proc proc /proc
-si1::sysinit:/bin/mount -a
+si1::sysinit:/bin/mkdir -p /dev/pts /dev/shm
+si2::sysinit:/bin/mount -a
 rcS:12345:wait:/etc/init.d/rcS
 
 1:1:respawn:/sbin/agetty tty1

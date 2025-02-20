@@ -1,5 +1,5 @@
 #include <drivers/block/genhd.h>
-#include <fs/dev_fs.h>
+#include <fs/fs.h>
 #include <stderr.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -18,10 +18,6 @@ static int add_partition(struct gendisk *hd, int i, uint32_t start_sect, uint32_
 
 	/* set partition name */
 	sprintf(partition_name, "%s%d", hd->name, i);
-
-	/* register partition in devfs */
-	if (!devfs_register(NULL, partition_name, S_IFBLK | 0660, hd->dev + i))
-		return -ENOSPC;
 
 	/* set block size */
 	blocksize_size[major(hd->dev)][minor(hd->dev) + i] = DEFAULT_BLOCK_SIZE;

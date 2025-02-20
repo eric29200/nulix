@@ -1,5 +1,4 @@
 #include <drivers/block/ata.h>
-#include <fs/dev_fs.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>
@@ -184,21 +183,13 @@ static int ata_detect(struct ata_device *device)
 
 	/* free device on error */
 	if (ret)
-		goto err;
+		return ret;
 
 	/* set gendisk */
 	device->hd.dev = mkdev(DEV_ATA_MAJOR, device->id << PARTITION_MINOR_SHIFT);
 	sprintf(device->hd.name, "hd%c", 'a' + device->id);
 
-	/* register device */
-	if (!devfs_register(NULL, device->hd.name, S_IFBLK | 0660, device->hd.dev)) {
-		ret = -ENOSPC;
-		goto err;
-	}
-
 	return 0;
-err:
-	return ret;
 }
 
 /*

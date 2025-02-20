@@ -1,6 +1,5 @@
 #include <drivers/char/null.h>
 #include <sys/syscall.h>
-#include <fs/dev_fs.h>
 #include <stderr.h>
 #include <fcntl.h>
 #include <dev.h>
@@ -61,14 +60,3 @@ static struct file_operations null_fops = {
 struct inode_operations null_iops = {
 	.fops		= &null_fops,
 };
-
-/*
- * Init null device.
- */
-int init_null()
-{
-	if (!devfs_register(NULL, "null", S_IFCHR | 0666, DEV_NULL))
-		return -ENOSPC;
-
-	return 0;
-}

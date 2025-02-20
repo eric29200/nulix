@@ -5,6 +5,4 @@
 
 extern struct inode_operations random_iops;
 
-int init_random();
-
 #endif

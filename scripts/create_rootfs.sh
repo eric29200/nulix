@@ -53,6 +53,30 @@ mkdir -p tmp/bin
 sudo ln -s /usr/bin/bash tmp/bin/sh
 sudo ln -s /proc/mounts tmp/etc/mtab
 
+# create devices
+sudo mknod tmp/dev/null c 1 3
+sudo mknod tmp/dev/zero c 1 5
+sudo mknod tmp/dev/random c 1 8
+sudo mknod tmp/dev/urandom c 1 9
+sudo mknod tmp/dev/tty0 c 4 0
+sudo mknod tmp/dev/tty1 c 4 1
+sudo mknod tmp/dev/tty2 c 4 2
+sudo mknod tmp/dev/tty3 c 4 3
+sudo mknod tmp/dev/tty4 c 4 4
+sudo mknod tmp/dev/tty5 c 4 5
+sudo mknod tmp/dev/tty6 c 4 6
+sudo mknod tmp/dev/tty7 c 4 7
+sudo mknod tmp/dev/tty c 5 0
+sudo mknod tmp/dev/console c 5 1
+sudo mknod tmp/dev/ptmx c 5 2
+sudo mknod tmp/dev/mouse c 13 0
+sudo mknod tmp/dev/fb0 c 29 0
+sudo mknod tmp/dev/hda b 3 0
+sudo mknod tmp/dev/hda1 b 3 1
+sudo mknod tmp/dev/hdc b 3 32
+sudo mkdir tmp/dev/input
+sudo ln -s ../mouse tmp/dev/input/mice
+
 # chown root
 sudo chown -R 0:0 tmp/
 

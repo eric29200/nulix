@@ -4,7 +4,6 @@
 #include <mm/mmap.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
-#include <fs/dev_fs.h>
 #include <fcntl.h>
 #include <string.h>
 #include <stderr.h>
@@ -19,18 +18,7 @@ static struct framebuffer direct_fb;
  */
 int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
 {
-	int ret;
-
-	/* init frame buffer */
-	ret = init_framebuffer(&direct_fb, tag_fb, 0, 1);
-	if (ret)
-		return ret;
-
-	/* register frame buffer */
-	if (!devfs_register(NULL, "fb0", S_IFCHR | 0660, mkdev(DEV_FB_MAJOR, 0)))
-		return -ENOSPC;
-
-	return 0;
+	return init_framebuffer(&direct_fb, tag_fb, 0, 1);
 }
 
 /*
