@@ -82,11 +82,19 @@ static int ptm_ioctl(struct tty *tty, int request, unsigned long arg)
  */
 static int ptm_close(struct tty *tty)
 {
+	struct pty *pty = tty->driver_data;
 	struct list_head *pos;
 	struct task *task;
 
 	if (!tty->link)
 		return 0;
+
+	/* unregister device */
+	if (pty->de)
+		devpts_unregister(pty->de);
+
+	/* update reference count */
+	pty->p_count--;
 
 	/* send SIGHUP signal to processes attached to slave pty */
 	list_for_each(pos, &current_task->list) {
@@ -115,6 +123,7 @@ static struct tty_driver ptm_driver = {
 static int ptmx_open(struct file *filp)
 {
 	struct tty *ptm = NULL, *pts = NULL;
+	char name[PTY_NAME_LEN];
 	int ret, i;
 
 	/* find a free pty */
@@ -142,6 +151,14 @@ static int ptmx_open(struct file *filp)
 
 	/* reset master termios */
 	memset(&ptm->termios, 0, sizeof(struct termios));
+
+	/* create slave pty node */
+	sprintf(name, "%d", i);
+	pty_table[i].de = devpts_register(name, S_IFCHR | 0660, mkdev(DEV_PTS_MAJOR, i));
+	if (!pty_table[i].de) {
+		ret = -ENOSPC;
+		goto err;
+	}
 
 	/* attach pty struct to master/slave */
 	ptm->driver_data = &pty_table[i];

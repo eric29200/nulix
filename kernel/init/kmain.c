@@ -21,6 +21,7 @@
 #include <fs/proc_fs.h>
 #include <fs/tmp_fs.h>
 #include <fs/iso_fs.h>
+#include <fs/devpts_fs.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
@@ -111,6 +112,8 @@ static void kinit()
 	if (init_tmp_fs() != 0)
 		panic("Cannot register tmp file system");
 	if (init_iso_fs() != 0)
+		panic("Cannot register iso file system");
+	if (init_devpts_fs() != 0)
 		panic("Cannot register iso file system");
 
 	/* init pci devices */
