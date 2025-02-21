@@ -27,7 +27,7 @@ sudo mount ${LOOP_DEVICE}p1 tmp
 
 # create root folders
 sudo mkdir -p tmp/etc
-sudo mkdir -p tmp/dev
+sudo mkdir -p tmp/dev/pts tmp/dev/shm
 sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt
 sudo mkdir -p tmp/tmp
@@ -50,7 +50,6 @@ sudo rm -f tmp/bin/objcopy tmp/bin/ranlib tmp/bin/nm tmp/bin/readelf tmp/bin/str
 
 # create links
 mkdir -p tmp/bin
-sudo ln -s /usr/bin/bash tmp/bin/sh
 sudo ln -s /proc/mounts tmp/etc/mtab
 
 # create devices

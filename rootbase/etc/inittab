@@ -1,19 +1,11 @@
-id:1:initdefault:
+::sysinit:/bin/mount -t proc proc /proc
+::sysinit:/bin/mount -a
+::sysinit:/etc/init.d/rcS
 
-si0::sysinit:/bin/mount -t proc proc /proc
-si1::sysinit:/bin/mkdir -p /dev/pts /dev/shm
-si2::sysinit:/bin/mount -a
-rcS:12345:wait:/etc/init.d/rcS
+console::respawn:/sbin/getty -L console 0 vt100
+tty2::respawn:/sbin/getty 38400 tty2
+tty2::respawn:/sbin/getty 38400 tty3
+tty2::respawn:/sbin/getty 38400 tty4
 
-1:1:respawn:/sbin/agetty tty1
-2:1:respawn:/sbin/agetty tty2
-3:1:respawn:/sbin/agetty tty3
-4:1:respawn:/sbin/agetty tty4
-
-# Stuff to do before rebooting
-shd0:06:wait:/etc/init.d/rcK
-shd2:06:wait:/bin/umount -a -r
-
-# The usual halt or reboot actions
-hlt0:0:wait:/sbin/halt -dhp
-reb0:6:wait:/sbin/reboot
+::shutdown:/etc/init.d/rcK
+::shutdown:/bin/umount -a -r
