@@ -32,7 +32,7 @@ sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt
 sudo mkdir -p tmp/tmp
 sudo mkdir -p tmp/run
-sudo mkdir -p tmp/var/run
+sudo mkdir -p tmp/var/run tmp/var/log
 
 # populate disk
 sudo cp -R musl/musl-install/i386-linux-musl/lib tmp/
