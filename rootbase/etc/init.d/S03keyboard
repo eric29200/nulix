@@ -1,4 +1,14 @@
 #!/bin/sh
 
-# load french key map
+DAEMON="loadkeys"
+
+printf 'Starting %s: ' "$DAEMON"
+
 loadkeys /usr/share/keymaps/i386/azerty/fr-latin1.map.gz
+
+status=$?
+if [ "$status" -eq 0 ]; then
+	echo "OK"
+else
+	echo "FAIL"
+fi
