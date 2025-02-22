@@ -939,7 +939,7 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 			*((char *) arg) = KB_101;
 			return 0;
 		case KDGETMODE:
-			*((uint8_t *) arg) = vc->vc_mode;
+			*((int *) arg) = vc->vc_mode;
 			return 0;
 		case KDSETMODE:
 			vc->vc_mode = *((uint8_t *) arg);
