@@ -217,7 +217,7 @@ static int mouse_read(struct file *filp, char *buf, int n)
 }
 
 /*
- * Writ to a mouse.
+ * Write to a mouse.
  */
 static int mouse_write(struct file *filp, const char *buf, int n)
 {
