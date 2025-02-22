@@ -15,10 +15,3 @@ cd musl-build
 
 # build musl
 make -j$NJOBS install TARGET=i386-linux-musl
-
-# fix musl
-mkdir output/i386-linux-musl/usr
-cd output/i386-linux-musl/usr
-ln -s ../include include
-ln -s ../bin bin
-ln -s ../lib lib
