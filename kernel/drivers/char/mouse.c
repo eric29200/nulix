@@ -201,16 +201,16 @@ static int mouse_read(struct file *filp, char *buf, int n)
 {
 	int ret;
 
-	/* user must read at least 3 characters = mouse event size */
-	if (n < MOUSE_EVENT_SIZE)
-		return -EINVAL;
+	/* maximumum size = mouse event size */
+	if (n > MOUSE_EVENT_SIZE)
+		n = MOUSE_EVENT_SIZE;
 
 	/* check if enough characters are available */
-	if ((filp->f_flags & O_NONBLOCK) && mouse_rb.size < MOUSE_EVENT_SIZE)
+	if ((filp->f_flags & O_NONBLOCK) && mouse_rb.size < (size_t) n)
 		return -EAGAIN;
 
 	/* read only one event */
-	ret = ring_buffer_read(&mouse_rb, (uint8_t *) buf, MOUSE_EVENT_SIZE);
+	ret = ring_buffer_read(&mouse_rb, (uint8_t *) buf, n);
 
 	/* no characters from ring buffer : interruption */
 	return ret ? ret : -EINTR;
