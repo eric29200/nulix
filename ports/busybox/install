@@ -11,5 +11,5 @@ function build_port() {
 }
 
 function install_port() {
-	make install CC=$CC LD=$LD AR=$AR AS=$AS CONFIG_PREFIX=$SYSROOT
+	make install CC=$CC LD=$LD AR=$AR AS=$AS CONFIG_PREFIX=$SYSROOT"/usr"
 }
