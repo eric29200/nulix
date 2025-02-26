@@ -22,9 +22,6 @@
 #define MOUSE_BBIT		0x01
 #define MOUSE_FBIT		0x20
 #define MOUSE_VBIT		0x08
-#define MOUSE_BUTTON_LEFT	0x01
-#define MOUSE_BUTTON_RIGHT	0x02
-#define MOUSE_BUTTON_MIDDLE	0x04
 
 #define MOUSE_OBUF_FULL		0x21
 #define MOUSE_INTS_ON		0x47
@@ -94,54 +91,6 @@ static void mouse_write_dev(int value)
 }
 
 /*
- * Compute mouse event.
- */
-static void mouse_compute_event()
-{
-	uint8_t state, event[MOUSE_EVENT_SIZE];
-	int move_x, move_y, buttons;
-
-	/* reset mouse cycle */
-	mouse_cycle = 0;
-
-	/* get mouse data */
-	state = mouse_byte[0];
-	move_x = mouse_byte[1];
-	move_y = mouse_byte[2];
-
-	/* apply x sign */
-	if (move_x && (state & (1 << 4)))
-		move_x -= 0x100;
-
-	/* apply y sign */
-	if (move_y && (state & (1 << 5)))
-		move_y -= 0x100;
-
-	/* overflow */
-	if (state & (1 << 6) || state & (1 << 7)) {
-		move_x = 0;
-		move_y = 0;
-	}
-
-	/* set mouse event button */
-	buttons = 0;
-	if (state & MOUSE_BUTTON_LEFT)
-		buttons |= MOUSE_BUTTON_LEFT;
-	if (state & MOUSE_BUTTON_RIGHT)
-		buttons |= MOUSE_BUTTON_RIGHT;
-	if (state & MOUSE_BUTTON_MIDDLE)
-		buttons |= MOUSE_BUTTON_MIDDLE;
-
-	/* put mouse event in ring buffer */
-	if (ring_buffer_left(&mouse_rb) >= MOUSE_EVENT_SIZE) {
-		event[0] = buttons;
-		event[1] = move_x;
-		event[2] = move_y;
-		ring_buffer_write(&mouse_rb, event, MOUSE_EVENT_SIZE);
-	}
-}
-
-/*
  * Mouse interrupt handler.
  */
 static void mouse_handler(struct registers *regs)
@@ -175,9 +124,11 @@ static void mouse_handler(struct registers *regs)
 			case 2:
 				/* get mouse y */
 				mouse_byte[2] = value;
-
-				/* compute event */
-				mouse_compute_event();
+	
+				/* reset mouse cycle and store mouse event */
+				mouse_cycle = 0;
+				if (ring_buffer_left(&mouse_rb) >= MOUSE_EVENT_SIZE)
+					ring_buffer_write(&mouse_rb, mouse_byte, MOUSE_EVENT_SIZE);
 				break;
 			default:
 				break;
