@@ -379,8 +379,8 @@ extern const int max_vals[];
 #define E0_MSLW				125
 #define E0_MSRW				126
 #define E0_MSTM				127
-
 #define E1_PAUSE   			119
+#define E_TABSZ				256
 
 #define VC_XLATE			0	/* translate keycodes using keymap */
 #define VC_MEDIUMRAW			1	/* medium raw (keycode) mode */
@@ -404,7 +404,8 @@ extern struct kbd kbd_table[NR_CONSOLES];
 extern uint16_t *key_maps[MAX_NR_KEYMAPS];
 extern uint16_t plain_map[NR_KEYS];
 extern uint8_t *func_table[MAX_NR_FUNCS];
-extern uint8_t e0_keys[128];
+extern uint8_t e0_keys[128]; 
+extern int shift_state;
 
 void init_keyboard();
 

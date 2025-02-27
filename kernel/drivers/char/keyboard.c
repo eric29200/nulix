@@ -14,7 +14,7 @@ struct kbd kbd_table[NR_CONSOLES];
 static struct tty *tty = NULL;
 
 /* keyboard state */
-static int shift_state = 0;
+int shift_state = 0;
 static int capslock_state = 0;
 static int numlock_state = 0;
 static uint8_t prev_scan_code = 0;

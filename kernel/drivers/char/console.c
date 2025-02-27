@@ -1,4 +1,5 @@
 #include <drivers/char/console.h>
+#include <drivers/char/console_selection.h>
 #include <drivers/char/keyboard.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
@@ -11,7 +12,7 @@
 #include <kd.h>
 
 /* consoles table */
-static struct vc console_table[NR_CONSOLES];
+struct vc console_table[NR_CONSOLES];
 int fg_console;
 
 /* processes waiting for console activation */
@@ -152,6 +153,14 @@ static void console_update_attr(struct vc *vc)
 
 	/* redefine erase char */
 	vc->vc_erase_char = ' ' | (vc->vc_color << 8);
+}
+
+/*
+ * Set console translation.
+ */
+static void set_translate(struct vc *vc, int i)
+{
+	vc->vc_translate = console_translations[i];
 }
 
 /*
@@ -360,7 +369,7 @@ static void csi_m(struct vc *vc)
 				vc->vc_reverse = 1;
 				break;
 			case 10:											/* set translation */
-				vc->vc_translate = console_translations[vc->vc_charset == 0 ? vc->vc_charset_g0 : vc->vc_charset_g1];
+				set_translate(vc, vc->vc_charset == 0 ? vc->vc_charset_g0 : vc->vc_charset_g1);
 				break;
 			case 24:											/* not underline */
 				vc->vc_underline = 0;
@@ -672,7 +681,7 @@ static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 		}
 
 		if (vc->vc_charset == 0)
-			vc->vc_translate = console_translations[vc->vc_charset_g0];
+			set_translate(vc, vc->vc_charset_g0);
 
 		vc->vc_state = TTY_STATE_NORMAL;
 		return;
@@ -696,7 +705,7 @@ static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 		}
 
 		if (vc->vc_charset == 1)
-			vc->vc_translate = console_translations[vc->vc_charset_g1];
+			set_translate(vc, vc->vc_charset_g1);
 
 		vc->vc_state = TTY_STATE_NORMAL;
 		return;
@@ -916,6 +925,7 @@ static int vt_waitactive(int n)
 
 	return 0;
 }
+
 /*
  * Console ioctl.
  */
@@ -1110,6 +1120,8 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 
 			*((int *) arg) = i < NR_CONSOLES ? i + 1 : -1;
 			return 0;
+		case TIOCLINUX:
+		  	return tioclinux(tty, arg);
 		default:
 			break;
 	}
@@ -1161,7 +1173,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		vc->vc_erase_char = ' ' | (vc->vc_def_color << 8);
 		vc->vc_deccm = 1;
 		vc->vc_attr = vc->vc_color;
-		vc->vc_translate = console_translations[LAT1_MAP];
+		set_translate(vc, LAT1_MAP);
 		reset_vc(vc);
 
 		/* init frame buffer */

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+DAEMON="gpm"
+
+printf 'Starting %s: ' "$DAEMON"
+
+/usr/bin/rm -f /var/run/gpm.pid
+/usr/sbin/gpm -m /dev/mouse -t ps2
+
+status=$?
+if [ "$status" -eq 0 ]; then
+	echo "OK"
+else
+	echo "FAIL"
+fi

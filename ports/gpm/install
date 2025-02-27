@@ -1,0 +1,19 @@
+VERSION="1.20.7"
+SRC_FILENAME="gpm-"$VERSION".tar.bz2"
+URL="https://anduin.linuxfromscratch.org/BLFS/gpm/"$SRC_FILENAME
+
+function configure_port() {
+	./autogen.sh
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr"							\
+		ac_cv_path_emacs=no
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

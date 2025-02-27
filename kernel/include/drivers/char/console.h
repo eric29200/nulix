@@ -14,6 +14,7 @@
 #define TTY_STATE_SET_G1	6
 
 #define NPARS			16
+#define MAX_GLYPH		512
 
 /* translation maps */
 #define LAT1_MAP		0
@@ -85,6 +86,7 @@ struct vc {
 	struct framebuffer	fb;							/* framebuffer */
 };
 
+extern struct vc console_table[NR_CONSOLES];
 extern uint16_t console_translations[][256];
 extern struct wait_queue *vt_activate_wq;
 

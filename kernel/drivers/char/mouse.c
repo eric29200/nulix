@@ -124,11 +124,13 @@ static void mouse_handler(struct registers *regs)
 			case 2:
 				/* get mouse y */
 				mouse_byte[2] = value;
-	
-				/* reset mouse cycle and store mouse event */
-				mouse_cycle = 0;
+				
+				/* store mouse event */
 				if (ring_buffer_left(&mouse_rb) >= MOUSE_EVENT_SIZE)
 					ring_buffer_write(&mouse_rb, mouse_byte, MOUSE_EVENT_SIZE);
+	
+				/* reset mouse cycle */
+				mouse_cycle = 0;
 				break;
 			default:
 				break;
