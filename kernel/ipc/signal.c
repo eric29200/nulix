@@ -213,7 +213,8 @@ int sys_sigreturn()
 	/* restore saved registers before signal handler */
 	memcpy(&current_task->user_regs, &current_task->signal_regs, sizeof(struct registers));
 
-	return 0;
+	/* return value of syscall interrupted by signal */
+	return current_task->signal_regs.eax;
 }
 
 /*
