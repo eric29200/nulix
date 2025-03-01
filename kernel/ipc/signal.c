@@ -84,6 +84,7 @@ int do_signal(struct registers *regs)
 			case SIGTSTP:
 				current_task->state = TASK_STOPPED;
 				current_task->exit_code = sig;
+				task_signal(current_task->parent->pid, SIGCHLD);
 				task_wakeup_all(&current_task->parent->wait_child_exit);
 				schedule();
 				goto out;
