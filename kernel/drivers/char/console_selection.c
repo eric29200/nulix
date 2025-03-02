@@ -120,7 +120,7 @@ static uint8_t sel_pos(struct vc *vc, int pos)
 {
 	uint16_t tc = vc->fb.buf[pos] & 0x00FF;
 	int i;
-	
+
 	for (i = 0; i < 256; i++)
 		if (vc->vc_translate[i] == tc)
 			break;

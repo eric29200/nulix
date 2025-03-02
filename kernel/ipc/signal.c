@@ -90,7 +90,6 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 int do_signal(struct registers *regs, int orig_eax)
 {
 	struct sigaction *act;
-	uint32_t *esp;
 	int sig;
 
 	/* get first unblocked signal */
