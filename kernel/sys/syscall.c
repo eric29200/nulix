@@ -165,11 +165,11 @@ static const void *syscalls[] = {
  */
 static void syscall_handler(struct registers *regs)
 {
-	int ret;
+	int ret, syscall_nr = regs->eax;
 
 	/* system call not handled */
-	if (regs->eax >= SYSCALLS_NUM || syscalls[regs->eax] == NULL) {
-		printf("Unknown system call : %d (process %d @ %x)\n", regs->eax, current_task->pid, regs->eip);
+	if (syscall_nr >= SYSCALLS_NUM || syscalls[syscall_nr] == NULL) {
+		printf("Unknown system call : %d (process %d @ %x)\n", syscall_nr, current_task->pid, regs->eip);
 		return;
 	}
 
@@ -178,12 +178,16 @@ static void syscall_handler(struct registers *regs)
 
 	/* execute system call */
 	current_task->in_syscall = 1;
-	ret = ((syscall_f) syscalls[regs->eax])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
+	ret = ((syscall_f) syscalls[syscall_nr])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
 	current_task->in_syscall = 0;
 
 	/* restore registers and set return value */
 	memcpyb(regs, &current_task->user_regs, sizeof(struct registers));
 	regs->eax = ret;
+
+	/* handle pending signals */
+	if (!sigisemptyset(&current_task->sigpend))
+		do_signal(regs, syscall_nr);
 }
 
 /*

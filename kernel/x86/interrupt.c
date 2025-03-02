@@ -2,7 +2,6 @@
 #include <x86/io.h>
 #include <sys/syscall.h>
 #include <proc/sched.h>
-#include <ipc/signal.h>
 #include <kernel_stat.h>
 #include <stdio.h>
 
@@ -75,8 +74,4 @@ void isr_handler(struct registers *regs)
 
 		sys_exit(1);
 	}
-
-	/* handle pending signals */
-	if (!sigisemptyset(&current_task->sigpend))
-		do_signal(regs);
 }

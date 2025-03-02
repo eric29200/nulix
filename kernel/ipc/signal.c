@@ -1,6 +1,7 @@
 #include <ipc/signal.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
+#include <stdio.h>
 #include <stderr.h>
 
 #define BLOCKABLE		(~(sigmask(SIGKILL) | sigmask(SIGSTOP)))
@@ -47,9 +48,46 @@ static int sigreturn()
 }
 
 /*
+ * Handle user signal handler.
+ */
+static void handle_signal(struct registers *regs, int sig, struct sigaction *act)
+{
+	uint32_t *esp;
+
+	/* signal in system call : restore user registers */
+	if (current_task->in_syscall)
+		memcpy(regs, &current_task->user_regs, sizeof(struct registers));
+
+	/* save interrupt registers, to restore it at the end of signal */
+	memcpy(&current_task->signal_regs, regs, sizeof(struct registers));
+
+	/* prepare a stack for signal handler */
+	esp = (uint32_t *) regs->useresp;
+	*(--esp) = sig;
+	*(--esp) = (uint32_t) sigreturn;
+
+	/* changer interrupt registers to return back in signal handler */
+	regs->useresp = (uint32_t) esp;
+	regs->eip = (uint32_t) act->sa_handler;
+
+	/* restore sigmask */
+	if (current_task->saved_sigmask) {
+		current_task->sigmask = current_task->saved_sigmask;
+		current_task->saved_sigmask = 0;
+	}
+
+	/* signal in system call : return to user mode */
+	if (current_task->in_syscall) {
+		current_task->in_syscall = 0;
+		regs->eax = -EINTR;
+		return_user_mode(regs);
+	}
+}
+
+/*
  * Handle signal of current task.
  */
-int do_signal(struct registers *regs)
+int do_signal(struct registers *regs, int orig_eax)
 {
 	struct sigaction *act;
 	uint32_t *esp;
@@ -94,22 +132,8 @@ int do_signal(struct registers *regs)
 		}
 	}
 
-	/* signal in system call : restore user registers */
-	if (current_task->in_syscall)
-		memcpy(regs, &current_task->user_regs, sizeof(struct registers));
-
-	/* save interrupt registers, to restore it at the end of signal */
-	memcpy(&current_task->signal_regs, regs, sizeof(struct registers));
-
-	/* prepare a stack for signal handler */
-	esp = (uint32_t *) regs->useresp;
-	*(--esp) = sig;
-	*(--esp) = (uint32_t) sigreturn;
-
-	/* changer interrupt registers to return back in signal handler */
-	regs->useresp = (uint32_t) esp;
-	regs->eip = (uint32_t) act->sa_handler;
-
+	handle_signal(regs, sig, act);
+	return 1;
 out:
 	/* restore sigmask */
 	if (current_task->saved_sigmask) {
@@ -122,6 +146,12 @@ out:
 		current_task->in_syscall = 0;
 		regs->eax = -EINTR;
 		return_user_mode(regs);
+	}
+
+	/* interrupted system call : redo it */
+	if (orig_eax && (int) regs->eax == -EINTR) {
+		regs->eax = orig_eax;
+		regs->eip -= 2;
 	}
 
 	return 0;
@@ -147,7 +177,7 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 		current_task->state = TASK_SLEEPING;
 		schedule();
 
-		if (do_signal(regs))
+		if (do_signal(regs, 0))
 			return -EINTR;
 	}
 }
