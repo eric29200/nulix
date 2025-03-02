@@ -4,7 +4,6 @@ DAEMON="gpm"
 
 printf 'Starting %s: ' "$DAEMON"
 
-/usr/bin/rm -f /var/run/gpm.pid
 /usr/sbin/gpm -m /dev/mouse -t ps2
 
 status=$?
