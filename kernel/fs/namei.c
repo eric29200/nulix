@@ -236,6 +236,12 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 	if (!*res_inode)
 		return -EACCES;
 
+	/* O_DIRECTORY : fails if inode is not a directory */
+	if ((flags & O_DIRECTORY) && !S_ISDIR((*res_inode)->i_mode)) {
+		iput(inode);
+		return -ENOTDIR;
+	}
+
 	/* truncate file */
 	if (flags & O_TRUNC) {
 		err = do_truncate(*res_inode, 0);

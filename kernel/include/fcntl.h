@@ -56,6 +56,7 @@
 #define O_NONBLOCK		04000
 #define O_NDELAY		O_NONBLOCK
 #define O_SYNC			010000
+#define O_DIRECTORY		00200000
 
 #define F_DUPFD			0			 /* fcntl : dup file descriptor (with a free slot after argument) */
 #define F_GETFD			1			 /* fcntl : get file mode */
