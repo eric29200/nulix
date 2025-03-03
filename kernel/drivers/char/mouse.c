@@ -174,15 +174,10 @@ static int mouse_read(struct file *filp, char *buf, int n)
  */
 static int mouse_write(struct file *filp, const char *buf, int n)
 {
-	int i;
-
-	/* unused filp */
 	UNUSED(filp);
-
-	for (i = 0; i < n; i++)
-		mouse_write_dev(buf[i]);
-
-	return n;
+	UNUSED(buf);
+	UNUSED(n);
+	return -EINVAL;
 }
 
 /*
