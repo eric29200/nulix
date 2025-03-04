@@ -6,6 +6,8 @@ function configure_port() {
 	./configure								\
 		--host=$HOST							\
 		--disable-nls							\
+		--disable-gpm							\
+		--disable-sysmouse						\
 		--with-features=normal						\
 		--prefix="/usr"							\
 		CFLAGS="-static" LDFLAGS="-static"
