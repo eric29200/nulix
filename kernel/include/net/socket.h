@@ -129,6 +129,7 @@ struct prot_ops {
 	int (*recvmsg)(struct socket *, struct msghdr *, int, int);
 	int (*sendmsg)(struct socket *, const struct msghdr *, int, int);
 	int (*bind)(struct socket *, const struct sockaddr *, size_t);
+	int (*listen)(struct socket *);
 	int (*accept)(struct socket *, struct socket *, struct sockaddr *);
 	int (*connect)(struct socket *, const struct sockaddr *, size_t);
 	int (*shutdown)(struct socket *, int);
@@ -141,6 +142,9 @@ struct prot_ops {
 /* protocole operations */
 extern struct prot_ops inet_ops;
 extern struct prot_ops unix_ops;
+
+/* generic functions */
+void sock_init_data(struct socket *sock);
 
 /* socket system calls */
 int sys_socket(int domain, int type, int protocol);

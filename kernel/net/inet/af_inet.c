@@ -114,6 +114,9 @@ static int inet_create(struct socket *sock, int protocol)
 	INIT_LIST_HEAD(&sk->skb_list);
 	sock->sk = sk;
 
+	/* init data */
+	sock_init_data(sock);
+
 	/* insert in sockets list */
 	list_add_tail(&sk->list, &inet_sockets);
 
@@ -275,6 +278,17 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 
 	/* copy address */
 	memcpy(&sk->protinfo.af_inet.src_sin, src_sin, sizeof(struct sockaddr));
+
+	return 0;
+}
+
+/*
+ * Listen system call.
+ */
+static int inet_listen(struct socket *sock)
+{
+	/* set socket state */
+	sock->state = SS_LISTENING;
 
 	return 0;
 }
@@ -480,6 +494,7 @@ struct prot_ops inet_ops = {
 	.recvmsg	= inet_recvmsg,
 	.sendmsg	= inet_sendmsg,
 	.bind		= inet_bind,
+	.listen		= inet_listen,
 	.accept		= inet_accept,
 	.connect	= inet_connect,
 	.shutdown	= inet_shutdown,

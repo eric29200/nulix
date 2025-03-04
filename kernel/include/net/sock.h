@@ -8,6 +8,15 @@
 #include <net/sk_buff.h>
 
 /*
+ * Socket credentials.
+ */
+struct ucred {
+	pid_t				pid;
+	uid_t				uid;
+	gid_t				gid;
+};
+
+/*
  * UNIX socket.
  */
 struct unix_opt {
@@ -37,6 +46,7 @@ struct sock {
 	uint16_t			protocol;
 	struct socket *			sock;
 	off_t				msg_position;
+	struct ucred 			peercred;
 	union {
 		struct unix_opt		af_unix;
 		struct inet_opt		af_inet;

@@ -1,4 +1,5 @@
 #include <fs/fs.h>
+#include <net/sock.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <stdio.h>
@@ -36,6 +37,16 @@ static struct socket *sock_alloc()
 	sock->inode = inode;
 
 	return sock;
+}
+
+/*
+ * Init socket data.
+ */
+void sock_init_data(struct socket *sock)
+{
+	sock->sk->peercred.pid = 0;
+	sock->sk->peercred.uid = -1;
+	sock->sk->peercred.gid = -1;
 }
 
 /*
@@ -342,11 +353,12 @@ int sys_listen(int sockfd, int backlog)
 	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
 		return err;
+	
+	/* listen not implemented */
+	if (!sock->ops || !sock->ops->listen)
+		return -EINVAL;
 
-	/* update socket state */
-	sock->state = SS_LISTENING;
-
-	return 0;
+	return sock->ops->listen(sock);
 }
 
 /*
@@ -604,11 +616,25 @@ int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
  */
 static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_t *optlen)
 {
-	UNUSED(sock);
-	UNUSED(optval);
-	UNUSED(optlen);
+	size_t len;
 
-	printf("sock_getsockopt(%d) undefined\n", optname);
+	/* check length */
+	if (!optlen)
+		return -EINVAL;
+	len = *optlen;	
+
+	switch (optname) {
+		case SO_PEERCRED:
+		 	len = sizeof(struct ucred) < len ? sizeof(struct ucred) : len;
+			memcpy(optval, &sock->sk->peercred, len);
+			break;
+		default:
+			printf("sock_getsockopt(%d) undefined\n", optname);
+			break;
+	}
+
+	/* fix length */
+	*optlen = len;
 
 	return 0;
 }

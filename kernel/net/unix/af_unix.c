@@ -104,6 +104,9 @@ static int unix_create(struct socket *sock, int protocol)
 	INIT_LIST_HEAD(&sk->skb_list);
 	sock->sk = sk;
 
+	/* init data */
+	sock_init_data(sock);
+
 	/* insert in sockets list */
 	list_add_tail(&sk->list, &unix_sockets);
 
@@ -360,6 +363,22 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 }
 
 /*
+ * Listen system call.
+ */
+static int unix_listen(struct socket *sock)
+{
+	/* set socket state */
+	sock->state = SS_LISTENING;
+
+	/* set credentials */
+	sock->sk->peercred.pid = current_task->pid;
+	sock->sk->peercred.uid = current_task->euid;
+	sock->sk->peercred.gid = current_task->egid;
+
+	return 0;
+}
+
+/*
  * Accept system call.
  */
 static int unix_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
@@ -401,6 +420,7 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 			/* set new socket */
 			sock_new->state = SS_CONNECTED;
 			sk_new->protinfo.af_unix.other = other;
+			sk_new->peercred.uid = sk->peercred.uid;
 
 			/* set other socket connected and wake up eventual clients connecting */
 			other->sock->state = SS_CONNECTED;
@@ -473,6 +493,9 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 		/* sleep */
 		task_sleep(&sock->wait);
 	}
+
+	/* set credentials */
+	sock->sk->peercred = other->peercred;
 
 	return 0;
 }
@@ -609,6 +632,7 @@ struct prot_ops unix_ops = {
 	.recvmsg	= unix_recvmsg,
 	.sendmsg	= unix_sendmsg,
 	.bind		= unix_bind,
+	.listen		= unix_listen,
 	.accept		= unix_accept,
 	.connect	= unix_connect,
 	.shutdown	= unix_shutdown,
