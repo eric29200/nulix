@@ -183,11 +183,31 @@ static int pipe_write_close(struct file *filp)
 }
 
 /*
+ * Poll a pipe.
+ */
+static int pipe_poll(struct file *filp, struct select_table *wait)
+{
+	int mask;
+
+	/* reader or writer */
+	if (PIPE_EMPTY(filp->f_inode))
+		mask = POLLOUT;
+	else
+		mask = POLLIN;
+
+	/* add wait queue to select table */
+	select_wait(&PIPE_WAIT(filp->f_inode), wait);
+
+	return mask;
+}
+
+/*
  * Read pipe operations.
  */
 static struct file_operations read_pipe_fops = {
 	.read		= pipe_read,
 	.close		= pipe_read_close,
+	.poll		= pipe_poll,
 };
 
 /*
@@ -196,6 +216,7 @@ static struct file_operations read_pipe_fops = {
 static struct file_operations write_pipe_fops = {
 	.write		= pipe_write,
 	.close		= pipe_write_close,
+	.poll		= pipe_poll,
 };
 
 /*
