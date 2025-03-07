@@ -4,8 +4,8 @@
 
 console::respawn:/sbin/getty -L console 0 vt100
 tty2::respawn:/sbin/getty 38400 tty2
-tty2::respawn:/sbin/getty 38400 tty3
-tty2::respawn:/sbin/getty 38400 tty4
+tty3::respawn:/sbin/getty 38400 tty3
+tty4::respawn:/sbin/getty 38400 tty4
 
 ::shutdown:/etc/init.d/rcK
 ::shutdown:/bin/umount -a -r
