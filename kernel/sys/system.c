@@ -20,6 +20,7 @@ int sys_clock_gettime64(clockid_t clockid, struct timespec *tp)
 			tp->tv_nsec = xtimes.tv_nsec;
 			break;
 		case CLOCK_MONOTONIC:
+		case CLOCK_MONOTONIC_RAW:
 			tp->tv_sec = xtimes.tv_sec;
 			tp->tv_nsec = xtimes.tv_nsec;
 			break;
