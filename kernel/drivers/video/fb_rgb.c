@@ -92,26 +92,6 @@ static uint32_t fb_rgb_bg_color(uint8_t color)
 }
 
 /*
- * Update cursor.
- */
-static void fb_rgb_update_cursor(struct framebuffer *fb)
-{
-	uint32_t color_bg, color_fg;
-	uint8_t c, color;
-
-	/* draw cursor */
-	c = fb->buf[fb->y * fb->width + fb->x];
-	color = fb->buf[fb->y * fb->width + fb->x] >> 8;
-	color_bg = fb_rgb_bg_color(color);
-	color_fg = fb_rgb_fg_color(color);
-	fb_put_glyph(fb, c, fb->x * fb->font->width, fb->y * fb->font->height, color_fg, color_bg);
-
-	/* set new cusor */
-	fb->cursor_x = fb->x;
-	fb->cursor_y = fb->y;
-}
-
-/*
  * Update a frame buffer region.
  */
 static void fb_rgb_update_region(struct framebuffer *fb, uint32_t start, uint32_t len)
@@ -136,14 +116,74 @@ static void fb_rgb_update_region(struct framebuffer *fb, uint32_t start, uint32_
 }
 
 /*
+ * Clear cursor.
+ */
+static void fb_rgb_clear_cursor(struct framebuffer *fb)
+{
+	uint32_t color_bg, color_fg;
+	uint8_t c, color;
+
+	/* frame buffer not active */
+	if (!fb->active || fb->cursor_x == -1 || fb->cursor_y == -1)
+		return;
+
+	/* clear cursor */
+	c = fb->buf[fb->cursor_y * fb->width + fb->cursor_x];
+	color = fb->buf[fb->cursor_y * fb->width + fb->cursor_x] >> 8;
+	color_bg = fb_rgb_bg_color(color);
+	color_fg = fb_rgb_fg_color(color);
+	fb_put_glyph(fb, c, fb->cursor_x * fb->font->width, fb->cursor_y * fb->font->height, color_bg, color_fg);
+
+	/* clear cursor */
+	fb->cursor_x = -1;
+	fb->cursor_y = -1;
+}
+
+/*
+ * Update cursor.
+ */
+static void fb_rgb_update_cursor(struct framebuffer *fb)
+{
+	uint32_t color_bg, color_fg;
+	uint8_t c, color;
+
+	/* frame buffer not active */
+	if (!fb->active)
+		return;
+
+	/* clear old cursor */
+	fb_rgb_clear_cursor(fb);
+
+	/* inactive cursor */
+	if (!fb->cursor_on)
+		return;
+
+	/* set new cusor */
+	fb->cursor_x = fb->x;
+	fb->cursor_y = fb->y;
+
+	/* draw new cursor */
+	c = fb->buf[fb->cursor_y * fb->width + fb->cursor_x];
+	color = fb->buf[fb->cursor_y * fb->width + fb->cursor_x] >> 8;
+	color_bg = fb_rgb_bg_color(color);
+	color_fg = fb_rgb_fg_color(color);
+	fb_put_glyph(fb, c, fb->cursor_x * fb->font->width, fb->cursor_y * fb->font->height, color_fg, color_bg);
+}
+
+/*
  * Show/Hide cursor.
  */
 static void fb_rgb_show_cursor(struct framebuffer *fb, int on_off)
 {
-	if (on_off)
-		fb_rgb_update_cursor(fb);
-	else
-		fb_rgb_update_region(fb, fb->cursor_y * fb->width + fb->cursor_x, 1);
+	/* nothing to do */
+	if (fb->cursor_on == on_off)
+		return;
+
+	/* switch on/off cursor */
+	fb->cursor_on = on_off;
+
+	/* update cursor */
+	fb_rgb_update_cursor(fb);
 }
 
 /*
@@ -269,6 +309,7 @@ struct framebuffer_ops fb_rgb_ops = {
 	.update_region		= fb_rgb_update_region,
 	.scroll_up		= fb_rgb_scroll_up,
 	.scroll_down		= fb_rgb_scroll_down,
+	.clear_cursor		= fb_rgb_clear_cursor,
 	.update_cursor		= fb_rgb_update_cursor,
 	.show_cursor		= fb_rgb_show_cursor,
 	.get_fix		= fb_rgb_get_fix,

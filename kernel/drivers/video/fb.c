@@ -18,13 +18,13 @@ static struct framebuffer direct_fb;
  */
 int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
 {
-	return init_framebuffer(&direct_fb, tag_fb, 0, 1);
+	return init_framebuffer(&direct_fb, tag_fb, 0, 1, 0);
 }
 
 /*
  * Init the framebuffer.
  */
-int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct)
+int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct, int cursor_on)
 {
 	int ret;
 
@@ -38,6 +38,7 @@ int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *t
 	fb->tag_fb = tag_fb;
 	fb->x = fb->cursor_x = 0;
 	fb->y = fb->cursor_y = 0;
+	fb->cursor_on = cursor_on;
 	fb->active = 0;
 
 	/* init frame buffer */

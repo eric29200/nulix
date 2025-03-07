@@ -37,6 +37,29 @@ static uint8_t ansi_color_table[] = {
 	11,	/* yellow */
 	15	/* white */
 };
+ 
+/* cursor timer */
+static struct timer_event cursor_timer;
+
+/*
+ * Update cursor.
+ */
+static void update_cursor_timer(void *arg)
+{
+	struct framebuffer *fb;
+
+	UNUSED(arg);
+	
+	/* get foreground console */
+	fb = &console_table[fg_console].fb;
+
+	/* update cursor */
+	fb->ops->update_cursor(fb);
+
+	/* reschedule timer */
+	timer_event_init(&cursor_timer, update_cursor_timer, NULL, jiffies + ms_to_jiffies(FB_CURSOR_TIMER_MS));
+	timer_event_add(&cursor_timer);
+}
 
 /*
  * Reset a virtual console.
@@ -86,6 +109,7 @@ static void console_complete_change(int n)
 		fb = &vc_new->fb;
 		fb->active = 1;
 		fb->ops->update_region(fb, 0, fb->width * fb->height);
+		fb->ops->show_cursor(fb, vc_new->vc_deccm);
 	}
 
 	/* set current console */
@@ -179,6 +203,10 @@ static void console_scrup(struct vc *vc, uint32_t top, uint32_t bottom, size_t n
 	if (bottom > fb->height || top >= bottom || nr < 1)
 		return;
 
+	/* clear cursor */
+	if (fb->active)
+		fb->ops->clear_cursor(fb);
+
 	/* move each line up */
 	dest = (uint16_t *) (fb->buf + fb->width * top);
 	src = (uint16_t *) (fb->buf + fb->width * (top + nr));
@@ -207,6 +235,10 @@ static void console_scrdown(struct vc *vc, uint32_t top, uint32_t bottom, size_t
 	/* check top and bottom */
 	if (bottom > fb->height || top >= bottom || nr < 1)
 		return;
+
+	/* clear cursor */
+	if (fb->active)
+		fb->ops->clear_cursor(fb);
 
 	/* move each line down */
 	dest = (uint16_t *) (fb->buf + fb->width * (top + nr));
@@ -875,10 +907,6 @@ static ssize_t console_write(struct tty *tty)
 	/* get console */
 	vc = tty->driver_data;
 
-	/* remove cursor */
-	if (vc->fb.active)
-		vc->fb.ops->update_region(&vc->fb, vc->fb.cursor_y * vc->fb.width + vc->fb.cursor_x, 1);
-
 	/* get characters from write queue */
 	while (tty->write_queue.size > 0) {
 		/* get next character */
@@ -897,10 +925,6 @@ static ssize_t console_write(struct tty *tty)
 		/* do control */
 		console_do_control(tty, vc, tc);
 	}
-
-	/* update cursor */
-	if (vc->vc_deccm && vc->fb.active)
-		vc->fb.ops->update_cursor(&vc->fb);
 
 	return count;
 }
@@ -1177,7 +1201,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		reset_vc(vc);
 
 		/* init frame buffer */
-		ret = init_framebuffer(&vc->fb, tag_fb, vc->vc_erase_char, 0);
+		ret = init_framebuffer(&vc->fb, tag_fb, vc->vc_erase_char, 0, vc->vc_deccm);
 		if (ret)
 			goto err;
 
@@ -1194,6 +1218,10 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 	/* set current console to first console */
 	fg_console = 0;
 	console_table[fg_console].fb.active = 1;
+
+	/* set cursor timer */
+	timer_event_init(&cursor_timer, update_cursor_timer, NULL, jiffies + ms_to_jiffies(FB_CURSOR_TIMER_MS));
+	timer_event_add(&cursor_timer);
 
 	return 0;
 err:

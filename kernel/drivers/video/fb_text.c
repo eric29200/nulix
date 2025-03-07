@@ -3,17 +3,31 @@
 #include <string.h>
 
 /*
+ * Clear cursor.
+ */
+static void fb_text_clear_cursor(struct framebuffer *fb)
+{
+	UNUSED(fb);
+}
+
+/*
  * Update cursor.
  */
 static void fb_text_update_cursor(struct framebuffer *fb)
 {
 	uint16_t pos = fb->y * fb->width + fb->x;
 
+	/* update position */
+	fb->cursor_x = fb->x;
+	fb->cursor_y = fb->y;
+	
 	/* update hardware cursor */
-	outb(0x03D4, 14);
-	outb(0x03D5, (pos >> 8) & 0xFF);
-	outb(0x03D4, 15);
-	outb(0x03D5, pos & 0xFF);
+	if (fb->active && fb->cursor_on) {
+		outb(0x03D4, 14);
+		outb(0x03D5, (pos >> 8) & 0xFF);
+		outb(0x03D4, 15);
+		outb(0x03D5, pos & 0xFF);
+	}
 }
 
 /*
@@ -23,8 +37,8 @@ static void fb_text_show_cursor(struct framebuffer *fb, int on_off)
 {
 	uint8_t status;
 
-	UNUSED(fb);
-
+	/* switch on/off cursor */
+	fb->cursor_on = on_off;
 	switch (on_off) {
 		case 0:
 			outb(0x03D4, 0xA);
@@ -103,6 +117,7 @@ struct framebuffer_ops fb_text_ops = {
 	.update_region		= fb_text_update_region,
 	.scroll_up		= fb_text_scroll_up,
 	.scroll_down		= fb_text_scroll_down,
+	.clear_cursor		= fb_text_clear_cursor,
 	.update_cursor		= fb_text_update_cursor,
 	.show_cursor		= fb_text_show_cursor,
 };

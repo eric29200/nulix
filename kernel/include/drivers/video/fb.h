@@ -2,6 +2,7 @@
 #define _FB_H_
 
 #include <grub/multiboot2.h>
+#include <proc/timer.h>
 #include <fs/fs.h>
 #include <stddef.h>
 #include <string.h>
@@ -40,6 +41,8 @@
 #define FB_VISUAL_PSEUDOCOLOR		3	/* Pseudo color (like atari) */
 #define FB_VISUAL_DIRECTCOLOR		4	/* Direct color */
 #define FB_VISUAL_STATIC_PSEUDOCOLOR	5	/* Pseudo color readonly */
+
+#define FB_CURSOR_TIMER_MS		20	/* Update cursor every 20 ms */
 
 struct framebuffer;
 
@@ -117,6 +120,7 @@ struct framebuffer_ops {
 	void			(*update_region)(struct framebuffer *, uint32_t, uint32_t);
 	void			(*scroll_up)(struct framebuffer *, uint32_t, uint32_t, size_t);
 	void			(*scroll_down)(struct framebuffer *, uint32_t, uint32_t, size_t);
+	void			(*clear_cursor)(struct framebuffer *);
 	void			(*update_cursor)(struct framebuffer *);
 	void			(*show_cursor)(struct framebuffer *, int);
 	int			(*get_fix)(struct framebuffer *, struct fb_fix_screeninfo *);
@@ -139,15 +143,16 @@ struct framebuffer {
 	struct font_desc *			font;
 	uint32_t				x;
 	uint32_t				y;
-	uint32_t				cursor_x;
-	uint32_t				cursor_y;
+	int					cursor_on;
+	int					cursor_x;
+	int					cursor_y;
 	uint16_t *				buf;
 	int					active;
 	struct multiboot_tag_framebuffer *	tag_fb;
 	struct framebuffer_ops *		ops;
 };
 
-int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct);
+int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct, int cursor_on);
 int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb);
 
 /* frame buffers */
