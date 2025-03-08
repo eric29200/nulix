@@ -638,6 +638,38 @@ static void console_status_report(struct tty *tty)
 }
 
 /*
+ * Save console.
+ */
+static void console_save(struct vc *vc)
+{
+	vc->s_x = vc->fb.x;
+	vc->s_y = vc->fb.y;
+	vc->s_vc_intensity = vc->vc_intensity;
+	vc->s_vc_underline = vc->vc_underline;
+	vc->s_vc_reverse = vc->vc_reverse;
+	vc->s_vc_charset = vc->vc_charset;
+	vc->s_vc_color = vc->vc_color;
+	vc->s_vc_charset_g0 = vc->vc_charset_g0;
+	vc->s_vc_charset_g1 = vc->vc_charset_g1;
+}
+
+/*
+ * Restore console.
+ */
+static void console_restore(struct vc *vc)
+{
+	console_gotoxy(vc, vc->s_x, vc->s_y);
+	vc->vc_intensity = vc->s_vc_intensity;
+	vc->vc_underline = vc->s_vc_underline;
+	vc->vc_reverse = vc->s_vc_reverse;
+	vc->vc_charset = vc->s_vc_charset;
+	vc->vc_color = vc->s_vc_color;
+	vc->vc_charset_g0 = vc->s_vc_charset_g0;
+	vc->vc_charset_g1 = vc->s_vc_charset_g1;
+	set_translate(vc, vc->vc_charset == 0 ? vc->vc_charset_g0 : vc->vc_charset_g1);
+}
+
+/*
  * Handle control characters.
  */
 static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
@@ -686,6 +718,12 @@ static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 					break;
 				case ')':
 					vc->vc_state = TTY_STATE_SET_G1;
+					break;
+				case '7':
+				 	console_save(vc);
+					break;
+				case '8':
+				 	console_restore(vc);
 					break;
 				default:
 					printf("console : unknown escape sequence %c\n", c);

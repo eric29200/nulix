@@ -80,6 +80,15 @@ struct vc {
 	uint8_t			vc_charset_g1;						/* g1 charset */
 	uint8_t			vc_mode;						/* console mode (KD_TEXT or KD_GRAPHICS) */
 	char			vc_need_wrap;						/* 1 if console needs to be wrapped */
+	uint32_t		s_x;							/* saved x */
+	uint32_t		s_y;							/* saved y */
+	uint8_t			s_vc_intensity;						/* saved foreground intensity */
+	uint8_t			s_vc_underline;						/* saved underline */
+	uint8_t			s_vc_reverse;						/* saved reverse mode */
+	uint8_t			s_vc_charset;						/* saved charset (g0 or g1) */
+	uint8_t			s_vc_color;						/* saved forgeground/background color */
+	uint8_t			s_vc_charset_g0;					/* saved g0 charset */
+	uint8_t			s_vc_charset_g1;					/* saved g1 charset */
 	struct vt_mode		vt_mode;						/* vt mode (AUTO or PROCESS) */
 	pid_t			vt_pid;							/* vt pid */
 	int			vt_newvt;						/* new asked vt */
