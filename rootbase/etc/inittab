@@ -2,7 +2,8 @@
 ::sysinit:/bin/mount -a
 ::sysinit:/etc/init.d/rcS
 
-console::respawn:/sbin/getty -L console 0 vt100
+#console::respawn:/sbin/getty -L console 0 vt100
+tty1::respawn:/sbin/getty 38400 tty1
 tty2::respawn:/sbin/getty 38400 tty2
 tty3::respawn:/sbin/getty 38400 tty3
 tty4::respawn:/sbin/getty 38400 tty4
