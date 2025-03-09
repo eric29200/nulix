@@ -1014,7 +1014,7 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 			*((int *) arg) = vc->vc_mode;
 			return 0;
 		case KDSETMODE:
-			vc->vc_mode = *((uint8_t *) arg);
+			vc->vc_mode = (uint8_t) arg;
 			return 0;
 		case KDGKBENT:
 			kbe = (struct kbentry *) arg;
