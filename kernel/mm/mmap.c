@@ -87,6 +87,39 @@ struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_
 
 	return NULL;
 }
+  
+/*
+ * Move a memory region.
+ */
+void *move_vma(struct vm_area *vm, uint32_t old_address, size_t old_size, uint32_t new_address, size_t new_size)
+{
+	struct vm_area *vm_new, *vm_prev;
+
+	/* create new memory region */
+	vm_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!vm_new)
+		return NULL;
+
+	/* set new memory region */
+	*vm_new = *vm;
+	vm_new->vm_start = new_address;
+	vm_new->vm_end = new_address + new_size;
+
+	/* unmap existing pages */
+	do_munmap(new_address, new_size);
+
+	/* add it to the list */
+	vm_prev = find_vma_prev(current_task, vm_new->vm_start);
+	if (vm_prev)
+		list_add(&vm_new->list, &vm_prev->list);
+	else
+		list_add(&vm_new->list, &current_task->mm->vm_list);
+
+	/* unmap old region */
+	do_munmap(old_address, old_size);
+
+	return (void *) vm_new->vm_start;
+}
 
 /*
  * Generic mmap.
@@ -321,7 +354,7 @@ int do_munmap(uint32_t addr, size_t len)
 void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
 {
 	struct vm_area *vma, *vma_next;
-	int ret;
+	int ret, map_flags;
 
 	/* check flags */
 	if (flags & ~(MREMAP_FIXED | MREMAP_MAYMOVE))
@@ -394,8 +427,26 @@ void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flag
 			}
 	}
 
-	/* TODO : move memory region into a new one */
-	printf("mremap not implemented\n");
+	/* unable to shrink or exapand the area : create a new one */
+	if (flags & MREMAP_MAYMOVE) {
+		/* TODO */
+		if (vma->vm_inode) {
+			printf("mremap not implemented\n");
+			goto err;
+		}
+
+		if (!(flags & MREMAP_FIXED)) {
+			map_flags = 0;
+			if (vma->vm_flags & VM_SHARED)
+				map_flags |= MAP_SHARED;
+
+			if (get_unmapped_area(&new_address, new_size, map_flags))
+				goto err;
+		}
+
+		return move_vma(vma, old_address, old_size, new_address, new_size);
+	}
+
 err:
 	return NULL;
 }
