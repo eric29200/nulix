@@ -104,6 +104,8 @@ void *move_vma(struct vm_area *vm, uint32_t old_address, size_t old_size, uint32
 	*vm_new = *vm;
 	vm_new->vm_start = new_address;
 	vm_new->vm_end = new_address + new_size;
+	if (vm_new->vm_inode && vm_new->vm_ops && vm_new->vm_ops->open)
+		vm_new->vm_ops->open(vm_new);
 
 	/* unmap existing pages */
 	do_munmap(new_address, new_size);
@@ -429,12 +431,6 @@ void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flag
 
 	/* unable to shrink or exapand the area : create a new one */
 	if (flags & MREMAP_MAYMOVE) {
-		/* TODO */
-		if (vma->vm_inode) {
-			printf("mremap not implemented\n");
-			goto err;
-		}
-
 		if (!(flags & MREMAP_FIXED)) {
 			map_flags = 0;
 			if (vma->vm_flags & VM_SHARED)
