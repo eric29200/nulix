@@ -353,7 +353,7 @@ int sys_listen(int sockfd, int backlog)
 	sock = sockfd_lookup(sockfd, NULL, &err);
 	if (!sock)
 		return err;
-	
+
 	/* listen not implemented */
 	if (!sock->ops || !sock->ops->listen)
 		return -EINVAL;
@@ -621,7 +621,7 @@ static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_
 	/* check length */
 	if (!optlen)
 		return -EINVAL;
-	len = *optlen;	
+	len = *optlen;
 
 	switch (optname) {
 		case SO_PEERCRED:

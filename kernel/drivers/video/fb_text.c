@@ -20,7 +20,7 @@ static void fb_text_update_cursor(struct framebuffer *fb)
 	/* update position */
 	fb->cursor_x = fb->x;
 	fb->cursor_y = fb->y;
-	
+
 	/* update hardware cursor */
 	if (fb->active && fb->cursor_on) {
 		outb(0x03D4, 14);

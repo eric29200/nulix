@@ -49,7 +49,7 @@ static void update_cursor_timer(void *arg)
 	struct framebuffer *fb;
 
 	UNUSED(arg);
-	
+
 	/* get foreground console */
 	fb = &console_table[fg_console].fb;
 
