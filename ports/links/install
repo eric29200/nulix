@@ -1,0 +1,20 @@
+VERSION="2.30"
+SRC_FILENAME="links-"$VERSION".tar.bz2"
+URL="http://links.twibright.com/download/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--without-ipv6							\
+		--enable-graphics						\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make clean
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
