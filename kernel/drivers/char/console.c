@@ -945,6 +945,10 @@ static ssize_t console_write(struct tty *tty)
 	/* get console */
 	vc = tty->driver_data;
 
+        /* clear selection */
+        if (vc == &console_table[sel_cons])
+		clear_selection(vc);
+
 	/* get characters from write queue */
 	while (tty->write_queue.size > 0) {
 		/* get next character */

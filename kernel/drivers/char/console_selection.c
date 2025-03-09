@@ -9,7 +9,7 @@
 /* current selection */
 static int sel_start = -1;
 static int sel_end;
-static int sel_cons = 0;
+int sel_cons = 0;
 static char *sel_buf = NULL;
 static int sel_buf_len = 0;
 
@@ -101,7 +101,7 @@ static void hilight(struct vc *vc, int start, int end)
 /*
  * Clear selection.
  */
-static void clear_selection(struct vc *vc)
+void clear_selection(struct vc *vc)
 {
 	/* hide pointer */
 	highlight_pointer(vc, -1);
