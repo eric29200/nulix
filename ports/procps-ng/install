@@ -3,6 +3,7 @@ SRC_FILENAME="procps-ng-"$VERSION".tar.xz"
 URL="https://sourceforge.net/projects/procps-ng/files/Production/"$SRC_FILENAME
 
 function configure_port() {
+	autoreconf -i --force
 	./configure								\
 		--host=$HOST							\
 		--disable-shared						\
