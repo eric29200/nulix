@@ -183,6 +183,10 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
 	if (!sk)
 		return -EINVAL;
 
+	/* connecting = waiting for TCP syn/ack */
+	if (sk->sock->state == SS_CONNECTING)
+		return mask;
+
 	/* check if there is a message in the queue */
 	if (sk->sock->state == SS_DISCONNECTING || !list_empty(&sk->skb_list))
 		mask |= POLLIN;
