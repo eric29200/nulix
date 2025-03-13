@@ -3,7 +3,7 @@
 
 #include <drivers/video/fb.h>
 
-#define NR_CONSOLES		4
+#define NR_CONSOLES		8
 
 #define TTY_STATE_NORMAL	0
 #define TTY_STATE_ESCAPE	1
