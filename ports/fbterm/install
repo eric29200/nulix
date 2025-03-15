@@ -1,0 +1,18 @@
+VERSION="1.7.0"
+SRC_FILENAME="fbterm-"$VERSION".tar.gz"
+URL="https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/fbterm/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--enable-gpm							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
