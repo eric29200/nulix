@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cd /usr/X11
+(sleep 1 ; nxstart) &
+exec nano-X
