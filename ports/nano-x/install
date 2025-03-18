@@ -14,6 +14,10 @@ function build_port() {
 function install_port() {
 	mkdir -p $SYSROOT/usr/X11/bin
 	mkdir -p $SYSROOT/usr/X11/fonts
+	mkdir -p $SYSROOT/usr/X11/images
+	mkdir -p $SYSROOT/usr/X11/demos/tuxchess/images
 	cp -Rv bin/* $SYSROOT/usr/X11/bin/
 	cp -Rv fonts/* $SYSROOT/usr/X11/fonts/
+	cp -Rv images/* $SYSROOT/usr/X11/images/
+	cp -Rv demos/tuxchess/images/* $SYSROOT/usr/X11/demos/tuxchess/images/
 }
