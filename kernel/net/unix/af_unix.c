@@ -133,12 +133,17 @@ static int unix_dup(struct socket *sock, struct socket *sock_new)
  */
 static int unix_release(struct socket *sock)
 {
-	unix_socket_t *sk;
+	unix_socket_t *sk, *other;
 
 	/* get UNIX socket */
 	sk = sock->sk;
 	if (!sk)
 		return 0;
+
+	/* shutdown other */
+	other = sk->protinfo.af_unix.other;
+	if (other)
+		other->protinfo.af_unix.shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
 
 	/* release inode */
 	if (sk->protinfo.af_unix.inode)
