@@ -1,0 +1,24 @@
+SRC_FILENAME="doomgeneric"
+URL_GIT=1
+URL="https://github.com/ozkl/doomgeneric"
+
+function configure_port() {
+	cd doomgeneric
+	cp ../../../../doom/Makefile.nulix Makefile
+	cp ../../../../doom/doomgeneric_nulix.c .
+}
+
+function build_port() {
+	make -j$NJOBS CC=$CC CXX=$CXX LD=$LD AR=$AR AS=$AS RANLIB=$RANLIB
+}
+
+function install_port() {
+	cp fbdoom $SYSROOT/usr/bin/
+
+	# install wad
+	rm -f DOOM1.WAD doom1.wad.zip
+	wget https://www.jbserver.com/downloads/games/doom/misc/shareware/doom1.wad.zip
+	unzip doom1.wad.zip
+	mv DOOM1.WAD $SYSROOT/usr/share/
+	rm -f doom1.wad.zip
+}
