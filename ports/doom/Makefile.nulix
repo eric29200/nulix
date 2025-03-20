@@ -1,5 +1,5 @@
 OBJDIR		= build
-OUTPUT		= fbdoom
+OUTPUT		= doom
 
 SRC_DOOM 	= dummy.o am_map.o doomdef.o doomstat.o dstrings.o d_event.o d_items.o d_iwad.o d_loop.o d_main.o d_mode.o d_net.o f_finale.o f_wipe.o	\
 			g_game.o hu_lib.o hu_stuff.o info.o i_cdmus.o i_endoom.o i_joystick.o i_scale.o i_sound.o i_system.o i_timer.o memio.o m_argv.o \
@@ -18,7 +18,7 @@ clean:
 
 $(OUTPUT): $(OBJS)
 	@echo [Linking $@]
-	$(CC) -o $(OUTPUT) $(OBJS)
+	$(CC) -o $(OUTPUT) $(OBJS) $(LIBS)
 	@echo [Size]
 
 $(OBJS): | $(OBJDIR)

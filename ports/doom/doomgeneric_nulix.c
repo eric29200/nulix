@@ -8,22 +8,19 @@
 #include <sys/mman.h>
 #include <linux/fb.h>
 #include <linux/kd.h>
+#include <nano-X.h>
 
 #include "doomgeneric.h"
 #include "doomkeys.h"
 
 #define KEY_QUEUE_SIZE			16
 
-
-/* direct frame buffer */
-static int fb_fd = -1;
-static int *fb_buf = NULL;
-static size_t fb_buf_size;
-static struct fb_var_screeninfo fb_var;
-
-/* console attributes */
-static struct termios old_term;
-static int old_kbd_mode = -1;
+/* nano-x context */
+static GR_GC_ID gc;
+static GR_WINDOW_ID window;
+static uint8_t *window_buf = NULL;
+static const int win_size_x = DOOMGENERIC_RESX;
+static const int win_size_y = DOOMGENERIC_RESY;
 
 /* key queue */
 static uint16_t key_queue[KEY_QUEUE_SIZE];
@@ -31,204 +28,88 @@ static uint8_t key_queue_widx = 0;
 static uint8_t key_queue_ridx = 0;
 
 /*
- * Init framebuffer.
- */
-static int __init_framebuffer()
-{
-	/* open direct frame buffer */
-	fb_fd = open("/dev/fb0", 0);
-	if (fb_fd < 0) {
-		fprintf(stderr, "Error: can't open direct framebuffer\n");
-		return -1;
-	}
-
-	/* get screen size */
-	if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &fb_var)) {
-		fprintf(stderr, "Error: can't get screen information\n");
-		close(fb_fd);
-		return -1;
-	}
-
-	/* map frame buffer */
-	fb_buf_size = fb_var.xres * fb_var.yres * 4;
-	fb_buf = mmap(NULL, fb_buf_size, PROT_READ | PROT_WRITE, 0, fb_fd, 0);
-	if (!fb_buf) {
-		fprintf(stderr, "Error: can't map framebuffer\n");
-		close(fb_fd);
-		return -1;
-	}
-
-	return 0;
-}
-
-/*
- * Exit framebuffer.
- */
-static void __exit_framebuffer()
-{
-	if (fb_buf)
-		munmap(fb_buf, fb_buf_size);
-
-	if (fb_fd >= 0)
-		close(fb_fd);
-}
-
-/*
- * Init console.
- */
-static int __init_console()
-{
-	struct termios new_term;
-
-	/* get console attributes */
-	if (tcgetattr(STDIN_FILENO, &old_term)) {
-		fprintf(stderr, "Can't get console attributes\n");
-		return -1;
-	}
-
-	/* set console attributes */
-	new_term = old_term;
-	new_term.c_iflag = 0;
-	new_term.c_lflag &= ~(ECHO | ICANON | ISIG);
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new_term)) {
-		fprintf(stderr, "Can't set console attributes\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-/*
- * Restore initial console.
- */
-static void __exit_console()
-{
-	/* restore console attributes */
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_term))
-		fprintf(stderr, "Can't restore console attributes\n");
-}
-
-/*
- * Init keyboard.
- */
-static int __init_keyboard()
-{
-	int flags;
-
-	/* get keyboard mode */
-	if (ioctl(STDIN_FILENO, KDGKBMODE, &old_kbd_mode)) {
-		fprintf(stderr, "Error: can't get keyboard mode\n");
-		return -1;
-	}
-
-	/* set keyboard mode */
-	if (ioctl(STDIN_FILENO, KDSKBMODE, K_MEDIUMRAW)) {
-		fprintf(stderr, "Error: Can't set keyboard mode\n");
-		return -1;
-	}
-
-	/* set non blocking mode */
-	flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-	fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
-
-	return 0;
-}
-
-/*
- * Restore initial keyboard.
- */
-static void __exit_keyboard()
-{
-	/* restore keyboard mode */
-	if (ioctl(STDIN_FILENO, KDSKBMODE, old_kbd_mode))
-		fprintf(stderr, "Error: Can't restore keyboard mode\n");
-}
-
-/*
- * Exit function.
- */
-static void __exit()
-{
-	__exit_framebuffer();
-	__exit_console();
-	__exit_keyboard();
-}
-
-/*
  * Init function.
  */
 void DG_Init()
 {
-	/* init framebuffer */
-	if (__init_framebuffer())
-		exit(1);
-
-	/* init console */
-	if (__init_console()) {
-		__exit_framebuffer();
+	/* try to open a connection */
+	if (GrOpen() < 0) {
+		GrError("GrOpen failed");
 		exit(1);
 	}
 
-	/* init keyboard */
-	if (__init_keyboard()) {
-		__exit_console();
-		exit(1);
-	}
+	/* create context */
+	gc = GrNewGC();
+	GrSetGCUseBackground(gc, GR_FALSE);
+	GrSetGCForeground(gc, MWRGB(255, 0, 0));
 
-	/* restore at exit */
-	atexit(__exit);
+	/* create new window */
+	window = GrNewBufferedWindow(GR_WM_PROPS_APPFRAME
+		| GR_WM_PROPS_CAPTION 
+		| GR_WM_PROPS_CLOSEBOX
+		| GR_WM_PROPS_BUFFER_MMAP
+		| GR_WM_PROPS_BUFFER_BGRA,
+		"Doom", GR_ROOT_WINDOW_ID, 50, 50,
+		win_size_x, win_size_y,
+		MWRGB(255, 255, 255));
+
+	/* select events */
+	GrSelectEvents(window, GR_EVENT_MASK_EXPOSURE
+		| GR_EVENT_MASK_TIMER
+		| GR_EVENT_MASK_CLOSE_REQ
+		| GR_EVENT_MASK_BUTTON_DOWN
+		| GR_EVENT_MASK_BUTTON_UP
+		| GR_EVENT_MASK_KEY_DOWN
+		| GR_EVENT_MASK_KEY_UP);
+
+	/* map window */
+	GrMapWindow(window);
+
+	/* get frame buffer */
+	window_buf = GrOpenClientFramebuffer(window);
 }
 
 /*
- * Handle keyboard.
+ * Handle keyboard event.
  */
-static void __handle_keyboard()
+static void __handle_keyboard_event(GR_EVENT *event, int pressed)
 {
-	uint8_t scan_code, key_code, key;
 	uint16_t key_data;
-	int pressed;
-
-	/* read from keyboard */
-	if (read(STDIN_FILENO, &scan_code, 1) < 1)
-		return;
-
-	/* parse key */
-	pressed = (scan_code & 0x80) == 0 ? 1 : 0;
-	key_code = scan_code & 0x7F;
+	uint8_t key;
 
 	/* convert to doom key */
-	switch (key_code) {
-		case 0x1C:
-		case 0x60:
+	switch (event->keystroke.ch) {
+		case MWKEY_ENTER:
 			key = KEY_ENTER;
 			break;
-		case 0x01:
+		case MWKEY_ESCAPE:
 			key = KEY_ESCAPE;
 			break;
-		case 0x69:
+		case MWKEY_LEFT:
 			key = KEY_LEFTARROW;
 			break;
-		case 0x6A:
+		case MWKEY_RIGHT:
 			key = KEY_RIGHTARROW;
 			break;
-		case 0x67:
+		case MWKEY_UP:
 			key = KEY_UPARROW;
 			break;
-		case 0x6C:
+		case MWKEY_DOWN:
 			key = KEY_DOWNARROW;
 			break;
-		case 0x39:
+		case ' ':
 			key = KEY_USE;
 			break;
-		case 0x1D:
-		case 0x61:
+		case MWKEY_RCTRL:
+		case MWKEY_LCTRL:
 			key = KEY_FIRE;
 			break;
-		case 0x2A:
-		case 0x36:
+		case MWKEY_RSHIFT:
+		case MWKEY_LSHIFT:
 			key = KEY_RSHIFT;
 			break;
-		case 0x15:
+		case 'y':
+		case 'Y':
 			key = 'y';
 			break;
 		default:
@@ -247,15 +128,35 @@ static void __handle_keyboard()
  */
 void DG_DrawFrame()
 {
-	int i;
+	GR_EVENT event;
 
-	/* draw framebuffer */
-	if (fb_buf)
-		for (i = 0; i < DOOMGENERIC_RESY; i++)
-			memcpy(fb_buf + i * fb_var.xres, DG_ScreenBuffer + i * DOOMGENERIC_RESX, DOOMGENERIC_RESX * 4);
+	/* handle events */
+	while (GrPeekEvent(&event)) {
+		/* get next event */
+		GrGetNextEvent(&event);
 
-	/* handle keyboard */
-	__handle_keyboard();
+		/* handle event */
+		switch (event.type) {
+			case GR_EVENT_TYPE_KEY_DOWN:
+				__handle_keyboard_event(&event, 1);
+				break;
+			case GR_EVENT_TYPE_KEY_UP:
+				__handle_keyboard_event(&event, 0);
+				break;
+			case GR_EVENT_TYPE_CLOSE_REQ:
+				GrClose();
+				exit(0);
+				break;
+			case GR_EVENT_TYPE_EXPOSURE:
+				break;
+			case GR_EVENT_TYPE_TIMER:         
+				break;
+		}
+	}
+
+	/* update framebuffer */
+	memcpy(window_buf, DG_ScreenBuffer, DOOMGENERIC_RESX * DOOMGENERIC_RESY * 4);
+        GrFlushWindow(window);
 }
 
 /*
@@ -306,6 +207,7 @@ uint32_t DG_GetTicksMs()
  */
 void DG_SetWindowTitle(const char *title)
 {
+	GrSetWindowTitle(window, title);
 }
 
 /*

@@ -9,11 +9,11 @@ function configure_port() {
 }
 
 function build_port() {
-	make -j$NJOBS CC=$CC CXX=$CXX LD=$LD AR=$AR AS=$AS RANLIB=$RANLIB
+	make -j$NJOBS CC=$CC CXX=$CXX LD=$LD AR=$AR AS=$AS RANLIB=$RANLIB LIBS=$SYSROOT/usr/X11/lib/libnano-X.a CFLAGS=-I$SYSROOT/usr/X11/include
 }
 
 function install_port() {
-	cp fbdoom $SYSROOT/usr/bin/
+	cp doom $SYSROOT/usr/bin/
 
 	# install wad
 	rm -f DOOM1.WAD doom1.wad.zip
