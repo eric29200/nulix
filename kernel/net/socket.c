@@ -649,8 +649,6 @@ static int sock_setsockopt(struct socket *sock, int optname, void *optval, size_
 	UNUSED(optlen);
 
 	switch (optname) {
-		case SO_PASSCRED:
-			break;
 		default:
 			printf("sock_setsockopt(%d) undefined\n", optname);
 			break;
