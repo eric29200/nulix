@@ -188,72 +188,96 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
  */
 static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, int flags)
 {
-	size_t n, i, len, count = 0;
+	size_t ct = msg->msg_iovlen, copied = 0, size, done, len, num, i;
+	struct sockaddr_un *sunaddr = msg->msg_name;
+	struct iovec *iov = msg->msg_iov;
 	unix_socket_t *sk, *from;
 	struct sk_buff *skb;
-	void *buf;
+	uint8_t *buf;
 
 	/* get UNIX socket */
 	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
-	/* sleep until we receive a packet */
-	for (;;) {
-		/* message received : break */
-		if (!list_empty(&sk->skb_list))
-			break;
+	/* compute size */
+	for (i = 0, size = 0; i < msg->msg_iovlen; i++)
+		size += msg->msg_iov[i].iov_len;
 
-		/* socket is down */
-		if (sk->protinfo.af_unix.shutdown & RCV_SHUTDOWN)
-			return 0;
+	/* for each iov */
+	while (ct--) {
+		done = 0;
+		buf = iov->iov_base;
+		len = iov->iov_len;
+		iov++;
 
-		/* non blocking */
-		if (nonblock)
-			return -EAGAIN;
+		/* try to fill buffer */
+		while (done < len) {
+			/* done */
+			if (copied == size || (copied && (flags & MSG_PEEK)))
+				goto out;
 
-		/* signal received : restart system call */
-		if (signal_pending(current_task))
-			return -ERESTARTSYS;
+			/* no message */
+			if (list_empty(&sk->skb_list)) {
+				/* socket is down */
+				if (sk->protinfo.af_unix.shutdown & RCV_SHUTDOWN)
+					return 0;
 
-		/* sleep */
-		task_sleep(&sk->sock->wait);
-	}
+				/* return partial data */
+				if (copied)
+					goto out;
 
-	/* get first message */
-	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
+				/* non blocking */
+				if (nonblock)
+					return -EAGAIN;
 
-	/* get message */
-	buf = skb->data;
-	len = skb->len;
+				/* signal received : restart system call */
+				if (signal_pending(current_task))
+					return -ERESTARTSYS;
 
-	/* copy message */
-	for (i = 0; i < msg->msg_iovlen; i++) {
-		n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
-		memcpy(msg->msg_iov[i].iov_base, buf, n);
-		count += n;
-		len -= n;
-		buf += n;
-	}
+				/* wait for a message */
+				task_sleep(&sk->sock->wait);
+				continue;
+			}
 
-	/* set source address */
-	if (skb->sock && skb->sock->sk) {
-		from = skb->sock->sk;
-		memcpy(msg->msg_name, &from->protinfo.af_unix.sunaddr, from->protinfo.af_unix.sunaddr_len);
-	}
+			/* get message */
+			skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
 
-	/* release socket buffer */
-	if (!(flags & MSG_PEEK)) {
-		skb_pull(skb, count);
+			/* set address just once */
+			if (sunaddr && skb->sock && skb->sock->sk) {
+				from = skb->sock->sk;
+				memcpy(sunaddr, &from->protinfo.af_unix.sunaddr, from->protinfo.af_unix.sunaddr_len);
+				sunaddr = NULL;
+			}
 
-		/* free empty socket buffer */
-		if (skb->len <= 0) {
-			list_del(&skb->list);
-			skb_free(skb);
+			/* copy message */
+			num = skb->len <= len - done ? skb->len : len - done;
+			memcpy(buf, skb->data, num);
+
+			/* update sizes */
+			copied += num;
+			done += num;
+			buf += num;
+
+			/* release socket buffer */
+			if (!(flags & MSG_PEEK)) {
+				skb_pull(skb, num);
+
+				/* free empty socket buffer */
+				if (skb->len <= 0) {
+					list_del(&skb->list);
+					skb_free(skb);
+				}
+			}
+
+			/* datagramm socket : return */
+			if (sock->type == SOCK_DGRAM)
+				goto out;
 		}
 	}
 
-	return count;
+out:
+	return copied;
 }
 
 /*
