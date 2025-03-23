@@ -71,7 +71,7 @@ static inline uint16_t tcp_data_length(struct sk_buff *skb)
  */
 static inline void *tcp_data(struct sk_buff *skb)
 {
-	return (void *) skb->h.tcp_header + sizeof(struct tcp_header) + tcp_option_length (skb);
+	return (void *) skb->h.tcp_header + sizeof(struct tcp_header) + tcp_option_length(skb);
 }
 
 #endif

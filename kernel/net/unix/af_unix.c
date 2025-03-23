@@ -227,8 +227,8 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
 
 	/* get message */
-	buf = skb->head + sk->msg_position;
-	len = skb->len - sk->msg_position;
+	buf = skb->data;
+	len = skb->len;
 
 	/* copy message */
 	for (i = 0; i < msg->msg_iovlen; i++) {
@@ -245,14 +245,14 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 		memcpy(msg->msg_name, &from->protinfo.af_unix.sunaddr, from->protinfo.af_unix.sunaddr_len);
 	}
 
-	/* remove and free socket buffer or remember position packet */
+	/* release socket buffer */
 	if (!(flags & MSG_PEEK)) {
-		if (len <= 0) {
+		skb_pull(skb, count);
+
+		/* free empty socket buffer */
+		if (skb->len <= 0) {
 			list_del(&skb->list);
 			skb_free(skb);
-			sk->msg_position = 0;
-		} else {
-			sk->msg_position += count;
 		}
 	}
 
