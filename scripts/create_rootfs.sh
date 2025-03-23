@@ -54,7 +54,6 @@ mkdir -p tmp/bin
 sudo ln -s /proc/mounts tmp/etc/mtab
 sudo ln -s /usr/sbin/init tmp/sbin/init
 sudo ln -s /usr/sbin/getty tmp/sbin/getty
-sudo ln -s /usr/bin/busybox tmp/bin/sh
 
 # create devices
 sudo mknod tmp/dev/null c 1 3
