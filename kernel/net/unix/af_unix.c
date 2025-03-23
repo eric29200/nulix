@@ -188,13 +188,10 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
  */
 static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, int flags)
 {
-	unix_socket_t *sk, *from;
 	size_t n, i, len, count = 0;
+	unix_socket_t *sk, *from;
 	struct sk_buff *skb;
 	void *buf;
-
-	/* unused flags */
-	UNUSED(flags);
 
 	/* get UNIX socket */
 	sk = sock->sk;
@@ -203,10 +200,6 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 
 	/* sleep until we receive a packet */
 	for (;;) {
-		/* signal received : restart system call */
-		if (signal_pending(current_task))
-			return -ERESTARTSYS;
-
 		/* message received : break */
 		if (!list_empty(&sk->skb_list))
 			break;
@@ -218,6 +211,10 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 		/* non blocking */
 		if (nonblock)
 			return -EAGAIN;
+
+		/* signal received : restart system call */
+		if (signal_pending(current_task))
+			return -ERESTARTSYS;
 
 		/* sleep */
 		task_sleep(&sk->sock->wait);
