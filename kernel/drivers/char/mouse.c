@@ -177,7 +177,7 @@ static int mouse_write(struct file *filp, const char *buf, int n)
 	UNUSED(filp);
 	UNUSED(buf);
 	UNUSED(n);
-	return -EINVAL;
+	return n;
 }
 
 /*
