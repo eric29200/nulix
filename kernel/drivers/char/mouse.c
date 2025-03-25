@@ -19,10 +19,6 @@
 #define MOUSE_CMD_WRITE		0x60
 #define MOUSE_MAGIC_WRITE	0xD4
 
-#define MOUSE_BBIT		0x01
-#define MOUSE_FBIT		0x20
-#define MOUSE_VBIT		0x08
-
 #define MOUSE_OBUF_FULL		0x21
 #define MOUSE_INTS_ON		0x47
 #define MOUSE_INTS_OFF		0x65
@@ -36,8 +32,6 @@
 
 /* mouse static variables */
 static struct ring_buffer mouse_rb;
-static uint8_t mouse_byte[MOUSE_EVENT_SIZE];
-static int mouse_cycle = 0;
 
 /*
  * Wait for mouse.
@@ -95,47 +89,19 @@ static void mouse_write_dev(int value)
  */
 static void mouse_handler(struct registers *regs)
 {
-	int status, value;
+	uint8_t value;
 
 	/* unused registers */
 	UNUSED(regs);
 
 	/* check status */
-	status = inb(MOUSE_STATUS);
-	if ((status & MOUSE_OBUF_FULL) != MOUSE_OBUF_FULL)
+	if ((inb(MOUSE_STATUS) & MOUSE_OBUF_FULL) != MOUSE_OBUF_FULL)
 		return;
 
-	/* handle data */
-	if ((status & MOUSE_BBIT) && (status & MOUSE_FBIT)) {
-		value = inb(MOUSE_PORT);
-
-		switch (mouse_cycle) {
-			case 0:
-				/* get mouse state */
-				mouse_byte[0] = value;
-				if (value & MOUSE_VBIT)
-					mouse_cycle++;
-				break;
-			case 1:
-				/* get mouse x */
-				mouse_byte[1] = value;
-				mouse_cycle++;
-				break;
-			case 2:
-				/* get mouse y */
-				mouse_byte[2] = value;
-
-				/* store mouse event */
-				if (ring_buffer_left(&mouse_rb) >= MOUSE_EVENT_SIZE)
-					ring_buffer_write(&mouse_rb, mouse_byte, MOUSE_EVENT_SIZE);
-
-				/* reset mouse cycle */
-				mouse_cycle = 0;
-				break;
-			default:
-				break;
-		}
-	}
+	/* queue data */
+	value = inb(MOUSE_PORT);
+	if (!ring_buffer_full(&mouse_rb))
+		ring_buffer_write(&mouse_rb, &value, 1);
 }
 
 /*
