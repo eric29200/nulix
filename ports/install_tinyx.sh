@@ -149,16 +149,16 @@ function build_xresource() {
 function build_tinyx() {
 	# download tinyx
 	cd $BASE_DIR
-	#rm -rf tinyx
-	#git clone https://github.com/tinycorelinux/tinyx.git
+	rm -rf tinyx
+	git clone https://github.com/tinycorelinux/tinyx.git
 	cd tinyx
 
 	# build tinyx
-	#autoreconf -i
-	#./configure									\
-	#	--host=$HOST								\
-	#	--with-fontdir="/usr/X11/share/fonts/X11"				\
-	#	--prefix="/usr/X11"
+	autoreconf -i
+	./configure									\
+		--host=$HOST								\
+		--with-fontdir="/usr/X11/share/fonts/X11"				\
+		--prefix="/usr/X11"
 	make clean
 	make -j$NJOBS
 	make install DESTDIR=$SYSROOT
@@ -168,46 +168,46 @@ function build_tinyx() {
 }
 
 # build dependencies and tinyx
-#build_util_macros
-#build_xport "xorgproto"
-#build_xport "libXau"
-#build_xport "libXdmcp"
-#build_xport "xcb-proto"
-#build_xport "libpthread-stubs"
-#build_xport "libxcb"
-#build_xport "xtrans"
-#build_xport "libX11"
-#build_xport "libXext"
-#build_xport "libICE"
-#build_xport "libSM"
-#build_xport "libXt"
-#build_xport "libXmu"
-#build_xport "libXpm"
-#build_xport "libXaw"
-#build_xport "libXfixes"
-#build_xport "libXrender"
-#build_xport "libXcursor"
-#build_xport "libfontenc"
-#build_xport "libXfont"
-#build_xport "libXft"
-#build_xport "libXi"
-#build_xport "libXtst"
-#build_xport "libxkbfile"
-#build_xport "font-util"
-#build_xresource "xcursor-themes"
-#build_xresource "encodings"
-#build_xresource "font-alias"
-#build_xresource "font-adobe-utopia-type1"
-#build_xresource "font-bh-ttf"
-#build_xresource "font-bh-type1"
-#build_xresource "font-ibm-type1"
-#build_xresource "font-misc-ethiopic"
-#build_xresource "font-xfree86-type1"
-#build_xresource "font-adobe-100dpi"
-#build_xresource "font-adobe-75dpi"
-#build_xresource "font-jis-misc"
-#build_xresource "font-daewoo-misc"
-#build_xresource "font-isas-misc"
-#build_xresource "font-misc-misc"
-#build_xresource "font-cursor-misc"
+build_util_macros
+build_xport "xorgproto"
+build_xport "libXau"
+build_xport "libXdmcp"
+build_xport "xcb-proto"
+build_xport "libpthread-stubs"
+build_xport "libxcb"
+build_xport "xtrans"
+build_xport "libX11"
+build_xport "libXext"
+build_xport "libICE"
+build_xport "libSM"
+build_xport "libXt"
+build_xport "libXmu"
+build_xport "libXpm"
+build_xport "libXaw"
+build_xport "libXfixes"
+build_xport "libXrender"
+build_xport "libXcursor"
+build_xport "libfontenc"
+build_xport "libXfont"
+build_xport "libXft"
+build_xport "libXi"
+build_xport "libXtst"
+build_xport "libxkbfile"
+build_xport "font-util"
+build_xresource "xcursor-themes"
+build_xresource "encodings"
+build_xresource "font-alias"
+build_xresource "font-adobe-utopia-type1"
+build_xresource "font-bh-ttf"
+build_xresource "font-bh-type1"
+build_xresource "font-ibm-type1"
+build_xresource "font-misc-ethiopic"
+build_xresource "font-xfree86-type1"
+build_xresource "font-adobe-100dpi"
+build_xresource "font-adobe-75dpi"
+build_xresource "font-jis-misc"
+build_xresource "font-daewoo-misc"
+build_xresource "font-isas-misc"
+build_xresource "font-misc-misc"
+build_xresource "font-cursor-misc"
 build_tinyx
