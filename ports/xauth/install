@@ -1,0 +1,17 @@
+VERSION="1.1.2"
+SRC_FILENAME="xauth-"$VERSION".tar.xz"
+URL="https://www.x.org/pub/individual/app/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr/X11"
+}
+
+function build_port() {
+	make -j$NJOBS LDFLAGS="-Wl,-rpath-link="$SYSROOT"/usr/X11/lib"
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
