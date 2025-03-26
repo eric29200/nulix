@@ -273,7 +273,7 @@ void task_wakeup_all(struct wait_queue **wq)
 			tmp->task->state = TASK_RUNNING;
 
 		tmp = tmp->next;
-	} while (tmp != *wq);
+	} while (tmp != *wq && tmp != NULL);
 }
 
 /*
