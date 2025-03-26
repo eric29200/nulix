@@ -53,8 +53,7 @@ void *kmalloc_align(uint32_t size)
  */
 void kfree(void *p)
 {
-	if (kheap)
-		heap_free(kheap, p);
+	heap_free(p);
 }
 
 /*

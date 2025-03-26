@@ -35,7 +35,6 @@ struct heap *heap_create(uint32_t start_address, size_t size)
 	heap->first_block->free = 1;
 	heap->first_block->prev = NULL;
 	heap->first_block->next = NULL;
-	heap->last_block = heap->first_block;
 
 	return heap;
 }
@@ -103,8 +102,6 @@ void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned)
 		/* update next block */
 		if (block->next)
 			block->next->prev = block;
-		else
-			heap->last_block = new_block;
 	}
 
 	/* create new free block with remaining size */
@@ -120,10 +117,6 @@ void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned)
 		/* update this block */
 		block->size = size;
 		block->next = new_block;
-
-		/* update heap last block */
-		if (!new_block->next)
-			heap->last_block = new_block;
 	}
 
 	/* mark this block */
@@ -135,7 +128,7 @@ void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned)
 /*
  * Free memory on the heap.
  */
-void heap_free(struct heap *heap, void *p)
+void heap_free(void *p)
 {
 	struct heap_block *block;
 
@@ -160,8 +153,6 @@ void heap_free(struct heap *heap, void *p)
 
 		if (block->next)
 			block->next->prev = block;
-		else
-			heap->last_block = block;
 	}
 }
 
