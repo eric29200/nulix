@@ -107,22 +107,23 @@ void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned)
 			heap->last_block = new_block;
 	}
 
-	/* create new last free block with remaining size */
-	if (block == heap->last_block && block->size - size > sizeof(struct heap_block)) {
+	/* create new free block with remaining size */
+	if (block->size - size > sizeof(struct heap_block)) {
 		/* create new free block */
 		new_block = (struct heap_block *) (HEAP_BLOCK_DATA(block) + size);
 		new_block->magic = HEAP_MAGIC;
 		new_block->size = block->size - size - sizeof(struct heap_block);
 		new_block->free = 1;
 		new_block->prev = block;
-		new_block->next = NULL;
+		new_block->next = block->next;
 
 		/* update this block */
 		block->size = size;
 		block->next = new_block;
 
 		/* update heap last block */
-		heap->last_block = new_block;
+		if (!new_block->next)
+			heap->last_block = new_block;
 	}
 
 	/* mark this block */
