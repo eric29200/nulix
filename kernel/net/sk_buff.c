@@ -1,5 +1,8 @@
 #include <net/sk_buff.h>
+#include <net/sock.h>
+#include <proc/sched.h>
 #include <mm/mm.h>
+#include <uio.h>
 #include <string.h>
 
 /*
@@ -65,3 +68,44 @@ void skb_free(struct sk_buff *skb)
 	kfree(skb);
 }
 
+/*
+ * Copy data from iovec.
+ */
+void memcpy_fromiovec(uint8_t *data, struct iovec *iov, size_t len)
+{
+	size_t copy;
+
+	while (len > 0) {
+		if (iov->iov_len) {
+			copy = len <= iov->iov_len ? len : iov->iov_len;
+			memcpy(data, iov->iov_base, copy);
+			len -= copy;
+			data += copy;
+			iov->iov_base += copy;
+			iov->iov_len -= copy;
+		}
+
+		iov++;
+	}
+}
+
+/*
+ * Copy data to iovec.
+ */
+void memcpy_toiovec(struct iovec *iov, uint8_t *data, size_t len)
+{
+	size_t copy;
+
+	while (len > 0) {
+		if (iov->iov_len) {
+			copy = len <= iov->iov_len ? len : iov->iov_len;
+			memcpy(iov->iov_base, data, copy);
+			len -= copy;
+			data += copy;
+			iov->iov_base += copy;
+			iov->iov_len -= copy;
+		}
+
+		iov++;
+	}
+}

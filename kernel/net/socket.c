@@ -624,6 +624,9 @@ static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_
 	len = *optlen;
 
 	switch (optname) {
+		case SO_SNDBUF:
+			*((int *) optval) = sock->sk->sndbuf;
+			break;
 		case SO_PEERCRED:
 		 	len = sizeof(struct ucred) < len ? sizeof(struct ucred) : len;
 			memcpy(optval, &sock->sk->peercred, len);
@@ -649,6 +652,9 @@ static int sock_setsockopt(struct socket *sock, int optname, void *optval, size_
 	UNUSED(optlen);
 
 	switch (optname) {
+		case SO_SNDBUF:
+			sock->sk->sndbuf = *((int *) optval);
+			break;
 		default:
 			printf("sock_setsockopt(%d) undefined\n", optname);
 			break;

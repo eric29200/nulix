@@ -100,6 +100,8 @@ static int unix_create(struct socket *sock, int protocol)
 	memset(sk, 0, sizeof(unix_socket_t));
 	sk->protocol = protocol;
 	sk->sock = sock;
+	sk->rcvbuf = SK_RMEM_MAX;
+	sk->sndbuf = SK_WMEM_MAX;
 	sk->protinfo.af_unix.other = NULL;
 	INIT_LIST_HEAD(&sk->skb_list);
 	sock->sk = sk;
@@ -287,9 +289,8 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 {
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	unix_socket_t *sk, *other;
+	size_t size, sent, len, i;
 	struct sk_buff *skb;
-	size_t len, i;
-	void *buf;
 	int ret;
 
 	/* unused flags */
@@ -313,32 +314,38 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 	}
 
 	/* compute data length */
-	len = 0;
+	size = 0;
 	for (i = 0; i < msg->msg_iovlen; i++)
-		len += msg->msg_iov[i].iov_len;
+		size += msg->msg_iov[i].iov_len;
 
-	/* allocate a socket buffer */
-	skb = skb_alloc(len);
-	if (!skb)
-		return -ENOMEM;
+	for (sent = 0; sent < size;) {
+		/* compute length */
+		len = size - sent;
+		if (len > sk->sndbuf)
+			len = sk->sndbuf;
 
-	/* set socket */
-	skb->sock = sock;
+		/* allocate a socket buffer */
+		skb = sock_alloc_send_skb(sock, len);
+		if (!skb)
+			return -ENOMEM;
 
-	/* copy message */
-	buf = skb_put(skb, len);
-	for (i = 0; i < msg->msg_iovlen; i++) {
-		memcpy(buf, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
-		buf += msg->msg_iov[i].iov_len;
+		/* set socket */
+		skb->sock = sock;
+
+		/* copy message */
+		memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
+
+		/* queue message to other socket */
+		list_add_tail(&skb->list, &other->skb_list);
+
+		/* wake up eventual readers */
+		task_wakeup_all(&other->sock->wait);
+
+		/* update sent */
+		sent += len;
 	}
 
-	/* queue message to other socket */
-	list_add_tail(&skb->list, &other->skb_list);
-
-	/* wake up eventual readers */
-	task_wakeup_all(&other->sock->wait);
-
-	return len;
+	return sent;
 }
 
 /*

@@ -3,7 +3,11 @@
 
 #include <net/socket.h>
 #include <lib/list.h>
+#include <uio.h>
 #include <stddef.h>
+
+#define SK_WMEM_MAX			65535
+#define SK_RMEM_MAX			65535
 
 /*
  * Socket buffer.
@@ -73,5 +77,7 @@ static inline uint8_t *skb_pull(struct sk_buff *skb, size_t len)
 struct sk_buff *skb_alloc(size_t size);
 struct sk_buff *skb_clone(struct sk_buff *skb);
 void skb_free(struct sk_buff *skb);
+void memcpy_fromiovec(uint8_t *data, struct iovec *iov, size_t len);
+void memcpy_toiovec(struct iovec *iov, uint8_t *data, size_t len);
 
 #endif
