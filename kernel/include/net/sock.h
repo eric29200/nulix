@@ -48,6 +48,7 @@ struct sock {
 	off_t				msg_position;
 	size_t				rcvbuf;
 	size_t				sndbuf;
+	size_t				wmem_alloc;
 	struct ucred 			peercred;
 	union {
 		struct unix_opt		af_unix;
@@ -75,6 +76,6 @@ extern struct proto tcp_proto;
 extern struct proto raw_proto;
 extern struct proto icmp_proto;
 
-struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len);
+struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonblock, int *err);
 
 #endif

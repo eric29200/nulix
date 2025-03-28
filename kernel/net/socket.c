@@ -647,8 +647,6 @@ static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_
  */
 static int sock_setsockopt(struct socket *sock, int optname, void *optval, size_t optlen)
 {
-	UNUSED(sock);
-	UNUSED(optval);
 	UNUSED(optlen);
 
 	switch (optname) {

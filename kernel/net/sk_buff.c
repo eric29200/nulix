@@ -64,6 +64,18 @@ struct sk_buff *skb_clone(struct sk_buff *skb)
  */
 void skb_free(struct sk_buff *skb)
 {
+	/* decrease allocated memory */
+	if (skb->sock && skb->sock->sk && skb->sock->sk->wmem_alloc > 0) {
+		if (skb->sock->sk->wmem_alloc > skb->size)
+			skb->sock->sk->wmem_alloc -= skb->size;
+		else
+			skb->sock->sk->wmem_alloc = 0;
+
+		/* wake up writers */
+		task_wakeup_all(&skb->sock->wait);
+	}
+
+	/* free socket buffer */
 	kfree(skb->head);
 	kfree(skb);
 }

@@ -325,9 +325,9 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 			len = sk->sndbuf;
 
 		/* allocate a socket buffer */
-		skb = sock_alloc_send_skb(sock, len);
+		skb = sock_alloc_send_skb(sock, len, nonblock, &ret);
 		if (!skb)
-			return -ENOMEM;
+			return sent ? (int) sent : ret;
 
 		/* set socket */
 		skb->sock = sock;
