@@ -11,28 +11,19 @@
 struct sk_buff *skb_alloc(size_t size)
 {
 	struct sk_buff *skb;
-	uint8_t *data;
 
 	/* allocate socket buffer */
-	skb = (struct sk_buff *) kmalloc(sizeof(struct sk_buff));
+	skb = (struct sk_buff *) kmalloc(sizeof(struct sk_buff) + size);
 	if (!skb)
 		return NULL;
-	memset(skb, 0, sizeof(struct sk_buff));
-
-	/* allocate data */
-	skb->size = size;
-	data = (uint8_t *) kmalloc(size);
-	if (!data) {
-		kfree(skb);
-		return NULL;
-	}
 
 	/* set socket buffer */
-	memset(data, 0, size);
-	skb->head = data;
-	skb->data = data;
-	skb->tail = data;
-	skb->end = data + size;
+	memset(skb, 0, sizeof(struct sk_buff) + size);
+	skb->data = (uint8_t *) skb + sizeof(struct sk_buff);
+	skb->size = size;
+	skb->head = skb->data;
+	skb->tail = skb->data;
+	skb->end = skb->data + size;
 	skb->len = 0;
 
 	return skb;
@@ -76,7 +67,6 @@ void skb_free(struct sk_buff *skb)
 	}
 
 	/* free socket buffer */
-	kfree(skb->head);
 	kfree(skb);
 }
 
