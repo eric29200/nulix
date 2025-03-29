@@ -1,5 +1,5 @@
-#ifndef _MM_HEAP_H_
-#define _MM_HEAP_H_
+#ifndef _MM_KHEAP_H_
+#define _MM_KHEAP_H_
 
 #include <mm/paging.h>
 #include <stddef.h>
@@ -20,16 +20,19 @@ struct heap_block {
 /*
  * Heap structure.
  */
-struct heap {
+struct kheap {
 	struct heap_block *	first_block;
 	uint32_t		start_address;
 	uint32_t		end_address;
 	size_t			size;
 };
 
-struct heap *heap_create(uint32_t start_address, size_t size);
-void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned);
-void heap_free(void *p);
-void heap_dump(struct heap *heap);
+/* kernel heap (defined in kheap.c) */
+extern struct kheap *kheap;
+
+int kheap_init(uint32_t start_address, size_t size);
+void *kheap_alloc(size_t size, uint8_t page_aligned);
+void kheap_free(void *p);
+void kheap_dump();
 
 #endif

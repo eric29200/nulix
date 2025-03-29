@@ -1,4 +1,4 @@
-#include <mm/heap.h>
+#include <mm/kheap.h>
 #include <mm/paging.h>
 #include <mm/mm.h>
 #include <stdio.h>
@@ -7,47 +7,48 @@
 #define HEAP_BLOCK_DATA(block)			((uint32_t) (block) + sizeof(struct heap_block))
 #define HEAP_BLOCK_ALIGNED(block)		(PAGE_ALIGNED(HEAP_BLOCK_DATA(block)))
 
+/* kernel heap */
+struct kheap *kheap = NULL;
+
 /*
  * Create a heap.
  */
-struct heap *heap_create(uint32_t start_address, size_t size)
+int kheap_init(uint32_t start_address, size_t size)
 {
-	struct heap *heap;
-
 	/* check heap size */
 	if (size <= sizeof(struct heap_block))
-		return NULL;
+		return -EINVAL;
 
 	/* allocate new heap */
-	heap = kmalloc(sizeof(struct heap));
-	if (!heap)
-		return NULL;
+	kheap = kmalloc(sizeof(struct kheap));
+	if (!kheap)
+		return -ENOMEM;
 
 	/* set start/end addresses */
-	heap->first_block = (struct heap_block *) start_address;
-	heap->start_address = start_address;
-	heap->end_address = start_address + size;
-	heap->size = size;
+	kheap->first_block = (struct heap_block *) start_address;
+	kheap->start_address = start_address;
+	kheap->end_address = start_address + size;
+	kheap->size = size;
 
 	/* create first block */
-	heap->first_block->magic = HEAP_MAGIC;
-	heap->first_block->size = size - sizeof(struct heap_block);
-	heap->first_block->free = 1;
-	heap->first_block->prev = NULL;
-	heap->first_block->next = NULL;
+	kheap->first_block->magic = HEAP_MAGIC;
+	kheap->first_block->size = size - sizeof(struct heap_block);
+	kheap->first_block->free = 1;
+	kheap->first_block->prev = NULL;
+	kheap->first_block->next = NULL;
 
-	return heap;
+	return 0;
 }
 
 /*
  * Find a free block.
  */
-static struct heap_block *heap_find_free_block(struct heap *heap, uint8_t page_aligned, size_t size)
+static struct heap_block *kheap_find_free_block(uint8_t page_aligned, size_t size)
 {
 	struct heap_block *block;
 	uint32_t page_offset;
 
-	for (block = heap->first_block; block != NULL; block = block->next) {
+	for (block = kheap->first_block; block != NULL; block = block->next) {
 		/* skip busy blocks */
 		if (!block->free)
 			continue;
@@ -68,13 +69,13 @@ static struct heap_block *heap_find_free_block(struct heap *heap, uint8_t page_a
 /*
  * Allocate memory on the heap.
  */
-void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned)
+void *kheap_alloc(size_t size, uint8_t page_aligned)
 {
 	struct heap_block *block, *new_block, *prev, *next;
 	uint32_t page_offset, block_size;
 
 	/* find free block */
-	block = heap_find_free_block(heap, page_aligned, size);
+	block = kheap_find_free_block(page_aligned, size);
 	if (!block)
 		return NULL;
 
@@ -98,7 +99,7 @@ void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned)
 			block->prev->size += page_offset;
 			block->prev->next = block;
 		} else {
-			heap->first_block = block;
+			kheap->first_block = block;
 		}
 
 		/* update next block */
@@ -129,7 +130,7 @@ void *heap_alloc(struct heap *heap, size_t size, uint8_t page_aligned)
 /*
  * Free memory on the heap.
  */
-void heap_free(void *p)
+void kheap_free(void *p)
 {
 	struct heap_block *block;
 
@@ -160,10 +161,10 @@ void heap_free(void *p)
 /*
  * Dump the heap on the screen.
  */
-void heap_dump(struct heap *heap)
+void kheap_dump()
 {
 	struct heap_block *block;
 
-	for (block = heap->first_block; block != NULL; block = block->next)
+	for (block = kheap->first_block; block != NULL; block = block->next)
 		printf("%x\t%d\t%d\n", (uint32_t) block, block->size, block->free);
 }

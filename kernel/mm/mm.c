@@ -1,15 +1,12 @@
 #include <mm/mm.h>
 #include <mm/paging.h>
-#include <mm/heap.h>
+#include <mm/kheap.h>
 #include <fs/fs.h>
 #include <string.h>
 #include <stdio.h>
 
 /* placement address (used before kernel heap is created) */
 uint32_t placement_address = 0;
-
-/* kernel heap */
-struct heap *kheap = NULL;
 
 /*
  * Allocate memory (internal function).
@@ -20,7 +17,7 @@ static void *__kmalloc(uint32_t size, uint8_t align)
 
 	/* use kernel heap */
 	if (kheap) 
-		return heap_alloc(kheap, size, align);
+		return kheap_alloc(size, align);
 
 	/* align adress on PAGE boundary */
 	if (align == 1)
@@ -53,7 +50,7 @@ void *kmalloc_align(uint32_t size)
  */
 void kfree(void *p)
 {
-	heap_free(p);
+	kheap_free(p);
 }
 
 /*
@@ -72,7 +69,7 @@ void init_mem(uint32_t start, uint32_t end)
 		panic("Cannot init paging");
 
 	/* init heap */
-	kheap = heap_create(KHEAP_START, KHEAP_SIZE);
-	if (!kheap)
+	ret = kheap_init(KHEAP_START, KHEAP_SIZE);
+	if (ret)
 		panic("Cannot create kernel heap");
 }
