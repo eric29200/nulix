@@ -100,6 +100,7 @@ static struct buffer_head *create_buffers(void *page, size_t size)
 
 	/* create buffers */
 	head = NULL;
+	tail = NULL;
 	for (offset = PAGE_SIZE - size; offset >= 0; offset -= size) {
 		/* get an unused buffer */
 		bh = get_unused_buffer();
@@ -118,7 +119,8 @@ static struct buffer_head *create_buffers(void *page, size_t size)
 	}
 
 	/* end circular list */
-	tail->b_this_page = head;
+	if (tail)
+		tail->b_this_page = head;
 
 	return head;
 err:

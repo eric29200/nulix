@@ -103,7 +103,7 @@ static int elf_create_tables(struct binargs *bargs, uint32_t *sp, char *args_str
 int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t *elf_entry)
 {
 	int fd, ret, off, elf_type, elf_prot, load_addr_set = 0;
-	struct elf_prog_header *ph, *last_ph;
+	struct elf_prog_header *ph, *last_ph = NULL;
 	uint32_t i, load_addr = 0, start, end;
 	struct elf_header *elf_header;
 	char *buf, *buf_mmap;

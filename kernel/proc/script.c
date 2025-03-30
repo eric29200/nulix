@@ -24,7 +24,7 @@ int script_load(const char *path, struct binargs *bargs)
 
 	/* read first characters */
 	n = do_read(filp, buf, 127);
-	buf[128] = 0;
+	buf[127] = 0;
 
 	/* close file */
 	sys_close(fd);

@@ -73,7 +73,7 @@ static int lookup(struct inode *dir, const char *name, size_t name_len, struct i
  */
 static struct inode *dir_namei(int dirfd, struct inode *base, const char *pathname, const char **basename, size_t *basename_len)
 {
-	struct inode *inode, *tmp;
+	struct inode *inode = NULL, *tmp;
 	const char *name;
 	size_t name_len;
 

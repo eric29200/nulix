@@ -60,10 +60,12 @@ static int proc_net_lookup(struct inode *dir, const char *name, size_t name_len,
 	for (i = 0; i < NR_NET_DIRENTRY; i++) {
 		if (proc_match(name, name_len, &net_dir[i])) {
 			ino = net_dir[i].ino;
-			break;
+			goto found;
 		}
 	}
 
+	return -ENOENT;
+found:
 	/* get inode */
 	*res_inode = iget(dir->i_sb, ino);
 	if (!*res_inode) {

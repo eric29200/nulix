@@ -368,7 +368,7 @@ static void csi_J(struct vc *vc, int vpar)
 			count = fb->width * fb->height;
 			break;
 		default:
-			break;
+			return;
 	}
 
 	/* update frame buffer */
