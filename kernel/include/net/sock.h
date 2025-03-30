@@ -22,7 +22,6 @@ struct ucred {
 struct unix_opt {
 	struct sockaddr_un		sunaddr;
 	size_t				sunaddr_len;
-	uint16_t			shutdown;
 	struct inode *			inode;
 	struct sock *			other;
 };
@@ -46,6 +45,7 @@ struct sock {
 	uint16_t			protocol;
 	struct socket *			sock;
 	off_t				msg_position;
+	uint16_t			shutdown;
 	size_t				rcvbuf;
 	size_t				sndbuf;
 	size_t				wmem_alloc;

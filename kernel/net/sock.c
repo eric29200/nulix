@@ -16,6 +16,12 @@ struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonbloc
 
 	/* wait for space */
 	for (;;) {
+		/* socket shutdown */
+		if (sock->sk->shutdown & SEND_SHUTDOWN) {
+			*err = -EPIPE;
+			return NULL;
+		}
+
 		/* check space */
 		if (sock->sk->wmem_alloc < sock->sk->sndbuf)
 			break;

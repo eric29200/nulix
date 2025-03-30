@@ -145,7 +145,7 @@ static int unix_release(struct socket *sock)
 	/* shutdown other */
 	other = sk->protinfo.af_unix.other;
 	if (other)
-		other->protinfo.af_unix.shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
+		other->shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
 
 	/* release inode */
 	if (sk->protinfo.af_unix.inode)
@@ -172,11 +172,11 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 		return -EINVAL;
 
 	/* check if there is a message in the queue */
-	if (!list_empty(&sk->skb_list) || sk->protinfo.af_unix.shutdown & RCV_SHUTDOWN)
+	if (!list_empty(&sk->skb_list) || sk->shutdown & RCV_SHUTDOWN)
 		mask |= POLLIN;
 
 	/* check if socket can write */
-	if (sk->sock->state != SS_DEAD || sk->protinfo.af_unix.shutdown & SEND_SHUTDOWN)
+	if (sk->sock->state != SS_DEAD || sk->shutdown & SEND_SHUTDOWN)
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */
@@ -222,7 +222,7 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 			/* no message */
 			if (list_empty(&sk->skb_list)) {
 				/* socket is down */
-				if (sk->protinfo.af_unix.shutdown & RCV_SHUTDOWN)
+				if (sk->shutdown & RCV_SHUTDOWN)
 					return 0;
 
 				/* return partial data */
@@ -550,16 +550,16 @@ static int unix_shutdown(struct socket *sock, int how)
 
  	/* shutdown send */
 	if (how & SEND_SHUTDOWN) {
-		sk->protinfo.af_unix.shutdown |= SEND_SHUTDOWN;
+		sk->shutdown |= SEND_SHUTDOWN;
 		if (other)
-			other->protinfo.af_unix.shutdown |= RCV_SHUTDOWN;
+			other->shutdown |= RCV_SHUTDOWN;
 	}
 
 	/* shutdown receive */
 	if (how & RCV_SHUTDOWN) {
-		sk->protinfo.af_unix.shutdown |= RCV_SHUTDOWN;
+		sk->shutdown |= RCV_SHUTDOWN;
 		if (other)
-			other->protinfo.af_unix.shutdown |= SEND_SHUTDOWN;
+			other->shutdown |= SEND_SHUTDOWN;
 	}
 
 	return 0;
