@@ -31,10 +31,8 @@ int kheap_init(uint32_t start_address, size_t size)
 	kheap->size = size;
 
 	/* create first block */
-	kheap->first_block->magic = HEAP_MAGIC;
 	kheap->first_block->size = size - sizeof(struct heap_block);
 	kheap->first_block->free = 1;
-	kheap->first_block->prev = NULL;
 	kheap->first_block->next = NULL;
 
 	return 0;
@@ -43,15 +41,15 @@ int kheap_init(uint32_t start_address, size_t size)
 /*
  * Find a free block.
  */
-static struct heap_block *kheap_find_free_block(uint8_t page_aligned, size_t size)
+static struct heap_block *kheap_find_free_block(uint8_t page_aligned, size_t size, struct heap_block **prev)
 {
 	struct heap_block *block;
 	uint32_t page_offset;
 
-	for (block = kheap->first_block; block != NULL; block = block->next) {
+	for (block = kheap->first_block, *prev = NULL; block != NULL; block = block->next) {
 		/* skip busy blocks */
 		if (!block->free)
-			continue;
+			goto next;
 
 		/* compute page offset */
 		page_offset = 0;
@@ -61,6 +59,9 @@ static struct heap_block *kheap_find_free_block(uint8_t page_aligned, size_t siz
 		/* check size */
 		if (block->size >= size + page_offset)
 			return block;
+
+next:
+		*prev = block;
 	}
 
 	return NULL;
@@ -75,7 +76,7 @@ void *kheap_alloc(size_t size, uint8_t page_aligned)
 	uint32_t page_offset, block_size;
 
 	/* find free block */
-	block = kheap_find_free_block(page_aligned, size);
+	block = kheap_find_free_block(page_aligned, size, &prev);
 	if (!block)
 		return NULL;
 
@@ -86,34 +87,23 @@ void *kheap_alloc(size_t size, uint8_t page_aligned)
 
 		/* move block */
 		block_size = block->size;
-		prev = block->prev;
 		next = block->next;
 		block = (void *) block + page_offset;
-		block->magic = HEAP_MAGIC;
 		block->size = block_size - page_offset;
-		block->prev = prev;
 		block->next = next;
 
-		/* update previous block size */
-		if (block->prev) {
-			block->prev->size += page_offset;
-			block->prev->next = block;
-		} else {
+		/* update previous block */
+		if (prev)
+			prev->next = block;
+		else
 			kheap->first_block = block;
-		}
-
-		/* update next block */
-		if (block->next)
-			block->next->prev = block;
 	}
 
 	/* create new free block with remaining size */
 	if (block->size - size > sizeof(struct heap_block)) {
 		new_block = (struct heap_block *) (HEAP_BLOCK_DATA(block) + size);
-		new_block->magic = HEAP_MAGIC;
 		new_block->size = block->size - size - sizeof(struct heap_block);
 		new_block->free = 1;
-		new_block->prev = block;
 		new_block->next = block->next;
 
 		/* update this block */
@@ -140,22 +130,7 @@ void kheap_free(void *p)
 
 	/* mark block as free */
 	block = (struct heap_block *) ((uint32_t) p - sizeof(struct heap_block));
-
-	/* check if it's a heap block */
-	if (block->magic != HEAP_MAGIC)
-		return;
-
-	/* mark block as free */
 	block->free = 1;
-
-	/* merge with right block */
-	if (block->next && block->next->free) {
-		block->size = HEAP_BLOCK_DATA(block->next) + block->next->size - HEAP_BLOCK_DATA(block);
-		block->next = block->next->next;
-
-		if (block->next)
-			block->next->prev = block;
-	}
 }
 
 /*

@@ -10,12 +10,10 @@
  * Heap block header.
  */
 struct heap_block {
-	uint16_t		magic;
 	uint32_t		size;
 	uint8_t			free;
-	struct heap_block *	prev;
 	struct heap_block *	next;
-} __attribute__((packed));
+};
 
 /*
  * Heap structure.
