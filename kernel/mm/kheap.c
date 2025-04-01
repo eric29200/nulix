@@ -4,142 +4,166 @@
 #include <stdio.h>
 #include <stderr.h>
 
-#define HEAP_BLOCK_DATA(block)			((uint32_t) (block) + sizeof(struct heap_block))
-#define HEAP_BLOCK_ALIGNED(block)		(PAGE_ALIGNED(HEAP_BLOCK_DATA(block)))
+#define KHEAP_NR_BUCKETS			16
+#define KHEAP_MIN_ORDER				16
+#define KHEAP_MAGIC				0xAEA0
+#define KHEAP_BLOCK_DATA(block)			((uint32_t) (block) + sizeof(struct heap_block))
+#define KHEAP_BLOCK_ALIGNED(block)		(PAGE_ALIGNED(KHEAP_BLOCK_DATA(block)))
+
+/*
+ * Bucket.
+ */
+struct bucket {
+	size_t			order;
+	struct list_head	used_blocks;
+	struct list_head	free_blocks;	
+	struct list_head	free_aligned_blocks;	
+};
+
+/*
+ * Heap block.
+ */
+struct heap_block {
+	uint16_t		magic;
+	size_t			order;
+	struct list_head	list;
+};
 
 /* kernel heap */
-struct kheap *kheap = NULL;
+uint32_t kheap_pos = 0;
+static struct bucket buckets[KHEAP_NR_BUCKETS];
 
 /*
- * Create a heap.
+ * Find a bucket.
  */
-int kheap_init(uint32_t start_address, size_t size)
+static struct bucket *find_bucket(size_t size)
 {
-	/* check heap size */
-	if (size <= sizeof(struct heap_block))
-		return -EINVAL;
+	size_t i;
 
-	/* allocate new heap */
-	kheap = kmalloc(sizeof(struct kheap));
-	if (!kheap)
-		return -ENOMEM;
-
-	/* set start/end addresses */
-	kheap->first_block = (struct heap_block *) start_address;
-	kheap->start_address = start_address;
-	kheap->end_address = start_address + size;
-	kheap->size = size;
-
-	/* create first block */
-	kheap->first_block->size = size - sizeof(struct heap_block);
-	kheap->first_block->free = 1;
-	kheap->first_block->next = NULL;
-
-	return 0;
-}
-
-/*
- * Find a free block.
- */
-static struct heap_block *kheap_find_free_block(uint8_t page_aligned, size_t size, struct heap_block **prev)
-{
-	struct heap_block *block;
-	uint32_t page_offset;
-
-	for (block = kheap->first_block, *prev = NULL; block != NULL; block = block->next) {
-		/* skip busy blocks */
-		if (!block->free)
-			goto next;
-
-		/* compute page offset */
-		page_offset = 0;
-		if (page_aligned && !HEAP_BLOCK_ALIGNED(block))
-			page_offset = PAGE_SIZE - HEAP_BLOCK_DATA(block) % PAGE_SIZE;
-
-		/* check size */
-		if (block->size >= size + page_offset)
-			return block;
-
-next:
-		*prev = block;
-	}
+	for (i = 0; i < KHEAP_NR_BUCKETS; i++)
+		if (size <= buckets[i].order)
+			return &buckets[i];
 
 	return NULL;
 }
 
 /*
- * Allocate memory on the heap.
+ * Create a new heap block.
  */
-void *kheap_alloc(size_t size, uint8_t page_aligned)
+static struct heap_block *create_heap_block(struct bucket *bucket, int page_aligned)
 {
-	struct heap_block *block, *new_block, *prev, *next;
-	uint32_t page_offset, block_size;
+	struct heap_block *block;
+	uint32_t page_offset;
 
-	/* find free block */
-	block = kheap_find_free_block(page_aligned, size, &prev);
-	if (!block)
+	/* create new block at the end of the heap */
+	block = (struct heap_block *) kheap_pos;
+
+	/* page align block if needed */
+	if (page_aligned && !KHEAP_BLOCK_ALIGNED(block)) {
+		page_offset = PAGE_SIZE - KHEAP_BLOCK_DATA(block) % PAGE_SIZE;
+		block = (void *) block + page_offset;
+	}
+
+	/* check heap overflow */
+	if (KHEAP_BLOCK_DATA(block) + bucket->order > KHEAP_START + KHEAP_SIZE)
 		return NULL;
 
-	/* if page alignement is asked, move block */
-	if (page_aligned && !HEAP_BLOCK_ALIGNED(block)) {
-		/* compute page offset */
-		page_offset = PAGE_SIZE - HEAP_BLOCK_DATA(block) % PAGE_SIZE;
+	/* set new block */
+	block->magic = KHEAP_MAGIC;
+	block->order = bucket->order;
 
-		/* move block */
-		block_size = block->size;
-		next = block->next;
-		block = (void *) block + page_offset;
-		block->size = block_size - page_offset;
-		block->next = next;
+	/* update kheap position */
+	kheap_pos = KHEAP_BLOCK_DATA(block) + block->order;
 
-		/* update previous block */
-		if (prev)
-			prev->next = block;
-		else
-			kheap->first_block = block;
-	}
-
-	/* create new free block with remaining size */
-	if (block->size - size > sizeof(struct heap_block)) {
-		new_block = (struct heap_block *) (HEAP_BLOCK_DATA(block) + size);
-		new_block->size = block->size - size - sizeof(struct heap_block);
-		new_block->free = 1;
-		new_block->next = block->next;
-
-		/* update this block */
-		block->size = size;
-		block->next = new_block;
-	}
-
-	/* mark this block */
-	block->free = 0;
-
-	return (void *) HEAP_BLOCK_DATA(block);
+	return block;
 }
 
 /*
- * Free memory on the heap.
+ * Allocate memory.
+ */
+void *kheap_alloc(size_t size, int page_aligned)
+{
+	struct heap_block *block = NULL;
+	struct bucket *bucket;
+	
+	/* find bucket */
+	bucket = find_bucket(size);
+	if (!bucket) {
+		printf("Kheap: can't allocate memory for size %d\n", size);
+		return NULL;
+	}
+
+	/* try to reuse a free block */
+	if (page_aligned && !list_empty(&bucket->free_aligned_blocks))
+		block = list_first_entry(&bucket->free_aligned_blocks, struct heap_block, list);
+	else if (!page_aligned && !list_empty(&bucket->free_blocks))
+		block = list_first_entry(&bucket->free_blocks, struct heap_block, list);
+
+	/* free block found */
+	if (block) {
+		list_del(&block->list);
+		goto found;
+	}
+
+	/* create a new block */
+	block = create_heap_block(bucket, page_aligned);
+	if (!block) {
+		printf("Kheap: kernel heap overflow\n");
+		return NULL;
+	}
+
+found:
+	list_add(&block->list, &bucket->used_blocks);
+	return (void *) KHEAP_BLOCK_DATA(block);
+}
+
+/*
+ * Free memory.
  */
 void kheap_free(void *p)
 {
 	struct heap_block *block;
+	struct bucket *bucket;
 
-	/* do not free NULL */
+	/* dot not free NULL */
 	if (!p)
 		return;
 
-	/* mark block as free */
+	/* get block */
 	block = (struct heap_block *) ((uint32_t) p - sizeof(struct heap_block));
-	block->free = 1;
+	if (block->magic != KHEAP_MAGIC)
+		return;
+
+	/* get bucket */
+	bucket = find_bucket(block->order);
+	if (!bucket)
+		return;
+
+	/* remove if from used list */
+	list_del(&block->list);
+
+	/* add to free list */
+	if (KHEAP_BLOCK_ALIGNED(block))
+		list_add_tail(&block->list, &bucket->free_aligned_blocks);
+	else
+		list_add_tail(&block->list, &bucket->free_blocks);
 }
 
 /*
- * Dump the heap on the screen.
+ * Init kernel heap.
  */
-void kheap_dump()
+void kheap_init()
 {
-	struct heap_block *block;
+	size_t order, i;
 
-	for (block = kheap->first_block; block != NULL; block = block->next)
-		printf("%x\t%d\t%d\n", (uint32_t) block, block->size, block->free);
+	/* set kheap */
+	kheap_pos = KHEAP_START;
+
+	/* init buckets */
+	for (i = 0, order = KHEAP_MIN_ORDER; i < KHEAP_NR_BUCKETS; i++, order *= 2) {
+		buckets[i].order = order;
+		INIT_LIST_HEAD(&buckets[i].used_blocks);
+		INIT_LIST_HEAD(&buckets[i].free_blocks);
+		INIT_LIST_HEAD(&buckets[i].free_aligned_blocks);
+	}
 }

@@ -16,7 +16,7 @@ static void *__kmalloc(uint32_t size, uint8_t align)
 	void *ret;
 
 	/* use kernel heap */
-	if (kheap) 
+	if (kheap_pos) 
 		return kheap_alloc(size, align);
 
 	/* align adress on PAGE boundary */
@@ -50,7 +50,8 @@ void *kmalloc_align(uint32_t size)
  */
 void kfree(void *p)
 {
-	kheap_free(p);
+	if (kheap_pos)
+		kheap_free(p);
 }
 
 /*
@@ -69,7 +70,5 @@ void init_mem(uint32_t start, uint32_t end)
 		panic("Cannot init paging");
 
 	/* init heap */
-	ret = kheap_init(KHEAP_START, KHEAP_SIZE);
-	if (ret)
-		panic("Cannot create kernel heap");
+	kheap_init(KHEAP_START, KHEAP_SIZE);
 }
