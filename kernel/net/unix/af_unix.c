@@ -223,7 +223,7 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 			if (list_empty(&sk->skb_list)) {
 				/* socket is down */
 				if (sk->shutdown & RCV_SHUTDOWN)
-					return 0;
+					goto out;
 
 				/* return partial data */
 				if (copied)
