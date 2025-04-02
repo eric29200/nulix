@@ -144,7 +144,7 @@ static int unix_release(struct socket *sock)
 
 	/* shutdown other */
 	other = sk->protinfo.af_unix.other;
-	if (other)
+	if (other && sock->type == SOCK_STREAM)
 		other->shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
 
 	/* release inode */
