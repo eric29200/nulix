@@ -16,8 +16,8 @@
 struct bucket {
 	size_t			order;
 	struct list_head	used_blocks;
-	struct list_head	free_blocks;	
-	struct list_head	free_aligned_blocks;	
+	struct list_head	free_blocks;
+	struct list_head	free_aligned_blocks;
 };
 
 /*
@@ -85,7 +85,7 @@ void *kheap_alloc(size_t size, int page_aligned)
 {
 	struct heap_block *block = NULL;
 	struct bucket *bucket;
-	
+
 	/* find bucket */
 	bucket = find_bucket(size);
 	if (!bucket) {
