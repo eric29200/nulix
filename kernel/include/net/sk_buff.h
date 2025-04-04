@@ -6,8 +6,8 @@
 #include <uio.h>
 #include <stddef.h>
 
-#define SK_WMEM_MAX			65536
-#define SK_RMEM_MAX			65536
+#define SK_WMEM_MAX			(65536 * 2)
+#define SK_RMEM_MAX			(65536 * 2)
 
 /*
  * Socket buffer.
