@@ -26,5 +26,4 @@ function install_port() {
 	cp $SYSROOT"/usr/X11/share/fluxbox/keys" $SYSROOT"/root/.fluxbox/"
 	cp -R $SYSROOT"/usr/X11/share/fluxbox/styles/ostrich" $SYSROOT"/root/.fluxbox/theme"
 	sed -i 's,\(session.styleFile:\).*,\1 ~/.fluxbox/theme,' $SYSROOT"/root/.fluxbox/init"
-	echo "background.pixmap: /root/.fluxbox/wallpaper.xpm" >> $SYSROOT"/root/.fluxbox/theme/theme.cfg"
 }
