@@ -41,6 +41,7 @@ sudo cp -R musl/musl-install/i386-linux-musl/usr tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/etc tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/bin tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/sbin tmp/
+sudo cp -R musl/musl-install/i386-linux-musl/root tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R rootbase/root tmp/
 

@@ -1,0 +1,30 @@
+VERSION="1.3.7"
+SRC_FILENAME="fluxbox-"$VERSION".tar.xz"
+URL="https://downloads.sourceforge.net/fluxbox/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr/X11"						\
+		ac_cv_func_realloc_0_nonnull=yes				\
+		ac_cv_func_malloc_0_nonnull=yes					\
+		LDFLAGS="-Wl,-rpath-link="$SYSROOT"/usr/X11/lib"
+}
+
+function build_port() {
+	make -j$NJOBS LDFLAGS="-Wl,-rpath-link="$SYSROOT"/usr/X11/lib"
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+
+	# set default configuration
+	rm -rf $SYSROOT"/root/.fluxbox"
+	mkdir -p $SYSROOT"/root/.fluxbox"
+	cp $SYSROOT"/usr/X11/share/fluxbox/init" $SYSROOT"/root/.fluxbox/"
+	cp $SYSROOT"/usr/X11/share/fluxbox/menu" $SYSROOT"/root/.fluxbox/"
+	cp $SYSROOT"/usr/X11/share/fluxbox/keys" $SYSROOT"/root/.fluxbox/"
+	cp -R $SYSROOT"/usr/X11/share/fluxbox/styles/ostrich" $SYSROOT"/root/.fluxbox/theme"
+	sed -i 's,\(session.styleFile:\).*,\1 ~/.fluxbox/theme,' $SYSROOT"/root/.fluxbox/init"
+	echo "background.pixmap: /root/.fluxbox/wallpaper.xpm" >> $SYSROOT"/root/.fluxbox/theme/theme.cfg"
+}
