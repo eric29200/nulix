@@ -4,5 +4,6 @@
 #include <stddef.h>
 
 void init_pit();
+void update_times();
 
 #endif

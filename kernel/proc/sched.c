@@ -1,12 +1,14 @@
 #include <x86/system.h>
 #include <x86/interrupt.h>
 #include <x86/tss.h>
+#include <drivers/char/pit.h>
 #include <proc/sched.h>
 #include <proc/task.h>
 #include <proc/timer.h>
 #include <sys/syscall.h>
 #include <lib/list.h>
 #include <kernel_stat.h>
+#include <stdio.h>
 #include <stderr.h>
 
 LIST_HEAD(tasks_list);					/* active processes list */
@@ -110,15 +112,38 @@ int spawn_init()
 }
 
 /*
+ * Update current process times.
+ */
+static void update_process_times()
+{
+	if (current_task && current_task->pid)
+		current_task->utime++;
+}
+
+/*
+ * Handle timer (PIT) interrupt.
+ */
+void do_timer_interrupt()
+{
+	/* update times and timers */
+	update_times();
+	update_process_times();
+	update_timers();
+
+	/* schedule */
+	schedule();
+}
+
+/*
  * Schedule function (interruptions must be disabled and will be reenabled on function return).
  */
 void schedule()
 {
-	struct task *prev_task, *task;
+	struct task *prev, *next, *task;
 	struct list_head *pos;
 
-	/* update timers */
-	timer_update();
+	/* save current task */
+	prev = current_task;
 
 	/* update timeout on all tasks and wake them if needed */
 	list_for_each(pos, &tasks_list) {
@@ -132,21 +157,20 @@ void schedule()
 	}
 
 	/* get next task to run */
-	prev_task = current_task;
-	current_task = get_next_task();
+	next = get_next_task();
 
 	/* switch tasks */
-	if (prev_task != current_task) {
+	if (prev != next) {
+		/* update kernel stats */
 		kstat.context_switch++;
+
+		/* real switch */
+		current_task = next;
 		tss_set_stack(0x10, current_task->kernel_stack);
 		load_tls();
 		switch_page_directory(current_task->mm->pgd);
-		scheduler_do_switch(&prev_task->esp, current_task->esp);
+		scheduler_do_switch(&prev->esp, current_task->esp);
 	}
-
-	/* update task time */
-	if (current_task)
-		current_task->utime++;
 }
 
 /*

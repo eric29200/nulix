@@ -43,7 +43,7 @@ void timer_event_mod(struct timer_event *tm, time_t expires)
 /*
  * Update all timers.
  */
-void timer_update()
+void update_timers()
 {
 	struct list_head *pos, *n;
 	struct timer_event *tm;

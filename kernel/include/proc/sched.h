@@ -48,6 +48,7 @@ int spawn_init();
 struct task *find_task(pid_t pid);
 pid_t get_next_pid();
 void schedule();
+void do_timer_interrupt();
 
 void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait);
 void remove_wait_queue(struct wait_queue *wait);

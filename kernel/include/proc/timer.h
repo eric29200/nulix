@@ -18,6 +18,6 @@ void timer_event_init(struct timer_event *tm, void (*func)(void *), void *data, 
 void timer_event_add(struct timer_event *tm);
 void timer_event_del(struct timer_event *tm);
 void timer_event_mod(struct timer_event *tm, time_t expires);
-void timer_update();
+void update_timers();
 
 #endif

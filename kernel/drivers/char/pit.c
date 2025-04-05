@@ -107,10 +107,17 @@ static uint32_t calibrate_tsc()
  */
 static void pit_handler(struct registers *regs)
 {
-	uint32_t time_offset;
-
-	/* unused register */
 	UNUSED(regs);
+
+	do_timer_interrupt();
+}
+
+/*
+ * Update system times.
+ */
+void update_times()
+{
+	uint32_t time_offset;
 
 	/* get time offset since last interrupt */
 	time_offset = do_gettimeoffset();
@@ -125,9 +132,6 @@ static void pit_handler(struct registers *regs)
 
 	/* update jiffies */
 	jiffies++;
-
-	/* schedule tasks */
-	schedule();
 }
 
 /*
