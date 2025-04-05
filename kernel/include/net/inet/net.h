@@ -3,6 +3,7 @@
 
 #include <net/sk_buff.h>
 #include <net/if.h>
+#include <proc/timer.h>
 
 #define NR_NET_DEVICES			4
 #define NET_HANDLE_FREQ_MS		10
@@ -26,7 +27,7 @@ struct net_device {
 	uint8_t			ip_route[4];
 	uint16_t		type;
 	uint16_t		flags;
-	struct task *		thread;
+	struct timer_event	timer;
 	struct wait_queue *	wait;
 	struct list_head	skb_input_list;
 	struct list_head	skb_output_list;

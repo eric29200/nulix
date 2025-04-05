@@ -101,9 +101,9 @@ void skb_handle(struct sk_buff *skb)
 }
 
 /*
- * Network handler thread.
+ * Network handler timer.
  */
-static void net_handler_thread(void *arg)
+static void net_handler_timer(void *arg)
 {
 	struct net_device *net_dev = (struct net_device *) arg;
 	struct list_head *pos1, *n1, *pos2, *n2;
@@ -111,47 +111,44 @@ static void net_handler_thread(void *arg)
 	uint32_t flags;
 	int ret;
 
-	for (;;) {
-		/* disable interrupts */
-		irq_save(flags);
+	/* disable interrupts */
+	irq_save(flags);
 
-		/* handle incoming packets */
-		list_for_each_safe(pos1, n1, &net_dev->skb_input_list) {
-			/* get packet */
-			skb = list_entry(pos1, struct sk_buff, list);
+	/* handle incoming packets */
+	list_for_each_safe(pos1, n1, &net_dev->skb_input_list) {
+		/* get packet */
+		skb = list_entry(pos1, struct sk_buff, list);
+		list_del(&skb->list);
+
+		/* handle packet */
+		skb_handle(skb);
+
+		/* free packet */
+		skb_free(skb);
+	}
+
+	/* handle outcoming packets */
+	list_for_each_safe(pos2, n2, &net_dev->skb_output_list) {
+		/* get packet */
+		skb = list_entry(pos2, struct sk_buff, list);
+
+		/* rebuild ethernet header */
+		ret = ethernet_rebuild_header(net_dev, skb);
+
+		/* send packet and remove it from list */
+		if (ret == 0) {
 			list_del(&skb->list);
-
-			/* handle packet */
-			skb_handle(skb);
-
-			/* free packet */
+			net_dev->send_packet(skb);
 			skb_free(skb);
 		}
-
-		/* handle outcoming packets */
-		list_for_each_safe(pos2, n2, &net_dev->skb_output_list) {
-			/* get packet */
-			skb = list_entry(pos2, struct sk_buff, list);
-
-			/* rebuild ethernet header */
-			ret = ethernet_rebuild_header(net_dev, skb);
-
-			/* send packet and remove it from list */
-			if (ret == 0) {
-				list_del(&skb->list);
-				net_dev->send_packet(skb);
-				skb_free(skb);
-			}
-		}
-
-		/* wait for incoming packets */
-		current_task->timeout = jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS);
-		task_sleep(&net_dev->wait);
-		current_task->timeout = 0;
-
-		/* enable interrupts */
-		irq_restore(flags);
 	}
+
+	/* wait for incoming packets = reschedule timer */
+	timer_event_init(&net_dev->timer, net_handler_timer, net_dev, jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS));
+	timer_event_add(&net_dev->timer);
+
+	/* enable interrupts */
+	irq_restore(flags);
 }
 
 /*
@@ -188,11 +185,9 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 	memcpy(net_dev->name, tmp, len + 1);
 
 	/* create kernel thread to handle receive packets */
-	net_dev->thread = create_kernel_thread(net_handler_thread, net_dev);
-	if (!net_dev->thread) {
-		kfree(net_dev->name);
-		return NULL;
-	}
+	/* create kernel timer to handle receive packets */
+	timer_event_init(&net_dev->timer, net_handler_timer, net_dev, jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS));
+	timer_event_add(&net_dev->timer);
 
 	/* update number of net devices */
 	nr_net_devices++;
