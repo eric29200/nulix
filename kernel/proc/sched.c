@@ -15,7 +15,7 @@ LIST_HEAD(tasks_list);					/* active processes list */
 static struct task *kinit_task;				/* kernel init task (pid = 0) */
 struct task *init_task;					/* user init task (pid = 1) */
 struct task *current_task = NULL;			/* current task */
-static pid_t next_pid = 1;				/* next pid */
+static pid_t next_pid = 0;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
 
 struct kernel_stat kstat;				/* kernel statistics */
@@ -62,7 +62,7 @@ int init_scheduler(void (*kinit_func)())
 	memset(&kstat, 0, sizeof(struct kernel_stat));
 
 	/* create init task */
-	kinit_task = create_kernel_thread(kinit_func, NULL);
+	kinit_task = create_kinit_task(kinit_func);
 	if (!kinit_task)
 		return -ENOMEM;
 

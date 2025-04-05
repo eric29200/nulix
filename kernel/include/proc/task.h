@@ -138,7 +138,7 @@ struct binargs {
 	char	dont_free;
 };
 
-struct task *create_kernel_thread(void (*func)(void *), void *arg);
+struct task *create_kinit_task(void (*kinit_func)());
 struct task *create_init_task(struct task *parent);
 int do_fork(uint32_t clone_flags, uint32_t user_sp);
 void destroy_task(struct task *task);

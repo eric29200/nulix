@@ -446,7 +446,7 @@ void task_release_mmap(struct task *task)
 /*
  * Create and init a task.
  */
-static struct task *create_task(struct task *parent, uint32_t clone_flags, uint32_t user_sp, int kernel_thread)
+static struct task *create_task(struct task *parent, uint32_t clone_flags, uint32_t user_sp)
 {
 	struct task *task;
 	void *stack;
@@ -470,7 +470,7 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	task->esp = task->kernel_stack - sizeof(struct task_registers);
 
 	/* init task */
-	task->pid = kernel_thread ? 0 : get_next_pid();
+	task->pid = get_next_pid();
 	task->pgrp = parent ? parent->pgrp : task->pid;
 	task->session = parent ? parent->session : task->pid;
 	task->state = TASK_RUNNING;
@@ -531,34 +531,6 @@ err_stack:
 }
 
 /*
- * Create kernel thread.
- */
-struct task *create_kernel_thread(void (*func)(void *), void *arg)
-{
-	struct task_registers *regs;
-	struct task *task;
-
-	/* create task */
-	task = create_task(NULL, 0, 0, 1);
-	if (!task)
-		return NULL;
-
-	/* set registers */
-	regs = (struct task_registers *) task->esp;
-	memset(regs, 0, sizeof(struct task_registers));
-
-	/* set eip to function */
-	regs->parameter1 = (uint32_t) arg;
-	regs->return_address = TASK_RETURN_ADDRESS;
-	regs->eip = (uint32_t) func;
-
-	/* add task */
-	list_add(&task->list, &tasks_list);
-
-	return task;
-}
-
-/*
  * Fork a task.
  */
 int do_fork(uint32_t clone_flags, uint32_t user_sp)
@@ -568,7 +540,7 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 	struct task *task;
 
 	/* create task */
-	task = create_task(current_task, clone_flags, user_sp, 0);
+	task = create_task(current_task, clone_flags, user_sp);
 	if (!task)
 		return -EINVAL;
 
@@ -594,6 +566,35 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 
 	return task->pid;
 }
+
+/*
+ * Create kinit (kernel init + idle) process.
+ */
+struct task *create_kinit_task(void (*kinit_func)())
+{
+	struct task_registers *regs;
+	struct task *task;
+
+	/* create task */
+	task = create_task(NULL, 0, 0);
+	if (!task)
+		return NULL;
+
+	/* set registers */
+	regs = (struct task_registers *) task->esp;
+	memset(regs, 0, sizeof(struct task_registers));
+
+	/* set eip to function */
+	regs->parameter1 = (uint32_t) NULL;
+	regs->return_address = TASK_RETURN_ADDRESS;
+	regs->eip = (uint32_t) kinit_func;
+
+	/* add task */
+	list_add(&task->list, &tasks_list);
+
+	return task;
+}
+
 /*
  * Create init process.
  */
@@ -603,7 +604,7 @@ struct task *create_init_task(struct task *parent)
 	struct task *task;
 
 	/* create task */
-	task = create_task(parent, 0, 0, 0);
+	task = create_task(parent, 0, 0);
 	if (!task)
 		return NULL;
 
