@@ -5,23 +5,24 @@
 #include <proc/wait.h>
 
 #define TASK_RETURN_ADDRESS		0xFFFFFFFF
+#define DEF_PRIORITY			(20 * (HZ) / 100)
 
-#define FSHIFT				11		/* nr of bits of precision */
-#define FIXED_1				(1 << FSHIFT)	/* 1.0 as fixed-point */
-#define LOAD_FREQ			(5 * HZ)	/* 5 sec intervals */
-#define EXP_1				1884		/* 1/exp(5sec/1min) as fixed-point */
-#define EXP_5				2014		/* 1/exp(5sec/5min) */
-#define EXP_15				2037		/* 1/exp(5sec/15min) */
+#define FSHIFT				11			/* nr of bits of precision */
+#define FIXED_1				(1 << FSHIFT)		/* 1.0 as fixed-point */
+#define LOAD_FREQ			(5 * HZ)		/* 5 sec intervals */
+#define EXP_1				1884			/* 1/exp(5sec/1min) as fixed-point */
+#define EXP_5				2014			/* 1/exp(5sec/5min) */
+#define EXP_15				2037			/* 1/exp(5sec/15min) */
 
-#define CLONE_VM			0x00000100	/* set if VM shared between processes */
-#define CLONE_FS			0x00000200	/* set if fs info shared between processes */
-#define CLONE_FILES			0x00000400	/* set if open files shared between processes */
-#define CLONE_SIGHAND			0x00000800	/* set if signal handlers and blocked signals shared */
-#define CLONE_PTRACE			0x00002000	/* set if we want to let tracing continue on the child too */
-#define CLONE_VFORK			0x00004000	/* set if the parent wants the child to wake it up on mm_release */
-#define CLONE_PARENT			0x00008000	/* set if we want to have the same parent as the cloner */
-#define CLONE_THREAD			0x00010000	/* Same thread group? */
-#define CLONE_NEWNS			0x00020000	/* New namespace group? */
+#define CLONE_VM			0x00000100		/* set if VM shared between processes */
+#define CLONE_FS			0x00000200		/* set if fs info shared between processes */
+#define CLONE_FILES			0x00000400		/* set if open files shared between processes */
+#define CLONE_SIGHAND			0x00000800		/* set if signal handlers and blocked signals shared */
+#define CLONE_PTRACE			0x00002000		/* set if we want to let tracing continue on the child too */
+#define CLONE_VFORK			0x00004000		/* set if the parent wants the child to wake it up on mm_release */
+#define CLONE_PARENT			0x00008000		/* set if we want to have the same parent as the cloner */
+#define CLONE_THREAD			0x00010000		/* Same thread group? */
+#define CLONE_NEWNS			0x00020000		/* New namespace group? */
 
 #define CALC_LOAD(load, exp,n ) \
 	load *= exp; \
@@ -54,9 +55,9 @@ void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait);
 void remove_wait_queue(struct wait_queue *wait);
 
 void select_wait(struct wait_queue **wait_address, struct select_table *st);
-void task_sleep(struct wait_queue **wq);
-void task_wakeup(struct wait_queue **wq);
-void task_wakeup_all(struct wait_queue **wq);
+void sleep_on(struct wait_queue **wq);
+void wake_up(struct wait_queue **wq);
+void wake_up_process(struct task *task);
 
 int task_signal(pid_t pid, int sig);
 int task_signal_group(pid_t pgrp, int sig);
