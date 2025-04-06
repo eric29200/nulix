@@ -128,7 +128,6 @@ static void update_old_timers()
  */
 void do_timer_interrupt()
 {
-
 	/* update times and timers */
 	update_times();
 	update_process_times();
@@ -168,7 +167,7 @@ void schedule()
 	/* save current task */
 	prev = current_task;
 	need_resched = 0;
-	
+
 	/* choose next task to run */
 	next = kinit_task;
 	next_counter = -1000;
