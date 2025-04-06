@@ -144,15 +144,24 @@ void do_timer_interrupt()
  */
 static int goodness(struct task *task, struct task *prev)
 {
-	int weight;
-
-	weight = task->counter;
+	int weight = task->counter;
 
 	/* slight advantage to the current process */
 	if (weight && task == prev)
 		weight++;
 
 	return weight;
+}
+
+/*
+ * Process a task timeout.
+ */
+static void process_timeout(void *arg)
+{
+	struct task *task = (struct task *) arg;
+
+	task->timeout = 0;
+	wake_up_process(task);
 }
 
 /*
@@ -163,10 +172,24 @@ void schedule()
 	struct task *prev, *next, *task;
 	int next_counter, weight;
 	struct list_head *pos;
+	time_t timeout = 0;
 
 	/* save current task */
 	prev = current_task;
 	need_resched = 0;
+
+	/* check previous task */
+	if (prev && prev->state == TASK_SLEEPING) {
+		if (signal_pending(prev)) {
+			prev->state = TASK_RUNNING;
+		} else {
+			timeout = prev->timeout;
+			if (timeout && timeout <= jiffies) {
+				prev->timeout = 0;
+				timeout = 0;
+			}
+		}
+	}
 
 	/* choose next task to run */
 	next = kinit_task;
@@ -198,6 +221,15 @@ void schedule()
 	if (prev != next) {
 		/* update kernel stats */
 		kstat.context_switch++;
+
+		/* set a timer on a previous task if needed */
+		if (timeout) {
+			if (prev->timeout_tm.list.next)
+				timer_event_del(&prev->timeout_tm);
+
+			timer_event_init(&prev->timeout_tm, process_timeout, prev, timeout);
+			timer_event_add(&prev->timeout_tm);
+		}
 
 		/* real switch */
 		current_task = next;
