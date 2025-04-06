@@ -74,4 +74,8 @@ void isr_handler(struct registers *regs)
 
 		sys_exit(1);
 	}
+
+	/* schedule if needed */
+	if (need_resched)
+		schedule();
 }
