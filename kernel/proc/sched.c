@@ -67,8 +67,8 @@ int init_scheduler(void (*kinit_func)())
 	if (!kinit_task)
 		return -ENOMEM;
 
-	/* need reschedule */
-	need_resched = 1;
+	/* schedule */
+	schedule();
 
 	return 0;
 }
