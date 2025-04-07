@@ -7,7 +7,7 @@ extern time_t startup_time;
 extern volatile time_t jiffies;
 extern struct kernel_timeval xtimes;
 
-#define HZ				100
+#define HZ				250
 #define CURRENT_TIME			(startup_time + (jiffies / HZ))
 
 #define CLOCK_REALTIME			0

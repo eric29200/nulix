@@ -133,6 +133,10 @@ void do_timer_interrupt()
 	update_process_times();
 	update_timers();
 	update_old_timers();
+
+	/* schedule if needed */
+	if (need_resched)
+		schedule();
 }
 
 /*
