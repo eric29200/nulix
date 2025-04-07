@@ -39,7 +39,7 @@ struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonbloc
 		}
 
 		/* wait */
-		sleep_on(&sock->wait);
+		task_sleep(&sock->wait);
 	}
 
 	/* allocate a socket buffer */

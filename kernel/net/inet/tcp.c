@@ -287,7 +287,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 
 out:
 	/* wake up eventual processes */
-	wake_up(&sk->sock->wait);
+	task_wakeup(&sk->sock->wait);
 
 	return 0;
 }
@@ -325,7 +325,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int fl
 			return -EAGAIN;
 
 		/* sleep */
-		sleep_on(&sk->sock->wait);
+		task_sleep(&sk->sock->wait);
 	}
 
 	/* get first message */
@@ -403,7 +403,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, 
 			return -EAGAIN;
 
 		/* sleep */
-		sleep_on(&sk->sock->wait);
+		task_sleep(&sk->sock->wait);
 	}
 
 	for (i = 0, len = 0; i < msg->msg_iovlen; i++) {
@@ -510,7 +510,7 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new)
 			return 0;
 
 		/* sleep */
-		sleep_on(&sk->sock->wait);
+		task_sleep(&sk->sock->wait);
 	}
 
 	return 0;
@@ -542,7 +542,7 @@ wait_for_ack:
 			return -ERESTARTSYS;
 
 		/* sleep */
-		sleep_on(&sk->sock->wait);
+		task_sleep(&sk->sock->wait);
 	}
 
 	return 0;

@@ -17,7 +17,6 @@ struct task *init_task;					/* user init task (pid = 1) */
 struct task *current_task = NULL;			/* current task */
 static pid_t next_pid = 0;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
-int need_resched = 0;					/* need reschedule ? */
 
 struct kernel_stat kstat;				/* kernel statistics */
 
@@ -67,10 +66,37 @@ int init_scheduler(void (*kinit_func)())
 	if (!kinit_task)
 		return -ENOMEM;
 
-	/* need reschedule */
-	need_resched = 1;
-
 	return 0;
+}
+
+/*
+ * Get next task to run.
+ */
+static struct task *get_next_task()
+{
+	struct list_head *pos;
+	struct task *task;
+
+	/* first scheduler call : return kinit */
+	if (!current_task)
+		return kinit_task;
+
+	/* get next running task */
+	list_for_each(pos, &current_task->list) {
+		if (pos == &tasks_list)
+			continue;
+
+		task = list_entry(pos, struct task, list);
+		if (task->state == TASK_RUNNING)
+			return task;
+	}
+
+	/* no tasks found : return current if still running */
+	if (current_task->state == TASK_RUNNING)
+		return current_task;
+
+	/* else execute kinit */
+	return kinit_task;
 }
 
 /*
@@ -90,37 +116,8 @@ int spawn_init()
  */
 static void update_process_times()
 {
-	if (!current_task || !current_task->pid)
-		return;
-
-	/* update quantum */
-	current_task->counter--;
-	if (current_task->counter < 0) {
-		current_task->counter = 0;
-		need_resched = 1;
-	}
-
-	/* update process time */
-	current_task->utime++;
-}
-
-/*
- * Update old timers.
- */
-static void update_old_timers()
-{
-	struct list_head *pos;
-	struct task *task;
-
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
-		if (task && task->timeout && task->timeout < jiffies) {
-			task->timeout = 0;
-
-			if (task->state == TASK_SLEEPING)
-				wake_up_process(task);
-		}
-	}
+	if (current_task && current_task->pid)
+		current_task->utime++;
 }
 
 /*
@@ -128,32 +125,13 @@ static void update_old_timers()
  */
 void do_timer_interrupt()
 {
-
 	/* update times and timers */
 	update_times();
 	update_process_times();
 	update_timers();
-	update_old_timers();
 
-	/* schedule if needed */
-	if (need_resched)
-		schedule();
-}
-
-/*
- * Decide how desirable a process is.
- */
-static int goodness(struct task *task, struct task *prev)
-{
-	int weight;
-
-	weight = task->counter;
-
-	/* slight advantage to the current process */
-	if (weight && task == prev)
-		weight++;
-
-	return weight;
+	/* schedule */
+	schedule();
 }
 
 /*
@@ -162,38 +140,24 @@ static int goodness(struct task *task, struct task *prev)
 void schedule()
 {
 	struct task *prev, *next, *task;
-	int next_counter, weight;
 	struct list_head *pos;
 
 	/* save current task */
 	prev = current_task;
-	need_resched = 0;
-	
-	/* choose next task to run */
-	next = kinit_task;
-	next_counter = -1000;
+
+	/* update timeout on all tasks and wake them if needed */
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);
+		if (task && task->timeout && task->timeout < jiffies) {
+			task->timeout = 0;
 
-		/* skip non running tasks */
-		if (task->state != TASK_RUNNING)
-			continue;
-
-		/* check if this process is desirable */
-		weight = goodness(task, prev);
-		if (weight > next_counter) {
-			next = task;
-			next_counter = task->counter;
+			if (task->state == TASK_SLEEPING)
+				task->state = TASK_RUNNING;
 		}
 	}
 
-	/* if all runnables processes have counter = 0, recomputer counters */
-	if (!next_counter) {
-		list_for_each(pos, &tasks_list) {
-			task = list_entry(pos, struct task, list);
-			task->counter = (task->counter >> 1) + task->priority;
-		}
-	}
+	/* get next task to run */
+	next = get_next_task();
 
 	/* switch tasks */
 	if (prev != next) {
@@ -271,7 +235,7 @@ void select_wait(struct wait_queue **wait_address, struct select_table *st)
 /*
  * Sleep on a wait queue.
  */
-void sleep_on(struct wait_queue **wq)
+void task_sleep(struct wait_queue **wq)
 {
 	struct wait_queue wait = { current_task, NULL };
 
@@ -289,18 +253,34 @@ void sleep_on(struct wait_queue **wq)
 }
 
 /*
- * Wake up a process.
+ * Wake up one task sleeping on a wait queue.
  */
-void wake_up_process(struct task *task)
+void task_wakeup(struct wait_queue **wq)
 {
-	task->state = TASK_RUNNING;
-	need_resched = 1;
+	struct wait_queue *tmp;
+
+	/* check first task */
+	if (!wq)
+		return;
+	tmp = *wq;
+	if (!tmp)
+		return;
+
+	/* wake up first sleeping task */
+	do {
+		if (tmp->task->state == TASK_SLEEPING) {
+			tmp->task->state = TASK_RUNNING;
+			break;
+		}
+
+		tmp = tmp->next;
+	} while (tmp != *wq && tmp != NULL);
 }
 
 /*
  * Wake up all tasks sleeping on a wait queue.
  */
-void wake_up(struct wait_queue **wq)
+void task_wakeup_all(struct wait_queue **wq)
 {
 	struct wait_queue *tmp;
 
@@ -314,7 +294,7 @@ void wake_up(struct wait_queue **wq)
 	/* wake up all tasks */
 	do {
 		if (tmp->task->state == TASK_SLEEPING)
-			wake_up_process(tmp->task);
+			tmp->task->state = TASK_RUNNING;
 
 		tmp = tmp->next;
 	} while (tmp != *wq && tmp != NULL);
@@ -349,9 +329,9 @@ static void __task_signal(struct task *task, int sig)
 	/* add to pending signals */
 	sigaddset(&task->sigpend, sig);
 
-	/* wake up process if sleeping */
+	/* wakeup process if sleeping */
 	if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)
-	 	wake_up_process(task);
+		task->state = TASK_RUNNING;
 }
 
 /*

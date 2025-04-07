@@ -35,7 +35,7 @@ void net_deliver_skb(struct sk_buff *skb)
 
 			/* wake up waiting processes */
 			if (ret == 0)
-				wake_up(&sk->sock->wait);
+				task_wakeup_all(&sk->sock->wait);
 		}
 	}
 }

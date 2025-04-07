@@ -122,7 +122,7 @@ int do_signal(struct registers *regs, int orig_eax)
 				current_task->state = TASK_STOPPED;
 				current_task->exit_code = sig;
 				task_signal(current_task->parent->pid, SIGCHLD);
-				wake_up(&current_task->parent->wait_child_exit);
+				task_wakeup_all(&current_task->parent->wait_child_exit);
 				schedule();
 				goto out;
 			default:

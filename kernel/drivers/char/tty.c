@@ -279,7 +279,7 @@ void tty_do_cook(struct tty *tty)
 	}
 
 	/* wake up eventual process */
-	wake_up(&tty->wait);
+	task_wakeup(&tty->wait);
 }
 
 /*
@@ -330,7 +330,7 @@ static int tiocsctty(struct tty *tty)
 
 	/* this tty is already the controlling tty for another session group */
 	if (tty->session > 0) {
-		list_for_each(pos, &tasks_list) {
+		list_for_each(pos, &current_task->list) {
 			task = list_entry(pos, struct task, list);
 			if (task->tty == tty)
 				task->tty = NULL;
@@ -395,7 +395,7 @@ void disassociate_ctty()
 	tty->pgrp = -1;
 
 	/* clear tty for all processes in the session group */
-	list_for_each(pos, &tasks_list) {
+	list_for_each(pos, &current_task->list) {
 		task = list_entry(pos, struct task, list);
 		if (task->session == current_task->session)
 			task->tty = NULL;

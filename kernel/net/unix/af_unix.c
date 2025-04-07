@@ -238,7 +238,7 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 					return -ERESTARTSYS;
 
 				/* wait for a message */
-				sleep_on(&sk->sock->wait);
+				task_sleep(&sk->sock->wait);
 				continue;
 			}
 
@@ -339,7 +339,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 		list_add_tail(&skb->list, &other->skb_list);
 
 		/* wake up eventual readers */
-		wake_up(&other->sock->wait);
+		task_wakeup_all(&other->sock->wait);
 
 		/* update sent */
 		sent += len;
@@ -458,7 +458,7 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 			/* set other socket connected and wake up eventual clients connecting */
 			other->sock->state = SS_CONNECTED;
 			other->protinfo.af_unix.other = sk_new;
-			wake_up(&sk_new->protinfo.af_unix.other->sock->wait);
+			task_wakeup_all(&sk_new->protinfo.af_unix.other->sock->wait);
 
 			return 0;
 		}
@@ -468,7 +468,7 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 			return 0;
 
 		/* sleep */
-		sleep_on(&sock->wait);
+		task_sleep(&sock->wait);
 	}
 
 	return 0;
@@ -511,7 +511,7 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 	list_add_tail(&skb->list, &other->skb_list);
 
 	/* wake up eventual reader */
-	wake_up(&other->sock->wait);
+	task_wakeup_all(&other->sock->wait);
 
 	/* set socket */
 	sk->protinfo.af_unix.other = other;
@@ -524,7 +524,7 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 			return -ERESTARTSYS;
 
 		/* sleep */
-		sleep_on(&sock->wait);
+		task_sleep(&sock->wait);
 	}
 
 	/* set credentials */

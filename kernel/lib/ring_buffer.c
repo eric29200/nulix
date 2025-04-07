@@ -49,7 +49,7 @@ size_t ring_buffer_read(struct ring_buffer *rb, uint8_t *buf, size_t n)
 			if (signal_pending(current_task))
 				return i;
 
-			sleep_on(&rb->wait);
+			task_sleep(&rb->wait);
 		}
 
 		/* read from ring buffer */
@@ -60,8 +60,8 @@ size_t ring_buffer_read(struct ring_buffer *rb, uint8_t *buf, size_t n)
 		if (rb->tail == rb->capacity)
 			rb->tail = 0;
 
-		/* wake up eventual writers */
-		wake_up(&rb->wait);
+		/* wakeup eventual writers */
+		task_wakeup(&rb->wait);
 	}
 
 	return n;
@@ -80,7 +80,7 @@ size_t ring_buffer_write(struct ring_buffer *rb, const uint8_t *buf, size_t n)
 			if (signal_pending(current_task))
 				return i;
 
-			sleep_on(&rb->wait);
+			task_sleep(&rb->wait);
 		}
 
 		/* write to ring buffer */
@@ -91,8 +91,8 @@ size_t ring_buffer_write(struct ring_buffer *rb, const uint8_t *buf, size_t n)
 		if (rb->head == rb->capacity)
 			rb->head = 0;
 
-		/* wake up eventual readers */
-		wake_up(&rb->wait);
+		/* wakeup eventual readers */
+		task_wakeup(&rb->wait);
 	}
 
 	return n;
@@ -114,8 +114,8 @@ int ring_buffer_putc(struct ring_buffer *rb, uint8_t c)
 	if (rb->head == rb->capacity)
 		rb->head = 0;
 
-	/* wake up eventual readers */
-	wake_up(&rb->wait);
+	/* wakeup eventual readers */
+	task_wakeup(&rb->wait);
 
 	return 0;
 }
@@ -130,6 +130,6 @@ void ring_buffer_flush(struct ring_buffer *rb)
 	rb->head = 0;
 	rb->tail = 0;
 
-	/* wake up eventual readers/writers */
-	wake_up(&rb->wait);
+	/* wakeup eventual readers/writers */
+	task_wakeup(&rb->wait);
 }

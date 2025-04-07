@@ -469,17 +469,11 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	task->kernel_stack = (uint32_t) stack + STACK_SIZE;
 	task->esp = task->kernel_stack - sizeof(struct task_registers);
 
-	/* shae dynamic priority/counter */
-	if (parent)
-		parent->counter >>= 1;
-
 	/* init task */
 	task->pid = get_next_pid();
 	task->pgrp = parent ? parent->pgrp : task->pid;
 	task->session = parent ? parent->session : task->pid;
 	task->state = TASK_RUNNING;
-	task->counter = parent ? parent->counter : DEF_PRIORITY;
-	task->priority = parent ? parent->priority : DEF_PRIORITY;
 	task->parent = parent;
 	task->uid = parent ? parent->uid : 0;
 	task->euid = parent ? parent->euid : 0;
@@ -560,8 +554,7 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 	regs->eip = (uint32_t) task_user_entry;
 
 	/* add new task */
-	list_add(&task->list, &tasks_list);
-	wake_up_process(task);
+	list_add(&task->list, &current_task->list);
 
 	/* vfork : sleep on semaphore */
 	if (clone_flags & CLONE_VFORK) {
@@ -596,6 +589,9 @@ struct task *create_kinit_task(void (*kinit_func)())
 	regs->return_address = TASK_RETURN_ADDRESS;
 	regs->eip = (uint32_t) kinit_func;
 
+	/* add task */
+	list_add(&task->list, &tasks_list);
+
 	return task;
 }
 
@@ -622,8 +618,7 @@ struct task *create_init_task(struct task *parent)
 	regs->eip = (uint32_t) init_entry;
 
 	/* add task */
-	list_add(&task->list, &tasks_list);
-	wake_up_process(task);
+	list_add(&task->list, &current_task->list);
 
 	return task;
 }

@@ -116,7 +116,7 @@ static void console_complete_change(int n)
 	fg_console = n;
 
 	/* wake up eventual processes */
-	wake_up(&vt_activate_wq);
+	task_wakeup(&vt_activate_wq);
 }
 
 /*
@@ -986,7 +986,7 @@ static int vt_waitactive(int n)
 			return -EINTR;
 
 		/* sleep on waiting queue */
-		sleep_on(&vt_activate_wq);
+		task_sleep(&vt_activate_wq);
 	}
 
 	return 0;

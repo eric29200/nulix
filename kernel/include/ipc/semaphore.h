@@ -30,7 +30,7 @@ static inline void up(struct semaphore *sem)
 		return;
 
 	sem->count++;
-	wake_up(&sem->wait);
+	task_wakeup(&sem->wait);
 }
 
 /*
@@ -47,7 +47,7 @@ static inline void down(struct semaphore *sem)
 			return;
 		}
 
-		sleep_on(&sem->wait);
+		task_sleep(&sem->wait);
 	}
 }
 

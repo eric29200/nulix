@@ -63,7 +63,7 @@ void skb_free(struct sk_buff *skb)
 			skb->sock->sk->wmem_alloc = 0;
 
 		/* wake up writers */
-		wake_up(&skb->sock->wait);
+		task_wakeup_all(&skb->sock->wait);
 	}
 
 	/* free socket buffer */

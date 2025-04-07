@@ -53,7 +53,7 @@ static int raw_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int fl
 			return -EAGAIN;
 
 		/* sleep */
-		sleep_on(&sk->sock->wait);
+		task_sleep(&sk->sock->wait);
 	}
 
 	/* get first message */
