@@ -159,8 +159,10 @@ static void kinit()
 		panic("Cannot spawn init process");
 
 	/* sleep forever */
-	for (;;)
+	for (;;) {
+		current_task->state = TASK_SLEEPING;
 		halt();
+	}
 }
 
 /*

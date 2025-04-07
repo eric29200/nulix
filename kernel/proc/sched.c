@@ -105,6 +105,25 @@ static void update_process_times()
 }
 
 /*
+ * Update old timers.
+ */
+static void update_old_timers()
+{
+	struct list_head *pos;
+	struct task *task;
+
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+		if (task && task->timeout && task->timeout < jiffies) {
+			task->timeout = 0;
+
+			if (task->state == TASK_SLEEPING)
+				wake_up_process(task);
+		}
+	}
+}
+
+/*
  * Handle timer (PIT) interrupt.
  */
 void do_timer_interrupt()
@@ -113,10 +132,7 @@ void do_timer_interrupt()
 	update_times();
 	update_process_times();
 	update_timers();
-
-	/* reschedule if needed */
-	if (need_resched)
-		schedule();
+	update_old_timers();
 }
 
 /*
@@ -159,23 +175,16 @@ void schedule()
 	need_resched = 0;
 
 	/* check previous task */
-	switch (prev->state) {
-		case TASK_SLEEPING:
-			/* signal pending : make it runnable */
-			if (signal_pending(prev)) {
-				prev->state = TASK_RUNNING;
-				break;
-			}
-
-			/* timeout expired : make it runnable */
+	if (prev && prev->state == TASK_SLEEPING) {
+		if (signal_pending(prev)) {
+			prev->state = TASK_RUNNING;
+		} else {
 			timeout = prev->timeout;
 			if (timeout && timeout <= jiffies) {
 				prev->timeout = 0;
 				timeout = 0;
-				prev->state = TASK_RUNNING;
 			}
-
-			break;
+		}
 	}
 
 	/* choose next task to run */
