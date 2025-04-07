@@ -105,7 +105,6 @@ struct task {
 	struct registers		user_regs;			/* saved registers at syscall entry */
 	struct registers		signal_regs;			/* saved registers at signal entry */
 	struct user_desc		tls;				/* Thread Local Storage address */
-	struct timer_event		timeout_tm;			/* timeout timer */
 	struct timer_event		sig_tm;				/* signal timer */
 	struct wait_queue *		wait_child_exit;		/* wait queue for child exit */
 	struct fs_struct *		fs;				/* file system stuff */

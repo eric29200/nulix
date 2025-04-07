@@ -10,11 +10,7 @@ void sys_exit(int status)
 	struct list_head *pos;
 	struct task *child;
 
-	/* delete timeout timer */
-	if (current_task->timeout_tm.list.next)
-		timer_event_del(&current_task->timeout_tm);
-
-	/* delete signal timer */
+	/* delete timer */
 	if (current_task->sig_tm.list.next)
 		timer_event_del(&current_task->sig_tm);
 
