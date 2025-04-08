@@ -193,7 +193,7 @@ int sys_syslog(int type, char *buf, int len)
 
 			/* wait for log */
 			while (!log_size)
-				task_sleep(&log_wait);
+				sleep_on(&log_wait);
 
 			/* read from ring buffer */
 			for (i = 0; i < len && log_size > 0; i++) {

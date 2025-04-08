@@ -54,9 +54,8 @@ void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait);
 void remove_wait_queue(struct wait_queue *wait);
 
 void select_wait(struct wait_queue **wait_address, struct select_table *st);
-void task_sleep(struct wait_queue **wq);
-void task_wakeup(struct wait_queue **wq);
-void task_wakeup_all(struct wait_queue **wq);
+void sleep_on(struct wait_queue **wq);
+void wake_up(struct wait_queue **wq);
 
 int task_signal(pid_t pid, int sig);
 int task_signal_group(pid_t pgrp, int sig);

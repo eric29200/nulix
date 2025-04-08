@@ -306,7 +306,7 @@ void net_handle(struct net_device *net_dev, struct sk_buff *skb)
 	list_add_tail(&skb->list, &net_dev->skb_input_list);
 
 	/* wake up handler */
-	task_wakeup_all(&net_dev->wait);
+	wake_up(&net_dev->wait);
 }
 
 /*
@@ -321,5 +321,5 @@ void net_transmit(struct net_device *net_dev, struct sk_buff *skb)
 	list_add_tail(&skb->list, &net_dev->skb_output_list);
 
 	/* wake up handler */
-	task_wakeup_all(&net_dev->wait);
+	wake_up(&net_dev->wait);
 }

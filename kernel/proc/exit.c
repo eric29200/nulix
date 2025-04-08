@@ -26,7 +26,7 @@ void sys_exit(int status)
 
 	/* notify parent */
 	task_signal(current_task->parent->pid, SIGCHLD);
-	task_wakeup_all(&current_task->parent->wait_child_exit);
+	wake_up(&current_task->parent->wait_child_exit);
 
 	/* give children to init */
 	list_for_each(pos, &current_task->list) {
@@ -34,7 +34,7 @@ void sys_exit(int status)
 		if (child->parent == current_task) {
 			child->parent = init_task;
 			if (child->state == TASK_ZOMBIE)
-				task_wakeup_all(&init_task->wait_child_exit);
+				wake_up(&init_task->wait_child_exit);
 		}
 	}
 
@@ -116,7 +116,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 			return 0;
 
 		/* else wait for child */
-		task_sleep(&current_task->wait_child_exit);
+		sleep_on(&current_task->wait_child_exit);
 
 		/* remove SIGCHLD */
 		current_task->sigpend &= ~(1 << SIGCHLD);

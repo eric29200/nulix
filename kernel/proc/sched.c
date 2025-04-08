@@ -254,7 +254,7 @@ void select_wait(struct wait_queue **wait_address, struct select_table *st)
 /*
  * Sleep on a wait queue.
  */
-void task_sleep(struct wait_queue **wq)
+void sleep_on(struct wait_queue **wq)
 {
 	struct wait_queue wait = { current_task, NULL };
 
@@ -272,34 +272,9 @@ void task_sleep(struct wait_queue **wq)
 }
 
 /*
- * Wake up one task sleeping on a wait queue.
- */
-void task_wakeup(struct wait_queue **wq)
-{
-	struct wait_queue *tmp;
-
-	/* check first task */
-	if (!wq)
-		return;
-	tmp = *wq;
-	if (!tmp)
-		return;
-
-	/* wake up first sleeping task */
-	do {
-		if (tmp->task->state == TASK_SLEEPING) {
-			tmp->task->state = TASK_RUNNING;
-			break;
-		}
-
-		tmp = tmp->next;
-	} while (tmp != *wq && tmp != NULL);
-}
-
-/*
  * Wake up all tasks sleeping on a wait queue.
  */
-void task_wakeup_all(struct wait_queue **wq)
+void wake_up(struct wait_queue **wq)
 {
 	struct wait_queue *tmp;
 
@@ -348,7 +323,7 @@ static void __task_signal(struct task *task, int sig)
 	/* add to pending signals */
 	sigaddset(&task->sigpend, sig);
 
-	/* wakeup process if sleeping */
+	/* wake up process if sleeping */
 	if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)
 		task->state = TASK_RUNNING;
 }

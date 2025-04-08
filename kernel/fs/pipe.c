@@ -35,7 +35,7 @@ static int pipe_read(struct file *filp, char *buf, int count)
 				return -ERESTARTSYS;
 
 			/* wait for some data */
-			task_sleep(&PIPE_WAIT(inode));
+			sleep_on(&PIPE_WAIT(inode));
 		}
 	}
 
@@ -69,7 +69,7 @@ static int pipe_read(struct file *filp, char *buf, int count)
 	}
 
 	/* wake up writer */
-	task_wakeup(&PIPE_WAIT(inode));
+	wake_up(&PIPE_WAIT(inode));
 
 	if (read)
 		return read;
@@ -113,7 +113,7 @@ static int pipe_write(struct file *filp, const char *buf, int count)
 				return written ? written : -EAGAIN;
 
 			/* wait for free space */
-			task_sleep(&PIPE_WAIT(inode));
+			sleep_on(&PIPE_WAIT(inode));
 		}
 
 		while (count > 0) {
@@ -143,7 +143,7 @@ static int pipe_write(struct file *filp, const char *buf, int count)
 		}
 
 		/* wake up readers */
-		task_wakeup(&PIPE_WAIT(inode));
+		wake_up(&PIPE_WAIT(inode));
 		free = 1;
 	}
 
@@ -161,7 +161,7 @@ static int pipe_read_close(struct file *filp)
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
 		free_page(PIPE_BASE(inode));
 	else
-		task_wakeup(&PIPE_WAIT(inode));
+		wake_up(&PIPE_WAIT(inode));
 
 	return 0;
 }
@@ -177,7 +177,7 @@ static int pipe_write_close(struct file *filp)
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
 		free_page(PIPE_BASE(inode));
 	else
-		task_wakeup(&PIPE_WAIT(inode));
+		wake_up(&PIPE_WAIT(inode));
 
 	return 0;
 }

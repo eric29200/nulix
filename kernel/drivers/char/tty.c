@@ -279,7 +279,7 @@ void tty_do_cook(struct tty *tty)
 	}
 
 	/* wake up eventual process */
-	task_wakeup(&tty->wait);
+	wake_up(&tty->wait);
 }
 
 /*
