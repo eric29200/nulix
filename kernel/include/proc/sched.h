@@ -5,6 +5,7 @@
 #include <proc/wait.h>
 
 #define TASK_RETURN_ADDRESS		0xFFFFFFFF
+#define DEF_PRIORITY			(20 * HZ / 100)	/* 200 ms time slices */
 
 #define FSHIFT				11		/* nr of bits of precision */
 #define FIXED_1				(1 << FSHIFT)	/* 1.0 as fixed-point */

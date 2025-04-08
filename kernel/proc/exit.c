@@ -29,7 +29,7 @@ void sys_exit(int status)
 	wake_up(&current_task->parent->wait_child_exit);
 
 	/* give children to init */
-	list_for_each(pos, &current_task->list) {
+	list_for_each(pos, &tasks_list) {
 		child = list_entry(pos, struct task, list);
 		if (child->parent == current_task) {
 			child->parent = init_task;
@@ -69,7 +69,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 		has_children = 0;
 
 		/* search zombie child */
-		list_for_each(pos, &current_task->list) {
+		list_for_each(pos, &tasks_list) {
 			task = list_entry(pos, struct task, list);
 
 			/* check task (see man waitpid) */

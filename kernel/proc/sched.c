@@ -94,8 +94,17 @@ int spawn_init()
  */
 static void update_process_times()
 {
-	if (current_task && current_task->pid)
-		current_task->utime++;
+	/* don't update kinit */
+	if (!current_task || !current_task->pid)
+		return;
+
+	/* update time */
+	current_task->utime++;
+
+	/* update counter */
+	current_task->counter--;
+	if (current_task->counter <= 0)
+		current_task->counter = 0;
 }
 
 /*
@@ -132,33 +141,17 @@ static void process_timeout(void *arg)
 }
 
 /*
- * Get next task to run.
+ * Decides how desirable a process is.
  */
-static struct task *get_next_task()
+static int goodness(struct task *task, struct task *prev)
 {
-	struct list_head *pos;
-	struct task *task;
+	int weight = task->counter;
 
-	/* first scheduler call : return kinit */
-	if (!current_task)
-		return kinit_task;
+	/* give a slight advantage to the current process */
+	if (task == prev)
+		weight++;
 
-	/* get next running task */
-	list_for_each(pos, &current_task->list) {
-		if (pos == &tasks_list)
-			continue;
-
-		task = list_entry(pos, struct task, list);
-		if (task->state == TASK_RUNNING)
-			return task;
-	}
-
-	/* no tasks found : return current if still running */
-	if (current_task->state == TASK_RUNNING)
-		return current_task;
-
-	/* else execute kinit */
-	return kinit_task;
+	return weight;
 }
 
 /*
@@ -166,7 +159,9 @@ static struct task *get_next_task()
  */
 void schedule()
 {
-	struct task *prev, *next;
+	struct task *prev, *next, *task;
+	int next_counter, weight;
+	struct list_head *pos;
 
 	/* save current task */
 	prev = current_task;
@@ -183,8 +178,31 @@ void schedule()
 		prev->timeout = 0;
 	}
 
-	/* get next task to run */
-	next = get_next_task();
+	/* choose next task */
+	next = kinit_task;
+	next_counter = -1000;
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+
+		/* skip sleeping tasks */
+		if (task->state != TASK_RUNNING)
+			continue;
+
+		/* compute goodness */
+		weight = goodness(task, prev);
+		if (weight > next_counter) {
+			next = task;
+			next_counter = weight;
+		}
+	}
+
+	/* if all runnable processes have "counter == 0", re-calculate counters */
+	if (!next_counter) {
+		list_for_each(pos, &tasks_list) {
+			task = list_entry(pos, struct task, list);
+			task->counter = (task->counter >> 1) + task->priority;
+		}
+	}
 
 	/* switch tasks */
 	if (prev != next) {
