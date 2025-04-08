@@ -17,6 +17,7 @@ struct task *init_task;					/* user init task (pid = 1) */
 struct task *current_task = NULL;			/* current task */
 static pid_t next_pid = 0;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
+int need_resched = 0;					/* reschedule needed ? */
 
 struct kernel_stat kstat;				/* kernel statistics */
 
@@ -86,6 +87,9 @@ int spawn_init()
 	if (!init_task)
 		return -ENOMEM;
 
+	/* reschedule */
+	schedule();
+
 	return 0;
 }
 
@@ -103,8 +107,10 @@ static void update_process_times()
 
 	/* update counter */
 	current_task->counter--;
-	if (current_task->counter <= 0)
+	if (current_task->counter <= 0) {
 		current_task->counter = 0;
+		need_resched = 1;
+	}
 }
 
 /*
@@ -118,7 +124,8 @@ void do_timer_interrupt()
 	update_timers();
 
 	/* schedule */
-	schedule();
+	if (need_resched)
+		schedule();
 }
 
 /*
@@ -127,6 +134,7 @@ void do_timer_interrupt()
 static void wake_up_process(struct task *task)
 {
 	task->state = TASK_RUNNING;
+	need_resched = 1;
 }
 
 /*
@@ -165,6 +173,7 @@ void schedule()
 
 	/* save current task */
 	prev = current_task;
+	need_resched = 0;
 
 	/* previous task sleeping on a timeout : create a timer */
 	if (prev->state == TASK_SLEEPING && prev->timeout) {
