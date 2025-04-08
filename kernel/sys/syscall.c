@@ -158,6 +158,8 @@ static const void *syscalls[] = {
 	[__NR_syslog]			= sys_syslog,
 	[__NR_rt_sigpending]		= sys_rt_sigpending,
 	[__NR_mincore]			= sys_mincore,
+	[__NR_getpriority]		= sys_getpriority,
+	[__NR_setpriority]		= sys_setpriority,
 };
 
 /*

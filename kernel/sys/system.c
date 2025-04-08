@@ -301,3 +301,107 @@ int sys_uname(struct utsname *buf)
 
 	return 0;
 }
+
+/*
+ * Select a process (for get/set/priority). Returns true if task matches which and who.
+ */
+static int proc_sel(struct task *task, int which, int who)
+{
+	if (!task->pid)
+		return 0;
+
+	switch (which) {
+		case PRIO_PROCESS:
+			if (!who && task == current_task)
+				return 1;
+			return task->pid == who;
+		case PRIO_PGRP:
+			if (!who)
+				who = current_task->pgrp;
+			return task->pgrp == who;
+		case PRIO_USER:
+			if (!who)
+				who = current_task->uid;
+			return task->uid == who;
+	}
+
+	return 0;
+}
+
+/*
+ * Get priority system call.
+ */
+int sys_getpriority(int which, int who)
+{
+	int max_prio = -ESRCH;
+	struct list_head *pos;
+	struct task *task;
+
+	/* check process selection */
+	if (which < PRIO_PROCESS || which > PRIO_PROCESS)
+		return -EINVAL;
+
+	/* for each task */
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+
+		/* check if task matches which and who */
+		if (!proc_sel(task, which, who))
+			continue;
+
+		/* return max priority */
+		if (task->priority > max_prio)
+			max_prio = task->priority;
+	}
+
+	/* scale the priority from timeslice to 0..40 */
+	if (max_prio > 0)
+		max_prio = (max_prio * 20 + DEF_PRIORITY / 2) / DEF_PRIORITY;
+
+	return max_prio;
+}
+
+/*
+ * Set priority system call.
+ */
+int sys_setpriority(int which, int who, int niceval)
+{
+	struct list_head *pos;
+	struct task *task;
+	int ret = -ESRCH;
+	int priority;
+
+	/* check process selection */
+	if (which < PRIO_PROCESS || which > PRIO_PROCESS)
+		return -EINVAL;
+
+	/* normalize : avoid signed division */
+	priority = niceval;
+	if (niceval < 0)
+		priority = -niceval;
+	if (priority > 20)
+		priority = 20;
+
+	priority = (priority * DEF_PRIORITY + 10) / 20 + DEF_PRIORITY;
+
+	if (niceval >= 0) {
+		priority = 2 * DEF_PRIORITY - priority;
+		if (!priority)
+			priority = 1;
+	}
+	
+	/* for each task */
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+
+		/* check if task matches which and who */
+		if (!proc_sel(task, which, who))
+			continue;
+
+		/* set priority */
+		task->priority = priority;
+		ret = 0;
+	}
+
+	return ret;
+}

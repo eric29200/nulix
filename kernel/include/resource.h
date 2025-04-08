@@ -20,6 +20,10 @@
 
 #define RLIM_NLIMITS		9
 
+#define PRIO_PROCESS		0
+#define PRIO_PGRP		1
+#define PRIO_USER		2
+
 /*
  * Process usage statistics.
  */

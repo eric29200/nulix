@@ -55,6 +55,8 @@
 #define __NR_mmap			90
 #define __NR_munmap			91
 #define __NR_fchmod			94
+#define __NR_getpriority		96
+#define __NR_setpriority		97
 #define __NR_socketcall			102
 #define __NR_syslog			103
 #define __NR_setitimer			104
