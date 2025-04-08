@@ -113,6 +113,14 @@ void do_timer_interrupt()
 }
 
 /*
+ * Wake a process = make it runnable.
+ */
+static void wake_up_process(struct task *task)
+{
+	task->state = TASK_RUNNING;
+}
+
+/*
  * Process a task timeout.
  */
 static void process_timeout(void *arg)
@@ -120,7 +128,7 @@ static void process_timeout(void *arg)
 	struct task *task = (struct task *) arg;
 
 	task->timeout = 0;
-	task->state = TASK_RUNNING;
+	wake_up_process(task);
 }
 
 /*
@@ -288,7 +296,7 @@ void wake_up(struct wait_queue **wq)
 	/* wake up all tasks */
 	do {
 		if (tmp->task->state == TASK_SLEEPING)
-			tmp->task->state = TASK_RUNNING;
+			wake_up_process(tmp->task);
 
 		tmp = tmp->next;
 	} while (tmp != *wq && tmp != NULL);
@@ -325,7 +333,7 @@ static void __task_signal(struct task *task, int sig)
 
 	/* wake up process if sleeping */
 	if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)
-		task->state = TASK_RUNNING;
+		wake_up_process(task);
 }
 
 /*
