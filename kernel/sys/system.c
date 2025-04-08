@@ -322,7 +322,7 @@ static int proc_sel(struct task *task, int which, int who)
 		case PRIO_USER:
 			if (!who)
 				who = current_task->uid;
-			return task->uid == who;
+			return (int) task->uid == who;
 	}
 
 	return 0;
