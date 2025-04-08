@@ -66,7 +66,61 @@ int init_scheduler(void (*kinit_func)())
 	if (!kinit_task)
 		return -ENOMEM;
 
+	/* switch to kinit */
+	current_task = kinit_task;
+	tss_set_stack(0x10, current_task->kernel_stack);
+	load_tls();
+	switch_page_directory(current_task->mm->pgd);
+	scheduler_do_switch(0, current_task->esp);
+
 	return 0;
+}
+
+/*
+ * Spawn init process.
+ */
+int spawn_init()
+{
+	/* create init */
+	init_task = create_init_task(kinit_task);
+	if (!init_task)
+		return -ENOMEM;
+
+	return 0;
+}
+
+/*
+ * Update current process times.
+ */
+static void update_process_times()
+{
+	if (current_task && current_task->pid)
+		current_task->utime++;
+}
+
+/*
+ * Handle timer (PIT) interrupt.
+ */
+void do_timer_interrupt()
+{
+	/* update times and timers */
+	update_times();
+	update_process_times();
+	update_timers();
+
+	/* schedule */
+	schedule();
+}
+
+/*
+ * Process a task timeout.
+ */
+static void process_timeout(void *arg)
+{
+	struct task *task = (struct task *) arg;
+
+	task->timeout = 0;
+	task->state = TASK_RUNNING;
 }
 
 /*
@@ -100,60 +154,25 @@ static struct task *get_next_task()
 }
 
 /*
- * Spawn init process.
- */
-int spawn_init()
-{
-	init_task = create_init_task(kinit_task);
-	if (!init_task)
-		return -ENOMEM;
-
-	return 0;
-}
-
-/*
- * Update current process times.
- */
-static void update_process_times()
-{
-	if (current_task && current_task->pid)
-		current_task->utime++;
-}
-
-/*
- * Handle timer (PIT) interrupt.
- */
-void do_timer_interrupt()
-{
-	/* update times and timers */
-	update_times();
-	update_process_times();
-	update_timers();
-
-	/* schedule */
-	schedule();
-}
-
-/*
  * Schedule function (interruptions must be disabled and will be reenabled on function return).
  */
 void schedule()
 {
-	struct task *prev, *next, *task;
-	struct list_head *pos;
+	struct task *prev, *next;
 
 	/* save current task */
 	prev = current_task;
 
-	/* update timeout on all tasks and wake them if needed */
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
-		if (task && task->timeout && task->timeout < jiffies) {
-			task->timeout = 0;
+	/* previous task sleeping on a timeout : create a timer */
+	if (prev->state == TASK_SLEEPING && prev->timeout) {
+		/* delete previous timer */
+		if (prev->timeout_tm.list.next)
+			timer_event_del(&current_task->timeout_tm);
 
-			if (task->state == TASK_SLEEPING)
-				task->state = TASK_RUNNING;
-		}
+		/* create new timer */
+		timer_event_init(&prev->timeout_tm, process_timeout, prev, prev->timeout);
+		timer_event_add(&prev->timeout_tm);
+		prev->timeout = 0;
 	}
 
 	/* get next task to run */
