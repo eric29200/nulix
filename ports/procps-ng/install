@@ -6,7 +6,6 @@ function configure_port() {
 	autoreconf -i --force
 	./configure								\
 		--host=$HOST							\
-		--disable-shared						\
 		--disable-nls							\
 		--disable-w							\
 		--disable-numa							\
