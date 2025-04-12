@@ -101,58 +101,10 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
  */
 static void kinit()
 {
-	/* register filesystems */
-	printf("[Kernel] Register file systems\n");
-	if (init_minix_fs() != 0)
-		panic("Cannot register minix file system");
-	if (init_ext2_fs() != 0)
-		panic("Cannot register ext2 file system");
-	if (init_proc_fs() != 0)
-		panic("Cannot register proc file system");
-	if (init_tmp_fs() != 0)
-		panic("Cannot register tmp file system");
-	if (init_iso_fs() != 0)
-		panic("Cannot register iso file system");
-	if (init_devpts_fs() != 0)
-		panic("Cannot register iso file system");
-
-	/* init pci devices */
-	printf("[Kernel] PCI devices Init\n");
-	init_pci();
-
-	/* init ata devices */
-	printf("[Kernel] ATA devices Init\n");
-	if (init_ata())
-		printf("[Kernel] ATA devices Init error\n");
-
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
 	if (do_mount_root(ROOT_DEV, ROOT_DEV_NAME) != 0)
 		panic("Cannot mount root file system");
-
-	/* init keyboard */
-	printf("[Kernel] Keyboard Init\n");
-	init_keyboard();
-
-	/* init mouse */
-	printf("[Kernel] Mouse Init\n");
-	if (init_mouse() != 0)
-		printf("[Kernel] Cannot init mouse\n");
-
-	/* init realtek 8139 device */
-	printf("[Kernel] Realtek 8139 card Init\n");
-	if (init_rtl8139(default_ip_address, default_ip_netmask, default_ip_route) != 0)
-		printf("[Kernel] Realtek 8139 card Init error\n");
-
-	/* init ttys */
-	printf("[Kernel] Ttys Init\n");
-	if (init_tty(tag_fb))
-		panic("Cannot init ttys");
-
-	/* init direct frame buffer */
-	printf("[Kernel] Direct frame buffer Init\n");
-	if (init_framebuffer_direct(tag_fb))
-		panic("Cannot init direct frame buffer");
 
 	/* spawn init process */
 	if (spawn_init() != 0)
@@ -219,14 +171,58 @@ int kmain(unsigned long magic, unsigned long addr)
 	printf("[Kernel] System calls Init\n");
 	init_syscall();
 
+	/* init pci devices */
+	printf("[Kernel] PCI devices Init\n");
+	init_pci();
+
+	/* init keyboard */
+	printf("[Kernel] Keyboard Init\n");
+	init_keyboard();
+
+	/* init mouse */
+	printf("[Kernel] Mouse Init\n");
+	if (init_mouse() != 0)
+		printf("[Kernel] Cannot init mouse\n");
+
+	/* init realtek 8139 device */
+	printf("[Kernel] Realtek 8139 card Init\n");
+	if (init_rtl8139(default_ip_address, default_ip_netmask, default_ip_route) != 0)
+		printf("[Kernel] Realtek 8139 card Init error\n");
+
+	/* init ttys */
+	printf("[Kernel] Ttys Init\n");
+	if (init_tty(tag_fb))
+		panic("Cannot init ttys");
+
+	/* init direct frame buffer */
+	printf("[Kernel] Direct frame buffer Init\n");
+	if (init_framebuffer_direct(tag_fb))
+		panic("Cannot init direct frame buffer");
+
+	/* init ata devices */
+	printf("[Kernel] ATA devices Init\n");
+	if (init_ata())
+		printf("[Kernel] ATA devices Init error\n");
+
+	/* register filesystems */
+	printf("[Kernel] Register file systems\n");
+	if (init_minix_fs() != 0)
+		panic("Cannot register minix file system");
+	if (init_ext2_fs() != 0)
+		panic("Cannot register ext2 file system");
+	if (init_proc_fs() != 0)
+		panic("Cannot register proc file system");
+	if (init_tmp_fs() != 0)
+		panic("Cannot register tmp file system");
+	if (init_iso_fs() != 0)
+		panic("Cannot register iso file system");
+	if (init_devpts_fs() != 0)
+		panic("Cannot register devpts file system");
+
 	/* init processes */
 	printf("[Kernel] Processes Init\n");
 	if (init_scheduler(kinit) != 0)
 		panic("Cannot init processes");
-
-	/* enable interrupts */
-	printf("[Kernel] Enable interrupts\n");
-	irq_enable();
 
 	return 0;
 }
