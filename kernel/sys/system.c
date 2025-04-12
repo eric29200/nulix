@@ -389,7 +389,7 @@ int sys_setpriority(int which, int who, int niceval)
 		if (!priority)
 			priority = 1;
 	}
-	
+
 	/* for each task */
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);

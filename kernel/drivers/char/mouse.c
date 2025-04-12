@@ -1,7 +1,6 @@
 #include <drivers/char/mouse.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
-#include <lib/ring_buffer.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <fs/fs.h>
@@ -31,7 +30,31 @@
 #define MOUSE_ENABLE_DEV	0xF4
 
 /* mouse static variables */
-static struct ring_buffer mouse_rb;
+static uint8_t queue_buf[MOUSE_BUF_SIZE];
+static int queue_head = 0;
+static int queue_tail = 0;
+static struct wait_queue *queue_wait = NULL;
+
+/*
+ * Is mouse queue empty ?
+ */
+static inline int queue_empty()
+{
+	return queue_head == queue_tail;
+}
+
+/*
+ * Get next character from queue.
+ */
+static uint8_t get_from_queue()
+{
+	uint8_t ret;
+
+	ret = queue_buf[queue_tail];
+	queue_tail = (queue_tail + 1) & (MOUSE_BUF_SIZE - 1);
+
+	return ret;
+}
 
 /*
  * Wait for mouse.
@@ -89,7 +112,7 @@ static void mouse_write_dev(int value)
  */
 static void mouse_handler(struct registers *regs)
 {
-	uint8_t value;
+	int max_head = (queue_tail - 1) & (MOUSE_BUF_SIZE - 1);
 
 	/* unused registers */
 	UNUSED(regs);
@@ -99,9 +122,14 @@ static void mouse_handler(struct registers *regs)
 		return;
 
 	/* queue data */
-	value = inb(MOUSE_PORT);
-	if (!ring_buffer_full(&mouse_rb))
-		ring_buffer_write(&mouse_rb, &value, 1);
+	queue_buf[queue_head] = inb(MOUSE_PORT);
+	if (queue_head != max_head) {
+		queue_head++;
+		queue_head &= MOUSE_BUF_SIZE - 1;
+	}
+
+	/* wake up processes */
+	wake_up(&queue_wait);
 }
 
 /*
@@ -118,21 +146,27 @@ static int mouse_open(struct file *filp)
  */
 static int mouse_read(struct file *filp, char *buf, int n)
 {
-	int ret;
+	int i;
 
-	/* maximumum size = mouse event size */
-	if (n > MOUSE_EVENT_SIZE)
-		n = MOUSE_EVENT_SIZE;
+	/* if queue is empty, wait for data */
+	if (queue_empty()) {
+		/* non blocking : return */
+		if (filp->f_flags & O_NONBLOCK)
+			return -EAGAIN;
 
-	/* check if enough characters are available */
-	if ((filp->f_flags & O_NONBLOCK) && mouse_rb.size < (size_t) n)
-		return -EAGAIN;
+		/* signal pending : return */
+		if (signal_pending(current_task))
+			return -EINTR;
 
-	/* read only one event */
-	ret = ring_buffer_read(&mouse_rb, (uint8_t *) buf, n);
+		/* wait for data */
+		sleep_on(&queue_wait);
+	}
 
-	/* no characters from ring buffer : interruption */
-	return ret ? ret : -EINTR;
+	/* read from queue */
+	for (i = 0; i < n && !queue_empty(); i++)
+		buf[i] = get_from_queue();
+
+	return i;
 }
 
 /*
@@ -157,11 +191,11 @@ static int mouse_poll(struct file *filp, struct select_table *wait)
 	UNUSED(filp);
 
 	/* check if there is some characters to read */
-	if (!ring_buffer_empty(&mouse_rb))
+	if (!queue_empty())
 		mask |= POLLIN;
 
-	/* add wait wait queue to select table */
-	select_wait(&mouse_rb.wait, wait);
+	/* add queue wait to select table */
+	select_wait(&queue_wait, wait);
 
 	return mask;
 }
@@ -171,13 +205,6 @@ static int mouse_poll(struct file *filp, struct select_table *wait)
  */
 int init_mouse()
 {
-	int ret;
-
-	/* create mouse buffer */
-	ret = ring_buffer_init(&mouse_rb, MOUSE_BUF_SIZE);
-	if (ret)
-		return ret;
-
 	/* register interrupt handler */
 	register_interrupt_handler(44, mouse_handler);
 
