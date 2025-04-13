@@ -203,7 +203,7 @@ static int mouse_poll(struct file *filp, struct select_table *wait)
 /*
  * Init mouse.
  */
-int init_mouse()
+void init_mouse()
 {
 	/* register interrupt handler */
 	register_interrupt_handler(44, mouse_handler);
@@ -226,8 +226,6 @@ int init_mouse()
 	mouse_write_dev(MOUSE_ENABLE_DEV);
 	mouse_write_cmd(MOUSE_INTS_ON);
 	mouse_poll_status_no_sleep();
-
-	return 0;
 }
 
 /*

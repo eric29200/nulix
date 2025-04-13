@@ -181,8 +181,7 @@ int kmain(unsigned long magic, unsigned long addr)
 
 	/* init mouse */
 	printf("[Kernel] Mouse Init\n");
-	if (init_mouse() != 0)
-		printf("[Kernel] Cannot init mouse\n");
+	init_mouse();
 
 	/* init realtek 8139 device */
 	printf("[Kernel] Realtek 8139 card Init\n");

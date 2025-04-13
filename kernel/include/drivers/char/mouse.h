@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-int init_mouse();
+void init_mouse();
 
 extern struct inode_operations mouse_iops;
 
