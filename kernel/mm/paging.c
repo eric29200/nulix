@@ -6,12 +6,14 @@
 #include <string.h>
 #include <stderr.h>
 
+#define PAGE_HASH_BITS			11
+#define PAGE_HASH_SIZE			(1 << PAGE_HASH_BITS)
+
 /* global pages */
 uint32_t nr_pages;
 struct page *page_table;
 static struct list_head free_pages;
 static struct list_head used_pages;
-static int page_htable_bits = 0;
 static struct htable_link **page_htable = NULL;
 
 /* page directories */
@@ -597,8 +599,8 @@ static inline uint32_t __page_hashfn(struct inode *inode, off_t offset)
 {
 #define i (((uint32_t) inode) / (sizeof(struct inode) & ~(sizeof(struct inode) - 1)))
 #define o (offset >> PAGE_SHIFT)
-#define s(x) ((x) + ((x) >> page_htable_bits))
-	return s(i + o) & ((1 << page_htable_bits) - 1);
+#define s(x) ((x) + ((x) >> PAGE_HASH_BITS))
+	return s(i + o) & (PAGE_HASH_SIZE);
 #undef i
 #undef o
 #undef s
@@ -613,7 +615,7 @@ struct page *find_page(struct inode *inode, off_t offset)
 	struct page *page;
 
 	/* try to find buffer in cache */
-	node = htable_lookup(page_htable, __page_hashfn(inode, offset), page_htable_bits);
+	node = htable_lookup(page_htable, __page_hashfn(inode, offset), PAGE_HASH_BITS);
 	while (node) {
 		page = htable_entry(node, struct page, htable);
 		if (page->inode == inode && page->offset == offset) {
@@ -639,7 +641,7 @@ void add_to_page_cache(struct page *page, struct inode *inode, off_t offset)
 
 	/* cache page */
 	htable_delete(&page->htable);
-	htable_insert(page_htable, &page->htable, __page_hashfn(inode, offset), page_htable_bits);
+	htable_insert(page_htable, &page->htable, __page_hashfn(inode, offset), PAGE_HASH_BITS);
 
 	/* add page to inode */
 	list_del(&page->list);
@@ -652,9 +654,6 @@ void add_to_page_cache(struct page *page, struct inode *inode, off_t offset)
 int init_page_cache()
 {
 	uint32_t addr, nr, i;
-
-	/* compute htable bits */
-	page_htable_bits = blksize_bits(nr_pages);
 
 	/* allocate page hash table */
 	nr = 1 + nr_pages * sizeof(struct htable_link *) / PAGE_SIZE;
