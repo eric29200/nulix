@@ -147,7 +147,7 @@ int kmain(unsigned long magic, unsigned long addr)
 
 	/* init memory */
 	printf("[Kernel] Memory Init\n");
-	init_mem((uint32_t) &kernel_end, mem_upper);
+	init_mem(mem_upper);
 
 	/* init inodes */
 	printf("[Kernel] Inodes init\n");

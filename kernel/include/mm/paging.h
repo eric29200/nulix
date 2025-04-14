@@ -54,7 +54,6 @@
 #define PAGE_ADDRESS(p)			(KPAGE_START + (p)->page * PAGE_SIZE)
 
 /* defined in paging.c */
-extern uint32_t placement_address;
 extern uint32_t nr_pages;
 extern struct page *page_table;
 extern struct page_directory *kernel_pgd;
@@ -87,7 +86,7 @@ struct page {
 	struct htable_link	htable;					/* page hash */
 };
 
-int init_paging(uint32_t start, uint32_t end);
+int init_paging(uint32_t end);
 int map_page(uint32_t address, struct page_directory *pgd, int pgprot);
 void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory *pgd);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory *pgd, int pgprot);

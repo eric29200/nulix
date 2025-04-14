@@ -5,28 +5,12 @@
 #include <string.h>
 #include <stdio.h>
 
-/* placement address (used before kernel heap is created) */
-uint32_t placement_address = 0;
-
 /*
  * Allocate memory (internal function).
  */
 static void *__kmalloc(uint32_t size, uint8_t align)
 {
-	void *ret;
-
-	/* use kernel heap */
-	if (kheap_pos) 
-		return kheap_alloc(size, align);
-
-	/* align adress on PAGE boundary */
-	if (align == 1)
-		placement_address = PAGE_ALIGN_UP(placement_address);
-
-	/* update placement_address */
-	ret = (void *) placement_address;
-	placement_address += size;
-	return ret;
+	return kheap_alloc(size, align);
 }
 
 /*
@@ -50,25 +34,21 @@ void *kmalloc_align(uint32_t size)
  */
 void kfree(void *p)
 {
-	if (kheap_pos)
-		kheap_free(p);
+	kheap_free(p);
 }
 
 /*
  * Init memory paging and kernel heap.
  */
-void init_mem(uint32_t start, uint32_t end)
+void init_mem(uint32_t end)
 {
 	int ret;
 
-	/* set placement address */
-	placement_address = start;
-
-	/* init paging */
-	ret = init_paging(start, end);
-	if (ret)
-		panic("Cannot init paging");
-
 	/* init heap */
 	kheap_init(KHEAP_START, KHEAP_SIZE);
+
+	/* init paging */
+	ret = init_paging(end);
+	if (ret)
+		panic("Cannot init paging");
 }

@@ -677,23 +677,21 @@ int init_page_cache()
 /*
  * Init paging.
  */
-int init_paging(uint32_t start, uint32_t end)
+int init_paging(uint32_t end)
 {
 	uint32_t addr, last_kernel_addr, i, *pte;
 	int ret;
 
-	/* unused start address */
-	UNUSED(start);
-
 	/* compute number of pages */
 	nr_pages = end / PAGE_SIZE;
 
-	/* allocate kernel page directory */
-	kernel_pgd = (struct page_directory *) kmalloc_align(sizeof(struct page_directory));
-	memset(kernel_pgd, 0, sizeof(struct page_directory));
-
-	/* allocate global page table after kernel heap */
+	/* allocate kernel page directory after kernel heap */
 	last_kernel_addr = KHEAP_START + KHEAP_SIZE;
+	kernel_pgd = (struct page_directory *) last_kernel_addr;
+	memset(kernel_pgd, 0, sizeof(struct page_directory));
+	last_kernel_addr += sizeof(struct page_directory);
+
+	/* allocate global page table */
 	page_table = (struct page *) last_kernel_addr;
 	memset(page_table, 0, sizeof(struct page) * nr_pages);
 	last_kernel_addr += sizeof(struct page) * nr_pages;
