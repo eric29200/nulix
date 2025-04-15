@@ -87,7 +87,6 @@ struct page {
 };
 
 int init_paging(uint32_t end);
-int map_page(uint32_t address, struct page_directory *pgd, int pgprot);
 void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory *pgd);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory *pgd, int pgprot);
 void switch_page_directory(struct page_directory *pgd);

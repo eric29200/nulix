@@ -197,42 +197,6 @@ static int set_pte(uint32_t *pte, int pgprot, struct page *page)
 }
 
 /*
- * Map a page.
- */
-int map_page(uint32_t address, struct page_directory *pgd, int pgprot)
-{
-	struct page *page;
-	uint32_t *pte;
-	int ret;
-
-	/* get page table entry */
-	pte = get_pte(address, 1, pgd);
-	if (!pte)
-		return -ENOMEM;
-
-	/* page table entry already set */
-	if (PTE_PAGE(*pte) != 0)
-		return -EPERM;
-
-	/* try to get a page */
-	page = __get_free_page();
-	if (!page)
-		return -ENOMEM;
-
-	/* set page table entry */
-	ret = set_pte(pte, pgprot, page);
-	if (ret) {
-		__free_page(page);
-		return ret;
-	}
-
-	/* flush TLB */
-	flush_tlb(address);
-
-	return 0;
-}
-
-/*
  * Remap pages to physical address.
  */
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory *pgd, int pgprot)
