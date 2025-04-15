@@ -649,6 +649,10 @@ int init_paging(uint32_t end)
 	/* compute number of pages */
 	nr_pages = end / PAGE_SIZE;
 
+	/* limit memory to 1G */
+	if (end > KPAGE_END - KPAGE_START)
+		nr_pages = (KPAGE_END - KPAGE_START) / PAGE_SIZE;
+
 	/* allocate kernel page directory after kernel heap */
 	last_kernel_addr = KHEAP_START + KHEAP_SIZE;
 	kernel_pgd = (struct page_directory *) last_kernel_addr;
@@ -688,15 +692,28 @@ int init_paging(uint32_t end)
 			return ret;
 	}
 
-	/* map physical pages to highmem */
-	for (i = 0, addr = KPAGE_START; i < nr_pages; i++, addr += PAGE_SIZE) {
+	/* map kernel pages to high memory */
+	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
 		/* make page table entry */
-		pte = get_pte(addr, 1, kernel_pgd);
+		pte = get_pte(P2V(addr), 1, kernel_pgd);
 		if (!pte)
 			return -ENOMEM;
 
 		/* set page table entry */
-		ret = set_pte(pte, V2P(addr) < last_kernel_addr ? PAGE_READONLY : PAGE_KERNEL, &page_table[i]);
+		ret = set_pte(pte, PAGE_READONLY, &page_table[i]);
+		if (ret)
+			return ret;
+	}
+
+	/* map remaining pages to highmem */
+	for (; i < nr_pages; i++, addr += PAGE_SIZE) {
+		/* make page table entry */
+		pte = get_pte(P2V(addr), 1, kernel_pgd);
+		if (!pte)
+			return -ENOMEM;
+
+		/* set page table entry */
+		ret = set_pte(pte, PAGE_KERNEL, &page_table[i]);
 		if (ret)
 			return ret;
 	}
