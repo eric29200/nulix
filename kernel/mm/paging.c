@@ -12,8 +12,8 @@
 /* global pages */
 uint32_t nr_pages;
 struct page *page_table;
-static struct list_head free_pages;
-static struct list_head used_pages;
+static LIST_HEAD(free_pages);
+static LIST_HEAD(used_pages);
 static struct htable_link **page_htable = NULL;
 
 /* page directories */
@@ -521,19 +521,17 @@ struct page_directory *clone_page_directory(struct page_directory *src)
  */
 static void free_page_table(struct page_table *pgt)
 {
-	struct page *page;
 	uint32_t page_idx;
 	int i;
 
+	/* free pages */
 	for (i = 0; i < 1024; i++) {
 		page_idx = PTE_PAGE(pgt->pages[i]);
-		if (page_idx > 0 && page_idx < nr_pages) {
-			page = &page_table[page_idx];
-			list_del(&page->list);
-			list_add(&page->list, &free_pages);
-		}
+		if (page_idx > 0 && page_idx < nr_pages)
+			__free_page(&page_table[page_idx]);
 	}
 
+	/* free page table */
 	kfree(pgt);
 }
 
@@ -638,12 +636,28 @@ int init_page_cache()
 	return 0;
 }
 
+/**
+ * @brief Map a kernel page.
+ */
+static int map_kernel_page(uint32_t page_nr, uint32_t addr, int pgprot)
+{
+	uint32_t *pte;
+
+	/* make page table entry */
+	pte = get_pte(addr, 1, kernel_pgd);
+	if (!pte)
+		return -ENOMEM;
+
+	/* set page table entry */
+	return set_pte(pte, pgprot, &page_table[page_nr]);
+}
+
 /*
  * Init paging.
  */
 int init_paging(uint32_t end)
 {
-	uint32_t addr, last_kernel_addr, i, *pte;
+	uint32_t addr, last_kernel_addr, i;
 	int ret;
 
 	/* compute number of pages */
@@ -664,56 +678,33 @@ int init_paging(uint32_t end)
 	memset(page_table, 0, sizeof(struct page) * nr_pages);
 	last_kernel_addr += sizeof(struct page) * nr_pages;
 
-	/* init pages */
-	INIT_LIST_HEAD(&free_pages);
-	INIT_LIST_HEAD(&used_pages);
-	for (i = 0; i < nr_pages; i++) {
+	/* map kernel code pages */
+	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
+		/* add page to used list */
 		page_table[i].page = i;
+		page_table[i].count = 1;
+		list_add_tail(&page_table[i].list, &used_pages);
 
-		/* add pages to used/free list */
-		if (i * PAGE_SIZE < last_kernel_addr) {
-			page_table[i].count = 1;
-			list_add_tail(&page_table[i].list, &used_pages);
-		} else {
-			list_add_tail(&page_table[i].list, &free_pages);
-		}
-	}
-
-	/* identity map kernel pages */
-	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
-		/* make page table entry */
-		pte = get_pte(addr, 1, kernel_pgd);
-		if (!pte)
-			return -ENOMEM;
-
-		/* set page table entry */
-		ret = set_pte(pte, PAGE_READONLY, &page_table[i]);
+		/* map to low memory */
+		ret = map_kernel_page(i, addr, PAGE_READONLY);
 		if (ret)
 			return ret;
-	}
 
-	/* map kernel pages to high memory */
-	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
-		/* make page table entry */
-		pte = get_pte(P2V(addr), 1, kernel_pgd);
-		if (!pte)
-			return -ENOMEM;
-
-		/* set page table entry */
-		ret = set_pte(pte, PAGE_READONLY, &page_table[i]);
+		/* map to high memory */
+		ret = map_kernel_page(i, P2V(addr), PAGE_READONLY);
 		if (ret)
 			return ret;
+
 	}
 
-	/* map remaining pages to highmem */
-	for (; i < nr_pages; i++, addr += PAGE_SIZE) {
-		/* make page table entry */
-		pte = get_pte(P2V(addr), 1, kernel_pgd);
-		if (!pte)
-			return -ENOMEM;
+	/* map kernel pages */
+	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
+		/* add page to free list */
+		page_table[i].page = i;
+		list_add_tail(&page_table[i].list, &free_pages);
 
-		/* set page table entry */
-		ret = set_pte(pte, PAGE_KERNEL, &page_table[i]);
+		/* map to high memory */
+		ret = map_kernel_page(i, P2V(addr), PAGE_KERNEL);
 		if (ret)
 			return ret;
 	}
