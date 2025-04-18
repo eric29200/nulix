@@ -251,7 +251,7 @@ static int clear_old_exec()
 		current_task->mm = mm_new;
 
 		/* switch to new page directory */
-		switch_page_directory(current_task->mm->pgd);
+		switch_pgd(current_task->mm->pgd);
 
 		/* release mapping */
 		task_release_mmap(current_task);

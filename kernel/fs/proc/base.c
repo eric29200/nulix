@@ -110,7 +110,7 @@ static int proc_cmdline_read(struct file *filp, char *buf, int count)
 		return -EINVAL;
 
 	/* switch to task's pgd */
-	switch_page_directory(task->mm->pgd);
+	switch_pgd(task->mm->pgd);
 
 	/* get arguments */
 	for (arg = task->mm->arg_start, p = tmp_buf; arg != task->mm->arg_end; arg += sizeof(char *)) {
@@ -129,7 +129,7 @@ static int proc_cmdline_read(struct file *filp, char *buf, int count)
 	}
 
 	/* switch back to current's pgd */
-	switch_page_directory(current_task->mm->pgd);
+	switch_pgd(current_task->mm->pgd);
 
 	/* file position after end */
 	len = p - tmp_buf;
@@ -179,7 +179,7 @@ static int proc_environ_read(struct file *filp, char *buf, int count)
 		return -EINVAL;
 
 	/* switch to task's pgd */
-	switch_page_directory(task->mm->pgd);
+	switch_pgd(task->mm->pgd);
 
 	/* get environs */
 	for (environ = task->mm->env_start, p = tmp_buf; environ != task->mm->env_end; environ += sizeof(char *)) {
@@ -198,7 +198,7 @@ static int proc_environ_read(struct file *filp, char *buf, int count)
 	}
 
 	/* switch back to current's pgd */
-	switch_page_directory(current_task->mm->pgd);
+	switch_pgd(current_task->mm->pgd);
 
 	/* file position after end */
 	len = p - tmp_buf;

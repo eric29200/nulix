@@ -71,7 +71,7 @@ int init_scheduler(void (*kinit_func)())
 	current_task = kinit_task;
 	tss_set_stack(0x10, current_task->kernel_stack);
 	load_tls();
-	switch_page_directory(current_task->mm->pgd);
+	switch_pgd(current_task->mm->pgd);
 	scheduler_do_switch(0, current_task->esp);
 
 	return 0;
@@ -222,7 +222,7 @@ void schedule()
 		current_task = next;
 		tss_set_stack(0x10, current_task->kernel_stack);
 		load_tls();
-		switch_page_directory(current_task->mm->pgd);
+		switch_pgd(current_task->mm->pgd);
 		scheduler_do_switch(&prev->esp, current_task->esp);
 	}
 }

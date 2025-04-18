@@ -28,7 +28,7 @@
  */
 struct mm_struct {
 	int				count;				/* reference counter */
-	struct page_directory *		pgd;				/* page directory */
+	pgd_t  *			pgd;				/* page directory */
 	uint32_t			start_text;			/* user text segment start */
 	uint32_t			end_text;			/* user text segment end */
 	uint32_t			start_brk;			/* user data segment start */

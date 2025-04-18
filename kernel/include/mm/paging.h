@@ -13,6 +13,8 @@
 #define PAGE_ALIGN_DOWN(addr)		((addr) & PAGE_MASK)
 #define PAGE_ALIGN_UP(addr)		(((addr) + PAGE_SIZE - 1) & PAGE_MASK)
 #define ALIGN_UP(addr, size)		(((addr) + size - 1) & (~(size - 1)))
+#define PTRS_PER_PTE			1024
+#define PGDIR_SHIFT			22
 
 #define PAGE_PRESENT			0x001
 #define PAGE_RW				0x002
@@ -26,6 +28,7 @@
 #define PAGE_COPY			(PAGE_PRESENT | PAGE_USER | PAGE_ACCESSED)
 #define PAGE_READONLY			(PAGE_PRESENT | PAGE_USER | PAGE_ACCESSED)
 #define PAGE_KERNEL			(PAGE_PRESENT | PAGE_RW | PAGE_DIRTY | PAGE_ACCESSED)
+#define PAGE_TABLE			(PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_ACCESSED | PAGE_DIRTY)
 
 #define __P000				PAGE_NONE
 #define __P001				PAGE_READONLY
@@ -56,25 +59,15 @@
 #define GFP_KERNEL			0
 #define GFP_USER			1
 
+/* page directory, page middle directory (= page table) and page table entry */
+typedef uint32_t pgd_t;
+typedef uint32_t pmd_t;
+typedef uint32_t pte_t;
+
 /* defined in paging.c */
 extern uint32_t nr_pages;
 extern struct page *page_array;
-extern struct page_directory *kernel_pgd;
-
-/*
- * Page directory structure.
- */
-struct page_directory {
-	struct page_table * 	tables[1024];				/* pointers to page tables */
-	uint32_t		tables_physical[1024];			/* pointers to page tables (physical addresses) */
-};
-
-/*
- * Page table structure.
- */
-struct page_table {
-	uint32_t 		pages[1024];				/* pages */
-};
+extern pgd_t *pgd_kernel;
 
 /*
  * Page structure.
@@ -91,17 +84,42 @@ struct page {
 };
 
 int init_paging(uint32_t end);
-void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_directory *pgd);
-int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, struct page_directory *pgd, int pgprot);
-void switch_page_directory(struct page_directory *pgd);
+void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd);
+int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot);
+void switch_pgd(pgd_t *pgd);
 void page_fault_handler(struct registers *regs);
-struct page_directory *clone_page_directory(struct page_directory *pgd);
-void free_page_directory(struct page_directory *pgd);
+pgd_t *clone_pgd(pgd_t *pgd);
+void free_pgd(pgd_t *pgd);
 
 /* page cache */
 struct page *find_page(struct inode *inode, off_t offset);
 void add_to_page_cache(struct page *page, struct inode *inode, off_t offset);
 void update_vm_cache(struct inode *inode, const char *buf, size_t pos, size_t count);
 void truncate_inode_pages(struct inode *inode, off_t start);
+
+/*
+ * Get page directory offset for an address.
+ */
+static inline pgd_t *pgd_offset(pgd_t *pgd, uint32_t address)
+{
+	return pgd + (address >> PGDIR_SHIFT);
+}
+
+/*
+ * Get page table offset for an address.
+ */
+static inline pmd_t *pmd_offset(pgd_t *pgd)
+{
+	return (pmd_t *) pgd;
+}
+
+/*
+ * Get page table entry.
+ */
+static inline uint32_t pmd_page(pmd_t pmd)
+{
+	return pmd & PAGE_MASK;
+}
+
 
 #endif

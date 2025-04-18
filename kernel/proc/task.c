@@ -160,7 +160,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	INIT_LIST_HEAD(&mm_new->vm_list);
 
 	/* clone page directory */
-	mm_new->pgd = mm ? clone_page_directory(mm->pgd) : kernel_pgd;
+	mm_new->pgd = mm ? clone_pgd(mm->pgd) : pgd_kernel;
 	if (!mm_new->pgd)
 		goto err;
 
@@ -201,8 +201,8 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 
 	return mm_new;
 err:
-	if (mm_new->pgd && mm_new->pgd != kernel_pgd)
-		free_page_directory(mm_new->pgd);
+	if (mm_new->pgd && mm_new->pgd != pgd_kernel)
+		free_pgd(mm_new->pgd);
 	task_exit_mmap(mm_new);
 	kfree(mm_new);
 	return NULL;
@@ -426,8 +426,8 @@ static void task_exit_mm(struct task *task)
 			task_exit_mmap(mm);
 
 			/* free page directory */
-			if (mm->pgd && mm->pgd != kernel_pgd)
-				free_page_directory(mm->pgd);
+			if (mm->pgd && mm->pgd != pgd_kernel)
+				free_pgd(mm->pgd);
 
 			kfree(mm);
 		}

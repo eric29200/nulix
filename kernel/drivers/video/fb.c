@@ -68,7 +68,7 @@ int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *t
 		return -ENOMEM;
 
 	/* identity map frame buffer */
-	ret = remap_page_range(fb->addr, fb->addr, fb->real_height * fb->pitch, kernel_pgd, PAGE_SHARED);
+	ret = remap_page_range(fb->addr, fb->addr, fb->real_height * fb->pitch, pgd_kernel, PAGE_SHARED);
 	if (ret)
 		goto err;
 
