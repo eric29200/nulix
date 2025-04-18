@@ -55,7 +55,7 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 	/* no share : copy to new page and keep old page in offset */
 	if (page && !(vma->vm_flags & VM_SHARED)) {
 		/* get a new page */
-		new_page = __get_free_page();
+		new_page = __get_free_page(GFP_KERNEL);
 		if (new_page)
 			memcpy((void *) PAGE_ADDRESS(new_page), (void *) PAGE_ADDRESS(page), PAGE_SIZE);
 

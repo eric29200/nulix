@@ -166,7 +166,7 @@ int tmpfs_inode_grow_size(struct inode *inode, size_t size)
 	INIT_LIST_HEAD(&pages_list);
 	for (i = 0; i < nb_pages; i++) {
 		/* get a free page */
-		page = __get_free_page();
+		page = __get_free_page(GFP_KERNEL);
 		if (!page)
 			goto err;
 

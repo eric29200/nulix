@@ -2,27 +2,39 @@
 #include <fs/fs.h>
 
 /* pages list */
-static LIST_HEAD(free_pages);
-static LIST_HEAD(used_pages);
+static LIST_HEAD(free_kernel_pages);
+static LIST_HEAD(used_kernel_pages);
+static LIST_HEAD(free_user_pages);
+static LIST_HEAD(used_user_pages);
 
 /*
  * Get a free page.
  */
-struct page *__get_free_page()
+struct page *__get_free_page(int priority)
 {
+	struct list_head *free_pages;
 	struct page *page;
 
-	/* try to get a page */
-	if (list_empty(&free_pages)) {
-		/* no more pages */
+	/* choose free list : kernel or user */
+	if (priority == GFP_KERNEL)
+		free_pages = &free_kernel_pages;
+	else
+		free_pages = &free_user_pages;
+
+	/* no more free pages : reclaim pages */
+	if (list_empty(free_pages))
 		reclaim_pages();
 
-		if (list_empty(&free_pages))
-			return NULL;
-	}
+	/* no user pages : get from kernel */
+	if (list_empty(free_pages) && free_pages == &free_user_pages)
+		free_pages = &free_kernel_pages;
+
+	/* no way to get a page */
+	if (list_empty(free_pages))
+		return NULL;
 
 	/* get first free page */
-	page = list_first_entry(&free_pages, struct page, list);
+	page = list_first_entry(free_pages, struct page, list);
 	page->inode = NULL;
 	page->offset = 0;
 	page->buffers = NULL;
@@ -30,7 +42,10 @@ struct page *__get_free_page()
 
 	/* update lists */
 	list_del(&page->list);
-	list_add(&page->list, &used_pages);
+	if (page->kernel)
+		list_add(&page->list, &used_kernel_pages);
+	else
+		list_add(&page->list, &used_user_pages);
 
 	return page;
 }
@@ -47,7 +62,11 @@ void __free_page(struct page *page)
 	if (!page->count) {
 		page->inode = NULL;
 		list_del(&page->list);
-		list_add(&page->list, &free_pages);
+
+		if (page->kernel)
+			list_add(&page->list, &free_kernel_pages);
+		else
+			list_add(&page->list, &free_user_pages);
 	}
 }
 
@@ -59,7 +78,7 @@ void *get_free_page()
 	struct page *page;
 
 	/* get a free page */
-	page = __get_free_page();
+	page = __get_free_page(GFP_KERNEL);
 	if (!page)
 		return NULL;
 
@@ -123,11 +142,19 @@ void reclaim_pages()
  */
 void init_page_alloc()
 {
-	uint32_t i;
+	uint32_t addr, i;
 
-	for (i = 0; i < nr_pages; i++)
+	/* add kernel pages (from KPAGE_START to KPAGE_END) */
+	for (i = 0, addr = KPAGE_START; i < nr_pages && addr < KPAGE_END; i++, addr += PAGE_SIZE)
 		if (page_table[i].count)
-			list_add_tail(&page_table[i].list, &used_pages);
+			list_add_tail(&page_table[i].list, &used_kernel_pages);
 		else
-			list_add_tail(&page_table[i].list, &free_pages);
+			list_add_tail(&page_table[i].list, &free_kernel_pages);
+
+	/* add user pages (after KPAGE_END) */
+	for (; i < nr_pages; i++)
+		if (page_table[i].count)
+			list_add_tail(&page_table[i].list, &used_user_pages);
+		else
+			list_add_tail(&page_table[i].list, &free_user_pages);
 }

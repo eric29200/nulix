@@ -44,7 +44,7 @@ void init_page_alloc();
 void *kmalloc(uint32_t size);
 void *kmalloc_align(uint32_t size);
 void kfree(void *p);
-struct page *__get_free_page();
+struct page *__get_free_page(int priority);
 void *get_free_page();
 void __free_page(struct page *page);
 void free_page(void *address);

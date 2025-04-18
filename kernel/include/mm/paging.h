@@ -53,6 +53,9 @@
 #define MAP_NR(addr)			(V2P(addr) >> PAGE_SHIFT)
 #define PAGE_ADDRESS(p)			(KPAGE_START + (p)->page * PAGE_SIZE)
 
+#define GFP_KERNEL			0
+#define GFP_USER			1
+
 /* defined in paging.c */
 extern uint32_t nr_pages;
 extern struct page *page_table;
@@ -79,6 +82,7 @@ struct page_table {
 struct page {
 	uint32_t		page;					/* page number */
 	int 			count;					/* reference count */
+	uint8_t			kernel;					/* mapped in kernel ? */
 	struct inode *		inode;					/* inode */
 	off_t			offset;					/* offset in inode */
 	struct buffer_head *	buffers;				/* buffers of this page */

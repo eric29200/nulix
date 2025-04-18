@@ -143,23 +143,23 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, struct page_direc
 /*
  * Anonymous page mapping.
  */
-static int do_anonymous_page(struct vm_area *vma, uint32_t *pte)
+static int do_anonymous_page(struct vm_area *vma, uint32_t *pte, void *address)
 {
 	struct page *page;
 	int ret;
 
 	/* try to get a page */
-	page = __get_free_page();
+	page = __get_free_page(GFP_USER);
 	if (!page)
 		return -ENOMEM;
-
-	/* memzero page */
-	memset((void *) PAGE_ADDRESS(page), 0, PAGE_SIZE);
 
 	/* set page table entry */
 	ret = set_pte(pte, vma->vm_page_prot, page);
 	if (ret)
 		goto err;
+
+	/* memzero page */
+	memset(address, 0, PAGE_SIZE);
 
 	return 0;
 err:
@@ -186,7 +186,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address)
 
 	/* anonymous page mapping */
 	if (!vma->vm_ops || !vma->vm_ops->nopage)
-		return do_anonymous_page(vma, pte);
+		return do_anonymous_page(vma, pte, (void *) PAGE_ALIGN_DOWN(address));
 
 	/* specific mapping */
 	page = vma->vm_ops->nopage(vma, address);
@@ -337,7 +337,7 @@ static struct page_table *clone_page_table(struct page_table *src)
 			continue;
 
 		/* try to get a page */
-		page = __get_free_page();
+		page = __get_free_page(GFP_USER);
 		if (!page) {
 			kfree(pgt);
 			return NULL;
@@ -462,10 +462,6 @@ int init_paging(uint32_t end)
 	/* compute number of pages */
 	nr_pages = end / PAGE_SIZE;
 
-	/* limit memory to 1G */
-	if (end > KPAGE_END - KPAGE_START)
-		nr_pages = (KPAGE_END - KPAGE_START) / PAGE_SIZE;
-
 	/* allocate kernel page directory after kernel heap */
 	last_kernel_addr = KHEAP_START + KHEAP_SIZE;
 	kernel_pgd = (struct page_directory *) last_kernel_addr;
@@ -477,11 +473,15 @@ int init_paging(uint32_t end)
 	memset(page_table, 0, sizeof(struct page) * nr_pages);
 	last_kernel_addr += sizeof(struct page) * nr_pages;
 
+	/* init pages */
+	for (i = 0; i < nr_pages; i++)
+		page_table[i].page = i;
+
 	/* map kernel code pages */
 	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
-		/* add page to used list */
-		page_table[i].page = i;
+		/* mark page used */
 		page_table[i].count = 1;
+		page_table[i].kernel = 1;
 
 		/* map to low memory */
 		ret = map_kernel_page(i, addr, PAGE_READONLY);
@@ -494,12 +494,11 @@ int init_paging(uint32_t end)
 			return ret;
 	}
 
-	/* map kernel pages */
+	/* map kernel pages to high memory */
 	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
-		/* add page to free list */
-		page_table[i].page = i;
+		/* mark kernel page */
+		page_table[i].kernel = 1;
 
-		/* map to high memory */
 		ret = map_kernel_page(i, P2V(addr), PAGE_KERNEL);
 		if (ret)
 			return ret;
