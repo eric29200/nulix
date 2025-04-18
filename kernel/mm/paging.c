@@ -492,7 +492,6 @@ int init_paging(uint32_t end)
 		ret = map_kernel_page(i, P2V(addr), PAGE_READONLY);
 		if (ret)
 			return ret;
-
 	}
 
 	/* map kernel pages */

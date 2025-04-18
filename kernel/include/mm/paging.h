@@ -62,8 +62,8 @@ extern struct page_directory *kernel_pgd;
  * Page directory structure.
  */
 struct page_directory {
-	struct page_table * 	tables[1024];			/* pointers to page tables */
-	uint32_t		tables_physical[1024];		/* pointers to page tables (physical addresses) */
+	struct page_table * 	tables[1024];				/* pointers to page tables */
+	uint32_t		tables_physical[1024];			/* pointers to page tables (physical addresses) */
 };
 
 /*
