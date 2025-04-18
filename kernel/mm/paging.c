@@ -6,15 +6,9 @@
 #include <string.h>
 #include <stderr.h>
 
-#define PAGE_HASH_BITS			11
-#define PAGE_HASH_SIZE			(1 << PAGE_HASH_BITS)
-
 /* global pages */
 uint32_t nr_pages;
 struct page *page_table;
-static LIST_HEAD(free_pages);
-static LIST_HEAD(used_pages);
-static struct htable_link **page_htable = NULL;
 
 /* page directories */
 struct page_directory *kernel_pgd = NULL;
@@ -28,119 +22,6 @@ extern void copy_page_physical(uint32_t src, uint32_t dst);
 static inline void flush_tlb(uint32_t address)
 {
 	__asm__ __volatile__("invlpg (%0)" :: "r" (address) : "memory");
-}
-
-/*
- * Get a free page.
- */
-struct page *__get_free_page()
-{
-	struct page *page;
-
-	/* try to get a page */
-	if (list_empty(&free_pages)) {
-		/* no more pages */
-		reclaim_pages();
-
-		if (list_empty(&free_pages))
-			return NULL;
-	}
-
-	/* get first free page */
-	page = list_first_entry(&free_pages, struct page, list);
-	page->inode = NULL;
-	page->offset = 0;
-	page->buffers = NULL;
-	page->count = 1;
-
-	/* update lists */
-	list_del(&page->list);
-	list_add(&page->list, &used_pages);
-
-	return page;
-}
-
-/*
- * Free a page.
- */
-void __free_page(struct page *page)
-{
-	if (!page)
-		return;
-
-	page->count--;
-	if (!page->count) {
-		page->inode = NULL;
-		list_del(&page->list);
-		list_add(&page->list, &free_pages);
-	}
-}
-
-/*
- * Get a free page.
- */
-void *get_free_page()
-{
-	struct page *page;
-
-	/* get a free page */
-	page = __get_free_page();
-	if (!page)
-		return NULL;
-
-	/* make virtual address */
-	return (void *) P2V(page->page * PAGE_SIZE);
-}
-
-/*
- * Free a page.
- */
-void free_page(void *address)
-{
-	uint32_t page_idx;
-
-	/* get page index */
-	page_idx = MAP_NR((uint32_t) address);
-
-	/* free page */
-	if (page_idx && page_idx < nr_pages)
-		__free_page(&page_table[page_idx]);
-}
-
-/*
- * Reclaim pages, when memory is low.
- */
-void reclaim_pages()
-{
-	struct page *page;
-	uint32_t i;
-
-	for (i = 0; i < nr_pages; i++) {
-		page = &page_table[i];
-
-		/* skip used pages */
-		if (page->count > 1)
-			continue;
-
-		/* skip shared memory pages */
-		if (page->inode && page->inode->i_shm == 1)
-			continue;
-
-		/* is it a buffer cached page ? */
-		if (page->buffers) {
-			try_to_free_buffer(page->buffers);
-			continue;
-		}
-
-		/* is it a page cached page ? */
-		if (page->inode) {
-			/* remove from page cache */
-			htable_delete(&page->htable);
-
-			/* free page */
-			__free_page(page);
-		}
-	}
 }
 
 /*
@@ -554,88 +435,6 @@ void free_page_directory(struct page_directory *pgd)
 	kfree(pgd);
 }
 
-/*
- * Hash an inode/offset.
- */
-static inline uint32_t __page_hashfn(struct inode *inode, off_t offset)
-{
-#define i (((uint32_t) inode) / (sizeof(struct inode) & ~(sizeof(struct inode) - 1)))
-#define o (offset >> PAGE_SHIFT)
-#define s(x) ((x) + ((x) >> PAGE_HASH_BITS))
-	return s(i + o) & (PAGE_HASH_SIZE);
-#undef i
-#undef o
-#undef s
-}
-
-/*
- * Find a page in hash table.
- */
-struct page *find_page(struct inode *inode, off_t offset)
-{
-	struct htable_link *node;
-	struct page *page;
-
-	/* try to find buffer in cache */
-	node = htable_lookup(page_htable, __page_hashfn(inode, offset), PAGE_HASH_BITS);
-	while (node) {
-		page = htable_entry(node, struct page, htable);
-		if (page->inode == inode && page->offset == offset) {
-			page->count++;
-			return page;
-		}
-
-		node = node->next;
-	}
-
-	return NULL;
-}
-
-/*
- * Cache a page.
- */
-void add_to_page_cache(struct page *page, struct inode *inode, off_t offset)
-{
-	/* set page */
-	page->count++;
-	page->inode = inode;
-	page->offset = offset;
-
-	/* cache page */
-	htable_delete(&page->htable);
-	htable_insert(page_htable, &page->htable, __page_hashfn(inode, offset), PAGE_HASH_BITS);
-
-	/* add page to inode */
-	list_del(&page->list);
-	list_add(&page->list, &inode->i_pages);
-}
-
-/*
- * Init page cache.
- */
-int init_page_cache()
-{
-	uint32_t addr, nr, i;
-
-	/* allocate page hash table */
-	nr = 1 + nr_pages * sizeof(struct htable_link *) / PAGE_SIZE;
-	for (i = 0; i < nr; i++) {
-		/* get a free page */
-		addr = (uint32_t) get_free_page();
-		if (!addr)
-			return -ENOMEM;
-
-		/* reset page */
-		memset((void *) addr, 0, PAGE_SIZE);
-
-		/* set buffer hash table */
-		if (i == 0)
-			page_htable = (struct htable_link **) addr;
-	}
-
-	return 0;
-}
-
 /**
  * @brief Map a kernel page.
  */
@@ -683,7 +482,6 @@ int init_paging(uint32_t end)
 		/* add page to used list */
 		page_table[i].page = i;
 		page_table[i].count = 1;
-		list_add_tail(&page_table[i].list, &used_pages);
 
 		/* map to low memory */
 		ret = map_kernel_page(i, addr, PAGE_READONLY);
@@ -701,7 +499,6 @@ int init_paging(uint32_t end)
 	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
 		/* add page to free list */
 		page_table[i].page = i;
-		list_add_tail(&page_table[i].list, &free_pages);
 
 		/* map to high memory */
 		ret = map_kernel_page(i, P2V(addr), PAGE_KERNEL);
@@ -714,6 +511,9 @@ int init_paging(uint32_t end)
 
 	/* enable paging */
 	switch_page_directory(kernel_pgd);
+
+	/* init page allocation */
+	init_page_alloc();
 
 	/* init page cache */
 	return init_page_cache();

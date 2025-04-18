@@ -39,6 +39,8 @@ struct vm_operations {
 };
 
 void init_mem(uint32_t end);
+int init_page_cache();
+void init_page_alloc();
 void *kmalloc(uint32_t size);
 void *kmalloc_align(uint32_t size);
 void kfree(void *p);
