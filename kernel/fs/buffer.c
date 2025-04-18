@@ -9,6 +9,7 @@
 #include <time.h>
 #include <dev.h>
 
+#define NR_BUFFERS_MAX			65521
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
 
@@ -447,6 +448,8 @@ int binit()
 
 	/* number of buffers = number of pages / 4 */
 	nr_buffer = 1 << blksize_bits(nr_pages / 4);
+	if (nr_buffer >= NR_BUFFERS_MAX)
+		nr_buffer = NR_BUFFERS_MAX;
 	buffer_htable_bits = blksize_bits(nr_buffer);
 
 	/* allocate buffers */
