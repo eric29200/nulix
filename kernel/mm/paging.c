@@ -8,7 +8,7 @@
 
 /* global pages */
 uint32_t nr_pages;
-struct page *page_table;
+struct page *page_array;
 
 /* page directories */
 struct page_directory *kernel_pgd = NULL;
@@ -119,7 +119,7 @@ static void unmap_page(uint32_t address, struct page_directory *pgd)
 	/* free page */
 	page_idx = PTE_PAGE(*pte);
 	if (page_idx && page_idx < nr_pages)
-		__free_page(&page_table[page_idx]);
+		__free_page(&page_array[page_idx]);
 
 	/* reset page table entry */
 	*pte = 0;
@@ -216,7 +216,7 @@ static int do_wp_page(struct task *task, uint32_t address)
 	page_idx = PTE_PAGE(*pte);
 	if (page_idx <= 0 || page_idx >= nr_pages)
 		return -EINVAL;
-	page = &page_table[page_idx];
+	page = &page_array[page_idx];
 
 	/* make page table entry writable */
 	*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
@@ -409,7 +409,7 @@ static void free_page_table(struct page_table *pgt)
 	for (i = 0; i < 1024; i++) {
 		page_idx = PTE_PAGE(pgt->pages[i]);
 		if (page_idx > 0 && page_idx < nr_pages)
-			__free_page(&page_table[page_idx]);
+			__free_page(&page_array[page_idx]);
 	}
 
 	/* free page table */
@@ -448,7 +448,7 @@ static int map_kernel_page(uint32_t page_nr, uint32_t addr, int pgprot)
 		return -ENOMEM;
 
 	/* set page table entry */
-	return set_pte(pte, pgprot, &page_table[page_nr]);
+	return set_pte(pte, pgprot, &page_array[page_nr]);
 }
 
 /*
@@ -468,20 +468,20 @@ int init_paging(uint32_t end)
 	memset(kernel_pgd, 0, sizeof(struct page_directory));
 	last_kernel_addr += sizeof(struct page_directory);
 
-	/* allocate global page table */
-	page_table = (struct page *) last_kernel_addr;
-	memset(page_table, 0, sizeof(struct page) * nr_pages);
+	/* allocate global pages array */
+	page_array = (struct page *) last_kernel_addr;
+	memset(page_array, 0, sizeof(struct page) * nr_pages);
 	last_kernel_addr += sizeof(struct page) * nr_pages;
 
 	/* init pages */
 	for (i = 0; i < nr_pages; i++)
-		page_table[i].page = i;
+		page_array[i].page = i;
 
 	/* map kernel code pages */
 	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
 		/* mark page used */
-		page_table[i].count = 1;
-		page_table[i].kernel = 1;
+		page_array[i].count = 1;
+		page_array[i].kernel = 1;
 
 		/* map to low memory */
 		ret = map_kernel_page(i, addr, PAGE_READONLY);
@@ -497,7 +497,7 @@ int init_paging(uint32_t end)
 	/* map kernel pages to high memory */
 	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
 		/* mark kernel page */
-		page_table[i].kernel = 1;
+		page_array[i].kernel = 1;
 
 		ret = map_kernel_page(i, P2V(addr), PAGE_KERNEL);
 		if (ret)

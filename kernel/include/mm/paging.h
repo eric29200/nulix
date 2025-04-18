@@ -58,7 +58,7 @@
 
 /* defined in paging.c */
 extern uint32_t nr_pages;
-extern struct page *page_table;
+extern struct page *page_array;
 extern struct page_directory *kernel_pgd;
 
 /*

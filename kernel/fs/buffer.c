@@ -164,7 +164,7 @@ static int refill_freelist(size_t blocksize)
 	} while (tmp != bh);
 
 	/* set page buffers */
-	page_table[MAP_NR((uint32_t) page)].buffers = bh;
+	page_array[MAP_NR((uint32_t) page)].buffers = bh;
 
 	return 0;
 }

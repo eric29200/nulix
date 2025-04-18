@@ -98,7 +98,7 @@ void free_page(void *address)
 
 	/* free page */
 	if (page_idx && page_idx < nr_pages)
-		__free_page(&page_table[page_idx]);
+		__free_page(&page_array[page_idx]);
 }
 
 /*
@@ -110,7 +110,7 @@ void reclaim_pages()
 	uint32_t i;
 
 	for (i = 0; i < nr_pages; i++) {
-		page = &page_table[i];
+		page = &page_array[i];
 
 		/* skip used pages */
 		if (page->count > 1)
@@ -146,15 +146,15 @@ void init_page_alloc()
 
 	/* add kernel pages (from KPAGE_START to KPAGE_END) */
 	for (i = 0, addr = KPAGE_START; i < nr_pages && addr < KPAGE_END; i++, addr += PAGE_SIZE)
-		if (page_table[i].count)
-			list_add_tail(&page_table[i].list, &used_kernel_pages);
+		if (page_array[i].count)
+			list_add_tail(&page_array[i].list, &used_kernel_pages);
 		else
-			list_add_tail(&page_table[i].list, &free_kernel_pages);
+			list_add_tail(&page_array[i].list, &free_kernel_pages);
 
 	/* add user pages (after KPAGE_END) */
 	for (; i < nr_pages; i++)
-		if (page_table[i].count)
-			list_add_tail(&page_table[i].list, &used_user_pages);
+		if (page_array[i].count)
+			list_add_tail(&page_array[i].list, &used_user_pages);
 		else
-			list_add_tail(&page_table[i].list, &free_user_pages);
+			list_add_tail(&page_array[i].list, &free_user_pages);
 }

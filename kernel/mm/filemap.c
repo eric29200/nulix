@@ -23,7 +23,7 @@ static struct page *fill_page(struct inode *inode, off_t offset)
 		return NULL;
 
 	/* get page and add it to cache */
-	page = &page_table[MAP_NR(new_page)];
+	page = &page_array[MAP_NR(new_page)];
 	add_to_page_cache(page, inode, offset);
 
 	/* read page */
