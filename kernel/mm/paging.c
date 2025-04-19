@@ -495,20 +495,9 @@ int init_paging(uint32_t end)
 	memset(pgd_kernel, 0, PAGE_SIZE);
 	last_kernel_addr += PAGE_SIZE;
 
-	/* allocate global pages array */
-	page_array = (struct page *) last_kernel_addr;
-	memset(page_array, 0, sizeof(struct page) * nr_pages);
-	last_kernel_addr += sizeof(struct page) * nr_pages;
-
-	/* map kernel code pages */
+	/* map kernel code pages to low memory */
 	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
-		/* map to low memory */
 		ret = map_kernel_page(i, addr, PAGE_READONLY);
-		if (ret)
-			return ret;
-
-		/* map to high memory */
-		ret = map_kernel_page(i, P2V(addr), PAGE_READONLY);
 		if (ret)
 			return ret;
 	}

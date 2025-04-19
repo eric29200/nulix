@@ -143,7 +143,12 @@ void reclaim_pages()
  */
 void init_page_alloc(uint32_t last_kernel_addr)
 {
-	uint32_t addr, i;
+	uint32_t page_array_end, addr, i;
+
+	/* allocate global pages array */
+	page_array = (struct page *) (KPAGE_START + PAGE_ALIGN_UP(last_kernel_addr));
+	memset(page_array, 0, sizeof(struct page) * nr_pages);
+	page_array_end = ((uint32_t) page_array) + sizeof(struct page) * nr_pages;
 
 	/* create page array */
 	for (i = 0, addr = 0; i < nr_pages; i++, addr += PAGE_SIZE) {
@@ -151,6 +156,14 @@ void init_page_alloc(uint32_t last_kernel_addr)
 
 		/* kernel code page */
 		if (addr < last_kernel_addr) {
+			page_array[i].count = 1;
+			page_array[i].kernel = 1;
+			list_add_tail(&page_array[i].list, &used_kernel_pages);
+			continue;
+		}
+
+		/* kernel used page (by page array) */
+		if (P2V(addr) < page_array_end) {
 			page_array[i].count = 1;
 			page_array[i].kernel = 1;
 			list_add_tail(&page_array[i].list, &used_kernel_pages);
