@@ -40,15 +40,15 @@ void kfree(void *p)
 /*
  * Init memory paging and kernel heap.
  */
-void init_mem(uint32_t end)
+void init_mem(uint32_t start, uint32_t end)
 {
 	int ret;
 
-	/* init heap */
-	kheap_init(KHEAP_START, KHEAP_SIZE);
-
 	/* init paging */
-	ret = init_paging(end);
+	ret = init_paging(start, end);
 	if (ret)
 		panic("Cannot init paging");
+
+	/* init heap */
+	kheap_init(KHEAP_START, KHEAP_SIZE);
 }

@@ -50,9 +50,6 @@ static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
 		/* clear page table entries */
 		memset((void *) pmd_page(*pmd), 0, PAGE_SIZE);
 
-		/* flush tlb */
-		flush_tlb(address);
-
 		return (pte_t *) pmd_page(*pmd) + page_nr;
 	}
 
@@ -456,57 +453,67 @@ void free_pgd(pgd_t *pgd)
 	kfree(pgd);
 }
 
-/**
- * @brief Map a kernel page.
- */
-static int map_kernel_page(uint32_t page_nr, uint32_t addr, int pgprot)
-{
-	pte_t *pte;
-
-	/* make page table entry */
-	pte = get_pte(addr, 1, pgd_kernel);
-	if (!pte)
-		return -ENOMEM;
-
-	/* page table entry already set */
-	if (PTE_PAGE(*pte) != 0)
-		return -EPERM;
-
-	/* set page table entry */
-	*pte = MK_PTE(page_nr, pgprot);
-
-	return 0;
-}
-
 /*
  * Init paging.
  */
-int init_paging(uint32_t end)
+int init_paging(uint32_t start, uint32_t end)
 {
-	uint32_t addr, last_kernel_addr, i;
-	int ret;
+	uint32_t addr, i;
+	pmd_t *pmd;
+	pte_t *pte;
 
 	/* compute number of pages */
 	nr_pages = end / PAGE_SIZE;
 
-	/* allocate kernel page directory after kernel heap */
-	last_kernel_addr = KHEAP_START + KHEAP_SIZE;
-	pgd_kernel = (pgd_t *) last_kernel_addr;
+	/* allocate kernel page directory after kernel code */
+	pgd_kernel = (pgd_t *) PAGE_ALIGN_UP(start);
 	memset(pgd_kernel, 0, PAGE_SIZE);
-	last_kernel_addr += PAGE_SIZE;
+	start = (uint32_t) pgd_kernel + PAGE_SIZE;
 
 	/* map kernel code pages to low memory */
-	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
-		ret = map_kernel_page(i, addr, PAGE_READONLY);
-		if (ret)
-			return ret;
+	pmd = pmd_offset(pgd_kernel);
+	for (addr = 0; addr < KHEAP_START + KHEAP_SIZE; ) {
+		/* allocate page table */
+		*pmd = (pmd_t) start | PAGE_TABLE;
+		start += PAGE_SIZE;
+
+		/* set page table entries */
+		for (i = 0; i < PTRS_PER_PTE; i++) {
+			pte = (pte_t *) pmd_page(*pmd) + i;
+
+			if (addr < KHEAP_START + KHEAP_SIZE)
+				*pte = MK_PTE(addr / PAGE_SIZE, PAGE_READONLY);
+			else
+				*pte = 0;
+
+			addr += PAGE_SIZE;
+		}
+
+		/* go to next page table */
+		pmd++;
 	}
 
 	/* map kernel pages to high memory */
-	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
-		ret = map_kernel_page(i, P2V(addr), PAGE_KERNEL);
-		if (ret)
-			return ret;
+	pmd = pmd_offset(pgd_kernel) + 768;
+	for (addr = 0; addr < end && addr < V2P(KPAGE_END);) {
+		/* allocate page table */
+		*pmd = (pmd_t) start | PAGE_TABLE;
+		start += PAGE_SIZE;
+
+		/* set page table entries */
+		for (i = 0; i < PTRS_PER_PTE; i++) {
+			pte = (pte_t *) pmd_page(*pmd) + i;
+
+			if (addr < end && addr < V2P(KPAGE_END))
+				*pte = MK_PTE(addr / PAGE_SIZE, PAGE_KERNEL);
+			else
+				*pte = 0;
+
+			addr += PAGE_SIZE;
+		}
+
+		/* go to next page table */
+		pmd++;
 	}
 
 	/* register page fault handler */
@@ -516,7 +523,7 @@ int init_paging(uint32_t end)
 	switch_pgd(pgd_kernel);
 
 	/* init page allocation */
-	init_page_alloc(last_kernel_addr);
+	init_page_alloc(KHEAP_START + KHEAP_SIZE);
 
 	/* init page cache */
 	return init_page_cache();

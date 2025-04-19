@@ -83,7 +83,7 @@ struct page {
 	struct htable_link	htable;					/* page hash */
 };
 
-int init_paging(uint32_t end);
+int init_paging(uint32_t start, uint32_t end);
 void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot);
 void switch_pgd(pgd_t *pgd);

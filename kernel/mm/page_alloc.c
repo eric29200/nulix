@@ -163,7 +163,7 @@ void init_page_alloc(uint32_t last_kernel_addr)
 		page_array[i].count = 1;
 		page_array[i].kernel = 1;
 	}
-	
+
 	/* kernel free pages */
 	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
 		page_array[i].page = i;

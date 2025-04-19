@@ -38,7 +38,7 @@ struct vm_operations {
 	struct page *(*nopage)(struct vm_area *, uint32_t address);
 };
 
-void init_mem(uint32_t end);
+void init_mem(uint32_t start, uint32_t end);
 int init_page_cache();
 void init_page_alloc(uint32_t last_kernel_addr);
 void *kmalloc(uint32_t size);
