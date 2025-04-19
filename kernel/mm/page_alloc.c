@@ -150,35 +150,31 @@ void init_page_alloc(uint32_t last_kernel_addr)
 	memset(page_array, 0, sizeof(struct page) * nr_pages);
 	page_array_end = (uint32_t) page_array + sizeof(struct page) * nr_pages;
 
-	/* create page array */
-	for (i = 0, addr = 0; i < nr_pages; i++, addr += PAGE_SIZE) {
+	/* kernel code pages */
+	for (i = 0, addr = 0; i < nr_pages && addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
 		page_array[i].page = i;
+		page_array[i].count = 1;
+		page_array[i].kernel = 1;
+	}
 
-		/* kernel code page */
-		if (addr < last_kernel_addr) {
-			page_array[i].count = 1;
-			page_array[i].kernel = 1;
-			list_add_tail(&page_array[i].list, &used_kernel_pages);
-			continue;
-		}
+	/* global pages array */
+	for (; i < nr_pages && P2V(addr) < page_array_end; i++, addr += PAGE_SIZE) {
+		page_array[i].page = i;
+		page_array[i].count = 1;
+		page_array[i].kernel = 1;
+	}
+	
+	/* kernel free pages */
+	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
+		page_array[i].page = i;
+		page_array[i].count = 0;
+		page_array[i].kernel = 1;
+		list_add_tail(&page_array[i].list, &free_kernel_pages);
+	}
 
-		/* kernel used page (by page array) */
-		if (P2V(addr) < page_array_end) {
-			page_array[i].count = 1;
-			page_array[i].kernel = 1;
-			list_add_tail(&page_array[i].list, &used_kernel_pages);
-			continue;
-		}
-
-		/* kernel free page */
-		if (P2V(addr) < KPAGE_END) {
-			page_array[i].count = 0;
-			page_array[i].kernel = 1;
-			list_add_tail(&page_array[i].list, &free_kernel_pages);
-			continue;
-		}
-
-		/* user free page */
+	/* user free pages */
+	for (; i < nr_pages; i++) {
+		page_array[i].page = i;
 		page_array[i].count = 0;
 		page_array[i].kernel = 0;
 		list_add_tail(&page_array[i].list, &free_user_pages);
