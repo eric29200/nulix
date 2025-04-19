@@ -495,7 +495,7 @@ int init_paging(uint32_t start, uint32_t end)
 
 	/* map kernel pages to high memory */
 	pmd = pmd_offset(pgd_kernel) + 768;
-	for (addr = 0; addr < end && addr < V2P(KPAGE_END);) {
+	for (addr = 0; addr < end && addr < __pa(KPAGE_END);) {
 		/* allocate page table */
 		*pmd = (pmd_t) start | PAGE_TABLE;
 		start += PAGE_SIZE;
@@ -504,7 +504,7 @@ int init_paging(uint32_t start, uint32_t end)
 		for (i = 0; i < PTRS_PER_PTE; i++) {
 			pte = (pte_t *) pmd_page(*pmd) + i;
 
-			if (addr < end && addr < V2P(KPAGE_END))
+			if (addr < end && addr < __pa(KPAGE_END))
 				*pte = MK_PTE(addr / PAGE_SIZE, PAGE_KERNEL);
 			else
 				*pte = 0;

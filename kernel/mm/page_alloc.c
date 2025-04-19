@@ -84,7 +84,7 @@ void *get_free_page()
 		return NULL;
 
 	/* make virtual address */
-	return (void *) P2V(page->page * PAGE_SIZE);
+	return (void *) __va(page->page * PAGE_SIZE);
 }
 
 /*
@@ -186,7 +186,7 @@ found:
 		list_add(&page->list, &used_kernel_pages);
 	}
 
-	return (void *) P2V(page_array[i].page * PAGE_SIZE);
+	return (void *) __va(page_array[i].page * PAGE_SIZE);
 }
 
 /*
@@ -209,14 +209,14 @@ void init_page_alloc(uint32_t last_kernel_addr)
 	}
 
 	/* global pages array */
-	for (; i < nr_pages && P2V(addr) < page_array_end; i++, addr += PAGE_SIZE) {
+	for (; i < nr_pages && __va(addr) < page_array_end; i++, addr += PAGE_SIZE) {
 		page_array[i].page = i;
 		page_array[i].count = 1;
 		page_array[i].kernel = 1;
 	}
 
 	/* kernel free pages */
-	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
+	for (; i < nr_pages && __va(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
 		page_array[i].page = i;
 		page_array[i].count = 0;
 		page_array[i].kernel = 1;
