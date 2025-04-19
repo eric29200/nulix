@@ -51,8 +51,8 @@
 #define PTE_PROT(pte)			((pte) & (PAGE_SIZE - 1))
 #define MK_PTE(page, prot)		(((page) << PAGE_SHIFT) | (prot))
 
-#define __va(addr)			((addr) + KPAGE_START)
-#define __pa(addr)			((addr) - KPAGE_START)
+#define __pa(addr)			((uint32_t)(addr) - KPAGE_START)
+#define __va(addr)			((void *)((uint32_t)(addr) + KPAGE_START))
 #define MAP_NR(addr)			(__pa(addr) >> PAGE_SHIFT)
 #define PAGE_ADDRESS(p)			(KPAGE_START + (p)->page * PAGE_SIZE)
 
