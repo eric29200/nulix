@@ -1,5 +1,6 @@
 #include <mm/mm.h>
 #include <fs/fs.h>
+#include <stdio.h>
 
 /* pages list */
 static LIST_HEAD(free_kernel_pages);
@@ -21,13 +22,13 @@ struct page *__get_free_page(int priority)
 	else
 		free_pages = &free_user_pages;
 
-	/* no more free pages : reclaim pages */
-	if (list_empty(free_pages))
-		reclaim_pages();
-
 	/* no user pages : get from kernel */
 	if (list_empty(free_pages) && free_pages == &free_user_pages)
 		free_pages = &free_kernel_pages;
+
+	/* no more free pages : reclaim pages */
+	if (list_empty(free_pages))
+		reclaim_pages();
 
 	/* no way to get a page */
 	if (list_empty(free_pages))
