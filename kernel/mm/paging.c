@@ -468,8 +468,14 @@ static int map_kernel_page(uint32_t page_nr, uint32_t addr, int pgprot)
 	if (!pte)
 		return -ENOMEM;
 
+	/* page table entry already set */
+	if (PTE_PAGE(*pte) != 0)
+		return -EPERM;
+
 	/* set page table entry */
-	return set_pte(pte, pgprot, &page_array[page_nr]);
+	*pte = MK_PTE(page_nr, pgprot);
+
+	return 0;
 }
 
 /*
