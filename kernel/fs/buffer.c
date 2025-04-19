@@ -443,7 +443,6 @@ int generic_readpage(struct inode *inode, struct page *page)
  */
 int binit()
 {
-	void *addr;
 	int nr, i;
 
 	/* number of buffers = number of pages / 4 */
@@ -454,35 +453,10 @@ int binit()
 
 	/* allocate buffers */
 	nr = 1 + nr_buffer * sizeof(struct buffer_head) / PAGE_SIZE;
-	for (i = 0; i < nr; i++) {
-		/* get a free page */
-		addr = get_free_page();
-		if (!addr)
-			return -ENOMEM;
-
-		/* reset page */
-		memset(addr, 0, PAGE_SIZE);
-
-		/* set buffer table */
-		if (i == 0)
-			buffer_table = addr;
-	}
-
-	/* allocate buffers hash table */
-	nr = 1 + nr_buffer * sizeof(struct htable_link *) / PAGE_SIZE;
-	for (i = 0; i < nr; i++) {
-		/* get a free page */
-		addr = get_free_page();
-		if (!addr)
-			return -ENOMEM;
-
-		/* reset page */
-		memset(addr, 0, PAGE_SIZE);
-
-		/* set buffer hash table */
-		if (i == 0)
-			buffer_htable = addr;
-	}
+	buffer_table = reserve_free_kernel_pages(nr);
+	if (!buffer_table)
+		return -ENOMEM;
+	memset(buffer_table, 0, nr * PAGE_SIZE);
 
 	/* init buffers list */
 	INIT_LIST_HEAD(&unused_list);
@@ -492,6 +466,13 @@ int binit()
 	/* add all buffers to unused list */
 	for (i = 0; i < nr_buffer; i++)
 		list_add(&buffer_table[i].b_list, &unused_list);
+
+	/* allocate buffers hash table */
+	nr = 1 + nr_buffer * sizeof(struct htable_link *) / PAGE_SIZE;
+	buffer_htable = reserve_free_kernel_pages(nr);
+	if (!buffer_htable)
+		return -ENOMEM;
+	memset(buffer_htable, 0, nr * PAGE_SIZE);
 
 	/* init buffers hash table */
 	htable_init(buffer_htable, buffer_htable_bits);

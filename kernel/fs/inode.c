@@ -12,8 +12,8 @@ static int inode_htable_bits = 0;
 static struct htable_link **inode_htable = NULL;
 
 /* inodes lists */
-static struct list_head free_inodes;
-static struct list_head used_inodes;
+static LIST_HEAD(free_inodes);
+static LIST_HEAD(used_inodes);
 
 /*
  * Insert an inode in hash table.
@@ -187,48 +187,27 @@ void iput(struct inode *inode)
  */
 int iinit()
 {
-	void *addr;
 	int nr, i;
 
 	inode_htable_bits = blksize_bits(NR_INODE);
 
 	/* allocate inodes */
 	nr = 1 + NR_INODE * sizeof(struct inode) / PAGE_SIZE;
-	for (i = 0; i < nr; i++) {
-		/* get a free page */
-		addr = get_free_page();
-		if (!addr)
-			return -ENOMEM;
+	inode_table = reserve_free_kernel_pages(nr);
+	if (!inode_table)
+		return -ENOMEM;
+	memset(inode_table, 0, nr * PAGE_SIZE);
 
-		/* reset page */
-		memset(addr, 0, PAGE_SIZE);
-
-		/* set inode table */
-		if (i == 0)
-			inode_table = addr;
-	}
+	/* add all inodes to free list */
+	for (i = 0; i < NR_INODE; i++)
+		list_add(&inode_table[i].i_list, &free_inodes);
 
 	/* allocate inode hash table */
 	nr = 1 + NR_INODE * sizeof(struct htable_link *) / PAGE_SIZE;
-	for (i = 0; i < nr; i++) {
-		/* get a free page */
-		addr = get_free_page();
-		if (!addr)
-			return -ENOMEM;
-
-		/* reset page */
-		memset(addr, 0, PAGE_SIZE);
-
-		/* set inode hash table */
-		if (i == 0)
-			inode_htable = addr;
-	}
-
-	/* add all inodes to free list */
-	INIT_LIST_HEAD(&free_inodes);
-	INIT_LIST_HEAD(&used_inodes);
-	for (i = 0; i < NR_INODE; i++)
-		list_add(&inode_table[i].i_list, &free_inodes);
+	inode_htable = reserve_free_kernel_pages(nr);
+	if (!inode_htable)
+		return -ENOMEM;
+	memset(inode_htable, 0, nr * PAGE_SIZE);
 
 	/* init inode hash table */
 	htable_init(inode_htable, inode_htable_bits);
