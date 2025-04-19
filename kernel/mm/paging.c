@@ -500,16 +500,8 @@ int init_paging(uint32_t end)
 	memset(page_array, 0, sizeof(struct page) * nr_pages);
 	last_kernel_addr += sizeof(struct page) * nr_pages;
 
-	/* init pages */
-	for (i = 0; i < nr_pages; i++)
-		page_array[i].page = i;
-
 	/* map kernel code pages */
 	for (i = 0, addr = 0; addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
-		/* mark page used */
-		page_array[i].count = 1;
-		page_array[i].kernel = 1;
-
 		/* map to low memory */
 		ret = map_kernel_page(i, addr, PAGE_READONLY);
 		if (ret)
@@ -523,9 +515,6 @@ int init_paging(uint32_t end)
 
 	/* map kernel pages to high memory */
 	for (; i < nr_pages && P2V(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
-		/* mark kernel page */
-		page_array[i].kernel = 1;
-
 		ret = map_kernel_page(i, P2V(addr), PAGE_KERNEL);
 		if (ret)
 			return ret;
@@ -538,7 +527,7 @@ int init_paging(uint32_t end)
 	switch_pgd(pgd_kernel);
 
 	/* init page allocation */
-	init_page_alloc();
+	init_page_alloc(last_kernel_addr);
 
 	/* init page cache */
 	return init_page_cache();
