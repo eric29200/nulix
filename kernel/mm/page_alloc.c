@@ -148,7 +148,7 @@ void init_page_alloc(uint32_t last_kernel_addr)
 	/* allocate global pages array */
 	page_array = (struct page *) (KPAGE_START + PAGE_ALIGN_UP(last_kernel_addr));
 	memset(page_array, 0, sizeof(struct page) * nr_pages);
-	page_array_end = ((uint32_t) page_array) + sizeof(struct page) * nr_pages;
+	page_array_end = (uint32_t) page_array + sizeof(struct page) * nr_pages;
 
 	/* create page array */
 	for (i = 0, addr = 0; i < nr_pages; i++, addr += PAGE_SIZE) {
