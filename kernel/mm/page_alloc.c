@@ -1,6 +1,7 @@
 #include <mm/mm.h>
 #include <fs/fs.h>
 #include <stdio.h>
+#include <string.h>
 
 /* pages list */
 static LIST_HEAD(free_kernel_pages);

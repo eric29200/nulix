@@ -36,7 +36,7 @@ static inline struct inode **inode_hash(dev_t dev, ino_t ino)
 /*
  * Insert an inode in hash table.
  */
-void insert_inode_hash(struct inode *inode)
+void add_to_inode_cache(struct inode *inode)
 {
 	struct inode **i;
 
@@ -52,9 +52,9 @@ void insert_inode_hash(struct inode *inode)
 }
 
 /*
- * Remove ai inode from cache.
+ * Remove an inode from cache.
  */
-void remove_inode_hash(struct inode *inode)
+static void remove_from_inode_cache(struct inode *inode)
 {
 	struct inode *next_hash = inode->i_next_hash, *prev_hash = inode->i_prev_hash;
 	struct inode **i;
@@ -87,7 +87,7 @@ void clear_inode(struct inode *inode)
 
 	/* clear inode */
 	list_del(&inode->i_list);
-	remove_inode_hash(inode);
+	remove_from_inode_cache(inode);
 	memset(inode, 0, sizeof(struct inode));
 
 	/* put it in free list */
@@ -220,7 +220,7 @@ struct inode *iget(struct super_block *sb, ino_t ino)
 	}
 
 	/* hash the new inode */
-	insert_inode_hash(inode);
+	add_to_inode_cache(inode);
 
 	return inode;
 }
@@ -289,6 +289,7 @@ void init_inode()
 {
 	int i;
 
+	/* init hash table */
 	for (i = 0; i < HASH_SIZE; i++)
 		inode_hash_table[i] = NULL;
 }

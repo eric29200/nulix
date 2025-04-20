@@ -2,7 +2,6 @@
 #define _FS_H_
 
 #include <lib/list.h>
-#include <lib/htable.h>
 #include <fs/stat.h>
 #include <fs/poll.h>
 #include <fs/statfs.h>
@@ -16,6 +15,7 @@
 #include <mm/mm.h>
 #include <uio.h>
 #include <time.h>
+#include <string.h>
 
 #define NR_INODE			4096
 #define NR_FILE				256
@@ -44,7 +44,8 @@ struct buffer_head {
 	dev_t				b_dev;			/* device number */
 	struct buffer_head *		b_this_page;		/* next buffer in page */
 	struct list_head		b_list;			/* next buffer in list */
-	struct htable_link		b_htable;		/* buffer hash */
+	struct buffer_head *		b_next_hash;		/* next buffer in hash list */
+	struct buffer_head *		b_prev_hash;		/* previous buffer in hash list */
 };
 
 /*
@@ -210,7 +211,7 @@ int bwrite(struct buffer_head *bh);
 void brelse(struct buffer_head *bh);
 void bsync();
 void bsync_dev(dev_t dev);
-int init_buffer();
+void init_buffer();
 struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void try_to_free_buffer(struct buffer_head *bh);
 void set_blocksize(dev_t dev, size_t blocksize);
@@ -223,7 +224,7 @@ struct inode *iget(struct super_block *sb, ino_t ino);
 void iput(struct inode *inode);
 struct inode *get_empty_inode(struct super_block *sb);
 void clear_inode(struct inode *inode);
-void insert_inode_hash(struct inode *inode);
+void add_to_inode_cache(struct inode *inode);
 struct inode *find_inode(struct super_block *sb, ino_t ino);
 void init_inode();
 

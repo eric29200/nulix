@@ -2,6 +2,7 @@
 #include <fs/ext2_fs.h>
 #include <stderr.h>
 #include <stdio.h>
+#include <string.h>
 
 /*
  * Get a group descriptor.

@@ -1,5 +1,6 @@
 #include <fs/devpts_fs.h>
 #include <stdio.h>
+#include <string.h>
 #include <stderr.h>
 
 /*

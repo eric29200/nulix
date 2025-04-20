@@ -18,7 +18,7 @@
 
 /* global buffer table */
 static int nr_buffers = 0;
-static struct htable_link **buffer_htable = NULL;
+static struct buffer_head *buffer_hash_table[HASH_SIZE];
 
 /* buffers lists */
 static char buffersize_index[9] = { -1, 0, 1, -1, 2, -1, -1, -1, 3 };
@@ -28,6 +28,66 @@ static struct list_head free_list[NR_SIZES];
 
 /* block size of devices */
 size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
+
+/*
+ * Hash a buffer.
+ */
+static inline int __buffer_hashfn(dev_t dev, uint32_t block)
+{
+	return (dev ^ block) % HASH_SIZE;
+}
+
+/*
+ * Get hash bucket.
+ */
+static inline struct buffer_head **buffer_hash(dev_t dev, uint32_t block)
+{
+	return buffer_hash_table + __buffer_hashfn(dev, block);
+}
+
+/*
+ * Insert a buffer in hash table.
+ */
+static void add_to_buffer_cache(struct buffer_head *bh)
+{
+	struct buffer_head **b;
+
+	b = buffer_hash(bh->b_dev, bh->b_block);
+	bh->b_prev_hash = NULL;
+	bh->b_next_hash = *b;
+
+	if (*b)
+		bh->b_next_hash->b_prev_hash = bh;
+
+	/* update head */
+	*b = bh;
+}
+
+/*
+ * Remove a buffer from cache.
+ */
+static void remove_from_buffer_cache(struct buffer_head *bh)
+{
+	struct buffer_head *next_hash = bh->b_next_hash, *prev_hash = bh->b_prev_hash;
+	struct buffer_head **b;
+
+	/* unlink this buffer */
+	bh->b_next_hash = NULL;
+	bh->b_prev_hash = NULL;
+
+	/* update next */
+	if (next_hash)
+		next_hash->b_prev_hash = prev_hash;
+
+	/* update previous */
+	if (prev_hash)
+		prev_hash->b_next_hash = next_hash;
+
+	/* update head */
+	b = buffer_hash(bh->b_dev, bh->b_block);
+	if (*b == bh)
+		*b = next_hash;
+}
 
 /*
  * Set blocksize of a device.
@@ -208,19 +268,13 @@ static int refill_freelist(size_t blocksize)
  */
 static struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize)
 {
-	struct htable_link *node;
 	struct buffer_head *bh;
 
-	/* try to find buffer in cache */
-	node = htable_lookup(buffer_htable, block, HASH_BITS);
-	while (node) {
-		bh = htable_entry(node, struct buffer_head, b_htable);
+	for (bh = *buffer_hash(dev, block); bh != NULL; bh = bh->b_next_hash) {
 		if (bh->b_block == block && bh->b_dev == dev && bh->b_size == blocksize) {
 			bh->b_ref++;
 			return bh;
 		}
-
-		node = node->next;
 	}
 
 	return NULL;
@@ -259,9 +313,8 @@ struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize)
 	bh->b_block = block;
 	bh->b_uptodate = 0;
 
-	/* hash the new buffer */
-	htable_delete(&bh->b_htable);
-	htable_insert(buffer_htable, &bh->b_htable, block, HASH_BITS);
+	/* cache the new buffer */
+	add_to_buffer_cache(bh);
 
 	return bh;
 }
@@ -319,7 +372,7 @@ void brelse(struct buffer_head *bh)
 	if (bh->b_dirt)
 		bwrite(bh);
 
-	/* update inode reference count */
+	/* update buffer reference count */
 	bh->b_ref--;
 }
 
@@ -356,7 +409,7 @@ void try_to_free_buffer(struct buffer_head *bh)
 		tmp1 = tmp->b_this_page;
 
 		/* remove it from lists */
-		htable_delete(&tmp->b_htable);
+		remove_from_buffer_cache(tmp);
 		put_unused_buffer(tmp);
 
 		/* go to next buffer in page */
@@ -491,7 +544,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 /*
  * Init buffers.
  */
-int init_buffer()
+void init_buffer()
 {
 	int i;
 
@@ -499,14 +552,7 @@ int init_buffer()
 	for (i = 0; i < NR_SIZES; i++)
 		INIT_LIST_HEAD(&free_list[i]);
 
-	/* allocate buffers hash table */
-	buffer_htable = (struct htable_link **) kmalloc(sizeof(struct htable_link *) * HASH_SIZE);
-	if (!buffer_htable)
-		return -ENOMEM;
-	memset(buffer_htable, 0, sizeof(struct htable_link *) * HASH_SIZE);
-
-	/* init buffers hash table */
-	htable_init(buffer_htable, HASH_BITS);
-
-	return 0;
+	/* init hash table */
+	for (i = 0; i < HASH_SIZE; i++)
+		buffer_hash_table[i] = NULL;
 }

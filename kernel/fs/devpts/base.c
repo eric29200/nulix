@@ -1,4 +1,5 @@
 #include <fs/devpts_fs.h>
+#include <string.h>
 #include <fcntl.h>
 
 /* root entry */

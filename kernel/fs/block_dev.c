@@ -3,6 +3,7 @@
 #include <stderr.h>
 #include <fcntl.h>
 #include <dev.h>
+#include <string.h>
 
 /*
  * Get block device driver.

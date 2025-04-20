@@ -3,7 +3,6 @@
 #include <x86/io.h>
 #include <mm/mm.h>
 #include <stderr.h>
-#include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <dev.h>

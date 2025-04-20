@@ -98,7 +98,7 @@ struct inode *tmpfs_new_inode(struct super_block *sb, mode_t mode, dev_t dev)
 		inode->i_op = &tmpfs_file_iops;
 
 	/* hash inode */
-	insert_inode_hash(inode);
+	add_to_inode_cache(inode);
 
 	return inode;
 }

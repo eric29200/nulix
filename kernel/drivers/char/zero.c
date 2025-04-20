@@ -1,6 +1,7 @@
 #include <drivers/char/zero.h>
 #include <sys/syscall.h>
 #include <stderr.h>
+#include <string.h>
 #include <fcntl.h>
 #include <dev.h>
 
