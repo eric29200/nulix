@@ -21,7 +21,8 @@ static struct htable_link **buffer_htable = NULL;
 
 /* buffers lists */
 static char buffersize_index[9] = { -1, 0, 1, -1, 2, -1, -1, -1, 3 };
-static struct list_head unused_list;
+static LIST_HEAD(unused_list);
+static LIST_HEAD(used_list);
 static struct list_head free_list[NR_SIZES];
 
 /* block size of devices */
@@ -78,6 +79,7 @@ static struct buffer_head *get_unused_buffer()
 	/* get first free unused buffer */
 	bh = list_first_entry(&unused_list, struct buffer_head, b_list);
 	list_del(&bh->b_list);
+	list_add(&bh->b_list, &used_list);
 
 	return bh;
 }
@@ -87,6 +89,7 @@ static struct buffer_head *get_unused_buffer()
  */ 
 static void put_unused_buffer(struct buffer_head *bh)
 {
+	list_del(&bh->b_list);
 	memset(bh, 0, sizeof(struct buffer_head));
 	list_add(&bh->b_list, &unused_list);
 }
@@ -159,6 +162,7 @@ static int refill_freelist(size_t blocksize)
 	/* add new buffers to free list */
 	tmp = bh;
 	do {
+		list_del(&tmp->b_list);
 		list_add_tail(&tmp->b_list, &free_list[isize]);
 		tmp = tmp->b_this_page;
 	} while (tmp != bh);
@@ -217,6 +221,7 @@ struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize)
 	/* get first free buffer */
 	bh = list_first_entry(&free_list[isize], struct buffer_head, b_list);
 	list_del(&bh->b_list);
+	list_add(&bh->b_list, &used_list);
 
 	/* set buffer */
 	bh->b_ref = 1;
@@ -333,19 +338,37 @@ void try_to_free_buffer(struct buffer_head *bh)
 }
 
 /*
+ * Write all dirty buffers of a list on disk.
+ */
+static void bsync_list(struct list_head *head, dev_t dev)
+{
+	struct buffer_head *bh;
+	struct list_head *pos;
+
+	list_for_each(pos, head) {
+		bh = (struct buffer_head *) list_entry(pos, struct buffer_head, b_list);
+
+		if (!bh->b_dirt || (dev && bh->b_dev != dev))
+			continue;
+
+		if (bwrite(bh)) {
+			printf("Can't write block %d on disk\n", bh->b_block);
+			panic("Disk error");
+		}
+	}
+}
+
+/*
  * Write all dirty buffers on disk.
  */
 void bsync()
 {
 	int i;
 
-	/* write all dirty buffers */
-	for (i = 0; i < nr_buffer; i++) {
-		if (buffer_table[i].b_dirt && bwrite(&buffer_table[i])) {
-			printf("Can't write block %d on disk\n", buffer_table[i].b_block);
-			panic("Disk error");
-		}
-	}
+	bsync_list(&used_list, 0);
+	bsync_list(&unused_list, 0);
+	for (i = 0; i < NR_SIZES; i++)
+		bsync_list(&free_list[i], 0);
 }
 
 /*
@@ -355,13 +378,10 @@ void bsync_dev(dev_t dev)
 {
 	int i;
 
-	/* write all dirty buffers */
-	for (i = 0; i < nr_buffer; i++) {
-		if (buffer_table[i].b_dev == dev && buffer_table[i].b_dirt && bwrite(&buffer_table[i])) {
-			printf("Can't write block %d on disk\n", buffer_table[i].b_block);
-			panic("Disk error");
-		}
-	}
+	bsync_list(&used_list, dev);
+	bsync_list(&unused_list, dev);
+	for (i = 0; i < NR_SIZES; i++)
+		bsync_list(&free_list[i], dev);
 }
 
 /*
@@ -441,7 +461,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 /*
  * Init buffers.
  */
-int binit()
+int init_buffer()
 {
 	int nr, i;
 
@@ -459,7 +479,6 @@ int binit()
 	memset(buffer_table, 0, nr * PAGE_SIZE);
 
 	/* init buffers list */
-	INIT_LIST_HEAD(&unused_list);
 	for (i = 0; i < NR_SIZES; i++)
 		INIT_LIST_HEAD(&free_list[i]);
 

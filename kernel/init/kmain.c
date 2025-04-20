@@ -156,7 +156,7 @@ int kmain(unsigned long magic, unsigned long addr)
 
 	/* init block buffers */
 	printf("[Kernel] Block buffers init\n");
-	if (binit() != 0)
+	if (init_buffer() != 0)
 		panic("Cannot allocate memory for block buffers");
 
 	/* init PIT */
