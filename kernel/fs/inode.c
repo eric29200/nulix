@@ -7,13 +7,13 @@
 #include <string.h>
 
 /* global inode table */
-static struct inode *inode_table = NULL;
 static int inode_htable_bits = 0;
 static struct htable_link **inode_htable = NULL;
 
 /* inodes lists */
 static LIST_HEAD(free_inodes);
 static LIST_HEAD(used_inodes);
+static int nr_inodes = 0;
 
 /*
  * Insert an inode in hash table.
@@ -41,12 +41,41 @@ void clear_inode(struct inode *inode)
 }
 
 /*
+ * Grow inodes.
+ */
+static int grow_inodes()
+{
+	struct inode *inodes;
+	int i, n;
+
+	/* get some memory */
+	inodes = (struct inode *) get_free_page(GFP_KERNEL);
+	if (!inodes)
+		return -ENOMEM;
+	memset(inodes, 0, PAGE_SIZE);
+
+	/* update number of inodes */
+	n = PAGE_SIZE / sizeof(struct inode);
+	nr_inodes += n;
+
+	/* add inodes to free list */
+	for (i = 0; i < n; i++)
+		list_add(&inodes[i].i_list, &free_inodes);
+
+	return 0;
+}
+
+/*
  * Get an empty inode.
  */
 struct inode *get_empty_inode(struct super_block *sb)
 {
 	struct list_head *pos;
 	struct inode *inode;
+
+	/* grow inodes if needed */
+	if (list_empty(&free_inodes) && nr_inodes < NR_INODE)
+		grow_inodes();
 
 	/* try to get a free inode */
 	if (!list_empty(&free_inodes)) {
@@ -205,26 +234,14 @@ int fs_may_umount(struct super_block *sb)
 	return 1;
 }
 
-
 /*
  * Init inodes.
  */
 int init_inode()
 {
-	int nr, i;
+	int nr;
 
 	inode_htable_bits = blksize_bits(NR_INODE);
-
-	/* allocate inodes */
-	nr = 1 + NR_INODE * sizeof(struct inode) / PAGE_SIZE;
-	inode_table = reserve_free_kernel_pages(nr);
-	if (!inode_table)
-		return -ENOMEM;
-	memset(inode_table, 0, nr * PAGE_SIZE);
-
-	/* add all inodes to free list */
-	for (i = 0; i < NR_INODE; i++)
-		list_add(&inode_table[i].i_list, &free_inodes);
 
 	/* allocate inode hash table */
 	nr = 1 + NR_INODE * sizeof(struct htable_link *) / PAGE_SIZE;
