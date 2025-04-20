@@ -3,7 +3,6 @@
 
 #include <x86/interrupt.h>
 #include <lib/list.h>
-#include <lib/htable.h>
 #include <stddef.h>
 
 #define PAGE_SHIFT			12
@@ -81,7 +80,8 @@ struct page {
 	off_t			offset;					/* offset in inode */
 	struct buffer_head *	buffers;				/* buffers of this page */
 	struct list_head	list;					/* next page */
-	struct htable_link	htable;					/* page hash */
+	struct page *		next_hash;
+	struct page *		prev_hash;
 };
 
 /* paging */
@@ -102,9 +102,10 @@ void free_page(void *address);
 void reclaim_pages();
 
 /* page cache */
-int init_page_cache();
+void init_page_cache();
 struct page *find_page(struct inode *inode, off_t offset);
 void add_to_page_cache(struct page *page, struct inode *inode, off_t offset);
+void remove_from_page_cache(struct page *page);
 void update_vm_cache(struct inode *inode, const char *buf, size_t pos, size_t count);
 void truncate_inode_pages(struct inode *inode, off_t start);
 

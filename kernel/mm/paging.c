@@ -532,5 +532,7 @@ int init_paging(uint32_t start, uint32_t end)
 	init_page_alloc(KHEAP_START + KHEAP_SIZE);
 
 	/* init page cache */
-	return init_page_cache();
+	init_page_cache();
+
+	return 0;
 }

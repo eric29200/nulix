@@ -130,7 +130,7 @@ void reclaim_pages()
 		/* is it a page cached page ? */
 		if (page->inode) {
 			/* remove from page cache */
-			htable_delete(&page->htable);
+			remove_from_page_cache(page);
 
 			/* free page */
 			__free_page(page);

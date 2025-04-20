@@ -134,7 +134,7 @@ void truncate_inode_pages(struct inode *inode, off_t start)
 
 		/* full page truncate */
 		if (offset >= start) {
-			htable_delete(&page->htable);
+			remove_from_page_cache(page);
 			__free_page(page);
 			continue;
 		}
