@@ -30,6 +30,7 @@ static inline void flush_tlb(uint32_t address)
 static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
 {
 	uint32_t page_nr;
+	void *tmp;
 	pmd_t *pmd;
 
 	/* get page table */
@@ -43,12 +44,16 @@ static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
 
 	/* create a new page table */
 	if (make) {
-		*pmd = (pmd_t) kmalloc_align(PAGE_SIZE) | PAGE_TABLE;
-		if (!*pmd)
+		/* allocate a new page table */
+		tmp = get_free_page(GFP_KERNEL);
+		if (!tmp)
 			return NULL;
 
-		/* clear page table entries */
-		memset((void *) pmd_page(*pmd), 0, PAGE_SIZE);
+		/* memzero page table */
+		memset(tmp, 0, PAGE_SIZE);
+
+		/* set page table */
+		*pmd = (pmd_t) __pa(tmp) | PAGE_TABLE;
 
 		return (pte_t *) pmd_page(*pmd) + page_nr;
 	}
@@ -309,7 +314,7 @@ void switch_pgd(pgd_t *pgd)
 	uint32_t cr0;
 
 	/* switch */
-	__asm__ volatile("mov %0, %%cr3" :: "r" (pgd));
+	__asm__ volatile("mov %0, %%cr3" :: "r" (__pa(pgd)));
 	__asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
 
 	/* enable paging */
@@ -327,7 +332,7 @@ static pmd_t clone_pmd(pmd_t *pmd_src)
 	int ret, i;
 
 	/* create a new page table */
-	ptes_new = (pmd_t *) kmalloc_align(PAGE_SIZE);
+	ptes_new = (pmd_t *) get_free_page(GFP_KERNEL);
 	if (!ptes_new)
 		return 0;
 
@@ -358,9 +363,9 @@ static pmd_t clone_pmd(pmd_t *pmd_src)
 		copy_page_physical(PTE_PAGE(ptes_src[i]) * PAGE_SIZE, PTE_PAGE(ptes_new[i]) * PAGE_SIZE);
 	}
 
-	return (pmd_t ) ptes_new | PAGE_TABLE;
+	return (pmd_t ) __pa(ptes_new) | PAGE_TABLE;
 err:
-	kfree(ptes_new);
+	free_page(ptes_new);
 	return 0;
 }
 
@@ -374,7 +379,7 @@ pgd_t *clone_pgd(pgd_t *pgd_src)
 	int i;
 
 	/* create a new page directory */
-	pgd_new = (pgd_t *) kmalloc_align(PAGE_SIZE);
+	pgd_new = (pgd_t *) get_free_page(GFP_KERNEL);
 	if (!pgd_new)
 		return NULL;
 
@@ -426,7 +431,7 @@ static void free_pmd(pmd_t *pmd)
 	}
 
 	/* free page table */
-	kfree(ptes);
+	free_page(ptes);
 }
 
 /*
@@ -450,7 +455,7 @@ void free_pgd(pgd_t *pgd)
 			free_pmd(pmd);
 
 	/* free page directory */
-	kfree(pgd);
+	free_page(pgd);
 }
 
 /*
@@ -479,7 +484,7 @@ int init_paging(uint32_t start, uint32_t end)
 
 		/* set page table entries */
 		for (i = 0; i < PTRS_PER_PTE; i++) {
-			pte = (pte_t *) pmd_page(*pmd) + i;
+			pte = (pte_t *) (*pmd & PAGE_MASK) + i;
 
 			if (addr < KHEAP_START + KHEAP_SIZE)
 				*pte = MK_PTE(addr / PAGE_SIZE, PAGE_READONLY);
@@ -502,7 +507,7 @@ int init_paging(uint32_t start, uint32_t end)
 
 		/* set page table entries */
 		for (i = 0; i < PTRS_PER_PTE; i++) {
-			pte = (pte_t *) pmd_page(*pmd) + i;
+			pte = (pte_t *) (*pmd & PAGE_MASK) + i;
 
 			if (addr < end && addr < __pa(KPAGE_END))
 				*pte = MK_PTE(addr / PAGE_SIZE, PAGE_KERNEL);
@@ -519,7 +524,8 @@ int init_paging(uint32_t start, uint32_t end)
 	/* register page fault handler */
 	register_interrupt_handler(14, page_fault_handler);
 
-	/* enable paging */
+	/* move kernel's pgd to high memory and enable paging */
+	pgd_kernel = __va(pgd_kernel);
 	switch_pgd(pgd_kernel);
 
 	/* init page allocation */

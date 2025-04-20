@@ -15,6 +15,7 @@
 #define ALIGN_UP(addr, size)		(((addr) + size - 1) & (~(size - 1)))
 #define PTRS_PER_PTE			1024
 #define PGDIR_SHIFT			22
+#define PAGE_OFFSET			0xC0000000
 
 #define PAGE_PRESENT			0x001
 #define PAGE_RW				0x002
@@ -51,10 +52,10 @@
 #define PTE_PROT(pte)			((pte) & (PAGE_SIZE - 1))
 #define MK_PTE(page, prot)		(((page) << PAGE_SHIFT) | (prot))
 
-#define __pa(addr)			((uint32_t)(addr) - KPAGE_START)
-#define __va(addr)			((void *)((uint32_t)(addr) + KPAGE_START))
+#define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
+#define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
 #define MAP_NR(addr)			(__pa(addr) >> PAGE_SHIFT)
-#define PAGE_ADDRESS(p)			(KPAGE_START + (p)->page * PAGE_SIZE)
+#define PAGE_ADDRESS(p)			(PAGE_OFFSET + (p)->page * PAGE_SIZE)
 
 #define GFP_KERNEL			0
 #define GFP_USER			1
@@ -118,8 +119,7 @@ static inline pmd_t *pmd_offset(pgd_t *pgd)
  */
 static inline uint32_t pmd_page(pmd_t pmd)
 {
-	return pmd & PAGE_MASK;
+	return (uint32_t) __va(pmd & PAGE_MASK);
 }
-
 
 #endif

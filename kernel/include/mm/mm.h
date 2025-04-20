@@ -8,8 +8,8 @@
 #define KHEAP_START			0x400000				/* kernel code + heap : from 0 to 16 MB */
 #define KHEAP_SIZE			0xF00000
 #define UMAP_START			0x40000000				/* user memory map : from 1 GB to 3 GB */
-#define UMAP_END			0xC0000000
-#define KPAGE_START			0xC0000000				/* kernel pages : from 3 GB to 4 GB */
+#define UMAP_END			(PAGE_OFFSET)
+#define KPAGE_START			(PAGE_OFFSET)				/* kernel pages : from 3 GB to 4 GB */
 #define KPAGE_END			0xF0000000
 #define USTACK_START			0xF8000000				/* user stack */
 #define USTACK_LIMIT			(8 * 1024 * 1024)			/* user stack limit = 8 MB */
