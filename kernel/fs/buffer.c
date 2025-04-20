@@ -14,9 +14,8 @@
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
 
 /* global buffer table */
-static int nr_buffer = 0;
+static int nr_buffers = 0;
 static int buffer_htable_bits = 0;
-static struct buffer_head *buffer_table = NULL;
 static struct htable_link **buffer_htable = NULL;
 
 /* buffers lists */
@@ -60,11 +59,40 @@ void set_blocksize(dev_t dev, size_t blocksize)
 }
 
 /*
+ * Grow buffers list.
+ */
+static int grow_buffers()
+{
+	struct buffer_head *bhs;
+	int i, n;
+
+	/* get some memory */
+	bhs = (struct buffer_head *) get_free_page(GFP_KERNEL);
+	if (!bhs)
+		return -ENOMEM;
+	memset(bhs, 0, PAGE_SIZE);
+
+	/* update number of buffers */
+	n = PAGE_SIZE / sizeof(struct buffer_head);
+	nr_buffers += n;
+
+	/* add buffers to unused list */
+	for (i = 0; i < n; i++)
+		list_add(&bhs[i].b_list, &unused_list);
+
+	return 0;
+}
+
+/*
  * Get an unused buffer.
  */
 static struct buffer_head *get_unused_buffer()
 {
 	struct buffer_head *bh;
+
+	/* grow buffers if needed */
+	if (list_empty(&unused_list) && nr_buffers < NR_BUFFERS_MAX)
+		grow_buffers();
 
 	/* no more unused buffers */
 	if (list_empty(&unused_list)) {
@@ -465,29 +493,13 @@ int init_buffer()
 {
 	int nr, i;
 
-	/* number of buffers = number of pages / 4 */
-	nr_buffer = 1 << blksize_bits(nr_pages / 4);
-	if (nr_buffer >= NR_BUFFERS_MAX)
-		nr_buffer = NR_BUFFERS_MAX;
-	buffer_htable_bits = blksize_bits(nr_buffer);
-
-	/* allocate buffers */
-	nr = 1 + nr_buffer * sizeof(struct buffer_head) / PAGE_SIZE;
-	buffer_table = reserve_free_kernel_pages(nr);
-	if (!buffer_table)
-		return -ENOMEM;
-	memset(buffer_table, 0, nr * PAGE_SIZE);
-
 	/* init buffers list */
 	for (i = 0; i < NR_SIZES; i++)
 		INIT_LIST_HEAD(&free_list[i]);
 
-	/* add all buffers to unused list */
-	for (i = 0; i < nr_buffer; i++)
-		list_add(&buffer_table[i].b_list, &unused_list);
-
 	/* allocate buffers hash table */
-	nr = 1 + nr_buffer * sizeof(struct htable_link *) / PAGE_SIZE;
+	buffer_htable_bits = blksize_bits(NR_BUFFERS_MAX);
+	nr = 1 + NR_BUFFERS_MAX * sizeof(struct htable_link *) / PAGE_SIZE;
 	buffer_htable = reserve_free_kernel_pages(nr);
 	if (!buffer_htable)
 		return -ENOMEM;
