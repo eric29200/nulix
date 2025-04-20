@@ -6,36 +6,23 @@
 #include <fcntl.h>
 #include <string.h>
 
-#define HASH_BITS		8
-#define HASH_SIZE		(1 << HASH_BITS)
-#define HASH_MASK		(HASH_SIZE - 1)
-#define NR_IHASH		512
+#define HASH_BITS			12
+#define HASH_SIZE			(1 << HASH_BITS)
+
+/* global inode table */
+static struct htable_link **inode_htable = NULL;
 
 /* inodes lists */
 static LIST_HEAD(free_inodes);
 static LIST_HEAD(used_inodes);
 static int nr_inodes = 0;
 
-/* global inode table */
-static struct list_head inode_hashtable[HASH_SIZE];
-
-/*
- * Hash an inode.
- */
-static uint32_t hash(struct super_block *sb, ino_t i_ino)
-{
-	uint32_t tmp = i_ino | (uint32_t) sb;
-	tmp = tmp + (tmp >> HASH_BITS);
-	return tmp & HASH_MASK;
-}
-
 /*
  * Insert an inode in hash table.
  */
 void insert_inode_hash(struct inode *inode)
 {
-	struct list_head *head = inode_hashtable + hash(inode->i_sb, inode->i_ino);
-	list_add(&inode->i_hash, head);
+	htable_insert(inode_htable, &inode->i_htable, inode->i_ino, HASH_BITS);
 }
 
 /*
@@ -48,7 +35,8 @@ void clear_inode(struct inode *inode)
 
 	/* clear inode */
 	list_del(&inode->i_list);
-	list_del(&inode->i_hash);
+	htable_delete(&inode->i_htable);
+	memset(inode, 0, sizeof(struct inode));
 
 	/* put it in free list */
 	list_add(&inode->i_list, &free_inodes);
@@ -115,7 +103,6 @@ found:
 	inode->i_ref = 1;
 	INIT_LIST_HEAD(&inode->i_pages);
 	INIT_LIST_HEAD(&inode->i_mmap);
-	INIT_LIST_HEAD(&inode->i_hash);
 
 	/* put inode at the end of LRU list */
 	list_del(&inode->i_list);
@@ -129,19 +116,19 @@ found:
  */
 struct inode *find_inode(struct super_block *sb, ino_t ino)
 {
-	struct list_head *head, *pos;
+	struct htable_link *node;
 	struct inode *inode;
 
-	/* get hash table entry */
-	head = inode_hashtable + hash(sb, ino);
-
-	/* find inode */
-	list_for_each(pos, head) {
-		inode = (struct inode *) list_entry(pos, struct inode, i_hash);
+	/* try to find inode in cache */
+	node = htable_lookup(inode_htable, ino, HASH_BITS);
+	while (node) {
+		inode = htable_entry(node, struct inode, i_htable);
 		if (inode->i_ino == ino && inode->i_sb == sb) {
 			inode->i_ref++;
 			return inode;
 		}
+
+		node = node->next;
 	}
 
 	return NULL;
@@ -254,11 +241,14 @@ int fs_may_umount(struct super_block *sb)
  */
 int init_inode()
 {
-	int i;
+	/* allocate inode hash table */
+	inode_htable = (struct htable_link **) kmalloc(sizeof(struct htable_link *) * HASH_SIZE);
+	if (!inode_htable)
+		return -ENOMEM;
+	memset(inode_htable, 0, sizeof(struct htable_link *) * HASH_SIZE);
 
-	/* init hash table */
-	for (i = 0; i < HASH_SIZE; i++)
-		INIT_LIST_HEAD(&inode_hashtable[i]);
+	/* init inode hash table */
+	htable_init(inode_htable, HASH_BITS);
 
 	return 0;
 }

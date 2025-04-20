@@ -98,7 +98,7 @@ struct inode {
 	struct list_head		i_pages;
 	struct list_head		i_mmap;
 	struct list_head		i_list;
-	struct list_head		i_hash;
+	struct htable_link		i_htable;
 	union {
 		struct minix_inode_info		minix_i;
 		struct ext2_inode_info		ext2_i;
