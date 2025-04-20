@@ -99,7 +99,6 @@ struct page *__get_free_page(int priority);
 void *get_free_page();
 void __free_page(struct page *page);
 void free_page(void *address);
-void *reserve_free_kernel_pages(size_t n);
 void reclaim_pages();
 
 /* page cache */

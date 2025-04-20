@@ -139,57 +139,6 @@ void reclaim_pages()
 }
 
 /*
- * Reserve free kernel contiguous pages.
- */
-void *reserve_free_kernel_pages(size_t n)
-{
-	struct page *page;
-	uint32_t i = 0, j;
-
-	for (;;) {
-		j = 0;
-
-		/* find first free kernel page */
-		while ((page_array[i].count || !page_array[i].kernel) && i < nr_pages)
-			i++;
-
-		/* no free kernel page */
-		if (i > nr_pages)
-			break;
-
-		/* find contiguous free kernel pages */
-		while (!page_array[i + j].count && page_array[i + j].kernel && j < n && i + j < nr_pages)
-			j++;
-
-		/* no free page */
-		if (i + j > nr_pages)
-			break;
-
-		/* found */
-		if (j == n)
-			goto found;
-
-		i += j;
-	}
-
-	return NULL;
-found:
-	/* get first free page */
-	while (j--) {
-		page = &page_array[i + j];
-		page->inode = NULL;
-		page->offset = 0;
-		page->buffers = NULL;
-		page->count = 1;
-
-		list_del(&page->list);
-		list_add(&page->list, &used_kernel_pages);
-	}
-
-	return __va(page_array[i].page * PAGE_SIZE);
-}
-
-/*
  * Init page allocation.
  */
 void init_page_alloc(uint32_t last_kernel_addr)

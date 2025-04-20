@@ -13,9 +13,11 @@
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
 
+#define HASH_BITS			12
+#define HASH_SIZE			(1 << HASH_BITS)
+
 /* global buffer table */
 static int nr_buffers = 0;
-static int buffer_htable_bits = 0;
 static struct htable_link **buffer_htable = NULL;
 
 /* buffers lists */
@@ -210,7 +212,7 @@ static struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksi
 	struct buffer_head *bh;
 
 	/* try to find buffer in cache */
-	node = htable_lookup(buffer_htable, block, buffer_htable_bits);
+	node = htable_lookup(buffer_htable, block, HASH_BITS);
 	while (node) {
 		bh = htable_entry(node, struct buffer_head, b_htable);
 		if (bh->b_block == block && bh->b_dev == dev && bh->b_size == blocksize) {
@@ -259,7 +261,7 @@ struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize)
 
 	/* hash the new buffer */
 	htable_delete(&bh->b_htable);
-	htable_insert(buffer_htable, &bh->b_htable, block, buffer_htable_bits);
+	htable_insert(buffer_htable, &bh->b_htable, block, HASH_BITS);
 
 	return bh;
 }
@@ -491,22 +493,20 @@ int generic_readpage(struct inode *inode, struct page *page)
  */
 int init_buffer()
 {
-	int nr, i;
+	int i;
 
 	/* init buffers list */
 	for (i = 0; i < NR_SIZES; i++)
 		INIT_LIST_HEAD(&free_list[i]);
 
 	/* allocate buffers hash table */
-	buffer_htable_bits = blksize_bits(NR_BUFFERS_MAX);
-	nr = 1 + NR_BUFFERS_MAX * sizeof(struct htable_link *) / PAGE_SIZE;
-	buffer_htable = reserve_free_kernel_pages(nr);
+	buffer_htable = (struct htable_link **) kmalloc(sizeof(struct htable_link *) * HASH_SIZE);
 	if (!buffer_htable)
 		return -ENOMEM;
-	memset(buffer_htable, 0, nr * PAGE_SIZE);
+	memset(buffer_htable, 0, sizeof(struct htable_link *) * HASH_SIZE);
 
 	/* init buffers hash table */
-	htable_init(buffer_htable, buffer_htable_bits);
+	htable_init(buffer_htable, HASH_BITS);
 
 	return 0;
 }
