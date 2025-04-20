@@ -7,7 +7,7 @@
 #include <string.h>
 
 /* global inode table */
-struct inode *inode_table = NULL;
+static struct inode *inode_table = NULL;
 static int inode_htable_bits = 0;
 static struct htable_link **inode_htable = NULL;
 
@@ -183,9 +183,33 @@ void iput(struct inode *inode)
 }
 
 /*
+ * Check if a file system can be unmounted.
+ */
+int fs_may_umount(struct super_block *sb)
+{
+	struct list_head *pos;
+	struct inode *inode;
+
+	list_for_each(pos, &used_inodes) {
+		inode = list_entry(pos, struct inode, i_list);
+
+		if (inode->i_sb != sb || !inode->i_ref)
+			continue;
+
+		if (inode == sb->s_root_inode && inode->i_ref == (inode->i_mount != inode ? 1 : 2))
+			continue;
+
+		return 0;
+	}
+
+	return 1;
+}
+
+
+/*
  * Init inodes.
  */
-int iinit()
+int init_inode()
 {
 	int nr, i;
 

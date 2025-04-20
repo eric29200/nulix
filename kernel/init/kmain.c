@@ -151,7 +151,7 @@ int kmain(unsigned long magic, unsigned long addr)
 
 	/* init inodes */
 	printf("[Kernel] Inodes init\n");
-	if (iinit() != 0)
+	if (init_inode() != 0)
 		panic("Cannot allocate memory for inodes");
 
 	/* init block buffers */

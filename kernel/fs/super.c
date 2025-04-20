@@ -331,29 +331,6 @@ found:
 }
 
 /*
- * Check if a file system can be unmounted.
- */
-static int fs_may_umount(struct super_block *sb)
-{
-	struct inode *inode;
-	int i;
-
-	for (i = 0; i < NR_INODE; i++) {
-		inode = &inode_table[i];
-
-		if (inode->i_sb != sb || !inode->i_ref)
-			continue;
-
-		if (inode == sb->s_root_inode && inode->i_ref == (inode->i_mount != inode ? 1 : 2))
-			continue;
-
-		return 0;
-	}
-
-	return 1;
-}
-
-/*
  * Unmount a file system.
  */
 static int do_umount(const char *target, int flags)

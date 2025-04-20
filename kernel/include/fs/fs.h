@@ -195,13 +195,13 @@ struct file_operations {
 
 /* files table */
 extern struct file filp_table[NR_FILE];
-extern struct inode *inode_table;
 
 /* super operations */
 int register_filesystem(struct file_system *fs);
 struct file_system *get_filesystem(const char *name);
 int get_filesystem_list(char *buf, int count);
 int get_vfs_mount_list(char *buf, int count);
+int fs_may_umount(struct super_block *sb);
 
 /* buffer operations */
 struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize);
@@ -224,7 +224,7 @@ struct inode *get_empty_inode(struct super_block *sb);
 void clear_inode(struct inode *inode);
 void insert_inode_hash(struct inode *inode);
 struct inode *find_inode(struct super_block *sb, ino_t ino);
-int iinit();
+int init_inode();
 
 /* file operations */
 struct file *get_empty_filp();
