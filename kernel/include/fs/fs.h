@@ -98,7 +98,8 @@ struct inode {
 	struct list_head		i_pages;
 	struct list_head		i_mmap;
 	struct list_head		i_list;
-	struct htable_link		i_htable;
+	struct inode *			i_next_hash;
+	struct inode *			i_prev_hash;
 	union {
 		struct minix_inode_info		minix_i;
 		struct ext2_inode_info		ext2_i;
@@ -224,7 +225,7 @@ struct inode *get_empty_inode(struct super_block *sb);
 void clear_inode(struct inode *inode);
 void insert_inode_hash(struct inode *inode);
 struct inode *find_inode(struct super_block *sb, ino_t ino);
-int init_inode();
+void init_inode();
 
 /* file operations */
 struct file *get_empty_filp();

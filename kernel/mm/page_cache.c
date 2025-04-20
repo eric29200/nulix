@@ -87,7 +87,7 @@ void remove_from_page_cache(struct page *page)
 	/* unlink this page */
 	page->next_hash = NULL;
 	page->prev_hash = NULL;
-	
+
 	/* update next */
 	if (next_hash)
 		next_hash->prev_hash = prev_hash;
@@ -97,7 +97,7 @@ void remove_from_page_cache(struct page *page)
 		prev_hash->next_hash = next_hash;
 
 	/* update head */
-	p = page_hash(page->inode,page->offset);
+	p = page_hash(page->inode, page->offset);
 	if (*p == page)
 		*p = next_hash;
 }

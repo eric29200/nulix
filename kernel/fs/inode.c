@@ -9,20 +9,72 @@
 #define HASH_BITS			12
 #define HASH_SIZE			(1 << HASH_BITS)
 
-/* global inode table */
-static struct htable_link **inode_htable = NULL;
-
 /* inodes lists */
 static LIST_HEAD(free_inodes);
 static LIST_HEAD(used_inodes);
 static int nr_inodes = 0;
+
+/* inode hash table */
+static struct inode *inode_hash_table[HASH_SIZE];
+
+/*
+ * Hash an inode.
+ */
+static inline int __inode_hashfn(dev_t dev, ino_t ino)
+{
+	return (dev ^ ino) % HASH_SIZE;
+}
+
+/*
+ * Get hash bucket.
+ */
+static inline struct inode **inode_hash(dev_t dev, ino_t ino)
+{
+	return inode_hash_table + __inode_hashfn(dev, ino);
+}
 
 /*
  * Insert an inode in hash table.
  */
 void insert_inode_hash(struct inode *inode)
 {
-	htable_insert(inode_htable, &inode->i_htable, inode->i_ino, HASH_BITS);
+	struct inode **i;
+
+	i = inode_hash(inode->i_sb->s_dev, inode->i_ino);
+	inode->i_prev_hash = NULL;
+	inode->i_next_hash = *i;
+
+	if (*i)
+		inode->i_next_hash->i_prev_hash = inode;
+
+	/* update head */
+	*i = inode;
+}
+
+/*
+ * Remove ai inode from cache.
+ */
+void remove_inode_hash(struct inode *inode)
+{
+	struct inode *next_hash = inode->i_next_hash, *prev_hash = inode->i_prev_hash;
+	struct inode **i;
+
+	/* unlink this inode */
+	inode->i_next_hash = NULL;
+	inode->i_prev_hash = NULL;
+
+	/* update next */
+	if (next_hash)
+		next_hash->i_prev_hash = prev_hash;
+
+	/* update previous */
+	if (prev_hash)
+		prev_hash->i_next_hash = next_hash;
+
+	/* update head */
+	i = inode_hash(inode->i_sb->s_dev, inode->i_ino);
+	if (*i == inode)
+		*i = next_hash;
 }
 
 /*
@@ -35,7 +87,7 @@ void clear_inode(struct inode *inode)
 
 	/* clear inode */
 	list_del(&inode->i_list);
-	htable_delete(&inode->i_htable);
+	remove_inode_hash(inode);
 	memset(inode, 0, sizeof(struct inode));
 
 	/* put it in free list */
@@ -116,19 +168,13 @@ found:
  */
 struct inode *find_inode(struct super_block *sb, ino_t ino)
 {
-	struct htable_link *node;
 	struct inode *inode;
 
-	/* try to find inode in cache */
-	node = htable_lookup(inode_htable, ino, HASH_BITS);
-	while (node) {
-		inode = htable_entry(node, struct inode, i_htable);
+	for (inode = *inode_hash(sb->s_dev, ino); inode != NULL; inode = inode->i_next_hash) {
 		if (inode->i_ino == ino && inode->i_sb == sb) {
 			inode->i_ref++;
 			return inode;
 		}
-
-		node = node->next;
 	}
 
 	return NULL;
@@ -239,16 +285,10 @@ int fs_may_umount(struct super_block *sb)
 /*
  * Init inodes.
  */
-int init_inode()
+void init_inode()
 {
-	/* allocate inode hash table */
-	inode_htable = (struct htable_link **) kmalloc(sizeof(struct htable_link *) * HASH_SIZE);
-	if (!inode_htable)
-		return -ENOMEM;
-	memset(inode_htable, 0, sizeof(struct htable_link *) * HASH_SIZE);
+	int i;
 
-	/* init inode hash table */
-	htable_init(inode_htable, HASH_BITS);
-
-	return 0;
+	for (i = 0; i < HASH_SIZE; i++)
+		inode_hash_table[i] = NULL;
 }
