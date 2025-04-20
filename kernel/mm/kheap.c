@@ -8,7 +8,6 @@
 #define KHEAP_MIN_ORDER				16
 #define KHEAP_MAGIC				0xAEA0
 #define KHEAP_BLOCK_DATA(block)			((uint32_t) (block) + sizeof(struct heap_block))
-#define KHEAP_BLOCK_ALIGNED(block)		(PAGE_ALIGNED(KHEAP_BLOCK_DATA(block)))
 
 /*
  * Bucket.
@@ -17,7 +16,6 @@ struct bucket {
 	size_t			order;
 	struct list_head	used_blocks;
 	struct list_head	free_blocks;
-	struct list_head	free_aligned_blocks;
 };
 
 /*
@@ -30,7 +28,7 @@ struct heap_block {
 };
 
 /* kernel heap */
-uint32_t kheap_pos = 0;
+static uint32_t kheap_pos = 0;
 static struct bucket buckets[KHEAP_NR_BUCKETS];
 
 /*
@@ -50,19 +48,12 @@ static struct bucket *find_bucket(size_t size)
 /*
  * Create a new heap block.
  */
-static struct heap_block *create_heap_block(struct bucket *bucket, int page_aligned)
+static struct heap_block *create_heap_block(struct bucket *bucket)
 {
 	struct heap_block *block;
-	uint32_t page_offset;
 
 	/* create new block at the end of the heap */
 	block = (struct heap_block *) kheap_pos;
-
-	/* page align block if needed */
-	if (page_aligned && !KHEAP_BLOCK_ALIGNED(block)) {
-		page_offset = PAGE_SIZE - KHEAP_BLOCK_DATA(block) % PAGE_SIZE;
-		block = (void *) block + page_offset;
-	}
 
 	/* check heap overflow */
 	if (KHEAP_BLOCK_DATA(block) + bucket->order > KHEAP_START + KHEAP_SIZE)
@@ -81,7 +72,7 @@ static struct heap_block *create_heap_block(struct bucket *bucket, int page_alig
 /*
  * Allocate memory.
  */
-void *kheap_alloc(size_t size, int page_aligned)
+void *kmalloc(size_t size)
 {
 	struct heap_block *block = NULL;
 	struct bucket *bucket;
@@ -94,9 +85,7 @@ void *kheap_alloc(size_t size, int page_aligned)
 	}
 
 	/* try to reuse a free block */
-	if (page_aligned && !list_empty(&bucket->free_aligned_blocks))
-		block = list_first_entry(&bucket->free_aligned_blocks, struct heap_block, list);
-	else if (!page_aligned && !list_empty(&bucket->free_blocks))
+	if (!list_empty(&bucket->free_blocks))
 		block = list_first_entry(&bucket->free_blocks, struct heap_block, list);
 
 	/* free block found */
@@ -106,7 +95,7 @@ void *kheap_alloc(size_t size, int page_aligned)
 	}
 
 	/* create a new block */
-	block = create_heap_block(bucket, page_aligned);
+	block = create_heap_block(bucket);
 	if (!block) {
 		printf("Kheap: kernel heap overflow\n");
 		return NULL;
@@ -120,7 +109,7 @@ found:
 /*
  * Free memory.
  */
-void kheap_free(void *p)
+void kfree(void *p)
 {
 	struct heap_block *block;
 	struct bucket *bucket;
@@ -139,14 +128,9 @@ void kheap_free(void *p)
 	if (!bucket)
 		return;
 
-	/* remove if from used list */
+	/* add it to free list */
 	list_del(&block->list);
-
-	/* add to free list */
-	if (KHEAP_BLOCK_ALIGNED(block))
-		list_add_tail(&block->list, &bucket->free_aligned_blocks);
-	else
-		list_add_tail(&block->list, &bucket->free_blocks);
+	list_add_tail(&block->list, &bucket->free_blocks);
 }
 
 /*
@@ -164,6 +148,5 @@ void kheap_init()
 		buckets[i].order = order;
 		INIT_LIST_HEAD(&buckets[i].used_blocks);
 		INIT_LIST_HEAD(&buckets[i].free_blocks);
-		INIT_LIST_HEAD(&buckets[i].free_aligned_blocks);
 	}
 }

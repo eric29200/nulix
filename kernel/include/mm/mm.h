@@ -3,6 +3,7 @@
 
 #include <lib/list.h>
 #include <mm/paging.h>
+#include <mm/kheap.h>
 #include <stddef.h>
 
 #define KHEAP_START			0x400000				/* kernel code + heap : from 0 to 16 MB */
@@ -39,17 +40,5 @@ struct vm_operations {
 };
 
 void init_mem(uint32_t start, uint32_t end);
-int init_page_cache();
-void init_page_alloc(uint32_t last_kernel_addr);
-void *kmalloc(uint32_t size);
-void *kmalloc_align(uint32_t size);
-void kfree(void *p);
-struct page *__get_free_page(int priority);
-void *get_free_page();
-void *reserve_free_kernel_pages(size_t n);
-void __free_page(struct page *page);
-void free_page(void *address);
-void reclaim_pages();
-void truncate_inode_pages(struct inode *inode, off_t start);
 
 #endif

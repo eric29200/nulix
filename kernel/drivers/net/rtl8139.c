@@ -28,7 +28,7 @@ static void rtl8139_send_packet(struct sk_buff *skb)
 	memcpy(tx_buffer[tx_cur], skb->head, skb->len);
 
 	/* put packet on device */
-	outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, (uint32_t) (tx_buffer[tx_cur]));
+	outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, __pa(tx_buffer[tx_cur]));
 	outl(rtl8139_net_dev->io_base + 0x10 + tx_cur * 4, skb->size);
 
 	/* update tx buffer index */
@@ -149,16 +149,16 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	while (inb(io_base + 0x37) & 0x10);
 
 	/* allocate receive buffer */
-	rx_buffer = kmalloc_align(RX_BUFFER_SIZE);
+	rx_buffer = kmalloc(RX_BUFFER_SIZE);
 	if (!rx_buffer)
 		return -ENOMEM;
 
 	/* allocate transmit buffers */
 	for (i = 0; i < 4; i++) {
-		tx_buffer[i] = kmalloc_align(PAGE_SIZE);
+		tx_buffer[i] = get_free_page(GFP_KERNEL);
 		if (!tx_buffer[i]) {
 			while (--i >= 0)
-				kfree(tx_buffer[i]);
+				free_page(tx_buffer[i]);
 			kfree(rx_buffer);
 			return -ENOMEM;
 		}

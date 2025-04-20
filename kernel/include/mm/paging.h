@@ -84,6 +84,7 @@ struct page {
 	struct htable_link	htable;					/* page hash */
 };
 
+/* paging */
 int init_paging(uint32_t start, uint32_t end);
 void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot);
@@ -92,7 +93,17 @@ void page_fault_handler(struct registers *regs);
 pgd_t *clone_pgd(pgd_t *pgd);
 void free_pgd(pgd_t *pgd);
 
+/* page allocation */
+void init_page_alloc(uint32_t last_kernel_addr);
+struct page *__get_free_page(int priority);
+void *get_free_page();
+void __free_page(struct page *page);
+void free_page(void *address);
+void *reserve_free_kernel_pages(size_t n);
+void reclaim_pages();
+
 /* page cache */
+int init_page_cache();
 struct page *find_page(struct inode *inode, off_t offset);
 void add_to_page_cache(struct page *page, struct inode *inode, off_t offset);
 void update_vm_cache(struct inode *inode, const char *buf, size_t pos, size_t count);

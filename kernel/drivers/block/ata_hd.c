@@ -140,12 +140,12 @@ int ata_hd_init(struct ata_device *device)
 		return -EINVAL;
 
 	/* allocate prdt */
-	device->prdt = kmalloc_align(sizeof(struct ata_prdt));
+	device->prdt = kmalloc(sizeof(struct ata_prdt));
 	if (!device->prdt)
 		return -ENOMEM;
 
 	/* allocate buffer */
-	device->buf = kmalloc_align(PAGE_SIZE);
+	device->buf = get_free_page(GFP_KERNEL);
 	if (!device->buf) {
 		kfree(device->prdt);
 		return -ENOMEM;
@@ -156,7 +156,7 @@ int ata_hd_init(struct ata_device *device)
 	memset(device->buf, 0, PAGE_SIZE);
 
 	/* set prdt */
-	device->prdt[0].buffer_phys = (uint32_t) device->buf;
+	device->prdt[0].buffer_phys = __pa(device->buf);
 	device->prdt[0].transfert_size = ATA_SECTOR_SIZE;
 	device->prdt[0].mark_end = 0x8000;
 

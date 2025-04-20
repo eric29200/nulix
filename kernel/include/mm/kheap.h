@@ -3,11 +3,8 @@
 
 #include <stddef.h>
 
-void *kheap_alloc(size_t size, int page_aligned);
-void kheap_free(void *p);
+void *kmalloc(uint32_t size);
+void kfree(void *p);
 void kheap_init();
-
-/* kernel heap position */
-extern uint32_t kheap_pos;
 
 #endif
