@@ -4,13 +4,9 @@
 #include <stddef.h>
 #include <string.h>
 
-extern uint32_t kernel_stack;
-extern void gdt_flush(uint32_t);
-extern void tss_flush();
-
-struct gdt_entry gdt_entries[6];
-struct gdt_ptr gdt_ptr;
-struct tss_entry tss_entry;
+static struct gdt_entry gdt_entries[6];
+static struct gdt_ptr gdt_ptr;
+static struct tss_entry tss_entry;
 
 /*
  * Set tss stack.
@@ -22,19 +18,23 @@ void tss_set_stack(uint32_t ss, uint32_t esp)
 }
 
 /*
- * Set a Global Descriptor Table.
+ * Set a Global Descriptor Table entry.
  */
-static void gdt_set_gate(uint32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran)
+static void gdt_set_entry(uint32_t id, uint32_t base, uint32_t limit, int flags)
 {
-	gdt_entries[num].base_low = base & 0xFFFF;
-	gdt_entries[num].base_middle = (base >> 16) & 0xFF;
-	gdt_entries[num].base_high = (base >> 24) & 0xFF;
-
-	gdt_entries[num].limit_low = limit & 0xFFFF;
-	gdt_entries[num].granularity = (limit >> 16) & 0x0F;
-
-	gdt_entries[num].granularity |= gran & 0xF0;
-	gdt_entries[num].access = access;
+	gdt_entries[id].limit0 = ((limit) >>  0) & 0xFFFF;
+	gdt_entries[id].limit1 = ((limit) >> 16) & 0x000F;
+	gdt_entries[id].base0 = ((base)  >>  0) & 0xFFFF;
+	gdt_entries[id].base1 = ((base)  >> 16) & 0x00FF;
+	gdt_entries[id].base2 = ((base)  >> 24) & 0x00FF;
+	gdt_entries[id].type = ((flags) >>  0) & 0x000F;
+	gdt_entries[id].s = ((flags) >>  4) & 0x0001;
+	gdt_entries[id].dpl = ((flags) >>  5) & 0x0003;
+	gdt_entries[id].p = ((flags) >>  7) & 0x0001;
+	gdt_entries[id].avl = ((flags) >> 12) & 0x0001;
+	gdt_entries[id].l = ((flags) >> 13) & 0x0001;
+	gdt_entries[id].d = ((flags) >> 14) & 0x0001;
+	gdt_entries[id].g = ((flags) >> 15) & 0x0001;
 }
 
 /*
@@ -54,12 +54,12 @@ void init_gdt()
 	tss_limit = tss_base + sizeof(struct tss_entry);
 
 	/* create kernel and user code/data segments */
-	gdt_set_gate(0, 0, 0, 0, 0);				/* NULL segement : always needed */
-	gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);		/* Kernel Code segment */
-	gdt_set_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);		/* Kernel Data segment */
-	gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);		/* User mode code segment */
-	gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);		/* User mode data segement */
-	gdt_set_gate(5, tss_base, tss_limit, 0xE9, 0x00);	/* Task State Segment */
+	gdt_set_entry(0, 0, 0, 0);
+	gdt_set_entry(GDT_ENTRY_KERNEL_CS, 0, 0xFFFFF, DESC_CODE32);
+	gdt_set_entry(GDT_ENTRY_KERNEL_DS, 0, 0xFFFFF, DESC_DATA32);
+	gdt_set_entry(GDT_ENTRY_USER_CS, 0, 0xFFFFF, DESC_CODE32 | DESC_USER);
+	gdt_set_entry(GDT_ENTRY_USER_DS, 0, 0xFFFFF, DESC_DATA32 | DESC_USER);
+	gdt_set_entry(GDT_ENTRY_TSS, tss_base, tss_limit, DESC_TSS32);
 
 	/* init tss */
 	memset((void *) &tss_entry, 0, sizeof(struct tss_entry));
