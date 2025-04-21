@@ -123,8 +123,8 @@ static int tty_close(struct file *filp)
  */
 static int tty_read(struct file *filp, char *buf, int n)
 {
+	int count = 0, ret;
 	struct tty *tty;
-	int count = 0;
 	uint8_t c;
 
 	/* get tty */
@@ -134,16 +134,13 @@ static int tty_read(struct file *filp, char *buf, int n)
 
 	/* read all characters */
 	while (count < n) {
-		/* non blocking mode : returns if no characters in cooked queue */
-		if ((filp->f_flags & O_NONBLOCK) && ring_buffer_empty(&tty->cooked_queue))
-			return -EAGAIN;
-
-		/* read char */
-		if (!ring_buffer_read(&tty->cooked_queue, &c, 1))
-			return count ? count : -EINTR;
+		/* read next character */
+		ret = ring_buffer_getc(&tty->cooked_queue, &c, filp->f_flags & O_NONBLOCK);
+		if (ret)
+			return ret;
 
 		/* add char to buffer */
-		((unsigned char *) buf)[count++] = c;
+		((uint8_t *) buf)[count++] = c;
 
 		/* end of line : return */
 		if (L_CANON(tty) && c == '\n') {
@@ -222,9 +219,10 @@ void tty_do_cook(struct tty *tty)
 {
 	uint8_t c;
 
-	while (tty->read_queue.size > 0) {
+	for (;;) {
 		/* get next input character */
-		ring_buffer_read(&tty->read_queue, &c, 1);
+		if (ring_buffer_getc(&tty->read_queue, &c, 1))
+			break;
 
 		/* convert to ascii */
 		if (I_ISTRIP(tty))
@@ -270,8 +268,7 @@ void tty_do_cook(struct tty *tty)
 			out_char(tty, c);
 
 		/* put character in cooked queue */
-		if (!ring_buffer_full(&tty->cooked_queue))
-			ring_buffer_write(&tty->cooked_queue, &c, 1);
+		ring_buffer_putc(&tty->cooked_queue, c);
 
 		/* update canon data */
 		if (L_CANON(tty) && c == '\n')

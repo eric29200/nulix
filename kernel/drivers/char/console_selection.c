@@ -292,7 +292,7 @@ int paste_selection(struct tty *tty)
 		return 0;
 
 	/* write buffer to tty */
-	ring_buffer_write(&tty->read_queue, (uint8_t *) sel_buf, sel_buf_len);
+	ring_buffer_write(&tty->read_queue, (uint8_t *) sel_buf, sel_buf_len, 0);
 	tty_do_cook(tty);
 
 	return 0;

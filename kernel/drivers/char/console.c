@@ -950,9 +950,10 @@ static ssize_t console_write(struct tty *tty)
 		clear_selection(vc);
 
 	/* get characters from write queue */
-	while (tty->write_queue.size > 0) {
+	for (;;) {
 		/* get next character */
-		ring_buffer_read(&tty->write_queue, &c, 1);
+		if (ring_buffer_getc(&tty->write_queue, &c, 1))
+			break;
 		count++;
 
 		/* translate character */

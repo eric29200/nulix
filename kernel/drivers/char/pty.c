@@ -26,9 +26,10 @@ static ssize_t pty_write(struct tty *tty)
 	uint8_t c;
 
 	/* get characters from write queue */
-	while (tty->write_queue.size > 0) {
+	for (;;) {
 		/* get next character */
-		ring_buffer_read(&tty->write_queue, &c, 1);
+		if (ring_buffer_getc(&tty->write_queue, &c, 1))
+			break;
 
 		/* write to linked tty */
 		if (ring_buffer_putc(&tty->link->read_queue, c))
