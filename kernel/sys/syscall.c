@@ -4,7 +4,6 @@
 #include <net/socket.h>
 #include <ipc/ipc.h>
 #include <sys/sys.h>
-#include <x86/ldt.h>
 #include <x86/tls.h>
 #include <stdio.h>
 
@@ -67,7 +66,6 @@ static const void *syscalls[] = {
 	[__NR_mmap2]			= sys_mmap2,
 	[__NR_munmap]			= sys_munmap,
 	[__NR_mremap]			= sys_mremap,
-	[__NR_modify_ldt]		= sys_modify_ldt,
 	[__NR_gettid]			= sys_gettid,
 	[__NR_get_thread_area]		= sys_get_thread_area,
 	[__NR_set_thread_area]		= sys_set_thread_area,
