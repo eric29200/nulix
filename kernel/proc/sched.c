@@ -1,6 +1,6 @@
 #include <x86/system.h>
 #include <x86/interrupt.h>
-#include <x86/tss.h>
+#include <x86/gdt.h>
 #include <drivers/char/pit.h>
 #include <proc/sched.h>
 #include <proc/task.h>
@@ -55,6 +55,23 @@ struct task *find_task(pid_t pid)
 }
 
 /*
+ * Switch to next task.
+ */
+static void switch_to(struct task *prev, struct task *next)
+{
+	/* set current task */
+	current_task = next;
+
+	/* load current task */
+	load_tss(current_task);
+	load_tls();
+	switch_pgd(current_task->mm->pgd);
+
+	/* switch */
+	scheduler_do_switch(prev ? &prev->esp : 0, current_task->esp);
+}
+
+/*
  * Init scheduler.
  */
 int init_scheduler(void (*kinit_func)())
@@ -68,11 +85,7 @@ int init_scheduler(void (*kinit_func)())
 		return -ENOMEM;
 
 	/* switch to kinit */
-	current_task = kinit_task;
-	tss_set_stack(0x10, current_task->kernel_stack);
-	load_tls();
-	switch_pgd(current_task->mm->pgd);
-	scheduler_do_switch(0, current_task->esp);
+	switch_to(NULL, kinit_task);
 
 	return 0;
 }
@@ -161,7 +174,7 @@ static int goodness(struct task *task, struct task *prev)
 
 	return weight;
 }
-
+  
 /*
  * Schedule function (interruptions must be disabled and will be reenabled on function return).
  */
@@ -219,11 +232,7 @@ void schedule()
 		kstat.context_switch++;
 
 		/* real switch */
-		current_task = next;
-		tss_set_stack(0x10, current_task->kernel_stack);
-		load_tls();
-		switch_pgd(current_task->mm->pgd);
-		scheduler_do_switch(&prev->esp, current_task->esp);
+		switch_to(prev, next);
 	}
 }
 

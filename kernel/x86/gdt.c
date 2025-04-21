@@ -1,6 +1,6 @@
 #include <x86/gdt.h>
-#include <x86/tss.h>
 #include <x86/system.h>
+#include <proc/task.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -9,12 +9,11 @@ static struct gdt_ptr gdt_ptr;
 static struct tss_entry tss_entry;
 
 /*
- * Set tss stack.
+ * Load Task State Segment.
  */
-void tss_set_stack(uint32_t ss, uint32_t esp)
+void load_tss(struct task *task)
 {
-	tss_entry.ss0 = ss;
-	tss_entry.esp0 = esp;
+	tss_entry.esp0 = task->kernel_stack;
 }
 
 /*

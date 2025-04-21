@@ -1,5 +1,5 @@
 #include <x86/interrupt.h>
-#include <x86/tss.h>
+#include <x86/gdt.h>
 #include <mm/mm.h>
 #include <proc/task.h>
 #include <proc/sched.h>
@@ -21,7 +21,7 @@ extern void return_user_mode(struct registers *regs);
 static void task_user_entry(struct task *task)
 {
 	/* return to user mode */
-	tss_set_stack(0x10, task->kernel_stack);
+	load_tss(task);
 	return_user_mode(&task->user_regs);
 }
 
