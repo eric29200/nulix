@@ -65,7 +65,7 @@ static void switch_to(struct task *prev, struct task *next)
 
 	/* load current task */
 	switch_ldt(prev, next);
-	load_tss(current_task);
+	load_tss(current_task->thread.kernel_stack);
 	load_tls();
 	switch_pgd(current_task->mm->pgd);
 

@@ -53,9 +53,9 @@ static struct tss_entry tss_entry;
 /*
  * Load Task State Segment.
  */
-void load_tss(struct task *task)
+void load_tss(uint32_t esp0)
 {
-	tss_entry.esp0 = task->thread.kernel_stack;
+	tss_entry.esp0 = esp0;
 }
 
 /*

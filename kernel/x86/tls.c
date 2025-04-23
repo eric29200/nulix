@@ -1,6 +1,7 @@
 #include <x86/tls.h>
 #include <proc/sched.h>
 #include <stderr.h>
+#include <stdio.h>
 
 /*
  * Load TLS.
@@ -30,7 +31,7 @@ int sys_get_thread_area(struct user_desc *u_info)
 /*
  * Set thread area.
  */
-int sys_set_thread_area(struct user_desc *u_info)
+int do_set_thread_area(struct task *task, struct user_desc *u_info)
 {
 	int idx = u_info->entry_number;
 
@@ -44,12 +45,21 @@ int sys_set_thread_area(struct user_desc *u_info)
 
 	/* set TLS */
 	u_info->entry_number = idx;
-	memcpy(&current_task->thread.tls, u_info, sizeof(struct user_desc));
+	memcpy(&task->thread.tls, u_info, sizeof(struct user_desc));
 
 	/* load TLS */
-	load_tls();
+	if (task == current_task)
+		load_tls();
 
 	return 0;
+}
+
+/*
+ * Set thread area system call.
+ */
+int sys_set_thread_area(struct user_desc *u_info)
+{
+	return do_set_thread_area(current_task, u_info);
 }
 
 /*

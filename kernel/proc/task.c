@@ -22,7 +22,7 @@ extern void return_user_mode(struct registers *regs);
 static void task_user_entry(struct task *task)
 {
 	/* return to user mode */
-	load_tss(task);
+	load_tss(task->thread.kernel_stack);
 	return_user_mode(&task->thread.regs);
 }
 
@@ -328,18 +328,22 @@ static int task_copy_files(struct task *task, struct task *parent, uint32_t clon
  */
 static int task_copy_thread(struct task *task, struct task *parent, uint32_t user_sp)
 {
-	/* duplicate parent registers and TLS */
+	int ret = 0;
+
 	if (parent) {
+		/* duplicate user registers */
 		memcpy(&task->thread.regs, &parent->thread.regs, sizeof(struct registers));
 		task->thread.regs.eax = 0;
-		memcpy(&task->thread.tls, &parent->thread.tls, sizeof(struct user_desc));
+
+		/* duplicate TLS */
+		ret = do_set_thread_area(task, &parent->thread.tls);
 	}
 
 	/* set user stack */
 	if (user_sp)
 		task->thread.regs.useresp = user_sp;
 
-	return 0;
+	return ret;
 }
 
 /*

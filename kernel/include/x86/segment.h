@@ -28,15 +28,19 @@
 #define DESC_TSS32			(_DESC_SYSTEM(9) | _DESC_PRESENT)
 #define DESC_USER			(_DESC_DPL(3))
 
+#define GDT_ENTRY_TLS_ENTRIES		3
+#define TLS_SIZE			(GDT_ENTRY_TLS_ENTRIES * 8)
+#define GDT_ENTRIES			32
+#define GDT_SIZE			(GDT_ENTRIES * 8)
+
 /* GDT entries */
 #define GDT_ENTRY_KERNEL_CS		1
 #define GDT_ENTRY_KERNEL_DS		2
 #define GDT_ENTRY_USER_CS		3
 #define GDT_ENTRY_USER_DS		4
 #define GDT_ENTRY_TSS			5
-#define GDT_ENTRY_TLS			6
-#define GDT_ENTRY_LDT			7
-
-#define GDT_ENTRIES			32
+#define GDT_ENTRY_TLS_MIN		6
+#define GDT_ENTRY_TLS_MAX		(GDT_ENTRY_TLS_MIN + GDT_ENTRY_TLS_ENTRIES - 1)
+#define GDT_ENTRY_LDT			17
 
 #endif

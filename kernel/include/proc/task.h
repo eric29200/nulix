@@ -8,6 +8,7 @@
 #include <ipc/signal.h>
 #include <lib/list.h>
 #include <x86/tls.h>
+#include <x86/segment.h>
 #include <resource.h>
 #include <stddef.h>
 
@@ -46,10 +47,11 @@ struct mm_struct {
  * Task's thread structure.
  */
 struct thread_struct {
-	uint32_t			kernel_stack;			/* kernel stack */
-	uint32_t			esp;				/* kernel stack pointer */
-	struct user_desc		tls;				/* Thread Local Storage address */
-	struct registers		regs;				/* saved registers at syscall entry */
+	uint32_t			kernel_stack;				/* kernel stack */
+	uint32_t			esp;					/* kernel stack pointer */
+	struct user_desc		tls;					/* Thread Local Storage address */
+	struct desc_struct		tls_array[GDT_ENTRY_TLS_ENTRIES];	/* Thread Local Storage */
+	struct registers		regs;					/* saved registers at syscall entry */
 };
 
 /*
