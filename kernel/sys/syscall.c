@@ -5,6 +5,7 @@
 #include <ipc/ipc.h>
 #include <sys/sys.h>
 #include <x86/tls.h>
+#include <x86/ldt.h>
 #include <stdio.h>
 
 /* system calls table */
@@ -158,6 +159,7 @@ static const void *syscalls[] = {
 	[__NR_mincore]			= sys_mincore,
 	[__NR_getpriority]		= sys_getpriority,
 	[__NR_setpriority]		= sys_setpriority,
+	[__NR_modify_ldt]		= sys_modify_ldt,
 };
 
 /*

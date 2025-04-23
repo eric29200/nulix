@@ -1,6 +1,7 @@
 #include <x86/system.h>
 #include <x86/interrupt.h>
 #include <x86/gdt.h>
+#include <x86/ldt.h>
 #include <drivers/char/pit.h>
 #include <proc/sched.h>
 #include <proc/task.h>
@@ -63,6 +64,7 @@ static void switch_to(struct task *prev, struct task *next)
 	current_task = next;
 
 	/* load current task */
+	switch_ldt(prev, next);
 	load_tss(current_task);
 	load_tls();
 	switch_pgd(current_task->mm->pgd);

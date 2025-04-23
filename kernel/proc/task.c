@@ -1,5 +1,6 @@
 #include <x86/interrupt.h>
 #include <x86/gdt.h>
+#include <x86/ldt.h>
 #include <mm/mm.h>
 #include <proc/task.h>
 #include <proc/sched.h>
@@ -148,6 +149,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	struct vm_area *vm_parent, *vm_child;
 	struct mm_struct *mm_new;
 	struct list_head *pos;
+	int ret;
 
 	/* allocate memory structure */
 	mm_new = (struct mm_struct *) kmalloc(sizeof(struct mm_struct));
@@ -163,6 +165,13 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	mm_new->pgd = mm ? clone_pgd(mm->pgd) : pgd_kernel;
 	if (!mm_new->pgd)
 		goto err;
+
+	/* clone LDT */
+	if (mm && mm->ldt_size) {
+		ret = clone_ldt(mm, mm_new);
+		if (ret)
+			goto err;
+	}
 
 	/* copy text/brk start/end */
 	mm_new->start_text = mm ? mm->start_text : 0;
@@ -423,11 +432,16 @@ static void task_exit_mm(struct task *task)
 		task->mm = NULL;
 
 		if (--mm->count <= 0) {
+			/* free areas */
 			task_exit_mmap(mm);
 
 			/* free page directory */
 			if (mm->pgd && mm->pgd != pgd_kernel)
 				free_pgd(mm->pgd);
+
+			/* free LDT */
+			if (mm->ldt)
+				kfree(mm->ldt);
 
 			kfree(mm);
 		}
@@ -493,9 +507,6 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	if (parent) {
 		memcpy(task->name, parent->name, TASK_NAME_LEN);
 		memcpy(&task->tls, &parent->tls, sizeof(struct user_desc));
-	} else {
-		memset(task->name, 0, TASK_NAME_LEN);
-		memset(&task->tls, 0, sizeof(struct user_desc));
 	}
 
 	/* copy task */
