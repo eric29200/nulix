@@ -151,11 +151,61 @@ install:
 }
 
 /*
+ * Read default LDT = zero.
+ */
+static int read_default_ldt(void *ptr, uint32_t bytecount)
+{
+	memcpy(ptr, 0, bytecount);
+	return bytecount;
+}
+
+/*
+ * Read a Local Descriptor Table.
+ */
+static int read_ldt(void *ptr, uint32_t bytecount)
+{
+	size_t entries_size;
+
+	/* no LDT */
+	if (!current_task->mm->ldt)
+		return 0;
+
+	/* limit bytecount */
+	if (bytecount > LDT_ENTRY_SIZE * LDT_ENTRIES)
+		bytecount = LDT_ENTRY_SIZE * LDT_ENTRIES;
+
+	/* number of entries to read */
+	entries_size = current_task->mm->ldt_size * LDT_ENTRIES;
+	if (entries_size > bytecount)
+		entries_size = bytecount;
+
+	/* copy entries */
+	memcpy(ptr, current_task->mm->ldt, entries_size);
+
+	/* zero fill remaining buffer */
+	if (entries_size != bytecount)
+		memset(ptr + entries_size, 0, bytecount - entries_size);
+
+	return bytecount;
+}
+
+/*
  * Modify Local Descriptor Table system call.
  */
 int sys_modify_ldt(int func, void *ptr, uint32_t bytecount)
 {
-	if (func == 1)
-		return write_ldt(ptr, bytecount, 0);
+	switch (func) {
+		case 0:
+			return read_ldt(ptr, bytecount);
+		case 1:
+			return write_ldt(ptr, bytecount, 1);
+		case 2:
+			return read_default_ldt(ptr, bytecount);
+		case 0x11:
+			return write_ldt(ptr, bytecount, 0);
+		default:
+			return -ENOSYS;
+	}
+
 	return 0;
 }
