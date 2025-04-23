@@ -176,7 +176,7 @@ static void syscall_handler(struct registers *regs)
 	}
 
 	/* save current registers */
-	memcpyb(&current_task->user_regs, regs, sizeof(struct registers));
+	memcpyb(&current_task->thread.regs, regs, sizeof(struct registers));
 
 	/* execute system call */
 	current_task->in_syscall = 1;
@@ -184,7 +184,7 @@ static void syscall_handler(struct registers *regs)
 	current_task->in_syscall = 0;
 
 	/* restore registers and set return value */
-	memcpyb(regs, &current_task->user_regs, sizeof(struct registers));
+	memcpyb(regs, &current_task->thread.regs, sizeof(struct registers));
 	regs->eax = ret;
 
 	/* handle pending signals */

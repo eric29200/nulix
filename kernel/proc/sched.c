@@ -70,7 +70,7 @@ static void switch_to(struct task *prev, struct task *next)
 	switch_pgd(current_task->mm->pgd);
 
 	/* switch */
-	scheduler_do_switch(prev ? &prev->esp : 0, current_task->esp);
+	scheduler_do_switch(prev ? &prev->thread.esp : 0, current_task->thread.esp);
 }
 
 /*

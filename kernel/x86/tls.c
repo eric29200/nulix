@@ -7,7 +7,7 @@
  */
 void load_tls()
 {
-	__asm__ volatile("movl %0, %%gs:0" :: "r" (current_task->tls.base_addr));
+	__asm__ volatile("movl %0, %%gs:0" :: "r" (current_task->thread.tls.base_addr));
 }
 
 /*
@@ -22,7 +22,7 @@ int sys_get_thread_area(struct user_desc *u_info)
 		return -EINVAL;
 
 	/* copy TLS */
-	memcpy(u_info, &current_task->tls, sizeof(struct user_desc));
+	memcpy(u_info, &current_task->thread.tls, sizeof(struct user_desc));
 
 	return 0;
 }
@@ -44,7 +44,7 @@ int sys_set_thread_area(struct user_desc *u_info)
 
 	/* set TLS */
 	u_info->entry_number = idx;
-	memcpy(&current_task->tls, u_info, sizeof(struct user_desc));
+	memcpy(&current_task->thread.tls, u_info, sizeof(struct user_desc));
 
 	/* load TLS */
 	load_tls();

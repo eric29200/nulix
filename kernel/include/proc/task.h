@@ -43,6 +43,16 @@ struct mm_struct {
 };
 
 /*
+ * Task's thread structure.
+ */
+struct thread_struct {
+	uint32_t			kernel_stack;			/* kernel stack */
+	uint32_t			esp;				/* kernel stack pointer */
+	struct user_desc		tls;				/* Thread Local Storage address */
+	struct registers		regs;				/* saved registers at syscall entry */
+};
+
+/*
  * Task's file structure.
  */
 struct files_struct {
@@ -96,20 +106,17 @@ struct task {
 	time_t				start_time;			/* time process started after system boot */
 	int			 	exit_code;			/* exit code */
 	struct task *		 	parent;				/* parent process */
-	uint32_t			kernel_stack;			/* kernel stack */
-	uint32_t			esp;				/* kernel stack pointer */
 	time_t				timeout;			/* timeout (used by sleep) */
 	sigset_t			sigpend;			/* pending signals */
 	sigset_t			sigmask;			/* signals mask */
 	sigset_t			saved_sigmask;			/* saved signals mask */
 	char				in_syscall;			/* process in system call */
 	struct rlimit			rlim[RLIM_NLIMITS];		/* resource limits */
-	struct registers		user_regs;			/* saved registers at syscall entry */
 	struct registers		signal_regs;			/* saved registers at signal entry */
-	struct user_desc		tls;				/* Thread Local Storage address */
 	struct timer_event		timeout_tm;			/* timeout timer */
 	struct timer_event		sig_tm;				/* signal timer */
 	struct wait_queue *		wait_child_exit;		/* wait queue for child exit */
+	struct thread_struct		thread;				/* thread stuff */
 	struct fs_struct *		fs;				/* file system stuff */
 	struct files_struct *		files;				/* opened files */
 	struct mm_struct *		mm;				/* memory regions */

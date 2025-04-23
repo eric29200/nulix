@@ -483,8 +483,8 @@ int elf_load(const char *path, struct binargs *bargs)
 	memcpy(current_task->name, name, TASK_NAME_LEN);
 
 	/* setup task entry and stack pointer */
-	current_task->user_regs.eip = elf_entry;
-	current_task->user_regs.useresp = sp;
+	current_task->thread.regs.eip = elf_entry;
+	current_task->thread.regs.useresp = sp;
 out:
 	if (current_task->files->filp[fd])
 		sys_close(fd);

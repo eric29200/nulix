@@ -23,7 +23,7 @@ static void task_user_entry(struct task *task)
 {
 	/* return to user mode */
 	load_tss(task);
-	return_user_mode(&task->user_regs);
+	return_user_mode(&task->thread.regs);
 }
 
 /*
@@ -49,7 +49,7 @@ static void init_entry(struct task *task)
 		goto err;
 
 	/* enter user mode */
-	enter_user_mode(task->user_regs.useresp, task->user_regs.eip, TASK_RETURN_ADDRESS);
+	enter_user_mode(task->thread.regs.useresp, task->thread.regs.eip, TASK_RETURN_ADDRESS);
 	return;
 err:
 	panic("cannot load init process");
@@ -328,15 +328,16 @@ static int task_copy_files(struct task *task, struct task *parent, uint32_t clon
  */
 static int task_copy_thread(struct task *task, struct task *parent, uint32_t user_sp)
 {
-	/* duplicate parent registers */
+	/* duplicate parent registers and TLS */
 	if (parent) {
-		memcpy(&task->user_regs, &parent->user_regs, sizeof(struct registers));
-		task->user_regs.eax = 0;
+		memcpy(&task->thread.regs, &parent->thread.regs, sizeof(struct registers));
+		task->thread.regs.eax = 0;
+		memcpy(&task->thread.tls, &parent->thread.tls, sizeof(struct user_desc));
 	}
 
 	/* set user stack */
 	if (user_sp)
-		task->user_regs.useresp = user_sp;
+		task->thread.regs.useresp = user_sp;
 
 	return 0;
 }
@@ -480,8 +481,8 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 
 	/* set stack */
 	memset(stack, 0, STACK_SIZE);
-	task->kernel_stack = (uint32_t) stack + STACK_SIZE;
-	task->esp = task->kernel_stack - sizeof(struct task_registers);
+	task->thread.kernel_stack = (uint32_t) stack + STACK_SIZE;
+	task->thread.esp = task->thread.kernel_stack - sizeof(struct task_registers);
 
 	/* init task */
 	task->pid = get_next_pid();
@@ -506,7 +507,6 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	/* copy task name and TLS */
 	if (parent) {
 		memcpy(task->name, parent->name, TASK_NAME_LEN);
-		memcpy(&task->tls, &parent->tls, sizeof(struct user_desc));
 	}
 
 	/* copy task */
@@ -558,7 +558,7 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 		return -EINVAL;
 
 	/* set registers */
-	regs = (struct task_registers *) task->esp;
+	regs = (struct task_registers *) task->thread.esp;
 	memset(regs, 0, sizeof(struct task_registers));
 
 	/* set eip to function */
@@ -594,7 +594,7 @@ struct task *create_kinit_task(void (*kinit_func)())
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers *) task->esp;
+	regs = (struct task_registers *) task->thread.esp;
 	memset(regs, 0, sizeof(struct task_registers));
 
 	/* set eip to function */
@@ -619,7 +619,7 @@ struct task *create_init_task(struct task *parent)
 		return NULL;
 
 	/* set registers */
-	regs = (struct task_registers *) task->esp;
+	regs = (struct task_registers *) task->thread.esp;
 	memset(regs, 0, sizeof(struct task_registers));
 
 	/* set eip */
@@ -645,7 +645,7 @@ void destroy_task(struct task *task)
 	list_del(&task->list);
 
 	/* free kernel stack */
-	kfree((void *) (task->kernel_stack - STACK_SIZE));
+	kfree((void *) (task->thread.kernel_stack - STACK_SIZE));
 
 	/* exit memory */
 	task_exit_mm(task);

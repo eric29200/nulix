@@ -56,7 +56,7 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 
 	/* signal in system call : restore user registers */
 	if (current_task->in_syscall)
-		memcpy(regs, &current_task->user_regs, sizeof(struct registers));
+		memcpy(regs, &current_task->thread.regs, sizeof(struct registers));
 
 	/* save interrupt registers, to restore it at the end of signal */
 	memcpy(&current_task->signal_regs, regs, sizeof(struct registers));
@@ -241,7 +241,7 @@ int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 int sys_sigreturn()
 {
 	/* restore saved registers before signal handler */
-	memcpy(&current_task->user_regs, &current_task->signal_regs, sizeof(struct registers));
+	memcpy(&current_task->thread.regs, &current_task->signal_regs, sizeof(struct registers));
 
 	/* return value of syscall interrupted by signal */
 	return current_task->signal_regs.eax;

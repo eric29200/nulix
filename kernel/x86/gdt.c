@@ -55,7 +55,7 @@ static struct tss_entry tss_entry;
  */
 void load_tss(struct task *task)
 {
-	tss_entry.esp0 = task->kernel_stack;
+	tss_entry.esp0 = task->thread.kernel_stack;
 }
 
 /*
