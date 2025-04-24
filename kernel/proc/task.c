@@ -671,7 +671,7 @@ pid_t sys_fork()
  */
 pid_t sys_vfork()
 {
-	return sys_fork();
+	return do_fork(CLONE_VFORK | CLONE_VM, 0);
 }
 
 /*
