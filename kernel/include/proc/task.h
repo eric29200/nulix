@@ -50,7 +50,6 @@ struct thread_struct {
 	uint32_t			kernel_stack;				/* kernel stack */
 	uint32_t			esp;					/* kernel stack pointer */
 	struct user_desc		tls;					/* Thread Local Storage address */
-	struct desc_struct		tls_array[GDT_ENTRY_TLS_ENTRIES];	/* Thread Local Storage */
 	struct registers		regs;					/* saved registers at syscall entry */
 };
 
