@@ -1,3 +1,5 @@
+#include <x86/segment.h>
+
 /* macro to create an isr function with no error code */
 .macro ISR num
     .globl isr\num
@@ -78,7 +80,7 @@ isr_common:
 	mov %ds, %ax
 	push %eax
 
-	mov $0x10, %ax		/* load kernel data segment descriptor */
+	mov $KERNEL_DS, %ax	/* load kernel data segment descriptor */
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs

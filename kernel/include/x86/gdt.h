@@ -6,7 +6,7 @@
 
 /* defined in x86/descriptor.s */
 extern void gdt_flush(uint32_t);
-extern void tss_flush();
+extern void tss_flush(uint32_t);
 
 void init_gdt();
 void gdt_write_entry(size_t id, struct desc_struct *entry);

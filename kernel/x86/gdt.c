@@ -112,19 +112,19 @@ void init_gdt()
 
 	/* init tss */
 	memset((void *) &tss_entry, 0, sizeof(struct tss_entry));
-	tss_entry.ss0 = 0x10;
+	tss_entry.ss0 = KERNEL_DS;
 	tss_entry.esp0 = 0x0;
-	tss_entry.cs = 0x0B;
-	tss_entry.ss = 0x13;
-	tss_entry.es = 0x13;
-	tss_entry.ds = 0x13;
-	tss_entry.fs = 0x13;
-	tss_entry.gs = 0x13;
+	tss_entry.cs = KERNEL_CS;
+	tss_entry.ss = KERNEL_DS;
+	tss_entry.es = KERNEL_DS;
+	tss_entry.ds = KERNEL_DS;
+	tss_entry.fs = KERNEL_DS;
+	tss_entry.gs = KERNEL_DS;
 	tss_entry.iomap_base = sizeof(struct tss_entry);
 
 	/* flush gdt */
 	gdt_flush((uint32_t) &gdt_ptr);
 
 	/* flush tss */
-	tss_flush();
+	tss_flush(SEGMENT_SEL(GDT_ENTRY_TSS, DPL_KERNEL));
 }

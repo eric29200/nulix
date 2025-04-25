@@ -1,3 +1,5 @@
+#include <x86/segment.h>
+
 .global scheduler_do_switch
 .global enter_user_mode
 .global return_user_mode
@@ -19,7 +21,7 @@ scheduler_do_switch:
 enter_user_mode:
 	cli
 
-	mov $0x23, %ax			/* set user segment registers */
+	mov $USER_DS, %ax		/* set user segment registers */
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
@@ -32,7 +34,7 @@ enter_user_mode:
 
 	mov 8(%esp), %ebx		/* get user eip */
 
-	push $0x23			/* stack segment to restore */
+	push $USER_DS			/* stack segment to restore */
 	push %eax
 	pushf
 
@@ -40,14 +42,14 @@ enter_user_mode:
 	or $0x200, %eax
 	push %eax
 
-	push $0x1B			/* code segment to restor */
+	push $USER_CS			/* code segment to restore */
 	push %ebx
 	iret
 
 return_user_mode:
 	cli
 
-	mov $0x23, %ax			/* set user segment registers */
+	mov $USER_DS, %ax		/* set user segment registers */
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
