@@ -234,6 +234,24 @@ static int do_wp_page(struct task *task, uint32_t address)
 }
 
 /*
+ * Expand stack.
+ */
+static int expand_stack(struct vm_area *vma, uint32_t addr)
+{
+	/* page align address */
+	addr &= PAGE_MASK;
+
+	/* check stack limit */
+	if (vma->vm_end - addr > USTACK_LIMIT)
+		return -ENOMEM;
+
+	/* grow stack */
+	vma->vm_start = addr;
+
+	return 0;
+}
+
+/*
  * Page fault handler.
  */
 void page_fault_handler(struct registers *regs)
@@ -271,7 +289,8 @@ void page_fault_handler(struct registers *regs)
 	/* else bad page fault */
 	goto bad_area;
 expand_stack:
-	vma->vm_start = fault_addr & PAGE_MASK;
+	if (expand_stack(vma, fault_addr))
+		goto bad_area;
 	return;
 good_area:
 	/* write violation */
