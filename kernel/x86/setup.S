@@ -87,19 +87,19 @@ IRQ 15, 47
 
 /* common isr handler */
 isr_common:
-	pusha			/* save registers */
+	pusha				/* save registers */
 
 	mov %ds, %ax
 	push %eax
 
-	mov $KERNEL_DSEG, %ax	/* load kernel data segment descriptor */
+	mov $KERNEL_DSEG, %ax		/* load kernel data segment descriptor */
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
 	mov %ax, %gs
 
-	push %esp		/* push a pointer to this frame */
-	call isr_handler	/* call C generic isr */
+	push %esp			/* push a pointer to this frame */
+	call isr_handler		/* call C generic isr */
 	add $4, %esp
 
 	pop %ebx
@@ -109,7 +109,7 @@ isr_common:
 	mov $TLS_SEG, %bx
 	mov %bx, %gs
 
-	popa			/* restore registers */
+	popa				/* restore registers */
 	add $8, %esp
 	iret
 
@@ -206,6 +206,10 @@ enter_user_mode:
 	push $USER_DSEG			/* stack segment to restore */
 	push %eax
 	pushf
+
+	pop %eax			/* enable interrupts */
+	or $0x200, %eax
+	push %eax
 
 	push $USER_CSEG			/* code segment to restore */
 	push %ebx

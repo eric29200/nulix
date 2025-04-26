@@ -3,8 +3,8 @@
 #include <stddef.h>
 #include <string.h>
 
-struct idt_entry idt_entries[256];
-struct idt_ptr idt_ptr;
+static struct idt_entry idt_entries[256];
+static struct idt_ptr idt_ptr;
 
 extern void idt_flush(uint32_t);
 
@@ -15,7 +15,6 @@ static void idt_set_gate(uint32_t num, uint32_t base, uint16_t selector, uint8_t
 {
 	idt_entries[num].base_low = base & 0xFFFF;
 	idt_entries[num].base_high = (base >> 16) & 0xFFFF;
-
 	idt_entries[num].selector = selector;
 	idt_entries[num].zero = 0;
 	idt_entries[num].flags = flags | 0x60;
