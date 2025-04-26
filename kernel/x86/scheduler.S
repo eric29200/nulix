@@ -39,10 +39,6 @@ enter_user_mode:
 	push %eax
 	pushf
 
-	pop %eax			/* enable interrupts */
-	or $0x200, %eax
-	push %eax
-
 	push $USER_CSEG			/* code segment to restore */
 	push %ebx
 	iret

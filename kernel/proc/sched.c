@@ -24,7 +24,6 @@ struct kernel_stat kstat;				/* kernel statistics */
 
 /* switch tasks (defined in scheduler.s) */
 extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
-extern void return_user_mode(struct registers *regs);
 
 /* average run */
 unsigned long avenrun[3] = { 0, 0, 0 };
