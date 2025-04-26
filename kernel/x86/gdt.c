@@ -87,6 +87,14 @@ void gdt_write_entry(size_t id, struct desc_struct *entry)
 }
 
 /*
+ * Read a Global Descriptor Table entry.
+ */
+void gdt_read_entry(size_t id, struct desc_struct *entry)
+{
+	memcpy(entry, &gdt[id], sizeof(struct desc_struct));
+}
+
+/*
  * Init the Global Descriptor Table.
  */
 void init_gdt()
@@ -109,17 +117,18 @@ void init_gdt()
 	gdt_set_entry(GDT_ENTRY_USER_CS, 0, 0xFFFFF, DESC_CODE32 | DESC_USER);
 	gdt_set_entry(GDT_ENTRY_USER_DS, 0, 0xFFFFF, DESC_DATA32 | DESC_USER);
 	gdt_set_entry(GDT_ENTRY_TSS, tss_base, tss_limit, DESC_TSS32);
+	gdt_set_entry(GDT_ENTRY_TLS, 0, 0xFFFFF, DESC_DATA32 | DESC_USER);
 
 	/* init tss */
 	memset((void *) &tss_entry, 0, sizeof(struct tss_entry));
-	tss_entry.ss0 = KERNEL_DS;
+	tss_entry.ss0 = KERNEL_DSEG;
 	tss_entry.esp0 = 0x0;
-	tss_entry.cs = KERNEL_CS;
-	tss_entry.ss = KERNEL_DS;
-	tss_entry.es = KERNEL_DS;
-	tss_entry.ds = KERNEL_DS;
-	tss_entry.fs = KERNEL_DS;
-	tss_entry.gs = KERNEL_DS;
+	tss_entry.cs = KERNEL_CSEG;
+	tss_entry.ss = KERNEL_DSEG;
+	tss_entry.es = KERNEL_DSEG;
+	tss_entry.ds = KERNEL_DSEG;
+	tss_entry.fs = KERNEL_DSEG;
+	tss_entry.gs = KERNEL_DSEG;
 	tss_entry.iomap_base = sizeof(struct tss_entry);
 
 	/* flush gdt */

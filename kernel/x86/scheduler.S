@@ -21,10 +21,11 @@ scheduler_do_switch:
 enter_user_mode:
 	cli
 
-	mov $USER_DS, %ax		/* set user segment registers */
+	mov $USER_DSEG, %ax		/* set user segment registers */
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
+	mov $TLS_SEG, %ax
 	mov %ax, %gs
 
 	mov 4(%esp), %eax		/* get user stack */
@@ -34,7 +35,7 @@ enter_user_mode:
 
 	mov 8(%esp), %ebx		/* get user eip */
 
-	push $USER_DS			/* stack segment to restore */
+	push $USER_DSEG			/* stack segment to restore */
 	push %eax
 	pushf
 
@@ -42,17 +43,18 @@ enter_user_mode:
 	or $0x200, %eax
 	push %eax
 
-	push $USER_CS			/* code segment to restore */
+	push $USER_CSEG			/* code segment to restore */
 	push %ebx
 	iret
 
 return_user_mode:
 	cli
 
-	mov $USER_DS, %ax		/* set user segment registers */
+	mov $USER_DSEG, %ax		/* set user segment registers */
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
+	mov $TLS_SEG, %ax
 	mov %ax, %gs
 
 	mov 4(%esp), %eax		/* get user stack */

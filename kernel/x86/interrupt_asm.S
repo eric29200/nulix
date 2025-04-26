@@ -92,7 +92,7 @@ isr_common:
 	mov %ds, %ax
 	push %eax
 
-	mov $KERNEL_DS, %ax	/* load kernel data segment descriptor */
+	mov $KERNEL_DSEG, %ax	/* load kernel data segment descriptor */
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
@@ -106,6 +106,7 @@ isr_common:
 	mov %bx, %ds
 	mov %bx, %es
 	mov %bx, %fs
+	mov $TLS_SEG, %bx
 	mov %bx, %gs
 
 	popa			/* restore registers */

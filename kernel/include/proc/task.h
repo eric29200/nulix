@@ -49,7 +49,7 @@ struct mm_struct {
 struct thread_struct {
 	uint32_t			kernel_stack;				/* kernel stack */
 	uint32_t			esp;					/* kernel stack pointer */
-	struct user_desc		tls;					/* Thread Local Storage address */
+	struct desc_struct		tls;					/* Thread Local Storage address */
 	struct registers		regs;					/* saved registers at syscall entry */
 };
 

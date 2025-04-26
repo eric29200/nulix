@@ -78,6 +78,21 @@ enum {
 	 (info)->useable		== 0)
 
 /*
+ * Is a Local Descriptor Zero ?
+ */
+static inline int LDT_zero(struct user_desc *info)
+{
+	return (info->base_addr		== 0 &&
+		info->limit		== 0 &&
+		info->contents		== 0 &&
+		info->read_exec_only	== 0 &&
+		info->seg_32bit		== 0 &&
+		info->limit_in_pages	== 0 &&
+		info->seg_not_present	== 0 &&
+		info->useable		== 0);
+}
+
+/*
  * Fill in a Local Descriptor Table.
  */
 static inline void fill_ldt(struct desc_struct *desc, struct user_desc *info)
@@ -99,7 +114,6 @@ static inline void fill_ldt(struct desc_struct *desc, struct user_desc *info)
 	desc->l			= 0;
 }
 
-
 /*
  * Set a TSS/LDT descriptor.
  */
@@ -116,6 +130,22 @@ static inline void set_tssldt_descriptor(void *d, uint32_t addr, uint32_t type, 
 	desc->p			= 1;
 	desc->limit1		= (size >> 16) & 0xF;
 	desc->base2		= (addr >> 24) & 0xFF;
+}
+
+/*
+ * Get descriptor base address.
+ */
+static inline uint32_t get_desc_base(struct desc_struct *desc)
+{
+	return (uint32_t) (desc->base0 | ((desc->base1) << 16) | ((desc->base2) << 24));
+}
+
+/*
+ * Get descriptor limit.
+ */
+static inline uint32_t get_desc_limit(struct desc_struct *desc)
+{
+	return desc->limit0 | (desc->limit1 << 16);
 }
 
 #endif

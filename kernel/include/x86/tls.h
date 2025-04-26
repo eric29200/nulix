@@ -5,7 +5,6 @@
 #include <proc/task.h>
 
 void load_tls();
-int do_set_thread_area(struct task *task, struct user_desc *u_info);
 
 int sys_get_thread_area(struct user_desc *u_info);
 int sys_set_thread_area(struct user_desc *u_info);

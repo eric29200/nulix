@@ -5,16 +5,16 @@
 #include <x86/segment.h>
 
 gdt_flush:
-	mov 4(%esp), %eax	/* load the gdt pointer passed as parameter on the stack */
+	mov 4(%esp), %eax		/* load the gdt pointer passed as parameter on the stack */
 	lgdt (%eax)
 
-	mov $KERNEL_DS, %ax	/* load data segment offset */
-	mov %ax, %ds		/* load data segment selectors */
+	mov $KERNEL_DSEG, %ax		/* load data segment offset */
+	mov %ax, %ds			/* load data segment selectors */
 	mov %ax, %es
 	mov %ax, %fs
 	mov %ax, %gs
 	mov %ax, %ss
-	ljmp $KERNEL_CS, $.flush	/* jump to code segment */
+	ljmp $KERNEL_CSEG, $.flush	/* jump to code segment */
 .flush:
 	ret
 
@@ -24,6 +24,6 @@ tss_flush:
 	 ret
 
 idt_flush:
-	mov 4(%esp), %eax	/* load the idt pointer passed as parameter on stack */
+	mov 4(%esp), %eax		/* load the idt pointer passed as parameter on stack */
 	lidt (%eax)
 	ret

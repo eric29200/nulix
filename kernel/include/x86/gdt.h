@@ -10,6 +10,7 @@ extern void tss_flush(uint32_t);
 
 void init_gdt();
 void gdt_write_entry(size_t id, struct desc_struct *entry);
+void gdt_read_entry(size_t id, struct desc_struct *entry);
 void load_tss(uint32_t esp0);
 
 #endif

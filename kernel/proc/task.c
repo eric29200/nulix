@@ -336,7 +336,9 @@ static int task_copy_thread(struct task *task, struct task *parent, uint32_t use
 		task->thread.regs.eax = 0;
 
 		/* duplicate TLS */
-		ret = do_set_thread_area(task, &parent->thread.tls);
+		memcpy(&task->thread.tls, &parent->thread.tls, sizeof(struct desc_struct));
+	} else {
+		gdt_read_entry(GDT_ENTRY_TLS, &task->thread.tls);
 	}
 
 	/* set user stack */
