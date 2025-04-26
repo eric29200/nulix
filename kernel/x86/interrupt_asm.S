@@ -20,6 +20,16 @@
         jmp isr_common
 .endm
 
+/* nasm macro to create a irq function with 2 parameters (interrupt and irq numbers) */
+.macro IRQ num ir
+	.globl irq\num
+	irq\num:
+		cli
+		push $0
+		push $\ir
+		jmp isr_common
+.endm
+
 /* generate isrs */
 ISR 0
 ISR 1
@@ -53,23 +63,25 @@ ISR 28
 ISR 29
 ISR 30
 ISR 31
-ISR 32
-ISR 33
-ISR 34
-ISR 35
-ISR 36
-ISR 37
-ISR 38
-ISR 39
-ISR 40
-ISR 41
-ISR 42
-ISR 43
-ISR 44
-ISR 45
-ISR 46
-ISR 47
 ISR 128
+
+/* generate irqs */
+IRQ 0, 32
+IRQ 1, 33
+IRQ 2, 34
+IRQ 3, 35
+IRQ 4, 36
+IRQ 5, 37
+IRQ 6, 38
+IRQ 7, 39
+IRQ 8, 40
+IRQ 9, 41
+IRQ 10, 42
+IRQ 11, 43
+IRQ 12, 44
+IRQ 13, 45
+IRQ 14, 46
+IRQ 15, 47
 
 .extern isr_handler
 
@@ -86,7 +98,7 @@ isr_common:
 	mov %ax, %fs
 	mov %ax, %gs
 
-	push %esp		/* push a pointer to is frame */
+	push %esp		/* push a pointer to this frame */
 	call isr_handler	/* call C generic isr */
 	add $4, %esp
 
