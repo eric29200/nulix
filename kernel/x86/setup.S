@@ -44,9 +44,10 @@ IRQ 10, 42 ; IRQ 11, 43 ; IRQ 12, 44 ; IRQ 13, 45 ; IRQ 14, 46 ; IRQ 15, 47
 /* common isr handler */
 isr_common:
 	pusha				/* save registers */
-
-	mov %ds, %ax
-	push %eax
+	push %ds
+	push %es
+	push %fs
+	push %gs
 
 	mov $KERNEL_DSEG, %ax		/* load kernel data segment descriptor */
 	mov %ax, %ds
@@ -58,14 +59,11 @@ isr_common:
 	call isr_handler		/* call C generic isr */
 	add $4, %esp
 
-	pop %ebx
-	mov %bx, %ds
-	mov %bx, %es
-	mov %bx, %fs
-	mov $TLS_SEG, %bx
-	mov %bx, %gs
-
-	popa				/* restore registers */
+	pop %gs				/* restore registers */
+	pop %fs
+	pop %es
+	pop %ds
+	popa
 	add $8, %esp
 	iret
 
@@ -184,18 +182,18 @@ return_user_mode:
 
 	mov 4(%esp), %eax		/* get user stack */
 
-	pushl 60(%eax) 			/* user data segment */
-	pushl 56(%eax)	 		/* push our current stack */
-	pushl 52(%eax)			/* EFLAGS */
-	pushl 48(%eax) 			/* segment selector */
-	pushl 44(%eax) 			/* eip */
+	pushl 72(%eax) 			/* user data segment */
+	pushl 68(%eax)	 		/* push our current stack */
+	pushl 64(%eax)			/* EFLAGS */
+	pushl 60(%eax) 			/* segment selector */
+	pushl 56(%eax) 			/* eip */
 
-	mov 4(%eax), %edi
-	mov 8(%eax), %esi
-	mov 12(%eax), %ebp
-	mov 20(%eax), %ebx
-	mov 24(%eax), %edx
-	mov 28(%eax), %ecx
-	mov 32(%eax), %eax
+	mov 16(%eax), %edi
+	mov 20(%eax), %esi
+	mov 24(%eax), %ebp
+	mov 32(%eax), %ebx
+	mov 36(%eax), %edx
+	mov 40(%eax), %ecx
+	mov 44(%eax), %eax
 
 	iret

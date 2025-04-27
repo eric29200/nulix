@@ -19,7 +19,6 @@ void memsetw(void *s, uint16_t v, size_t n);
 void memsetdw(void *s, uint32_t v, size_t n);
 int memcmp(const void *s1, const void *s2, size_t n);
 void *memcpy(void *dest, const void *src, size_t n);
-void *memcpyb(void *dest, const void *src, size_t n);
 void *memmovew(uint16_t *dest, const uint16_t *src, size_t n);
 void *memmovedw(uint32_t *dest, const uint32_t *src, size_t n);
 

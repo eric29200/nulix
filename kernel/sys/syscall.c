@@ -176,7 +176,7 @@ static void syscall_handler(struct registers *regs)
 	}
 
 	/* save current registers */
-	memcpyb(&current_task->thread.regs, regs, sizeof(struct registers));
+	memcpy(&current_task->thread.regs, regs, sizeof(struct registers));
 
 	/* execute system call */
 	current_task->in_syscall = 1;
@@ -184,12 +184,15 @@ static void syscall_handler(struct registers *regs)
 	current_task->in_syscall = 0;
 
 	/* restore registers and set return value */
-	memcpyb(regs, &current_task->thread.regs, sizeof(struct registers));
+	memcpy(regs, &current_task->thread.regs, sizeof(struct registers));
 	regs->eax = ret;
 
 	/* handle pending signals */
 	if (!sigisemptyset(&current_task->sigpend))
 		do_signal(regs, syscall_nr);
+
+	/* restore TLS */
+	regs->gs = TLS_SEG;
 }
 
 /*

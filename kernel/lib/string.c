@@ -193,20 +193,6 @@ int memcmp(const void *s1, const void *s2, size_t n)
 
 
 /*
- * Copy memory area.
- */
-void *memcpyb(void *dest, const void *src, size_t n)
-{
-	const char *sp = src;
-	char *dp = dest;
-
-	while (n-- > 0)
-		*dp++ = *sp++;
-
-	return dest;
-}
-
-/*
  * Optimized memcpy.
  */
 void *memcpy(void *dest, const void *src, size_t n)
