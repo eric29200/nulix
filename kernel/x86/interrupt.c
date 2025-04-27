@@ -8,7 +8,7 @@
 /*
  * x86 cpu exceptions messages
  */
-const char* exception_messages[] = {
+static const char *exception_messages[] = {
 	"Division By Zero Exception",
 	"Debug Exception",
 	"Non Maskable Interrupt Exception",
@@ -31,7 +31,7 @@ const char* exception_messages[] = {
 };
 
 /* isr handlers */
-isr_t interrupt_handlers[256];
+static isr_t interrupt_handlers[256];
 
 /*
  * Register an interrupt handler.
@@ -46,8 +46,6 @@ void register_interrupt_handler(uint8_t n, isr_t handler)
  */
 void isr_handler(struct registers *regs)
 {
-	isr_t handler;
-
 	/* update kernel statistics */
 	kstat.interrupts++;
 
@@ -63,8 +61,7 @@ void isr_handler(struct registers *regs)
 
 	/* handle interrupt or print a message */
 	if (interrupt_handlers[regs->int_no] != 0) {
-		handler = interrupt_handlers[regs->int_no];
-		handler(regs);
+		interrupt_handlers[regs->int_no](regs);
 	} else {
 		printf("[Interrupt] code=%d, message=%s (process %d @ %x)\n",
 		       regs->int_no,
