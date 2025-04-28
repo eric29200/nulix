@@ -68,10 +68,10 @@ int sys_set_thread_area(struct user_desc *u_info)
 
 	/* find an entry */
 	if (idx == -1)
-		idx = 0;
+		idx = GDT_ENTRY_TLS;
 
-	/* only first entry allowed */
-	if (idx != 0)
+	/* only one TLS entry */
+	if (idx != GDT_ENTRY_TLS)
 		return -EINVAL;
 
 	/* set TLS */

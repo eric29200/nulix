@@ -190,9 +190,6 @@ static void syscall_handler(struct registers *regs)
 	/* handle pending signals */
 	if (!sigisemptyset(&current_task->sigpend))
 		do_signal(regs, syscall_nr);
-
-	/* restore TLS */
-	regs->gs = TLS_SEG;
 }
 
 /*
