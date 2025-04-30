@@ -19,6 +19,7 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
 int sys_sysinfo(struct sysinfo *info);
 mode_t sys_umask(mode_t mask);
 int sys_uname(struct utsname *buf);
+int sys_sethostname(const char *name, size_t len);
 int sys_getpriority(int which, int who);
 int sys_setpriority(int which, int who, int niceval);
 

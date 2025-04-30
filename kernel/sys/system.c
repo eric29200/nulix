@@ -8,6 +8,23 @@
 #include <stderr.h>
 #include <resource.h>
 #include <reboot.h>
+ 
+#define UTS_SYSNAME		"nulix"
+#define UTS_NODENAME		"nulix"
+#define UTS_RELEASE		"0.0.1"
+#define UTS_VERSION		"nulix 0.0.1"
+#define UTS_MACHINE		"x86"
+
+/*
+ * Utsname.
+ */
+struct utsname system_utsname = {
+	UTS_SYSNAME,
+	UTS_NODENAME,
+	UTS_RELEASE,
+	UTS_VERSION,
+	UTS_MACHINE,
+};
 
 /*
  * Get time system call.
@@ -293,11 +310,27 @@ int sys_uname(struct utsname *buf)
 	if (!buf)
 		return -EINVAL;
 
-	strncpy(buf->sysname, "nulix", UTSNAME_LEN);
-	strncpy(buf->nodename, "nulix", UTSNAME_LEN);
-	strncpy(buf->release, "0.0.1", UTSNAME_LEN);
-	strncpy(buf->version, "nulix 0.0.1", UTSNAME_LEN);
-	strncpy(buf->machine, "x86", UTSNAME_LEN);
+	memcpy(buf->sysname, system_utsname.sysname, sizeof(system_utsname.sysname));
+	memcpy(buf->nodename, system_utsname.nodename, sizeof(system_utsname.nodename));
+	memcpy(buf->release, system_utsname.release, sizeof(system_utsname.release));
+	memcpy(buf->version, system_utsname.version, sizeof(system_utsname.version));
+	memcpy(buf->machine, system_utsname.machine, sizeof(system_utsname.machine));
+
+	return 0;
+}
+
+/*
+ * Set host name system call.
+ */
+int sys_sethostname(const char *name, size_t len)
+{
+	/* check length */
+	if (len + 1 > UTSNAME_LEN)
+		return -EINVAL;
+
+	/* set hostname */
+	memcpy(system_utsname.nodename, name, len);
+	system_utsname.nodename[len] = 0;
 
 	return 0;
 }

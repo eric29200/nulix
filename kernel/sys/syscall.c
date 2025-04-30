@@ -160,6 +160,7 @@ static const void *syscalls[] = {
 	[__NR_getpriority]		= sys_getpriority,
 	[__NR_setpriority]		= sys_setpriority,
 	[__NR_modify_ldt]		= sys_modify_ldt,
+	[__NR_sethostname]		= sys_sethostname,
 };
 
 /*

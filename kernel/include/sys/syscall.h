@@ -48,6 +48,7 @@
 #define __NR_getppid			64
 #define __NR_setsid			66
 #define __NR_sigaction			67
+#define __NR_sethostname		74
 #define __NR_getrusage			77
 #define __NR_symlink			83
 #define __NR_readlink			85
