@@ -5,7 +5,7 @@
 #include <net/inet/net.h>
 #include <net/inet/arp.h>
 #include <net/sk_buff.h>
-#include <mm/mm.h>
+#include <mm/paging.h>
 #include <stderr.h>
 #include <string.h>
 

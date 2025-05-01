@@ -1,7 +1,7 @@
 #include <x86/interrupt.h>
 #include <x86/gdt.h>
 #include <x86/ldt.h>
-#include <mm/mm.h>
+#include <mm/paging.h>
 #include <proc/task.h>
 #include <proc/sched.h>
 #include <proc/elf.h>
@@ -198,7 +198,8 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vm_child->vm_ops = vm_parent->vm_ops;
 			list_add_tail(&vm_child->list, &mm_new->vm_list);
 
-			copy_page_range(mm->pgd, mm_new->pgd, vm_child->vm_start, vm_child->vm_end);
+			/* copy pages */
+			copy_page_range(mm->pgd, mm_new->pgd, vm_child);
 
 			/* open region */
 			if (vm_child->vm_ops && vm_child->vm_ops->open)

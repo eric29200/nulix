@@ -2,6 +2,7 @@
 #define _MM_PAGING_H_
 
 #include <x86/interrupt.h>
+#include <mm/mm.h>
 #include <lib/list.h>
 #include <stddef.h>
 
@@ -109,7 +110,7 @@ struct page {
 /* paging */
 int init_paging(uint32_t start, uint32_t end);
 void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd);
-int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, uint32_t start, uint32_t end);
+int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot);
 void switch_pgd(pgd_t *pgd);
 void page_fault_handler(struct registers *regs);

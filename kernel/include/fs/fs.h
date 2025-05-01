@@ -12,7 +12,7 @@
 #include <fs/iso_i.h>
 #include <net/socket.h>
 #include <proc/wait.h>
-#include <mm/mm.h>
+#include <mm/paging.h>
 #include <uio.h>
 #include <time.h>
 #include <string.h>

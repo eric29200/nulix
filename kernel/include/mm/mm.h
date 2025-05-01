@@ -2,7 +2,6 @@
 #define _MM_H_
 
 #include <lib/list.h>
-#include <mm/paging.h>
 #include <mm/kheap.h>
 #include <stddef.h>
 

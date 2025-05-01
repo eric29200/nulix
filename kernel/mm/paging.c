@@ -359,9 +359,9 @@ out:
 /*
  * Copy page range.
  */
-int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, uint32_t start, uint32_t end)
+int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 {
-	uint32_t address = start;
+	uint32_t address = vma->vm_start, end = vma->vm_end;
 	pmd_t *pmd_src, *pmd_dst;
 	pte_t *pte_src, *pte_dst;
 	struct page *page;
