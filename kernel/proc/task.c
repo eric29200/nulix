@@ -162,7 +162,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	INIT_LIST_HEAD(&mm_new->vm_list);
 
 	/* clone page directory */
-	mm_new->pgd = mm ? clone_pgd(mm->pgd) : pgd_kernel;
+	mm_new->pgd = create_page_directory();
 	if (!mm_new->pgd)
 		goto err;
 
@@ -198,13 +198,11 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vm_child->vm_ops = vm_parent->vm_ops;
 			list_add_tail(&vm_child->list, &mm_new->vm_list);
 
+			copy_page_range(mm->pgd, mm_new->pgd, vm_child->vm_start, vm_child->vm_end);
+
 			/* open region */
 			if (vm_child->vm_ops && vm_child->vm_ops->open)
 				vm_child->vm_ops->open(vm_child);
-
-			/* shared memory : unmap pages = force page fault, to read from page cache */
-			if (vm_child->vm_flags & VM_SHARED)
-				unmap_pages(vm_child->vm_start, vm_child->vm_end, mm_new->pgd);
 		}
 	}
 

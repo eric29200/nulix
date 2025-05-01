@@ -313,56 +313,11 @@ void switch_pgd(pgd_t *pgd)
 }
 
 /*
- * Clone a page table.
+ * Create a new page directory.
  */
-static pmd_t clone_pmd(pmd_t *pmd_src)
+pgd_t *create_page_directory()
 {
-	pte_t *ptes_src, *ptes_new;
-	struct page *page;
-	int i;
-
-	/* create a new page table */
-	ptes_new = (pmd_t *) get_free_page(GFP_KERNEL);
-	if (!ptes_new)
-		return 0;
-
-	/* reset page table */
-	memset(ptes_new, 0, PAGE_SIZE);
-
-	/* get table entries */
-	ptes_src = (pte_t *) pmd_page(*pmd_src);
-
-	/* copy physical pages */
-	for (i = 0; i < PTRS_PER_PTE; i++) {
-		if (pte_none(&ptes_src[i]))
-			continue;
-
-		/* try to get a page */
-		page = __get_free_page(GFP_USER);
-		if (!page)
-			goto err;
-
-		/* make page table entry */
-		ptes_new[i] = mk_pte(page->page, pte_prot(ptes_src[i]));
-
-		/* copy physical page */
-		copy_page_physical(pte_page(ptes_src[i]) * PAGE_SIZE, pte_page(ptes_new[i]) * PAGE_SIZE);
-	}
-
-	return (pmd_t ) __pa(ptes_new) | PAGE_TABLE;
-err:
-	free_page(ptes_new);
-	return 0;
-}
-
-/*
- * Clone a page directory.
- */
-pgd_t *clone_pgd(pgd_t *pgd_src)
-{
-	pmd_t *pmd_src, *pmd_dst, *pmd_kernel;
 	pgd_t *pgd_new;
-	int i;
 
 	/* create a new page directory */
 	pgd_new = (pgd_t *) get_free_page(GFP_KERNEL);
@@ -372,27 +327,106 @@ pgd_t *clone_pgd(pgd_t *pgd_src)
 	/* copy kernel page directory */
 	memcpy(pgd_new, pgd_kernel, PAGE_SIZE);
 
-	/* get tables */
-	pmd_src = pmd_offset(pgd_src);
-	pmd_dst = pmd_offset(pgd_new);
-	pmd_kernel = pmd_offset(pgd_kernel);
+	return pgd_new;
+}
 
-	/* copy page tables */
-	for (i = 0; i < PTRS_PER_PTE; i++, pmd_src++, pmd_dst++, pmd_kernel++) {
-		if (pmd_none(pmd_src))
-			continue;
+/*
+ * Allocate a new page table entry.
+ */
+static pte_t *pte_alloc(pmd_t *pmd, uint32_t offset)
+{
+	pte_t *pte;
 
-		/* copy page table */
-		if (pmd_page(*pmd_src) != pmd_page(*pmd_kernel)) {
-			*pmd_dst = clone_pmd(pmd_src);
-			if (!pmd_dst) {
-				free_pgd(pgd_new);
-				return NULL;
+	/* page table already allocated */
+	if (!pmd_none(pmd))
+		goto out;
+
+	/* create a new page table */
+	pte = (pte_t *) get_free_page(GFP_KERNEL);
+	if (!pte)
+		return NULL;
+
+	/* reset page table */
+	memset(pte, 0, PAGE_SIZE);
+
+	/* set page table */
+	*pmd = __pa(pte) | PAGE_TABLE;
+
+out:
+	return (pte_t *) pmd_page(*pmd) + offset;
+}
+
+/*
+ * Copy page range.
+ */
+int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, uint32_t start, uint32_t end)
+{
+	uint32_t address = start;
+	pmd_t *pmd_src, *pmd_dst;
+	pte_t *pte_src, *pte_dst;
+	struct page *page;
+
+	pgd_src = pgd_offset(pgd_src, address) - 1;
+	pgd_dst = pgd_offset(pgd_dst, address) - 1;
+
+	for (;;) {
+		pgd_src++;
+		pgd_dst++;
+
+		pmd_src = pmd_offset(pgd_src);
+		pmd_dst = pmd_offset(pgd_dst);
+
+		/* for each page table */
+		do {
+			if (pmd_none(pmd_src)) {
+				address = (address + PMD_SIZE) & PMD_MASK;
+				if (address >= end)
+					goto out;
 			}
-		}
+
+			/* TODO : allocate */
+			if (pmd_none(pmd_dst))
+				if (!pte_alloc(pmd_dst, 0))
+					goto nomem;
+
+			pte_src = pte_offset(pmd_src, address);
+			pte_dst = pte_offset(pmd_dst, address);
+
+			/* for each page table entry */
+			do {
+				if (pte_none(pte_src))
+					goto next_pte;
+
+				/* try to get a page */
+				page = __get_free_page(GFP_USER);
+				if (!page)
+					goto nomem;
+
+				/* make page table entry */
+				*pte_dst = mk_pte(page->page, pte_prot(*pte_src));
+
+				/* copy physical page */
+				copy_page_physical(pte_page(*pte_src) * PAGE_SIZE, pte_page(*pte_dst) * PAGE_SIZE);
+
+next_pte:
+				/* go to next page table entry */
+				address += PAGE_SIZE;
+				if (address >= end)
+					goto out;
+
+				pte_src++;
+				pte_dst++;
+			} while ((uint32_t) pte_src & PTE_TABLE_MASK);
+
+			pmd_src++;
+			pmd_dst++;
+		} while ((uint32_t) pmd_src & PMD_TABLE_MASK);
 	}
 
-	return pgd_new;
+out:
+	return 0;
+nomem:
+	return -ENOMEM;
 }
 
 /*

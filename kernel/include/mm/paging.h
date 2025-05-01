@@ -18,8 +18,16 @@ typedef uint32_t pte_t;
 #define PAGE_ALIGN_UP(addr)		(((addr) + PAGE_SIZE - 1) & PAGE_MASK)
 #define ALIGN_UP(addr, size)		(((addr) + size - 1) & (~(size - 1)))
 #define PTRS_PER_PTE			1024
+#define PTRS_PER_PMD			1
 #define PGDIR_SHIFT			22
+#define PGDIR_SIZE			(1UL << PGDIR_SHIFT)
+#define PGDIR_MASK			(~(PGDIR_SIZE - 1))
+#define PMD_SHIFT			22
+#define PMD_SIZE			(1UL << PMD_SHIFT)
+#define PMD_MASK			(~(PMD_SIZE - 1))
 #define PAGE_OFFSET			0xC0000000
+#define PTE_TABLE_MASK			((PTRS_PER_PTE - 1) * sizeof(pte_t))
+#define PMD_TABLE_MASK			((PTRS_PER_PMD - 1) * sizeof(pmd_t))
 
 #define PAGE_PRESENT			0x001
 #define PAGE_RW				0x002
@@ -58,6 +66,7 @@ typedef uint32_t pte_t;
 #define pte_prot(pte)			((pte) & (PAGE_SIZE - 1))
 #define pte_clear(pte)			(*(pte) = 0)
 #define pte_none(pte)			(!*(pte))
+#define pte_offset(pmd, addr) 		((pte_t *) (pmd_page(*pmd) + ((addr >> 10) & ((PTRS_PER_PTE - 1) << 2))))
 
 static inline pte_t *pte_mkwrite(pte_t *pte)
 {
@@ -100,10 +109,11 @@ struct page {
 /* paging */
 int init_paging(uint32_t start, uint32_t end);
 void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd);
+int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, uint32_t start, uint32_t end);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot);
 void switch_pgd(pgd_t *pgd);
 void page_fault_handler(struct registers *regs);
-pgd_t *clone_pgd(pgd_t *pgd);
+pgd_t *create_page_directory();
 void free_pgd(pgd_t *pgd);
 
 /* page allocation */
