@@ -224,8 +224,6 @@ static int do_wp_page(struct task *task, uint32_t address)
 	uint32_t page_idx;
 	pte_t *pte;
 
-	printf("%d %x\n", current_task->pid, address);
-
 	/* get page table entry */
 	pte = get_pte(address, 0, task->mm->pgd);
 	if (!pte)
