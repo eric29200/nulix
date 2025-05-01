@@ -61,21 +61,21 @@ typedef uint32_t pte_t;
 #define __S111				PAGE_SHARED
 
 #define mk_pte(page, prot)		(((page) << PAGE_SHIFT) | (prot))
-#define pmd_none(pmd)			(!*(pmd))
+#define pmd_none(pmd)			(!(pmd))
 #define pte_page(pte)			((pte) >> PAGE_SHIFT)
 #define pte_prot(pte)			((pte) & (PAGE_SIZE - 1))
 #define pte_clear(pte)			(*(pte) = 0)
-#define pte_none(pte)			(!*(pte))
+#define pte_none(pte)			(!(pte))
 #define pte_offset(pmd, addr) 		((pte_t *) (pmd_page(*pmd) + ((addr >> 10) & ((PTRS_PER_PTE - 1) << 2))))
 
-static inline pte_t *pte_mkwrite(pte_t *pte)
+static inline pte_t pte_mkwrite(pte_t pte)
 {
-	*pte |= PAGE_RW; return pte;
+	pte |= PAGE_RW; return pte;
 }
 
-static inline pte_t *pte_mkdirty(pte_t *pte)
+static inline pte_t pte_mkdirty(pte_t pte)
 {
-	*pte |= PAGE_DIRTY; return pte;
+	pte |= PAGE_DIRTY; return pte;
 }
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)

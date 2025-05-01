@@ -144,7 +144,7 @@ static int do_anonymous_page(struct vm_area *vma, pte_t *pte, void *address, int
 	/* make page table entry */
 	*pte = mk_pte(page->page, vma->vm_page_prot);
 	if (write_access)
-		pte = pte_mkdirty(pte_mkwrite(pte));
+		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
 	/* memzero page */
 	memset(address, 0, PAGE_SIZE);
@@ -166,7 +166,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 		return -ENOMEM;
 
 	/* page table entry already set */
-	if (!pte_none(pte))
+	if (!pte_none(*pte))
 		return -EPERM;
 
 	/* anonymous page mapping */
@@ -181,7 +181,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	/* make page table entry */
 	*pte = mk_pte(page->page, vma->vm_page_prot);
 	if (write_access)
-		pte = pte_mkdirty(pte_mkwrite(pte));
+		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
 	return 0;
 }
@@ -199,7 +199,7 @@ static int do_wp_page(struct task *task, uint32_t address)
 		return -EINVAL;
 
 	/* make page table entry writable */
-	pte_mkdirty(pte_mkwrite(pte));
+	*pte = pte_mkdirty(pte_mkwrite(*pte));
 
 	return 0;
 }
@@ -338,7 +338,7 @@ static pte_t *pte_alloc(pmd_t *pmd, uint32_t offset)
 	pte_t *pte;
 
 	/* page table already allocated */
-	if (!pmd_none(pmd))
+	if (!pmd_none(*pmd))
 		goto out;
 
 	/* create a new page table */
@@ -378,14 +378,14 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, uint32_t start, uint32_t end
 
 		/* for each page table */
 		do {
-			if (pmd_none(pmd_src)) {
+			if (pmd_none(*pmd_src)) {
 				address = (address + PMD_SIZE) & PMD_MASK;
 				if (address >= end)
 					goto out;
 			}
 
 			/* TODO : allocate */
-			if (pmd_none(pmd_dst))
+			if (pmd_none(*pmd_dst))
 				if (!pte_alloc(pmd_dst, 0))
 					goto nomem;
 
@@ -394,7 +394,7 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, uint32_t start, uint32_t end
 
 			/* for each page table entry */
 			do {
-				if (pte_none(pte_src))
+				if (pte_none(*pte_src))
 					goto next_pte;
 
 				/* try to get a page */
@@ -407,7 +407,6 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, uint32_t start, uint32_t end
 
 				/* copy physical page */
 				copy_page_physical(pte_page(*pte_src) * PAGE_SIZE, pte_page(*pte_dst) * PAGE_SIZE);
-
 next_pte:
 				/* go to next page table entry */
 				address += PAGE_SIZE;
