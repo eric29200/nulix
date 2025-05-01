@@ -151,7 +151,7 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd)
 /*
  * Anonymous page mapping.
  */
-static int do_anonymous_page(struct vm_area *vma, pte_t *pte, void *address)
+static int do_anonymous_page(struct vm_area *vma, pte_t *pte, void *address, int write_access)
 {
 	struct page *page;
 	int ret;
@@ -166,6 +166,10 @@ static int do_anonymous_page(struct vm_area *vma, pte_t *pte, void *address)
 	if (ret)
 		goto err;
 
+	/* make page table entry writable */
+	if (write_access)
+		*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
+
 	/* memzero page */
 	memset(address, 0, PAGE_SIZE);
 
@@ -178,7 +182,7 @@ err:
 /*
  * Handle a no page fault.
  */
-static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address)
+static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, int write_access)
 {
 	struct page *page;
 	pte_t *pte;
@@ -194,7 +198,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address)
 
 	/* anonymous page mapping */
 	if (!vma->vm_ops || !vma->vm_ops->nopage)
-		return do_anonymous_page(vma, pte, (void *) PAGE_ALIGN_DOWN(address));
+		return do_anonymous_page(vma, pte, (void *) PAGE_ALIGN_DOWN(address), write_access);
 
 	/* specific mapping */
 	page = vma->vm_ops->nopage(vma, address);
@@ -203,6 +207,10 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address)
 
 	/* set page table entry */
 	set_pte(pte, vma->vm_page_prot, page);
+
+	/* make page table entry writable */
+	if (write_access)
+		*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
 
 	return 0;
 }
@@ -215,6 +223,8 @@ static int do_wp_page(struct task *task, uint32_t address)
 	struct page *page;
 	uint32_t page_idx;
 	pte_t *pte;
+
+	printf("%d %x\n", current_task->pid, address);
 
 	/* get page table entry */
 	pte = get_pte(address, 0, task->mm->pgd);
@@ -256,9 +266,9 @@ static int expand_stack(struct vm_area *vma, uint32_t addr)
  */
 void page_fault_handler(struct registers *regs)
 {
+	int present, write_access, user, reserved, id, ret;
 	struct vm_area *vma;
 	uint32_t fault_addr;
-	int ret;
 
 	/* faulting address is stored in CR2 register */
 	__asm__ volatile("mov %%cr2, %0" : "=r" (fault_addr));
@@ -269,12 +279,12 @@ void page_fault_handler(struct registers *regs)
 		return;
 	}
 
-	/* get errors informations */
-	int present = regs->err_code & 0x1 ? 1 : 0;
-	int write = regs->err_code & 0x2 ? 1 : 0;
-	int user = regs->err_code & 0x4 ? 1 : 0;
-	int reserved = regs->err_code & 0x8 ? 1 : 0;
-	int id = regs->err_code & 0x10 ? 1 : 0;
+	/* get fault informations */
+	present = regs->err_code & 0x1 ? 1 : 0;
+	write_access = regs->err_code & 0x2 ? 1 : 0;
+	user = regs->err_code & 0x4 ? 1 : 0;
+	reserved = regs->err_code & 0x8 ? 1 : 0;
+	id = regs->err_code & 0x10 ? 1 : 0;
 
 	/* get memory region */
 	vma = find_vma(current_task, fault_addr);
@@ -294,7 +304,7 @@ expand_stack:
 	return;
 good_area:
 	/* write violation */
-	if (write && !(vma->vm_flags & VM_WRITE))
+	if (write_access && !(vma->vm_flags & VM_WRITE))
 		goto bad_area;
 
 	/* present page : try to make it writable */
@@ -307,7 +317,7 @@ good_area:
 	}
 
 	/* non present page */
-	ret = do_no_page(current_task, vma, fault_addr);
+	ret = do_no_page(current_task, vma, fault_addr, write_access);
 	if (ret)
 		goto bad_area;
 
@@ -315,7 +325,7 @@ good_area:
 bad_area:
 	/* output message */
 	printf("Page fault at address=%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d (process %d at %x)\n",
-	       fault_addr, present, write, user, reserved, id, current_task->pid, regs->eip);
+	       fault_addr, present, write_access, user, reserved, id, current_task->pid, regs->eip);
 
 	/* user mode : exit process */
 	if (user)

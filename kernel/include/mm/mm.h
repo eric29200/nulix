@@ -36,7 +36,7 @@ struct vm_area {
 struct vm_operations {
 	void (*open)(struct vm_area *);
 	void (*close)(struct vm_area *);
-	struct page *(*nopage)(struct vm_area *, uint32_t address);
+	struct page *(*nopage)(struct vm_area *, uint32_t);
 };
 
 void init_mem(uint32_t start, uint32_t end);
