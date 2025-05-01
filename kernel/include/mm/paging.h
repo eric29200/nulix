@@ -52,9 +52,12 @@ typedef uint32_t pte_t;
 #define __S110				PAGE_SHARED
 #define __S111				PAGE_SHARED
 
-#define PTE_PAGE(pte)			((pte) >> PAGE_SHIFT)
-#define PTE_PROT(pte)			((pte) & (PAGE_SIZE - 1))
 #define mk_pte(page, prot)		(((page) << PAGE_SHIFT) | (prot))
+#define pmd_none(pmd)			(!*(pmd))
+#define pte_page(pte)			((pte) >> PAGE_SHIFT)
+#define pte_prot(pte)			((pte) & (PAGE_SIZE - 1))
+#define pte_clear(pte)			(*(pte) = 0)
+#define pte_none(pte)			(!*(pte))
 
 static inline pte_t *pte_mkwrite(pte_t *pte)
 {

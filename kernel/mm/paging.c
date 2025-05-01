@@ -106,12 +106,12 @@ static void unmap_page(uint32_t address, pgd_t *pgd)
 		return;
 
 	/* free page */
-	page_idx = PTE_PAGE(*pte);
+	page_idx = pte_page(*pte);
 	if (page_idx && page_idx < nr_pages)
 		__free_page(&page_array[page_idx]);
 
-	/* reset page table entry */
-	*pte = 0;
+	/* clear page table entry */
+	pte_clear(pte);
 
 	/* flush tlb */
 	flush_tlb(address);
@@ -166,7 +166,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 		return -ENOMEM;
 
 	/* page table entry already set */
-	if (PTE_PAGE(*pte) != 0)
+	if (!pte_none(pte))
 		return -EPERM;
 
 	/* anonymous page mapping */
@@ -334,7 +334,7 @@ static pmd_t clone_pmd(pmd_t *pmd_src)
 
 	/* copy physical pages */
 	for (i = 0; i < PTRS_PER_PTE; i++) {
-		if (!PTE_PAGE(ptes_src[i]))
+		if (pte_none(&ptes_src[i]))
 			continue;
 
 		/* try to get a page */
@@ -343,10 +343,10 @@ static pmd_t clone_pmd(pmd_t *pmd_src)
 			goto err;
 
 		/* make page table entry */
-		ptes_new[i] = mk_pte(page->page, PTE_PROT(ptes_src[i]));
+		ptes_new[i] = mk_pte(page->page, pte_prot(ptes_src[i]));
 
 		/* copy physical page */
-		copy_page_physical(PTE_PAGE(ptes_src[i]) * PAGE_SIZE, PTE_PAGE(ptes_new[i]) * PAGE_SIZE);
+		copy_page_physical(pte_page(ptes_src[i]) * PAGE_SIZE, pte_page(ptes_new[i]) * PAGE_SIZE);
 	}
 
 	return (pmd_t ) __pa(ptes_new) | PAGE_TABLE;
@@ -369,8 +369,8 @@ pgd_t *clone_pgd(pgd_t *pgd_src)
 	if (!pgd_new)
 		return NULL;
 
-	/* reset page directory */
-	memset(pgd_new, 0, PAGE_SIZE);
+	/* copy kernel page directory */
+	memcpy(pgd_new, pgd_kernel, PAGE_SIZE);
 
 	/* get tables */
 	pmd_src = pmd_offset(pgd_src);
@@ -379,13 +379,11 @@ pgd_t *clone_pgd(pgd_t *pgd_src)
 
 	/* copy page tables */
 	for (i = 0; i < PTRS_PER_PTE; i++, pmd_src++, pmd_dst++, pmd_kernel++) {
-		if (!pmd_page(*pmd_src))
+		if (pmd_none(pmd_src))
 			continue;
 
-		/* if kernel page tables, just link */
-		if (pmd_page(*pmd_src) == pmd_page(*pmd_kernel)) {
-			*pmd_dst = *pmd_src;
-		} else {
+		/* copy page table */
+		if (pmd_page(*pmd_src) != pmd_page(*pmd_kernel)) {
 			*pmd_dst = clone_pmd(pmd_src);
 			if (!pmd_dst) {
 				free_pgd(pgd_new);
@@ -411,7 +409,7 @@ static void free_pmd(pmd_t *pmd)
 
 	/* free pages */
 	for (i = 0; i < PTRS_PER_PTE; i++) {
-		page_idx = PTE_PAGE(ptes[i]);
+		page_idx = pte_page(ptes[i]);
 		if (page_idx > 0 && page_idx < nr_pages)
 			__free_page(&page_array[page_idx]);
 	}
