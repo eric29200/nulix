@@ -62,25 +62,6 @@ static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
 }
 
 /*
- * Set a page table entry.
- */
-static int set_pte(pte_t *pte, int pgprot, struct page *page)
-{
-	/* check page */
-	if (!page)
-		return -EINVAL;
-
-	/* page table entry already set */
-	if (PTE_PAGE(*pte) != 0)
-		return -EPERM;
-
-	/* set page table entry */
-	*pte = MK_PTE(page->page, pgprot);
-
-	return 0;
-}
-
-/*
  * Remap pages to physical address.
  */
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot)
@@ -95,7 +76,7 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd
 			return -ENOMEM;
 
 		/* set page table entry */
-		*pte = MK_PTE(phys_addr / PAGE_SIZE, pgprot);
+		*pte = mk_pte(phys_addr / PAGE_SIZE, pgprot);
 	}
 
 	return 0;
@@ -154,29 +135,21 @@ void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd)
 static int do_anonymous_page(struct vm_area *vma, pte_t *pte, void *address, int write_access)
 {
 	struct page *page;
-	int ret;
 
 	/* try to get a page */
 	page = __get_free_page(GFP_USER);
 	if (!page)
 		return -ENOMEM;
 
-	/* set page table entry */
-	ret = set_pte(pte, vma->vm_page_prot, page);
-	if (ret)
-		goto err;
-
-	/* make page table entry writable */
+	/* make page table entry */
+	*pte = mk_pte(page->page, vma->vm_page_prot);
 	if (write_access)
-		*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
+		pte = pte_mkdirty(pte_mkwrite(pte));
 
 	/* memzero page */
 	memset(address, 0, PAGE_SIZE);
 
 	return 0;
-err:
-	__free_page(page);
-	return ret;
 }
 
 /*
@@ -205,12 +178,10 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	if (!page)
 		return -ENOSPC;
 
-	/* set page table entry */
-	set_pte(pte, vma->vm_page_prot, page);
-
-	/* make page table entry writable */
+	/* make page table entry */
+	*pte = mk_pte(page->page, vma->vm_page_prot);
 	if (write_access)
-		*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
+		pte = pte_mkdirty(pte_mkwrite(pte));
 
 	return 0;
 }
@@ -220,8 +191,6 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
  */
 static int do_wp_page(struct task *task, uint32_t address)
 {
-	struct page *page;
-	uint32_t page_idx;
 	pte_t *pte;
 
 	/* get page table entry */
@@ -229,14 +198,8 @@ static int do_wp_page(struct task *task, uint32_t address)
 	if (!pte)
 		return -EINVAL;
 
-	/* get page */
-	page_idx = PTE_PAGE(*pte);
-	if (page_idx <= 0 || page_idx >= nr_pages)
-		return -EINVAL;
-	page = &page_array[page_idx];
-
 	/* make page table entry writable */
-	*pte = MK_PTE(page->page, PTE_PROT(*pte) | PAGE_RW | PAGE_DIRTY);
+	pte_mkdirty(pte_mkwrite(pte));
 
 	return 0;
 }
@@ -356,7 +319,7 @@ static pmd_t clone_pmd(pmd_t *pmd_src)
 {
 	pte_t *ptes_src, *ptes_new;
 	struct page *page;
-	int ret, i;
+	int i;
 
 	/* create a new page table */
 	ptes_new = (pmd_t *) get_free_page(GFP_KERNEL);
@@ -379,12 +342,8 @@ static pmd_t clone_pmd(pmd_t *pmd_src)
 		if (!page)
 			goto err;
 
-		/* set page table entry */
-		ret = set_pte(&ptes_new[i], PTE_PROT(ptes_src[i]), page);
-		if (ret) {
-			__free_page(page);
-			goto err;
-		}
+		/* make page table entry */
+		ptes_new[i] = mk_pte(page->page, PTE_PROT(ptes_src[i]));
 
 		/* copy physical page */
 		copy_page_physical(PTE_PAGE(ptes_src[i]) * PAGE_SIZE, PTE_PAGE(ptes_new[i]) * PAGE_SIZE);
@@ -514,7 +473,7 @@ int init_paging(uint32_t start, uint32_t end)
 			pte = (pte_t *) (*pmd & PAGE_MASK) + i;
 
 			if (addr < KHEAP_START + KHEAP_SIZE)
-				*pte = MK_PTE(addr / PAGE_SIZE, PAGE_READONLY);
+				*pte = mk_pte(addr / PAGE_SIZE, PAGE_READONLY);
 			else
 				*pte = 0;
 
@@ -537,7 +496,7 @@ int init_paging(uint32_t start, uint32_t end)
 			pte = (pte_t *) (*pmd & PAGE_MASK) + i;
 
 			if (addr < end && addr < __pa(KPAGE_END))
-				*pte = MK_PTE(addr / PAGE_SIZE, PAGE_KERNEL);
+				*pte = mk_pte(addr / PAGE_SIZE, PAGE_KERNEL);
 			else
 				*pte = 0;
 

@@ -5,6 +5,11 @@
 #include <lib/list.h>
 #include <stddef.h>
 
+/* page directory, page middle directory (= page table) and page table entry */
+typedef uint32_t pgd_t;
+typedef uint32_t pmd_t;
+typedef uint32_t pte_t;
+
 #define PAGE_SHIFT			12
 #define PAGE_SIZE			(1 << PAGE_SHIFT)
 #define PAGE_MASK			(~(PAGE_SIZE - 1))
@@ -49,7 +54,17 @@
 
 #define PTE_PAGE(pte)			((pte) >> PAGE_SHIFT)
 #define PTE_PROT(pte)			((pte) & (PAGE_SIZE - 1))
-#define MK_PTE(page, prot)		(((page) << PAGE_SHIFT) | (prot))
+#define mk_pte(page, prot)		(((page) << PAGE_SHIFT) | (prot))
+
+static inline pte_t *pte_mkwrite(pte_t *pte)
+{
+	*pte |= PAGE_RW; return pte;
+}
+
+static inline pte_t *pte_mkdirty(pte_t *pte)
+{
+	*pte |= PAGE_DIRTY; return pte;
+}
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
@@ -58,11 +73,6 @@
 
 #define GFP_KERNEL			0
 #define GFP_USER			1
-
-/* page directory, page middle directory (= page table) and page table entry */
-typedef uint32_t pgd_t;
-typedef uint32_t pmd_t;
-typedef uint32_t pte_t;
 
 /* defined in paging.c */
 extern uint32_t nr_pages;
