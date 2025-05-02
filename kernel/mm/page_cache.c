@@ -2,7 +2,7 @@
 #include <fs/fs.h>
 #include <stderr.h>
 
-#define HASH_BITS 		12
+#define HASH_BITS 		11
 #define HASH_SIZE 		(1 << HASH_BITS)
 
 /* pages hash table */
@@ -16,7 +16,7 @@ static inline uint32_t __page_hashfn(struct inode *inode, off_t offset)
 #define i (((uint32_t) inode) / (sizeof(struct inode) & ~(sizeof(struct inode) - 1)))
 #define o (offset >> PAGE_SHIFT)
 #define s(x) ((x) + ((x) >> HASH_BITS))
-	return s(i + o) & (HASH_SIZE);
+	return s(i + o) & (HASH_SIZE - 1);
 #undef i
 #undef o
 #undef s
