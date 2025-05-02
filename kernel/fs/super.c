@@ -186,7 +186,7 @@ static int get_mount_point(const char *mount_point, struct inode **res_inode)
 		return -EINVAL;
 
 	/* mount point busy */
-	if ((*res_inode)->i_ref != 1 || (*res_inode)->i_mount) {
+	if ((*res_inode)->i_count != 1 || (*res_inode)->i_mount) {
 		iput(*res_inode);
 		return -EBUSY;
 	}
@@ -315,7 +315,7 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	return -EINVAL;
 found:
 	/* set mount point */
-	sb->s_root_inode->i_ref = 3;
+	sb->s_root_inode->i_count = 3;
 	sb->s_covered = NULL;
 	current_task->fs->cwd = sb->s_root_inode;
 	current_task->fs->root = sb->s_root_inode;

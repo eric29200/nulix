@@ -272,7 +272,7 @@ static struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksi
 
 	for (bh = *buffer_hash(dev, block); bh != NULL; bh = bh->b_next_hash) {
 		if (bh->b_block == block && bh->b_dev == dev && bh->b_size == blocksize) {
-			bh->b_ref++;
+			bh->b_count++;
 			return bh;
 		}
 	}
@@ -308,7 +308,7 @@ struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize)
 	list_add(&bh->b_list, &used_list);
 
 	/* set buffer */
-	bh->b_ref = 1;
+	bh->b_count = 1;
 	bh->b_dev = dev;
 	bh->b_block = block;
 	bh->b_uptodate = 0;
@@ -373,7 +373,7 @@ void brelse(struct buffer_head *bh)
 		bwrite(bh);
 
 	/* update buffer reference count */
-	bh->b_ref--;
+	bh->b_count--;
 }
 
 /*
@@ -395,7 +395,7 @@ void try_to_free_buffer(struct buffer_head *bh)
 	tmp = bh;
 	do {
 		/* used buffer */
-		if (tmp->b_ref || tmp->b_dirt)
+		if (tmp->b_count || tmp->b_dirt)
 			return;
 
 		/* go to next buffer in page */

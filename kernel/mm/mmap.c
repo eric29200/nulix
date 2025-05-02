@@ -472,7 +472,7 @@ static int mprotect_fixup_start(struct vm_area *vm, uint32_t end, uint16_t newfl
 	/* set new memory region */
 	*vm_new = *vm;
 	if (vm_new->vm_inode)
-		vm_new->vm_inode->i_ref++;
+		vm_new->vm_inode->i_count++;
 	vm_new->vm_flags = newflags;
 	vm_new->vm_page_prot = newprot;
 
@@ -502,7 +502,7 @@ static int mprotect_fixup_end(struct vm_area *vm, uint32_t start, uint16_t newfl
 	/* set new memory region */
 	*vm_new = *vm;
 	if (vm_new->vm_inode)
-		vm_new->vm_inode->i_ref++;
+		vm_new->vm_inode->i_count++;
 	vm_new->vm_flags = newflags;
 	vm_new->vm_page_prot = newprot;
 

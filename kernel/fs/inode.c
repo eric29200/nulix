@@ -141,7 +141,7 @@ struct inode *get_empty_inode(struct super_block *sb)
 	if (list_empty(&free_inodes)) {
 		list_for_each(pos, &used_inodes) {
 			inode = list_entry(pos, struct inode, i_list);
-			if (!inode->i_ref) {
+			if (!inode->i_count) {
 				clear_inode(inode);
 				goto found;
 			}
@@ -152,7 +152,7 @@ struct inode *get_empty_inode(struct super_block *sb)
 found:
 	/* set inode */
 	inode->i_sb = sb;
-	inode->i_ref = 1;
+	inode->i_count = 1;
 	INIT_LIST_HEAD(&inode->i_pages);
 	INIT_LIST_HEAD(&inode->i_mmap);
 
@@ -172,7 +172,7 @@ struct inode *find_inode(struct super_block *sb, ino_t ino)
 
 	for (inode = *inode_hash(sb->s_dev, ino); inode != NULL; inode = inode->i_next_hash) {
 		if (inode->i_ino == ino && inode->i_sb == sb) {
-			inode->i_ref++;
+			inode->i_count++;
 			return inode;
 		}
 	}
@@ -194,7 +194,7 @@ struct inode *iget(struct super_block *sb, ino_t ino)
 		/* cross mount point */
 		if (inode->i_mount) {
 			tmp = inode->i_mount;
-			tmp->i_ref++;
+			tmp->i_count++;
 			iput(inode);
 			inode = tmp;
 		}
@@ -246,7 +246,7 @@ void iput(struct inode *inode)
 		return;
 
 	/* update inode reference count */
-	inode->i_ref--;
+	inode->i_count--;
 
 	/* put inode */
 	if (inode->i_sb && inode->i_sb->s_op->put_inode) {
@@ -270,10 +270,10 @@ int fs_may_umount(struct super_block *sb)
 	list_for_each(pos, &used_inodes) {
 		inode = list_entry(pos, struct inode, i_list);
 
-		if (inode->i_sb != sb || !inode->i_ref)
+		if (inode->i_sb != sb || !inode->i_count)
 			continue;
 
-		if (inode == sb->s_root_inode && inode->i_ref == (inode->i_mount != inode ? 1 : 2))
+		if (inode == sb->s_root_inode && inode->i_count == (inode->i_mount != inode ? 1 : 2))
 			continue;
 
 		return 0;

@@ -38,7 +38,7 @@ struct buffer_head {
 	uint32_t			b_block;		/* block number */
 	char *				b_data;			/* data */
 	size_t				b_size;			/* block size */
-	int				b_ref;			/* reference counter */
+	int				b_count;			/* reference counter */
 	char				b_dirt;			/* dirty flag */
 	char				b_uptodate;		/* up to date flag */
 	dev_t				b_dev;			/* device number */
@@ -88,7 +88,7 @@ struct inode {
 	time_t				i_ctime;
 	ino_t				i_ino;
 	struct super_block *		i_sb;
-	int				i_ref;
+	int				i_count;
 	char				i_dirt;
 	struct inode_operations *	i_op;
 	dev_t				i_rdev;
@@ -119,7 +119,7 @@ struct file {
 	uint16_t			f_mode;
 	int				f_flags;
 	size_t				f_pos;
-	int				f_ref;
+	int				f_count;
 	struct inode *			f_inode;
 	char *				f_path;
 	void *				f_private;

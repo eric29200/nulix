@@ -380,7 +380,7 @@ static int shm_mmap(struct inode *inode, struct vm_area *vma)
 	/* update inode */
 	inode->i_atime = CURRENT_TIME;
 	inode->i_dirt = 1;
-	inode->i_ref++;
+	inode->i_count++;
 
 	/* set memory region */
 	vma->vm_inode = inode;

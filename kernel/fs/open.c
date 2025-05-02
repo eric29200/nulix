@@ -18,13 +18,13 @@ struct file *get_empty_filp()
 	int i;
 
 	for (i = 0; i < NR_FILE; i++)
-		if (!filp_table[i].f_ref)
+		if (!filp_table[i].f_count)
 			break;
 
 	if (i >= NR_FILE)
 		return NULL;
 
-	filp_table[i].f_ref = 1;
+	filp_table[i].f_count = 1;
 	return &filp_table[i];
 }
 
@@ -122,10 +122,10 @@ int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode)
  */
 int do_close(struct file *filp)
 {
-	filp->f_ref--;
+	filp->f_count--;
 
 	/* release file if not used anymore */
-	if (filp->f_ref <= 0) {
+	if (filp->f_count <= 0) {
 		/* specific close operation */
 		if (filp->f_op && filp->f_op->close)
 			filp->f_op->close(filp);

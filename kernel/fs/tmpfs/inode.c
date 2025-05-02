@@ -71,7 +71,7 @@ struct inode *tmpfs_new_inode(struct super_block *sb, mode_t mode, dev_t dev)
 	/* set inode */
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_ino = tmpfs_next_ino++;
-	inode->i_ref = 1;
+	inode->i_count = 1;
 	inode->i_nlinks = 1;
 	inode->i_sb = sb;
 	inode->i_mode = mode;
@@ -132,7 +132,7 @@ int tmpfs_put_inode(struct inode *inode)
 		return -EINVAL;
 
 	/* truncate and free inode */
-	if (inode->i_ref <= 1 && !inode->i_nlinks) {
+	if (inode->i_count <= 1 && !inode->i_nlinks) {
 		inode->i_size = 0;
 		tmpfs_truncate(inode);
 		clear_inode(inode);
@@ -140,8 +140,8 @@ int tmpfs_put_inode(struct inode *inode)
 	}
 
 	/* inodes must not be released, since they are only in memory */
-	if (!inode->i_ref)
-		inode->i_ref = 1;
+	if (!inode->i_count)
+		inode->i_count = 1;
 
 	return 0;
 }

@@ -139,7 +139,7 @@ int proc_write_inode(struct inode *inode)
  */
 int proc_put_inode(struct inode *inode)
 {
-	if (!inode->i_ref)
+	if (!inode->i_count)
 		clear_inode(inode);
 
 	return 0;

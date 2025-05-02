@@ -239,7 +239,7 @@ static struct inode *get_pipe_inode()
 	}
 
 	/* set pipe inode (2 references = reader + writer) */
-	inode->i_ref = 2;
+	inode->i_count = 2;
 	inode->i_pipe = 1;
 	inode->i_mode = S_IFIFO | S_IRUSR | S_IWUSR;
 	inode->i_uid = current_task->uid;
@@ -266,7 +266,7 @@ static int do_pipe(int pipefd[2], int flags)
 
 	/* find 2 file descriptors in global table */
 	for (i = 0, j = 0; i < NR_FILE && j < 2; i++)
-		if (!filp_table[i].f_ref)
+		if (!filp_table[i].f_count)
 			filps[j++] = &filp_table[i];
 
 	/* not enough available slots */
@@ -274,8 +274,8 @@ static int do_pipe(int pipefd[2], int flags)
 		return -ENOSPC;
 
 	/* update reference counts */
-	filps[0]->f_ref++;
-	filps[1]->f_ref++;
+	filps[0]->f_count++;
+	filps[1]->f_count++;
 
 	/* find 2 file descriptors in current task */
 	for (i = 0, j = 0; i < NR_OPEN && j < 2; i++) {
@@ -290,8 +290,8 @@ static int do_pipe(int pipefd[2], int flags)
 		if (j == 1)
 			current_task->files->filp[fd[0]] = NULL;
 
-		filps[0]->f_ref = 0;
-		filps[1]->f_ref = 0;
+		filps[0]->f_count = 0;
+		filps[1]->f_count = 0;
 		return -ENOSPC;
 	}
 
@@ -300,8 +300,8 @@ static int do_pipe(int pipefd[2], int flags)
 	if (!inode) {
 		current_task->files->filp[fd[0]] = NULL;
 		current_task->files->filp[fd[1]] = NULL;
-		filps[0]->f_ref = 0;
-		filps[1]->f_ref = 0;
+		filps[0]->f_count = 0;
+		filps[1]->f_count = 0;
 		return -ENOSPC;
 	}
 

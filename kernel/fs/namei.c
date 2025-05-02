@@ -50,7 +50,7 @@ static int lookup(struct inode *dir, const char *name, size_t name_len, struct i
 			dir = sb->s_covered;
 			if (!dir)
 				return -ENOENT;
-			dir->i_ref++;
+			dir->i_count++;
 		}
 	}
 
@@ -93,7 +93,7 @@ static struct inode *dir_namei(int dirfd, struct inode *base, const char *pathna
 		return NULL;
 
 	/* update reference count */
-	inode->i_ref++;
+	inode->i_count++;
 
 	while (1) {
 		/* check if inode is a directory */
@@ -115,7 +115,7 @@ static struct inode *dir_namei(int dirfd, struct inode *base, const char *pathna
 			continue;
 
 		/* lookup */
-		inode->i_ref++;
+		inode->i_count++;
 		if (lookup(inode, name, name_len, &tmp)) {
 			iput(inode);
 			return NULL;
@@ -146,7 +146,7 @@ struct inode *namei(int dirfd, struct inode *base, const char *pathname, int fol
 		if (dirfd >= NR_OPEN || !current_task->files->filp[dirfd])
 			return NULL;
 
-		current_task->files->filp[dirfd]->f_inode->i_ref++;
+		current_task->files->filp[dirfd]->f_inode->i_count++;
 		return current_task->files->filp[dirfd]->f_inode;
 	}
 
@@ -160,7 +160,7 @@ struct inode *namei(int dirfd, struct inode *base, const char *pathname, int fol
 		return dir;
 
 	/* lookup file */
-	dir->i_ref++;
+	dir->i_count++;
 	if (lookup(dir, basename, basename_len, &inode)) {
 		iput(dir);
 		return NULL;
@@ -208,7 +208,7 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 	mode |= S_IFREG;
 
 	/* lookup inode */
-	dir->i_ref++;
+	dir->i_count++;
 	if (lookup(dir, basename, basename_len, &inode)) {
 		/* no such entry */
 		if (!(flags & O_CREAT)) {
@@ -223,7 +223,7 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 		}
 
 		/* create new inode */
-		dir->i_ref++;
+		dir->i_count++;
 		err = dir->i_op->create(dir, basename, basename_len, mode, res_inode);
 
 		/* release directory */
@@ -282,7 +282,7 @@ static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 	}
 
 	/* create directory */
-	dir->i_ref++;
+	dir->i_count++;
 	err = dir->i_op->mkdir(dir, basename, basename_len, mode);
 	iput(dir);
 
@@ -348,7 +348,7 @@ static int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *
 	}
 
 	/* create link */
-	dir->i_ref++;
+	dir->i_count++;
 	err = dir->i_op->link(old_inode, dir, basename, basename_len);
 
 	iput(old_inode);
@@ -401,7 +401,7 @@ static int do_symlink(const char *target, int newdirfd, const char *linkpath)
 	}
 
 	/* create symbolic link */
-	dir->i_ref++;
+	dir->i_count++;
 	err = dir->i_op->symlink(dir, basename, basename_len, target);
 
 	iput(dir);
@@ -619,7 +619,7 @@ static int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char
 		}
 	}
 
-	new_dir->i_ref++;
+	new_dir->i_count++;
 	return old_dir->i_op->rename(old_dir, old_basename, old_basename_len, new_dir, new_basename, new_basename_len);
 }
 

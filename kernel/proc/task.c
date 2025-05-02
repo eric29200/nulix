@@ -270,13 +270,13 @@ static int task_copy_fs(struct task *task, struct task *parent, uint32_t clone_f
 	/* duplicate current working dir */
 	if (parent && parent->fs->cwd) {
 		task->fs->cwd = parent->fs->cwd;
-		task->fs->cwd->i_ref++;
+		task->fs->cwd->i_count++;
 	}
 
 	/* duplicate root dir */
 	if (parent && parent->fs->root) {
 		task->fs->root = parent->fs->root;
-		task->fs->root->i_ref++;
+		task->fs->root->i_count++;
 	}
 
 	return 0;
@@ -316,7 +316,7 @@ static int task_copy_files(struct task *task, struct task *parent, uint32_t clon
 	for (i = 0; i < NR_OPEN; i++) {
 		task->files->filp[i] = parent ? parent->files->filp[i] : NULL;
 		if (task->files->filp[i])
-			task->files->filp[i]->f_ref++;
+			task->files->filp[i]->f_count++;
 	}
 
 	return 0;

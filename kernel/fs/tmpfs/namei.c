@@ -183,7 +183,7 @@ int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_ref++;
+	dir->i_count++;
 	if (tmpfs_lookup(dir, name, name_len, &tmp) == 0) {
 		iput(tmp);
 		iput(dir);
@@ -558,7 +558,7 @@ int tmpfs_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_ref++;
+	dir->i_count++;
 	if (tmpfs_lookup(dir, name, name_len, &tmp) == 0) {
 		iput(tmp);
 		iput(dir);

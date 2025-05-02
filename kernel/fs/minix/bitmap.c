@@ -134,8 +134,8 @@ int minix_free_inode(struct inode *inode)
 		return 0;
 
 	/* panic if inode is still used */
-	if (inode->i_ref > 1) {
-		printf("Trying to free inode %d with ref=%d\n", inode->i_ino, inode->i_ref);
+	if (inode->i_count > 1) {
+		printf("Trying to free inode %d with ref=%d\n", inode->i_ino, inode->i_count);
 		panic("");
 	}
 
@@ -181,7 +181,7 @@ struct inode *minix_new_inode(struct super_block *sb)
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_nlinks = 1;
 	inode->i_ino = i * sb->s_blocksize * 8 + j;
-	inode->i_ref = 1;
+	inode->i_count = 1;
 	inode->i_sb = sb;
 
 	/* set inode in bitmap */

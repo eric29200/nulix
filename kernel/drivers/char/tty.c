@@ -90,7 +90,7 @@ static int tty_check_count(struct tty *tty)
 	int count = 0, i;
 
 	for (i = 0; i < NR_FILE; i++)
-		if (filp_table[i].f_ref && filp_table[i].f_private == tty)
+		if (filp_table[i].f_count && filp_table[i].f_private == tty)
 			count++;
 
 	return count;

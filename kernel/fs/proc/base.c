@@ -423,7 +423,7 @@ static int proc_fd_follow_link(struct inode *dir, struct inode *inode, int flags
 	if (!*res_inode)
 		return -ENOENT;
 
-	(*res_inode)->i_ref++;
+	(*res_inode)->i_count++;
 	return 0;
 }
 

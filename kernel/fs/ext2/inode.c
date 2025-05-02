@@ -231,7 +231,7 @@ int ext2_put_inode(struct inode *inode)
 		return -EINVAL;
 
 	/* truncate and free inode */
-	if (!inode->i_ref && !inode->i_nlinks) {
+	if (!inode->i_count && !inode->i_nlinks) {
 		inode->i_size = 0;
 		ext2_truncate(inode);
 		ext2_free_inode(inode);

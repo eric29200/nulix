@@ -305,7 +305,7 @@ int elf_load(const char *path, struct binargs *bargs)
 	if (fd < 0)
 		return fd;
 	filp = current_task->files->filp[fd];
-	filp->f_ref++;
+	filp->f_count++;
 
 	/* save path */
 	strncpy(name, path, TASK_NAME_LEN - 1);

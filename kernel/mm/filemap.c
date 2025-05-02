@@ -72,7 +72,7 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
  */
 void filemap_open(struct vm_area *vma)
 {
-	vma->vm_inode->i_ref++;
+	vma->vm_inode->i_count++;
 	list_add(&vma->list_share, &vma->vm_inode->i_mmap);
 }
 
@@ -110,7 +110,7 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 	/* update inode */
 	inode->i_atime = CURRENT_TIME;
 	inode->i_dirt = 1;
-	inode->i_ref++;
+	inode->i_count++;
 
 	/* set memory region */
 	vma->vm_inode = inode;

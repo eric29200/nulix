@@ -82,7 +82,7 @@ static int get_fd(struct inode *inode)
 
 	/* no free slot */
 	if (fd >= NR_OPEN) {
-		filp->f_ref = 0;
+		filp->f_count = 0;
 		return -EMFILE;
 	}
 
@@ -92,7 +92,7 @@ static int get_fd(struct inode *inode)
 	current_task->files->filp[fd]->f_mode = O_RDWR;
 	current_task->files->filp[fd]->f_flags = 0;
 	current_task->files->filp[fd]->f_pos = 0;
-	current_task->files->filp[fd]->f_ref = 1;
+	current_task->files->filp[fd]->f_count = 1;
 	current_task->files->filp[fd]->f_inode = inode;
 	current_task->files->filp[fd]->f_op = &socket_fops;
 

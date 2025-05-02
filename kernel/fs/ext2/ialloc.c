@@ -93,7 +93,7 @@ allocated:
 	inode->i_blocks = 0;
 	inode->i_nlinks = 1;
 	inode->i_op = NULL;
-	inode->i_ref = 1;
+	inode->i_count = 1;
 	inode->i_dirt = 1;
 	inode->u.ext2_i.i_block_group = group_no;
 	inode->u.ext2_i.i_flags = dir->u.ext2_i.i_flags;
@@ -145,8 +145,8 @@ int ext2_free_inode(struct inode *inode)
 		return 0;
 
 	/* check if inode is still referenced */
-	if (inode->i_ref > 1) {
-		printf("[Ext2-fs] Trying to free inode %d with ref=%d\n", inode->i_ino, inode->i_ref);
+	if (inode->i_count > 1) {
+		printf("[Ext2-fs] Trying to free inode %d with ref=%d\n", inode->i_ino, inode->i_count);
 		return -EINVAL;
 	}
 

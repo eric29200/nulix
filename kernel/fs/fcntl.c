@@ -11,7 +11,7 @@
 static int dupfd(int oldfd, int newfd)
 {
 	current_task->files->filp[newfd] = current_task->files->filp[oldfd];
-	current_task->files->filp[newfd]->f_ref++;
+	current_task->files->filp[newfd]->f_count++;
 
 	return newfd;
 }

@@ -327,7 +327,7 @@ int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mod
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_ref++;
+	dir->i_count++;
 	if (ext2_lookup(dir, name, name_len, &tmp) == 0) {
 		iput(tmp);
 		iput(dir);
@@ -808,7 +808,7 @@ int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_ref++;
+	dir->i_count++;
 	if (ext2_lookup(dir, name, name_len, &tmp) == 0) {
 		iput(tmp);
 		iput(dir);
