@@ -79,8 +79,6 @@ sudo mknod tmp/dev/fb0 c 29 0
 sudo mknod tmp/dev/hda b 3 0
 sudo mknod tmp/dev/hda1 b 3 1
 sudo mknod tmp/dev/hdc b 3 32
-sudo mkdir tmp/dev/input
-sudo ln -s ../mouse tmp/dev/input/mice
 
 # chown root
 sudo chown -R 0:0 tmp/
