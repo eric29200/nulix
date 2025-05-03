@@ -398,14 +398,6 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 				if (pte_none(*pte_src))
 					goto next_pte;
 
-				/* share page */
-				if ((vma->vm_flags & VM_SHARED) || !(vma->vm_flags & VM_WRITE)) {
-					page = &page_array[pte_page(*pte_src)];
-					page->count++;
-					*pte_dst = *pte_src;
-					goto next_pte;
-				}
-
 				/* try to get a page */
 				page = __get_free_page(GFP_USER);
 				if (!page)
