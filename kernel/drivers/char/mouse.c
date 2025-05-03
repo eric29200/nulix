@@ -26,12 +26,15 @@
 #define MOUSE_SET_SAMPLE	0xF3
 #define MOUSE_ENABLE_DEV	0xF4
 
+#define MAX_RETRIES		1000000
+
 /* mouse static variables */
 static uint8_t queue_buf[MOUSE_BUF_SIZE];
 static int queue_head = 0;
 static int queue_tail = 0;
 static struct wait_queue *queue_wait = NULL;
 static int mouse_count = 0;
+static int mouse_ready = 0;
 
 /*
  * Is mouse queue empty ?
@@ -57,11 +60,38 @@ static uint8_t get_from_queue()
 /*
  * Wait for mouse.
  */
-static void mouse_wait()
+static int mouse_poll_status()
 {
-	while (inb(MOUSE_STATUS) & 0x03)
+	int retries = 0;
+
+	while (inb(MOUSE_STATUS) & 0x03 && retries < MAX_RETRIES) {
 		if ((inb(MOUSE_STATUS) & MOUSE_OBUF_FULL) == MOUSE_OBUF_FULL)
 			inb(MOUSE_PORT);
+
+		current_task->state = TASK_SLEEPING;
+		current_task->timeout = jiffies + (5 * HZ + 99) / 100;
+		schedule();
+
+		retries++;
+	}
+	return !(retries==MAX_RETRIES);
+}
+
+/*
+ * Wait for mouse.
+ */
+static int mouse_poll_status_no_sleep()
+{
+	int retries = 0;
+
+	while (inb(MOUSE_STATUS) & 0x03 && retries < MAX_RETRIES) {
+		if ((inb(MOUSE_STATUS) & MOUSE_OBUF_FULL) == MOUSE_OBUF_FULL)
+			inb(MOUSE_PORT);
+
+		retries++;
+	}
+
+	return retries != MAX_RETRIES;
 }
 
 /*
@@ -70,11 +100,11 @@ static void mouse_wait()
 static int mouse_write_ack(int value)
 {
 	/* write value */
-	mouse_wait();
+	mouse_poll_status_no_sleep();
 	outb(MOUSE_COMMAND, MOUSE_MAGIC_WRITE);
-	mouse_wait();
+	mouse_poll_status_no_sleep();
 	outb(MOUSE_PORT, value);
-	mouse_wait();
+	mouse_poll_status_no_sleep();
 
 	/* handle ack */
 	if ((inb(MOUSE_STATUS & MOUSE_OBUF_FULL)) == MOUSE_OBUF_FULL)
@@ -88,9 +118,9 @@ static int mouse_write_ack(int value)
  */
 static void mouse_write_cmd(int value)
 {
-	mouse_wait();
+	mouse_poll_status();
 	outb(MOUSE_COMMAND, MOUSE_CMD_WRITE);
-	mouse_wait();
+	mouse_poll_status();
 	outb(MOUSE_PORT, value);
 }
 
@@ -99,9 +129,9 @@ static void mouse_write_cmd(int value)
  */
 static void mouse_write_dev(int value)
 {
-	mouse_wait();
+	mouse_poll_status();
 	outb(MOUSE_COMMAND, MOUSE_MAGIC_WRITE);
-	mouse_wait();
+	mouse_poll_status();
 	outb(MOUSE_PORT, value);
 }
 
@@ -126,6 +156,9 @@ static void mouse_interrupt_handler(struct registers *regs)
 		queue_head &= MOUSE_BUF_SIZE - 1;
 	}
 
+	/* mouse ready */
+	mouse_ready = 1;
+
 	/* wake up processes */
 	wake_up(&queue_wait);
 }
@@ -143,16 +176,17 @@ static int mouse_open(struct file *filp)
 
 	/* reset queue */
 	queue_head = queue_tail = 0;
+	mouse_ready = 0;
 
 	/* register interrupt */
 	register_interrupt_handler(MOUSE_IRQ, mouse_interrupt_handler);
 
 	/* enable mouse */
-	mouse_wait();
+	mouse_poll_status();
 	outb(MOUSE_COMMAND, MOUSE_ENABLE);
 	mouse_write_dev(MOUSE_ENABLE_DEV);
 	mouse_write_cmd(MOUSE_INTS_ON);
-	mouse_wait();
+	mouse_poll_status();
 
 	return 0;
 }
@@ -170,9 +204,9 @@ static int mouse_close(struct file *filp)
 
 	/* disable mouse */
 	mouse_write_cmd(MOUSE_INTS_OFF);
-	mouse_wait();
+	mouse_poll_status();
 	outb(MOUSE_COMMAND, MOUSE_DISABLE);
-	mouse_wait();
+	mouse_poll_status();
 
 	/* free interrupt */
 	unregister_interrupt_handler(MOUSE_IRQ);
@@ -205,6 +239,12 @@ static int mouse_read(struct file *filp, char *buf, int n)
 	for (i = 0; i < n && !queue_empty(); i++)
 		buf[i] = get_from_queue();
 
+	mouse_ready = !queue_empty();
+
+	/* upate inode */
+	if (i)
+		filp->f_inode->i_atime = CURRENT_TIME;
+
 	return i;
 }
 
@@ -224,13 +264,13 @@ static int mouse_write(struct file *filp, const char *buf, int n)
  */
 static int mouse_poll(struct file *filp, struct select_table *wait)
 {
-	int mask = POLLOUT;
+	int mask = 0;
 
 	/* unused filp */
 	UNUSED(filp);
 
 	/* check if there is some characters to read */
-	if (!queue_empty())
+	if (mouse_ready)
 		mask |= POLLIN;
 
 	/* add queue wait to select table */
@@ -257,11 +297,11 @@ void init_mouse()
 	mouse_write_ack(MOUSE_SET_SCALE21);
 
 	/* disable mouse */
-	mouse_wait();
+	mouse_poll_status_no_sleep();
 	outb(MOUSE_COMMAND, MOUSE_DISABLE);
-	mouse_wait();
+	mouse_poll_status_no_sleep();
 	outb(MOUSE_COMMAND, MOUSE_CMD_WRITE);
-	mouse_wait();
+	mouse_poll_status_no_sleep();
 	outb(MOUSE_PORT, MOUSE_INTS_OFF);
 }
 
