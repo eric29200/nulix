@@ -74,7 +74,7 @@ static int mouse_poll_status()
 
 		retries++;
 	}
-	return !(retries==MAX_RETRIES);
+	return retries != MAX_RETRIES;
 }
 
 /*
