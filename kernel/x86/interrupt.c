@@ -42,6 +42,14 @@ void register_interrupt_handler(uint8_t n, isr_t handler)
 }
 
 /*
+ * Unregister an interrupt handler.
+ */
+void unregister_interrupt_handler(uint8_t n)
+{
+	interrupt_handlers[n] = NULL;
+}
+
+/*
  * Interrupt service routine handler.
  */
 void isr_handler(struct registers *regs)

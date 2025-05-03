@@ -9,15 +9,12 @@
 #include <dev.h>
 
 #define MOUSE_BUF_SIZE		2048
-#define MOUSE_EVENT_SIZE	3
-
+#define MOUSE_IRQ		44
 #define MOUSE_PORT		0x60
 #define MOUSE_STATUS		0x64
 #define MOUSE_COMMAND		0x64
-
 #define MOUSE_CMD_WRITE		0x60
 #define MOUSE_MAGIC_WRITE	0xD4
-
 #define MOUSE_OBUF_FULL		0x21
 #define MOUSE_INTS_ON		0x47
 #define MOUSE_INTS_OFF		0x65
@@ -34,6 +31,7 @@ static uint8_t queue_buf[MOUSE_BUF_SIZE];
 static int queue_head = 0;
 static int queue_tail = 0;
 static struct wait_queue *queue_wait = NULL;
+static int mouse_count = 0;
 
 /*
  * Is mouse queue empty ?
@@ -59,7 +57,7 @@ static uint8_t get_from_queue()
 /*
  * Wait for mouse.
  */
-static void mouse_poll_status_no_sleep()
+static void mouse_wait()
 {
 	while (inb(MOUSE_STATUS) & 0x03)
 		if ((inb(MOUSE_STATUS) & MOUSE_OBUF_FULL) == MOUSE_OBUF_FULL)
@@ -67,16 +65,16 @@ static void mouse_poll_status_no_sleep()
 }
 
 /*
- * Write to mouse and handle ack.
+ * Write to mouse device and handle ack.
  */
 static int mouse_write_ack(int value)
 {
 	/* write value */
-	mouse_poll_status_no_sleep();
+	mouse_wait();
 	outb(MOUSE_COMMAND, MOUSE_MAGIC_WRITE);
-	mouse_poll_status_no_sleep();
+	mouse_wait();
 	outb(MOUSE_PORT, value);
-	mouse_poll_status_no_sleep();
+	mouse_wait();
 
 	/* handle ack */
 	if ((inb(MOUSE_STATUS & MOUSE_OBUF_FULL)) == MOUSE_OBUF_FULL)
@@ -90,9 +88,9 @@ static int mouse_write_ack(int value)
  */
 static void mouse_write_cmd(int value)
 {
-	mouse_poll_status_no_sleep();
+	mouse_wait();
 	outb(MOUSE_COMMAND, MOUSE_CMD_WRITE);
-	mouse_poll_status_no_sleep();
+	mouse_wait();
 	outb(MOUSE_PORT, value);
 }
 
@@ -101,16 +99,16 @@ static void mouse_write_cmd(int value)
  */
 static void mouse_write_dev(int value)
 {
-	mouse_poll_status_no_sleep();
+	mouse_wait();
 	outb(MOUSE_COMMAND, MOUSE_MAGIC_WRITE);
-	mouse_poll_status_no_sleep();
+	mouse_wait();
 	outb(MOUSE_PORT, value);
 }
 
 /*
  * Mouse interrupt handler.
  */
-static void mouse_handler(struct registers *regs)
+static void mouse_interrupt_handler(struct registers *regs)
 {
 	int max_head = (queue_tail - 1) & (MOUSE_BUF_SIZE - 1);
 
@@ -133,16 +131,57 @@ static void mouse_handler(struct registers *regs)
 }
 
 /*
- * Open a mouse buffer.
+ * Open mouse device.
  */
 static int mouse_open(struct file *filp)
 {
 	UNUSED(filp);
+
+	/* mouse already installed */
+	if (mouse_count++)
+		return 0;
+
+	/* reset queue */
+	queue_head = queue_tail = 0;
+
+	/* register interrupt */
+	register_interrupt_handler(MOUSE_IRQ, mouse_interrupt_handler);
+
+	/* enable mouse */
+	mouse_wait();
+	outb(MOUSE_COMMAND, MOUSE_ENABLE);
+	mouse_write_dev(MOUSE_ENABLE_DEV);
+	mouse_write_cmd(MOUSE_INTS_ON);
+	mouse_wait();
+
 	return 0;
 }
 
 /*
- * Read a mouse.
+ * Close mouse device.
+ */
+static int mouse_close(struct file *filp)
+{
+	UNUSED(filp);
+
+	/* device still used */
+	if (--mouse_count)
+		return 0;
+
+	/* disable mouse */
+	mouse_write_cmd(MOUSE_INTS_OFF);
+	mouse_wait();
+	outb(MOUSE_COMMAND, MOUSE_DISABLE);
+	mouse_wait();
+
+	/* free interrupt */
+	unregister_interrupt_handler(MOUSE_IRQ);
+
+	return 0;
+}
+
+/*
+ * Read mouse device.
  */
 static int mouse_read(struct file *filp, char *buf, int n)
 {
@@ -170,7 +209,7 @@ static int mouse_read(struct file *filp, char *buf, int n)
 }
 
 /*
- * Write to a mouse.
+ * Write to mouse device.
  */
 static int mouse_write(struct file *filp, const char *buf, int n)
 {
@@ -181,7 +220,7 @@ static int mouse_write(struct file *filp, const char *buf, int n)
 }
 
 /*
- * Poll a mouse.
+ * Poll mouse device.
  */
 static int mouse_poll(struct file *filp, struct select_table *wait)
 {
@@ -201,13 +240,10 @@ static int mouse_poll(struct file *filp, struct select_table *wait)
 }
 
 /*
- * Init mouse.
+ * Init mouse device.
  */
 void init_mouse()
 {
-	/* register interrupt handler */
-	register_interrupt_handler(44, mouse_handler);
-
 	/* empty mouse input buffer */
 	while (inb(MOUSE_STATUS) & 0x01)
 		inb(MOUSE_PORT);
@@ -219,13 +255,14 @@ void init_mouse()
 	mouse_write_ack(MOUSE_SET_RES);
 	mouse_write_ack(3);
 	mouse_write_ack(MOUSE_SET_SCALE21);
-	mouse_poll_status_no_sleep();
 
-	/* enable mouse */
-	outb(MOUSE_COMMAND, MOUSE_ENABLE);
-	mouse_write_dev(MOUSE_ENABLE_DEV);
-	mouse_write_cmd(MOUSE_INTS_ON);
-	mouse_poll_status_no_sleep();
+	/* disable mouse */
+	mouse_wait();
+	outb(MOUSE_COMMAND, MOUSE_DISABLE);
+	mouse_wait();
+	outb(MOUSE_COMMAND, MOUSE_CMD_WRITE);
+	mouse_wait();
+	outb(MOUSE_PORT, MOUSE_INTS_OFF);
 }
 
 /*
@@ -233,6 +270,7 @@ void init_mouse()
  */
 static struct file_operations mouse_fops = {
 	.open		= mouse_open,
+	.close		= mouse_close,
 	.read		= mouse_read,
 	.write		= mouse_write,
 	.poll		= mouse_poll,

@@ -34,5 +34,6 @@ void isr_handler(struct registers *regs);
 /* IRQ handler registration */
 typedef void (*isr_t)(struct registers *);
 void register_interrupt_handler(uint8_t n, isr_t handler);
+void unregister_interrupt_handler(uint8_t n);
 
 #endif
