@@ -87,28 +87,28 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd
  */
 static void unmap_page(uint32_t address, pgd_t *pgd)
 {
-	uint32_t page_nr, page_idx;
+	uint32_t page_idx, page_nr;
 	pmd_t *pmd;
 	pte_t *pte;
 
 	/* get page table */
 	pgd = pgd_offset(pgd, address);
 	pmd = pmd_offset(pgd);
-	page_nr = (address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1);
+	page_idx = (address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1);
 
 	/* no matching page table */
 	if (!*pmd)
 		return;
 
 	/* get page */
-	pte = (pte_t *) pmd_page(*pmd) + page_nr;
+	pte = (pte_t *) pmd_page(*pmd) + page_idx;
 	if (!pte)
 		return;
 
 	/* free page */
-	page_idx = pte_page(*pte);
-	if (page_idx && page_idx < nr_pages)
-		__free_page(&page_array[page_idx]);
+	page_nr = MAP_NR(pte_page(*pte));
+	if (page_nr && page_nr < nr_pages)
+		__free_page(&page_array[page_nr]);
 
 	/* clear page table entry */
 	pte_clear(pte);
@@ -362,9 +362,10 @@ out:
 int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 {
 	uint32_t address = vma->vm_start, end = vma->vm_end;
+	pte_t *pte_src, *pte_dst, pte;
 	pmd_t *pmd_src, *pmd_dst;
-	pte_t *pte_src, *pte_dst;
 	struct page *page;
+	uint32_t page_nr;
 
 	pgd_src = pgd_offset(pgd_src, address) - 1;
 	pgd_dst = pgd_offset(pgd_dst, address) - 1;
@@ -394,9 +395,23 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 
 			/* for each page table entry */
 			do {
+				pte = *pte_src;
+
 				/* skip empty */
-				if (pte_none(*pte_src))
+				if (pte_none(pte))
 					goto next_pte;
+
+				/* read only or shared : share page */
+				if ((vma->vm_flags & VM_SHARED) || !(vma->vm_flags & VM_WRITE)) {
+					/* update page reference count */
+					page_nr = MAP_NR(pte_page(pte));
+					if (page_nr < nr_pages)
+						page_array[page_nr].count++;
+
+					/* set pte */
+					*pte_dst = pte;
+					goto next_pte;
+				}
 
 				/* try to get a page */
 				page = __get_free_page(GFP_USER);
@@ -404,10 +419,10 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 					goto nomem;
 
 				/* make page table entry */
-				*pte_dst = mk_pte(page->page, pte_prot(*pte_src));
+				*pte_dst = mk_pte(page->page, pte_prot(pte));
 
 				/* copy physical page */
-				copy_page_physical(pte_page(*pte_src) * PAGE_SIZE, pte_page(*pte_dst) * PAGE_SIZE);
+				copy_page_physical(MAP_NR(pte_page(pte)) * PAGE_SIZE, MAP_NR(pte_page(*pte_dst)) * PAGE_SIZE);
 next_pte:
 				/* go to next page table entry */
 				address += PAGE_SIZE;
@@ -434,7 +449,7 @@ nomem:
  */
 static void free_pmd(pmd_t *pmd)
 {
-	uint32_t page_idx;
+	uint32_t page_nr;
 	pte_t *ptes;
 	int i;
 
@@ -443,9 +458,9 @@ static void free_pmd(pmd_t *pmd)
 
 	/* free pages */
 	for (i = 0; i < PTRS_PER_PTE; i++) {
-		page_idx = pte_page(ptes[i]);
-		if (page_idx > 0 && page_idx < nr_pages)
-			__free_page(&page_array[page_idx]);
+		page_nr = MAP_NR(pte_page(ptes[i]));
+		if (page_nr && page_nr < nr_pages)
+			__free_page(&page_array[page_nr]);
 	}
 
 	/* free page table */

@@ -63,7 +63,7 @@ typedef uint32_t pte_t;
 
 #define mk_pte(page, prot)		(((page) << PAGE_SHIFT) | (prot))
 #define pmd_none(pmd)			(!(pmd))
-#define pte_page(pte)			((pte) >> PAGE_SHIFT)
+#define pte_page(pte)			((uint32_t) __va((pte) & PAGE_MASK))
 #define pte_prot(pte)			((pte) & (PAGE_SIZE - 1))
 #define pte_clear(pte)			(*(pte) = 0)
 #define pte_none(pte)			(!(pte))
