@@ -384,7 +384,7 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 					goto out;
 			}
 
-			/* TODO : allocate */
+			/* allocate a new pmd */
 			if (pmd_none(*pmd_dst))
 				if (!pte_alloc(pmd_dst, 0))
 					goto nomem;
