@@ -5,6 +5,7 @@
 #include <proc/task.h>
 #include <proc/sched.h>
 #include <proc/elf.h>
+#include <mm/paging.h>
 #include <ipc/semaphore.h>
 #include <sys/syscall.h>
 #include <stdio.h>
@@ -178,6 +179,10 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	mm_new->end_text = mm ? mm->end_text : 0;
 	mm_new->start_brk = mm ? mm->start_brk : 0;
 	mm_new->end_brk = mm ? mm->end_brk : 0;
+	mm_new->arg_start = mm ? mm->arg_end : 0;
+	mm_new->arg_start = mm ? mm->arg_end : 0;
+	mm_new->env_start = mm ? mm->env_start : 0;
+	mm_new->env_end = mm ? mm->env_end : 0;
 
 	/* copy virtual memory areas */
 	if (mm) {
@@ -205,6 +210,9 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			if (vm_child->vm_ops && vm_child->vm_ops->open)
 				vm_child->vm_ops->open(vm_child);
 		}
+
+		/* flush tlb */
+		flush_tlb(current_task->mm->pgd);
 	}
 
 	return mm_new;
@@ -418,7 +426,7 @@ void task_exit_mmap(struct mm_struct *mm)
 				vm_area->vm_ops->close(vm_area);
 
 			/* unmap pages */
-			unmap_pages(vm_area->vm_start, vm_area->vm_end, mm->pgd);
+			unmap_pages(mm->pgd, vm_area->vm_start, vm_area->vm_end);
 
 			/* free memory region */
 			list_del(&vm_area->list);

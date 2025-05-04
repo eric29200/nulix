@@ -1,6 +1,7 @@
 #include <proc/sched.h>
 #include <fs/fs.h>
 #include <stderr.h>
+#include <stdio.h>
 #include <fcntl.h>
 
 /*

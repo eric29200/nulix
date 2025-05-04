@@ -84,7 +84,7 @@ void *get_free_page()
 		return NULL;
 
 	/* make virtual address */
-	return __va(page->page * PAGE_SIZE);
+	return __va(page->page_nr * PAGE_SIZE);
 }
 
 /*
@@ -152,21 +152,21 @@ void init_page_alloc(uint32_t last_kernel_addr)
 
 	/* kernel code pages */
 	for (i = 0, addr = 0; i < nr_pages && addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
-		page_array[i].page = i;
+		page_array[i].page_nr = i;
 		page_array[i].count = 1;
 		page_array[i].kernel = 1;
 	}
 
 	/* global pages array */
 	for (; i < nr_pages && (uint32_t) __va(addr) < page_array_end; i++, addr += PAGE_SIZE) {
-		page_array[i].page = i;
+		page_array[i].page_nr = i;
 		page_array[i].count = 1;
 		page_array[i].kernel = 1;
 	}
 
 	/* kernel free pages */
 	for (; i < nr_pages && (uint32_t) __va(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
-		page_array[i].page = i;
+		page_array[i].page_nr = i;
 		page_array[i].count = 0;
 		page_array[i].kernel = 1;
 		list_add_tail(&page_array[i].list, &free_kernel_pages);
@@ -174,7 +174,7 @@ void init_page_alloc(uint32_t last_kernel_addr)
 
 	/* user free pages */
 	for (; i < nr_pages; i++) {
-		page_array[i].page = i;
+		page_array[i].page_nr = i;
 		page_array[i].count = 0;
 		page_array[i].kernel = 0;
 		list_add_tail(&page_array[i].list, &free_user_pages);

@@ -74,15 +74,30 @@ static inline pte_t pte_mkwrite(pte_t pte)
 	pte |= PAGE_RW; return pte;
 }
 
+static inline pte_t pte_wrprotect(pte_t pte)
+{
+	pte &= ~PAGE_RW; return pte;
+}
+
 static inline pte_t pte_mkdirty(pte_t pte)
 {
 	pte |= PAGE_DIRTY; return pte;
 }
 
+static inline pte_t pte_mkclean(pte_t pte)
+{
+	pte &= ~PAGE_DIRTY; return pte;
+}
+
+static inline pte_t pte_mkold(pte_t pte)
+{
+	pte &= ~PAGE_ACCESSED; return pte;
+}
+
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
 #define MAP_NR(addr)			(__pa(addr) >> PAGE_SHIFT)
-#define PAGE_ADDRESS(p)			(PAGE_OFFSET + (p)->page * PAGE_SIZE)
+#define PAGE_ADDRESS(p)			(PAGE_OFFSET + (p)->page_nr * PAGE_SIZE)
 
 #define GFP_KERNEL			0
 #define GFP_USER			1
@@ -96,7 +111,7 @@ extern pgd_t *pgd_kernel;
  * Page structure.
  */
 struct page {
-	uint32_t		page;					/* page number */
+	uint32_t		page_nr;				/* page number */
 	int 			count;					/* reference count */
 	uint8_t			kernel;					/* mapped in kernel ? */
 	struct inode *		inode;					/* inode */
@@ -109,7 +124,7 @@ struct page {
 
 /* paging */
 int init_paging(uint32_t start, uint32_t end);
-void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd);
+void unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address);
 int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot);
 void switch_pgd(pgd_t *pgd);
@@ -156,5 +171,22 @@ static inline uint32_t pmd_page(pmd_t pmd)
 {
 	return (uint32_t) __va(pmd & PAGE_MASK);
 }
+
+/*
+ * Flush a Translation Lookaside Buffer entry.
+ */
+static inline void flush_tlb_page(uint32_t address)
+{
+	__asm__ __volatile__("invlpg (%0)" :: "r" (address) : "memory");
+}
+
+/*
+ * Flush Translation Lookaside Buffers.
+ */
+static inline void flush_tlb(pgd_t *pgd)
+{
+	switch_pgd(pgd);
+}
+
 
 #endif

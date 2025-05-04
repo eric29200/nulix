@@ -345,7 +345,7 @@ int do_munmap(uint32_t addr, size_t len)
 	}
 
 	/* unmap region */
-	unmap_pages(addr, addr + len, current_task->mm->pgd);
+	unmap_pages(current_task->mm->pgd, addr, addr + len);
 
 	return 0;
 }

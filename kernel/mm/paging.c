@@ -17,14 +17,6 @@ pgd_t *pgd_kernel = NULL;
 extern void copy_page_physical(uint32_t src, uint32_t dst);
 
 /*
- * Flush a Translation Lookaside Buffer entry.
- */
-static inline void flush_tlb(uint32_t address)
-{
-	__asm__ __volatile__("invlpg (%0)" :: "r" (address) : "memory");
-}
-
-/*
  * Get or create a page table entry from pgd at virtual address.
  */
 static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
@@ -114,13 +106,13 @@ static void unmap_page(uint32_t address, pgd_t *pgd)
 	pte_clear(pte);
 
 	/* flush tlb */
-	flush_tlb(address);
+	flush_tlb_page(address);
 }
 
 /*
  * Unmap pages.
  */
-void unmap_pages(uint32_t start_address, uint32_t end_address, pgd_t *pgd)
+void unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address)
 {
 	uint32_t address;
 
@@ -142,7 +134,7 @@ static int do_anonymous_page(struct vm_area *vma, pte_t *pte, void *address, int
 		return -ENOMEM;
 
 	/* make page table entry */
-	*pte = mk_pte(page->page, vma->vm_page_prot);
+	*pte = mk_pte(page->page_nr, vma->vm_page_prot);
 	if (write_access)
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
@@ -179,7 +171,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 		return -ENOSPC;
 
 	/* make page table entry */
-	*pte = mk_pte(page->page, vma->vm_page_prot);
+	*pte = mk_pte(page->page_nr, vma->vm_page_prot);
 	if (write_access)
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
@@ -189,8 +181,9 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 /*
  * Handle a read only page fault.
  */
-static int do_wp_page(struct task *task, uint32_t address)
+static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address)
 {
+	struct page *old_page, *new_page;
 	pte_t *pte;
 
 	/* get page table entry */
@@ -198,8 +191,28 @@ static int do_wp_page(struct task *task, uint32_t address)
 	if (!pte)
 		return -EINVAL;
 
-	/* make page table entry writable */
-	*pte = pte_mkdirty(pte_mkwrite(*pte));
+	/* get page */
+	old_page = &page_array[MAP_NR(pte_page(*pte))];
+
+	/* only one user make page table entry writable */
+	if (old_page->count == 1) {
+		*pte = pte_mkdirty(pte_mkwrite(*pte));
+		return 0;
+	}
+
+	/* get a new page */
+	new_page = __get_free_page(GFP_USER);
+	if (!new_page)
+		return -ENOMEM;
+
+	/* copy physical page */
+	copy_page_physical(old_page->page_nr * PAGE_SIZE, new_page->page_nr * PAGE_SIZE);
+
+	/* set pte */
+	*pte = pte_mkdirty(pte_mkwrite(mk_pte(new_page->page_nr, vma->vm_page_prot)));
+
+	/* free old page */
+	__free_page(old_page);
 
 	return 0;
 }
@@ -264,13 +277,14 @@ expand_stack:
 		goto bad_area;
 	return;
 good_area:
+
 	/* write violation */
 	if (write_access && !(vma->vm_flags & VM_WRITE))
 		goto bad_area;
 
 	/* present page : try to make it writable */
 	if (present) {
-		ret = do_wp_page(current_task, fault_addr);
+		ret = do_wp_page(current_task, vma, fault_addr);
 		if (ret)
 			goto bad_area;
 		else
@@ -364,8 +378,11 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 	uint32_t address = vma->vm_start, end = vma->vm_end;
 	pte_t *pte_src, *pte_dst, pte;
 	pmd_t *pmd_src, *pmd_dst;
-	struct page *page;
 	uint32_t page_nr;
+	int cow;
+
+	/* copy on write ? */
+	cow = (vma->vm_flags & (VM_SHARED | VM_WRITE)) == VM_WRITE;
 
 	pgd_src = pgd_offset(pgd_src, address) - 1;
 	pgd_dst = pgd_offset(pgd_dst, address) - 1;
@@ -401,28 +418,28 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 				if (pte_none(pte))
 					goto next_pte;
 
-				/* read only or shared : share page */
-				if ((vma->vm_flags & VM_SHARED) || !(vma->vm_flags & VM_WRITE)) {
-					/* update page reference count */
-					page_nr = MAP_NR(pte_page(pte));
-					if (page_nr < nr_pages)
-						page_array[page_nr].count++;
-
-					/* set pte */
+				/* virtual page */
+				page_nr = MAP_NR(pte_page(pte));
+				if (page_nr >= nr_pages) {
 					*pte_dst = pte;
 					goto next_pte;
 				}
 
-				/* try to get a page */
-				page = __get_free_page(GFP_USER);
-				if (!page)
-					goto nomem;
+				/* copy on write : write protect it both in src and dst */
+				if (cow) {
+					pte = pte_wrprotect(pte);
+					*pte_src = pte;
+				}
 
-				/* make page table entry */
-				*pte_dst = mk_pte(page->page, pte_prot(pte));
+				/* shared mapping : mark it clean in dst */
+				if (vma->vm_flags & VM_SHARED)
+					pte = pte_mkclean(pte);
 
-				/* copy physical page */
-				copy_page_physical(MAP_NR(pte_page(pte)) * PAGE_SIZE, MAP_NR(pte_page(*pte_dst)) * PAGE_SIZE);
+				/* set pte */
+				*pte_dst = pte_mkold(pte);
+
+				/* update page reference count */
+				page_array[page_nr].count++;
 next_pte:
 				/* go to next page table entry */
 				address += PAGE_SIZE;

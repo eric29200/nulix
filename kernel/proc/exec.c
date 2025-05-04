@@ -1,5 +1,6 @@
 #include <proc/sched.h>
 #include <proc/elf.h>
+#include <stdio.h>
 #include <stderr.h>
 
 /*
