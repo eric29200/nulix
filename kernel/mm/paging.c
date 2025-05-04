@@ -17,6 +17,24 @@ pgd_t *pgd_kernel = NULL;
 extern void copy_page_physical(uint32_t src, uint32_t dst);
 
 /*
+ * Flush a Translation Lookaside Buffer entry.
+ */
+void flush_tlb_page(pgd_t *pgd, uint32_t address)
+{
+	if (pgd == current_task->mm->pgd)
+		__asm__ __volatile__("invlpg (%0)" :: "r" (address) : "memory");
+}
+
+/*
+ * Flush Translation Lookaside Buffers.
+ */
+void flush_tlb(pgd_t *pgd)
+{
+	if (pgd == current_task->mm->pgd)
+		switch_pgd(pgd);
+}
+
+/*
  * Get or create a page table entry from pgd at virtual address.
  */
 static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
@@ -77,7 +95,7 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd
 /*
  * Unmap a page.
  */
-static void unmap_page(uint32_t address, pgd_t *pgd)
+static void unmap_page(pgd_t *pgd, uint32_t address)
 {
 	uint32_t page_idx, page_nr;
 	pmd_t *pmd;
@@ -104,9 +122,6 @@ static void unmap_page(uint32_t address, pgd_t *pgd)
 
 	/* clear page table entry */
 	pte_clear(pte);
-
-	/* flush tlb */
-	flush_tlb_page(address);
 }
 
 /*
@@ -118,7 +133,10 @@ void unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address)
 
 	/* unmap all pages */
 	for (address = start_address; address < end_address; address += PAGE_SIZE)
-		unmap_page(address, pgd);
+		unmap_page(pgd, address);
+
+	/* flush tlb */
+	flush_tlb(pgd);
 }
 
 /*

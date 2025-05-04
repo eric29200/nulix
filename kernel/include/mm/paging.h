@@ -131,6 +131,8 @@ void switch_pgd(pgd_t *pgd);
 void page_fault_handler(struct registers *regs);
 pgd_t *create_page_directory();
 void free_pgd(pgd_t *pgd);
+void flush_tlb_page(pgd_t *pgd, uint32_t address);
+void flush_tlb(pgd_t *pgd);
 
 /* page allocation */
 void init_page_alloc(uint32_t last_kernel_addr);
@@ -171,22 +173,5 @@ static inline uint32_t pmd_page(pmd_t pmd)
 {
 	return (uint32_t) __va(pmd & PAGE_MASK);
 }
-
-/*
- * Flush a Translation Lookaside Buffer entry.
- */
-static inline void flush_tlb_page(uint32_t address)
-{
-	__asm__ __volatile__("invlpg (%0)" :: "r" (address) : "memory");
-}
-
-/*
- * Flush Translation Lookaside Buffers.
- */
-static inline void flush_tlb(pgd_t *pgd)
-{
-	switch_pgd(pgd);
-}
-
 
 #endif
