@@ -1,7 +1,6 @@
 ENTRY(loader)
 
 SECTIONS {
-	kernel_start = 0x100000;
 	. = 0x00100000;
 
 	.text ALIGN (0x1000) :
