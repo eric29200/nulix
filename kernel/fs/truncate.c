@@ -33,9 +33,9 @@ int sys_truncate64(const char *pathname, off_t length)
 	int ret;
 
 	/* get inode */
-	inode = namei(AT_FDCWD, NULL, pathname, 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(AT_FDCWD, NULL, pathname, 1, &inode);
+	if (ret)
+		return ret;
 
 	/* truncate */
 	ret = do_truncate(inode, length);

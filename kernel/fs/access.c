@@ -10,11 +10,12 @@
 static int do_faccessat(int dirfd, const char *pathname, int flags)
 {
 	struct inode *inode;
+	int ret;
 
 	/* check inode */
-	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
+	if (ret)
+		return ret;
 
 	/* release inode */
 	iput(inode);

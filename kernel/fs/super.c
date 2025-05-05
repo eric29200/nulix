@@ -180,10 +180,12 @@ found:
  */
 static int get_mount_point(const char *mount_point, struct inode **res_inode)
 {
+	int ret;
+
 	/* get mount point */
-	*res_inode = namei(AT_FDCWD, NULL, mount_point, 1);
-	if (!*res_inode)
-		return -EINVAL;
+	ret = namei(AT_FDCWD, NULL, mount_point, 1, res_inode);
+	if (ret)
+		return ret;
 
 	/* mount point busy */
 	if ((*res_inode)->i_count != 1 || (*res_inode)->i_mount) {
@@ -252,6 +254,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 	struct file_system *fs;
 	struct inode *inode;
 	dev_t dev = 0;
+	int ret;
 
 	/* find file system type */
 	fs = get_filesystem(type);
@@ -261,9 +264,9 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 	/* if filesystem requires dev, find it */
 	if (fs->requires_dev) {
 		/* find device's inode */
-		inode = namei(AT_FDCWD, NULL, dev_name, 1);
-		if (!inode)
-			return -EACCES;
+		ret = namei(AT_FDCWD, NULL, dev_name, 1, &inode);
+		if (ret)
+			return ret;
 
 		/* must be a block device */
 		if (!S_ISBLK(inode->i_mode)) {
@@ -337,14 +340,15 @@ static int do_umount(const char *target, int flags)
 {
 	struct super_block *sb;
 	struct inode *inode;
+	int ret;
 
 	/* unused flags */
 	UNUSED(flags);
 
 	/* get target inode */
-	inode = namei(AT_FDCWD, NULL, target, 1);
-	if (!inode)
-		return -EACCES;
+	ret = namei(AT_FDCWD, NULL, target, 1, &inode);
+	if (ret)
+		return ret;
 
 	/* target inode must be a root inode */
 	sb = inode->i_sb;

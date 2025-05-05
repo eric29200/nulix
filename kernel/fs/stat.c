@@ -17,7 +17,6 @@ static int do_stat64(struct inode *inode, struct stat64 *statbuf)
 	/* fill in statbuf */
 	statbuf->__st_ino = inode->i_ino;
 	statbuf->st_mode = inode->i_mode;
-	statbuf->st_nlink = inode->i_nlinks;
 	statbuf->st_uid = inode->i_uid;
 	statbuf->st_gid = inode->i_gid;
 	statbuf->st_rdev = inode->i_rdev;
@@ -41,9 +40,9 @@ int sys_stat64(const char *pathname, struct stat64 *statbuf)
 	int ret;
 
 	/* get inode */
-	inode = namei(AT_FDCWD, NULL, pathname, 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(AT_FDCWD, NULL, pathname, 1, &inode);
+	if (ret)
+		return ret;
 
 	/* do stat */
 	ret = do_stat64(inode, statbuf);
@@ -62,9 +61,9 @@ int sys_lstat64(const char *pathname, struct stat64 *statbuf)
 	int ret;
 
 	/* get inode */
-	inode = namei(AT_FDCWD, NULL, pathname, 0);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(AT_FDCWD, NULL, pathname, 0, &inode);
+	if (ret)
+		return ret;
 
 	/* do stat */
 	ret = do_stat64(inode, statbuf);
@@ -96,9 +95,9 @@ int sys_fstatat64(int dirfd, const char *pathname, struct stat64 *statbuf, int f
 	int ret;
 
 	/* get inode */
-	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
+	if (ret)
+		return ret;
 
 	/* do stat */
 	ret = do_stat64(inode, statbuf);
@@ -114,14 +113,15 @@ int sys_fstatat64(int dirfd, const char *pathname, struct stat64 *statbuf, int f
 int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statbuf)
 {
 	struct inode *inode;
+	int ret;
 
 	/* unused mask */
 	UNUSED(mask);
 
 	/* get inode */
-	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
+	if (ret)
+		return ret;
 
 	/* reset stat buf */
 	memset(statbuf, 0, sizeof(struct statx));

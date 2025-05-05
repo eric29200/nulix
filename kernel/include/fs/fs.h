@@ -232,7 +232,7 @@ void init_inode();
 struct file *get_empty_filp();
 
 /* name operations */
-struct inode *namei(int dirfd, struct inode *base, const char *pathname, int follow_links);
+int namei(int dirfd, struct inode *base, const char *pathname, int follow_links, struct inode **res_inode);
 int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode, struct inode **res_inode);
 
 /* directory operations */

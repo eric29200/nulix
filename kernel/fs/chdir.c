@@ -9,11 +9,12 @@
 int sys_chdir(const char *path)
 {
 	struct inode *inode;
+	int ret;
 
 	/* get inode */
-	inode = namei(AT_FDCWD, NULL, path, 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(AT_FDCWD, NULL, path, 1, &inode);
+	if (ret)
+		return ret;
 
 	/* check directory */
 	if (!S_ISDIR(inode->i_mode)) {

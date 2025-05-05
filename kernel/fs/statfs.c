@@ -31,9 +31,9 @@ int sys_statfs64(const char *path, size_t size, struct statfs64 *buf)
 		return -EINVAL;
 
 	/* get inode */
-	inode = namei(AT_FDCWD, NULL, path, 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(AT_FDCWD, NULL, path, 1, &inode);
+	if (ret)
+		return ret;
 
 	/* do statfs */
 	ret = do_statfs64(inode, buf);

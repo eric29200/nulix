@@ -15,10 +15,11 @@ static struct file_operations shm_file_operations;
 static struct inode *shm_get_inode(mode_t mode, dev_t dev, int size)
 {
 	struct inode *tmpfs_root_inode, *inode;
+	int ret;
 
 	/* get tmpfs root inode */
-	tmpfs_root_inode = namei(AT_FDCWD, NULL, "/tmp", 0);
-	if (!tmpfs_root_inode)
+	ret = namei(AT_FDCWD, NULL, "/tmp", 0, &tmpfs_root_inode);
+	if (ret)
 		return NULL;
 
 	/* get a new tmpfs inode */

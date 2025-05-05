@@ -171,11 +171,12 @@ int sys_close(int fd)
 static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 {
 	struct inode *inode;
+	int ret;
 
 	/* get inode */
-	inode = namei(dirfd, NULL, pathname, 1);
-	if (!inode)
-		return -ENOSPC;
+	ret = namei(dirfd, NULL, pathname, 1, &inode);
+	if (ret)
+		return ret;
 
 	/* adjust mode */
 	if (mode == (mode_t) - 1)
@@ -245,11 +246,12 @@ int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flag
 static int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags)
 {
 	struct inode *inode;
+	int ret;
 
 	/* get inode */
-	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
-	if (!inode)
-		return -ENOSPC;
+	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
+	if (ret)
+		return ret;
 
 	/* update inode */
 	inode->i_uid = owner;
@@ -310,11 +312,12 @@ int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsi
 static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *times, int flags)
 {
 	struct inode *inode;
+	int ret;
 
 	/* get inode */
-	inode = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
+	if (ret)
+		return ret;
 
 	/* set time */
 	if (times)
@@ -353,11 +356,12 @@ int sys_utimensat(int dirfd, const char *pathname, struct timespec *times, int f
 int sys_chroot(const char *path)
 {
 	struct inode *inode;
+	int ret;
 
 	/* get inode */
-	inode = namei(AT_FDCWD, NULL, path, 1);
-	if (!inode)
-		return -ENOENT;
+	ret = namei(AT_FDCWD, NULL, path, 1, &inode);
+	if (ret)
+		return ret;
 
 	/* check if it's a directory */
 	if (!S_ISDIR(inode->i_mode))
