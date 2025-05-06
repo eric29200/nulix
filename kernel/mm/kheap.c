@@ -14,7 +14,6 @@
  */
 struct bucket {
 	size_t			order;
-	struct list_head	used_blocks;
 	struct list_head	free_blocks;
 };
 
@@ -56,7 +55,7 @@ static struct heap_block *create_heap_block(struct bucket *bucket)
 	block = (struct heap_block *) kheap_pos;
 
 	/* check heap overflow */
-	if (KHEAP_BLOCK_DATA(block) + bucket->order > KHEAP_START + KHEAP_SIZE)
+	if (kheap_pos + bucket->order > KHEAP_START + KHEAP_SIZE)
 		return NULL;
 
 	/* set new block */
@@ -64,7 +63,7 @@ static struct heap_block *create_heap_block(struct bucket *bucket)
 	block->order = bucket->order;
 
 	/* update kheap position */
-	kheap_pos = KHEAP_BLOCK_DATA(block) + block->order;
+	kheap_pos += block->order;
 
 	return block;
 }
@@ -76,9 +75,13 @@ void *kmalloc(size_t size)
 {
 	struct heap_block *block = NULL;
 	struct bucket *bucket;
+	size_t real_size;
+
+	/* compute real size */
+	real_size = size + sizeof(struct heap_block);
 
 	/* find bucket */
-	bucket = find_bucket(size);
+	bucket = find_bucket(real_size);
 	if (!bucket) {
 		printf("Kheap: can't allocate memory for size %d\n", size);
 		return NULL;
@@ -102,7 +105,6 @@ void *kmalloc(size_t size)
 	}
 
 found:
-	list_add(&block->list, &bucket->used_blocks);
 	return (void *) KHEAP_BLOCK_DATA(block);
 }
 
@@ -129,7 +131,6 @@ void kfree(void *p)
 		return;
 
 	/* add it to free list */
-	list_del(&block->list);
 	list_add_tail(&block->list, &bucket->free_blocks);
 }
 
@@ -146,7 +147,6 @@ void kheap_init()
 	/* init buckets */
 	for (i = 0, order = KHEAP_MIN_ORDER; i < KHEAP_NR_BUCKETS; i++, order *= 2) {
 		buckets[i].order = order;
-		INIT_LIST_HEAD(&buckets[i].used_blocks);
 		INIT_LIST_HEAD(&buckets[i].free_blocks);
 	}
 }
