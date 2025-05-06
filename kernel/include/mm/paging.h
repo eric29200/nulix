@@ -101,6 +101,7 @@ static inline pte_t pte_mkold(pte_t pte)
 
 #define GFP_KERNEL			0
 #define GFP_USER			1
+#define NR_ZONES			2
 
 /* defined in paging.c */
 extern uint32_t nr_pages;
@@ -113,7 +114,7 @@ extern pgd_t *pgd_kernel;
 struct page {
 	uint32_t		page_nr;				/* page number */
 	int 			count;					/* reference count */
-	uint8_t			kernel;					/* mapped in kernel ? */
+	uint8_t			priority;				/* priority : GFP_KERNEL or GFP_USER */
 	struct inode *		inode;					/* inode */
 	off_t			offset;					/* offset in inode */
 	struct buffer_head *	buffers;				/* buffers of this page */
