@@ -176,7 +176,7 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 		mask |= POLLIN;
 
 	/* check if socket can write */
-	if (sk->sock->state != SS_DEAD || sk->shutdown & SEND_SHUTDOWN)
+	if ((sk->sock->state != SS_DEAD && sk->wmem_alloc < sk->sndbuf) || sk->shutdown & SEND_SHUTDOWN)
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */
