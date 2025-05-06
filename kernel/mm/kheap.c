@@ -1,47 +1,29 @@
-#include <mm/kheap.h>
 #include <mm/paging.h>
 #include <mm/mm.h>
 #include <stdio.h>
 #include <stderr.h>
 
-#define KHEAP_NR_BUCKETS			16
-#define KHEAP_MIN_ORDER				16
-#define KHEAP_MAGIC				0xAEA0
-#define KHEAP_BLOCK_DATA(block)			((uint32_t) (block) + sizeof(struct heap_block))
+#define NR_BUCKETS				15
+#define MIN_ORDER				16
 
 /*
  * Bucket.
  */
 struct bucket {
-	size_t			order;
-	struct list_head	free_blocks;
+	size_t				order;
+	struct list_head		free_blocks;
 };
 
 /*
  * Heap block.
  */
 struct heap_block {
-	uint16_t		magic;
-	size_t			order;
-	struct list_head	list;
+	struct bucket *			bucket;
+	struct list_head		list;
 };
 
 /* kernel heap */
-static struct bucket buckets[KHEAP_NR_BUCKETS];
-
-/*
- * Find a bucket.
- */
-static struct bucket *find_bucket(size_t size)
-{
-	size_t i;
-
-	for (i = 0; i < KHEAP_NR_BUCKETS; i++)
-		if (size <= buckets[i].order)
-			return &buckets[i];
-
-	return NULL;
-}
+static struct bucket buckets[NR_BUCKETS];
 
 /*
  * Create a new heap block.
@@ -65,8 +47,7 @@ static struct heap_block *create_heap_block(struct bucket *bucket)
 	for (off = 0; off < npages * PAGE_SIZE; off += bucket->order) {
 		/* create block */
 		block = (struct heap_block *) (pages + off);
-		block->magic = KHEAP_MAGIC;
-		block->order = bucket->order;
+		block->bucket = bucket;
 
 		/* add block to free list */
 		list_add_tail(&block->list, &bucket->free_blocks);
@@ -86,13 +67,20 @@ void *kmalloc(size_t size)
 {
 	struct heap_block *block = NULL;
 	struct bucket *bucket;
-	size_t real_size;
+	size_t real_size, i;
 
 	/* compute real size */
 	real_size = size + sizeof(struct heap_block);
 
 	/* find bucket */
-	bucket = find_bucket(real_size);
+	for (i = 0; i < NR_BUCKETS; i++) {
+		if (real_size <= buckets[i].order) {
+			bucket = &buckets[i];
+			break;
+		}
+	}
+
+	/* no matching bucket */
 	if (!bucket) {
 		printf("Kheap: can't allocate memory for size %d\n", size);
 		return NULL;
@@ -116,7 +104,7 @@ void *kmalloc(size_t size)
 	}
 
 found:
-	return (void *) KHEAP_BLOCK_DATA(block);
+	return block + 1;
 }
 
 /*
@@ -125,7 +113,6 @@ found:
 void kfree(void *p)
 {
 	struct heap_block *block;
-	struct bucket *bucket;
 
 	/* dot not free NULL */
 	if (!p)
@@ -133,16 +120,9 @@ void kfree(void *p)
 
 	/* get block */
 	block = (struct heap_block *) ((uint32_t) p - sizeof(struct heap_block));
-	if (block->magic != KHEAP_MAGIC)
-		return;
-
-	/* get bucket */
-	bucket = find_bucket(block->order);
-	if (!bucket)
-		return;
 
 	/* add it to free list */
-	list_add_tail(&block->list, &bucket->free_blocks);
+	list_add_tail(&block->list, &block->bucket->free_blocks);
 }
 
 /*
@@ -153,7 +133,7 @@ void kheap_init()
 	size_t order, i;
 
 	/* init buckets */
-	for (i = 0, order = KHEAP_MIN_ORDER; i < KHEAP_NR_BUCKETS; i++, order *= 2) {
+	for (i = 0, order = MIN_ORDER; i < NR_BUCKETS; i++, order *= 2) {
 		buckets[i].order = order;
 		INIT_LIST_HEAD(&buckets[i].free_blocks);
 	}

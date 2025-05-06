@@ -2,7 +2,6 @@
 #define _MM_H_
 
 #include <lib/list.h>
-#include <mm/kheap.h>
 #include <stddef.h>
 
 #define KCODE_START			0x00000000				/* kernel code : from 0 to 4 MB */
@@ -39,5 +38,9 @@ struct vm_operations {
 };
 
 void init_mem(uint32_t start, uint32_t end);
+void *kmalloc(uint32_t size);
+void kfree(void *p);
+void kheap_init();
+
 
 #endif
