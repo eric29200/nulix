@@ -174,7 +174,6 @@ int tmpfs_inode_grow_size(struct inode *inode, size_t size)
 		memset((void *) PAGE_ADDRESS(page), 0, PAGE_SIZE);
 
 		/* add page to directory */
-		list_del(&page->list);
 		list_add_tail(&page->list, &pages_list);
 	}
 

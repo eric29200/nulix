@@ -6,7 +6,6 @@
  * Memory zone.
  */
 struct zone {
-	struct list_head 	used_pages;
 	struct list_head 	free_pages;
 };
 
@@ -41,9 +40,8 @@ struct page *__get_free_page(int priority)
 	page->buffers = NULL;
 	page->count = 1;
 
-	/* update lists */
+	/* remove page from free list */
 	list_del(&page->list);
-	list_add(&page->list, &zone->used_pages);
 
 	return page;
 }
@@ -59,7 +57,6 @@ void __free_page(struct page *page)
 	page->count--;
 	if (!page->count) {
 		page->inode = NULL;
-		list_del(&page->list);
 		list_add(&page->list, &zones[page->priority].free_pages);
 	}
 }
@@ -139,10 +136,8 @@ void init_page_alloc(uint32_t last_kernel_addr)
 	uint32_t page_array_end, addr, i;
 
 	/* init memory zones */
-	for (i = 0; i < NR_ZONES; i++) {
-		INIT_LIST_HEAD(&zones[i].used_pages);
+	for (i = 0; i < NR_ZONES; i++)
 		INIT_LIST_HEAD(&zones[i].free_pages);
-	}
 
 	/* allocate global pages array */
 	page_array = (struct page *) (KPAGE_START + PAGE_ALIGN_UP(last_kernel_addr));
@@ -150,14 +145,7 @@ void init_page_alloc(uint32_t last_kernel_addr)
 	page_array_end = (uint32_t) page_array + sizeof(struct page) * nr_pages;
 
 	/* kernel code pages */
-	for (i = 0, addr = 0; i < nr_pages && addr < last_kernel_addr; i++, addr += PAGE_SIZE) {
-		page_array[i].page_nr = i;
-		page_array[i].count = 1;
-		page_array[i].priority = GFP_KERNEL;
-	}
-
-	/* global pages array */
-	for (; i < nr_pages && (uint32_t) __va(addr) < page_array_end; i++, addr += PAGE_SIZE) {
+	for (i = 0, addr = 0; i < nr_pages && (uint32_t) __va(addr) < page_array_end; i++, addr += PAGE_SIZE) {
 		page_array[i].page_nr = i;
 		page_array[i].count = 1;
 		page_array[i].priority = GFP_KERNEL;

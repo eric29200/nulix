@@ -72,7 +72,6 @@ void add_to_page_cache(struct page *page, struct inode *inode, off_t offset)
 	*p = page;
 
 	/* add page to inode */
-	list_del(&page->list);
 	list_add(&page->list, &inode->i_pages);
 }
 
@@ -100,6 +99,9 @@ void remove_from_page_cache(struct page *page)
 	p = page_hash(page->inode, page->offset);
 	if (*p == page)
 		*p = next_hash;
+
+	/* remove it from inode list */
+	list_del(&page->list);
 }
 
 /*
