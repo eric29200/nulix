@@ -1076,8 +1076,7 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 			new_func_len = strlen((char *) kbse->kb_string);
 
 			/* free old entry */
-			if (old_func_len && (new_func_len == 0 || new_func_len > old_func_len)
-			    && func_table[kbse->kb_func] >= (uint8_t *) KHEAP_START)
+			if (old_func_len && (new_func_len == 0 || new_func_len > old_func_len))
 				kfree(func_table[kbse->kb_func]);
 
 			/* set new function */
