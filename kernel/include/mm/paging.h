@@ -138,9 +138,13 @@ void flush_tlb(pgd_t *pgd);
 /* page allocation */
 void init_page_alloc(uint32_t last_kernel_addr);
 struct page *__get_free_page(int priority);
+struct page *__get_free_pages(size_t count, int priority);
 void *get_free_page();
+void *get_free_pages(size_t count);
 void __free_page(struct page *page);
+void __free_pages(struct page *page, size_t count);
 void free_page(void *address);
+void free_pages(void *address, size_t count);
 void reclaim_pages();
 
 /* page cache */
