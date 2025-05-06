@@ -5,8 +5,8 @@
 #include <mm/kheap.h>
 #include <stddef.h>
 
-#define KHEAP_START			0x400000				/* kernel code + heap : from 0 to 16 MB */
-#define KHEAP_SIZE			0xF00000
+#define KCODE_START			0x00000000				/* kernel code : from 0 to 4 MB */
+#define KCODE_END			0x00400000
 #define UMAP_START			0x40000000				/* user memory map : from 1 GB to 3 GB */
 #define UMAP_END			(PAGE_OFFSET)
 #define KPAGE_START			(PAGE_OFFSET)				/* kernel pages : from 3 GB to 4 GB */

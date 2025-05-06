@@ -254,12 +254,12 @@ void reclaim_pages()
 /*
  * Init page allocation.
  */
-void init_page_alloc(uint32_t last_kernel_addr)
+void init_page_alloc()
 {
 	uint32_t page_array_end, addr, order, first_free_kpage, first_free_upage, i, j;
 
 	/* allocate global pages array */
-	page_array = (struct page *) (KPAGE_START + PAGE_ALIGN_UP(last_kernel_addr));
+	page_array = (struct page *) (KPAGE_START + PAGE_ALIGN_UP(KCODE_END));
 	memset(page_array, 0, sizeof(struct page) * nr_pages);
 	page_array_end = (uint32_t) page_array + sizeof(struct page) * nr_pages;
 

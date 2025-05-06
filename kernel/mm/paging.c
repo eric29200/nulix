@@ -545,7 +545,7 @@ int init_paging(uint32_t start, uint32_t end)
 
 	/* map kernel code pages to low memory */
 	pmd = pmd_offset(pgd_kernel);
-	for (addr = 0; addr < KHEAP_START + KHEAP_SIZE; ) {
+	for (addr = KCODE_START; addr < KCODE_END; ) {
 		/* allocate page table */
 		*pmd = (pmd_t) start | PAGE_TABLE;
 		start += PAGE_SIZE;
@@ -553,12 +553,7 @@ int init_paging(uint32_t start, uint32_t end)
 		/* set page table entries */
 		for (i = 0; i < PTRS_PER_PTE; i++) {
 			pte = (pte_t *) (*pmd & PAGE_MASK) + i;
-
-			if (addr < KHEAP_START + KHEAP_SIZE)
-				*pte = mk_pte(addr / PAGE_SIZE, PAGE_READONLY);
-			else
-				*pte = 0;
-
+			*pte = mk_pte(addr / PAGE_SIZE, PAGE_READONLY);
 			addr += PAGE_SIZE;
 		}
 
@@ -597,7 +592,7 @@ int init_paging(uint32_t start, uint32_t end)
 	switch_pgd(pgd_kernel);
 
 	/* init page allocation */
-	init_page_alloc(KHEAP_START + KHEAP_SIZE);
+	init_page_alloc();
 
 	/* init page cache */
 	init_page_cache();

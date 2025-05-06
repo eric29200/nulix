@@ -32,7 +32,7 @@ static int ata_hd_read_sectors(struct ata_device *device, uint32_t sector, uint3
 
 	/* prepare DMA transfert */
 	outb(device->bar4, 0);
-	outl(device->bar4 + 0x04, (uint32_t) device->prdt);
+	outl(device->bar4 + 0x04, __pa(device->prdt));
 	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
 
 	/* select sector */
@@ -85,7 +85,7 @@ static int ata_hd_write_sectors(struct ata_device *device, uint32_t sector, uint
 
 	/* prepare DMA transfert */
 	outb(device->bar4, 0);
-	outl(device->bar4 + 0x04, (uint32_t) device->prdt);
+	outl(device->bar4 + 0x04, __pa(device->prdt));
 	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
 
 	/* select sector */

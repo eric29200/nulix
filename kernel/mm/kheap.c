@@ -27,7 +27,6 @@ struct heap_block {
 };
 
 /* kernel heap */
-static uint32_t kheap_pos = 0;
 static struct bucket buckets[KHEAP_NR_BUCKETS];
 
 /*
@@ -50,20 +49,32 @@ static struct bucket *find_bucket(size_t size)
 static struct heap_block *create_heap_block(struct bucket *bucket)
 {
 	struct heap_block *block;
+	size_t npages;
+	uint32_t off;
+	void *pages;
 
-	/* create new block at the end of the heap */
-	block = (struct heap_block *) kheap_pos;
+	/* compute number of pages to allocate */
+	npages = PAGE_ALIGN_UP(bucket->order) / PAGE_SIZE;
 
-	/* check heap overflow */
-	if (kheap_pos + bucket->order > KHEAP_START + KHEAP_SIZE)
+	/* allocate pages */
+	pages = get_free_pages(npages);
+	if (!pages)
 		return NULL;
 
-	/* set new block */
-	block->magic = KHEAP_MAGIC;
-	block->order = bucket->order;
+	/* create blocks */
+	for (off = 0; off < npages * PAGE_SIZE; off += bucket->order) {
+		/* create block */
+		block = (struct heap_block *) (pages + off);
+		block->magic = KHEAP_MAGIC;
+		block->order = bucket->order;
 
-	/* update kheap position */
-	kheap_pos += block->order;
+		/* add block to free list */
+		list_add_tail(&block->list, &bucket->free_blocks);
+	}
+
+	/* return first free block */
+	block = list_first_entry(&bucket->free_blocks, struct heap_block, list);
+	list_del(&block->list);
 
 	return block;
 }
@@ -140,9 +151,6 @@ void kfree(void *p)
 void kheap_init()
 {
 	size_t order, i;
-
-	/* set kheap */
-	kheap_pos = KHEAP_START;
 
 	/* init buckets */
 	for (i = 0, order = KHEAP_MIN_ORDER; i < KHEAP_NR_BUCKETS; i++, order *= 2) {

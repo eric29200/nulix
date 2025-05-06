@@ -1,7 +1,7 @@
 KERNEL		= kernel/kernel.bin
 ISO		= nulix.iso
 NJOBS		= $(shell nproc)
-MEM_SIZE	= 3G
+MEM_SIZE	= 4G
 DISK		= hda.img
 QEMU		= kvm
 args		= `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
