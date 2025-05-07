@@ -103,7 +103,7 @@ static int grow_inodes()
 	int i, n;
 
 	/* get some memory */
-	inodes = (struct inode *) get_free_page(GFP_KERNEL);
+	inodes = (struct inode *) get_free_page();
 	if (!inodes)
 		return -ENOMEM;
 	memset(inodes, 0, PAGE_SIZE);

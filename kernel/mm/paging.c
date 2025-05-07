@@ -55,7 +55,7 @@ static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
 	/* create a new page table */
 	if (make) {
 		/* allocate a new page table */
-		tmp = get_free_page(GFP_KERNEL);
+		tmp = get_free_page();
 		if (!tmp)
 			return NULL;
 
@@ -352,7 +352,7 @@ pgd_t *create_page_directory()
 	pgd_t *pgd_new;
 
 	/* create a new page directory */
-	pgd_new = (pgd_t *) get_free_page(GFP_KERNEL);
+	pgd_new = (pgd_t *) get_free_page();
 	if (!pgd_new)
 		return NULL;
 
@@ -374,7 +374,7 @@ static pte_t *pte_alloc(pmd_t *pmd, uint32_t offset)
 		goto out;
 
 	/* create a new page table */
-	pte = (pte_t *) get_free_page(GFP_KERNEL);
+	pte = (pte_t *) get_free_page();
 	if (!pte)
 		return NULL;
 

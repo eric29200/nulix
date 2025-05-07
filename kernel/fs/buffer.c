@@ -129,7 +129,7 @@ static int grow_buffers()
 	int i, n;
 
 	/* get some memory */
-	bhs = (struct buffer_head *) get_free_page(GFP_KERNEL);
+	bhs = (struct buffer_head *) get_free_page();
 	if (!bhs)
 		return -ENOMEM;
 	memset(bhs, 0, PAGE_SIZE);

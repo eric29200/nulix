@@ -155,7 +155,7 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 
 	/* allocate transmit buffers */
 	for (i = 0; i < 4; i++) {
-		tx_buffer[i] = get_free_page(GFP_KERNEL);
+		tx_buffer[i] = get_free_page();
 		if (!tx_buffer[i]) {
 			while (--i >= 0)
 				free_page(tx_buffer[i]);

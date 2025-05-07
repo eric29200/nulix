@@ -27,24 +27,24 @@ static struct zone zones[NR_ZONES];
 /*
  * Add to free pages.
  */
-static void __add_to_free_pages(struct page *pages, size_t count, int priority)
+static void __add_to_free_pages(struct page *pages, int priority, size_t count)
 {
-	struct node *node;
-	size_t i;
+	struct zone *zone = &zones[priority];
+	uint32_t order, i;
 
-	/* try with biggest node first */
-	node = &zones[priority].nodes[NR_NODES - 1];
+	/* try with biggest order first */
+	order = NR_NODES - 1;
 
 	for (i = 0; i < count; ) {
 		/* find node */
-		while (count - i < node->order)
-			node--;
+		while (count - i < (uint32_t) (1 << order))
+			order--;
 
 		/* add pages to node */
-		list_add_tail(&pages[i].list, &node->free_pages);
+		list_add_tail(&pages[i].list, &zone->nodes[order].free_pages);
 
 		/* skip pages */
-		i += node->order;
+		i += (1 << order);
 	}
 
 	/* update number of free pages */
@@ -52,39 +52,27 @@ static void __add_to_free_pages(struct page *pages, size_t count, int priority)
 }
 
 /*
- * Find free node for "count" pages allocation.
+ * Find free node for "order" pages allocation.
  */
-static struct node *__find_free_node(size_t count, int priority)
+static struct node *__find_free_node(int priority, uint32_t order)
 {
-	struct node *node;
-	int i;
+	struct zone *zone;
 
 	/* no free page in the zone */
-	if (!zones[priority].nr_free_pages)
+	zone = &zones[priority];
+	if (!zone->nr_free_pages)
 		return NULL;
 
-	/* find zone */
-	for (i = 0; i < NR_NODES; i++) {
-		if (count <= zones[priority].nodes[i].order) {
-			node = &zones[priority].nodes[i];
-			break;
-		}
-	}
-
-	/* no matching node */
-	if (!node) {
-		printf("Page allocation failed: can't allocate %d pages\n", count);
+	/* check order */
+	if (order >= NR_NODES) {
+		printf("Page allocation failed: can't allocate pages (priority %d, order %d)\n", priority, order);
 		return NULL;
 	}
 
-	/* free pages available in node */
-	if (!list_empty(&node->free_pages))
-		return node;
-
-	/* try bigger zones */
-	for (; i < NR_NODES; i++)
-		if (!list_empty(&zones[priority].nodes[i].free_pages))
-			return &zones[priority].nodes[i];
+	/* find smallest node with free pages */
+	for (; order < NR_NODES; order++)
+		if (!list_empty(&zone->nodes[order].free_pages))
+			return &zone->nodes[order];
 
 	return NULL;
 }
@@ -92,19 +80,19 @@ static struct node *__find_free_node(size_t count, int priority)
 /*
  * Get free pages.
  */
-struct page *__get_free_pages(size_t count, int priority)
+struct page *__get_free_pages(int priority, uint32_t order)
 {
 	struct node *node;
 	struct page *page;
 
 	/* find free node */
-	node = __find_free_node(count, priority);
+	node = __find_free_node(priority, order);
 	if (node)
 		goto found;
 
 	/* try to use kernel pages */
 	if (priority != GFP_KERNEL) {
-		node = __find_free_node(count, GFP_KERNEL);
+		node = __find_free_node(GFP_KERNEL, order);
 		if (node)
 			goto found;
 	}
@@ -113,7 +101,7 @@ struct page *__get_free_pages(size_t count, int priority)
 	reclaim_pages();
 
 	/* retry one last time */
-	node = __find_free_node(count, GFP_KERNEL);
+	node = __find_free_node(GFP_KERNEL, order);
 	if (node)
 		goto found;
 
@@ -128,27 +116,19 @@ found:
 	list_del(&page->list);
 
 	/* update number of free pages */
-	node->zone->nr_free_pages -= node->order;
+	node->zone->nr_free_pages -= (1 << node->order);
 
 	/* add remaining pages to free list */
-	if (count != node->order)
-		__add_to_free_pages(page + count, node->order - count, priority);
+	if (order != node->order)
+		__add_to_free_pages(page + (1 << order), priority, (1 << node->order) - (1 << order));
 
 	return page;
 }
 
 /*
- * Get a free page.
- */
-struct page *__get_free_page(int priority)
-{
-	return __get_free_pages(1, priority);
-}
-
-/*
  * Free pages.
  */
-void __free_pages(struct page *page, size_t count)
+void __free_pages(struct page *page, uint32_t order)
 {
 	if (!page)
 		return;
@@ -156,40 +136,24 @@ void __free_pages(struct page *page, size_t count)
 	page->count--;
 	if (!page->count) {
 		page->inode = NULL;
-		__add_to_free_pages(page, count, page->priority);
+		__add_to_free_pages(page, page->priority, order);
 	}
-}
-
-/*
- * Free a page.
- */
-void __free_page(struct page *page)
-{
-	__free_pages(page, 1);
 }
 
 /*
  * Get a free page.
  */
-void *get_free_pages(size_t count)
+void *get_free_pages(uint32_t order)
 {
 	struct page *page;
 
 	/* get a free page */
-	page = __get_free_pages(count, GFP_KERNEL);
+	page = __get_free_pages(GFP_KERNEL, order);
 	if (!page)
 		return NULL;
 
 	/* make virtual address */
 	return __va(page->page_nr * PAGE_SIZE);
-}
-
-/*
- * Get a free page.
- */
-void *get_free_page()
-{
-	return get_free_pages(1);
 }
 
 /*
@@ -205,14 +169,6 @@ void free_pages(void *address, size_t count)
 	/* free page */
 	if (page_idx && page_idx < nr_pages)
 		__free_pages(&page_array[page_idx], count);
-}
-
-/*
- * Free a page.
- */
-void free_page(void *address)
-{
-	return free_pages(address, 1);
 }
 
 /*
@@ -256,7 +212,7 @@ void reclaim_pages()
  */
 void init_page_alloc()
 {
-	uint32_t page_array_end, addr, order, first_free_kpage, first_free_upage, i, j;
+	uint32_t page_array_end, addr, order, first_free_kpage, first_free_upage, i;
 
 	/* allocate global pages array */
 	page_array = (struct page *) (KPAGE_START + PAGE_ALIGN_UP(KCODE_END));
@@ -288,15 +244,15 @@ void init_page_alloc()
 
 	/* init memory zones */
 	for (i = 0; i < NR_ZONES; i++) {
-		for (j = 0, order = 1; j < NR_NODES; j++, order *= 2) {
-			zones[i].nodes[j].zone = &zones[i];
-			zones[i].nodes[j].order = order;
-			INIT_LIST_HEAD(&zones[i].nodes[j].free_pages);
+		for (order = 0; order < NR_NODES; order++) {
+			zones[i].nodes[order].zone = &zones[i];
+			zones[i].nodes[order].order = order;
+			INIT_LIST_HEAD(&zones[i].nodes[order].free_pages);
 		}
 	}
 
 	/* add kernel and user free pages */
-	__add_to_free_pages(&page_array[first_free_kpage], first_free_upage - first_free_kpage, GFP_KERNEL);
+	__add_to_free_pages(&page_array[first_free_kpage], GFP_KERNEL, first_free_upage - first_free_kpage);
 	if (nr_pages > first_free_upage)
-		__add_to_free_pages(&page_array[first_free_upage], nr_pages - first_free_upage, GFP_USER);
+		__add_to_free_pages(&page_array[first_free_upage], GFP_USER, nr_pages - first_free_upage);
 }

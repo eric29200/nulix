@@ -103,6 +103,13 @@ static inline pte_t pte_mkold(pte_t pte)
 #define GFP_USER			1
 #define NR_ZONES			2
 
+/* page allocation */
+#define __get_free_page(priority)	__get_free_pages(priority, 0)
+#define __free_page(page)		__free_pages(page, 0)
+#define get_free_page()			get_free_pages(0)
+#define free_page(addr)			free_pages(addr, 0)
+
+
 /* defined in paging.c */
 extern uint32_t nr_pages;
 extern struct page *page_array;
@@ -137,14 +144,10 @@ void flush_tlb(pgd_t *pgd);
 
 /* page allocation */
 void init_page_alloc();
-struct page *__get_free_page(int priority);
-struct page *__get_free_pages(size_t count, int priority);
-void *get_free_page();
-void *get_free_pages(size_t count);
-void __free_page(struct page *page);
-void __free_pages(struct page *page, size_t count);
-void free_page(void *address);
-void free_pages(void *address, size_t count);
+struct page *__get_free_pages(int priority, uint32_t order);
+void __free_pages(struct page *page, uint32_t order);
+void *get_free_pages(uint32_t order);
+void free_pages(void *address, uint32_t order);
 void reclaim_pages();
 
 /* page cache */

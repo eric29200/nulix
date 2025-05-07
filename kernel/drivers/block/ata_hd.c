@@ -145,7 +145,7 @@ int ata_hd_init(struct ata_device *device)
 		return -ENOMEM;
 
 	/* allocate buffer */
-	device->buf = get_free_page(GFP_KERNEL);
+	device->buf = get_free_page();
 	if (!device->buf) {
 		kfree(device->prdt);
 		return -ENOMEM;

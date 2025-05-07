@@ -31,6 +31,7 @@ static struct bucket buckets[NR_BUCKETS];
 static struct heap_block *create_heap_block(struct bucket *bucket)
 {
 	struct heap_block *block;
+	uint32_t order;
 	size_t npages;
 	uint32_t off;
 	void *pages;
@@ -38,8 +39,16 @@ static struct heap_block *create_heap_block(struct bucket *bucket)
 	/* compute number of pages to allocate */
 	npages = PAGE_ALIGN_UP(bucket->order) / PAGE_SIZE;
 
+	/* compute order */
+	for (order = 0; ; order++)
+		if (npages <= (uint32_t) (1 << order))
+			break;
+
+	/* fix number of pages */
+	npages = (1 << order);
+
 	/* allocate pages */
-	pages = get_free_pages(npages);
+	pages = get_free_pages(order);
 	if (!pages)
 		return NULL;
 
