@@ -17,6 +17,7 @@ struct node {
  * Memory zone.
  */
 struct zone {
+	size_t			nr_pages;
 	size_t			nr_free_pages;
 	struct node		nodes[NR_NODES];
 };
@@ -208,19 +209,46 @@ void reclaim_pages()
 }
 
 /*
+ * Init a zone.
+ */
+static void __init_zone(int priority, uint32_t first_page, uint32_t last_page)
+{
+	struct zone *zone = &zones[priority];
+	uint32_t order;
+
+	/* set number of pages */
+	if (last_page > first_page)
+		zone->nr_pages = last_page - first_page;
+	else
+		zone->nr_pages = 0;
+
+	/* init nodes */
+	for (order = 0; order < NR_NODES; order++) {
+		zone->nodes[order].zone = &zones[priority];
+		zone->nodes[order].order = order;
+		INIT_LIST_HEAD(&zone->nodes[order].free_pages);
+	}
+
+	/* add free pages */
+	if (zone->nr_pages)
+		__add_to_free_pages(&page_array[first_page], priority, zone->nr_pages);
+}
+
+/*
  * Init page allocation.
  */
 void init_page_alloc()
 {
-	uint32_t page_array_end, addr, order, first_free_kpage, first_free_upage, i;
+	uint32_t addr, kaddr, first_free_kpage, first_free_upage, i;
 
 	/* allocate global pages array */
-	page_array = (struct page *) (KPAGE_START + PAGE_ALIGN_UP(KCODE_END));
+	kaddr = KPAGE_START + PAGE_ALIGN_UP(KCODE_END);
+	page_array = (struct page *) kaddr;
+	kaddr += sizeof(struct page) * nr_pages;
 	memset(page_array, 0, sizeof(struct page) * nr_pages);
-	page_array_end = (uint32_t) page_array + sizeof(struct page) * nr_pages;
 
 	/* kernel code pages */
-	for (i = 0, addr = 0; i < nr_pages && (uint32_t) __va(addr) < page_array_end; i++, addr += PAGE_SIZE) {
+	for (i = 0, addr = 0; (uint32_t) __va(addr) < kaddr; i++, addr += PAGE_SIZE) {
 		page_array[i].page_nr = i;
 		page_array[i].count = 1;
 		page_array[i].priority = GFP_KERNEL;
@@ -242,17 +270,7 @@ void init_page_alloc()
 		page_array[i].priority = GFP_USER;
 	}
 
-	/* init memory zones */
-	for (i = 0; i < NR_ZONES; i++) {
-		for (order = 0; order < NR_NODES; order++) {
-			zones[i].nodes[order].zone = &zones[i];
-			zones[i].nodes[order].order = order;
-			INIT_LIST_HEAD(&zones[i].nodes[order].free_pages);
-		}
-	}
-
-	/* add kernel and user free pages */
-	__add_to_free_pages(&page_array[first_free_kpage], GFP_KERNEL, first_free_upage - first_free_kpage);
-	if (nr_pages > first_free_upage)
-		__add_to_free_pages(&page_array[first_free_upage], GFP_USER, nr_pages - first_free_upage);
+	/* init zones */
+	__init_zone(GFP_KERNEL, first_free_kpage, first_free_upage);
+	__init_zone(GFP_USER, first_free_upage, nr_pages);
 }
