@@ -166,7 +166,7 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 
 	/* memzero buffer and set physical address on chip */
 	memset(rx_buffer, 0, RX_BUFFER_SIZE);
-	outl(io_base + 0x30, (uint32_t) rx_buffer);
+	outl(io_base + 0x30, __pa(rx_buffer));
 
 	/* set Interrupt Mask Register (only accept Transmit OK and Receive OK interrupts) */
 	outw(io_base + 0x3C, 0x0005);
