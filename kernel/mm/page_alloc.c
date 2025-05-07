@@ -136,7 +136,7 @@ void __free_pages(struct page *page, uint32_t order)
 	page->count--;
 	if (!page->count) {
 		page->inode = NULL;
-		__add_to_free_pages(page, page->priority, order);
+		__add_to_free_pages(page, page->priority, (1 << order));
 	}
 }
 
@@ -159,7 +159,7 @@ void *get_free_pages(uint32_t order)
 /*
  * Free a page.
  */
-void free_pages(void *address, size_t count)
+void free_pages(void *address, uint32_t order)
 {
 	uint32_t page_idx;
 
@@ -168,7 +168,7 @@ void free_pages(void *address, size_t count)
 
 	/* free page */
 	if (page_idx && page_idx < nr_pages)
-		__free_pages(&page_array[page_idx], count);
+		__free_pages(&page_array[page_idx], order);
 }
 
 /*
