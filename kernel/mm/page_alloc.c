@@ -10,6 +10,7 @@
 struct node {
 	struct zone *		zone;
 	size_t			order;
+	size_t			order_nr_pages;
 	struct list_head	free_pages;
 };
 
@@ -28,24 +29,25 @@ static struct zone zones[NR_ZONES];
 /*
  * Add to free pages.
  */
-static void __add_to_free_pages(struct page *pages, int priority, size_t count)
+static void __add_to_free_pages(struct page *pages, int priority, uint32_t max_order, size_t count)
 {
 	struct zone *zone = &zones[priority];
-	uint32_t order, i;
+	struct node *node;
+	uint32_t i;
 
-	/* try with biggest order first */
-	order = NR_NODES - 1;
+	/* try with max order first */
+	node = &zone->nodes[max_order];
 
 	for (i = 0; i < count; ) {
 		/* find node */
-		while (count - i < (uint32_t) (1 << order))
-			order--;
+		while (count - i < node->order_nr_pages)
+			node--;
 
 		/* add pages to node */
-		list_add_tail(&pages[i].list, &zone->nodes[order].free_pages);
+		list_add_tail(&pages[i].list, &node->free_pages);
 
 		/* skip pages */
-		i += (1 << order);
+		i += node->order_nr_pages;
 	}
 
 	/* update number of free pages */
@@ -83,6 +85,7 @@ static struct node *__find_free_node(int priority, uint32_t order)
  */
 struct page *__get_free_pages(int priority, uint32_t order)
 {
+	size_t npages = 1 << order;
 	struct node *node;
 	struct page *page;
 
@@ -117,11 +120,11 @@ found:
 	list_del(&page->list);
 
 	/* update number of free pages */
-	node->zone->nr_free_pages -= (1 << node->order);
+	node->zone->nr_free_pages -= node->order_nr_pages;
 
 	/* add remaining pages to free list */
 	if (order != node->order)
-		__add_to_free_pages(page + (1 << order), priority, (1 << node->order) - (1 << order));
+		__add_to_free_pages(page + npages, priority, node->order - 1, node->order_nr_pages - npages);
 
 	return page;
 }
@@ -137,7 +140,7 @@ void __free_pages(struct page *page, uint32_t order)
 	page->count--;
 	if (!page->count) {
 		page->inode = NULL;
-		__add_to_free_pages(page, page->priority, (1 << order));
+		__add_to_free_pages(page, page->priority, order, (1 << order));
 	}
 }
 
@@ -226,12 +229,13 @@ static void __init_zone(int priority, uint32_t first_page, uint32_t last_page)
 	for (order = 0; order < NR_NODES; order++) {
 		zone->nodes[order].zone = &zones[priority];
 		zone->nodes[order].order = order;
+		zone->nodes[order].order_nr_pages = (1 << order);
 		INIT_LIST_HEAD(&zone->nodes[order].free_pages);
 	}
 
 	/* add free pages */
 	if (zone->nr_pages)
-		__add_to_free_pages(&page_array[first_page], priority, zone->nr_pages);
+		__add_to_free_pages(&page_array[first_page], priority, NR_NODES - 1, zone->nr_pages);
 }
 
 /*
