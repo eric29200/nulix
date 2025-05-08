@@ -125,9 +125,10 @@ struct page {
 	struct inode *		inode;					/* inode */
 	off_t			offset;					/* offset in inode */
 	struct buffer_head *	buffers;				/* buffers of this page */
+	void *			private;				/* used for page allocation */
 	struct list_head	list;					/* next page */
-	struct page *		next_hash;
-	struct page *		prev_hash;
+	struct page *		next_hash;				/* next page in hash table */
+	struct page *		prev_hash;				/* previous page in hash table */
 };
 
 /* paging */
