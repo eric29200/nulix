@@ -20,9 +20,11 @@ static int proc_meminfo_read(struct file *filp, char *buf, int count)
 	/* print meminfo */
 	len = sprintf(tmp_buf,
 		"MemTotal:\t%d kB\n"
-		"MemFree:\t%d kB\n",
+		"MemFree:\t%d kB\n"
+		"Buffers:\t%d kB\n",
 		nr_pages * PAGE_SIZE / 1024,
-		nr_free_pages * PAGE_SIZE / 1024);
+		nr_free_pages * PAGE_SIZE / 1024,
+		buffermem / 1024);
 
 	/* file position after end */
 	if (filp->f_pos >= len)

@@ -10,7 +10,6 @@
 #include <dev.h>
 
 #define NR_BUFFERS_MAX			65521
-#define MAX_UNUSED_BUFFERS		32
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
 
@@ -21,6 +20,7 @@
 static int nr_buffers = 0;
 static int nr_buffer_heads = 0;
 static int nr_unused_buffer_heads = 0;
+uint32_t buffermem = 0;
 static struct buffer_head *buffer_hash_table[HASH_SIZE];
 
 /* buffers lists */
@@ -124,6 +124,17 @@ void set_blocksize(dev_t dev, size_t blocksize)
 }
 
 /*
+ * Put a buffer in unused list.
+ */
+static void put_unused_buffer_head(struct buffer_head *bh)
+{
+	list_del(&bh->b_list);
+	memset(bh, 0, sizeof(struct buffer_head));
+	list_add(&bh->b_list, &unused_list);
+	nr_unused_buffer_heads++;
+}
+
+/*
  * Get an unused buffer.
  */
 static struct buffer_head *get_unused_buffer_head()
@@ -150,25 +161,6 @@ static struct buffer_head *get_unused_buffer_head()
 	nr_buffer_heads++;
 
 	return bh;
-}
-
-/*
- * Put a buffer in unused list.
- */ 
-static void put_unused_buffer_head(struct buffer_head *bh)
-{
-	/* free unused buffer head */
-	if (nr_unused_buffer_heads >= MAX_UNUSED_BUFFERS) {
-		nr_buffer_heads--;
-		list_del(&bh->b_list);
-		kfree(bh);
-	}
-
-	/* else put it in unused list */
-	list_del(&bh->b_list);
-	memset(bh, 0, sizeof(struct buffer_head));
-	list_add(&bh->b_list, &unused_list);
-	nr_unused_buffer_heads++;
 }
 
 /*
@@ -247,6 +239,7 @@ static int grow_buffers(size_t size)
 
 	/* set page buffers */
 	page_array[MAP_NR((uint32_t) page)].buffers = bh;
+	buffermem += PAGE_SIZE;
 
 	return 0;
 }
@@ -375,17 +368,9 @@ void brelse(struct buffer_head *bh)
 /*
  * Try to free a buffer.
  */
-void try_to_free_buffer(struct buffer_head *bh)
+void try_to_free_buffer(struct page *page)
 {
-	struct buffer_head *tmp, *tmp1;
-	uint32_t page;
-
-	/* already freed */
-	if (!bh->b_this_page)
-		return;
-
-	/* get page address */
-	page = (uint32_t) bh->b_data & PAGE_MASK;
+	struct buffer_head *tmp, *tmp1, *bh = page->buffers;
 
 	/* check if all page buffers can be freed */
 	tmp = bh;
@@ -414,7 +399,9 @@ void try_to_free_buffer(struct buffer_head *bh)
 	} while (tmp != bh);
 
 	/* free page */
-	free_page((void *) page);
+	buffermem -= PAGE_SIZE;
+	page->buffers = NULL;
+	__free_page(page);
 }
 
 /*

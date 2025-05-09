@@ -270,7 +270,7 @@ void reclaim_pages()
 
 		/* is it a buffer cached page ? */
 		if (page->buffers) {
-			try_to_free_buffer(page->buffers);
+			try_to_free_buffer(page);
 			continue;
 		}
 
