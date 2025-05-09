@@ -132,7 +132,7 @@ struct page {
 };
 
 /* paging */
-int init_paging(uint32_t start, uint32_t end);
+int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end);
 void unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address);
 int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot);
@@ -144,7 +144,7 @@ void flush_tlb_page(pgd_t *pgd, uint32_t address);
 void flush_tlb(pgd_t *pgd);
 
 /* page allocation */
-void init_page_alloc(uint32_t start);
+int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end);
 struct page *__get_free_pages(int priority, uint32_t order);
 void __free_pages(struct page *page, uint32_t order);
 void *get_free_pages(uint32_t order);

@@ -529,26 +529,27 @@ void free_pgd(pgd_t *pgd)
 /*
  * Init paging.
  */
-int init_paging(uint32_t start, uint32_t end)
+int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end)
 {
 	uint32_t addr, i;
 	pmd_t *pmd;
 	pte_t *pte;
+	int ret;
 
 	/* compute number of pages */
-	nr_pages = end / PAGE_SIZE;
+	nr_pages = mem_end / PAGE_SIZE;
 
 	/* allocate kernel page directory after kernel code */
-	pgd_kernel = (pgd_t *) PAGE_ALIGN_UP(start);
+	pgd_kernel = (pgd_t *) PAGE_ALIGN_UP(kernel_end);
 	memset(pgd_kernel, 0, PAGE_SIZE);
-	start = (uint32_t) pgd_kernel + PAGE_SIZE;
+	kernel_end = (uint32_t) pgd_kernel + PAGE_SIZE;
 
 	/* map kernel code pages to low memory */
 	pmd = pmd_offset(pgd_kernel);
 	for (addr = KCODE_START; addr < KCODE_END; ) {
 		/* allocate page table */
-		*pmd = (pmd_t) start | PAGE_TABLE;
-		start += PAGE_SIZE;
+		*pmd = (pmd_t) kernel_end | PAGE_TABLE;
+		kernel_end += PAGE_SIZE;
 
 		/* set page table entries */
 		for (i = 0; i < PTRS_PER_PTE; i++) {
@@ -563,16 +564,16 @@ int init_paging(uint32_t start, uint32_t end)
 
 	/* map kernel pages to high memory */
 	pmd = pmd_offset(pgd_kernel) + 768;
-	for (addr = 0; addr < end && addr < __pa(KPAGE_END);) {
+	for (addr = 0; addr < mem_end && addr < __pa(KPAGE_END);) {
 		/* allocate page table */
-		*pmd = (pmd_t) start | PAGE_TABLE;
-		start += PAGE_SIZE;
+		*pmd = (pmd_t) kernel_end | PAGE_TABLE;
+		kernel_end += PAGE_SIZE;
 
 		/* set page table entries */
 		for (i = 0; i < PTRS_PER_PTE; i++) {
 			pte = (pte_t *) (*pmd & PAGE_MASK) + i;
 
-			if (addr < end && addr < __pa(KPAGE_END))
+			if (addr < mem_end && addr < __pa(KPAGE_END))
 				*pte = mk_pte(addr / PAGE_SIZE, PAGE_KERNEL);
 			else
 				*pte = 0;
@@ -592,7 +593,9 @@ int init_paging(uint32_t start, uint32_t end)
 	switch_pgd(pgd_kernel);
 
 	/* init page allocation */
-	init_page_alloc(start);
+	ret = init_page_alloc(kernel_start, kernel_end);
+	if (ret)
+		return ret;
 
 	/* init page cache */
 	init_page_cache();

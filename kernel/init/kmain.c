@@ -33,6 +33,7 @@
 
 extern uint32_t loader;
 extern uint32_t kernel_stack;
+extern uint32_t kernel_start;
 extern uint32_t kernel_end;
 
 /* grub framebuffer */
@@ -80,6 +81,9 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 					((struct multiboot_tag_basic_meminfo *) tag)->mem_lower,
 					((struct multiboot_tag_basic_meminfo *) tag)->mem_upper);
 				*mem_upper = ((struct multiboot_tag_basic_meminfo *) tag)->mem_upper * 1024;
+				break;
+			case MULTIBOOT_TAG_TYPE_MMAP:
+				init_bios_map((struct multiboot_tag_mmap *) tag);
 				break;
 			case MULTIBOOT_TAG_TYPE_BOOTDEV:
 				printf("Boot device 0x%x,%u,%u\n",
@@ -147,7 +151,7 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 
 	/* init memory */
 	printf("[Kernel] Memory Init\n");
-	init_mem((uint32_t) &kernel_end, mem_upper);
+	init_mem((uint32_t) &kernel_start, (uint32_t) &kernel_end, mem_upper);
 
 	/* init inodes */
 	printf("[Kernel] Inodes init\n");

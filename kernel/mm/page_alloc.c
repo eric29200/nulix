@@ -18,7 +18,6 @@ struct node {
  * Memory zone.
  */
 struct zone {
-	size_t			nr_pages;
 	size_t			nr_free_pages;
 	struct node		nodes[NR_NODES];
 };
@@ -292,16 +291,14 @@ void reclaim_pages()
 /*
  * Init a zone.
  */
-static void __init_zone(int priority, uint32_t first_page, uint32_t last_page)
+static void __init_zone(int priority)
 {
+	uint32_t order, start = 0, end = 0, addr, i;
 	struct zone *zone = &zones[priority];
-	uint32_t order;
+	struct page *first_free_page = NULL;
 
-	/* set number of pages */
-	if (last_page > first_page)
-		zone->nr_pages = last_page - first_page;
-	else
-		zone->nr_pages = 0;
+	/* clear number of free pages */
+	zone->nr_free_pages = 0;
 
 	/* init nodes */
 	for (order = 0; order < NR_NODES; order++) {
@@ -311,47 +308,63 @@ static void __init_zone(int priority, uint32_t first_page, uint32_t last_page)
 		INIT_LIST_HEAD(&zone->nodes[order].free_pages);
 	}
 
-	/* add free pages */
-	if (zone->nr_pages)
-		__add_to_free_pages(&page_array[first_page], priority, zone->nr_pages);
+	/* kernel pages from 0 to PAGE_OFFSET */
+	if (priority == GFP_KERNEL) {
+		start = 0;
+		end = __pa(KPAGE_END);
+	} else if (priority == GFP_USER) {
+		start = __pa(KPAGE_END);
+		end = nr_pages * PAGE_SIZE;
+	}
+
+	/* for each page */
+	for (addr = start, i = start / PAGE_SIZE; i < nr_pages && addr < end; i++, addr += PAGE_SIZE) {
+		/* set page */
+		page_array[i].page_nr = i;
+		page_array[i].count = 0;
+		page_array[i].priority = priority;
+
+		/* page not available */
+		if (!bios_map_address_available(addr)) {
+			page_array[i].count = 1;
+
+			if (first_free_page)
+				__add_to_free_pages(first_free_page, priority, i - first_free_page->page_nr);
+
+			first_free_page = NULL;
+			continue;
+		}
+
+		/* set first free page */
+		if (!first_free_page)
+			first_free_page = &page_array[i];
+	}
+
+	/* add last free pages */
+	if (first_free_page)
+		__add_to_free_pages(first_free_page, priority, i - first_free_page->page_nr);
 }
 
 /*
  * Init page allocation.
  */
-void init_page_alloc(uint32_t start)
+int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end)
 {
-	uint32_t addr, first_free_kpage, first_free_upage, i;
+	int ret;
 
 	/* allocate global pages array */
-	page_array = (struct page *) __va(start);
-	start += sizeof(struct page) * nr_pages;
+	page_array = (struct page *) __va(kernel_end);
+	kernel_end += sizeof(struct page) * nr_pages;
 	memset(page_array, 0, sizeof(struct page) * nr_pages);
 
-	/* kernel code pages */
-	for (i = 0, addr = 0; addr < start; i++, addr += PAGE_SIZE) {
-		page_array[i].page_nr = i;
-		page_array[i].count = 1;
-		page_array[i].priority = GFP_KERNEL;
-	}
-
-	/* kernel free pages */
-	first_free_kpage = i;
-	for (; i < nr_pages && (uint32_t) __va(addr) < KPAGE_END; i++, addr += PAGE_SIZE) {
-		page_array[i].page_nr = i;
-		page_array[i].count = 0;
-		page_array[i].priority = GFP_KERNEL;
-	}
-
-	/* user free pages */
-	first_free_upage = i;
-	for (; i < nr_pages; i++) {
-		page_array[i].page_nr = i;
-		page_array[i].count = 0;
-		page_array[i].priority = GFP_USER;
-	}
+	/* reserve memory for kernel code */
+	ret = bios_map_add_entry(kernel_start, kernel_end, MULTIBOOT_MEMORY_RESERVED);
+	if (ret)
+		return ret;
 
 	/* init zones */
-	__init_zone(GFP_KERNEL, first_free_kpage, first_free_upage);
-	__init_zone(GFP_USER, first_free_upage, nr_pages);
+	__init_zone(GFP_KERNEL);
+	__init_zone(GFP_USER);
+
+	return 0;
 }

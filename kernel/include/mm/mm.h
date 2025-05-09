@@ -2,6 +2,7 @@
 #define _MM_H_
 
 #include <lib/list.h>
+#include <grub/multiboot2.h>
 #include <stddef.h>
 
 #define KCODE_START			0x00000000				/* kernel code : from 0 to 4 MB */
@@ -37,7 +38,10 @@ struct vm_operations {
 	struct page *(*nopage)(struct vm_area *, uint32_t);
 };
 
-void init_mem(uint32_t start, uint32_t end);
+void init_bios_map(struct multiboot_tag_mmap *mbi_mmap);
+int bios_map_address_available(uint32_t addr);
+int bios_map_add_entry(uint32_t start, uint32_t end, int type);
+void init_mem(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_upper);
 void *kmalloc(uint32_t size);
 void kfree(void *p);
 void kheap_init();
