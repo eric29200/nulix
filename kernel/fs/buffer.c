@@ -10,6 +10,7 @@
 #include <dev.h>
 
 #define NR_BUFFERS_MAX			65521
+#define MAX_UNUSED_BUFFERS		32
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
 
@@ -18,6 +19,8 @@
 
 /* global buffer table */
 static int nr_buffers = 0;
+static int nr_buffer_heads = 0;
+static int nr_unused_buffer_heads = 0;
 static struct buffer_head *buffer_hash_table[HASH_SIZE];
 
 /* buffers lists */
@@ -121,55 +124,30 @@ void set_blocksize(dev_t dev, size_t blocksize)
 }
 
 /*
- * Grow buffers list.
- */
-static int grow_buffers()
-{
-	struct buffer_head *bhs;
-	int i, n;
-
-	/* get some memory */
-	bhs = (struct buffer_head *) get_free_page();
-	if (!bhs)
-		return -ENOMEM;
-	memset(bhs, 0, PAGE_SIZE);
-
-	/* update number of buffers */
-	n = PAGE_SIZE / sizeof(struct buffer_head);
-	nr_buffers += n;
-
-	/* add buffers to unused list */
-	for (i = 0; i < n; i++)
-		list_add(&bhs[i].b_list, &unused_list);
-
-	return 0;
-}
-
-/*
  * Get an unused buffer.
  */
-static struct buffer_head *get_unused_buffer()
+static struct buffer_head *get_unused_buffer_head()
 {
 	struct buffer_head *bh;
 
-	/* grow buffers if needed */
-	if (list_empty(&unused_list) && nr_buffers < NR_BUFFERS_MAX)
-		grow_buffers();
-
-	/* no more unused buffers */
-	if (list_empty(&unused_list)) {
-		/* reclaim pages */
-		reclaim_pages();
-
-		/* recheck unused list */
-		if (list_empty(&unused_list))
-			return NULL;
+	/* try to reuse a buffer */
+	if (!list_empty(&unused_list)) {
+		bh = list_first_entry(&unused_list, struct buffer_head, b_list);
+		list_del(&bh->b_list);
+		list_add(&bh->b_list, &used_list);
+		nr_unused_buffer_heads--;
+		return bh;
 	}
 
-	/* get first free unused buffer */
-	bh = list_first_entry(&unused_list, struct buffer_head, b_list);
-	list_del(&bh->b_list);
+	/* allocate a new buffer */
+	bh = (struct buffer_head *) kmalloc(sizeof(struct buffer_head));
+	if (!bh)
+		return NULL;
+
+	/* set new buffer */
+	memset(bh, 0, sizeof(struct buffer_head));
 	list_add(&bh->b_list, &used_list);
+	nr_buffer_heads++;
 
 	return bh;
 }
@@ -177,11 +155,20 @@ static struct buffer_head *get_unused_buffer()
 /*
  * Put a buffer in unused list.
  */ 
-static void put_unused_buffer(struct buffer_head *bh)
+static void put_unused_buffer_head(struct buffer_head *bh)
 {
+	/* free unused buffer head */
+	if (nr_unused_buffer_heads >= MAX_UNUSED_BUFFERS) {
+		nr_buffer_heads--;
+		list_del(&bh->b_list);
+		kfree(bh);
+	}
+
+	/* else put it in unused list */
 	list_del(&bh->b_list);
 	memset(bh, 0, sizeof(struct buffer_head));
 	list_add(&bh->b_list, &unused_list);
+	nr_unused_buffer_heads++;
 }
 
 /*
@@ -197,7 +184,7 @@ static struct buffer_head *create_buffers(void *page, size_t size)
 	tail = NULL;
 	for (offset = PAGE_SIZE - size; offset >= 0; offset -= size) {
 		/* get an unused buffer */
-		bh = get_unused_buffer();
+		bh = get_unused_buffer_head();
 		if (!bh)
 			goto err;
 
@@ -222,28 +209,28 @@ err:
 	for (bh = head; bh != NULL;) {
 		head = bh;
 		bh = bh->b_this_page;
-		put_unused_buffer(head);
+		put_unused_buffer_head(head);
 	}
 
 	return NULL;
 }
 
 /*
- * Refill free list.
+ * Grow buffers list.
  */
-static int refill_freelist(size_t blocksize)
+static int grow_buffers(size_t size)
 {
-	size_t isize = BUFSIZE_INDEX(blocksize);
 	struct buffer_head *bh, *tmp;
+	size_t isize = BUFSIZE_INDEX(size);
 	void *page;
 
-	/* get a new page */
+	/* get a page */
 	page = get_free_page();
 	if (!page)
 		return -ENOMEM;
 
-	/* create new buffers */
-	bh = create_buffers(page, blocksize);
+	/* create buffers */
+	bh = create_buffers(page, size);
 	if (!bh) {
 		free_page(page);
 		return -ENOMEM;
@@ -254,6 +241,7 @@ static int refill_freelist(size_t blocksize)
 	do {
 		list_del(&tmp->b_list);
 		list_add_tail(&tmp->b_list, &free_list[isize]);
+		nr_buffers++;
 		tmp = tmp->b_this_page;
 	} while (tmp != bh);
 
@@ -261,6 +249,14 @@ static int refill_freelist(size_t blocksize)
 	page_array[MAP_NR((uint32_t) page)].buffers = bh;
 
 	return 0;
+}
+
+/*
+ * Refill free list.
+ */
+static void refill_freelist(size_t blocksize)
+{
+	grow_buffers(blocksize);
 }
 
 /*
@@ -410,7 +406,8 @@ void try_to_free_buffer(struct buffer_head *bh)
 
 		/* remove it from lists */
 		remove_from_buffer_cache(tmp);
-		put_unused_buffer(tmp);
+		put_unused_buffer_head(tmp);
+		nr_buffers--;
 
 		/* go to next buffer in page */
 		tmp = tmp1;
@@ -534,7 +531,7 @@ int generic_readpage(struct inode *inode, struct page *page)
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;
-		put_unused_buffer(next);
+		put_unused_buffer_head(next);
 		next = tmp;
 	}
 
