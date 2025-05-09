@@ -46,20 +46,20 @@ static uint8_t default_ip_route[] = { 10, 0, 2, 2 };
 /*
  * Parse multiboot header.
  */
-static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_upper)
+static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_upper)
 {
 	struct multiboot_tag *tag;
 
 	/* check magic number */
-	if (magic != MULTIBOOT2_BOOTLOADER_MAGIC)
+	if (mbi_magic != MULTIBOOT2_BOOTLOADER_MAGIC)
 		return -EINVAL;
 
 	/* check alignement */
-	if (addr & 7)
+	if (mbi_addr & 7)
 		return -EINVAL;
 
 	/* parse all multi boot tags */
-	for (tag = (struct multiboot_tag *) (addr + 8);
+	for (tag = (struct multiboot_tag *) (mbi_addr + 8);
 			 tag->type != MULTIBOOT_TAG_TYPE_END;
 			 tag = (struct multiboot_tag *) ((multiboot_uint8_t *) tag + ((tag->size + 7) & ~7))) {
 		switch (tag->type) {
@@ -76,13 +76,13 @@ static int parse_mboot(unsigned long magic, unsigned long addr, uint32_t *mem_up
 				       ((struct multiboot_tag_module *) tag)->cmdline);
 				break;
 			case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
-				printf ("mem_lower = %uKB, mem_upper = %uKB\n",
+				printf("mem_lower = %uKB, mem_upper = %uKB\n",
 					((struct multiboot_tag_basic_meminfo *) tag)->mem_lower,
 					((struct multiboot_tag_basic_meminfo *) tag)->mem_upper);
 				*mem_upper = ((struct multiboot_tag_basic_meminfo *) tag)->mem_upper * 1024;
 				break;
 			case MULTIBOOT_TAG_TYPE_BOOTDEV:
-				printf ("Boot device 0x%x,%u,%u\n",
+				printf("Boot device 0x%x,%u,%u\n",
 					((struct multiboot_tag_bootdev *) tag)->biosdev,
 					((struct multiboot_tag_bootdev *) tag)->slice,
 					((struct multiboot_tag_bootdev *) tag)->part);
@@ -118,7 +118,7 @@ static void kinit()
 /*
  * Main nulix function.
  */
-int kmain(unsigned long magic, unsigned long addr)
+int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 {
 	uint32_t mem_upper;
 	int ret;
@@ -130,7 +130,7 @@ int kmain(unsigned long magic, unsigned long addr)
 	init_serial();
 
 	/* parse multiboot header */
-	ret = parse_mboot(magic, addr, &mem_upper);
+	ret = parse_mboot(mbi_magic, mbi_addr, &mem_upper);
 	if (ret)
 		return ret;
 
