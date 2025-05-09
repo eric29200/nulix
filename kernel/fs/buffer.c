@@ -10,6 +10,7 @@
 #include <dev.h>
 
 #define NR_BUFFERS_MAX			65521
+#define MAX_UNUSED_BUFFERS		32
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
 
@@ -128,6 +129,15 @@ void set_blocksize(dev_t dev, size_t blocksize)
  */
 static void put_unused_buffer_head(struct buffer_head *bh)
 {
+	/* free buffer */
+	if (nr_unused_buffer_heads >= MAX_UNUSED_BUFFERS) {
+		nr_buffer_heads--;
+		list_del(&bh->b_list);
+		kfree(bh);
+		return;
+	}
+
+	/* or add it to unused list */
 	list_del(&bh->b_list);
 	memset(bh, 0, sizeof(struct buffer_head));
 	list_add(&bh->b_list, &unused_list);
