@@ -8,11 +8,21 @@
  */
 static int proc_meminfo_read(struct file *filp, char *buf, int count)
 {
+	uint32_t nr_free_pages = 0, i;
 	char tmp_buf[256];
 	size_t len;
 
+	/* get number of free pages */
+	for (i = 0; i < nr_pages; i++)
+		if (!page_array[i].count)
+			nr_free_pages++;
+
 	/* print meminfo */
-	len = sprintf(tmp_buf, "MemTotal:\t%d kB\n", nr_pages * PAGE_SIZE / 1024);
+	len = sprintf(tmp_buf,
+		"MemTotal:\t%d kB\n"
+		"MemFree:\t%d kB\n",
+		nr_pages * PAGE_SIZE / 1024,
+		nr_free_pages * PAGE_SIZE / 1024);
 
 	/* file position after end */
 	if (filp->f_pos >= len)
