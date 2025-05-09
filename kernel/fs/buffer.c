@@ -443,7 +443,6 @@ void bsync()
 	int i;
 
 	bsync_list(&used_list, 0);
-	bsync_list(&unused_list, 0);
 	for (i = 0; i < NR_SIZES; i++)
 		bsync_list(&free_list[i], 0);
 }
@@ -456,7 +455,6 @@ void bsync_dev(dev_t dev)
 	int i;
 
 	bsync_list(&used_list, dev);
-	bsync_list(&unused_list, dev);
 	for (i = 0; i < NR_SIZES; i++)
 		bsync_list(&free_list[i], dev);
 }
