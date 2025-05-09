@@ -319,18 +319,17 @@ static void __init_zone(int priority, uint32_t first_page, uint32_t last_page)
 /*
  * Init page allocation.
  */
-void init_page_alloc()
+void init_page_alloc(uint32_t start)
 {
-	uint32_t addr, kaddr, first_free_kpage, first_free_upage, i;
+	uint32_t addr, first_free_kpage, first_free_upage, i;
 
 	/* allocate global pages array */
-	kaddr = KPAGE_START + PAGE_ALIGN_UP(KCODE_END);
-	page_array = (struct page *) kaddr;
-	kaddr += sizeof(struct page) * nr_pages;
+	page_array = (struct page *) __va(start);
+	start += sizeof(struct page) * nr_pages;
 	memset(page_array, 0, sizeof(struct page) * nr_pages);
 
 	/* kernel code pages */
-	for (i = 0, addr = 0; (uint32_t) __va(addr) < kaddr; i++, addr += PAGE_SIZE) {
+	for (i = 0, addr = 0; addr < start; i++, addr += PAGE_SIZE) {
 		page_array[i].page_nr = i;
 		page_array[i].count = 1;
 		page_array[i].priority = GFP_KERNEL;

@@ -36,7 +36,7 @@ extern uint32_t kernel_stack;
 extern uint32_t kernel_end;
 
 /* grub framebuffer */
-static struct multiboot_tag_framebuffer *tag_fb;
+static struct multiboot_tag_framebuffer tag_fb;
 
 /* static IP address */
 static uint8_t default_ip_address[] = { 10, 0, 2, 15 };
@@ -88,7 +88,7 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 					((struct multiboot_tag_bootdev *) tag)->part);
 				break;
 			case MULTIBOOT_TAG_TYPE_FRAMEBUFFER:
-				tag_fb = (struct multiboot_tag_framebuffer *) tag;
+				memcpy(&tag_fb, (struct multiboot_tag_framebuffer *) tag, tag->size);
 				break;
 		}
 	}
@@ -188,12 +188,12 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 
 	/* init ttys */
 	printf("[Kernel] Ttys Init\n");
-	if (init_tty(tag_fb))
+	if (init_tty(&tag_fb))
 		panic("Cannot init ttys");
 
 	/* init direct frame buffer */
 	printf("[Kernel] Direct frame buffer Init\n");
-	if (init_framebuffer_direct(tag_fb))
+	if (init_framebuffer_direct(&tag_fb))
 		panic("Cannot init direct frame buffer");
 
 	/* init ata devices */

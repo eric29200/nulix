@@ -592,7 +592,7 @@ int init_paging(uint32_t start, uint32_t end)
 	switch_pgd(pgd_kernel);
 
 	/* init page allocation */
-	init_page_alloc();
+	init_page_alloc(start);
 
 	/* init page cache */
 	init_page_cache();

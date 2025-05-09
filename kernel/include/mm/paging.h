@@ -144,7 +144,7 @@ void flush_tlb_page(pgd_t *pgd, uint32_t address);
 void flush_tlb(pgd_t *pgd);
 
 /* page allocation */
-void init_page_alloc();
+void init_page_alloc(uint32_t start);
 struct page *__get_free_pages(int priority, uint32_t order);
 void __free_pages(struct page *page, uint32_t order);
 void *get_free_pages(uint32_t order);
