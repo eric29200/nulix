@@ -163,7 +163,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	INIT_LIST_HEAD(&mm_new->vm_list);
 
 	/* clone page directory */
-	mm_new->pgd = create_page_directory();
+	mm_new->pgd = mm ? create_page_directory() : pgd_kernel;
 	if (!mm_new->pgd)
 		goto err;
 
