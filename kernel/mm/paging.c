@@ -295,7 +295,6 @@ expand_stack:
 		goto bad_area;
 	return;
 good_area:
-
 	/* write violation */
 	if (write_access && !(vma->vm_flags & VM_WRITE))
 		goto bad_area;
@@ -383,7 +382,6 @@ static pte_t *pte_alloc(pmd_t *pmd, uint32_t offset)
 
 	/* set page table */
 	*pmd = __pa(pte) | PAGE_TABLE;
-
 out:
 	return (pte_t *) pmd_page(*pmd) + offset;
 }
