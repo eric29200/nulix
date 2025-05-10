@@ -18,12 +18,14 @@ static int proc_meminfo_read(struct file *filp, char *buf, int count)
 
 	/* print meminfo */
 	len = sprintf(tmp_buf,
-		"MemTotal:\t%d kB\n"
-		"MemFree:\t%d kB\n"
-		"Buffers:\t%d kB\n",
-		info.totalram / 1024,
-		info.freeram / 1024,
-		info.bufferram / 1024);
+		"MemTotal:  %d kB\n"
+		"MemFree:   %d kB\n"
+		"Buffers:   %d kB\n"
+		"Cached:    %d kB\n",
+		info.totalram >> 10,
+		info.freeram >> 10,
+		info.bufferram >> 10,
+		page_cache_size >> (PAGE_SHIFT - 10));
 
 	/* file position after end */
 	if (filp->f_pos >= len)

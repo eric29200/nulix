@@ -7,6 +7,7 @@
 
 /* pages hash table */
 static struct page *page_hash_table[HASH_SIZE];
+uint32_t page_cache_size = 0;
 
 /*
  * Hash an inode/offset.
@@ -73,6 +74,9 @@ void add_to_page_cache(struct page *page, struct inode *inode, off_t offset)
 
 	/* add page to inode */
 	list_add(&page->list, &inode->i_pages);
+
+	/* update cache size */
+	page_cache_size++;
 }
 
 /*
@@ -102,6 +106,9 @@ void remove_from_page_cache(struct page *page)
 
 	/* remove it from inode list */
 	list_del(&page->list);
+
+	/* update cache size */
+	page_cache_size--;
 }
 
 /*
