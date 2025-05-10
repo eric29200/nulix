@@ -34,9 +34,11 @@ static char proc_states[] = {
  */
 static int proc_stat_read(struct file *filp, char *buf, int count)
 {
-	struct task *task;
+	size_t len = 0, vsize = 0;
+	struct list_head *pos;
+	struct vm_area *vma;
 	char tmp_buf[1024];
-	size_t len;
+	struct task *task;
 	pid_t pid;
 
 	/* get process */
@@ -45,23 +47,25 @@ static int proc_stat_read(struct file *filp, char *buf, int count)
 	if (!task)
 		return -EINVAL;
 
+	/* compute virtual memory */
+	list_for_each(pos, &task->mm->vm_list) {
+		vma = list_entry(pos, struct vm_area, list);
+		vsize += vma->vm_end - vma->vm_start;
+	}
+
 	/* print pid in temporary buffer */
-	len = sprintf(tmp_buf,	"%d (%s) "						/* pid, name */
-				"%c %d "						/* state, ppid */
-				"0 0 "							/* pgrp, session */
-				"%d "							/* tty */
-				"0 0 "							/* tpgid, flags */
-				"0 0 0 0 "						/* minflt, cminflt, majflt, cmajflt */
-				"%lld %lld %lld %lld "					/* utime, stime, cutime, cstime */
-				"0 0 "							/* priority, nice */
-				"0 0 "							/* num_threads, itrealvalue */
-				"%lld "							/* starttime */
-				"0 0 0 \n",						/* vsize, rss, rsslim */
-				task->pid, task->name, proc_states[task->state - 1],
-				task->parent ? task->parent->pid : task->pid,
-				(int) task->tty,
-				task->utime, task->stime, task->cutime, task->cstime,
-				task->start_time);
+	len += sprintf(tmp_buf + len, "%d (%s) ", task->pid, task->name);						/* pid, name */
+	len += sprintf(tmp_buf + len, "%c ", proc_states[task->state - 1]);						/* state */
+	len += sprintf(tmp_buf + len, "%d ", task->parent ? task->parent->pid : task->pid);				/* ppid */
+	len += sprintf(tmp_buf + len, "0 0 ");										/* pgrp, session */
+	len += sprintf(tmp_buf + len, "0 ");										/* tty */
+	len += sprintf(tmp_buf + len, "0 0 ");										/* tpgid, flags */
+	len += sprintf(tmp_buf + len, "0 0 0 0 ");									/* minflt, cminflt, majflt, cmajflt */
+	len += sprintf(tmp_buf + len, "%lld %lld %lld %lld ", task->utime, task->stime, task->cutime, task->cstime);	/* utime, stime, cutime, cstime */
+	len += sprintf(tmp_buf + len, "0 0 ");										/* priority, nice */
+	len += sprintf(tmp_buf + len, "0 0 ");										/* num_threads, itrealvalue */
+	len += sprintf(tmp_buf + len, "%lld ", task->start_time);							/* starttime */
+	len += sprintf(tmp_buf + len, "%d 0 0\n", vsize);								/* vsize, rss, rsslim */
 
 	/* file position after end */
 	if (filp->f_pos >= len)

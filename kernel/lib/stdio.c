@@ -64,7 +64,7 @@ static int __print_num_signed_64(void (*putch)(char), int64_t num, uint16_t base
 	static char *digits = "0123456789abcdef";
 	int is_negative = 0;
 	int64_t n = num;
-	char buf[16];
+	char buf[32];
 	int i, ret;
 
 	if (num < 0) {
