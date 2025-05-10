@@ -120,6 +120,10 @@ static void unmap_page(pgd_t *pgd, uint32_t address)
 	if (page_nr && page_nr < nr_pages)
 		__free_page(&page_array[page_nr]);
 
+	/* update memory size */
+	if (pgd == current_task->mm->pgd && current_task->mm->rss > 0)
+		current_task->mm->rss--;
+
 	/* clear page table entry */
 	pte_clear(pte);
 }
@@ -169,6 +173,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 {
 	struct page *page;
 	pte_t *pte;
+	int ret;
 
 	/* get page table entry */
 	pte = get_pte(address, 1, task->mm->pgd);
@@ -180,8 +185,12 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 		return -EPERM;
 
 	/* anonymous page mapping */
-	if (!vma->vm_ops || !vma->vm_ops->nopage)
-		return do_anonymous_page(vma, pte, (void *) PAGE_ALIGN_DOWN(address), write_access);
+	if (!vma->vm_ops || !vma->vm_ops->nopage) {
+		ret = do_anonymous_page(vma, pte, (void *) PAGE_ALIGN_DOWN(address), write_access);
+		if (!ret)
+			task->mm->rss++;
+		return ret;
+	}
 
 	/* specific mapping */
 	page = vma->vm_ops->nopage(vma, address);
@@ -192,6 +201,9 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	*pte = mk_pte(page->page_nr, vma->vm_page_prot);
 	if (write_access)
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
+
+	/* update memory size */
+	task->mm->rss++;
 
 	return 0;
 }
@@ -231,6 +243,9 @@ static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address)
 
 	/* free old page */
 	__free_page(old_page);
+
+	/* update memory size */
+	task->mm->rss++;
 
 	return 0;
 }

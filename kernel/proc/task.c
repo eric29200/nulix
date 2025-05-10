@@ -417,6 +417,9 @@ void task_exit_mmap(struct mm_struct *mm)
 	struct list_head *pos, *n;
 	struct vm_area *vm_area;
 
+	/* clear memory size */
+	mm->rss = 0;
+
 	/* free memory regions */
 	list_for_each_safe(pos, n, &mm->vm_list) {
 		vm_area = list_entry(pos, struct vm_area, list);

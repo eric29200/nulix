@@ -38,6 +38,7 @@ struct mm_struct {
 	uint32_t			arg_end;			/* end argument */
 	uint32_t			env_start;			/* start environ */
 	uint32_t			env_end;			/* end environ */
+	uint32_t			rss;				/* resident memory */
 	struct desc_struct *		ldt;				/* Local Descriptor Table */
 	size_t				ldt_size;			/* Local Descriptor Table size */
 	struct list_head		vm_list;			/* virtual memory areas */

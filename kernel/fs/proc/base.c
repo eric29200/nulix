@@ -57,7 +57,7 @@ static int proc_stat_read(struct file *filp, char *buf, int count)
 	len += sprintf(tmp_buf + len, "%d (%s) ", task->pid, task->name);						/* pid, name */
 	len += sprintf(tmp_buf + len, "%c ", proc_states[task->state - 1]);						/* state */
 	len += sprintf(tmp_buf + len, "%d ", task->parent ? task->parent->pid : task->pid);				/* ppid */
-	len += sprintf(tmp_buf + len, "0 0 ");										/* pgrp, session */
+	len += sprintf(tmp_buf + len, "%d %d ", task->pgrp, task->session);						/* pgrp, session */
 	len += sprintf(tmp_buf + len, "0 ");										/* tty */
 	len += sprintf(tmp_buf + len, "0 0 ");										/* tpgid, flags */
 	len += sprintf(tmp_buf + len, "0 0 0 0 ");									/* minflt, cminflt, majflt, cmajflt */
@@ -65,7 +65,7 @@ static int proc_stat_read(struct file *filp, char *buf, int count)
 	len += sprintf(tmp_buf + len, "0 0 ");										/* priority, nice */
 	len += sprintf(tmp_buf + len, "0 0 ");										/* num_threads, itrealvalue */
 	len += sprintf(tmp_buf + len, "%lld ", task->start_time);							/* starttime */
-	len += sprintf(tmp_buf + len, "%d 0 0\n", vsize);								/* vsize, rss, rsslim */
+	len += sprintf(tmp_buf + len, "%d %d 0\n", vsize, task->mm->rss);						/* vsize, rss, rsslim */
 
 	/* file position after end */
 	if (filp->f_pos >= len)
