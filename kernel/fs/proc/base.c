@@ -52,10 +52,10 @@ static int proc_stat_read(struct file *filp, char *buf, int count)
 				"%d "							/* tty */
 				"0 0 "							/* tpgid, flags */
 				"0 0 0 0 "						/* minflt, cminflt, majflt, cmajflt */
-				"%d %d %d %d "						/* utime, stime, cutime, cstime */
+				"%lld %lld %lld %lld "					/* utime, stime, cutime, cstime */
 				"0 0 "							/* priority, nice */
 				"0 0 "							/* num_threads, itrealvalue */
-				"%d "							/* starttime */
+				"%lld "							/* starttime */
 				"0 0 0 \n",						/* vsize, rss, rsslim */
 				task->pid, task->name, proc_states[task->state - 1],
 				task->parent ? task->parent->pid : task->pid,

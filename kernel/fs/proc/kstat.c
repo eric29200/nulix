@@ -17,7 +17,7 @@ static int proc_kstat_read(struct file *filp, char *buf, int count)
 	len = sprintf(tmp_buf,	"cpu 0 0 0 0 0 0 0 0 0 0\n"
 				"intr %u\n"
 				"ctxt %u\n"
-				"btime %u\n",
+				"btime %llu\n",
 		      kstat.interrupts,
 		      kstat.context_switch,
 		      startup_time);

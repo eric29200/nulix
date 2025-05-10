@@ -5,6 +5,8 @@
 #include <drivers/char/serial.h>
 
 #define LOG_BUF_LEN		8192
+#define QUALIFIER_LONG		1
+#define QUALIFIER_LONG_LONG	2
 
 static char *__buf_ptr;
 
@@ -29,8 +31,40 @@ static int __print_num_signed(void (*putch)(char), int32_t num, uint16_t base)
 {
 	static char *digits = "0123456789abcdef";
 	int is_negative = 0;
-	char buf[16];
 	int32_t n = num;
+	char buf[16];
+	int i, ret;
+
+	if (num < 0) {
+		n = -n;
+		is_negative = 1;
+	}
+
+	i = 0;
+	do {
+		buf[i++] = digits[n % base];
+		n /= base;
+	} while (n > 0);
+
+	if (is_negative)
+		buf[i++] = '-';
+
+	ret = i;
+	while (i > 0)
+		putch(buf[--i]);
+
+	return ret;
+}
+
+/*
+ * Print a formatted signed number to a file descriptor.
+ */
+static int __print_num_signed_64(void (*putch)(char), int64_t num, uint16_t base)
+{
+	static char *digits = "0123456789abcdef";
+	int is_negative = 0;
+	int64_t n = num;
+	char buf[16];
 	int i, ret;
 
 	if (num < 0) {
@@ -57,11 +91,34 @@ static int __print_num_signed(void (*putch)(char), int32_t num, uint16_t base)
 /*
  * Print a formatted unsigned number to a file descriptor.
  */
+static int __print_num_unsigned_64(void (*putch)(char), uint64_t num, uint16_t base)
+{
+	static char *digits = "0123456789abcdef";
+	uint64_t n = num;
+	char buf[32];
+	int i, ret;
+
+	i = 0;
+	do {
+		buf[i++] = digits[n % base];
+		n /= base;
+	} while (n > 0);
+
+	ret = i;
+	while (i > 0)
+		putch(buf[--i]);
+
+	return ret;
+}
+
+/*
+ * Print a formatted unsigned number to a file descriptor.
+ */
 static int __print_num_unsigned(void (*putch)(char), uint32_t num, uint16_t base)
 {
 	static char *digits = "0123456789abcdef";
-	char buf[16];
 	uint32_t n = num;
+	char buf[32];
 	int i, ret;
 
 	i = 0;
@@ -82,20 +139,35 @@ static int __print_num_unsigned(void (*putch)(char), uint32_t num, uint16_t base
  */
 static int vsprintf(void (*putch)(char), const char *format, va_list args)
 {
-	char *substr;
-	int i, count;
-	char c;
+	int count = 0, qualifier = QUALIFIER_LONG;
+	char *substr, c;
 
-	for (i = 0, count = 0; format[i] != '\0'; i++) {
-		c = format[i];
+	while (*format) {
+		c = *format++;
 
+		/* normal character */
 		if (c != '%') {
 			putch(c);
 			count++;
 			continue;
 		}
 
-		c = format[++i];
+		/* get next character */
+		c = *format++;
+
+		/* long qualifier */
+		if (c == 'l') {
+			qualifier = QUALIFIER_LONG;
+			c = *format++;
+		
+			/* long long qualifier */
+			if (c == 'l') {
+				qualifier = QUALIFIER_LONG_LONG;
+				c = *format++;
+			}
+		}
+
+		/* format */
 		switch (c) {
 			case 'c':
 				putch(va_arg(args, int));
@@ -103,16 +175,25 @@ static int vsprintf(void (*putch)(char), const char *format, va_list args)
 				break;
 			case 'd':
 			case 'i':
-				count += __print_num_signed(putch, va_arg(args, int32_t), 10);
+				if (qualifier == QUALIFIER_LONG_LONG)
+					count += __print_num_signed_64(putch, va_arg(args, int64_t), 10);
+				else
+					count += __print_num_signed(putch, va_arg(args, int32_t), 10);
 				break;
 			case 'u':
-				count += __print_num_unsigned(putch, va_arg(args, int32_t), 10);
+				if (qualifier == QUALIFIER_LONG_LONG)
+					count += __print_num_unsigned_64(putch, va_arg(args, uint64_t), 10);
+				else
+					count += __print_num_unsigned(putch, va_arg(args, uint32_t), 10);
 				break;
 			case 'x':
 				putch('0');
 				putch('x');
 				count += 2;
-				count += __print_num_unsigned(putch, va_arg(args, uint32_t), 16);
+				if (qualifier == QUALIFIER_LONG_LONG)
+					count += __print_num_unsigned_64(putch, va_arg(args, uint64_t), 16);
+				else
+					count += __print_num_unsigned(putch, va_arg(args, uint32_t), 16);
 				break;
 			case 's':
 				for (substr = va_arg(args, char *); *substr != '\0'; substr++, count++)
