@@ -286,9 +286,25 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
  */
 int sys_sysinfo(struct sysinfo *info)
 {
+	uint32_t nr_free_pages = 0, i;
+
+	/* clear info */
 	memset(info, 0, sizeof(struct sysinfo));
+
+	/* get number of free pages */
+	for (i = 0; i < nr_pages; i++) {
+		info->totalram++;
+
+		if (!page_array[i].count)
+			nr_free_pages++;
+	}
+
+	/* set info */
 	info->uptime = jiffies / HZ;
-	info->totalram = 0;
+	info->totalram <<= PAGE_SHIFT;
+	info->freeram = nr_free_pages << PAGE_SHIFT;
+	info->bufferram = buffermem;
+
 	return 0;
 }
 
