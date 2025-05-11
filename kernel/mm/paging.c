@@ -95,9 +95,10 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd
 /*
  * Unmap a page.
  */
-static void unmap_page(pgd_t *pgd, uint32_t address)
+static size_t unmap_page(pgd_t *pgd, uint32_t address)
 {
 	uint32_t page_idx, page_nr;
+	size_t ret = 0;
 	pmd_t *pmd;
 	pte_t *pte;
 
@@ -108,39 +109,41 @@ static void unmap_page(pgd_t *pgd, uint32_t address)
 
 	/* no matching page table */
 	if (!*pmd)
-		return;
+		goto out;
 
 	/* get page */
 	pte = (pte_t *) pmd_page(*pmd) + page_idx;
 	if (!pte)
-		return;
+		goto out;
 
 	/* free page */
 	page_nr = MAP_NR(pte_page(*pte));
-	if (page_nr && page_nr < nr_pages)
+	if (page_nr && page_nr < nr_pages) {
 		__free_page(&page_array[page_nr]);
-
-	/* update memory size */
-	if (pgd == current_task->mm->pgd && current_task->mm->rss > 0)
-		current_task->mm->rss--;
+		ret = 1;
+	}
 
 	/* clear page table entry */
 	pte_clear(pte);
+out:
+	return ret;
 }
 
 /*
  * Unmap pages.
  */
-void unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address)
+size_t unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address)
 {
-	uint32_t address;
+	uint32_t address, ret = 0;
 
 	/* unmap all pages */
 	for (address = start_address; address < end_address; address += PAGE_SIZE)
-		unmap_page(pgd, address);
+		ret += unmap_page(pgd, address);
 
 	/* flush tlb */
 	flush_tlb(pgd);
+
+	return ret;
 }
 
 /*

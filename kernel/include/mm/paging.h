@@ -134,7 +134,7 @@ struct page {
 
 /* paging */
 int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end);
-void unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address);
+size_t unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address);
 int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot);
 void switch_pgd(pgd_t *pgd);

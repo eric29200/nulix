@@ -318,8 +318,8 @@ static int unmap_fixup(struct vm_area *vm, uint32_t addr, size_t len)
 int do_munmap(uint32_t addr, size_t len)
 {
 	struct list_head *pos, *n;
+	uint32_t start, end, nr;
 	struct vm_area *vm;
-	uint32_t start, end;
 
 	/* add must be page aligned */
 	if (addr & ~PAGE_MASK)
@@ -345,7 +345,13 @@ int do_munmap(uint32_t addr, size_t len)
 	}
 
 	/* unmap region */
-	unmap_pages(current_task->mm->pgd, addr, addr + len);
+	nr = unmap_pages(current_task->mm->pgd, addr, addr + len);
+
+	/* update resident memory size */
+	if (nr >= current_task->mm->rss)
+		current_task->mm->rss -= nr;
+	else
+		current_task->mm->rss = 0;
 
 	return 0;
 }
