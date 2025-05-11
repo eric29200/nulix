@@ -67,12 +67,14 @@ static int proc_meminfo_read(char *page)
 	return sprintf(page,
 		"MemTotal:  %d kB\n"
 		"MemFree:   %d kB\n"
+		"MemShared: %d kB\n"
 		"Buffers:   %d kB\n"
 		"Cached:    %d kB\n",
 		info.totalram >> 10,
 		info.freeram >> 10,
+		info.sharedram >> 10,
 		info.bufferram >> 10,
-		page_cache_size >> (PAGE_SHIFT - 10));
+		page_cache_size << (PAGE_SHIFT - 10));
 }
 
 /*
