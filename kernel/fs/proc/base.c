@@ -53,19 +53,24 @@ static int proc_stat_read(struct file *filp, char *buf, int count)
 		vsize += vma->vm_end - vma->vm_start;
 	}
 
-	/* print pid in temporary buffer */
-	len += sprintf(tmp_buf + len, "%d (%s) ", task->pid, task->name);						/* pid, name */
-	len += sprintf(tmp_buf + len, "%c ", proc_states[task->state - 1]);						/* state */
-	len += sprintf(tmp_buf + len, "%d ", task->parent ? task->parent->pid : task->pid);				/* ppid */
-	len += sprintf(tmp_buf + len, "%d %d ", task->pgrp, task->session);						/* pgrp, session */
-	len += sprintf(tmp_buf + len, "0 ");										/* tty */
-	len += sprintf(tmp_buf + len, "0 0 ");										/* tpgid, flags */
-	len += sprintf(tmp_buf + len, "0 0 0 0 ");									/* minflt, cminflt, majflt, cmajflt */
-	len += sprintf(tmp_buf + len, "%lld %lld %lld %lld ", task->utime, task->stime, task->cutime, task->cstime);	/* utime, stime, cutime, cstime */
-	len += sprintf(tmp_buf + len, "0 0 ");										/* priority, nice */
-	len += sprintf(tmp_buf + len, "0 0 ");										/* num_threads, itrealvalue */
-	len += sprintf(tmp_buf + len, "%lld ", task->start_time);							/* starttime */
-	len += sprintf(tmp_buf + len, "%d %d 0\n", vsize, task->mm->rss);						/* vsize, rss, rsslim */
+	/* print informations in temporary buffer */
+	len = sprintf(tmp_buf,	"%d (%s) "						/* pid, name */
+				"%c %d "						/* state, ppid */
+				"%d %d "						/* pgrp, session */
+				"0 "							/* tty */
+				"0 0 "							/* tpgid, flags */
+				"0 0 0 0 "						/* minflt, cminflt, majflt, cmajflt */
+				"%lld %lld %lld %lld "					/* utime, stime, cutime, cstime */
+				"0 0 "							/* priority, nice */
+				"0 0 "							/* num_threads, itrealvalue */
+				"%lld "							/* starttime */
+				"%d %d 0 \n",						/* vsize, rss, rsslim */
+				task->pid, task->name,
+				proc_states[task->state - 1], task->parent ? task->parent->pid : task->pid,
+				task->pgrp, task->session,
+				task->utime, task->stime, task->cutime, task->cstime,
+				task->start_time,
+				vsize, task->mm->rss);
 
 	/* file position after end */
 	if (filp->f_pos >= len)

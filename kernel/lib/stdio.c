@@ -8,6 +8,29 @@
 #define QUALIFIER_LONG		1
 #define QUALIFIER_LONG_LONG	2
 
+#define FORMAT_TYPE_NONE		1
+#define FORMAT_TYPE_CHAR		2
+#define FORMAT_TYPE_STR			3
+#define FORMAT_TYPE_PERCENT_CHAR	4
+#define FORMAT_TYPE_INVALID		5
+#define FORMAT_TYPE_LONG_LONG		6
+#define FORMAT_TYPE_ULONG		7
+#define FORMAT_TYPE_LONG		8
+#define FORMAT_TYPE_UINT		9
+#define FORMAT_TYPE_INT			10
+
+#define SIGN				2
+
+/*
+ * Print specifications.
+ */
+struct printf_spec {
+	uint8_t		type;
+	uint8_t		flags;
+	uint8_t		qualifier;
+	uint8_t		base;
+};
+
 static char *__buf_ptr;
 
 /* syslog */
@@ -27,44 +50,12 @@ static void __putc_buf(char c)
 /*
  * Print a formatted signed number to a file descriptor.
  */
-static int __print_num_signed(void (*putch)(char), int32_t num, uint16_t base)
-{
-	static char *digits = "0123456789abcdef";
-	int is_negative = 0;
-	int32_t n = num;
-	char buf[16];
-	int i, ret;
-
-	if (num < 0) {
-		n = -n;
-		is_negative = 1;
-	}
-
-	i = 0;
-	do {
-		buf[i++] = digits[n % base];
-		n /= base;
-	} while (n > 0);
-
-	if (is_negative)
-		buf[i++] = '-';
-
-	ret = i;
-	while (i > 0)
-		putch(buf[--i]);
-
-	return ret;
-}
-
-/*
- * Print a formatted signed number to a file descriptor.
- */
-static int __print_num_signed_64(void (*putch)(char), int64_t num, uint16_t base)
+static int __print_num_signed(void (*putch)(char), int64_t num, struct printf_spec *spec)
 {
 	static char *digits = "0123456789abcdef";
 	int is_negative = 0;
 	int64_t n = num;
-	char buf[32];
+	char buf[66];
 	int i, ret;
 
 	if (num < 0) {
@@ -74,13 +65,18 @@ static int __print_num_signed_64(void (*putch)(char), int64_t num, uint16_t base
 
 	i = 0;
 	do {
-		buf[i++] = digits[n % base];
-		n /= base;
+		buf[i++] = digits[n % spec->base];
+		n /= spec->base;
 	} while (n > 0);
 
 	if (is_negative)
 		buf[i++] = '-';
 
+	if (spec->base == 16) {
+		buf[i++] = 'x';
+		buf[i++] = '0';
+	}
+
 	ret = i;
 	while (i > 0)
 		putch(buf[--i]);
@@ -91,18 +87,23 @@ static int __print_num_signed_64(void (*putch)(char), int64_t num, uint16_t base
 /*
  * Print a formatted unsigned number to a file descriptor.
  */
-static int __print_num_unsigned_64(void (*putch)(char), uint64_t num, uint16_t base)
+static int __print_num_unsigned(void (*putch)(char), uint64_t num, struct printf_spec *spec)
 {
 	static char *digits = "0123456789abcdef";
 	uint64_t n = num;
-	char buf[32];
+	char buf[66];
 	int i, ret;
 
 	i = 0;
 	do {
-		buf[i++] = digits[n % base];
-		n /= base;
+		buf[i++] = digits[n % spec->base];
+		n /= spec->base;
 	} while (n > 0);
+
+	if (spec->base == 16) {
+		buf[i++] = 'x';
+		buf[i++] = '0';
+	}
 
 	ret = i;
 	while (i > 0)
@@ -112,26 +113,71 @@ static int __print_num_unsigned_64(void (*putch)(char), uint64_t num, uint16_t b
 }
 
 /*
- * Print a formatted unsigned number to a file descriptor.
+ * Decode format.
  */
-static int __print_num_unsigned(void (*putch)(char), uint32_t num, uint16_t base)
+static int format_decode(const char *fmt, struct printf_spec *spec)
 {
-	static char *digits = "0123456789abcdef";
-	uint32_t n = num;
-	char buf[32];
-	int i, ret;
+	const char *start = fmt;
 
-	i = 0;
-	do {
-		buf[i++] = digits[n % base];
-		n /= base;
-	} while (n > 0);
+	/* default specifications */
+	spec->type = FORMAT_TYPE_NONE;
+	spec->flags = 0;
+	spec->qualifier = -1;
+	spec->base = 10;
 
-	ret = i;
-	while (i > 0)
-		putch(buf[--i]);
+	/* normal character */
+	if (*fmt++ != '%')
+		return 0;
 
-	return ret;
+	/* long qualifier */
+	if (*fmt == 'l') {
+		spec->qualifier = *fmt++;
+
+		/* long long qualifier */
+		if (*fmt == 'l') {
+			spec->qualifier = 'L';
+			fmt++;
+		}
+	}
+
+	/* type */
+	switch (*fmt) {
+		case 'c':
+			spec->type = FORMAT_TYPE_CHAR;
+			return ++fmt - start;
+		case 's':
+			spec->type = FORMAT_TYPE_STR;
+			return ++fmt - start;
+		case '%':
+			spec->type = FORMAT_TYPE_PERCENT_CHAR;
+			return ++fmt - start;
+		case 'd':
+		case 'i':
+			spec->flags |= SIGN;
+			break;
+		case 'u':
+			break;
+		case 'x':
+			spec->base = 16;
+			break;
+		default:
+			spec->type = FORMAT_TYPE_INVALID;
+			return ++fmt - start;
+	}
+
+	/* adjust type */
+	if (spec->qualifier == 'L')
+		spec->type = FORMAT_TYPE_LONG_LONG;
+	else if (spec->qualifier == 'l' && spec->flags & SIGN)
+		spec->type = FORMAT_TYPE_LONG;
+	else if (spec->qualifier == 'l')
+		spec->type = FORMAT_TYPE_ULONG;
+	else if (spec->flags & SIGN)
+		spec->type = FORMAT_TYPE_INT;
+	else
+		spec->type = FORMAT_TYPE_UINT;
+
+	return ++fmt - start;
 }
 
 /*
@@ -139,74 +185,52 @@ static int __print_num_unsigned(void (*putch)(char), uint32_t num, uint16_t base
  */
 static int vsprintf(void (*putch)(char), const char *format, va_list args)
 {
-	int count = 0, qualifier = QUALIFIER_LONG;
-	char *substr, c;
+	struct printf_spec spec;
+	char *substr;
+	int count = 0;
 
 	while (*format) {
-		c = *format++;
+		/* decode format */
+		int read = format_decode(format, &spec);
 
-		/* normal character */
-		if (c != '%') {
-			putch(c);
-			count++;
-			continue;
-		}
-
-		/* get next character */
-		c = *format++;
-
-		/* long qualifier */
-		if (c == 'l') {
-			qualifier = QUALIFIER_LONG;
-			c = *format++;
-		
-			/* long long qualifier */
-			if (c == 'l') {
-				qualifier = QUALIFIER_LONG_LONG;
-				c = *format++;
-			}
-		}
+		format += read;
 
 		/* format */
-		switch (c) {
-			case 'c':
+		switch (spec.type) {
+			case FORMAT_TYPE_NONE:
+				putch(*format++);
+				count++;
+				break;
+			case FORMAT_TYPE_CHAR:
 				putch(va_arg(args, int));
 				count++;
 				break;
-			case 'd':
-			case 'i':
-				if (qualifier == QUALIFIER_LONG_LONG)
-					count += __print_num_signed_64(putch, va_arg(args, int64_t), 10);
-				else
-					count += __print_num_signed(putch, va_arg(args, int32_t), 10);
-				break;
-			case 'u':
-				if (qualifier == QUALIFIER_LONG_LONG)
-					count += __print_num_unsigned_64(putch, va_arg(args, uint64_t), 10);
-				else
-					count += __print_num_unsigned(putch, va_arg(args, uint32_t), 10);
-				break;
-			case 'x':
-				putch('0');
-				putch('x');
-				count += 2;
-				if (qualifier == QUALIFIER_LONG_LONG)
-					count += __print_num_unsigned_64(putch, va_arg(args, uint64_t), 16);
-				else
-					count += __print_num_unsigned(putch, va_arg(args, uint32_t), 16);
-				break;
-			case 's':
+			case FORMAT_TYPE_STR:
 				for (substr = va_arg(args, char *); *substr != '\0'; substr++, count++)
 					putch(*substr);
 				break;
-			case '%':
+			case FORMAT_TYPE_PERCENT_CHAR:
 				putch('%');
 				count++;
 				break;
-			default:
+			case FORMAT_TYPE_INVALID:
 				putch('%');
-				putch(c);
-				count += 2;
+				count++;
+				break;
+			case FORMAT_TYPE_LONG_LONG:
+				count += __print_num_signed(putch, va_arg(args, int64_t), &spec);
+				break;
+			case FORMAT_TYPE_ULONG:
+				count += __print_num_unsigned(putch, va_arg(args, uint32_t), &spec);
+				break;
+			case FORMAT_TYPE_LONG:
+				count += __print_num_signed(putch, va_arg(args, int32_t), &spec);
+				break;
+			case FORMAT_TYPE_UINT:
+				count += __print_num_unsigned(putch, va_arg(args, uint32_t), &spec);
+				break;
+			default:
+				count += __print_num_signed(putch, va_arg(args, int32_t), &spec);
 				break;
 		}
 	}
