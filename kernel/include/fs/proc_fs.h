@@ -43,11 +43,9 @@ void proc_statfs(struct super_block *sb, struct statfs64 *buf);
 /* inode operations */
 extern struct inode_operations proc_root_iops;
 extern struct inode_operations proc_array_iops;
+extern struct inode_operations proc_base_dir_iops;
 extern struct inode_operations proc_base_iops;
 extern struct inode_operations proc_self_iops;
-extern struct inode_operations proc_stat_iops;
-extern struct inode_operations proc_cmdline_iops;
-extern struct inode_operations proc_environ_iops;
 extern struct inode_operations proc_fd_iops;
 extern struct inode_operations proc_fd_link_iops;
 extern struct inode_operations proc_net_iops;

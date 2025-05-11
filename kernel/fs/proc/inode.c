@@ -82,19 +82,19 @@ int proc_read_inode(struct inode *inode)
 		case PROC_PID_INO:
 			inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
 			inode->i_nlinks = 2;
-			inode->i_op = &proc_base_iops;
+			inode->i_op = &proc_base_dir_iops;
 			return 0;
 		case PROC_PID_STAT_INO:
 			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-			inode->i_op = &proc_stat_iops;
+			inode->i_op = &proc_base_iops;
 			return 0;
 		case PROC_PID_CMDLINE_INO:
 			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-			inode->i_op = &proc_cmdline_iops;
+			inode->i_op = &proc_base_iops;
 			return 0;
 		case PROC_PID_ENVIRON_INO:
 			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-			inode->i_op = &proc_environ_iops;
+			inode->i_op = &proc_base_iops;
 			return 0;
 		case PROC_PID_FD_INO:
 			inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
