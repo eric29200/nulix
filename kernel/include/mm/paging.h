@@ -112,6 +112,7 @@ static inline pte_t pte_mkold(pte_t pte)
 
 /* defined in paging.c */
 extern uint32_t nr_pages;
+extern uint32_t nr_free_pages;
 extern struct page *page_array;
 extern pgd_t *pgd_kernel;
 extern uint32_t page_cache_size;

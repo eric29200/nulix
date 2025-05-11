@@ -286,7 +286,7 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
  */
 int sys_sysinfo(struct sysinfo *info)
 {
-	uint32_t nr_free_pages = 0, nr_shared_pages = 0, i;
+	uint32_t nr_shared_pages = 0, i;
 
 	/* clear info */
 	memset(info, 0, sizeof(struct sysinfo));
@@ -295,10 +295,8 @@ int sys_sysinfo(struct sysinfo *info)
 	for (i = 0; i < nr_pages; i++) {
 		info->totalram++;
 
-		if (!page_array[i].count) {
-			nr_free_pages++;
+		if (!page_array[i].count)
 			continue;
-		}
 
 		nr_shared_pages += page_array[i].count - 1;
 	}

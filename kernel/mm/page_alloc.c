@@ -24,6 +24,7 @@ struct zone {
 
 /* Memory zones */
 static struct zone zones[NR_ZONES];
+uint32_t nr_free_pages = 0;
 
 /*
  * Add to free pages.
@@ -52,6 +53,7 @@ static void __add_to_free_pages(struct page *pages, int priority, size_t count)
 
 	/* update number of free pages */
 	zones[priority].nr_free_pages += count;
+	nr_free_pages += count;
 }
 
 /*
@@ -63,6 +65,7 @@ static void __delete_from_free_pages(struct page *pages)
 
 	/* update number of free pages */
 	node->zone->nr_free_pages -= node->order_nr_pages;
+	nr_free_pages -= node->order_nr_pages;
 
 	/* remove pages from free list */
 	pages->private = NULL;
@@ -194,7 +197,7 @@ static void merge_free_pages()
 {
 	struct page *first_pages, *pages, *next_pages;
 	struct node *first_node, *node, *next_node;
-	uint32_t nr_free_pages, page_nr, i;
+	uint32_t nr_free, page_nr, i;
 
 	/* for each page */
 	for (i = 0; i < nr_pages; ) {
@@ -209,7 +212,7 @@ static void merge_free_pages()
 		}
 
 		/* find contiguous free pages */
-		nr_free_pages = 0;
+		nr_free = 0;
 		for (page_nr = i; page_nr + node->order_nr_pages < nr_pages; ) {
 			/* get next page group */
 			next_pages = &page_array[page_nr + node->order_nr_pages];
@@ -223,7 +226,7 @@ static void merge_free_pages()
 			__delete_from_free_pages(next_pages);
 
 			/* update number of free pages */
-			nr_free_pages += next_node->order_nr_pages;
+			nr_free += next_node->order_nr_pages;
 
 			/* go to next group */
 			page_nr += node->order_nr_pages;
@@ -232,18 +235,18 @@ static void merge_free_pages()
 		}
 
 		/* free contiguous pages found */
-		if (nr_free_pages) {
+		if (nr_free) {
 			/* remove first pages first */
 			__delete_from_free_pages(first_pages);
-			nr_free_pages += first_node->order_nr_pages;
+			nr_free += first_node->order_nr_pages;
 
 			/* add all pages to free list */
-			__add_to_free_pages(first_pages, first_pages->priority, nr_free_pages);
+			__add_to_free_pages(first_pages, first_pages->priority, nr_free);
 		}
 
 		/* go to next group */
-		if (nr_free_pages)
-			i += nr_free_pages;
+		if (nr_free)
+			i += nr_free;
 		else
 			i++;
 	}
