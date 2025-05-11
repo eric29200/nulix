@@ -1,9 +1,11 @@
 #include <fs/proc_fs.h>
 #include <proc/sched.h>
+#include <drivers/char/tty.h>
 #include <string.h>
 #include <stderr.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <dev.h>
 
 #define NR_BASE_DIRENTRY		(sizeof(base_dir) / sizeof(base_dir[0]))
 
@@ -57,7 +59,7 @@ static int proc_stat_read(struct file *filp, char *buf, int count)
 	len = sprintf(tmp_buf,	"%d (%s) "						/* pid, name */
 				"%c %d "						/* state, ppid */
 				"%d %d "						/* pgrp, session */
-				"0 "							/* tty */
+				"%d "							/* tty */
 				"0 0 "							/* tpgid, flags */
 				"0 0 0 0 "						/* minflt, cminflt, majflt, cmajflt */
 				"%lld %lld %lld %lld "					/* utime, stime, cutime, cstime */
@@ -68,6 +70,7 @@ static int proc_stat_read(struct file *filp, char *buf, int count)
 				task->pid, task->name,
 				proc_states[task->state - 1], task->parent ? task->parent->pid : task->pid,
 				task->pgrp, task->session,
+				task->tty ? dev_t_to_nr(task->tty->device) : 0,
 				task->utime, task->stime, task->cutime, task->cstime,
 				task->start_time,
 				vsize, task->mm->rss);

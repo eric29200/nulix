@@ -525,12 +525,13 @@ static int tty_poll(struct file *filp, struct select_table *wait)
 /*
  * Init a tty.
  */
-int tty_init_dev(struct tty *tty, struct tty_driver *driver)
+int tty_init_dev(struct tty *tty, dev_t device, struct tty_driver *driver)
 {
 	int ret;
 
 	memset(tty, 0, sizeof(struct tty));
 	tty->driver = driver;
+	tty->device = device;
 
 	/* init read queue */
 	ret = ring_buffer_init(&tty->read_queue, TTY_BUF_SIZE);

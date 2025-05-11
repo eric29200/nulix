@@ -1226,7 +1226,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		vc = &console_table[i];
 
 		/* init tty device */
-		ret = tty_init_dev(tty, &console_driver);
+		ret = tty_init_dev(tty, mkdev(DEV_TTY_MAJOR, i + 1), &console_driver);
 		if (ret)
 			goto err;
 

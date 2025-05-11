@@ -139,14 +139,14 @@ static int ptmx_open(struct file *filp)
 	/* create slave pty */
 	pts = &tty_table[NR_CONSOLES + i];
 	memset(pts, 0, sizeof(struct tty));
-	ret = tty_init_dev(pts, &pts_driver);
+	ret = tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i + 1), &pts_driver);
 	if (ret)
 		goto err;
 
 	/* create master pty */
 	ptm = &tty_table[NR_CONSOLES + NR_PTYS + i];
 	memset(ptm, 0, sizeof(struct tty));
-	ret = tty_init_dev(ptm, &ptm_driver);
+	ret = tty_init_dev(ptm, DEV_PTMX, &ptm_driver);
 	if (ret)
 		goto err;
 

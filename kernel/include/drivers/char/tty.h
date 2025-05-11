@@ -64,6 +64,7 @@ struct tty_driver {
  * TTY structure.
  */
 struct tty {
+	dev_t			device;							/* device */
 	int			count;							/* reference count */
 	pid_t			session;						/* session id */
 	pid_t			pgrp;							/* process group id */
@@ -81,7 +82,7 @@ struct tty {
 
 /* tty functions */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
-int tty_init_dev(struct tty *tty, struct tty_driver *driver);
+int tty_init_dev(struct tty *tty, dev_t device, struct tty_driver *driver);
 void tty_destroy(struct tty *tty);
 void tty_do_cook(struct tty *tty);
 void tty_change(int n);
