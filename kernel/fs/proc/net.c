@@ -97,12 +97,17 @@ struct inode_operations proc_net_iops = {
  */
 static int proc_net_dev_read(struct file *filp, char *buf, int count)
 {
-	char tmp_buf[256];
+	char *page;
 	size_t len;
 	int i;
 
+	/* get a page */
+	page = get_free_page();
+	if (!page)
+		return -ENOMEM;
+
 	/* print header */
-	len = sprintf(tmp_buf, "Inter-|   Receive                            "
+	len = sprintf(page, "Inter-|   Receive                            "
 		"                    |  Transmit\n"
 		" face |bytes    packets errs drop fifo frame "
 		"compressed multicast|bytes    packets errs "
@@ -110,20 +115,24 @@ static int proc_net_dev_read(struct file *filp, char *buf, int count)
 
 	/* print interfaces */
 	for (i = 0; i < nr_net_devices; i++)
-		len += sprintf(tmp_buf + len, "%s: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n", net_devices[i].name);
+		len += sprintf(page + len, "%s: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n", net_devices[i].name);
 
 	/* file position after end */
-	if (filp->f_pos >= len)
-		return 0;
+	if (filp->f_pos >= len) {
+		count = 0;
+		goto out;
+	}
 
 	/* update count */
 	if (filp->f_pos + count > len)
 		count = len - filp->f_pos;
 
 	/* copy content to user buffer and update file position */
-	memcpy(buf, tmp_buf + filp->f_pos, count);
+	memcpy(buf, page + filp->f_pos, count);
 	filp->f_pos += count;
 
+out:
+	free_page(page);
 	return count;
 }
 

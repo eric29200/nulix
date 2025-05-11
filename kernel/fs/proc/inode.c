@@ -31,15 +31,15 @@ int proc_read_inode(struct inode *inode)
 		switch (ino) {
 			case PROC_UPTIME_INO:
 				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_uptime_iops;
+				inode->i_op = &proc_array_iops;
 				break;
 			case PROC_FILESYSTEMS_INO:
 				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_filesystems_iops;
+				inode->i_op = &proc_array_iops;
 				break;
 			case PROC_MOUNTS_INO:
 				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_mounts_iops;
+				inode->i_op = &proc_array_iops;
 				break;
 			case PROC_SELF_INO:
 				inode->i_mode = S_IFLNK | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
@@ -47,15 +47,15 @@ int proc_read_inode(struct inode *inode)
 				break;
 			case PROC_KSTAT_INO:
 				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_kstat_iops;
+				inode->i_op = &proc_array_iops;
 				break;
 			case PROC_MEMINFO_INO:
 				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_meminfo_iops;
+				inode->i_op = &proc_array_iops;
 				break;
 			case PROC_LOADAVG_INO:
 				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_loadavg_iops;
+				inode->i_op = &proc_array_iops;
 				break;
 			case PROC_NET_INO:
 				inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
