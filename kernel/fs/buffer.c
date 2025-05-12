@@ -409,7 +409,7 @@ void try_to_free_buffer(struct page *page)
 	} while (tmp != bh);
 
 	/* free page */
-	buffermem_pages++;
+	buffermem_pages--;
 	page->buffers = NULL;
 	__free_page(page);
 }
