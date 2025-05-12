@@ -24,6 +24,7 @@ struct zone {
 
 /* Memory zones */
 static struct zone zones[NR_ZONES];
+uint32_t totalram_pages = 0;
 
 /*
  * Get number of free pages.
@@ -342,8 +343,10 @@ static void __init_zone(int priority)
 		if (!bios_map_address_available(addr)) {
 			page_array[i].count = 1;
 
-			if (first_free_page)
+			if (first_free_page) {
 				__add_to_free_pages(first_free_page, priority, i - first_free_page->page_nr);
+				totalram_pages += i - first_free_page->page_nr;
+			}
 
 			first_free_page = NULL;
 			continue;
@@ -355,8 +358,10 @@ static void __init_zone(int priority)
 	}
 
 	/* add last free pages */
-	if (first_free_page)
+	if (first_free_page) {
 		__add_to_free_pages(first_free_page, priority, i - first_free_page->page_nr);
+		totalram_pages += i - first_free_page->page_nr;
+	}
 }
 
 /*

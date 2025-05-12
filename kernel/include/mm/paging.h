@@ -114,6 +114,7 @@ static inline pte_t pte_mkold(pte_t pte)
 extern uint32_t nr_pages;
 extern struct page *page_array;
 extern pgd_t *pgd_kernel;
+extern uint32_t totalram_pages;
 extern uint32_t page_cache_size;
 
 /*
