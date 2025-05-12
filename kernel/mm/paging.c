@@ -201,14 +201,14 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	/* no share : copy to new page and keep old page in offset */
 	if (write_access && !(vma->vm_flags & VM_SHARED)) {
 		/* get a new page */
-		page = __get_free_page(GFP_KERNEL);
+		page = __get_free_page(GFP_USER);
 		if (!page) {
 			__free_page(new_page);
 			return -ENOMEM;
 		}
 
-		if (new_page)
-			memcpy((void *) PAGE_ADDRESS(page), (void *) PAGE_ADDRESS(new_page), PAGE_SIZE);
+		/* copy physical page */
+		copy_page_physical(new_page->page_nr * PAGE_SIZE, page->page_nr * PAGE_SIZE);
 
 		/* release cache page */
 		__free_page(new_page);
