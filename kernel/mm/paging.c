@@ -149,7 +149,7 @@ size_t unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address)
 /*
  * Anonymous page mapping.
  */
-static int do_anonymous_page(struct vm_area *vma, pte_t *pte, void *address, int write_access)
+static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte, void *address, int write_access)
 {
 	struct page *page;
 
@@ -166,6 +166,9 @@ static int do_anonymous_page(struct vm_area *vma, pte_t *pte, void *address, int
 	/* memzero page */
 	memset(address, 0, PAGE_SIZE);
 
+	/* update memory size */
+	task->mm->rss++;
+
 	return 0;
 }
 
@@ -176,7 +179,6 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 {
 	struct page *page;
 	pte_t *pte;
-	int ret;
 
 	/* get page table entry */
 	pte = get_pte(address, 1, task->mm->pgd);
@@ -188,12 +190,8 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 		return -EPERM;
 
 	/* anonymous page mapping */
-	if (!vma->vm_ops || !vma->vm_ops->nopage) {
-		ret = do_anonymous_page(vma, pte, (void *) PAGE_ALIGN_DOWN(address), write_access);
-		if (!ret)
-			task->mm->rss++;
-		return ret;
-	}
+	if (!vma->vm_ops || !vma->vm_ops->nopage)
+		return do_anonymous_page(task, vma, pte, (void *) PAGE_ALIGN_DOWN(address), write_access);
 
 	/* specific mapping */
 	page = vma->vm_ops->nopage(vma, address);
