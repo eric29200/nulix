@@ -5,40 +5,12 @@
 #include <stderr.h>
 
 /*
- * Fill a page.
- */
-static struct page *fill_page(struct inode *inode, off_t offset)
-{
-	struct page *page;
-	uint32_t new_page;
-
-	/* try to get page from cache */
-	page = find_page(inode, offset);
-	if (page)
-		return page;
-
-	/* get a new page */
-	new_page = (uint32_t) get_free_page();
-	if (!new_page)
-		return NULL;
-
-	/* get page and add it to cache */
-	page = &page_array[MAP_NR(new_page)];
-	add_to_page_cache(page, inode, offset);
-
-	/* read page */
-	inode->i_op->readpage(inode, page);
-
-	return page;
-}
-
-/*
  * Handle a page fault = read page from file.
  */
 static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 {
 	struct inode *inode = vma->vm_inode;
-	struct page *page, *new_page;
+	struct page *page;
 	uint32_t offset;
 
 	/* page align address */
@@ -49,19 +21,24 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 	if (offset >= inode->i_size)
 		return NULL;
 
-	/* fill in page */
-	page = fill_page(inode, offset);
+	/* try to get page from cache */
+	page = find_page(inode, offset);
+	if (page)
+		return page;
 
-	/* no share : copy to new page and keep old page in offset */
-	if (page && !(vma->vm_flags & VM_SHARED)) {
-		/* get a new page */
-		new_page = __get_free_page(GFP_KERNEL);
-		if (new_page)
-			memcpy((void *) PAGE_ADDRESS(new_page), (void *) PAGE_ADDRESS(page), PAGE_SIZE);
+	/* get a new page */
+	page = __get_free_page(GFP_KERNEL);
+	if (!page)
+		return NULL;
 
-		/* release cache page */
+	/* add it to cache */
+	add_to_page_cache(page, inode, offset);
+
+	/* read page */
+	if (inode->i_op->readpage(inode, page)) {
+		remove_from_page_cache(page);
 		__free_page(page);
-		return new_page;
+		return NULL;
 	}
 
 	return page;

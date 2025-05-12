@@ -177,7 +177,7 @@ static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte,
  */
 static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, int write_access)
 {
-	struct page *page;
+	struct page *page, *new_page;
 	pte_t *pte;
 
 	/* get page table entry */
@@ -194,12 +194,29 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 		return do_anonymous_page(task, vma, pte, (void *) PAGE_ALIGN_DOWN(address), write_access);
 
 	/* specific mapping */
-	page = vma->vm_ops->nopage(vma, address);
-	if (!page)
-		return -ENOSPC;
+	new_page = vma->vm_ops->nopage(vma, address);
+	if (!new_page)
+		return -ENOMEM;
+
+	/* no share : copy to new page and keep old page in offset */
+	if (write_access && !(vma->vm_flags & VM_SHARED)) {
+		/* get a new page */
+		page = __get_free_page(GFP_KERNEL);
+		if (!page) {
+			__free_page(new_page);
+			return -ENOMEM;
+		}
+
+		if (new_page)
+			memcpy((void *) PAGE_ADDRESS(page), (void *) PAGE_ADDRESS(new_page), PAGE_SIZE);
+
+		/* release cache page */
+		__free_page(new_page);
+		new_page = page;
+	}
 
 	/* make page table entry */
-	*pte = mk_pte(page->page_nr, vma->vm_page_prot);
+	*pte = mk_pte(new_page->page_nr, vma->vm_page_prot);
 	if (write_access)
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
