@@ -21,7 +21,7 @@
 static int nr_buffers = 0;
 static int nr_buffer_heads = 0;
 static int nr_unused_buffer_heads = 0;
-uint32_t buffermem = 0;
+uint32_t buffermem_pages = 0;
 static struct buffer_head *buffer_hash_table[HASH_SIZE];
 
 /* buffers lists */
@@ -249,7 +249,7 @@ static int grow_buffers(size_t size)
 
 	/* set page buffers */
 	page_array[MAP_NR((uint32_t) page)].buffers = bh;
-	buffermem += PAGE_SIZE;
+	buffermem_pages++;
 
 	return 0;
 }
@@ -409,7 +409,7 @@ void try_to_free_buffer(struct page *page)
 	} while (tmp != bh);
 
 	/* free page */
-	buffermem -= PAGE_SIZE;
+	buffermem_pages++;
 	page->buffers = NULL;
 	__free_page(page);
 }

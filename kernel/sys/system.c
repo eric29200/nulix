@@ -286,27 +286,14 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
  */
 int sys_sysinfo(struct sysinfo *info)
 {
-	uint32_t nr_shared_pages = 0, i;
-
 	/* clear info */
 	memset(info, 0, sizeof(struct sysinfo));
 
-	/* get number of free pages */
-	for (i = 0; i < nr_pages; i++) {
-		info->totalram++;
-
-		if (!page_array[i].count)
-			continue;
-
-		nr_shared_pages += page_array[i].count - 1;
-	}
-
 	/* set info */
 	info->uptime = jiffies / HZ;
-	info->totalram <<= PAGE_SHIFT;
-	info->freeram = nr_free_pages << PAGE_SHIFT;
-	info->sharedram = nr_shared_pages << PAGE_SHIFT;
-	info->bufferram = buffermem;
+	info->totalram = nr_pages << PAGE_SHIFT;
+	info->freeram = nr_free_pages() << PAGE_SHIFT;
+	info->bufferram = buffermem_pages << PAGE_SHIFT;
 
 	return 0;
 }

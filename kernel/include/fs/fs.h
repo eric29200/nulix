@@ -197,7 +197,7 @@ struct file_operations {
 
 /* files table */
 extern struct file filp_table[NR_FILE];
-extern uint32_t buffermem;
+extern uint32_t buffermem_pages;
 
 /* super operations */
 int register_filesystem(struct file_system *fs);

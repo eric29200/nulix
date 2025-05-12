@@ -112,7 +112,6 @@ static inline pte_t pte_mkold(pte_t pte)
 
 /* defined in paging.c */
 extern uint32_t nr_pages;
-extern uint32_t nr_free_pages;
 extern struct page *page_array;
 extern pgd_t *pgd_kernel;
 extern uint32_t page_cache_size;
@@ -147,6 +146,7 @@ void flush_tlb(pgd_t *pgd);
 
 /* page allocation */
 int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end);
+uint32_t nr_free_pages();
 struct page *__get_free_pages(int priority, uint32_t order);
 void __free_pages(struct page *page, uint32_t order);
 void *get_free_pages(uint32_t order);

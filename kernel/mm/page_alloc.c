@@ -24,7 +24,20 @@ struct zone {
 
 /* Memory zones */
 static struct zone zones[NR_ZONES];
-uint32_t nr_free_pages = 0;
+
+/*
+ * Get number of free pages.
+ */
+uint32_t nr_free_pages()
+{
+	uint32_t ret = 0;
+	int i;
+
+	for (i = 0; i < NR_ZONES; i++)
+		ret += zones[i].nr_free_pages;
+
+	return ret;
+}
 
 /*
  * Add to free pages.
@@ -53,7 +66,6 @@ static void __add_to_free_pages(struct page *pages, int priority, size_t count)
 
 	/* update number of free pages */
 	zones[priority].nr_free_pages += count;
-	nr_free_pages += count;
 }
 
 /*
@@ -65,7 +77,6 @@ static void __delete_from_free_pages(struct page *pages)
 
 	/* update number of free pages */
 	node->zone->nr_free_pages -= node->order_nr_pages;
-	nr_free_pages -= node->order_nr_pages;
 
 	/* remove pages from free list */
 	pages->private = NULL;
