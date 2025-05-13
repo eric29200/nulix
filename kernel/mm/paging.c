@@ -148,54 +148,91 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd
 }
 
 /*
- * Unmap a page.
+ * Unmap pages.
  */
-static size_t zap_page(pgd_t *pgd, uint32_t address)
+static size_t zap_pte_range(pmd_t *pmd, uint32_t address, size_t size)
 {
-	uint32_t page_idx;
-	pmd_t *pmd;
+	uint32_t page_idx, end;
+	size_t freed = 0;
 	pte_t *pte;
-	int ret;
 
-	/* get page table */
-	pgd = pgd_offset(pgd, address);
-	pmd = pmd_offset(pgd);
-	page_idx = (address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1);
-
-	/* no matching page table */
-	if (!*pmd)
-		goto out;
-
-	/* get page */
-	pte = (pte_t *) pmd_page(*pmd) + page_idx;
-	if (!pte)
-		goto out;
-
-	if (pte_none(*pte))
+	/* check page table */
+	if (pmd_none(*pmd))
 		return 0;
 
-	/* free page table entry */
-	ret = pte_free(pte);
-	pte_clear(pte);
-out:
-	return ret;
+	/* compute end address */
+	end = address + size;
+	if (end > ((address + PMD_SIZE) & PMD_MASK))
+		end = ((address + PMD_SIZE) & PMD_MASK);
+
+	/* free page table entries */
+	do {
+		/* get page table entry */
+		page_idx = (address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1);
+		pte = (pte_t *) pmd_page(*pmd) + page_idx;
+
+		/* free page table entry */
+		if (!pte_none(*pte)) {
+			freed += pte_free(pte);
+			pte_clear(pte);
+		}
+
+		address += PAGE_SIZE;
+	} while (address < end);
+
+	return freed;
 }
 
 /*
  * Unmap pages.
  */
-size_t zap_page_range(pgd_t *pgd, uint32_t start_address, uint32_t size)
+static size_t zap_pmd_range(pgd_t *dir, uint32_t address, size_t size)
 {
-	uint32_t address, ret = 0;
+	size_t freed = 0;
+	uint32_t end;
+	pmd_t *pmd;
+	
+	/* get page table */
+	pmd = pmd_offset(dir);
 
-	/* unmap all pages */
-	for (address = start_address; address < start_address + size; address += PAGE_SIZE)
-		ret += zap_page(pgd, address);
+	/* compute end address */
+	end = address + size;
+	if (end > ((address + PGDIR_SIZE) & PGDIR_MASK))
+		end = ((address + PGDIR_SIZE) & PGDIR_MASK);
+
+	/* free page table */
+	do {
+		freed += zap_pte_range(pmd, address, end - address);
+		address += (address + PMD_SIZE) & PMD_MASK;
+		pmd++;
+	} while (address < end);
+
+	return freed;
+}
+
+/*
+ * Unmap pages.
+ */
+size_t zap_page_range(pgd_t *pgd, uint32_t address, uint32_t size)
+{
+	uint32_t end = address + size;
+	size_t freed = 0;
+	pgd_t *dir;
+
+	/* get page directory */
+	dir = pgd_offset(pgd, address);
+
+	/* free page directory */
+	do {
+		freed += zap_pmd_range(dir, address, end - address);
+		address = (address + PMD_SIZE) & PMD_MASK;
+		dir++;
+	} while (address < end);
 
 	/* flush tlb */
 	flush_tlb(pgd);
 
-	return ret;
+	return freed;
 }
 
 /*
