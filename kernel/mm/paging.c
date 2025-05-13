@@ -225,7 +225,7 @@ size_t zap_page_range(pgd_t *pgd, uint32_t address, uint32_t size)
 	/* free page directory */
 	do {
 		freed += zap_pmd_range(dir, address, end - address);
-		address = (address + PMD_SIZE) & PMD_MASK;
+		address = (address + PGDIR_SIZE) & PGDIR_MASK;
 		dir++;
 	} while (address < end);
 
