@@ -36,6 +36,7 @@ typedef uint32_t pte_t;
 #define PAGE_PCD			0x010
 #define PAGE_ACCESSED			0x020
 #define PAGE_DIRTY			0x040
+#define PAGE_PROTNONE			0x080
 
 #define PAGE_NONE			(PAGE_PRESENT | PAGE_ACCESSED)
 #define PAGE_SHARED			(PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_ACCESSED)
@@ -67,6 +68,7 @@ typedef uint32_t pte_t;
 #define pte_prot(pte)			((pte) & (PAGE_SIZE - 1))
 #define pte_clear(pte)			(*(pte) = 0)
 #define pte_none(pte)			(!(pte))
+#define pte_present(pte)		((pte) & (PAGE_PRESENT | PAGE_PROTNONE))
 #define pte_offset(pmd, addr) 		((pte_t *) (pmd_page(*pmd) + ((addr >> 10) & ((PTRS_PER_PTE - 1) << 2))))
 
 static inline pte_t pte_mkwrite(pte_t pte)

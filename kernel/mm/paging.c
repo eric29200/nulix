@@ -35,6 +35,41 @@ void flush_tlb(pgd_t *pgd)
 }
 
 /*
+ * Allocate a new page directory entry.
+ */
+static inline pmd_t *pmd_alloc(pgd_t *pgd, uint32_t address)
+{
+	UNUSED(address);
+	return (pmd_t *) pgd;
+}
+
+/*
+ * Allocate a new page table entry.
+ */
+static pte_t *pte_alloc(pmd_t *pmd, uint32_t address)
+{
+	uint32_t offset = address = (address >> (PAGE_SHIFT - 2)) & 4 * (PTRS_PER_PTE - 1);
+	pte_t *pte;
+
+	/* page table already allocated */
+	if (!pmd_none(*pmd))
+		goto out;
+
+	/* create a new page table */
+	pte = (pte_t *) get_free_page();
+	if (!pte)
+		return NULL;
+
+	/* reset page table */
+	memset(pte, 0, PAGE_SIZE);
+
+	/* set page table */
+	*pmd = __pa(pte) | PAGE_TABLE;
+out:
+	return (pte_t *) (pmd_page(*pmd) + offset);
+}
+
+/*
  * Get or create a page table entry from pgd at virtual address.
  */
 static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
@@ -175,23 +210,16 @@ static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte,
 /*
  * Handle a no page fault.
  */
-static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, int write_access)
+static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, int write_access, pte_t *pte)
 {
 	struct page *page, *new_page;
-	pte_t *pte;
 
-	/* get page table entry */
-	pte = get_pte(address, 1, task->mm->pgd);
-	if (!pte)
-		return -ENOMEM;
-
-	/* page table entry already set */
-	if (!pte_none(*pte))
-		return -EPERM;
+	/* page align address */
+	address &= PAGE_MASK;
 
 	/* anonymous page mapping */
 	if (!vma->vm_ops || !vma->vm_ops->nopage)
-		return do_anonymous_page(task, vma, pte, (void *) PAGE_ALIGN_DOWN(address), write_access);
+		return do_anonymous_page(task, vma, pte, (void *) address, write_access);
 
 	/* specific mapping */
 	new_page = vma->vm_ops->nopage(vma, address);
@@ -229,15 +257,9 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 /*
  * Handle a read only page fault.
  */
-static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address)
+static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address, pte_t *pte)
 {
 	struct page *old_page, *new_page;
-	pte_t *pte;
-
-	/* get page table entry */
-	pte = get_pte(address, 0, task->mm->pgd);
-	if (!pte)
-		return -EINVAL;
 
 	/* get page */
 	old_page = &page_array[MAP_NR(pte_page(*pte))];
@@ -245,6 +267,7 @@ static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address)
 	/* only one user make page table entry writable */
 	if (old_page->count == 1) {
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
+		flush_tlb_page(task->mm->pgd, address);
 		return 0;
 	}
 
@@ -258,6 +281,7 @@ static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address)
 
 	/* set pte */
 	*pte = pte_mkdirty(pte_mkwrite(mk_pte(new_page->page_nr, vma->vm_page_prot)));
+	flush_tlb_page(task->mm->pgd, address);
 
 	/* free old page */
 	__free_page(old_page);
@@ -284,6 +308,44 @@ static int expand_stack(struct vm_area *vma, uint32_t addr)
 	vma->vm_start = addr;
 
 	return 0;
+}
+
+/*
+ * Handle memory fault.
+ */
+static int handle_pte_fault(struct task *task, struct vm_area *vma, uint32_t address, int write_access, pte_t *pte)
+{
+	/* page not present */
+	if (!pte_present(*pte))
+		return do_no_page(task, vma, address, write_access, pte);
+
+	/* write access */
+	if (write_access)
+		return do_wp_page(task, vma, address, pte);
+	
+	return 0;
+}
+
+/*
+ * Handle memory fault.
+ */
+static int handle_mm_fault(struct task *task, struct vm_area *vma, uint32_t address, int write_access)
+{
+	pgd_t *pgd;
+	pmd_t *pmd;
+	pte_t *pte;
+
+	/* get page table entry */
+	pgd = pgd_offset(task->mm->pgd, address);
+	pmd = pmd_alloc(pgd, address);
+	if (!pmd)
+		return -ENOMEM;
+	pte = pte_alloc(pmd, address);
+	if (!pte)
+		return -ENOMEM;
+
+	/* handle fault */
+	return handle_pte_fault(task, vma, address, write_access, pte);
 }
 
 /*
@@ -332,17 +394,8 @@ good_area:
 	if (write_access && !(vma->vm_flags & VM_WRITE))
 		goto bad_area;
 
-	/* present page : try to make it writable */
-	if (present) {
-		ret = do_wp_page(current_task, vma, fault_addr);
-		if (ret)
-			goto bad_area;
-		else
-			return;
-	}
-
-	/* non present page */
-	ret = do_no_page(current_task, vma, fault_addr, write_access);
+	/* handle fault */
+	ret = handle_mm_fault(current_task, vma, fault_addr, write_access);
 	if (ret)
 		goto bad_area;
 
@@ -392,31 +445,6 @@ pgd_t *create_page_directory()
 	memcpy(pgd_new, pgd_kernel, PAGE_SIZE);
 
 	return pgd_new;
-}
-
-/*
- * Allocate a new page table entry.
- */
-static pte_t *pte_alloc(pmd_t *pmd, uint32_t offset)
-{
-	pte_t *pte;
-
-	/* page table already allocated */
-	if (!pmd_none(*pmd))
-		goto out;
-
-	/* create a new page table */
-	pte = (pte_t *) get_free_page();
-	if (!pte)
-		return NULL;
-
-	/* reset page table */
-	memset(pte, 0, PAGE_SIZE);
-
-	/* set page table */
-	*pmd = __pa(pte) | PAGE_TABLE;
-out:
-	return (pte_t *) pmd_page(*pmd) + offset;
 }
 
 /*
