@@ -70,6 +70,26 @@ out:
 }
 
 /*
+ * Free a page table entry.
+ */
+static int pte_free(pte_t *pte)
+{
+	uint32_t page_nr;
+
+	if (!pte_present(*pte))
+		return 0;
+
+	/* get page */
+	page_nr = MAP_NR(pte_page(*pte));
+	if (!page_nr || page_nr >= nr_pages)
+		return 0;
+
+	/* free page */
+	__free_page(&page_array[page_nr]);
+	return 1;
+}
+
+/*
  * Get or create a page table entry from pgd at virtual address.
  */
 static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
@@ -130,12 +150,12 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd
 /*
  * Unmap a page.
  */
-static size_t unmap_page(pgd_t *pgd, uint32_t address)
+static size_t zap_page(pgd_t *pgd, uint32_t address)
 {
-	uint32_t page_idx, page_nr;
-	size_t ret = 0;
+	uint32_t page_idx;
 	pmd_t *pmd;
 	pte_t *pte;
+	int ret;
 
 	/* get page table */
 	pgd = pgd_offset(pgd, address);
@@ -151,14 +171,11 @@ static size_t unmap_page(pgd_t *pgd, uint32_t address)
 	if (!pte)
 		goto out;
 
-	/* free page */
-	page_nr = MAP_NR(pte_page(*pte));
-	if (page_nr && page_nr < nr_pages) {
-		__free_page(&page_array[page_nr]);
-		ret = 1;
-	}
+	if (pte_none(*pte))
+		return 0;
 
-	/* clear page table entry */
+	/* free page table entry */
+	ret = pte_free(pte);
 	pte_clear(pte);
 out:
 	return ret;
@@ -167,13 +184,13 @@ out:
 /*
  * Unmap pages.
  */
-size_t unmap_pages(pgd_t *pgd, uint32_t start_address, uint32_t end_address)
+size_t zap_page_range(pgd_t *pgd, uint32_t start_address, uint32_t size)
 {
 	uint32_t address, ret = 0;
 
 	/* unmap all pages */
-	for (address = start_address; address < end_address; address += PAGE_SIZE)
-		ret += unmap_page(pgd, address);
+	for (address = start_address; address < start_address + size; address += PAGE_SIZE)
+		ret += zap_page(pgd, address);
 
 	/* flush tlb */
 	flush_tlb(pgd);

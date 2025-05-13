@@ -345,7 +345,7 @@ int do_munmap(uint32_t addr, size_t len)
 	}
 
 	/* unmap region */
-	nr = unmap_pages(current_task->mm->pgd, addr, addr + len);
+	nr = zap_page_range(current_task->mm->pgd, addr, len);
 
 	/* update resident memory size */
 	if (nr >= current_task->mm->rss)

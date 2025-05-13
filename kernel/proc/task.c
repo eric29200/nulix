@@ -429,7 +429,7 @@ void task_exit_mmap(struct mm_struct *mm)
 				vm_area->vm_ops->close(vm_area);
 
 			/* unmap pages */
-			unmap_pages(mm->pgd, vm_area->vm_start, vm_area->vm_end);
+			zap_page_range(mm->pgd, vm_area->vm_start, vm_area->vm_end - vm_area->vm_start);
 
 			/* free memory region */
 			list_del(&vm_area->list);
