@@ -68,7 +68,7 @@ int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *t
 		return -ENOMEM;
 
 	/* identity map frame buffer */
-	ret = remap_page_range(fb->addr, fb->addr, fb->real_height * fb->pitch, pgd_kernel, PAGE_SHARED);
+	ret = remap_page_range(fb->addr, fb->addr, fb->real_height * fb->pitch, PAGE_SHARED);
 	if (ret)
 		goto err;
 
@@ -178,7 +178,7 @@ static int fb_mmap(struct inode *inode, struct vm_area *vma)
 	vma->vm_inode = inode;
 
 	/* remap frame buffer */
-	ret = remap_page_range(vma->vm_start, fb->addr + vma->vm_offset, vma->vm_end - vma->vm_start, current_task->mm->pgd, PAGE_SHARED);
+	ret = remap_page_range(vma->vm_start, fb->addr + vma->vm_offset, vma->vm_end - vma->vm_start, PAGE_SHARED);
 	if (ret)
 		return ret;
 

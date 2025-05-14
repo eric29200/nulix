@@ -129,14 +129,14 @@ static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
 /*
  * Remap pages to physical address.
  */
-int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, pgd_t *pgd, int pgprot)
+int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, int pgprot)
 {
 	uint32_t address;
 	pte_t *pte;
 
 	for (address = start; address < start + size; address += PAGE_SIZE, phys_addr += PAGE_SIZE) {
 		/* get page table entry */
-		pte = get_pte(address, 1, pgd);
+		pte = get_pte(address, 1, current_task->mm->pgd);
 		if (!pte)
 			return -ENOMEM;
 
