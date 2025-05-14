@@ -190,7 +190,7 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, int pgprot
 	/* remap page directory */
 	do {
 		/* allocate page directory */
-		pmd = (pmd_t *) dir;
+		pmd = pmd_alloc(dir, start);
 		if (!pmd) {
 			ret = -ENOMEM;
 			break;
