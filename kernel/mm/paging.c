@@ -90,10 +90,30 @@ static int pte_free(pte_t *pte)
 }
 
 /*
+ * Forget a page table entry.
+ */
+static void forget_pte(pte_t pte)
+{
+	uint32_t page_nr;
+
+	if (pte_none(pte))
+		return;
+
+	/* get page */
+	page_nr = MAP_NR(pte_page(pte));
+	if (!page_nr || page_nr >= nr_pages)
+		return;
+
+	/* free page */
+	__free_page(&page_array[page_nr]);
+}
+
+/*
  * Remap pages.
  */
 static void remap_pte_range(pte_t *pte, uint32_t start, size_t size, uint32_t phys_addr, int pgprot)
 {
+	pte_t old_page;
 	uint32_t end;
 
 	/* compute end address */
@@ -103,8 +123,15 @@ static void remap_pte_range(pte_t *pte, uint32_t start, size_t size, uint32_t ph
 
 	/* remap page table entries */
 	do {
+		old_page = *pte;
+
 		/* set page table entry */
+		pte_clear(pte);
 		*pte = mk_pte(phys_addr / PAGE_SIZE, pgprot);
+
+		/* forget old entry */
+		if (!pte_none(old_page))
+			forget_pte(old_page);
 
 		start += PAGE_SIZE;
 		phys_addr += PAGE_SIZE;
