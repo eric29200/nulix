@@ -17,6 +17,7 @@ static struct proc_dir_entry base_dir[] = {
 	{ PROC_ROOT_INO,	2,	".." },
 	{ PROC_PID_STAT_INO,	4,	"stat" },
 	{ PROC_PID_STATUS_INO,	6,	"status" },
+	{ PROC_PID_STATM_INO,	5,	"statm" },
 	{ PROC_PID_CMDLINE_INO,	7,	"cmdline" },
 	{ PROC_PID_ENVIRON_INO,	7,	"environ" },
 	{ PROC_PID_FD_INO,	2,	"fd" },
@@ -177,6 +178,127 @@ static int proc_status_read(struct task *task, char *page)
 }
 
 /*
+ * Statistics on pages.
+ */
+static void statm_pte_range(pmd_t *pmd, uint32_t address, size_t size, size_t *pages, size_t *shared, size_t *total)
+{
+	uint32_t end, page_nr;
+	pte_t *pte, page;
+
+	if (pmd_none(*pmd))
+		return;
+
+	/* get first entry */
+	pte = pte_offset(pmd, address);
+
+	/* compute end address */
+	address &= ~PMD_MASK;
+	end = address + size;
+	if (end > PMD_SIZE)
+		end = PMD_SIZE;
+
+	/* for each page table entry */
+	do {
+		page = *pte;
+
+		/* go to next entry */
+		address += PAGE_SIZE;
+		pte++;
+
+		if (pte_none(page))
+			continue;
+
+		/* update total */
+		*total +=1;
+
+		if (!pte_present(page))
+			continue;
+
+		/* virtual page */
+		page_nr = MAP_NR(pte_page(page));
+		if (!page_nr || page_nr >= nr_pages)
+			continue;
+
+		/* update number of present pages */
+		*pages += 1;
+
+		/* update number of shared pages */
+		if (page_array[page_nr].count > 1)
+			*shared += 1;
+	} while (address < end);
+}
+
+/*
+ * Statistics on pages.
+ */
+static void statm_pmd_range(pgd_t *pgd, uint32_t address, size_t size, size_t *pages, size_t *shared, size_t *total)
+{
+	uint32_t end;
+	pmd_t *pmd;
+
+	/* get page table */
+	pmd = pmd_offset(pgd);
+
+	/* compute end address */
+	address &= ~PGDIR_MASK;
+	end = address + size;
+	if (end > PGDIR_SIZE)
+		end = PGDIR_SIZE;
+
+	/* for each page table */
+	do {
+		statm_pte_range(pmd, address, end - address, pages, shared, total);
+		address = (address + PMD_SIZE) & PMD_MASK;
+		pmd++;
+	} while (address < end);
+}
+
+/*
+ * Statistics on pages.
+ */
+static void statm_pgd_range(pgd_t *pgd, uint32_t address, uint32_t end, size_t *pages, size_t *shared, size_t *total)
+{
+	/* for each page directory */
+	while (address < end) {
+		statm_pmd_range(pgd, address, end - address, pages, shared, total);
+		address = (address + PGDIR_SIZE) & PGDIR_MASK;
+		pgd++;
+	}
+}
+
+/*
+ * Read process memory.
+ */
+static int proc_statm_read(struct task *task, char *page)
+{
+	size_t size = 0, resident = 0, share = 0, text = 0;
+	struct list_head *pos;
+	struct vm_area *vma;
+	pgd_t *pgd;
+
+	/* compute virtual memory */
+	list_for_each(pos, &task->mm->vm_list) {
+		vma = list_entry(pos, struct vm_area, list);
+
+		/* stat pages */
+		size_t pages = 0, shared = 0, total = 0;
+		pgd = pgd_offset(current_task->mm->pgd, vma->vm_start);
+		statm_pgd_range(pgd, vma->vm_start, vma->vm_end, &pages, &shared, &total);
+
+		/* update total, resident, shared and dirty pages */
+		size += total;
+		resident += pages;
+		share += shared;
+
+		/* update text, data, stack and library pages */
+		if (vma->vm_flags & VM_EXECUTABLE)
+			text += pages;
+	}
+
+	return sprintf(page, "%d %d %d %d 0 %d 0\n", size, resident, share, text, size - share);
+}
+
+/*
  * Read process command line.
  */
 static int proc_cmdline_read(struct task *task, char *page)
@@ -274,6 +396,9 @@ static int proc_base_read(struct file *filp, char *buf, int count)
 			break;
 		case PROC_PID_STATUS_INO:
 			len = proc_status_read(task, page);
+			break;
+		case PROC_PID_STATM_INO:
+			len = proc_statm_read(task, page);
 			break;
 		case PROC_PID_CMDLINE_INO:
 			len = proc_cmdline_read(task, page);
