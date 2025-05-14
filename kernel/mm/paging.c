@@ -90,61 +90,98 @@ static int pte_free(pte_t *pte)
 }
 
 /*
- * Get or create a page table entry from pgd at virtual address.
+ * Remap pages.
  */
-static pte_t *get_pte(uint32_t address, int make, pgd_t *pgd)
+static void remap_pte_range(pte_t *pte, uint32_t start, size_t size, uint32_t phys_addr, int pgprot)
 {
-	uint32_t page_nr;
-	void *tmp;
-	pmd_t *pmd;
+	uint32_t end;
 
-	/* get page table */
-	pgd = pgd_offset(pgd, address);
-	pmd = pmd_offset(pgd);
-	page_nr = (address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1);
+	/* compute end address */
+	end = start + size;
+	if (end > ((start + PMD_SIZE) & PMD_MASK))
+		end = ((start + PMD_SIZE) & PMD_MASK);
 
-	/* page table already assigned */
-	if (*pmd)
-		return (pte_t *) pmd_page(*pmd) + page_nr;
+	/* remap page table entries */
+	do {
+		/* set page table entry */
+		*pte = mk_pte(phys_addr / PAGE_SIZE, pgprot);
 
-	/* create a new page table */
-	if (make) {
-		/* allocate a new page table */
-		tmp = get_free_page();
-		if (!tmp)
-			return NULL;
+		start += PAGE_SIZE;
+		phys_addr += PAGE_SIZE;
+		pte++;
+	} while (start < end);
+}
 
-		/* memzero page table */
-		memset(tmp, 0, PAGE_SIZE);
+/*
+ * Remap pages.
+ */
+int remap_pmd_range(pmd_t *pmd, uint32_t start, size_t size, uint32_t phys_addr, int pgprot)
+{
+	uint32_t end;
+	pte_t *pte;
 
-		/* set page table */
-		*pmd = (pmd_t) __pa(tmp) | PAGE_TABLE;
+	phys_addr -= start;
+	
+	/* compute end address */
+	end = start + size;
+	if (end > ((start + PGDIR_SIZE) & PGDIR_MASK))
+		end = ((start + PGDIR_SIZE) & PGDIR_MASK);
 
-		return (pte_t *) pmd_page(*pmd) + page_nr;
-	}
+	/* free page table */
+	do {
+		/* allocate page table entries */
+		pte = pte_alloc(pmd, start);
+		if (!pte)
+			return -ENOMEM;
+
+		/* remap */
+		remap_pte_range(pte, start, end - start, phys_addr + start, pgprot);
+
+		start += (start + PMD_SIZE) & PMD_MASK;
+		pmd++;
+	} while (start < end);
 
 	return 0;
 }
 
 /*
- * Remap pages to physical address.
+ * Remap pages.
  */
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, int pgprot)
 {
-	uint32_t address;
-	pte_t *pte;
+	uint32_t end = start + size;
+	int ret = 0;
+	pmd_t *pmd;
+	pgd_t *dir;
 
-	for (address = start; address < start + size; address += PAGE_SIZE, phys_addr += PAGE_SIZE) {
-		/* get page table entry */
-		pte = get_pte(address, 1, current_task->mm->pgd);
-		if (!pte)
-			return -ENOMEM;
+	/* get page directory */
+	dir = pgd_offset(current_task->mm->pgd, start);
 
-		/* set page table entry */
-		*pte = mk_pte(phys_addr / PAGE_SIZE, pgprot);
-	}
+	/* fix physical address */
+	phys_addr -= start;
 
-	return 0;
+	/* remap page directory */
+	do {
+		/* allocate page directory */
+		pmd = (pmd_t *) dir;
+		if (!pmd) {
+			ret = -ENOMEM;
+			break;
+		}
+
+		/* remap */
+		ret = remap_pmd_range((pmd_t *) dir, start, end - start, phys_addr + start, pgprot);
+		if (ret)
+			break;
+
+		start = (start + PGDIR_SIZE) & PGDIR_MASK;
+		dir++;
+	} while (start < end);
+
+	/* flush tlb */
+	flush_tlb(current_task->mm->pgd);
+
+	return ret;
 }
 
 /*
