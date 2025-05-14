@@ -148,7 +148,7 @@ int remap_pmd_range(pmd_t *pmd, uint32_t start, size_t size, uint32_t phys_addr,
 	pte_t *pte;
 
 	phys_addr -= start;
-	
+
 	/* compute end address */
 	end = start + size;
 	if (end > ((start + PGDIR_SIZE) & PGDIR_MASK))
@@ -255,7 +255,7 @@ static size_t zap_pmd_range(pgd_t *dir, uint32_t address, size_t size)
 	size_t freed = 0;
 	uint32_t end;
 	pmd_t *pmd;
-	
+
 	/* get page table */
 	pmd = pmd_offset(dir);
 
@@ -440,7 +440,7 @@ static int handle_pte_fault(struct task *task, struct vm_area *vma, uint32_t add
 	/* write access */
 	if (write_access)
 		return do_wp_page(task, vma, address, pte);
-	
+
 	return 0;
 }
 

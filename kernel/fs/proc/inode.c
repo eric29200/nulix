@@ -88,6 +88,10 @@ int proc_read_inode(struct inode *inode)
 			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
 			inode->i_op = &proc_base_iops;
 			return 0;
+		case PROC_PID_STATUS_INO:
+			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
+			inode->i_op = &proc_base_iops;
+			return 0;
 		case PROC_PID_CMDLINE_INO:
 			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
 			inode->i_op = &proc_base_iops;

@@ -16,6 +16,7 @@ static struct proc_dir_entry base_dir[] = {
 	{ PROC_PID_INO,		1,	"." },
 	{ PROC_ROOT_INO,	2,	".." },
 	{ PROC_PID_STAT_INO,	4,	"stat" },
+	{ PROC_PID_STATUS_INO,	6,	"status" },
 	{ PROC_PID_CMDLINE_INO,	7,	"cmdline" },
 	{ PROC_PID_ENVIRON_INO,	7,	"environ" },
 	{ PROC_PID_FD_INO,	2,	"fd" },
@@ -29,6 +30,16 @@ static char proc_states[] = {
 	'S',				/* sleeping */
 	'T',				/* stopped */
 	'Z',				/* zombie */
+};
+
+/*
+ * Process states.
+ */
+static char *proc_states_desc[] = {
+	"R (running)",			/* running */
+	"S (sleeping)",			/* sleeping */
+	"T (stopped)",			/* stopped */
+	"Z' (zombie)"			/* zombie */
 };
 
 /*
@@ -64,7 +75,105 @@ static int proc_stat_read(struct task *task, char *page)
 				task->tty ? dev_t_to_nr(task->tty->device) : 0,
 				task->utime, task->stime, task->cutime, task->cstime,
 				task->start_time,
-				vsize, task->mm->rss);
+				vsize, task->mm->rss
+			);
+}
+
+/*
+ * Get task name.
+ */
+static char *task_name(struct task *task, char *buf)
+{
+	return buf + sprintf(buf, 	"Name:\t%s\n", task->name);
+}
+
+/*
+ * Get task state.
+ */
+static char *task_state(struct task *task, char *buf)
+{
+	return buf + sprintf(buf, 	"State:\t%s\n"
+					"Tgid:\t0\n"
+					"Ngid:\t0\n"
+					"Pid:\t%d\n"
+					"PPid:\t%d\n"
+					"TracerPid:\t0\n"
+					"Uid:\t%d\t%d\t%d\t%d\n"
+					"Gid:\t%d\t%d\t%d\t%d\n"
+					"FDSize:\t0\n"
+					"Groups:\t0\n",
+					proc_states_desc[task->state - 1],
+					task->pid,
+					task->parent ? task->parent->pid : task->pid,
+					task->uid, task->euid, task->suid, task->suid,
+					task->gid, task->egid, task->sgid, task->sgid
+				);
+}
+
+/*
+ * Get task memory.
+ */
+static char *task_mem(struct task *task, char *buf)
+{
+	size_t len, vsize = 0, data = 0, stack = 0, exec = 0, lib = 0;
+	struct list_head *pos;
+	struct vm_area *vma;
+
+	/* compute virtual memory */
+	list_for_each(pos, &task->mm->vm_list) {
+		vma = list_entry(pos, struct vm_area, list);
+		len = (vma->vm_end - vma->vm_start) >> 10;
+
+		/* update virtual size */
+		vsize += len;
+
+		/* update data/stack size */
+		if (!vma->vm_inode) {
+			if (vma->vm_flags & VM_GROWSDOWN)
+				stack += len;
+			else
+				data += len;
+
+			continue;
+		}
+
+		/* update exec/lib size */
+		if (!(vma->vm_flags & VM_WRITE) && vma->vm_flags & VM_EXEC) {
+			if (vma->vm_flags & VM_EXECUTABLE)
+				exec += len;
+			else
+				lib += len;
+		}
+	}
+
+	return buf + sprintf(buf, 	"VmSize:\t%d kB\n"
+					"VmLck:\t0 kB\n"
+					"VmRSS:\t%d kB\n"
+					"VmData:\t%d kB\n"
+					"VmStk:\t%d kB\n"
+					"VmExe:\t%d kB\n"
+					"VmLib:\t%d kB\n",
+					vsize,
+					task->mm->rss << (PAGE_SHIFT - 10),
+					data,
+					stack,
+					exec,
+					lib
+				);
+}
+
+/*
+ * Read process status.
+ */
+static int proc_status_read(struct task *task, char *page)
+{
+	char *ori = page;
+
+	page = task_name(task, page);
+	page = task_state(task, page);
+	page = task_mem(task, page);
+
+	return page - ori;
 }
 
 /*
@@ -162,6 +271,9 @@ static int proc_base_read(struct file *filp, char *buf, int count)
 	switch (ino) {
 		case PROC_PID_STAT_INO:
 			len = proc_stat_read(task, page);
+			break;
+		case PROC_PID_STATUS_INO:
+			len = proc_status_read(task, page);
 			break;
 		case PROC_PID_CMDLINE_INO:
 			len = proc_cmdline_read(task, page);

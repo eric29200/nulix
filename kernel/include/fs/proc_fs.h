@@ -16,11 +16,12 @@
 #define PROC_LOADAVG_INO	8
 #define PROC_PID_INO		9
 #define PROC_PID_STAT_INO	10
-#define PROC_PID_CMDLINE_INO	11
-#define PROC_PID_ENVIRON_INO	12
-#define PROC_PID_FD_INO		13
-#define PROC_NET_INO		14
-#define PROC_NET_DEV_INO	15
+#define PROC_PID_STATUS_INO	11
+#define PROC_PID_CMDLINE_INO	12
+#define PROC_PID_ENVIRON_INO	13
+#define PROC_PID_FD_INO		14
+#define PROC_NET_INO		15
+#define PROC_NET_DEV_INO	16
 
 /*
  * Procfs dir entry.
