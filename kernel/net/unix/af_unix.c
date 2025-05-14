@@ -648,7 +648,7 @@ static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
 	UNUSED(sock);
 	UNUSED(arg);
 
-	printf("UNIX socket : unknown ioctl cmd %x\n", cmd);
+	printf("UNIX socket : unknown ioctl cmd 0x%x\n", cmd);
 
 	return -EINVAL;
 }

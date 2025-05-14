@@ -481,7 +481,7 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 		case SIOCADDRT:
 			return ip_route_new((struct rtentry *) arg);
 		default:
-			printf("INET socket : unknown ioctl cmd %x\n", cmd);
+			printf("INET socket : unknown ioctl cmd 0x%x\n", cmd);
 			return -EINVAL;
 	}
 }

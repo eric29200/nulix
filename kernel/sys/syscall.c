@@ -172,7 +172,7 @@ static void syscall_handler(struct registers *regs)
 
 	/* system call not handled */
 	if (syscall_nr >= SYSCALLS_NUM || syscalls[syscall_nr] == NULL) {
-		printf("Unknown system call : %d (process %d @ %x)\n", syscall_nr, current_task->pid, regs->eip);
+		printf("Unknown system call : %d (process %d @ 0x%x)\n", syscall_nr, current_task->pid, regs->eip);
 		return;
 	}
 

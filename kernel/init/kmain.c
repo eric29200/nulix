@@ -71,7 +71,7 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 				printf("Boot loader name = %s\n", ((struct multiboot_tag_string *) tag)->string);
 				break;
 			case MULTIBOOT_TAG_TYPE_MODULE:
-				printf("Module at %x-%x. Command line %s\n",
+				printf("Module at 0x%x-0x%x. Command line %s\n",
 				       ((struct multiboot_tag_module *) tag)->mod_start,
 				       ((struct multiboot_tag_module *) tag)->mod_end,
 				       ((struct multiboot_tag_module *) tag)->cmdline);
@@ -186,7 +186,7 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 		return ret;
 
 	/* print grub informations */
-	printf("[Kernel] Loading at linear address = %x\n", loader);
+	printf("[Kernel] Loading at linear address = 0x%x\n", loader);
 
 	/* init gdt */
 	printf("[Kernel] Global Descriptor Table Init\n");

@@ -57,7 +57,7 @@ static int check_msdos_partition(struct gendisk *hd, dev_t dev)
 
 		/* add partition to disk */
 		if (add_partition(hd, i, partition->start_sect, partition->nr_sects))
-			printf("[Kernel] Can't register partition %d of disk %x", i, hd->dev);
+			printf("[Kernel] Can't register partition %d of disk 0x%x", i, hd->dev);
 	}
 
 	brelse(bh);

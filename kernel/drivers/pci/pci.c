@@ -73,7 +73,7 @@ static void pci_scan_bus(uint8_t bus)
 			bar0 = pci_read_field(address, PCI_BAR0);
 
 			if (nb_pci_devices >= NR_PCI_DEVICES) {
-				printf("PCI device (vendor id = %x, device id = %x) cannot be registered : too many devices\n", vendor_id, device_id);
+				printf("PCI device (vendor id = 0x%x, device id = 0x%x) cannot be registered : too many devices\n", vendor_id, device_id);
 				continue;
 			}
 
@@ -84,7 +84,7 @@ static void pci_scan_bus(uint8_t bus)
 			pci_devices[nb_pci_devices].bar0 = bar0;
 			nb_pci_devices++;
 
-			printf("PCI device (vendor id = %x, device id = %x, BAR = %x) registered\n", vendor_id, device_id, bar0);
+			printf("PCI device (vendor id = 0x%x, device id = 0x%x, BAR = 0x%x) registered\n", vendor_id, device_id, bar0);
 		}
 	}
 }

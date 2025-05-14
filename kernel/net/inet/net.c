@@ -253,7 +253,7 @@ int net_device_ioctl(int cmd, struct ifreq *ifr)
 			ifr->ifr_ifru.ifru_hwaddr.sa_family = net_dev->type;
 			break;
 		default:
-			printf("INET socket : unknown ioctl cmd %x\n", cmd);
+			printf("INET socket : unknown ioctl cmd 0x%x\n", cmd);
 			return -EINVAL;
 	}
 

@@ -71,7 +71,7 @@ void isr_handler(struct registers *regs)
 	if (interrupt_handlers[regs->int_no] != 0) {
 		interrupt_handlers[regs->int_no](regs);
 	} else {
-		printf("[Interrupt] code=%d, message=%s (process %d @ %x)\n",
+		printf("[Interrupt] code=%d, message=%s (process %d @ 0x%x)\n",
 		       regs->int_no,
 		       regs->int_no < 20 ? exception_messages[regs->int_no]: "",
 		       current_task->pid,

@@ -72,11 +72,6 @@ static int __print_num_signed(void (*putch)(char), int64_t num, struct printf_sp
 	if (is_negative)
 		buf[i++] = '-';
 
-	if (spec->base == 16) {
-		buf[i++] = 'x';
-		buf[i++] = '0';
-	}
-
 	ret = i;
 	while (i > 0)
 		putch(buf[--i]);
@@ -99,11 +94,6 @@ static int __print_num_unsigned(void (*putch)(char), uint64_t num, struct printf
 		buf[i++] = digits[n % spec->base];
 		n /= spec->base;
 	} while (n > 0);
-
-	if (spec->base == 16) {
-		buf[i++] = 'x';
-		buf[i++] = '0';
-	}
 
 	ret = i;
 	while (i > 0)

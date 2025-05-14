@@ -477,7 +477,7 @@ int tty_ioctl(struct file *filp, int request, unsigned long arg)
 					return ret;
 			}
 
-			printf("Unknown ioctl request (%x) on device %x\n", request, (int) filp->f_inode->i_rdev);
+			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) filp->f_inode->i_rdev);
 			break;
 	}
 
