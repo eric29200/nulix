@@ -1,5 +1,7 @@
 #include <fs/tmp_fs.h>
+#include <mm/highmem.h>
 #include <fcntl.h>
+#include <stdio.h>
 
 /*
  * Read a file.
@@ -117,7 +119,7 @@ int tmpfs_readpage(struct inode *inode, struct page *page)
 		}
 
 		/* copy data */
-		memcpy((void *) PAGE_ADDRESS(page), (void *) PAGE_ADDRESS(inode_page), PAGE_SIZE);
+		copy_user_highpage(page, inode_page);
 		break;
 	}
 
