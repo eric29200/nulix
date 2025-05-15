@@ -4,6 +4,7 @@
 #include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
+#include <stdio.h>
 
 /*
  * Handle a page fault = read page from file.

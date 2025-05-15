@@ -5,6 +5,7 @@
 #include <sys/syscall.h>
 #include <fcntl.h>
 #include <stderr.h>
+#include <stdio.h>
 #include <string.h>
 
 #define ELF_MIN_ALIGN		PAGE_SIZE

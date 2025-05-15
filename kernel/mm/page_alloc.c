@@ -1,4 +1,5 @@
 #include <fs/fs.h>
+#include <mm/highmem.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -384,6 +385,12 @@ int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end)
 	/* init zones */
 	__init_zone(GFP_KERNEL);
 	__init_zone(GFP_HIGHUSER);
+
+	/* set first high mem page */
+	if (nr_pages > __pa(KPAGE_END) / PAGE_SIZE)
+		highmem_start_page = &page_array[__pa(KPAGE_END) / PAGE_SIZE];
+	else
+		highmem_start_page = &page_array[nr_pages];
 
 	return 0;
 }
