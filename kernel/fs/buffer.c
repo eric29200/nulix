@@ -3,6 +3,7 @@
 #include <proc/timer.h>
 #include <drivers/block/ata.h>
 #include <mm/mm.h>
+#include <mm/highmem.h>
 #include <string.h>
 #include <stderr.h>
 #include <stdio.h>
@@ -487,17 +488,21 @@ int generic_readpage(struct inode *inode, struct page *page)
 	struct super_block *sb = inode->i_sb;
 	struct buffer_head *bh, *next, *tmp;
 	uint32_t block, address;
-	int nr, i;
+	int nr, i, ret = 0;
 
 	/* compute blocks to read */
 	nr = PAGE_SIZE >> sb->s_blocksize_bits;
 	block = page->offset >> sb->s_blocksize_bits;
-	address = PAGE_ADDRESS(page);
+
+	/* map page in kernel space */
+	address = (uint32_t) kmap(page);
 
 	/* create temporary buffers */
 	bh = create_buffers((void *) address, sb->s_blocksize);
-	if (!bh)
-		return -ENOMEM;
+	if (!bh) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	/* read block by block */
 	for (i = 0, next = bh; i < nr; i++, block++) {
@@ -530,7 +535,9 @@ int generic_readpage(struct inode *inode, struct page *page)
 		next = tmp;
 	}
 
-	return 0;
+out:
+	kunmap(page);
+	return ret;
 }
 
 /*

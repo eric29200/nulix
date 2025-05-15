@@ -102,7 +102,7 @@ static inline pte_t pte_mkold(pte_t pte)
 #define PAGE_ADDRESS(p)			(PAGE_OFFSET + (p)->page_nr * PAGE_SIZE)
 
 #define GFP_KERNEL			0
-#define GFP_USER			1
+#define GFP_HIGHUSER			1
 #define NR_ZONES			2
 
 /* page allocation */
@@ -129,6 +129,7 @@ struct page {
 	struct inode *		inode;					/* inode */
 	off_t			offset;					/* offset in inode */
 	struct buffer_head *	buffers;				/* buffers of this page */
+	uint32_t		virtual;				/* virtual address (used to map high pages in kernel space) */
 	void *			private;				/* used for page allocation */
 	struct list_head	list;					/* next page */
 	struct page *		next_hash;				/* next page in hash table */

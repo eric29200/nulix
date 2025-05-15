@@ -27,7 +27,7 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 		return page;
 
 	/* get a new page */
-	page = __get_free_page(GFP_KERNEL);
+	page = __get_free_page(GFP_HIGHUSER);
 	if (!page)
 		return NULL;
 

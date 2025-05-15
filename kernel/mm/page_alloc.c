@@ -327,7 +327,7 @@ static void __init_zone(int priority)
 	if (priority == GFP_KERNEL) {
 		start = 0;
 		end = __pa(KPAGE_END);
-	} else if (priority == GFP_USER) {
+	} else if (priority == GFP_HIGHUSER) {
 		start = __pa(KPAGE_END);
 		end = nr_pages * PAGE_SIZE;
 	}
@@ -383,7 +383,7 @@ int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end)
 
 	/* init zones */
 	__init_zone(GFP_KERNEL);
-	__init_zone(GFP_USER);
+	__init_zone(GFP_HIGHUSER);
 
 	return 0;
 }

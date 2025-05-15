@@ -1,6 +1,7 @@
 #include <mm/mm.h>
 #include <proc/sched.h>
 #include <mm/paging.h>
+#include <mm/highmem.h>
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,9 +13,6 @@ struct page *page_array;
 
 /* page directories */
 pgd_t *pgd_kernel = NULL;
-
-/* copy phsyical page (defined in x86/paging.s) */
-extern void copy_page_physical(uint32_t src, uint32_t dst);
 
 /*
  * Flush a Translation Lookaside Buffer entry.
@@ -302,22 +300,22 @@ size_t zap_page_range(pgd_t *pgd, uint32_t address, uint32_t size)
 /*
  * Anonymous page mapping.
  */
-static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte, void *address, int write_access)
+static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte, int write_access)
 {
 	struct page *page;
 
 	/* try to get a page */
-	page = __get_free_page(GFP_USER);
+	page = __get_free_page(GFP_HIGHUSER);
 	if (!page)
 		return -ENOMEM;
+
+	/* clear page */
+	clear_user_highpage(page);
 
 	/* make page table entry */
 	*pte = mk_pte(page->page_nr, vma->vm_page_prot);
 	if (write_access)
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
-
-	/* memzero page */
-	memset(address, 0, PAGE_SIZE);
 
 	/* update memory size */
 	task->mm->rss++;
@@ -337,7 +335,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 
 	/* anonymous page mapping */
 	if (!vma->vm_ops || !vma->vm_ops->nopage)
-		return do_anonymous_page(task, vma, pte, (void *) address, write_access);
+		return do_anonymous_page(task, vma, pte, write_access);
 
 	/* specific mapping */
 	new_page = vma->vm_ops->nopage(vma, address);
@@ -347,14 +345,14 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	/* no share : copy to new page and keep old page in offset */
 	if (write_access && !(vma->vm_flags & VM_SHARED)) {
 		/* get a new page */
-		page = __get_free_page(GFP_USER);
+		page = __get_free_page(GFP_HIGHUSER);
 		if (!page) {
 			__free_page(new_page);
 			return -ENOMEM;
 		}
 
-		/* copy physical page */
-		copy_page_physical(new_page->page_nr * PAGE_SIZE, page->page_nr * PAGE_SIZE);
+		/* copy page */
+		copy_user_highpage(page, new_page);
 
 		/* release cache page */
 		__free_page(new_page);
@@ -390,12 +388,12 @@ static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	}
 
 	/* get a new page */
-	new_page = __get_free_page(GFP_USER);
+	new_page = __get_free_page(GFP_HIGHUSER);
 	if (!new_page)
 		return -ENOMEM;
 
-	/* copy physical page */
-	copy_page_physical(old_page->page_nr * PAGE_SIZE, new_page->page_nr * PAGE_SIZE);
+	/* copy page */
+	copy_user_highpage(new_page, old_page);
 
 	/* set pte */
 	*pte = pte_mkdirty(pte_mkwrite(mk_pte(new_page->page_nr, vma->vm_page_prot)));
@@ -709,6 +707,7 @@ void free_pgd(pgd_t *pgd)
 int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end)
 {
 	uint32_t addr, i;
+	pgd_t *pgd;
 	pmd_t *pmd;
 	pte_t *pte;
 	int ret;
@@ -761,6 +760,14 @@ int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end)
 		/* go to next page table */
 		pmd++;
 	}
+
+	/* allocate pkmap page table entries */
+	addr = PKMAP_BASE;
+	pgd = pgd_offset(pgd_kernel, addr);
+	pmd = pmd_offset(pgd);
+	*pmd = (pmd_t) kernel_end | PAGE_TABLE;
+	kernel_end += PAGE_SIZE;
+	pkmap_page_table = pte_offset(pmd, addr);
 
 	/* register page fault handler */
 	register_interrupt_handler(14, page_fault_handler);
