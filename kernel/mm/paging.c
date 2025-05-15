@@ -125,7 +125,7 @@ static void remap_pte_range(pte_t *pte, uint32_t start, size_t size, uint32_t ph
 
 		/* set page table entry */
 		pte_clear(pte);
-		*pte = mk_pte(phys_addr / PAGE_SIZE, pgprot);
+		*pte = mk_pte_phys(phys_addr, pgprot);
 
 		/* forget old entry */
 		if (!pte_none(old_page))
@@ -313,7 +313,7 @@ static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte,
 	clear_user_highpage(page);
 
 	/* make page table entry */
-	*pte = mk_pte(page->page_nr, vma->vm_page_prot);
+	*pte = mk_pte(page, vma->vm_page_prot);
 	if (write_access)
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
@@ -360,7 +360,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	}
 
 	/* make page table entry */
-	*pte = mk_pte(new_page->page_nr, vma->vm_page_prot);
+	*pte = mk_pte(new_page, vma->vm_page_prot);
 	if (write_access)
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
@@ -396,7 +396,7 @@ static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	copy_user_highpage(new_page, old_page);
 
 	/* set pte */
-	*pte = pte_mkdirty(pte_mkwrite(mk_pte(new_page->page_nr, vma->vm_page_prot)));
+	*pte = pte_mkdirty(pte_mkwrite(mk_pte(new_page, vma->vm_page_prot)));
 	flush_tlb_page(task->mm->pgd, address);
 
 	/* free old page */
@@ -730,7 +730,7 @@ int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end)
 		/* set page table entries */
 		for (i = 0; i < PTRS_PER_PTE; i++) {
 			pte = (pte_t *) (*pmd & PAGE_MASK) + i;
-			*pte = mk_pte(addr / PAGE_SIZE, PAGE_READONLY);
+			*pte = mk_pte_phys(addr, PAGE_READONLY);
 			addr += PAGE_SIZE;
 		}
 
@@ -750,7 +750,7 @@ int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end)
 			pte = (pte_t *) (*pmd & PAGE_MASK) + i;
 
 			if (addr < mem_end && addr < __pa(KPAGE_END))
-				*pte = mk_pte(addr / PAGE_SIZE, PAGE_KERNEL);
+				*pte = mk_pte_phys(addr, PAGE_KERNEL);
 			else
 				*pte = 0;
 

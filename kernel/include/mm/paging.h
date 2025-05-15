@@ -62,7 +62,9 @@ typedef uint32_t pte_t;
 #define __S110				PAGE_SHARED
 #define __S111				PAGE_SHARED
 
-#define mk_pte(page, prot)		(((page) << PAGE_SHIFT) | (prot))
+#define __mk_pte(page_nr, prot)		(((page_nr) << PAGE_SHIFT) | (prot))
+#define mk_pte(page, prot)		__mk_pte((page) - page_array, (prot))
+#define mk_pte_phys(phys, prot)		__mk_pte((phys) >> PAGE_SHIFT, prot)
 #define pmd_none(pmd)			(!(pmd))
 #define pte_page(pte)			((uint32_t) __va((pte) & PAGE_MASK))
 #define pte_prot(pte)			((pte) & (PAGE_SIZE - 1))

@@ -69,7 +69,7 @@ static uint32_t map_new_virtual(struct page *page)
 
 	/* set pte */
 	vaddr = PKMAP_ADDR(last_pkmap_nr);
-	pkmap_page_table[last_pkmap_nr] = mk_pte(page->page_nr, PAGE_KERNEL);
+	pkmap_page_table[last_pkmap_nr] = mk_pte(page, PAGE_KERNEL);
 	page->virtual = vaddr;
 	pkmap_count[last_pkmap_nr] = 1;
 
