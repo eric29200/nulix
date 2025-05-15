@@ -72,18 +72,18 @@ out:
  */
 static int pte_free(pte_t *pte)
 {
-	uint32_t page_nr;
+	struct page *page;
 
-	if (!pte_present(*pte))
+	if (pte_none(*pte) || !pte_present(*pte))
 		return 0;
 
 	/* get page */
-	page_nr = MAP_NR(pte_page(*pte));
-	if (!page_nr || page_nr >= nr_pages)
+	page = pte_page(*pte);
+	if (!VALID_PAGE(page))
 		return 0;
 
 	/* free page */
-	__free_page(&page_array[page_nr]);
+	__free_page(page);
 	return 1;
 }
 
@@ -92,18 +92,18 @@ static int pte_free(pte_t *pte)
  */
 static void forget_pte(pte_t pte)
 {
-	uint32_t page_nr;
+	struct page *page;
 
 	if (pte_none(pte))
 		return;
 
 	/* get page */
-	page_nr = MAP_NR(pte_page(pte));
-	if (!page_nr || page_nr >= nr_pages)
+	page = pte_page(pte);
+	if (!VALID_PAGE(page))
 		return;
 
 	/* free page */
-	__free_page(&page_array[page_nr]);
+	__free_page(page);
 }
 
 /*
@@ -378,7 +378,7 @@ static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	struct page *old_page, *new_page;
 
 	/* get page */
-	old_page = &page_array[MAP_NR(pte_page(*pte))];
+	old_page = pte_page(*pte);
 
 	/* only one user make page table entry writable */
 	if (old_page->count == 1) {
@@ -571,7 +571,7 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 	uint32_t address = vma->vm_start, end = vma->vm_end;
 	pte_t *pte_src, *pte_dst, pte;
 	pmd_t *pmd_src, *pmd_dst;
-	uint32_t page_nr;
+	struct page *page;
 	int cow;
 
 	/* copy on write ? */
@@ -612,8 +612,8 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 					goto next_pte;
 
 				/* virtual page */
-				page_nr = MAP_NR(pte_page(pte));
-				if (page_nr >= nr_pages) {
+				page = pte_page(pte);
+				if (!VALID_PAGE(page)) {
 					*pte_dst = pte;
 					goto next_pte;
 				}
@@ -632,7 +632,7 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 				*pte_dst = pte_mkold(pte);
 
 				/* update page reference count */
-				page_array[page_nr].count++;
+				page->count++;
 next_pte:
 				/* go to next page table entry */
 				address += PAGE_SIZE;
@@ -659,7 +659,7 @@ nomem:
  */
 static void free_pmd(pmd_t *pmd)
 {
-	uint32_t page_nr;
+	struct page *page;
 	pte_t *ptes;
 	int i;
 
@@ -668,9 +668,12 @@ static void free_pmd(pmd_t *pmd)
 
 	/* free pages */
 	for (i = 0; i < PTRS_PER_PTE; i++) {
-		page_nr = MAP_NR(pte_page(ptes[i]));
-		if (page_nr && page_nr < nr_pages)
-			__free_page(&page_array[page_nr]);
+		if (pte_none(ptes[i]))
+			continue;
+
+		page = pte_page(ptes[i]);
+		if (VALID_PAGE(page))
+			__free_page(page);
 	}
 
 	/* free page table */

@@ -182,14 +182,15 @@ static int proc_status_read(struct task *task, char *page)
  */
 static void statm_pte_range(pmd_t *pmd, uint32_t address, size_t size, size_t *pages, size_t *shared, size_t *total)
 {
-	uint32_t end, page_nr;
-	pte_t *pte, page;
+	struct page *page;
+	pte_t *ptep, pte;
+	uint32_t end;
 
 	if (pmd_none(*pmd))
 		return;
 
 	/* get first entry */
-	pte = pte_offset(pmd, address);
+	ptep = pte_offset(pmd, address);
 
 	/* compute end address */
 	address &= ~PMD_MASK;
@@ -199,31 +200,31 @@ static void statm_pte_range(pmd_t *pmd, uint32_t address, size_t size, size_t *p
 
 	/* for each page table entry */
 	do {
-		page = *pte;
+		pte = *ptep;
 
 		/* go to next entry */
 		address += PAGE_SIZE;
-		pte++;
+		ptep++;
 
-		if (pte_none(page))
+		if (pte_none(pte))
 			continue;
 
 		/* update total */
 		*total +=1;
 
-		if (!pte_present(page))
+		if (!pte_present(pte))
 			continue;
 
 		/* virtual page */
-		page_nr = MAP_NR(pte_page(page));
-		if (!page_nr || page_nr >= nr_pages)
+		page = pte_page(pte);
+		if (!VALID_PAGE(page))
 			continue;
 
 		/* update number of present pages */
 		*pages += 1;
 
 		/* update number of shared pages */
-		if (page_array[page_nr].count > 1)
+		if (page->count > 1)
 			*shared += 1;
 	} while (address < end);
 }

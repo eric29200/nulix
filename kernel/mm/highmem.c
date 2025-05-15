@@ -13,7 +13,7 @@ pte_t *pkmap_page_table;
  */
 static void flush_all_zero_pkmaps()
 {
-	uint32_t page_nr;
+	struct page *page;
 	int i;
 
 	for (i = 0; i < LAST_PKMAP; i++) {
@@ -24,14 +24,18 @@ static void flush_all_zero_pkmaps()
 		/* free entry */
 		pkmap_count[i] = 0;
 
+		/* no entry */
+		if (pte_none(pkmap_page_table[i]))
+			continue;
+
 		/* get page */
-		page_nr = MAP_NR(pte_page(pkmap_page_table[i]));
-		if (!page_nr || page_nr >= nr_pages)
+		page = pte_page(pkmap_page_table[i]);
+		if (!VALID_PAGE(page))
 			continue;
 
 		/* clear entry */
 		pte_clear(&pkmap_page_table[i]);
-		page_array[page_nr].virtual = 0;
+		page->virtual = 0;
 	}
 
 	/* flush tlb */

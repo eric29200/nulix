@@ -62,11 +62,21 @@ typedef uint32_t pte_t;
 #define __S110				PAGE_SHARED
 #define __S111				PAGE_SHARED
 
+#define GFP_KERNEL			0
+#define GFP_HIGHUSER			1
+#define NR_ZONES			2
+
+#define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
+#define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
+#define MAP_NR(addr)			(__pa(addr) >> PAGE_SHIFT)
+#define PAGE_ADDRESS(page)		(PAGE_OFFSET + (page)->page_nr * PAGE_SIZE)
+#define VALID_PAGE(page)		((uint32_t) (page - page_array) < nr_pages)
+
 #define __mk_pte(page_nr, prot)		(((page_nr) << PAGE_SHIFT) | (prot))
 #define mk_pte(page, prot)		__mk_pte((page) - page_array, (prot))
 #define mk_pte_phys(phys, prot)		__mk_pte((phys) >> PAGE_SHIFT, prot)
 #define pmd_none(pmd)			(!(pmd))
-#define pte_page(pte)			((uint32_t) __va((pte) & PAGE_MASK))
+#define pte_page(pte)			(page_array + ((uint32_t)(((pte) >> PAGE_SHIFT))))
 #define pte_prot(pte)			((pte) & (PAGE_SIZE - 1))
 #define pte_clear(pte)			(*(pte) = 0)
 #define pte_none(pte)			(!(pte))
@@ -97,15 +107,6 @@ static inline pte_t pte_mkold(pte_t pte)
 {
 	pte &= ~PAGE_ACCESSED; return pte;
 }
-
-#define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
-#define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
-#define MAP_NR(addr)			(__pa(addr) >> PAGE_SHIFT)
-#define PAGE_ADDRESS(p)			(PAGE_OFFSET + (p)->page_nr * PAGE_SIZE)
-
-#define GFP_KERNEL			0
-#define GFP_HIGHUSER			1
-#define NR_ZONES			2
 
 /* page allocation */
 #define __get_free_page(priority)	__get_free_pages(priority, 0)
