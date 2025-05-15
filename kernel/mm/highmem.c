@@ -35,7 +35,7 @@ static void flush_all_zero_pkmaps()
 
 		/* clear entry */
 		pte_clear(&pkmap_page_table[i]);
-		page->virtual = 0;
+		page->virtual = NULL;
 	}
 
 	/* flush tlb */
@@ -74,7 +74,7 @@ static uint32_t map_new_virtual(struct page *page)
 	/* set pte */
 	vaddr = PKMAP_ADDR(last_pkmap_nr);
 	pkmap_page_table[last_pkmap_nr] = mk_pte(page, PAGE_KERNEL);
-	page->virtual = vaddr;
+	page->virtual = (void *) vaddr;
 	pkmap_count[last_pkmap_nr] = 1;
 
 	/* flush TLB */
@@ -110,7 +110,6 @@ out:
 static void kunmap_high(struct page *page)
 {
 	uint32_t vaddr;
-	uint32_t nr;
 
 	/* page not mapped */
 	vaddr = (uint32_t) page->virtual;
@@ -118,8 +117,7 @@ static void kunmap_high(struct page *page)
 		return;
 
 	/* decrement reference count */
-	nr = PKMAP_NR(vaddr);
-	pkmap_count[nr]--;
+	pkmap_count[PKMAP_NR(vaddr)]--;
 }
 
 /*
@@ -128,7 +126,7 @@ static void kunmap_high(struct page *page)
 void *kmap(struct page *page)
 {
 	if (page < highmem_start_page)
-		return (void *) PAGE_ADDRESS(page);
+		return page_address(page);
 
 	return kmap_high(page);
 }

@@ -185,7 +185,7 @@ void *get_free_pages(uint32_t order)
 		return NULL;
 
 	/* make virtual address */
-	return __va(page->page_nr * PAGE_SIZE);
+	return page_address(page);
 }
 
 /*
@@ -335,18 +335,20 @@ static void __init_zone(int priority)
 
 	/* for each page */
 	for (addr = start, i = start / PAGE_SIZE; i < nr_pages && addr < end; i++, addr += PAGE_SIZE) {
-		/* set page */
-		page_array[i].page_nr = i;
-		page_array[i].count = 0;
+		/* set priority */
 		page_array[i].priority = priority;
+
+		/* set virtual address for kernel pages */
+		if (priority == GFP_KERNEL)
+			page_array[i].virtual = (void *) __va(addr);
 
 		/* page not available */
 		if (!bios_map_address_available(addr)) {
 			page_array[i].count = 1;
 
 			if (first_free_page) {
-				__add_to_free_pages(first_free_page, priority, i - first_free_page->page_nr);
-				totalram_pages += i - first_free_page->page_nr;
+				__add_to_free_pages(first_free_page, priority, &page_array[i] - first_free_page);
+				totalram_pages += &page_array[i] - first_free_page;
 			}
 
 			first_free_page = NULL;
@@ -360,8 +362,8 @@ static void __init_zone(int priority)
 
 	/* add last free pages */
 	if (first_free_page) {
-		__add_to_free_pages(first_free_page, priority, i - first_free_page->page_nr);
-		totalram_pages += i - first_free_page->page_nr;
+		__add_to_free_pages(first_free_page, priority, &page_array[i] - first_free_page);
+		totalram_pages += &page_array[i] - first_free_page;
 	}
 }
 

@@ -68,8 +68,8 @@ typedef uint32_t pte_t;
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
+#define page_address(page)		((page)->virtual)
 #define MAP_NR(addr)			(__pa(addr) >> PAGE_SHIFT)
-#define PAGE_ADDRESS(page)		(PAGE_OFFSET + (page)->page_nr * PAGE_SIZE)
 #define VALID_PAGE(page)		((uint32_t) (page - page_array) < nr_pages)
 
 #define __mk_pte(page_nr, prot)		(((page_nr) << PAGE_SHIFT) | (prot))
@@ -126,13 +126,12 @@ extern uint32_t page_cache_size;
  * Page structure.
  */
 struct page {
-	uint32_t		page_nr;				/* page number */
 	int 			count;					/* reference count */
 	uint8_t			priority;				/* priority : GFP_KERNEL or GFP_USER */
 	struct inode *		inode;					/* inode */
 	off_t			offset;					/* offset in inode */
 	struct buffer_head *	buffers;				/* buffers of this page */
-	uint32_t		virtual;				/* virtual address (used to map high pages in kernel space) */
+	void *			virtual;				/* virtual address (used to map high pages in kernel space) */
 	void *			private;				/* used for page allocation */
 	struct list_head	list;					/* next page */
 	struct page *		next_hash;				/* next page in hash table */
