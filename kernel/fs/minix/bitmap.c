@@ -12,12 +12,12 @@
 /*
  * Count number of free bits in a bitmap.
  */
-static uint32_t minix_count_free_bitmap(struct buffer_head **maps, int nb_maps)
+static uint32_t minix_count_free_bitmap(struct buffer_head **maps, int nr_maps)
 {
 	uint32_t *bits, res = 0;
 	register int i, j, k;
 
-	for (i = 0; i < nb_maps; i++) {
+	for (i = 0; i < nr_maps; i++) {
 		bits = (uint32_t *) maps[i]->b_data;
 
 		for (j = 0; j < (int) (maps[i]->b_size / 4); j++)

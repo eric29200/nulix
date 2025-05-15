@@ -7,7 +7,7 @@
  */
 int ext2_file_read(struct file *filp, char *buf, int count)
 {
-	size_t pos, nb_chars, left;
+	size_t pos, nr_chars, left;
 	struct buffer_head *bh;
 
 	/* adjust size */
@@ -27,18 +27,18 @@ int ext2_file_read(struct file *filp, char *buf, int count)
 
 		/* find position and numbers of chars to read */
 		pos = filp->f_pos % filp->f_inode->i_sb->s_blocksize;
-		nb_chars = filp->f_inode->i_sb->s_blocksize - pos <= left ? filp->f_inode->i_sb->s_blocksize - pos : left;
+		nr_chars = filp->f_inode->i_sb->s_blocksize - pos <= left ? filp->f_inode->i_sb->s_blocksize - pos : left;
 
 		/* copy to buffer */
-		memcpy(buf, bh->b_data + pos, nb_chars);
+		memcpy(buf, bh->b_data + pos, nr_chars);
 
 		/* release block */
 		brelse(bh);
 
 		/* update sizes */
-		filp->f_pos += nb_chars;
-		buf += nb_chars;
-		left -= nb_chars;
+		filp->f_pos += nr_chars;
+		buf += nr_chars;
+		left -= nr_chars;
 	}
 
 out:
@@ -52,7 +52,7 @@ out:
  */
 int ext2_file_write(struct file *filp, const char *buf, int count)
 {
-	size_t pos, nb_chars, left;
+	size_t pos, nr_chars, left;
 	struct buffer_head *bh;
 
 	/* handle append flag */
@@ -68,19 +68,19 @@ int ext2_file_write(struct file *filp, const char *buf, int count)
 
 		/* find position and numbers of chars to read */
 		pos = filp->f_pos % filp->f_inode->i_sb->s_blocksize;
-		nb_chars = filp->f_inode->i_sb->s_blocksize - pos <= left ? filp->f_inode->i_sb->s_blocksize - pos : left;
+		nr_chars = filp->f_inode->i_sb->s_blocksize - pos <= left ? filp->f_inode->i_sb->s_blocksize - pos : left;
 
 		/* copy to buffer */
-		memcpy(bh->b_data + pos, buf, nb_chars);
+		memcpy(bh->b_data + pos, buf, nr_chars);
 
 		/* release block */
 		bh->b_dirt = 1;
 		brelse(bh);
 
 		/* update sizes */
-		filp->f_pos += nb_chars;
-		buf += nb_chars;
-		left -= nb_chars;
+		filp->f_pos += nr_chars;
+		buf += nr_chars;
+		left -= nr_chars;
 
 		/* end of file : grow it and mark inode dirty */
 		if (filp->f_pos > filp->f_inode->i_size) {

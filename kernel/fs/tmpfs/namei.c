@@ -21,7 +21,7 @@ static inline int tmpfs_name_match(const char *name1, size_t len1, const char *n
  */
 static struct tmpfs_dir_entry *tmpfs_find_entry(struct inode *dir, const char *name, int name_len)
 {
-	int nb_entries_per_page, i;
+	int nr_entries_per_page, i;
 	struct tmpfs_dir_entry *de;
 	struct list_head *pos;
 	struct page *page;
@@ -32,7 +32,7 @@ static struct tmpfs_dir_entry *tmpfs_find_entry(struct inode *dir, const char *n
 		return NULL;
 
 	/* compute number of entries per page */
-	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
+	nr_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
 
 	/* walk through all pages */
 	list_for_each(pos, &dir->u.tmp_i.i_pages) {
@@ -40,7 +40,7 @@ static struct tmpfs_dir_entry *tmpfs_find_entry(struct inode *dir, const char *n
 		kaddr = kmap(page);
 
 		/* walk through all entries */
-		for (i = 0; i < nb_entries_per_page; i++) {
+		for (i = 0; i < nr_entries_per_page; i++) {
 			de = (struct tmpfs_dir_entry *) (kaddr + i * sizeof(struct tmpfs_dir_entry));
 			if (tmpfs_name_match(name, name_len, de->d_name, TMPFS_NAME_LEN)) {
 				kunmap(page);
@@ -59,7 +59,7 @@ static struct tmpfs_dir_entry *tmpfs_find_entry(struct inode *dir, const char *n
  */
 static int tmpfs_empty_dir(struct inode *dir)
 {
-	int nb_entries_per_page, i, first_page;
+	int nr_entries_per_page, i, first_page;
 	struct tmpfs_dir_entry *de;
 	struct list_head *pos;
 	struct page *page;
@@ -70,7 +70,7 @@ static int tmpfs_empty_dir(struct inode *dir)
 		return 0;
 
 	/* compute number of entries per page */
-	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
+	nr_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
 
 	/* walk through all pages */
 	first_page = 1;
@@ -79,7 +79,7 @@ static int tmpfs_empty_dir(struct inode *dir)
 		kaddr = kmap(page);
 
 		/* walk through all entries */
-		for (i = 0; i < nb_entries_per_page; i++) {
+		for (i = 0; i < nr_entries_per_page; i++) {
 			de = (struct tmpfs_dir_entry *) (kaddr + i * sizeof(struct tmpfs_dir_entry));
 
 			/* skip first 2 entries "." and ".." */
@@ -105,7 +105,7 @@ static int tmpfs_empty_dir(struct inode *dir)
  */
 int tmpfs_add_entry(struct inode *dir, const char *name, int name_len, struct inode *inode)
 {
-	int nb_entries_per_page, i, ret;
+	int nr_entries_per_page, i, ret;
 	struct tmpfs_dir_entry *de;
 	struct list_head *pos;
 	struct page *page;
@@ -116,7 +116,7 @@ int tmpfs_add_entry(struct inode *dir, const char *name, int name_len, struct in
 		return -EINVAL;
 
 	/* compute number of entries per page */
-	nb_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
+	nr_entries_per_page = PAGE_SIZE / sizeof(struct tmpfs_dir_entry);
 
 retry:
 	/* walk through all pages */
@@ -125,7 +125,7 @@ retry:
 		kaddr = kmap(page);
 
 		/* walk through all entries */
-		for (i = 0; i < nb_entries_per_page; i++) {
+		for (i = 0; i < nr_entries_per_page; i++) {
 			de = (struct tmpfs_dir_entry *) (kaddr + i * sizeof(struct tmpfs_dir_entry));
 			if (!de->d_inode) {
 				kunmap(page);

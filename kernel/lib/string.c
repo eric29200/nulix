@@ -197,24 +197,24 @@ int memcmp(const void *s1, const void *s2, size_t n)
  */
 void *memcpy(void *dest, const void *src, size_t n)
 {
-	uint32_t nb_dwords, nb_bytes;
+	uint32_t nr_dwords, nr_bytes;
 	uint32_t *dest32, *src32;
 	uint8_t *dest8,*src8;
 
 	/* compute number of double words */
-	nb_dwords = n / sizeof(uint32_t);
+	nr_dwords = n / sizeof(uint32_t);
 	dest32 = (uint32_t *) dest;
 	src32 = (uint32_t *) src;
 
 	/* compute number of remaining bytes */
-	nb_bytes = n % sizeof(uint32_t);
-	dest8 = ((uint8_t *) dest) + nb_dwords * sizeof(uint32_t);
-	src8 = ((uint8_t *) src) + nb_dwords * sizeof(uint32_t);
+	nr_bytes = n % sizeof(uint32_t);
+	dest8 = ((uint8_t *) dest) + nr_dwords * sizeof(uint32_t);
+	src8 = ((uint8_t *) src) + nr_dwords * sizeof(uint32_t);
 
-	while (nb_dwords-- > 0)
+	while (nr_dwords-- > 0)
 		*dest32++ = *src32++;
 
-	while (nb_bytes-- > 0)
+	while (nr_bytes-- > 0)
 		*dest8++ = *src8++;
 
 	return dest;

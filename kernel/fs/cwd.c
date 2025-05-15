@@ -37,7 +37,7 @@ static struct dirent64 *find_dirent(int fd, struct dirent64 *dirp, ino_t ino)
  */
 static int prepend_dirent(char *buf, size_t size, size_t max_size, struct dirent64 *dirent)
 {
-	size_t dirent_name_len, nb_shift;
+	size_t dirent_name_len, nr_shift;
 	int i;
 
 	/* get entry name length */
@@ -45,14 +45,14 @@ static int prepend_dirent(char *buf, size_t size, size_t max_size, struct dirent
 
 	/* compute number of shifts */
 	if (dirent_name_len + 1 >= max_size)
-		nb_shift = 0;
+		nr_shift = 0;
 	else if (size + dirent_name_len + 1 > max_size)
-		nb_shift = max_size - dirent_name_len - 1;
+		nr_shift = max_size - dirent_name_len - 1;
 	else
-		nb_shift = size;
+		nr_shift = size;
 
 	/* shift existing buffer */
-	for (i = nb_shift - 1; i >= 0; i--)
+	for (i = nr_shift - 1; i >= 0; i--)
 		buf[i + dirent_name_len + 1] = buf[i];
 
 	/* prepend '/' */
@@ -66,7 +66,7 @@ static int prepend_dirent(char *buf, size_t size, size_t max_size, struct dirent
 	memcpy(buf + 1, dirent->d_name, dirent_name_len);
 
 	/* return path length */
-	return nb_shift + dirent_name_len + 1;
+	return nr_shift + dirent_name_len + 1;
 }
 
 /*

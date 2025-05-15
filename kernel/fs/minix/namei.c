@@ -23,7 +23,7 @@ static inline int minix_name_match(const char *name1, size_t len1, const char *n
 static struct buffer_head *minix_find_entry(struct inode *dir, const char *name, int name_len, void **res_de)
 {
 	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
-	int nb_entries, nb_entries_per_block, i;
+	int nr_entries, nr_entries_per_block, i;
 	struct buffer_head *bh = NULL;
 	struct minix3_dir_entry *de3;
 	char *de, *de_name;
@@ -33,24 +33,24 @@ static struct buffer_head *minix_find_entry(struct inode *dir, const char *name,
 		return NULL;
 
 	/* compute number of entries in directory */
-	nb_entries = dir->i_size / sbi->s_dirsize;
-	nb_entries_per_block = dir->i_sb->s_blocksize / sbi->s_dirsize;
+	nr_entries = dir->i_size / sbi->s_dirsize;
+	nr_entries_per_block = dir->i_sb->s_blocksize / sbi->s_dirsize;
 
 	/* walk through all entries */
-	for (i = 0; i < nb_entries; i++) {
+	for (i = 0; i < nr_entries; i++) {
 		/* read next block if needed */
-		if (i % nb_entries_per_block == 0) {
+		if (i % nr_entries_per_block == 0) {
 			/* release previous block */
 			brelse(bh);
 
 			/* get next block */
-			bh = minix_getblk(dir, i / nb_entries_per_block, 0);
+			bh = minix_getblk(dir, i / nr_entries_per_block, 0);
 			if (!bh)
 				return NULL;
 		}
 
 		/* get directory entry */
-		de = bh->b_data + (i % nb_entries_per_block) * sbi->s_dirsize;
+		de = bh->b_data + (i % nr_entries_per_block) * sbi->s_dirsize;
 		de3 = (struct minix3_dir_entry *) de;
 		de_name = de3->d_name;
 
@@ -72,7 +72,7 @@ static struct buffer_head *minix_find_entry(struct inode *dir, const char *name,
 static int minix_add_entry(struct inode *dir, const char *name, int name_len, struct inode *inode)
 {
 	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
-	int nb_entries, nb_entries_per_block, i;
+	int nr_entries, nr_entries_per_block, i;
 	struct minix3_dir_entry *de3 = NULL;
 	struct buffer_head *bh = NULL;
 	char *de, *de_name;
@@ -83,30 +83,30 @@ static int minix_add_entry(struct inode *dir, const char *name, int name_len, st
 		return -EINVAL;
 
 	/* compute number of entries in directory */
-	nb_entries = dir->i_size / sbi->s_dirsize;
-	nb_entries_per_block = dir->i_sb->s_blocksize / sbi->s_dirsize;
+	nr_entries = dir->i_size / sbi->s_dirsize;
+	nr_entries_per_block = dir->i_sb->s_blocksize / sbi->s_dirsize;
 
 	/* walk through all entries */
-	for (i = 0; i <= nb_entries; i++) {
+	for (i = 0; i <= nr_entries; i++) {
 		/* read next block if needed */
-		if (i % nb_entries_per_block == 0) {
+		if (i % nr_entries_per_block == 0) {
 			/* release previous block */
 			brelse(bh);
 
 			/* get next block */
-			bh = minix_getblk(dir, i / nb_entries_per_block, 1);
+			bh = minix_getblk(dir, i / nr_entries_per_block, 1);
 			if (!bh)
 				return -EIO;
 		}
 
 		/* last entry : update directory size */
-		if (i == nb_entries) {
+		if (i == nr_entries) {
 			dir->i_size = (i + 1) * sbi->s_dirsize;
 			dir->i_dirt = 1;
 		}
 
 		/* get directory entry */
-		de = bh->b_data + (i % nb_entries_per_block) * sbi->s_dirsize;
+		de = bh->b_data + (i % nr_entries_per_block) * sbi->s_dirsize;
 		de3 = (struct minix3_dir_entry *) de;
 		de_ino = de3->d_inode;
 		de_name = de3->d_name;
@@ -144,7 +144,7 @@ found_free_entry:
 static int minix_empty_dir(struct inode *dir)
 {
 	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
-	int nb_entries, nb_entries_per_block, i;
+	int nr_entries, nr_entries_per_block, i;
 	struct buffer_head *bh = NULL;
 	ino_t ino;
 	char *de;
@@ -154,18 +154,18 @@ static int minix_empty_dir(struct inode *dir)
 		return 0;
 
 	/* compute number of entries in directory */
-	nb_entries = dir->i_size / sbi->s_dirsize;
-	nb_entries_per_block = dir->i_sb->s_blocksize / sbi->s_dirsize;
+	nr_entries = dir->i_size / sbi->s_dirsize;
+	nr_entries_per_block = dir->i_sb->s_blocksize / sbi->s_dirsize;
 
 	/* walk through all entries */
-	for (i = 0; i < nb_entries; i++) {
+	for (i = 0; i < nr_entries; i++) {
 		/* read next block if needed */
-		if (i % nb_entries_per_block == 0) {
+		if (i % nr_entries_per_block == 0) {
 			/* release previous block */
 			brelse(bh);
 
 			/* get next block */
-			bh = minix_getblk(dir, i / nb_entries_per_block, 0);
+			bh = minix_getblk(dir, i / nr_entries_per_block, 0);
 			if (!bh)
 				return 0;
 		}
@@ -175,7 +175,7 @@ static int minix_empty_dir(struct inode *dir)
 			continue;
 
 		/* get inode number */
-		de = bh->b_data + (i % nb_entries_per_block) * sbi->s_dirsize;
+		de = bh->b_data + (i % nr_entries_per_block) * sbi->s_dirsize;
 		ino = ((struct minix3_dir_entry *) de)->d_inode;
 
 		/* found an entry : directory is not empty */

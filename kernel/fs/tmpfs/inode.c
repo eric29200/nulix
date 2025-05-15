@@ -154,18 +154,18 @@ int tmpfs_inode_grow_size(struct inode *inode, size_t size)
 {
 	struct list_head pages_list, *pos, *n;
 	struct page *page;
-	int nb_pages, i;
+	int npages, i;
 
 	/* no need to grow */
 	if (size <= inode->i_size)
 		return 0;
 
 	/* compute number of pages to add */
-	nb_pages = (PAGE_ALIGN_UP(size) - PAGE_ALIGN_UP(inode->i_size)) / PAGE_SIZE;
+	npages = (PAGE_ALIGN_UP(size) - PAGE_ALIGN_UP(inode->i_size)) / PAGE_SIZE;
 
 	/* allocate pages */
 	INIT_LIST_HEAD(&pages_list);
-	for (i = 0; i < nb_pages; i++) {
+	for (i = 0; i < npages; i++) {
 		/* get a free page */
 		page = __get_free_page(GFP_HIGHUSER);
 		if (!page)
