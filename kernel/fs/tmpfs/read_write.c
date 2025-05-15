@@ -8,9 +8,10 @@
  */
 int tmpfs_file_read(struct file *filp, char *buf, int count)
 {
-	size_t page_offset, offset, nb_chars, left;
+	size_t page_offset, offset, nr_chars, left;
 	struct list_head *pos;
 	struct page *page;
+	void *kaddr;
 
 	/* adjust size */
 	if (filp->f_pos + count > filp->f_inode->i_size)
@@ -31,17 +32,19 @@ int tmpfs_file_read(struct file *filp, char *buf, int count)
 
 		/* compute offset in page and number of characters to read */
 		offset = filp->f_pos - page_offset;
-		nb_chars = PAGE_SIZE - offset;
-		if (nb_chars > left)
-			nb_chars = left;
+		nr_chars = PAGE_SIZE - offset;
+		if (nr_chars > left)
+			nr_chars = left;
 
 		/* copy data */
-		memcpy(buf, (void *) PAGE_ADDRESS(page) + offset, nb_chars);
+		kaddr = kmap(page);
+		memcpy(buf, kaddr + offset, nr_chars);
+		kunmap(page);
 
 		/* update sizes */
-		filp->f_pos += nb_chars;
-		buf += nb_chars;
-		left -= nb_chars;
+		filp->f_pos += nr_chars;
+		buf += nr_chars;
+		left -= nr_chars;
 		page_offset += PAGE_SIZE;
 
 		/* end of read */
@@ -57,9 +60,10 @@ int tmpfs_file_read(struct file *filp, char *buf, int count)
  */
 int tmpfs_file_write(struct file *filp, const char *buf, int count)
 {
-	size_t page_offset, left, offset, nb_chars;
+	size_t page_offset, left, offset, nr_chars;
 	struct list_head *pos;
 	struct page *page;
+	void *kaddr;
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)
@@ -80,17 +84,19 @@ int tmpfs_file_write(struct file *filp, const char *buf, int count)
 
 		/* compute offset in page and number of characters to write */
 		offset = filp->f_pos - page_offset;
-		nb_chars = PAGE_SIZE - offset;
-		if (nb_chars > left)
-			nb_chars = left;
+		nr_chars = PAGE_SIZE - offset;
+		if (nr_chars > left)
+			nr_chars = left;
 
 		/* copy data */
-		memcpy((void *) PAGE_ADDRESS(page) + offset, buf, nb_chars);
+		kaddr = kmap(page);
+		memcpy(kaddr + offset, buf, nr_chars);
+		kunmap(page);
 
 		/* update sizes */
-		filp->f_pos += nb_chars;
-		buf += nb_chars;
-		left -= nb_chars;
+		filp->f_pos += nr_chars;
+		buf += nr_chars;
+		left -= nr_chars;
 		page_offset += PAGE_SIZE;
 
 		/* end of write */

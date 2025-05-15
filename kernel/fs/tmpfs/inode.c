@@ -1,5 +1,6 @@
 #include <fs/tmp_fs.h>
 #include <proc/sched.h>
+#include <mm/highmem.h>
 #include <fcntl.h>
 #include <stderr.h>
 
@@ -166,12 +167,12 @@ int tmpfs_inode_grow_size(struct inode *inode, size_t size)
 	INIT_LIST_HEAD(&pages_list);
 	for (i = 0; i < nb_pages; i++) {
 		/* get a free page */
-		page = __get_free_page(GFP_KERNEL);
+		page = __get_free_page(GFP_HIGHUSER);
 		if (!page)
 			goto err;
 
 		/* memzero page */
-		memset((void *) PAGE_ADDRESS(page), 0, PAGE_SIZE);
+		clear_user_highpage(page);
 
 		/* add page to directory */
 		list_add_tail(&page->list, &pages_list);

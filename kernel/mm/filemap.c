@@ -1,5 +1,6 @@
 #include <mm/mmap.h>
 #include <mm/paging.h>
+#include <mm/highmem.h>
 #include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
@@ -119,7 +120,7 @@ void truncate_inode_pages(struct inode *inode, off_t start)
 		/* partial page truncate */
 		offset = start - offset;
 		if (offset < PAGE_SIZE)
-			memset((void *) (uint32_t) (PAGE_ADDRESS(page) + offset), 0, PAGE_SIZE - offset);
+			clear_user_highpage_partial(page, offset);
 	}
 }
 
@@ -130,8 +131,8 @@ void update_vm_cache(struct inode *inode, const char *buf, size_t pos, size_t co
 {
 	struct page *page;
 	off_t offset;
+	void *kaddr;
 	size_t len;
-	void *addr;
 
 	offset = pos & ~PAGE_MASK;
 	pos = pos & PAGE_MASK;
@@ -146,8 +147,9 @@ void update_vm_cache(struct inode *inode, const char *buf, size_t pos, size_t co
 		page = find_page(inode, pos);
 		if (page) {
 			/* update page */
-			addr = (void *) PAGE_ADDRESS(page);
-			memcpy(addr + offset, buf, len);
+			kaddr = kmap(page);
+			memcpy(kaddr + offset, buf, len);
+			kunmap(page);
 
 			/* release page */
 			__free_page(page);

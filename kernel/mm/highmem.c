@@ -151,6 +151,16 @@ void clear_user_highpage(struct page *page)
 }
 
 /*
+ * Clear a user high page.
+ */
+void clear_user_highpage_partial(struct page *page, off_t offset)
+{
+	char *vpage = kmap(page);
+	memset(vpage + offset, 0, PAGE_SIZE - offset);
+	kunmap(page);
+}
+
+/*
  * Copy a user high page.
  */
 void copy_user_highpage(struct page *dst, struct page *src)

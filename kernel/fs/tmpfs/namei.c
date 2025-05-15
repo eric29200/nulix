@@ -1,5 +1,6 @@
 #include <fs/tmp_fs.h>
 #include <proc/sched.h>
+#include <mm/highmem.h>
 #include <stderr.h>
 #include <fcntl.h>
 
@@ -24,6 +25,7 @@ static struct tmpfs_dir_entry *tmpfs_find_entry(struct inode *dir, const char *n
 	struct tmpfs_dir_entry *de;
 	struct list_head *pos;
 	struct page *page;
+	void *kaddr;
 
 	/* check file name length */
 	if (name_len <= 0 || name_len > TMPFS_NAME_LEN)
@@ -35,13 +37,18 @@ static struct tmpfs_dir_entry *tmpfs_find_entry(struct inode *dir, const char *n
 	/* walk through all pages */
 	list_for_each(pos, &dir->u.tmp_i.i_pages) {
 		page = list_entry(pos, struct page, list);
+		kaddr = kmap(page);
 
 		/* walk through all entries */
 		for (i = 0; i < nb_entries_per_page; i++) {
-			de = (struct tmpfs_dir_entry *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry));
-			if (tmpfs_name_match(name, name_len, de->d_name, TMPFS_NAME_LEN))
+			de = (struct tmpfs_dir_entry *) (kaddr + i * sizeof(struct tmpfs_dir_entry));
+			if (tmpfs_name_match(name, name_len, de->d_name, TMPFS_NAME_LEN)) {
+				kunmap(page);
 				return de;
+			}
 		}
+
+		kunmap(page);
 	}
 
 	return NULL;
@@ -56,6 +63,7 @@ static int tmpfs_empty_dir(struct inode *dir)
 	struct tmpfs_dir_entry *de;
 	struct list_head *pos;
 	struct page *page;
+	void *kaddr;
 
 	/* check if dir is a directory */
 	if (S_ISREG(dir->i_mode))
@@ -68,20 +76,24 @@ static int tmpfs_empty_dir(struct inode *dir)
 	first_page = 1;
 	list_for_each(pos, &dir->u.tmp_i.i_pages) {
 		page = list_entry(pos, struct page, list);
+		kaddr = kmap(page);
 
 		/* walk through all entries */
 		for (i = 0; i < nb_entries_per_page; i++) {
-			de = (struct tmpfs_dir_entry *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry));
+			de = (struct tmpfs_dir_entry *) (kaddr + i * sizeof(struct tmpfs_dir_entry));
 
 			/* skip first 2 entries "." and ".." */
 			if (first_page && i < 2)
 				continue;
 
 			/* found an entry : directory is not empty */
-			if (de->d_inode)
+			if (de->d_inode) {
+				kunmap(page);
 				return 0;
+			}
 		}
 
+		kunmap(page);
 		first_page = 0;
 	}
 
@@ -97,6 +109,7 @@ int tmpfs_add_entry(struct inode *dir, const char *name, int name_len, struct in
 	struct tmpfs_dir_entry *de;
 	struct list_head *pos;
 	struct page *page;
+	void *kaddr;
 
 	/* check file name */
 	if (name_len <= 0 || name_len > TMPFS_NAME_LEN)
@@ -109,13 +122,18 @@ retry:
 	/* walk through all pages */
 	list_for_each(pos, &dir->u.tmp_i.i_pages) {
 		page = list_entry(pos, struct page, list);
+		kaddr = kmap(page);
 
 		/* walk through all entries */
 		for (i = 0; i < nb_entries_per_page; i++) {
-			de = (struct tmpfs_dir_entry *) (PAGE_ADDRESS(page) + i * sizeof(struct tmpfs_dir_entry));
-			if (!de->d_inode)
+			de = (struct tmpfs_dir_entry *) (kaddr + i * sizeof(struct tmpfs_dir_entry));
+			if (!de->d_inode) {
+				kunmap(page);
 				goto found;
+			}
 		}
+
+		kunmap(page);
 	}
 
 	/* no free directory entry : grow directory */
@@ -307,7 +325,7 @@ int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	struct tmpfs_dir_entry *de;
 	struct inode *inode;
 	struct page *page;
-	char *buf;
+	char *kaddr;
 	int ret, i;
 
 	/* create a new inode */
@@ -328,12 +346,13 @@ int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 
 	/* get first page */
 	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page, list);
-	buf = (char *) PAGE_ADDRESS(page);
+	kaddr = kmap(page);
 
 	/* write file name on first page */
 	for (i = 0; target[i] && i < PAGE_SIZE - 1; i++)
-		buf[i] = target[i];
-	buf[i] = 0;
+		kaddr[i] = target[i];
+	kaddr[i] = 0;
+	kunmap(page);
 
 	/* check if file exists */
 	de = tmpfs_find_entry(dir, name, name_len);

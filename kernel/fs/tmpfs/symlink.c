@@ -1,4 +1,5 @@
 #include <fs/tmp_fs.h>
+#include <mm/highmem.h>
 #include <fcntl.h>
 #include <stderr.h>
 
@@ -8,6 +9,7 @@
 int tmpfs_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
 	struct page *page;
+	char *kaddr;
 	int ret;
 
 	*res_inode = NULL;
@@ -35,7 +37,9 @@ int tmpfs_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t 
 	iput(inode);
 
 	/* open target inode */
-	ret = open_namei(AT_FDCWD, dir, (char *) PAGE_ADDRESS(page), flags, mode, res_inode);
+	kaddr = kmap(page);
+	ret = open_namei(AT_FDCWD, dir, kaddr, flags, mode, res_inode);
+	kunmap(page);
 
 	return ret;
 }
@@ -46,6 +50,7 @@ int tmpfs_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t 
 ssize_t tmpfs_readlink(struct inode *inode, char *buf, size_t bufsize)
 {
 	struct page *page;
+	void *kaddr;
 
 	/* inode must be link */
 	if (!S_ISLNK(inode->i_mode)) {
@@ -70,7 +75,9 @@ ssize_t tmpfs_readlink(struct inode *inode, char *buf, size_t bufsize)
 	iput(inode);
 
 	/* copy target name to user buffer */
-	memcpy(buf, (char *) PAGE_ADDRESS(page), bufsize);
+	kaddr = kmap(page);
+	memcpy(buf, kaddr, bufsize);
+	kunmap(page);
 
 	return bufsize;
 }

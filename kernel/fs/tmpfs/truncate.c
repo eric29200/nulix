@@ -1,4 +1,5 @@
 #include <fs/tmp_fs.h>
+#include <mm/highmem.h>
 
 /*
  * Truncate an inode.
@@ -16,7 +17,7 @@ void tmpfs_truncate(struct inode *inode)
 		if (offset >= inode->i_size)
 			__free_page(page);
 		else if (offset + PAGE_SIZE > inode->i_size)
-			memset((void *) PAGE_ADDRESS(page) + inode->i_size - offset, 0, offset + PAGE_SIZE - inode->i_size);
+			clear_user_highpage_partial(page, inode->i_size - offset);
 
 		/* update offset */
 		offset += PAGE_SIZE;
