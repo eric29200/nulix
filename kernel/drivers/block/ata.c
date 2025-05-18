@@ -235,6 +235,7 @@ int init_ata()
 static struct file_operations ata_fops = {
 	.read		= generic_block_read,
 	.write		= generic_block_write,
+	.ioctl		= generic_block_ioctl,
 };
 
 /*

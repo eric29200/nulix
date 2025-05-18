@@ -218,6 +218,7 @@ void try_to_free_buffer(struct page *page);
 void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_read(struct file *filp, char *buf, int count);
 int generic_block_write(struct file *filp, const char *buf, int count);
+int generic_block_ioctl(struct file *filp, int request, unsigned long arg);
 int generic_readpage(struct inode *inode, struct page *page);
 
 /* inode operations */
