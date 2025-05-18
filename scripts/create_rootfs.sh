@@ -79,6 +79,7 @@ sudo mknod tmp/dev/fb0 c 29 0
 sudo mknod tmp/dev/hda b 3 0
 sudo mknod tmp/dev/hda1 b 3 1
 sudo mknod tmp/dev/hdc b 3 32
+sudo ln -s /dev/hda1 tmp/dev/root
 
 # chown root
 sudo chown -R 0:0 tmp/

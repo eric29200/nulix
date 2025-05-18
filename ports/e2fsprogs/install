@@ -1,0 +1,17 @@
+VERSION="1.47.2"
+SRC_FILENAME="e2fsprogs-"$VERSION".tar.xz"
+URL="https://www.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.2/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
