@@ -35,6 +35,46 @@ static struct list_head free_list[NR_SIZES];
 size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
 
 /*
+ * Is a buffer dirty ?
+ */
+int buffer_dirty(struct buffer_head *bh)
+{
+	return bh->b_dirt == 1;
+}
+
+/*
+ * Is a buffer up to date ?
+ */
+int buffer_uptodate(struct buffer_head *bh)
+{
+	return bh->b_uptodate == 1;
+}
+
+/*
+ * Mark a buffer clean.
+ */
+void mark_buffer_clean(struct buffer_head *bh)
+{
+	bh->b_dirt = 0;
+}
+
+/*
+ * Mark a buffer dirty.
+ */
+void mark_buffer_dirty(struct buffer_head *bh)
+{
+	bh->b_dirt = 1;
+}
+
+/*
+ * Mark a buffer up to date.
+ */
+void mark_buffer_uptodate(struct buffer_head *bh, int on)
+{
+	bh->b_uptodate = on;
+}
+
+/*
  * Hash a buffer.
  */
 static inline int __buffer_hashfn(dev_t dev, uint32_t block)
@@ -311,7 +351,7 @@ struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize)
 	bh->b_count = 1;
 	bh->b_dev = dev;
 	bh->b_block = block;
-	bh->b_uptodate = 0;
+	mark_buffer_uptodate(bh, 0);
 
 	/* cache the new buffer */
 	add_to_buffer_cache(bh);
@@ -332,12 +372,12 @@ struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize)
 		return NULL;
 
 	/* read it from device */
-	if (!bh->b_uptodate && block_read(bh) != 0) {
+	if (!buffer_uptodate(bh) && block_read(bh) != 0) {
 		brelse(bh);
 		return NULL;
 	}
 
-	bh->b_uptodate = 1;
+	mark_buffer_uptodate(bh, 1);
 	return bh;
 }
 
@@ -356,7 +396,7 @@ int bwrite(struct buffer_head *bh)
 	if (ret)
 		return ret;
 
-	bh->b_dirt = 0;
+	mark_buffer_clean(bh);
 	return ret;
 }
 
@@ -369,7 +409,7 @@ void brelse(struct buffer_head *bh)
 		return;
 
 	/* write dirty buffer */
-	if (bh->b_dirt)
+	if (buffer_dirty(bh))
 		bwrite(bh);
 
 	/* update buffer reference count */
@@ -387,7 +427,7 @@ void try_to_free_buffer(struct page *page)
 	tmp = bh;
 	do {
 		/* used buffer */
-		if (tmp->b_count || tmp->b_dirt)
+		if (tmp->b_count || buffer_dirty(tmp))
 			return;
 
 		/* go to next buffer in page */
@@ -426,7 +466,7 @@ static void bsync_list(struct list_head *head, dev_t dev)
 	list_for_each(pos, head) {
 		bh = (struct buffer_head *) list_entry(pos, struct buffer_head, b_list);
 
-		if (!bh->b_dirt || (dev && bh->b_dev != dev))
+		if (!buffer_dirty(bh) || (dev && bh->b_dev != dev))
 			continue;
 
 		if (bwrite(bh)) {
@@ -509,13 +549,13 @@ int generic_readpage(struct inode *inode, struct page *page)
 		/* set block buffer */
 		next->b_dev = sb->s_dev;
 		next->b_block = inode->i_op->bmap(inode, block);
-		next->b_uptodate = 1;
+		mark_buffer_uptodate(next, 1);
 
 		/* check if buffer is already hashed */
 		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
 		if (tmp) {
 			/* read it from disk if needed */
-			if (!tmp->b_uptodate)
+			if (!buffer_uptodate(tmp))
 				block_read(tmp);
 
 			/* copy data to user address space */

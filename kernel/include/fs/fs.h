@@ -207,6 +207,11 @@ int get_vfs_mount_list(char *buf, int count);
 int fs_may_umount(struct super_block *sb);
 
 /* buffer operations */
+int buffer_dirty(struct buffer_head *bh);
+int buffer_uptodate(struct buffer_head *bh);
+void mark_buffer_clean(struct buffer_head *bh);
+void mark_buffer_dirty(struct buffer_head *bh);
+void mark_buffer_uptodate(struct buffer_head *bh, int on);
 struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize);
 int bwrite(struct buffer_head *bh);
 void brelse(struct buffer_head *bh);

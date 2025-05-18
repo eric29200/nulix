@@ -149,7 +149,7 @@ found_entry:
 	memcpy(de->d_name, name, name_len);
 
 	/* mark buffer dirty and release it */
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	/* update parent directory */
@@ -426,7 +426,7 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	strcpy(de->d_name, "..");
 
 	/* release first block */
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	/* add entry to parent dir */
@@ -500,7 +500,7 @@ int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
 		goto out;
 
 	/* mark buffer diry */
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 
 	/* update dir */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
@@ -598,7 +598,7 @@ int ext2_unlink(struct inode *dir, const char *name, size_t name_len)
 		goto out;
 
 	/* mark buffer dirty */
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 
 	/* update directory */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
@@ -775,7 +775,7 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 		goto out;
 
 	/* mark old directory buffer dirty */
-	old_bh->b_dirt = 1;
+	mark_buffer_dirty(old_bh);
 
 	/* update old and new directories */
 	old_dir->i_atime = old_dir->i_mtime = CURRENT_TIME;

@@ -109,19 +109,19 @@ allocated:
 	EXT2_BITMAP_SET(bitmap_bh, i);
 
 	/* release inodes bitmap */
-	bitmap_bh->b_dirt = 1;
+	mark_buffer_dirty(bitmap_bh);
 	brelse(bitmap_bh);
 
 	/* update group descriptor */
 	gdp->bg_free_inodes_count = gdp->bg_free_inodes_count - 1;
 	if (S_ISDIR(inode->i_mode))
 		gdp->bg_used_dirs_count = gdp->bg_used_dirs_count + 1;
-	gdp_bh->b_dirt = 1;
+	mark_buffer_dirty(gdp_bh);
 	bwrite(gdp_bh);
 
 	/* update super block */
 	sbi->s_es->s_free_inodes_count = sbi->s_es->s_free_inodes_count - 1;
-	sbi->s_sbh->b_dirt = 1;
+	mark_buffer_dirty(sbi->s_sbh);
 	bwrite(sbi->s_sbh);
 
 	/* mark inode dirty */
@@ -170,7 +170,7 @@ int ext2_free_inode(struct inode *inode)
 
 	/* clear inode in bitmap */
 	EXT2_BITMAP_CLR(bitmap_bh, bit);
-	bitmap_bh->b_dirt = 1;
+	mark_buffer_dirty(bitmap_bh);
 	brelse(bitmap_bh);
 
 	/* update group descriptor */
@@ -178,12 +178,12 @@ int ext2_free_inode(struct inode *inode)
 	gdp->bg_free_inodes_count = gdp->bg_free_inodes_count + 1;
 	if (S_ISDIR(inode->i_mode))
 		gdp->bg_used_dirs_count = gdp->bg_used_dirs_count - 1;
-	gdp_bh->b_dirt = 1;
+	mark_buffer_dirty(gdp_bh);
 	bwrite(gdp_bh);
 
 	/* update super block */
 	sbi->s_es->s_free_inodes_count = sbi->s_es->s_free_inodes_count + 1;
-	sbi->s_sbh->b_dirt = 1;
+	mark_buffer_dirty(sbi->s_sbh);
 	bwrite(sbi->s_sbh);
 
 	/* clear inode */

@@ -58,7 +58,7 @@ static void ext2_free_indirect_blocks(struct inode *inode, int offset, uint32_t 
 
 		/* mark parent block dirty */
 		blocks[i] = 0;
-		bh->b_dirt = 1;
+		mark_buffer_dirty(bh);
 	}
 
 	/* get first used address */
@@ -105,7 +105,7 @@ static void ext2_free_dindirect_blocks(struct inode *inode, int offset, uint32_t
 
 		/* mark parent block dirty */
 		blocks[i] = 0;
-		bh->b_dirt = 1;
+		mark_buffer_dirty(bh);
 	}
 
 	/* get first used address */
@@ -152,7 +152,7 @@ static void ext2_free_tindirect_blocks(struct inode *inode, int offset, uint32_t
 
 		/* mark parent block dirty */
 		blocks[i] = 0;
-		bh->b_dirt = 1;
+		mark_buffer_dirty(bh);
 	}
 
 	/* get first used address */

@@ -74,7 +74,7 @@ int ext2_file_write(struct file *filp, const char *buf, int count)
 		memcpy(bh->b_data + pos, buf, nr_chars);
 
 		/* release block */
-		bh->b_dirt = 1;
+		mark_buffer_dirty(bh);
 		brelse(bh);
 
 		/* update sizes */

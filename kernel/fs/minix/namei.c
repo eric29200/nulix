@@ -128,7 +128,7 @@ found_free_entry:
 	de3->d_inode = inode->i_ino;
 
 	/* mark buffer dirty and release it */
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	/* update parent directory */
@@ -373,7 +373,7 @@ int minix_unlink(struct inode *dir, const char *name, size_t name_len)
 
 	/* reset directory entry */
 	memset(de, 0, sbi->s_dirsize);
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	/* update directory */
@@ -430,7 +430,7 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	for (i = 0; target[i] && i < inode->i_sb->s_blocksize - 1; i++)
 		bh->b_data[i] = target[i];
 	bh->b_data[i] = 0;
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	/* update inode size */
@@ -519,7 +519,7 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	strcpy(de3->d_name, "..");
 
 	/* release first block */
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	/* add entry to parent dir */
@@ -590,7 +590,7 @@ int minix_rmdir(struct inode *dir, const char *name, size_t name_len)
 
 	/* reset entry */
 	memset(de, 0, sbi->s_dirsize);
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	/* update dir */
@@ -680,7 +680,7 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 	sbi = minix_sb(old_dir->i_sb);
 	((struct minix3_dir_entry *) old_de)->d_inode = 0;
 	memset(((struct minix3_dir_entry *) old_de)->d_name, 0, sbi->s_name_len);
-	old_bh->b_dirt = 1;
+	mark_buffer_dirty(old_bh);
 
 	/* update old and new directories */
 	old_dir->i_atime = old_dir->i_mtime = CURRENT_TIME;

@@ -163,7 +163,7 @@ int minix_write_inode(struct inode *inode)
 			raw_inode->i_zone[i] = inode->u.minix_i.i_zone[i];
 
 	/* write inode block */
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	return 0;
@@ -220,7 +220,7 @@ static struct buffer_head *block_getblk(struct inode *inode, struct buffer_head 
 	if (create && !i) {
 		if ((i = minix_new_block(inode->i_sb))) {
 			((uint32_t *) (bh->b_data))[block] = i;
-			bh->b_dirt = 1;
+			mark_buffer_dirty(bh);
 		}
 	}
 

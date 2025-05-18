@@ -215,7 +215,7 @@ int ext2_write_inode(struct inode *inode)
 		raw_inode->i_block[i] = ext2_inode->i_data[i];
 
 	/* release block buffer */
-	bh->b_dirt = 1;
+	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	return 0;
@@ -309,7 +309,7 @@ static struct buffer_head *ext2_block_getblk(struct inode *inode, struct buffer_
 		i = ext2_new_block(inode, goal);
 		if (i) {
 			((uint32_t *) bh->b_data)[block_block] = i;
-			bh->b_dirt = 1;
+			mark_buffer_dirty(bh);
 		}
 	}
 
