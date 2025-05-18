@@ -29,6 +29,7 @@ static struct buffer_head *buffer_hash_table[HASH_SIZE];
 static char buffersize_index[9] = { -1, 0, 1, -1, 2, -1, -1, -1, 3 };
 static LIST_HEAD(unused_list);
 static LIST_HEAD(used_list);
+static LIST_HEAD(dirty_list);
 static struct list_head free_list[NR_SIZES];
 
 /* block size of devices */
@@ -55,7 +56,11 @@ int buffer_uptodate(struct buffer_head *bh)
  */
 void mark_buffer_clean(struct buffer_head *bh)
 {
-	bh->b_dirt = 0;
+	if (bh->b_dirt) {
+		bh->b_dirt = 0;
+		list_del(&bh->b_list);
+		list_add(&bh->b_list, &used_list);
+	}
 }
 
 /*
@@ -63,7 +68,11 @@ void mark_buffer_clean(struct buffer_head *bh)
  */
 void mark_buffer_dirty(struct buffer_head *bh)
 {
-	bh->b_dirt = 1;
+	if (!bh->b_dirt) {
+		bh->b_dirt = 1;
+		list_del(&bh->b_list);
+		list_add(&bh->b_list, &dirty_list);
+	}
 }
 
 /*
@@ -198,6 +207,7 @@ static struct buffer_head *get_unused_buffer_head()
 		list_del(&bh->b_list);
 		list_add(&bh->b_list, &used_list);
 		nr_unused_buffer_heads--;
+
 		return bh;
 	}
 
@@ -408,10 +418,6 @@ void brelse(struct buffer_head *bh)
 	if (!bh)
 		return;
 
-	/* write dirty buffer */
-	if (buffer_dirty(bh))
-		bwrite(bh);
-
 	/* update buffer reference count */
 	bh->b_count--;
 }
@@ -456,14 +462,14 @@ void try_to_free_buffer(struct page *page)
 }
 
 /*
- * Write all dirty buffers of a list on disk.
+ * Write all dirty buffers on disk.
  */
-static void bsync_list(struct list_head *head, dev_t dev)
+static void __bsync(dev_t dev)
 {
+	struct list_head *pos, *n;
 	struct buffer_head *bh;
-	struct list_head *pos;
 
-	list_for_each(pos, head) {
+	list_for_each_safe(pos, n, &dirty_list) {
 		bh = (struct buffer_head *) list_entry(pos, struct buffer_head, b_list);
 
 		if (!buffer_dirty(bh) || (dev && bh->b_dev != dev))
@@ -481,11 +487,7 @@ static void bsync_list(struct list_head *head, dev_t dev)
  */
 void bsync()
 {
-	int i;
-
-	bsync_list(&used_list, 0);
-	for (i = 0; i < NR_SIZES; i++)
-		bsync_list(&free_list[i], 0);
+	__bsync(0);
 }
 
 /*
@@ -493,11 +495,7 @@ void bsync()
  */
 void bsync_dev(dev_t dev)
 {
-	int i;
-
-	bsync_list(&used_list, dev);
-	for (i = 0; i < NR_SIZES; i++)
-		bsync_list(&free_list[i], dev);
+	__bsync(dev);
 }
 
 /*

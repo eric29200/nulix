@@ -104,12 +104,10 @@ allocated:
 	/* update group descriptor */
 	gdp->bg_free_blocks_count = gdp->bg_free_blocks_count - 1;
 	mark_buffer_dirty(gdp_bh);
-	bwrite(gdp_bh);
 
 	/* update super block */
 	sbi->s_es->s_free_blocks_count = sbi->s_es->s_free_blocks_count - 1;
 	mark_buffer_dirty(sbi->s_sbh);
-	bwrite(sbi->s_sbh);
 
 	/* mark inode dirty */
 	inode->i_dirt = 1;
@@ -160,12 +158,10 @@ int ext2_free_block(struct inode *inode, uint32_t block)
 	gdp = ext2_get_group_desc(inode->i_sb, block_group, &gdp_bh);
 	gdp->bg_free_blocks_count = gdp->bg_free_blocks_count + 1;
 	mark_buffer_dirty(gdp_bh);
-	bwrite(gdp_bh);
 
 	/* update super block */
 	sbi->s_es->s_free_blocks_count = sbi->s_es->s_free_blocks_count + 1;
 	mark_buffer_dirty(sbi->s_sbh);
-	bwrite(sbi->s_sbh);
 
 	return 0;
 }
