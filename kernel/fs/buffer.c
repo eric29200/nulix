@@ -549,8 +549,10 @@ int generic_readpage(struct inode *inode, struct page *page)
 		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
 		if (tmp) {
 			/* read it from disk if needed */
-			if (!buffer_uptodate(tmp))
+			if (!buffer_uptodate(tmp)) {
 			 	ll_rw_block(READ, 1, &tmp);
+				mark_buffer_uptodate(tmp, 1);
+			}
 
 			/* copy data to user address space */
 			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
@@ -562,6 +564,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 		/* read buffer on disk */
 		ll_rw_block(READ, 1, &next);
+		mark_buffer_uptodate(tmp, 1);
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;
