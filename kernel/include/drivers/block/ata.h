@@ -119,11 +119,8 @@ struct ata_device {
 	int			(*write)(struct ata_device *, struct buffer_head *, uint32_t);
 };
 
-int init_ata();
-int ata_read(struct buffer_head *bh);
-int ata_write(struct buffer_head *bh);
-
 /* init functions */
+int init_ata();
 int ata_hd_init(struct ata_device *device);
 int ata_cd_init(struct ata_device *device);
 

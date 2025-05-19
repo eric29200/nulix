@@ -29,6 +29,9 @@
 #define DEFAULT_BLOCK_SIZE_BITS		10
 #define DEFAULT_BLOCK_SIZE		(1 << DEFAULT_BLOCK_SIZE_BITS)
 
+#define READ				0
+#define WRITE				1
+
 struct super_block;
 
 /*
@@ -250,8 +253,6 @@ struct inode_operations *char_get_driver(struct inode *inode);
 
 /* block device driver */
 struct inode_operations *block_get_driver(struct inode *inode);
-int block_read(struct buffer_head *bh);
-int block_write(struct buffer_head *bh);
 
 /* filemap operations */
 int generic_file_mmap(struct inode *inode, struct vm_area *vma);

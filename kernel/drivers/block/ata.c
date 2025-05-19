@@ -1,4 +1,5 @@
 #include <drivers/block/ata.h>
+#include <drivers/block/blk_dev.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>
@@ -73,41 +74,44 @@ static uint32_t ata_get_start_sector(struct ata_device *device, dev_t dev)
 }
 
 /*
- * Read from an ata device.
+ * Handle a read/write request.
  */
-int ata_read(struct buffer_head *bh)
+static void ata_request(struct request *request)
 {
+	int (*fn)(struct ata_device *, struct buffer_head *, uint32_t);
 	struct ata_device *device;
-	uint32_t start_sector;
+	uint32_t start_sector, i;
+	int ret;
 
 	/* get ata device */
-	device = ata_get_device(bh->b_dev);
-	if (!device || !device->read)
-		return -EINVAL;
+	device = ata_get_device(request->dev);
+	if (!device) {
+		printf("ata_request: can't find device 0x%x\n", request->dev);
+		return;
+	}
 
 	/* get partition start sector */
-	start_sector = ata_get_start_sector(device, bh->b_dev);
+	start_sector = ata_get_start_sector(device, request->dev);
 
-	return device->read(device, bh, start_sector);
-}
+	/* find request function */
+	switch (request->cmd) {
+		case READ:
+			fn = device->read;
+			break;
+		case WRITE:
+			fn = device->write;
+			break;
+		default:
+			printf("ata_request: can't handle request %x\n", request->cmd);
+			return;
+	}
 
-/*
- * Write to an ata device.
- */
-int ata_write(struct buffer_head *bh)
-{
-	struct ata_device *device;
-	uint32_t start_sector;
-
-	/* get ata device */
-	device = ata_get_device(bh->b_dev);
-	if (!device || !device->write)
-		return -EINVAL;
-
-	/* get partition start sector */
-	start_sector = ata_get_start_sector(device, bh->b_dev);
-
-	return device->write(device, bh, start_sector);
+	/* handle request */
+	for (i = 0; i < request->nr_bhs; i++) {
+		ret = fn(device, request->bhs[i], start_sector);
+		if (ret)
+			printf("ata_request: error on request (cmd = %x, block = %ld\n", request->cmd, request->bhs[i]->b_block);
+	}
 }
 
 /*
@@ -212,6 +216,9 @@ int init_ata()
 
 	/* set default block size */
 	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
+
+	/* register block device */
+	blk_dev[DEV_ATA_MAJOR].request = ata_request;
 
 	/* detect hard drives */
 	for (i = 0; i < NR_ATA_DEVICES; i++) {

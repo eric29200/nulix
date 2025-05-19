@@ -1,4 +1,5 @@
 #include <fs/fs.h>
+#include <drivers/block/blk_dev.h>
 #include <drivers/block/ata.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -123,30 +124,4 @@ int generic_block_ioctl(struct file *filp, int request, unsigned long arg)
 	printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) filp->f_inode->i_rdev);
 
 	return 0;
-}
-
-/*
- * Read a block.
- */
-int block_read(struct buffer_head *bh)
-{
-	switch (major(bh->b_dev)) {
-		case DEV_ATA_MAJOR:
-			return ata_read(bh);
-		default:
-			return -EINVAL;
-	}
-}
-
-/*
- * Write a block.
- */
-int block_write(struct buffer_head *bh)
-{
-	switch (major(bh->b_dev)) {
-		case DEV_ATA_MAJOR:
-			return ata_write(bh);
-		default:
-			return -EINVAL;
-	}
 }

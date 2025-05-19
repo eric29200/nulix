@@ -2,6 +2,7 @@
 #include <proc/sched.h>
 #include <proc/timer.h>
 #include <drivers/block/ata.h>
+#include <drivers/block/blk_dev.h>
 #include <mm/mm.h>
 #include <mm/highmem.h>
 #include <string.h>
@@ -381,12 +382,12 @@ struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize)
 	if (!bh)
 		return NULL;
 
-	/* read it from device */
-	if (!buffer_uptodate(bh) && block_read(bh) != 0) {
-		brelse(bh);
-		return NULL;
-	}
+	/* buffer up to date */
+	if (buffer_uptodate(bh))
+		return bh;
 
+	/* read it from device */
+	ll_rw_block(READ, 1, &bh);
 	mark_buffer_uptodate(bh, 1);
 	return bh;
 }
@@ -396,18 +397,13 @@ struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize)
  */
 int bwrite(struct buffer_head *bh)
 {
-	int ret;
-
 	if (!bh)
 		return -EINVAL;
 
 	/* write to block device */
-	ret = block_write(bh);
-	if (ret)
-		return ret;
-
+	ll_rw_block(WRITE, 1, &bh);
 	mark_buffer_clean(bh);
-	return ret;
+	return 0;
 }
 
 /*
@@ -554,7 +550,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 		if (tmp) {
 			/* read it from disk if needed */
 			if (!buffer_uptodate(tmp))
-				block_read(tmp);
+			 	ll_rw_block(READ, 1, &tmp);
 
 			/* copy data to user address space */
 			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
@@ -565,7 +561,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 		}
 
 		/* read buffer on disk */
-		block_read(next);
+		ll_rw_block(READ, 1, &next);
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;
