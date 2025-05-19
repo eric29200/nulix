@@ -216,7 +216,6 @@ void mark_buffer_clean(struct buffer_head *bh);
 void mark_buffer_dirty(struct buffer_head *bh);
 void mark_buffer_uptodate(struct buffer_head *bh, int on);
 struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize);
-int bwrite(struct buffer_head *bh);
 void brelse(struct buffer_head *bh);
 void bsync();
 void bsync_dev(dev_t dev);

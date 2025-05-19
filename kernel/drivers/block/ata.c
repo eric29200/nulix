@@ -111,6 +111,10 @@ static void ata_request(struct request *request)
 		ret = fn(device, request->bhs[i], start_sector);
 		if (ret)
 			printf("ata_request: error on request (cmd = %x, block = %ld\n", request->cmd, request->bhs[i]->b_block);
+
+		/* mark buffer clean and up to date */
+		mark_buffer_clean(request->bhs[i]);
+		mark_buffer_uptodate(request->bhs[i], 1);
 	}
 }
 

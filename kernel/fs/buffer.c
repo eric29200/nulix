@@ -15,6 +15,7 @@
 #define MAX_UNUSED_BUFFERS		32
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
+#define NBUF				16
 
 #define HASH_BITS			12
 #define HASH_SIZE			(1 << HASH_BITS)
@@ -388,22 +389,8 @@ struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize)
 
 	/* read it from device */
 	ll_rw_block(READ, 1, &bh);
-	mark_buffer_uptodate(bh, 1);
+
 	return bh;
-}
-
-/*
- * Write a block buffer.
- */
-int bwrite(struct buffer_head *bh)
-{
-	if (!bh)
-		return -EINVAL;
-
-	/* write to block device */
-	ll_rw_block(WRITE, 1, &bh);
-	mark_buffer_clean(bh);
-	return 0;
 }
 
 /*
@@ -468,13 +455,12 @@ static void __bsync(dev_t dev)
 	list_for_each_safe(pos, n, &dirty_list) {
 		bh = (struct buffer_head *) list_entry(pos, struct buffer_head, b_list);
 
+		/* clean buffer */
 		if (!buffer_dirty(bh) || (dev && bh->b_dev != dev))
 			continue;
 
-		if (bwrite(bh)) {
-			printf("Can't write block %d on disk\n", bh->b_block);
-			panic("Disk error");
-		}
+		/* write buffer */
+		ll_rw_block(WRITE, 1, &bh);
 	}
 }
 
@@ -549,10 +535,8 @@ int generic_readpage(struct inode *inode, struct page *page)
 		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
 		if (tmp) {
 			/* read it from disk if needed */
-			if (!buffer_uptodate(tmp)) {
+			if (!buffer_uptodate(tmp))
 			 	ll_rw_block(READ, 1, &tmp);
-				mark_buffer_uptodate(tmp, 1);
-			}
 
 			/* copy data to user address space */
 			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
@@ -564,7 +548,6 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 		/* read buffer on disk */
 		ll_rw_block(READ, 1, &next);
-		mark_buffer_uptodate(tmp, 1);
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;
