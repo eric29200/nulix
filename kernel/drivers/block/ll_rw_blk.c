@@ -42,10 +42,17 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 		}
 	}
 
-	/* make request */
-	request.dev = bhs[0]->b_dev;
-	request.cmd = rw;
-	request.bhs = bhs;
-	request.nr_bhs = nr_bhs;
-	dev->request(&request);
+	/* make requests */
+	for (i = 0; i < nr_bhs; i++) {
+		request.dev = bhs[i]->b_dev;
+		request.cmd = rw;
+		request.block = bhs[i]->b_block;
+		request.buf = bhs[i]->b_data;
+		request.size = bhs[i]->b_size;
+		dev->request(&request);
+
+		/* mark buffer clean and up to date */
+		mark_buffer_clean(bhs[i]);
+		mark_buffer_uptodate(bhs[i], 1);
+	}
 }

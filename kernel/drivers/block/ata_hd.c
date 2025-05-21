@@ -23,9 +23,9 @@ static void ata_hd_wait(struct ata_device *device)
 }
 
 /*
- * Read sectors from an ata device.
+ * Read from an ata device.
  */
-static int ata_hd_read_sectors(struct ata_device *device, uint32_t sector, uint32_t nr_sectors, char *buf)
+static int ata_hd_read(struct ata_device *device, uint32_t sector, size_t nr_sectors, char *buf)
 {
 	/* set transfert size */
 	device->prdt[0].transfert_size = nr_sectors * ATA_SECTOR_SIZE;
@@ -58,24 +58,9 @@ static int ata_hd_read_sectors(struct ata_device *device, uint32_t sector, uint3
 }
 
 /*
- * Read from an ata device.
+ * Write to an ata device.
  */
-static int ata_hd_read(struct ata_device *device, struct buffer_head *bh, uint32_t start_sector)
-{
-	uint32_t nr_sectors, sector;
-
-	/* compute nb sectors */
-	nr_sectors = bh->b_size / ATA_SECTOR_SIZE;
-	sector = start_sector + bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
-
-	/* read sectors */
-	return ata_hd_read_sectors(device, sector, nr_sectors, bh->b_data);
-}
-
-/*
- * Write sectors to an ata device.
- */
-static int ata_hd_write_sectors(struct ata_device *device, uint32_t sector, uint32_t nr_sectors, char *buf)
+static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_sectors, char *buf)
 {
 	/* copy buffer */
 	memcpy(device->buf, buf, nr_sectors * ATA_SECTOR_SIZE);
@@ -105,21 +90,6 @@ static int ata_hd_write_sectors(struct ata_device *device, uint32_t sector, uint
 	ata_hd_wait(device);
 
 	return 0;
-}
-
-/*
- * Write to an ata device.
- */
-static int ata_hd_write(struct ata_device *device, struct buffer_head *bh, uint32_t start_sector)
-{
-	uint32_t nr_sectors, sector;
-
-	/* compute nb sectors */
-	nr_sectors = bh->b_size / ATA_SECTOR_SIZE;
-	sector = start_sector + bh->b_block * bh->b_size / ATA_SECTOR_SIZE;
-
-	/* write sectors */
-	return ata_hd_write_sectors(device, sector, nr_sectors, bh->b_data);
 }
 
 /*

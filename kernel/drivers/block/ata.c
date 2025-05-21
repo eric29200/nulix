@@ -38,7 +38,6 @@ static struct ata_device ata_devices[NR_ATA_DEVICES] = {
 
 /* ata block sizes */
 static size_t ata_blocksizes[NR_ATA_DEVICES * NR_PARTITIONS] = { 0, };
-static size_t ata_hardsectsizes[NR_ATA_DEVICES * NR_PARTITIONS] = { 0, };
 
 /*
  * Get an ata device.
@@ -79,9 +78,8 @@ static uint32_t ata_get_start_sector(struct ata_device *device, dev_t dev)
  */
 static void ata_request(struct request *request)
 {
-	int (*fn)(struct ata_device *, struct buffer_head *, uint32_t);
+	uint32_t start_sector, sector, nr_sectors;
 	struct ata_device *device;
-	uint32_t start_sector, i;
 	int ret;
 
 	/* get ata device */
@@ -93,30 +91,25 @@ static void ata_request(struct request *request)
 
 	/* get partition start sector */
 	start_sector = ata_get_start_sector(device, request->dev);
+	sector = start_sector + request->block * request->size / device->sector_size;
+	nr_sectors = request->size / device->sector_size;
 
 	/* find request function */
 	switch (request->cmd) {
 		case READ:
-			fn = device->read;
+			ret = device->read(device, sector, nr_sectors, request->buf);
 			break;
 		case WRITE:
-			fn = device->write;
+			ret = device->write(device, sector, nr_sectors, request->buf);
 			break;
 		default:
 			printf("ata_request: can't handle request %x\n", request->cmd);
 			return;
 	}
 
-	/* handle request */
-	for (i = 0; i < request->nr_bhs; i++) {
-		ret = fn(device, request->bhs[i], start_sector);
-		if (ret)
-			printf("ata_request: error on request (cmd = %x, block = %ld\n", request->cmd, request->bhs[i]->b_block);
-
-		/* mark buffer clean and up to date */
-		mark_buffer_clean(request->bhs[i]);
-		mark_buffer_uptodate(request->bhs[i], 1);
-	}
+	/* print error */
+	if (ret)
+		printf("ata_request: error on request (cmd = %x, block = %ld\n", request->cmd, request->block);
 }
 
 /*
@@ -217,7 +210,6 @@ int init_ata()
 
 	/* set default block size */
 	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
-	hardsect_size[DEV_ATA_MAJOR] = ata_hardsectsizes;
 
 	/* register block device */
 	blk_dev[DEV_ATA_MAJOR].request = ata_request;
@@ -230,10 +222,9 @@ int init_ata()
 
 		/* set default block size */
 		ata_blocksizes[i << PARTITION_MINOR_SHIFT] = DEFAULT_BLOCK_SIZE;
-		ata_hardsectsizes[i << PARTITION_MINOR_SHIFT] = ata_devices[i].sector_size;
 
 		/* discover partitions */
-		check_partition(&ata_devices[i].hd, ata_devices[i].sector_size);
+		check_partition(&ata_devices[i].hd);
 	}
 
 	return 0;

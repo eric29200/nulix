@@ -69,19 +69,14 @@ static int ata_cd_read_sector(struct ata_device *device, uint32_t sector, char *
 /*
  * Read from an ata device.
  */
-static int ata_cd_read(struct ata_device *device, struct buffer_head *bh, uint32_t start_sector)
+static int ata_cd_read(struct ata_device *device, uint32_t sector, size_t nr_sectors, char *buf)
 {
-	uint32_t nr_sectors, sector;
 	size_t i;
 	int ret;
 
-	/* compute nb sectors */
-	nr_sectors = bh->b_size / ATAPI_SECTOR_SIZE;
-	sector = start_sector + bh->b_block * bh->b_size / ATAPI_SECTOR_SIZE;
-
 	/* read sectors */
 	for (i = 0; i < nr_sectors; i++) {
-		ret = ata_cd_read_sector(device, sector + i, bh->b_data + ATAPI_SECTOR_SIZE * i);
+		ret = ata_cd_read_sector(device, sector + i, buf + ATAPI_SECTOR_SIZE * i);
 		if (ret)
 			return ret;
 	}

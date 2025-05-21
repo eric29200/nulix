@@ -116,8 +116,8 @@ struct ata_device {
 	struct ata_prdt *	prdt;
 	uint8_t *		buf;
 	uint32_t		bar4;
-	int			(*read)(struct ata_device *, struct buffer_head *, uint32_t);
-	int			(*write)(struct ata_device *, struct buffer_head *, uint32_t);
+	int			(*read)(struct ata_device *, uint32_t, size_t, char *);
+	int			(*write)(struct ata_device *, uint32_t, size_t, char *);
 };
 
 /* init functions */

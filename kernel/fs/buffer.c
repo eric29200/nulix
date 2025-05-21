@@ -36,7 +36,6 @@ static struct list_head free_list[NR_SIZES];
 
 /* block size of devices */
 size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
-size_t *hardsect_size[MAX_BLKDEV] = { NULL, NULL };
 
 /*
  * Is a buffer dirty ?

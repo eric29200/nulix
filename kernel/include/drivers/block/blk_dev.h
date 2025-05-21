@@ -12,8 +12,9 @@
 struct request {
 	dev_t			dev;
 	int			cmd;
-	struct buffer_head **	bhs;
-	size_t			nr_bhs;
+	uint32_t		block;
+	char *			buf;
+	size_t			size;
 };
 
 /*

@@ -40,6 +40,6 @@ struct msdos_partition {
 	uint32_t		nr_sects;			/* nr of sectors in partition */
 };
 
-void check_partition(struct gendisk *hd, size_t sector_size);
+void check_partition(struct gendisk *hd);
 
 #endif
