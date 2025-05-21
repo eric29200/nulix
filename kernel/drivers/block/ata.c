@@ -182,21 +182,17 @@ static int ata_detect(struct ata_device *device)
 	if (ret)
 		return ret;
 
+	/* set gendisk */
+	device->hd.dev = mkdev(DEV_ATA_MAJOR, device->id << PARTITION_MINOR_SHIFT);
+	sprintf(device->hd.name, "hd%c", 'a' + device->id);
+
 	/* init drive */
 	if (device->is_atapi)
 		ret = ata_cd_init(device);
 	else
 		ret = ata_hd_init(device);
 
-	/* free device on error */
-	if (ret)
-		return ret;
-
-	/* set gendisk */
-	device->hd.dev = mkdev(DEV_ATA_MAJOR, device->id << PARTITION_MINOR_SHIFT);
-	sprintf(device->hd.name, "hd%c", 'a' + device->id);
-
-	return 0;
+	return ret;
 }
 
 /*
