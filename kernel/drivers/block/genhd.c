@@ -8,7 +8,7 @@
 /*
  * Add a partition.
  */
-static int add_partition(struct gendisk *hd, int i, uint32_t start_sect, uint32_t nr_sects)
+static int add_partition(struct gendisk *hd, int i, uint32_t start_sect, uint32_t nr_sects, size_t sector_size)
 {
 	char partition_name[DISK_NAME_LEN];
 
@@ -21,6 +21,7 @@ static int add_partition(struct gendisk *hd, int i, uint32_t start_sect, uint32_
 
 	/* set block size */
 	blocksize_size[major(hd->dev)][minor(hd->dev) + i] = DEFAULT_BLOCK_SIZE;
+	hardsect_size[major(hd->dev)][minor(hd->dev) + i] = sector_size;
 
 	return 0;
 }
@@ -28,7 +29,7 @@ static int add_partition(struct gendisk *hd, int i, uint32_t start_sect, uint32_
 /*
  * Discover msdos partitions.
  */
-static int check_msdos_partition(struct gendisk *hd, dev_t dev)
+static int check_msdos_partition(struct gendisk *hd, size_t sector_size)
 {
 	struct msdos_partition *partition;
 	struct buffer_head *bh;
@@ -38,7 +39,7 @@ static int check_msdos_partition(struct gendisk *hd, dev_t dev)
 	memset(hd->partitions, 0, sizeof(struct partition) * NR_PARTITIONS);
 
 	/* read partition table */
-	bh = bread(dev, 0, 1024);
+	bh = bread(hd->dev, 0, 1024);
 	if (!bh)
 		goto out;
 
@@ -56,7 +57,7 @@ static int check_msdos_partition(struct gendisk *hd, dev_t dev)
 			continue;
 
 		/* add partition to disk */
-		if (add_partition(hd, i, partition->start_sect, partition->nr_sects))
+		if (add_partition(hd, i, partition->start_sect, partition->nr_sects, sector_size))
 			printf("[Kernel] Can't register partition %d of disk 0x%x", i, hd->dev);
 	}
 
@@ -69,7 +70,7 @@ static int check_msdos_partition(struct gendisk *hd, dev_t dev)
 /*
  * Discover partitions.
  */
-void check_partition(struct gendisk *hd, dev_t dev)
+void check_partition(struct gendisk *hd, size_t sector_size)
 {
-	check_msdos_partition(hd, dev);
+	check_msdos_partition(hd, sector_size);
 }

@@ -173,6 +173,7 @@ int ata_hd_init(struct ata_device *device)
 		device->bar4 &= 0xFFFFFFFC;
 
 	/* set operations */
+	device->sector_size = ATA_SECTOR_SIZE;
 	device->read = ata_hd_read;
 	device->write = ata_hd_write;
 

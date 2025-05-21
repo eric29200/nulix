@@ -94,7 +94,9 @@ static int ata_cd_read(struct ata_device *device, struct buffer_head *bh, uint32
  */
 int ata_cd_init(struct ata_device *device)
 {
+	device->sector_size = ATAPI_SECTOR_SIZE;
 	device->read = ata_cd_read;
 	device->write = NULL;
+
 	return 0;
 }

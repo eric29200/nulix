@@ -38,6 +38,7 @@ static struct ata_device ata_devices[NR_ATA_DEVICES] = {
 
 /* ata block sizes */
 static size_t ata_blocksizes[NR_ATA_DEVICES * NR_PARTITIONS] = { 0, };
+static size_t ata_hardsectsizes[NR_ATA_DEVICES * NR_PARTITIONS] = { 0, };
 
 /*
  * Get an ata device.
@@ -216,6 +217,7 @@ int init_ata()
 
 	/* set default block size */
 	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
+	hardsect_size[DEV_ATA_MAJOR] = ata_hardsectsizes;
 
 	/* register block device */
 	blk_dev[DEV_ATA_MAJOR].request = ata_request;
@@ -227,10 +229,11 @@ int init_ata()
 			continue;
 
 		/* set default block size */
-		ata_blocksizes[i] = DEFAULT_BLOCK_SIZE;
+		ata_blocksizes[i << PARTITION_MINOR_SHIFT] = DEFAULT_BLOCK_SIZE;
+		ata_hardsectsizes[i << PARTITION_MINOR_SHIFT] = ata_devices[i].sector_size;
 
 		/* discover partitions */
-		check_partition(&ata_devices[i].hd, ata_devices[i].hd.dev);
+		check_partition(&ata_devices[i].hd, ata_devices[i].sector_size);
 	}
 
 	return 0;

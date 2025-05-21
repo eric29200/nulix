@@ -111,6 +111,7 @@ struct ata_device {
 	uint16_t		io_base;
 	struct ata_identify	identify;
 	char			is_atapi;
+	size_t			sector_size;
 	struct gendisk		hd;
 	struct ata_prdt *	prdt;
 	uint8_t *		buf;

@@ -10,12 +10,13 @@ struct blk_dev blk_dev[MAX_BLKDEV];
  */
 void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 {
-	uint32_t major, correct_size, i;
+	uint32_t major, minor, correct_size, i;
 	struct blk_dev *dev = NULL;
 	struct request request;
 
 	/* get block device */
 	major = major(bhs[0]->b_dev);
+	minor = minor(bhs[0]->b_dev);
 	if (major < MAX_BLKDEV)
 		dev = &blk_dev[major];
 
@@ -28,7 +29,7 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 	/* get correct size */
 	correct_size = DEFAULT_BLOCK_SIZE;
 	if (blocksize_size[major]) {
-		i = blocksize_size[major][minor(bhs[0]->b_dev)];
+		i = blocksize_size[major][minor];
 		if (i)
 			correct_size = i;
 	}
