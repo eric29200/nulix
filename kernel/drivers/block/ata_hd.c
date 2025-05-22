@@ -3,8 +3,9 @@
 #include <x86/io.h>
 #include <stderr.h>
 
-#define NR_DMA_PAGES		2
-#define NR_DMA_SECTORS		(1 << (NR_DMA_PAGES)) * PAGE_SIZE / ATA_SECTOR_SIZE
+#define ORDER_DMA_PAGES		2
+#define NR_DMA_PAGES		(1 << (ORDER_DMA_PAGES))
+#define NR_DMA_SECTORS		((NR_DMA_PAGES) * PAGE_SIZE / ATA_SECTOR_SIZE)
 
 /*
  * Wait for operation completion.
@@ -122,7 +123,7 @@ static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_se
 
 	return 0;
 }
-
+#include <stdio.h>
 /*
  * Init an ata hard disk.
  */
@@ -146,7 +147,7 @@ int ata_hd_init(struct ata_device *device)
 		return -ENOMEM;
 
 	/* allocate buffer */
-	device->buf = get_free_pages(1 << NR_DMA_PAGES);
+	device->buf = get_free_pages(ORDER_DMA_PAGES);
 	if (!device->buf) {
 		kfree(device->prdt);
 		return -ENOMEM;
