@@ -3,6 +3,9 @@
 #include <x86/io.h>
 #include <stderr.h>
 
+#define NR_DMA_PAGES		2
+#define NR_DMA_SECTORS		(1 << (NR_DMA_PAGES)) * PAGE_SIZE / ATA_SECTOR_SIZE
+
 /*
  * Wait for operation completion.
  */
@@ -27,32 +30,46 @@ static void ata_hd_wait(struct ata_device *device)
  */
 static int ata_hd_read(struct ata_device *device, uint32_t sector, size_t nr_sectors, char *buf)
 {
-	/* set transfert size */
-	device->prdt[0].transfert_size = nr_sectors * ATA_SECTOR_SIZE;
+	uint32_t nsect;
 
-	/* prepare DMA transfert */
-	outb(device->bar4, 0);
-	outl(device->bar4 + 0x04, __pa(device->prdt));
-	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
+	while (nr_sectors) {
+		/* limit transfert to buffer size */
+		nsect = nr_sectors;
+		if (nsect > NR_DMA_SECTORS)
+			nsect = NR_DMA_SECTORS;
 
-	/* select sector */
-	outb(device->io_base + ATA_REG_CONTROL, 0x00);
-	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-	outb(device->io_base + ATA_REG_FEATURES, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, nr_sectors);
-	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+		/* set transfert size */
+		device->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
 
-	/* issue read DMA command */
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_DMA);
-	outb(device->bar4, 0x8 | 0x1);
+		/* prepare DMA transfert */
+		outb(device->bar4, 0);
+		outl(device->bar4 + 0x04, __pa(device->prdt));
+		outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
 
-	/* wait for completion */
-	ata_hd_wait(device);
+		/* select sector */
+		outb(device->io_base + ATA_REG_CONTROL, 0x00);
+		outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+		outb(device->io_base + ATA_REG_FEATURES, 0x00);
+		outb(device->io_base + ATA_REG_SECCOUNT0, nsect);
+		outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
+		outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
+		outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
 
-	/* copy buffer */
-	memcpy(buf, device->buf, nr_sectors * ATA_SECTOR_SIZE);
+		/* issue read DMA command */
+		outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_DMA);
+		outb(device->bar4, 0x8 | 0x1);
+
+		/* wait for completion */
+		ata_hd_wait(device);
+
+		/* copy buffer */
+		memcpy(buf, device->buf, nsect * ATA_SECTOR_SIZE);
+
+		/* update size */
+		buf += nsect * ATA_SECTOR_SIZE;
+		sector += nsect;
+		nr_sectors -= nsect;
+	}
 
 	return 0;
 }
@@ -62,32 +79,46 @@ static int ata_hd_read(struct ata_device *device, uint32_t sector, size_t nr_sec
  */
 static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_sectors, char *buf)
 {
-	/* copy buffer */
-	memcpy(device->buf, buf, nr_sectors * ATA_SECTOR_SIZE);
+	uint32_t nsect;
 
-	/* set transfert size */
-	device->prdt[0].transfert_size = nr_sectors * ATA_SECTOR_SIZE;
+	while (nr_sectors) {
+		/* limit transfert to buffer size */
+		nsect = nr_sectors;
+		if (nsect > NR_DMA_SECTORS)
+			nsect = NR_DMA_SECTORS;
 
-	/* prepare DMA transfert */
-	outb(device->bar4, 0);
-	outl(device->bar4 + 0x04, __pa(device->prdt));
-	outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
+		/* copy buffer */
+		memcpy(device->buf, buf, nsect * ATA_SECTOR_SIZE);
 
-	/* select sector */
-	outb(device->io_base + ATA_REG_CONTROL, 0x00);
-	outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-	outb(device->io_base + ATA_REG_FEATURES, 0x00);
-	outb(device->io_base + ATA_REG_SECCOUNT0, nr_sectors);
-	outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+		/* set transfert size */
+		device->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
 
-	/* issue write DMA command */
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
-	outb(device->bar4, 0x1);
+		/* prepare DMA transfert */
+		outb(device->bar4, 0);
+		outl(device->bar4 + 0x04, __pa(device->prdt));
+		outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
 
-	/* wait for completion */
-	ata_hd_wait(device);
+		/* select sector */
+		outb(device->io_base + ATA_REG_CONTROL, 0x00);
+		outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+		outb(device->io_base + ATA_REG_FEATURES, 0x00);
+		outb(device->io_base + ATA_REG_SECCOUNT0, nsect);
+		outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
+		outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
+		outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+
+		/* issue write DMA command */
+		outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
+		outb(device->bar4, 0x1);
+
+		/* wait for completion */
+		ata_hd_wait(device);
+
+		/* update size */
+		buf += nsect * ATA_SECTOR_SIZE;
+		sector += nsect;
+		nr_sectors -= nsect;
+	}
 
 	return 0;
 }
@@ -115,7 +146,7 @@ int ata_hd_init(struct ata_device *device)
 		return -ENOMEM;
 
 	/* allocate buffer */
-	device->buf = get_free_page();
+	device->buf = get_free_pages(1 << NR_DMA_PAGES);
 	if (!device->buf) {
 		kfree(device->prdt);
 		return -ENOMEM;
@@ -123,11 +154,10 @@ int ata_hd_init(struct ata_device *device)
 
 	/* clear prdt and buffer */
 	memset(device->prdt, 0, sizeof(struct ata_prdt));
-	memset(device->buf, 0, PAGE_SIZE);
+	memset(device->buf, 0, NR_DMA_PAGES * PAGE_SIZE);
 
 	/* set prdt */
 	device->prdt[0].buffer_phys = __pa(device->buf);
-	device->prdt[0].transfert_size = ATA_SECTOR_SIZE;
 	device->prdt[0].mark_end = 0x8000;
 
 	/* activate pci */

@@ -70,10 +70,27 @@ void mark_buffer_clean(struct buffer_head *bh)
  */
 void mark_buffer_dirty(struct buffer_head *bh)
 {
+	struct buffer_head *next = NULL;
+	struct list_head *pos;
+
 	if (!bh->b_dirt) {
 		bh->b_dirt = 1;
 		list_del(&bh->b_list);
-		list_add(&bh->b_list, &dirty_list);
+
+		/* keep dirty list sorted */
+		list_for_each(pos, &dirty_list) {
+			next = list_entry(pos, struct buffer_head, b_list);
+
+			if (next->b_dev > bh->b_dev)
+				break;
+			if (next->b_block == bh->b_block && next->b_block > bh->b_block)
+				break;
+		}
+
+		if (next)
+			list_add_tail(&bh->b_list, &next->b_list);
+		else
+			list_add(&bh->b_list, &dirty_list);
 	}
 }
 
@@ -449,8 +466,9 @@ void try_to_free_buffer(struct page *page)
  */
 static void __bsync(dev_t dev)
 {
+	struct buffer_head *bh, *bhs_list[NBUF];
 	struct list_head *pos, *n;
-	struct buffer_head *bh;
+	size_t bhs_count = 0;
 
 	list_for_each_safe(pos, n, &dirty_list) {
 		bh = (struct buffer_head *) list_entry(pos, struct buffer_head, b_list);
@@ -459,9 +477,19 @@ static void __bsync(dev_t dev)
 		if (!buffer_dirty(bh) || (dev && bh->b_dev != dev))
 			continue;
 
-		/* write buffer */
-		ll_rw_block(WRITE, 1, &bh);
+		/* write buffers */
+		if (bhs_count == NBUF) {
+			ll_rw_block(WRITE, bhs_count, bhs_list);
+			bhs_count = 0;
+		}
+
+		/* add buffer */
+		bhs_list[bhs_count++] = bh;
 	}
+
+		/* write last buffers */
+		if (bhs_count)
+			ll_rw_block(WRITE, bhs_count, bhs_list);
 }
 
 /*
