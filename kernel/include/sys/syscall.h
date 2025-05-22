@@ -81,6 +81,7 @@
 #define __NR_nanosleep			162
 #define __NR_mremap			163
 #define __NR_poll			168
+#define __NR_prctl			172
 #define __NR_rt_sigaction		174
 #define __NR_rt_sigprocmask		175
 #define __NR_rt_sigpending		176

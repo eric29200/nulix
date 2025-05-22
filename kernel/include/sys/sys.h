@@ -22,5 +22,6 @@ int sys_uname(struct utsname *buf);
 int sys_sethostname(const char *name, size_t len);
 int sys_getpriority(int which, int who);
 int sys_setpriority(int which, int who, int niceval);
+int sys_prctl(int option, uint32_t arg2, uint32_t arg3, uint32_t arg4, uint32_t arg5);
 
 #endif

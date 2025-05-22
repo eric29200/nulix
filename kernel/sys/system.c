@@ -8,6 +8,7 @@
 #include <stderr.h>
 #include <resource.h>
 #include <reboot.h>
+#include <prctl.h>
  
 #define UTS_SYSNAME		"nulix"
 #define UTS_NODENAME		"nulix"
@@ -443,4 +444,24 @@ int sys_setpriority(int which, int who, int niceval)
 	}
 
 	return ret;
+}
+
+/*
+ * Operation on a process or thread.
+ */
+int sys_prctl(int option, uint32_t arg2, uint32_t arg3, uint32_t arg4, uint32_t arg5)
+{
+	UNUSED(arg2);
+	UNUSED(arg3);
+	UNUSED(arg4);
+	UNUSED(arg5);
+
+	switch (option) {
+		case PR_GET_DUMPABLE:
+			break;
+		default:
+			printf("Prctl: unknown option %d\n");
+	}
+
+	return 0;
 }
