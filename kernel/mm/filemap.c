@@ -99,6 +99,79 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 }
 
 /*
+ * Generic file read.
+ */
+int generic_file_read(struct file *filp, char *buf, int count)
+{
+	struct inode *inode = filp->f_inode;
+	int read = 0, err = 0, nr;
+	struct page *page;
+	off_t offset;
+	char *kaddr;
+	size_t pos;
+
+
+	for (pos = filp->f_pos; count && pos < inode->i_size;) {
+		/* compute offset in page */
+		offset = pos & ~PAGE_MASK;
+		nr = PAGE_SIZE - offset;
+
+		/* try to find page in cache */
+		page = find_page(inode, pos & PAGE_MASK);
+		if (page)
+			goto found_page;
+
+		/* get a free page */
+		page = __get_free_page(GFP_HIGHUSER);
+		if (!page) {
+			err = -ENOMEM;
+			break;
+		}
+
+		/* add it to cache */
+		add_to_page_cache(page, inode, pos & PAGE_MASK);
+
+		/* read page */
+		err = inode->i_op->readpage(inode, page);
+		if (err) {
+			remove_from_page_cache(page);
+			__free_page(page);
+			break;
+		}
+
+found_page:
+		/* adjust size */
+		if (nr > count)
+			nr = count;
+		if (pos + nr > inode->i_size)
+			nr = inode->i_size - pos;
+
+		/* copy to user buffer */
+		kaddr = kmap(page);
+		memcpy(buf, kaddr + offset, nr);
+		kunmap(page);
+
+		/* release page */
+		__free_page(page);
+
+		/* update sizes */
+		buf += nr;
+		pos += nr;
+		read += nr;
+		count -= nr;
+	}
+
+	/* update position */
+	filp->f_pos = pos;
+
+	/* update inode */
+	inode->i_atime = CURRENT_TIME;
+	inode->i_dirt = 1;
+
+	return read ? read : err;
+}
+
+/*
  * Truncate inode pages.
  */
 void truncate_inode_pages(struct inode *inode, off_t start)
