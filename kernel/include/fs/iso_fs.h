@@ -111,7 +111,6 @@ struct buffer_head *isofs_getblk(struct inode *inode, int block, int create);
 int isofs_bmap(struct inode *inode, int block);
 
 /* isofs file operations prototypes */
-int isofs_file_read(struct file *filp, char *buf, int count);
 int isofs_getdents64(struct file *filp, void *dirp, size_t count);
 
 /* isofs utils prototypes */

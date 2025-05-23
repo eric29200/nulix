@@ -7,7 +7,7 @@
  * ISOFS file operations.
  */
 struct file_operations isofs_file_fops = {
-	.read		= isofs_file_read,
+	.read		= generic_file_read,
 	.mmap		= generic_file_mmap,
 };
 
