@@ -19,7 +19,7 @@ int ext2_file_write(struct file *filp, const char *buf, int count)
 		/* read block */
 		bh = ext2_bread(filp->f_inode, filp->f_pos / filp->f_inode->i_sb->s_blocksize, 1);
 		if (!bh)
-			goto out;
+			break;
 
 		/* find position and numbers of chars to read */
 		pos = filp->f_pos % filp->f_inode->i_sb->s_blocksize;
@@ -44,7 +44,6 @@ int ext2_file_write(struct file *filp, const char *buf, int count)
 		}
 	}
 
-out:
 	filp->f_inode->i_mtime = filp->f_inode->i_ctime = CURRENT_TIME;
 	filp->f_inode->i_dirt = 1;
 	return count - left;

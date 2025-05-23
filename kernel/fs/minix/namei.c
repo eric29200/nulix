@@ -44,7 +44,7 @@ static struct buffer_head *minix_find_entry(struct inode *dir, const char *name,
 			brelse(bh);
 
 			/* get next block */
-			bh = minix_getblk(dir, i / nr_entries_per_block, 0);
+			bh = minix_bread(dir, i / nr_entries_per_block, 0);
 			if (!bh)
 				return NULL;
 		}
@@ -94,7 +94,7 @@ static int minix_add_entry(struct inode *dir, const char *name, int name_len, st
 			brelse(bh);
 
 			/* get next block */
-			bh = minix_getblk(dir, i / nr_entries_per_block, 1);
+			bh = minix_bread(dir, i / nr_entries_per_block, 1);
 			if (!bh)
 				return -EIO;
 		}
@@ -165,7 +165,7 @@ static int minix_empty_dir(struct inode *dir)
 			brelse(bh);
 
 			/* get next block */
-			bh = minix_getblk(dir, i / nr_entries_per_block, 0);
+			bh = minix_bread(dir, i / nr_entries_per_block, 0);
 			if (!bh)
 				return 0;
 		}
@@ -418,7 +418,7 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	inode->i_dirt = 1;
 
 	/* get/create first block */
-	bh = minix_getblk(inode, 0, 1);
+	bh = minix_bread(inode, 0, 1);
 	if(!bh) {
 		inode->i_nlinks = 0;
 		iput(inode);
@@ -500,7 +500,7 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	inode->i_dirt = 1;
 
 	/* get/create first block */
-	bh = minix_getblk(inode, 0, 1);
+	bh = minix_bread(inode, 0, 1);
 	if (!bh) {
 		inode->i_nlinks = 0;
 		iput(inode);

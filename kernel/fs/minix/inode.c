@@ -19,7 +19,7 @@ struct file_operations minix_dir_fops = {
  * File operations.
  */
 struct file_operations minix_file_fops = {
-	.read			= minix_file_read,
+	.read			= generic_file_read,
 	.write			= minix_file_write,
 	.mmap			= generic_file_mmap,
 };
@@ -191,7 +191,7 @@ int minix_put_inode(struct inode *inode)
 /*
  * Get an inode buffer.
  */
-static struct buffer_head *inode_getblk(struct inode *inode, int nr, int create)
+static struct buffer_head *minix_inode_getblk(struct inode *inode, int nr, int create)
 {
 	/* create block if needed */
 	if (create && !inode->u.minix_i.i_zone[nr])
@@ -208,7 +208,7 @@ static struct buffer_head *inode_getblk(struct inode *inode, int nr, int create)
 /*
  * Get a block buffer.
  */
-static struct buffer_head *block_getblk(struct inode *inode, struct buffer_head *bh, int block, int create)
+static struct buffer_head *minix_block_getblk(struct inode *inode, struct buffer_head *bh, int block, int create)
 {
 	int i;
 
@@ -235,9 +235,9 @@ static struct buffer_head *block_getblk(struct inode *inode, struct buffer_head 
 }
 
 /*
- * Get or create a buffer.
+ * Read a minix inode block.
  */
-struct buffer_head *minix_getblk(struct inode *inode, int block, int create)
+struct buffer_head *minix_bread(struct inode *inode, int block, int create)
 {
 	struct super_block *sb = inode->i_sb;
 	struct buffer_head *bh;
@@ -248,29 +248,29 @@ struct buffer_head *minix_getblk(struct inode *inode, int block, int create)
 
 	/* direct block */
 	if (block < 7)
-		return inode_getblk(inode, block, create);
+		return minix_inode_getblk(inode, block, create);
 
 	/* indirect block */
 	block -= 7;
 	if (block < 256) {
-		bh = inode_getblk(inode, 7, create);
-		return block_getblk(inode, bh, block, create);
+		bh = minix_inode_getblk(inode, 7, create);
+		return minix_block_getblk(inode, bh, block, create);
 	}
 
 	/* double indirect block */
 	block -= 256;
 	if (block < 256 * 256) {
-		bh = inode_getblk(inode, 8, create);
-		bh = block_getblk(inode, bh, (block >> 8) & 255, create);
-		return block_getblk(inode, bh, block & 255, create);
+		bh = minix_inode_getblk(inode, 8, create);
+		bh = minix_block_getblk(inode, bh, (block >> 8) & 255, create);
+		return minix_block_getblk(inode, bh, block & 255, create);
 	}
 
 	/* triple indirect block */
 	block -= 256 * 256;
-	bh = inode_getblk(inode, 9, create);
-	bh = block_getblk(inode, bh, (block >> 16) & 255, create);
-	bh = block_getblk(inode, bh, (block >> 8) & 255, create);
-	return block_getblk(inode, bh, block & 255, create);
+	bh = minix_inode_getblk(inode, 9, create);
+	bh = minix_block_getblk(inode, bh, (block >> 16) & 255, create);
+	bh = minix_block_getblk(inode, bh, (block >> 8) & 255, create);
+	return minix_block_getblk(inode, bh, block & 255, create);
 }
 
 /*

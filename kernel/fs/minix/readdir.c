@@ -5,56 +5,70 @@
 #include <stderr.h>
 
 /*
- * Get directory entries system call.
+ * Get directory entries.
  */
 int minix_getdents64(struct file *filp, void *dirp, size_t count)
 {
 	struct minix_sb_info *sbi = minix_sb(filp->f_inode->i_sb);
+	struct super_block *sb = filp->f_inode->i_sb;
+	struct inode *inode = filp->f_inode;
+	struct buffer_head *bh = NULL;
 	struct minix3_dir_entry *de3;
 	struct dirent64 *dirent;
-	int entries_size, ret;
+	int entries_size = 0, ret;
+	uint32_t offset, block;
 	size_t name_len;
-	char *name;
-	ino_t ino;
-	void *de;
 
-	/* allocate directory entry */
-	de = kmalloc(sbi->s_dirsize);
-	if (!de)
-		return -ENOMEM;
+	/* get start offset */
+	offset = filp->f_pos & (sb->s_blocksize - 1);
+	dirent = (struct dirent64 *) dirp;
 
-	/* set minix directory entries pointer */
-	de3 = de;
-
-	/* walk through all entries */
-	for (entries_size = 0, dirent = (struct dirent64 *) dirp;;) {
-		/* read minix dir entry */
-		if (minix_file_read(filp, (char *) de, sbi->s_dirsize) != sbi->s_dirsize)
-			goto out;
-
-		/* get inode number and file name */
-		ino = de3->d_inode;
-		name = de3->d_name;
-
-		/* skip null entries */
-		if (ino == 0)
+	/* read block by block */
+	while (filp->f_pos < inode->i_size) {
+		/* read next block */
+		block = filp->f_pos >> sb->s_blocksize_bits;
+		bh = minix_bread(inode, block, 0);
+		if (!bh) {
+			filp->f_pos += sb->s_blocksize - offset;
 			continue;
-
-		/* fill in directory entry */
-		name_len = strlen(name);
-		ret = filldir(dirent, name, name_len, ino, count);
-		if (ret) {
-			filp->f_pos -= sbi->s_dirsize;
-			return entries_size;
 		}
 
-		/* go to next entry */
-		count -= dirent->d_reclen;
-		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
+		/* read all entries in block */
+		while (filp->f_pos < inode->i_size && offset < sb->s_blocksize) {
+			/* check next entry */
+			de3 = (struct minix3_dir_entry *) (bh->b_data + offset);
+
+			/* skip null entry */
+			if (de3->d_inode == 0) {
+				offset += sbi->s_dirsize;
+				filp->f_pos += sbi->s_dirsize;
+				continue;
+			}
+
+			/* fill in directory entry */
+			name_len = strlen(de3->d_name);
+			ret = filldir(dirent, de3->d_name, name_len, de3->d_inode, count);
+			if (ret) {
+				brelse(bh);
+				return entries_size;
+			}
+
+			/* update offset */
+			offset += sbi->s_dirsize;
+
+			/* go to next entry */
+			count -= dirent->d_reclen;
+			entries_size += dirent->d_reclen;
+			dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
+
+			/* update file position */
+			filp->f_pos += sbi->s_dirsize;
+		}
+
+		/* reset offset and release block buffer */
+		offset = 0;
+		brelse(bh);
 	}
 
-out:
-	kfree(de);
 	return entries_size;
 }
