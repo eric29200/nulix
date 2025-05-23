@@ -110,7 +110,6 @@ int generic_file_read(struct file *filp, char *buf, int count)
 	char *kaddr;
 	size_t pos;
 
-
 	for (pos = filp->f_pos; count && pos < inode->i_size;) {
 		/* compute offset in page */
 		offset = pos & ~PAGE_MASK;
