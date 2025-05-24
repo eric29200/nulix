@@ -32,6 +32,9 @@ int ext2_file_write(struct file *filp, const char *buf, int count)
 		mark_buffer_dirty(bh);
 		brelse(bh);
 
+		/* update page cache */
+		update_vm_cache(filp->f_inode, buf, pos, nr_chars);
+
 		/* update sizes */
 		filp->f_pos += nr_chars;
 		buf += nr_chars;
