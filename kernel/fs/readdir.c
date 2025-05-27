@@ -10,10 +10,10 @@ static int do_getdents64(int fd, void *dirp, size_t count)
 {
 	struct file *filp;
 
-	/* check fd */
-	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EINVAL;
-	filp = current_task->files->filp[fd];
 
 	/* getdents not implemented */
 	if (!filp->f_op || !filp->f_op->getdents64)

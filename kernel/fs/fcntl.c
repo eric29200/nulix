@@ -86,11 +86,11 @@ int sys_fcntl(int fd, int cmd, unsigned long arg)
 	struct file *filp;
 	int ret = 0;
 
-	/* check fd */
-	if (fd >= NR_OPEN || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EINVAL;
 
-	filp = current_task->files->filp[fd];
 	switch (cmd) {
 		case F_DUPFD:
 			ret = dup_after(fd, arg);

@@ -55,12 +55,10 @@ int sys_fstatfs64(int fd, struct statfs64 *buf)
 	if (!buf)
 		return -EINVAL;
 
-	/* check input file */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
-
-	/* get input file */
-	filp = current_task->files->filp[fd];
 
 	/* do statfs */
 	return do_statfs64(filp->f_inode, buf);

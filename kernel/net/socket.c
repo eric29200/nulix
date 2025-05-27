@@ -89,12 +89,12 @@ static int get_fd(struct inode *inode)
 	/* set file */
 	current_task->files->filp[fd] = filp;
 	FD_CLR(fd, &current_task->files->close_on_exec);
-	current_task->files->filp[fd]->f_mode = O_RDWR;
-	current_task->files->filp[fd]->f_flags = 0;
-	current_task->files->filp[fd]->f_pos = 0;
-	current_task->files->filp[fd]->f_count = 1;
-	current_task->files->filp[fd]->f_inode = inode;
-	current_task->files->filp[fd]->f_op = &socket_fops;
+	filp->f_mode = O_RDWR;
+	filp->f_flags = 0;
+	filp->f_pos = 0;
+	filp->f_count = 1;
+	filp->f_inode = inode;
+	filp->f_op = &socket_fops;
 
 	return fd;
 }
@@ -106,14 +106,14 @@ static struct socket *sockfd_lookup(int fd, struct file **filpp, int *err)
 {
 	struct file *filp;
 
-	/* check file descriptor */
-	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd]) {
+	/* get file */
+	filp = fget(fd);
+	if (!filp) {
 		*err = -EBADF;
 		return NULL;
 	}
 
 	/* get socket */
-	filp = current_task->files->filp[fd];
 	if (!filp->f_inode || !filp->f_inode->i_sock) {
 		*err = -ENOTSOCK;
 		return NULL;

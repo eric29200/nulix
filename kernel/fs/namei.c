@@ -142,15 +142,17 @@ int namei(int dirfd, struct inode *base, const char *pathname, int follow_links,
 	struct inode *dir, *inode;
 	const char *basename;
 	size_t basename_len;
+	struct file *filp;
 	int ret;
 
 	/* use directly dir fd */
 	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
-		if (dirfd >= NR_OPEN || !current_task->files->filp[dirfd])
+		filp = fget(dirfd);
+		if (!filp)
 			return -EINVAL;
 
-		current_task->files->filp[dirfd]->f_inode->i_count++;
-		*res_inode = current_task->files->filp[dirfd]->f_inode;
+		filp->f_inode->i_count++;
+		*res_inode = filp->f_inode;
 		return 0;
 	}
 

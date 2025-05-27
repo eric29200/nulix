@@ -50,13 +50,15 @@ int sys_truncate64(const char *pathname, off_t length)
 static int do_ftruncate(int fd, off_t length)
 {
 	struct inode *inode;
+	struct file *filp;
 
-	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
 
 	/* get inode */
-	inode = current_task->files->filp[fd]->f_inode;
+	inode = filp->f_inode;
 
 	return do_truncate(inode, length);
 }

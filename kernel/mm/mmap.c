@@ -652,10 +652,9 @@ void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off
 
 	/* get file */
 	if (fd >= 0) {
-		if (fd >= NR_OPEN || !current_task->files->filp[fd])
+		filp = fget(fd);
+		if (!filp)
 			return NULL;
-
-		filp = current_task->files->filp[fd];
 	}
 
 	return do_mmap((uint32_t) addr, length, prot, flags, filp, offset);
@@ -670,10 +669,9 @@ void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pg
 
 	/* get file */
 	if (fd >= 0) {
-		if (fd >= NR_OPEN || !current_task->files->filp[fd])
+		filp = fget(fd);
+		if (!filp)
 			return NULL;
-
-		filp = current_task->files->filp[fd];
 	}
 
 	return do_mmap((uint32_t) addr, length, prot, flags, filp, pgoffset * PAGE_SIZE);

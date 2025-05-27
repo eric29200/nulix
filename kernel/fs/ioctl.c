@@ -11,12 +11,10 @@ int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 	struct file *filp;
 	int on;
 
-	/* check input args */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
-
-	/* get current file */
-	filp = current_task->files->filp[fd];
 
 	switch (request) {
 		case FIONBIO:

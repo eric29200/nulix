@@ -82,11 +82,14 @@ off_t do_lseek(struct file *filp, off_t offset, int whence)
  */
 off_t sys_lseek(int fd, off_t offset, int whence)
 {
-	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
+	struct file *filp;
+
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
 
-	return do_lseek(current_task->files->filp[fd], offset, whence);
+	return do_lseek(filp, offset, whence);
 }
 
 /*
@@ -94,17 +97,19 @@ off_t sys_lseek(int fd, off_t offset, int whence)
  */
 int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result, int whence)
 {
+	struct file *filp;
 	off_t offset;
 
-	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
 
 	/* compute offset */
 	offset = ((unsigned long long) offset_high << 32) | offset_low;
 
 	/* seek */
-	*result = do_lseek(current_task->files->filp[fd], offset, whence);
+	*result = do_lseek(filp, offset, whence);
 
 	return 0;
 }
@@ -147,11 +152,14 @@ static int do_pread64(struct file *filp, void *buf, size_t count, off_t offset)
  */
 int sys_read(int fd, char *buf, int count)
 {
-	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || count < 0 || !current_task->files->filp[fd])
+	struct file *filp;
+
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
 
-	return do_read(current_task->files->filp[fd], buf, count);
+	return do_read(filp, buf, count);
 }
 
 /*
@@ -159,11 +167,14 @@ int sys_read(int fd, char *buf, int count)
  */
 int sys_write(int fd, const char *buf, int count)
 {
-	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || count < 0 || !current_task->files->filp[fd])
+	struct file *filp;
+
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
 
-	return do_write(current_task->files->filp[fd], buf, count);
+	return do_write(filp, buf, count);
 }
 
 /*
@@ -172,16 +183,18 @@ int sys_write(int fd, const char *buf, int count)
 ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 {
 	ssize_t ret = 0, n;
+	struct file *filp;
 	int i;
 
-	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
 
 	/* read into each buffer */
 	for (i = 0; i < iovcnt; i++, iov++) {
 		/* read into buffer */
-		n = do_read(current_task->files->filp[fd], iov->iov_base, iov->iov_len);
+		n = do_read(filp, iov->iov_base, iov->iov_len);
 		if (n < 0)
 			return n;
 
@@ -200,16 +213,18 @@ ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 {
 	ssize_t ret = 0, n;
+	struct file *filp;
 	int i;
 
-	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
 
 	/* write each buffer */
 	for (i = 0; i < iovcnt; i++, iov++) {
 		/* write into buffer */
-		n = do_write(current_task->files->filp[fd], iov->iov_base, iov->iov_len);
+		n = do_write(filp, iov->iov_base, iov->iov_len);
 		if (n < 0)
 			return n;
 
@@ -227,11 +242,14 @@ ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
  */
 int sys_pread64(int fd, void *buf, size_t count, off_t offset)
 {
-	/* check file descriptor */
-	if (fd >= NR_OPEN || fd < 0 || !current_task->files->filp[fd])
+	struct file *filp;
+
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EBADF;
 
-	return do_pread64(current_task->files->filp[fd], buf, count, offset);
+	return do_pread64(filp, buf, count, offset);
 }
 
 /*
@@ -261,14 +279,14 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 	void *buf;
 
 	/* get input file */
-	if (fd_in >= NR_OPEN || fd_in < 0 || !current_task->files->filp[fd_in])
+	filp_in = fget(fd_in);
+	if (!filp_in)
 		return -EBADF;
-	filp_in = current_task->files->filp[fd_in];
 
 	/* get output file */
-	if (fd_out>= NR_OPEN || fd_out < 0 || !current_task->files->filp[fd_out])
+	filp_out = fget(fd_out);
+	if (!filp_out)
 		return -EBADF;
-	filp_out = current_task->files->filp[fd_out];
 
 	/* get a free buffer */
 	buf = get_free_page();

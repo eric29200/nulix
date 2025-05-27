@@ -232,6 +232,7 @@ int generic_file_read(struct file *filp, char *buf, int count);
 /* inode operations */
 struct inode *iget(struct super_block *sb, ino_t ino);
 void iput(struct inode *inode);
+struct file *fget(int fd);
 struct inode *get_empty_inode(struct super_block *sb);
 void clear_inode(struct inode *inode);
 void add_to_inode_cache(struct inode *inode);

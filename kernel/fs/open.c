@@ -11,6 +11,17 @@
 struct file filp_table[NR_FILE];
 
 /*
+ * Get a file.
+ */
+struct file *fget(int fd)
+{
+	if (fd < 0 || fd >= NR_OPEN)
+		return NULL;
+
+	return current_task->files->filp[fd];
+}
+
+/*
  * Get an empty file.
  */
 struct file *get_empty_filp()
@@ -149,14 +160,16 @@ int do_close(struct file *filp)
  */
 int sys_close(int fd)
 {
+	struct file *filp;
 	int ret;
 
-	/* check file descriptor */
-	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EINVAL;
 
 	/* close file */
-	ret = do_close(current_task->files->filp[fd]);
+	ret = do_close(filp);
 	if (ret)
 		return ret;
 
@@ -204,13 +217,15 @@ int sys_chmod(const char *pathname, mode_t mode)
 static int do_fchmod(int fd, mode_t mode)
 {
 	struct inode *inode;
+	struct file *filp;
 
-	/* check file descriptor */
-	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EINVAL;
 
 	/* get inode */
-	inode = current_task->files->filp[fd]->f_inode;
+	inode = filp->f_inode;
 
 	/* adjust mode */
 	if (mode == (mode_t) - 1)
@@ -276,13 +291,15 @@ int sys_chown(const char *pathname, uid_t owner, gid_t group)
 static int do_fchown(int fd, uid_t owner, gid_t group)
 {
 	struct inode *inode;
+	struct file *filp;
 
-	/* check file descriptor */
-	if (fd < 0 || fd >= NR_OPEN || !current_task->files->filp[fd])
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EINVAL;
 
 	/* update inode */
-	inode = current_task->files->filp[fd]->f_inode;
+	inode = filp->f_inode;
 	inode->i_uid = owner;
 	inode->i_gid = group;
 	inode->i_dirt = 1;

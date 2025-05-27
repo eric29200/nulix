@@ -37,13 +37,15 @@ int sys_chdir(const char *path)
 int sys_fchdir(int fd)
 {
 	struct inode *inode;
+	struct file *filp;
 
-	/* check fd */
-	if (fd >= NR_OPEN || !current_task->files->filp[fd])
+	/* gt file */
+	filp = fget(fd);
+	if (!filp)
 		return -EINVAL;
 
 	/* fd must be a directory */
-	inode = current_task->files->filp[fd]->f_inode;
+	inode = filp->f_inode;
 	if (!S_ISDIR(inode->i_mode))
 		return -ENOTDIR;
 

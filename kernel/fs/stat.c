@@ -78,12 +78,15 @@ int sys_lstat64(const char *pathname, struct stat64 *statbuf)
  */
 int sys_fstat64(int fd, struct stat64 *statbuf)
 {
-	/* check fd */
-	if (fd >= NR_OPEN || !current_task->files->filp[fd])
+	struct file *filp;
+
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
 		return -EINVAL;
 
 	/* do stat */
-	return do_stat64(current_task->files->filp[fd]->f_inode, statbuf);
+	return do_stat64(filp->f_inode, statbuf);
 }
 
 /*
