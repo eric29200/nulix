@@ -240,6 +240,7 @@ struct inode *find_inode(struct super_block *sb, ino_t ino);
 void init_inode();
 
 /* file operations */
+int get_unused_fd();
 struct file *get_empty_filp();
 
 /* name operations */

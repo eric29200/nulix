@@ -11,6 +11,20 @@
 struct file filp_table[NR_FILE];
 
 /*
+ * Get an empty file descriptor.
+ */
+int get_unused_fd()
+{
+	int fd;
+
+	for (fd = 0; fd < NR_OPEN; fd++)
+		if (!current_task->files->filp[fd])
+			return fd;
+
+	return -EMFILE;
+}
+
+/*
  * Get a file.
  */
 struct file *fget(int fd)
@@ -49,13 +63,9 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	int fd, ret;
 
 	/* find a free slot in current process */
-	for (fd = 0; fd < NR_OPEN; fd++)
-		if (!current_task->files->filp[fd])
-			break;
-
-	/* no slots : exit */
-	if (fd >= NR_OPEN)
-		return -EINVAL;
+	fd = get_unused_fd();
+	if (fd < 0)
+		return fd;
 
 	/* get an empty file */
 	filp = get_empty_filp();

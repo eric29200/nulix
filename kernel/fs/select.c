@@ -26,17 +26,14 @@ static void do_pollfd(struct pollfd *fds, int *count, struct select_table *wait)
 {
 	struct file *filp;
 	uint32_t mask = 0;
-	int fd;
 
 	/* reset mask and number of events */
 	mask = 0;
 	*count = 0;
 
-	/* check file descriptor */
-	fd = fds->fd;
-	if (fd >= 0 && fd < NR_OPEN && current_task->files->filp[fd]) {
-		filp = current_task->files->filp[fd];
-
+	/* get file */
+	filp = fget(fds->fd);
+	if (filp) {
 		/* call specific poll */
 		mask = POLLNVAL;
 		if (filp->f_op && filp->f_op->poll)

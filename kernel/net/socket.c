@@ -70,21 +70,15 @@ static int get_fd(struct inode *inode)
 	struct file *filp;
 	int fd;
 
+	/* get a file slot */
+	fd = get_unused_fd();
+	if (fd < 0)
+		return fd;
+
 	/* get a new empty file */
 	filp = get_empty_filp();
 	if (!filp)
 		return -EMFILE;
-
-	/* find a free file slot */
-	for (fd = 0; fd < NR_OPEN; fd++)
-		if (!current_task->files->filp[fd])
-			break;
-
-	/* no free slot */
-	if (fd >= NR_OPEN) {
-		filp->f_count = 0;
-		return -EMFILE;
-	}
 
 	/* set file */
 	current_task->files->filp[fd] = filp;
