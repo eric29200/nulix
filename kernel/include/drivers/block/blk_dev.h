@@ -2,9 +2,15 @@
 #define _BLK_DEV_H_
 
 #include <fs/fs.h>
+#include <ioctl.h>
 #include <dev.h>
 
 #define MAX_BLKDEV		128
+
+#define BLKGETSIZE 		_IO(0x12, 96)
+#define BLKBSZGET		_IOR(0x12, 112, sizeof(int))
+#define BLKBSZSET		_IOW(0x12, 113, sizeof(int))
+#define BLKGETSIZE64		_IOR(0x12, 114, sizeof(uint64_t))	
 
 /*
  * Block device request.

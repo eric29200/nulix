@@ -74,6 +74,21 @@ static uint32_t ata_get_start_sector(struct ata_device *device, dev_t dev)
 }
 
 /*
+ * Get number of sectors.
+ */
+static uint32_t ata_get_nr_sectors(struct ata_device *device, dev_t dev)
+{
+	int partition_nr;
+
+	/* get partition number */
+	partition_nr = dev - device->hd.dev;
+	if (!partition_nr)
+		return 0;
+
+	return device->hd.partitions[partition_nr].nr_sects;
+}
+
+/*
  * Handle a read/write request.
  */
 static void ata_request(struct request *request)
@@ -190,6 +205,34 @@ static int ata_detect(struct ata_device *device)
 }
 
 /*
+ * Ioctl write.
+ */
+static int ata_ioctl(struct file *filp, int request, unsigned long arg)
+{
+	dev_t dev = filp->f_inode->i_rdev;
+	struct ata_device *device;
+
+	/* get ata device */
+	device = ata_get_device(dev);
+	if (!device)
+		return -EINVAL;
+
+	switch (request) {
+		case BLKGETSIZE:
+			*((uint32_t *) arg) = ata_get_nr_sectors(device, dev);
+			break;
+		case BLKGETSIZE64:
+			*((uint64_t *) arg) = ata_get_nr_sectors(device, dev) * ATA_SECTOR_SIZE;
+			break;
+		default:
+			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) filp->f_inode->i_rdev);
+			break;
+	}
+
+	return 0;
+}
+
+/*
  * Irq handler.
  */
 static void ata_irq_handler(struct registers *regs)
@@ -236,7 +279,7 @@ int init_ata()
 static struct file_operations ata_fops = {
 	.read		= generic_block_read,
 	.write		= generic_block_write,
-	.ioctl		= generic_block_ioctl,
+	.ioctl		= ata_ioctl,
 };
 
 /*

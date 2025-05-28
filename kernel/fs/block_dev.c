@@ -113,15 +113,3 @@ int generic_block_write(struct file *filp, const char *buf, int count)
 
 	return count - left;
 }
-
-/*
- * Generic block write.
- */
-int generic_block_ioctl(struct file *filp, int request, unsigned long arg)
-{
-	UNUSED(arg);
-
-	printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) filp->f_inode->i_rdev);
-
-	return 0;
-}
