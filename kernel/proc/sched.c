@@ -664,24 +664,17 @@ int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
  */
 int sys_getgroups(int size, gid_t *list)
 {
-	size_t i;
-
 	if (size < 0)
 		return -EINVAL;
 
-	/* get number of groups */
-	for (i = 0; i < NGROUPS; i++)
-		if (current_task->groups[i] == (gid_t) NOGROUP)
-			break;
-
 	if (size) {
-		if (i > (size_t) size)
+		if (current_task->ngroups > (size_t) size)
 			return -EINVAL;
 
-		memcpy(list, current_task->groups, sizeof(gid_t) * i);
+		memcpy(list, current_task->groups, sizeof(gid_t) * current_task->ngroups);
 	}
 
-	return i;
+	return current_task->ngroups;
 }
 
 /*
@@ -695,13 +688,14 @@ int sys_setgroups(size_t size, const gid_t *list)
 	if (!suser())
 		return -EPERM;
 
+	/* check number of groups */
+	if (size >= NGROUPS)
+		return -EPERM;
+
 	/* set groups */	
+	current_task->ngroups = size;
 	for (i = 0; i < size; i++)
 		current_task->groups[i] = list[i];
-
-	/* reset remaining groups */
-	for (; i < NGROUPS; i++)
-		current_task->groups[i] = NOGROUP;
 
 	return 0;
 }
