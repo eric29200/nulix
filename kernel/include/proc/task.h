@@ -14,6 +14,9 @@
 
 #define STACK_SIZE		0x2000
 
+#define NGROUPS			32
+#define NOGROUP			-1
+
 #define TASK_RUNNING		1
 #define TASK_SLEEPING		2
 #define TASK_STOPPED		3
@@ -100,6 +103,7 @@ struct task {
 	gid_t				gid;				/* group id */
 	gid_t				egid;				/* effective group id */
 	gid_t				sgid;				/* saved group id */
+	gid_t				groups[NGROUPS];		/* groups */
 	struct tty *			tty;				/* attached tty */
 	time_t				utime;				/* amount of time (in jiffies) that this process has been scheduled in user mode */
 	time_t				stime;				/* amount of time (in jiffies) that this process has been scheduled in kernel mode */

@@ -163,6 +163,7 @@ static const void *syscalls[] = {
 	[__NR_modify_ldt]		= sys_modify_ldt,
 	[__NR_sethostname]		= sys_sethostname,
 	[__NR_prctl]			= sys_prctl,
+	[__NR_getgroups32]		= sys_getgroups,
 };
 
 /*

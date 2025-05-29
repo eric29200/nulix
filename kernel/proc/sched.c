@@ -660,11 +660,48 @@ int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 }
 
 /*
+ * Get groups system call.
+ */
+int sys_getgroups(int size, gid_t *list)
+{
+	size_t i;
+
+	if (size < 0)
+		return -EINVAL;
+
+	/* get number of groups */
+	for (i = 0; i < NGROUPS; i++)
+		if (current_task->groups[i] == (gid_t) NOGROUP)
+			break;
+
+	if (size) {
+		if (i > (size_t) size)
+			return -EINVAL;
+
+		memcpy(list, current_task->groups, sizeof(gid_t) * i);
+	}
+
+	return i;
+}
+
+/*
  * Set groups system call.
  */
 int sys_setgroups(size_t size, const gid_t *list)
 {
-	UNUSED(size);
-	UNUSED(list);
+	size_t i;
+
+	/* check permissions */
+	if (!suser())
+		return -EPERM;
+
+	/* set groups */	
+	for (i = 0; i < size; i++)
+		current_task->groups[i] = list[i];
+
+	/* reset remaining groups */
+	for (; i < NGROUPS; i++)
+		current_task->groups[i] = NOGROUP;
+
 	return 0;
 }

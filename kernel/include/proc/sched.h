@@ -80,5 +80,6 @@ int sys_setsid();
 int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid);
 int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid);
 int sys_setgroups(size_t size, const gid_t *list);
+int sys_getgroups(int size, gid_t *list);
 
 #endif

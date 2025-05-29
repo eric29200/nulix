@@ -101,6 +101,7 @@
 #define __NR_getgid32			200
 #define __NR_geteuid32			201
 #define __NR_getegid32			202
+#define __NR_getgroups32		205
 #define __NR_setgroups32		206
 #define __NR_fchown32			207
 #define __NR_setresuid			208
