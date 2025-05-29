@@ -24,6 +24,8 @@
 #define CLONE_THREAD			0x00010000	/* Same thread group? */
 #define CLONE_NEWNS			0x00020000	/* New namespace group? */
 
+#define suser()				((current_task)->euid == 0)
+
 #define CALC_LOAD(load, exp,n ) \
 	load *= exp; \
 	load += n*(FIXED_1-exp); \

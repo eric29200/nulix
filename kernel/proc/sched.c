@@ -562,7 +562,13 @@ int sys_setpgid(pid_t pid, pid_t pgid)
  */
 int sys_setuid(uid_t uid)
 {
-	current_task->uid = uid;
+	if (suser())
+		current_task->uid = current_task->euid = current_task->suid = uid;
+	else if (uid == current_task->uid || uid == current_task->suid)
+		current_task->euid = uid;
+	else
+		return -EPERM;
+
 	return 0;
 }
 
@@ -571,7 +577,13 @@ int sys_setuid(uid_t uid)
  */
 int sys_setgid(gid_t gid)
 {
-	current_task->gid = gid;
+	if (suser())
+		current_task->gid = current_task->egid = current_task->sgid = gid;
+	else if (gid == current_task->gid || gid == current_task->sgid)
+		current_task->egid = gid;
+	else
+		return -EPERM;
+
 	return 0;
 }
 
@@ -580,6 +592,15 @@ int sys_setgid(gid_t gid)
  */
 int sys_setsid()
 {
+	struct list_head *pos;
+	struct task *task;
+
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+		if (task->pgrp == current_task->pid)
+			return -EPERM;
+	}
+
 	current_task->leader = 1;
 	current_task->pgrp = current_task->pid;
 	current_task->session = current_task->pid;
@@ -593,9 +614,23 @@ int sys_setsid()
  */
 int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
 {
-	UNUSED(rgid);
-	UNUSED(egid);
-	UNUSED(sgid);
+	/* check permissions */
+	if (!suser()) {
+		if ((rgid != (gid_t) -1) && (rgid != current_task->gid) && (rgid != current_task->egid) && (rgid != current_task->sgid))
+			return -EPERM;
+		if ((egid != (gid_t) -1) && (egid != current_task->gid) && (egid != current_task->egid) && (egid != current_task->sgid))
+			return -EPERM;
+		if ((sgid != (gid_t) -1) && (sgid != current_task->gid) && (sgid != current_task->egid) && (sgid != current_task->sgid))
+			return -EPERM;
+	}
+
+	if (rgid != (gid_t) -1)
+		current_task->gid = rgid;
+	if (egid != (gid_t) -1)
+		current_task->egid = egid;
+	if (sgid != (gid_t) -1)
+		current_task->sgid = sgid;
+
 	return 0;
 }
 
@@ -604,9 +639,23 @@ int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
  */
 int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
-	UNUSED(ruid);
-	UNUSED(euid);
-	UNUSED(suid);
+	/* check permissions */
+	if (!suser()) {
+		if ((ruid != (uid_t) -1) && (ruid != current_task->uid) && (ruid != current_task->euid) && (ruid != current_task->suid))
+			return -EPERM;
+		if ((euid != (uid_t) -1) && (euid != current_task->uid) && (euid != current_task->euid) && (euid != current_task->suid))
+			return -EPERM;
+		if ((suid != (uid_t) -1) && (suid != current_task->uid) && (suid != current_task->euid) && (suid != current_task->suid))
+			return -EPERM;
+	}
+
+	if (ruid != (uid_t) -1)
+		current_task->uid = ruid;
+	if (euid != (uid_t) -1)
+		current_task->euid = euid;
+	if (suid != (uid_t) -1)
+		current_task->suid = suid;
+
 	return 0;
 }
 
