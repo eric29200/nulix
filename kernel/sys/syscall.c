@@ -109,6 +109,7 @@ static const void *syscalls[] = {
 	[__NR_getsockname]		= sys_getsockname,
 	[__NR_getpeername]		= sys_getpeername,
 	[__NR_chown32]			= sys_chown,
+	[__NR_lchown32]			= sys_lchown,
 	[__NR_fchown32]			= sys_fchown,
 	[__NR_fchmod]			= sys_fchmod,
 	[__NR_setgroups32]		= sys_setgroups,

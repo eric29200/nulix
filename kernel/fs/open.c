@@ -296,6 +296,14 @@ int sys_chown(const char *pathname, uid_t owner, gid_t group)
 }
 
 /*
+ * Lchown system call.
+ */
+int sys_lchown(const char *pathname, uid_t owner, gid_t group)
+{
+	return do_chown(AT_FDCWD, pathname, owner, group, AT_SYMLINK_NO_FOLLOW);
+}
+
+/*
  * Fchown system call.
  */
 static int do_fchown(int fd, uid_t owner, gid_t group)

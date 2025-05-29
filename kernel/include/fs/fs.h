@@ -282,6 +282,7 @@ int sys_chmod(const char *pathname, mode_t mode);
 int sys_fchmod(int fd, mode_t mode);
 int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flags);
 int sys_chown(const char *pathname, uid_t owner, gid_t group);
+int sys_lchown(const char *pathname, uid_t owner, gid_t group);
 int sys_fchown(int fd, uid_t owner, gid_t group);
 int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags);
 int sys_utimensat(int dirfd, const char *pathname, struct timespec *times, int flags);
