@@ -44,6 +44,7 @@ sudo cp -R musl/musl-install/i386-linux-musl/sbin tmp/
 sudo cp -R musl/musl-install/i386-linux-musl/root tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R rootbase/root tmp/
+sudo cp -R rootbase/home tmp/
 
 # remove x86_64 binaries
 sudo rm -f tmp/bin/pkgconf tmp/bin/ar tmp/bin/as tmp/bin/ld tmp/bin/ld.bfd tmp/bin/objdump
@@ -82,8 +83,9 @@ sudo mknod tmp/dev/hda1 b 3 1
 sudo mknod tmp/dev/hdc b 3 32
 sudo ln -s /dev/hda1 tmp/dev/root
 
-# chown root
+# permissions
 sudo chown -R 0:0 tmp/
+sudo chown -R 1000:1000 tmp/home/nulix
 
 # unmount disk
 sudo umount tmp
