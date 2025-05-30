@@ -6,6 +6,8 @@
 #include <fcntl.h>
 #include <string.h>
 
+#define ACC_MODE(x) ("\000\004\002\006"[(x)&O_ACCMODE])
+
 /*
  * Check permission.
  */
@@ -229,14 +231,21 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 
 	/* open a directory */
 	if (!basename_len) {
-		/* do not allow to create/truncate directories here */
-		if (!(flags & (O_ACCMODE | O_CREAT | O_TRUNC))) {
-			*res_inode = dir;
-			return 0;
+		if (flags & 2) {
+			iput(dir);
+			return -EISDIR;
 		}
 
-		iput(dir);
-		return -EISDIR;
+		/* check permissions */
+		ret = permission(dir, ACC_MODE(flags));
+		if (ret) {
+			iput(dir);
+			return ret;
+		}
+
+		/* open directory */
+		*res_inode = dir;
+		return 0;
 	}
 
 	/* set mode (needed if new file is created) */
