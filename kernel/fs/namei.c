@@ -258,6 +258,13 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 			return -EPERM;
 		}
 
+		/* check permissions */
+		ret = permission(dir, MAY_WRITE | MAY_EXEC);
+		if (ret) {
+			iput(dir);
+			return ret;
+		}
+
 		/* create new inode */
 		dir->i_count++;
 		ret = dir->i_op->create(dir, basename, basename_len, mode, res_inode);
@@ -280,6 +287,14 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 
 	/* truncate file */
 	if (flags & O_TRUNC) {
+		/* check permissions */
+		ret = permission(*res_inode, MAY_WRITE);
+		if (ret) {
+			iput(inode);
+			return ret;
+		}
+
+		/* truncate */
 		ret = do_truncate(*res_inode, 0);
 		if (ret) {
 			iput(inode);

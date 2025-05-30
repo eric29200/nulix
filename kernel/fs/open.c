@@ -60,7 +60,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
 	struct inode *inode;
 	struct file *filp;
-	int fd, ret;
+	int flag, fd, ret;
 
 	/* find a free slot in current process */
 	fd = get_unused_fd();
@@ -72,8 +72,15 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	if (!filp)
 		return -EINVAL;
 
+	filp->f_flags = flag = flags;
+	filp->f_mode = (flag + 1) & O_ACCMODE;
+	if (filp->f_mode)
+		flag++;
+	if (flag & O_TRUNC)
+		flag |= 2;
+
 	/* open file */
-	ret = open_namei(dirfd, NULL, pathname, flags, mode, &inode);
+	ret = open_namei(dirfd, NULL, pathname, flag, mode, &inode);
 	if (ret != 0)
 		goto err;
 
@@ -83,12 +90,17 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 		goto err;
 	}
 
+	/* check permissions */
+	if (filp->f_mode & FMODE_WRITE) {
+		ret = permission(inode, MAY_WRITE);
+		if (ret)
+			goto err;
+	}
+
 	/* set file */
 	current_task->files->filp[fd] = filp;
 	FD_CLR(fd, &current_task->files->close_on_exec);
-	filp->f_mode = inode->i_mode;
 	filp->f_inode = inode;
-	filp->f_flags = flags;
 	filp->f_pos = 0;
 	filp->f_op = inode->i_op->fops;
 
