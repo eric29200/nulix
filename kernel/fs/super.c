@@ -148,9 +148,9 @@ err:
 }
 
 /*
- * Remove a mounted file system.
+ * Find a mounted file system.
  */
-static void del_vfs_mount(struct super_block *sb)
+static struct vfs_mount *lookup_vfs_mount(struct super_block *sb)
 {
 	struct vfs_mount *vfs_mount;
 	struct list_head *pos;
@@ -159,11 +159,24 @@ static void del_vfs_mount(struct super_block *sb)
 	list_for_each(pos, &vfs_mounts_list) {
 		vfs_mount = list_entry(pos, struct vfs_mount, mnt_list);
 		if (vfs_mount->mnt_sb == sb)
-			goto found;
+			return vfs_mount;
 	}
 
-	return;
-found:
+	return NULL;
+}
+
+/*
+ * Remove a mounted file system.
+ */
+static void del_vfs_mount(struct super_block *sb)
+{
+	struct vfs_mount *vfs_mount;
+
+	/* find mounted file system */
+	vfs_mount = lookup_vfs_mount(sb);
+	if (!vfs_mount)
+		return;
+
 	/* remove file system from list */
 	list_del(&vfs_mount->mnt_list);
 
@@ -203,9 +216,77 @@ static int get_mount_point(const char *mount_point, struct inode **res_inode)
 }
 
 /*
+ * Check if a file system can be remounted read only.
+ */
+static int fs_may_remount_ro(struct super_block *sb)
+{
+	struct file *filp;
+	size_t i;
+
+	for (i = 0; i < NR_FILE; i++) {
+		filp = &filp_table[i];
+
+		if (!filp->f_count || !filp->f_inode || filp->f_inode->i_sb != sb)
+			continue;
+		if (S_ISREG(filp->f_inode->i_mode) && (filp->f_mode & MAY_WRITE))
+			return 0;
+	}
+
+	return 1;
+}
+
+/*
+ * Remount a file system.
+ */
+static int do_remount_sb(struct super_block *sb, uint32_t flags)
+{
+	struct vfs_mount *vfs_mount;
+
+	/* check if we can remount read only */
+	if ((flags & MS_RDONLY) && !(sb->s_flags & MS_RDONLY))
+		if (!fs_may_remount_ro(sb))
+			return -EBUSY;
+
+	/* update flags */
+	sb->s_flags = flags;
+
+	/* update mounted file system */
+	vfs_mount = lookup_vfs_mount(sb);
+	if (vfs_mount)
+		vfs_mount->mnt_flags = sb->s_flags;
+
+	return 0;
+}
+
+/*
+ * Remount a file system.
+ */
+static int do_remount(const char *dir_name, uint32_t flags)
+{
+	struct inode *dir_inode;
+	int ret;
+
+	/* get directory */
+	ret = namei(AT_FDCWD, NULL, dir_name, 1, &dir_inode);
+	if (ret)
+		return ret;
+
+	/* check mount point */
+	if (dir_inode != dir_inode->i_sb->s_root_inode) {
+		iput(dir_inode);
+		return -EINVAL;
+	}
+
+	/* remount */
+	ret = do_remount_sb(dir_inode->i_sb, flags);
+	iput(dir_inode);
+	return 0;
+}
+
+/*
  * Mount a file system.
  */
-static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, int flags)
+static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, uint32_t flags)
 {
 	struct inode *mount_point_dir = NULL;
 	struct super_block *sb;
@@ -256,6 +337,14 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 	dev_t dev = 0;
 	int ret;
 
+	/* only root can mount */
+	if (!suser())
+		return -EPERM;
+
+	/* remount ? */
+	if (flags & MS_REMOUNT)
+		return do_remount(dir_name, flags);
+
 	/* find file system type */
 	fs = get_filesystem(type);
 	if (!fs)
@@ -299,6 +388,7 @@ int do_mount_root(dev_t dev, const char *dev_name)
 
 	/* set device */
 	sb->s_dev = dev;
+	sb->s_flags = MS_RDONLY;
 
 	/* try all file systems */
 	list_for_each(pos, &fs_list) {
@@ -391,5 +481,9 @@ static int do_umount(const char *target, int flags)
  */
 int sys_umount2(const char *target, int flags)
 {
+	/* only root can umount */
+	if (!suser())
+		return -EPERM;
+
 	return do_umount(target, flags);
 }

@@ -21,6 +21,7 @@
 #define NR_FILE				256
 
 #define MS_RDONLY			1
+#define MS_REMOUNT			32
 
 #define RENAME_NOREPLACE		(1 << 0)
 #define RENAME_EXCHANGE			(1 << 1)

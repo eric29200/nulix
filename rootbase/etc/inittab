@@ -1,5 +1,6 @@
 ::sysinit:/bin/mount -t proc proc /proc
 ::sysinit:/usr/sbin/fsck.ext2 /dev/root
+::sysinit:/bin/mount -o remount,rw /
 ::sysinit:/bin/mount -a
 ::sysinit:/etc/init.d/rcS
 
