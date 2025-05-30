@@ -336,7 +336,7 @@ static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 	/* check name length */
 	if (!basename_len) {
 		iput(dir);
-		return -ENOENT;
+		return -EEXIST;
 	}
 
 	/* check permissions */
