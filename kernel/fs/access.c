@@ -7,7 +7,7 @@
 /*
  * Faccessat system call.
  */
-static int do_faccessat(int dirfd, const char *pathname, int flags)
+static int do_faccessat(int dirfd, const char *pathname, mode_t mode, int flags)
 {
 	struct inode *inode;
 	int ret;
@@ -17,9 +17,11 @@ static int do_faccessat(int dirfd, const char *pathname, int flags)
 	if (ret)
 		return ret;
 
-	/* release inode */
+	/* check permissions */
+	ret = permission(inode, mode);
 	iput(inode);
-	return 0;
+
+	return ret;
 }
 
 /*
@@ -27,8 +29,7 @@ static int do_faccessat(int dirfd, const char *pathname, int flags)
  */
 int sys_access(const char *filename, mode_t mode)
 {
-	UNUSED(mode);
-	return do_faccessat(AT_FDCWD, filename, 0);
+	return do_faccessat(AT_FDCWD, filename, mode, 0);
 }
 
 /*
@@ -36,7 +37,7 @@ int sys_access(const char *filename, mode_t mode)
  */
 int sys_faccessat(int dirfd, const char *pathname, int flags)
 {
-	return do_faccessat(dirfd, pathname, flags);
+	return do_faccessat(dirfd, pathname, 0, flags);
 }
 
 /*
@@ -44,7 +45,7 @@ int sys_faccessat(int dirfd, const char *pathname, int flags)
  */
 int sys_faccessat2(int dirfd, const char *pathname, int flags)
 {
-	return do_faccessat(dirfd, pathname, flags);
+	return do_faccessat(dirfd, pathname, 0, flags);
 }
 
 /*

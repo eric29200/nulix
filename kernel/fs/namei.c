@@ -7,6 +7,26 @@
 #include <string.h>
 
 /*
+ * Check permission.
+ */
+int permission(struct inode *inode, int mask)
+{
+	int mode = inode->i_mode;
+
+	/* root */
+	if (suser())
+		return 0;
+
+	/* user or group */
+	if (current_task->fsuid == inode->i_uid)
+		mode >>= 6;
+	else if (task_in_group(current_task, inode->i_gid))
+		mode >>= 3;
+
+	return (mode & mask & S_IRWXO) == mask ? 0 : -EACCES;
+}
+
+/*
  * Follow a link.
  */
 static int follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
@@ -26,6 +46,7 @@ static int follow_link(struct inode *dir, struct inode *inode, int flags, mode_t
 static int lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
 	struct super_block *sb;
+	int ret;
 
 	/* reset result inode */
 	*res_inode = NULL;
@@ -33,6 +54,11 @@ static int lookup(struct inode *dir, const char *name, size_t name_len, struct i
 	/* no parent directory */
 	if (!dir)
 		return -ENOENT;
+
+	/* check permissions */
+	ret = permission(dir, MAY_EXEC);
+	if (ret)
+		return ret;
 
 	/* special cases */
 	if (name_len == 2 && name[0] == '.' && name[1] == '.') {
@@ -285,6 +311,13 @@ static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 		return -ENOENT;
 	}
 
+	/* check permissions */
+	ret = permission(dir, MAY_WRITE | MAY_EXEC);
+	if (ret) {
+		iput(dir);
+		return ret;
+	}
+
 	/* mkdir not implemented */
 	if (!dir->i_op || !dir->i_op->mkdir) {
 		iput(dir);
@@ -350,6 +383,14 @@ static int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *
 		return -EPERM;
 	}
 
+	/* check permissions */
+	ret = permission(dir, MAY_WRITE | MAY_EXEC);
+	if (ret) {
+		iput(old_inode);
+		iput(dir);
+		return ret;
+	}
+
 	/* link not implemented */
 	if (!dir->i_op || !dir->i_op->link) {
 		iput(old_inode);
@@ -404,6 +445,13 @@ static int do_symlink(const char *target, int newdirfd, const char *linkpath)
 		return -ENOENT;
 	}
 
+	/* check permissions */
+	ret = permission(dir, MAY_WRITE | MAY_EXEC);
+	if (ret) {
+		iput(dir);
+		return ret;
+	}
+
 	/* symlink not implemented */
 	if (!dir->i_op || !dir->i_op->symlink) {
 		iput(dir);
@@ -455,6 +503,13 @@ static int do_rmdir(int dirfd, const char *pathname)
 		return -ENOENT;
 	}
 
+	/* check permissions */
+	ret = permission(dir, MAY_WRITE | MAY_EXEC);
+	if (ret) {
+		iput(dir);
+		return ret;
+	}
+
 	/* rmdir not implemented */
 	if (!dir->i_op || !dir->i_op->rmdir) {
 		iput(dir);
@@ -493,6 +548,13 @@ static int do_unlink(int dirfd, const char *pathname)
 	if (!basename_len) {
 		iput(dir);
 		return -ENOENT;
+	}
+
+	/* check permissions */
+	ret = permission(dir, MAY_WRITE | MAY_EXEC);
+	if (ret) {
+		iput(dir);
+		return ret;
 	}
 
 	/* unlink not implemented */
@@ -585,6 +647,13 @@ static int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char
 		return -EPERM;
 	}
 
+	/* check permissions */
+	ret = permission(old_dir, MAY_WRITE | MAY_EXEC);
+	if (ret) {
+		iput(old_dir);
+		return ret;
+	}
+
 	/* get new directory */
 	ret = dir_namei(newdirfd, NULL, newpath, &new_basename, &new_basename_len, &new_dir);
 	if (ret) {
@@ -597,6 +666,14 @@ static int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char
 		iput(old_dir);
 		iput(new_dir);
 		return -EPERM;
+	}
+
+	/* check permissions */
+	ret = permission(new_dir, MAY_WRITE | MAY_EXEC);
+	if (ret) {
+		iput(old_dir);
+		iput(new_dir);
+		return ret;
 	}
 
 	/* do not allow to move to another device */
@@ -672,6 +749,19 @@ static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 	ret = dir_namei(dirfd, NULL, pathname, &basename, &basename_len, &dir);
 	if (ret)
 		return ret;
+
+	/* check name length */
+	if (!basename_len) {
+		iput(dir);
+		return -ENOENT;
+	}
+
+	/* check permissions */
+	ret = permission(dir, MAY_WRITE | MAY_EXEC);
+	if (ret) {
+		iput(dir);
+		return ret;
+	}
 
 	/* mknod not implemented */
 	if (!dir->i_op || !dir->i_op->mknod) {

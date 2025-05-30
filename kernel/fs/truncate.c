@@ -8,6 +8,13 @@
  */
 int do_truncate(struct inode *inode, off_t length)
 {
+	int ret;
+
+	/* check permissions */
+	ret = permission(inode, MAY_WRITE);
+	if (ret)
+		return ret;
+
 	/* set new size */
 	inode->i_size = length;
 

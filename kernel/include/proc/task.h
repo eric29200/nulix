@@ -169,6 +169,7 @@ void task_exit_fs(struct task *task);
 void task_exit_files(struct task *task);
 void task_exit_mmap(struct mm_struct *mm);
 void task_release_mmap(struct task *task);
+int task_in_group(struct task *task, gid_t gid);
 
 void copy_strings(struct binargs *bargs, int argc, char **argv);
 int binary_load(const char *path, struct binargs *bargs);

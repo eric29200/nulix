@@ -32,6 +32,10 @@
 #define READ				0
 #define WRITE				1
 
+#define MAY_EXEC			1
+#define MAY_WRITE			2
+#define MAY_READ			4
+
 struct super_block;
 
 /*
@@ -243,6 +247,7 @@ int get_unused_fd();
 struct file *get_empty_filp();
 
 /* name operations */
+int permission(struct inode *inode, int mask);
 int namei(int dirfd, struct inode *base, const char *pathname, int follow_links, struct inode **res_inode);
 int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode, struct inode **res_inode);
 

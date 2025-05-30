@@ -673,6 +673,23 @@ void destroy_task(struct task *task)
 }
 
 /*
+ * Is a task in a group ?
+ */
+int task_in_group(struct task *task, gid_t gid)
+{
+	size_t i;
+
+	if (task->fsgid == gid)
+		return 1;
+
+	for (i = 0; i < task->ngroups; i++)
+		if (current_task->groups[i] == gid)
+			return 1;
+
+	return 0;
+}
+
+/*
  * Fork system call.
  */
 pid_t sys_fork()

@@ -21,6 +21,13 @@ int sys_chdir(const char *path)
 		iput(inode);
 		return -ENOTDIR;
 	}
+	
+	/* check permissions */
+	ret = permission(inode, MAY_EXEC);
+	if (ret) {
+		iput(inode);
+		return ret;
+	}
 
 	/* release current working dir */
 	iput(current_task->fs->cwd);
@@ -38,6 +45,7 @@ int sys_fchdir(int fd)
 {
 	struct inode *inode;
 	struct file *filp;
+	int ret;
 
 	/* gt file */
 	filp = fget(fd);
@@ -48,6 +56,11 @@ int sys_fchdir(int fd)
 	inode = filp->f_inode;
 	if (!S_ISDIR(inode->i_mode))
 		return -ENOTDIR;
+
+	/* check permissions */
+	ret = permission(inode, MAY_EXEC);
+	if (ret)
+		return ret;
 
 	/* no change */
 	if (inode == current_task->fs->cwd)

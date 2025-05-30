@@ -354,6 +354,13 @@ static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *
 	if (ret)
 		return ret;
 
+	/* check permissions */
+	ret = permission(inode, MAY_WRITE);
+	if (ret) {
+		iput(inode);
+		return ret;
+	}
+
 	/* set time */
 	if (times)
 		inode->i_atime = inode->i_mtime = times[0].tv_sec;
