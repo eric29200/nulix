@@ -274,8 +274,8 @@ int do_truncate(struct inode *inode, off_t length);
 
 /* system calls */
 int sys_access(const char *filename, mode_t mode);
-int sys_faccessat(int dirfd, const char *pathname, int flags);
-int sys_faccessat2(int dirfd, const char *pathname, int flags);
+int sys_faccessat(int dirfd, const char *pathname, mode_t mode, int flags);
+int sys_faccessat2(int dirfd, const char *pathname, mode_t mode, int flags);
 int sys_fadvise64(int fd, off_t offset, off_t len, int advice);
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data);
 int sys_umount2(const char *target, int flags);

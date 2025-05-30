@@ -35,17 +35,17 @@ int sys_access(const char *filename, mode_t mode)
 /*
  * Faccessat system call.
  */
-int sys_faccessat(int dirfd, const char *pathname, int flags)
+int sys_faccessat(int dirfd, const char *pathname, mode_t mode, int flags)
 {
-	return do_faccessat(dirfd, pathname, 0, flags);
+	return do_faccessat(dirfd, pathname, mode, flags);
 }
 
 /*
  * Faccessat2 system call.
  */
-int sys_faccessat2(int dirfd, const char *pathname, int flags)
+int sys_faccessat2(int dirfd, const char *pathname, mode_t mode, int flags)
 {
-	return do_faccessat(dirfd, pathname, 0, flags);
+	return do_faccessat(dirfd, pathname, mode, flags);
 }
 
 /*
