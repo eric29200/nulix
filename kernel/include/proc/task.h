@@ -99,9 +99,11 @@ struct task {
 	uid_t				uid;				/* user id */
 	uid_t				euid;				/* effective user id */
 	uid_t				suid;				/* saved user id */
+	uid_t				fsuid;				/* file system uid */
 	gid_t				gid;				/* group id */
 	gid_t				egid;				/* effective group id */
 	gid_t				sgid;				/* saved group id */
+	gid_t				fsgid;				/* file system gid */
 	size_t				ngroups;			/* number of groups */
 	gid_t				groups[NGROUPS];		/* groups */
 	struct tty *			tty;				/* attached tty */

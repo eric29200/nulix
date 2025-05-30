@@ -563,9 +563,9 @@ int sys_setpgid(pid_t pid, pid_t pgid)
 int sys_setuid(uid_t uid)
 {
 	if (suser())
-		current_task->uid = current_task->euid = current_task->suid = uid;
+		current_task->uid = current_task->euid = current_task->suid = current_task->fsuid = uid;
 	else if (uid == current_task->uid || uid == current_task->suid)
-		current_task->euid = uid;
+		current_task->euid = current_task->fsuid = uid;
 	else
 		return -EPERM;
 
@@ -578,9 +578,9 @@ int sys_setuid(uid_t uid)
 int sys_setgid(gid_t gid)
 {
 	if (suser())
-		current_task->gid = current_task->egid = current_task->sgid = gid;
+		current_task->gid = current_task->egid = current_task->sgid = current_task->fsgid = gid;
 	else if (gid == current_task->gid || gid == current_task->sgid)
-		current_task->egid = gid;
+		current_task->egid = current_task->fsgid = gid;
 	else
 		return -EPERM;
 
@@ -628,6 +628,8 @@ int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
 		current_task->gid = rgid;
 	if (egid != (gid_t) -1)
 		current_task->egid = egid;
+
+	current_task->fsgid = current_task->fsgid;
 	if (sgid != (gid_t) -1)
 		current_task->sgid = sgid;
 
@@ -653,6 +655,8 @@ int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 		current_task->uid = ruid;
 	if (euid != (uid_t) -1)
 		current_task->euid = euid;
+
+	current_task->fsuid = current_task->euid;
 	if (suid != (uid_t) -1)
 		current_task->suid = suid;
 

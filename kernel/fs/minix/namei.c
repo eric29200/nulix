@@ -263,8 +263,8 @@ int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 	}
 
 	/* set inode */
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 	inode->i_op = &minix_file_iops;
 	inode->i_mode = S_IFREG | mode;
 	inode->i_dirt = 1;
@@ -411,8 +411,8 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	}
 
 	/* set new inode */
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 	inode->i_op = &minix_symlink_iops;
 	inode->i_mode = S_IFLNK | (0777 & ~current_task->fs->umask);
 	inode->i_dirt = 1;
@@ -491,8 +491,8 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 
 	/* set inode */
 	sbi = minix_sb(dir->i_sb);
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 	inode->i_op = &minix_dir_iops;
 	inode->i_mode = S_IFDIR | (mode & ~current_task->fs->umask & 0777);
 	inode->i_nlinks = 2;
@@ -729,8 +729,8 @@ int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	}
 
 	/* set inode */
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 	inode->i_mode = mode;
 	inode->i_rdev = dev;
 	inode->i_dirt = 1;

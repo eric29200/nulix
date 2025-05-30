@@ -242,8 +242,8 @@ static struct inode *get_pipe_inode()
 	inode->i_count = 2;
 	inode->i_pipe = 1;
 	inode->i_mode = S_IFIFO | S_IRUSR | S_IWUSR;
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 	inode->i_atime = inode->i_ctime = inode->i_mtime = CURRENT_TIME;
 	PIPE_WAIT(inode) = NULL;
 	PIPE_START(inode) = 0;

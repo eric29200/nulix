@@ -106,8 +106,8 @@ static char *task_state(struct task *task, char *buf)
 					proc_states_desc[task->state - 1],
 					task->pid,
 					task->parent ? task->parent->pid : task->pid,
-					task->uid, task->euid, task->suid, task->suid,
-					task->gid, task->egid, task->sgid, task->sgid
+					task->uid, task->euid, task->suid, task->fsuid,
+					task->gid, task->egid, task->sgid, task->fsgid
 				);
 }
 

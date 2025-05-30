@@ -27,8 +27,8 @@ static struct socket *sock_alloc()
 	/* set inode */
 	inode->i_mode = S_IFSOCK;
 	inode->i_sock = 1;
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 
 	/* set socket */
 	sock = &inode->u.socket_i;

@@ -95,8 +95,8 @@ int isofs_read_inode(struct inode *inode)
 	inode->i_mode = S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
 	inode->i_mode |= (raw_inode->flags[0] & 2) ? S_IFDIR : S_IFREG;
 	inode->i_nlinks = 1;
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 	inode->i_size = isofs_num733(raw_inode->size);
 	inode->i_blocks = 0;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = isofs_date(raw_inode->date);

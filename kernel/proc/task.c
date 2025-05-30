@@ -510,10 +510,12 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	task->parent = parent;
 	task->uid = parent ? parent->uid : 0;
 	task->euid = parent ? parent->euid : 0;
-	task->suid = parent ? parent->euid : 0;
+	task->suid = parent ? parent->suid : 0;
+	task->fsuid = parent ? parent->fsuid : 0;
 	task->gid = parent ? parent->gid : 0;
 	task->egid = parent ? parent->egid : 0;
 	task->sgid = parent ? parent->sgid : 0;
+	task->fsgid = parent ? parent->fsgid : 0;
 	task->tty = parent ? parent->tty : 0;
 	task->start_time = jiffies;
 	task->vfork_sem = NULL;

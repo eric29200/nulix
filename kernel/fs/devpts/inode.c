@@ -51,8 +51,8 @@ struct inode *devpts_iget(struct super_block *sb, struct devpts_entry *de)
 	inode->i_nlinks = 1;
 	inode->i_sb = sb;
 	inode->i_mode = de->mode;
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 	inode->i_rdev = 0;
 	inode->u.generic_i = de;
 

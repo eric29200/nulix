@@ -86,8 +86,8 @@ allocated:
 
 	/* set inode */
 	inode->i_mode = mode;
-	inode->i_uid = current_task->uid;
-	inode->i_gid = current_task->gid;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_size = 0;
 	inode->i_blocks = 0;
