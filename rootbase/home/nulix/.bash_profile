@@ -1,4 +1,3 @@
-export HOME=/root
 export TERM=linux
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/X11/bin
 export LD_LIBRARY_PATH="/lib:/usr/lib:/usr/X11/lib"
