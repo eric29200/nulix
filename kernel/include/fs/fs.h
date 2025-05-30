@@ -36,6 +36,8 @@
 #define MAY_WRITE			2
 #define MAY_READ			4
 
+#define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
+
 struct super_block;
 
 /*
@@ -74,6 +76,7 @@ struct super_block {
 	uint8_t				s_blocksize_bits;
 	void *				s_fs_info;
 	uint16_t			s_magic;
+	uint32_t			s_flags;
 	struct file_system *		s_type;
 	struct inode *			s_root_inode;
 	struct inode *			s_covered;

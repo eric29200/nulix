@@ -15,6 +15,10 @@ int permission(struct inode *inode, int mask)
 {
 	int mode = inode->i_mode;
 
+	/* read only filesystem */
+	if ((mask & S_IWOTH) && IS_RDONLY(inode) && (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode)))
+		return -EROFS;
+
 	/* root */
 	if (suser())
 		return 0;
