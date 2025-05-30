@@ -305,8 +305,13 @@ int elf_load(const char *path, struct binargs *bargs)
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
-	filp = current_task->files->filp[fd];
+	filp = fget(fd);
 	filp->f_count++;
+
+	/* check permissions */
+	ret = permission(filp->f_inode, MAY_EXEC);
+	if (ret)
+		goto out;
 
 	/* save path */
 	strncpy(name, path, TASK_NAME_LEN - 1);
