@@ -3,10 +3,11 @@
 #include <fcntl.h>
 
 #define DIRECT_BLOCK(inode)			(((inode)->i_size + (inode)->i_sb->s_blocksize - 1) / (inode)->i_sb->s_blocksize)
-#define INDIRECT_BLOCK(inode, offset)		(DIRECT_BLOCK((inode)) - offset)
-#define DINDIRECT_BLOCK(inode, offset)		(INDIRECT_BLOCK(inode, offset) / addr_per_block)
-#define TINDIRECT_BLOCK(inode, offset)		(INDIRECT_BLOCK(inode, offset) / (addr_per_block * addr_per_block))
-
+#define INDIRECT_BLOCK(inode, offset)		((int) DIRECT_BLOCK((inode)) - offset)
+#define DINDIRECT_BLOCK(inode, offset)		((int) DIRECT_BLOCK(inode) / addr_per_block)
+#define TINDIRECT_BLOCK(inode, offset)		(((int) DIRECT_BLOCK(inode) - (addr_per_block * addr_per_block 	\
+						+ addr_per_block + EXT2_NDIR_BLOCKS)) 				\
+						/ (addr_per_block * addr_per_block))
 
 /*
  * Free Ext2 direct blocks.
