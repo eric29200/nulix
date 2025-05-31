@@ -3,10 +3,10 @@
 #include <fcntl.h>
 #include <stdio.h>
 
-#define DIRECT_BLOCK(inode)				(((inode)->i_size + 1023) >> 10)
-#define INDIRECT_BLOCK(inode, offset)			(DIRECT_BLOCK((inode)) - offset)
-#define DINDIRECT_BLOCK(inode, offset)			((DIRECT_BLOCK((inode)) - offset) >> 8)
-#define TINDIRECT_BLOCK(inode, offset)			((DIRECT_BLOCK((inode)) - offset) >> 8)
+#define DIRECT_BLOCK(inode)				(((int) (inode)->i_size + 1023) >> 10)
+#define INDIRECT_BLOCK(inode, offset)			(DIRECT_BLOCK(inode) - offset)
+#define DINDIRECT_BLOCK(inode, offset)			((DIRECT_BLOCK(inode) - offset) >> 8)
+#define TINDIRECT_BLOCK(inode, offset)			((DIRECT_BLOCK(inode) - offset) >> 8)
 
 /*
  * Free direct blocks.
