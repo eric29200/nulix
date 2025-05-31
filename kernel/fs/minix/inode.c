@@ -327,7 +327,7 @@ int minix_bmap(struct inode *inode, int block)
 		i = inode_bmap(inode, 8);
 		if (!i)
 			return 0;
-		i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), (block >> 8) & 255);
+		i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block >> 8);
 		if (!i)
 			return 0;
 		return block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block & 255);
@@ -338,10 +338,10 @@ int minix_bmap(struct inode *inode, int block)
 	i = inode_bmap(inode, 9);
 	if (!i)
 		return 0;
-	i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), (block >> 16) & 255);
+	i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block >> 16);
 	if (!i)
 		return 0;
-	i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), (block >> 8) & 255);
+	i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block >> 8);
 	if (!i)
 		return 0;
 	return block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block & 255);

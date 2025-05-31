@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <fs/minix_fs.h>
 #include <fcntl.h>
+#include <stdio.h>
 
 #define DIRECT_BLOCK(inode)				(((inode)->i_size + 1023) >> 10)
 #define INDIRECT_BLOCK(inode, offset)			(DIRECT_BLOCK((inode)) - offset)
@@ -29,7 +30,7 @@ static void minix_free_indirect_blocks(struct inode *inode, int offset, uint32_t
 {
 	struct buffer_head *bh;
 	uint32_t *blocks;
-	size_t i;
+	int i;
 
 	if (!*block)
 		return;
@@ -41,17 +42,21 @@ static void minix_free_indirect_blocks(struct inode *inode, int offset, uint32_t
 
 	/* free all pointed blocks */
 	blocks = (uint32_t *) bh->b_data;
-	for (i = INDIRECT_BLOCK(inode, offset); i < bh->b_size / 4; i++)
+	for (i = INDIRECT_BLOCK(inode, offset); i < 256; i++) {
+		if (i < 0)
+			i = 0;
+
 		if (blocks[i])
 			minix_free_block(inode->i_sb, blocks[i]);
+	}
 
 	/* get first used adress */
-	for (i = 0; i < bh->b_size / 4; i++)
+	for (i = 0; i < 256; i++)
 		if (blocks[i])
 			break;
 
 	/* indirect block not used anymore : free it */
-	if (i >= bh->b_size / 4) {
+	if (i >= 256) {
 		minix_free_block(inode->i_sb, *block);
 		*block = 0;
 	}
@@ -67,7 +72,7 @@ static void minix_free_dindirect_blocks(struct inode *inode, int offset, uint32_
 {
 	struct buffer_head *bh;
 	uint32_t *blocks;
-	size_t i;
+	int i;
 
 	if (!*block)
 		return;
@@ -79,17 +84,21 @@ static void minix_free_dindirect_blocks(struct inode *inode, int offset, uint32_
 
 	/* free all pointed blocks */
 	blocks = (uint32_t *) bh->b_data;
-	for (i = DINDIRECT_BLOCK(inode, offset); i < bh->b_size / 4; i++)
+	for (i = DINDIRECT_BLOCK(inode, offset); i < 256; i++) {
+		if (i < 0)
+			i = 0;
+
 		if (blocks[i])
 			minix_free_indirect_blocks(inode, offset + (i << 8), &blocks[i]);
+	}
 
 	/* get first used adress */
-	for (i = 0; i < bh->b_size / 4; i++)
+	for (i = 0; i < 256; i++)
 		if (blocks[i])
 			break;
 
 	/* indirect block not used anymore : free it */
-	if (i >= bh->b_size / 4) {
+	if (i >= 256) {
 		minix_free_block(inode->i_sb, *block);
 		*block = 0;
 	}
@@ -105,7 +114,7 @@ static void minix_free_tindirect_blocks(struct inode *inode, int offset, uint32_
 {
 	struct buffer_head *bh;
 	uint32_t *blocks;
-	size_t i;
+	int i;
 
 	if (!block)
 		return;
@@ -117,17 +126,21 @@ static void minix_free_tindirect_blocks(struct inode *inode, int offset, uint32_
 
 	/* free all pointed blocks */
 	blocks = (uint32_t *) bh->b_data;
-	for (i = TINDIRECT_BLOCK(inode, offset); i < bh->b_size / 4; i++)
+	for (i = TINDIRECT_BLOCK(inode, offset); i < 256; i++) {
+		if (i < 0)
+			i = 0;
+
 		if (blocks[i])
 			minix_free_dindirect_blocks(inode, offset + (i << 8), &blocks[i]);
+	}
 
 	/* get first used adress */
-	for (i = 0; i < bh->b_size / 4; i++)
+	for (i = 0; i < 256; i++)
 		if (blocks[i])
 			break;
 
 	/* indirect block not used anymore : free it */
-	if (i >= bh->b_size / 4) {
+	if (i >= 256) {
 		minix_free_block(inode->i_sb, *block);
 		*block = 0;
 	}
