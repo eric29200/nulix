@@ -19,6 +19,7 @@ struct request {
 	dev_t			dev;
 	int			cmd;
 	uint32_t		block;
+	size_t			block_size;
 	char *			buf;
 	size_t			size;
 };

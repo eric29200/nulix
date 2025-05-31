@@ -12,24 +12,44 @@ static struct request requests[NR_REQUESTS];
 static size_t nr_requests = 0;
 
 /*
+ * Execute requests.
+ */
+static void execute_requests(struct blk_dev *dev)
+{
+	size_t i;
+
+	/* execute requests */
+	for (i = 0; i < nr_requests; i++)
+		dev->request(&requests[i]);
+}
+
+/*
  * Make a request.
  */
-static void make_request(int rw, dev_t dev, uint32_t block, char *buf, size_t size)
+static void make_request(struct blk_dev *dev, int rw, struct buffer_head *bh)
 {
 	/* merge with previous request */
 	if (nr_requests
-		&& requests[nr_requests - 1].block + 1 == block
-		&& requests[nr_requests - 1].buf + size == buf) {
-		requests[nr_requests - 1].size += size;
+		&& requests[nr_requests - 1].block_size == bh->b_size
+		&& requests[nr_requests - 1].block + 1 == bh->b_block
+		&& requests[nr_requests - 1].buf + bh->b_size == bh->b_data) {
+		requests[nr_requests - 1].size += bh->b_size;
 		return;
 	}
 
+	/* requests array full : execute requests */
+	if (nr_requests == NR_REQUESTS) {
+		execute_requests(dev);
+		nr_requests = 0;
+	}
+
 	/* create new request */
-	requests[nr_requests].dev = dev;
+	requests[nr_requests].dev = bh->b_dev;
 	requests[nr_requests].cmd = rw;
-	requests[nr_requests].block = block;
-	requests[nr_requests].buf = buf;
-	requests[nr_requests].size = size;
+	requests[nr_requests].block = bh->b_block;
+	requests[nr_requests].block_size = bh->b_size;
+	requests[nr_requests].buf = bh->b_data;
+	requests[nr_requests].size = bh->b_size;
 	nr_requests++;
 }
 
@@ -70,17 +90,13 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 	}
 
 	/* make requests */
-	nr_requests = 0;
-	for (i = 0; i < nr_bhs; i++)
-		make_request(rw, bhs[i]->b_dev, bhs[i]->b_block, bhs[i]->b_data, bhs[i]->b_size);
-
-	/* execute requests */
-	for (i = 0; i < nr_requests; i++)
-		dev->request(&requests[i]);
-
-	/* mark buffer clean and up to date */
-	for (i = 0; i < nr_bhs; i++) {
+	for (i = 0, nr_requests = 0; i < nr_bhs; i++) {
+		make_request(dev, rw, bhs[i]);
 		mark_buffer_clean(bhs[i]);
 		mark_buffer_uptodate(bhs[i], 1);
 	}
+
+	/* execute requests */
+	if (nr_requests)
+	 	execute_requests(dev);
 }

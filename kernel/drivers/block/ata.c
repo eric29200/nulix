@@ -106,7 +106,7 @@ static void ata_request(struct request *request)
 
 	/* get partition start sector */
 	start_sector = ata_get_start_sector(device, request->dev);
-	sector = start_sector + request->block * request->size / device->sector_size;
+	sector = start_sector + request->block * request->block_size / device->sector_size;
 	nr_sectors = request->size / device->sector_size;
 
 	/* find request function */
