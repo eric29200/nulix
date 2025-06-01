@@ -335,7 +335,7 @@ static void refill_freelist(size_t blocksize)
 /*
  * Find a buffer in hash table.
  */
-static struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize)
+struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize)
 {
 	struct buffer_head *bh;
 

@@ -98,24 +98,25 @@ int minix_free_block(struct super_block *sb, uint32_t block)
 {
 	struct minix_sb_info *sbi = minix_sb(sb);
 	struct buffer_head *bh;
-	uint32_t zone;
+	uint32_t zone, bit;
 
 	/* check block number */
 	if (block < sbi->s_firstdatazone || block >= sbi->s_nzones)
 		return -EINVAL;
 
-	/* get buffer and clear it */
-	bh = bread(sb->s_dev, block, sb->s_blocksize);
+	/* mark buffer clean */
+	bh = find_buffer(sb->s_dev, block, sb->s_blocksize);
 	if (bh) {
-		memset(bh->b_data, 0, bh->b_size);
-		mark_buffer_dirty(bh);
+		mark_buffer_clean(bh);
 		brelse(bh);
 	}
 
 	/* update/clear block bitmap */
 	zone = block - sbi->s_firstdatazone + 1;
-	bh = sbi->s_zmap[zone >> 13];
-	MINIX_CLEAR_BITMAP(bh, zone & (bh->b_size * 8 - 1));
+	bit = zone & 8191;
+	zone >>= 13;
+	bh = sbi->s_zmap[zone];
+	MINIX_CLEAR_BITMAP(bh, bit);
 	mark_buffer_dirty(bh);
 
 	return 0;
@@ -139,7 +140,7 @@ int minix_free_inode(struct inode *inode)
 
 	/* update/clear inode bitmap */
 	bh = minix_sb(inode->i_sb)->s_imap[inode->i_ino >> 13];
-	MINIX_CLEAR_BITMAP(bh, inode->i_ino & (bh->b_size * 8 - 1));
+	MINIX_CLEAR_BITMAP(bh, inode->i_ino & 8191);
 	mark_buffer_dirty(bh);
 
 	/* clear inode */
