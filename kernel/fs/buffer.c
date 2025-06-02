@@ -492,9 +492,9 @@ static void __bsync(dev_t dev)
 		bhs_list[bhs_count++] = bh;
 	}
 
-		/* write last buffers */
-		if (bhs_count)
-			ll_rw_block(WRITE, bhs_count, bhs_list);
+	/* write last buffers */
+	if (bhs_count)
+		ll_rw_block(WRITE, bhs_count, bhs_list);
 }
 
 /*
