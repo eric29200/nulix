@@ -14,19 +14,22 @@ static size_t nr_requests = 0;
 /*
  * Execute requests.
  */
-static void execute_requests(struct blk_dev *dev)
+static void execute_requests()
 {
 	size_t i;
 
 	/* execute requests */
 	for (i = 0; i < nr_requests; i++)
-		dev->request(&requests[i]);
+		blk_dev[major(requests[i].dev)].request(&requests[i]);
+
+	/* clear requests */
+	nr_requests = 0;
 }
 
 /*
  * Make a request.
  */
-static void make_request(struct blk_dev *dev, int rw, struct buffer_head *bh)
+static void make_request(int rw, struct buffer_head *bh)
 {
 	/* merge with previous request */
 	if (nr_requests
@@ -38,10 +41,8 @@ static void make_request(struct blk_dev *dev, int rw, struct buffer_head *bh)
 	}
 
 	/* requests array full : execute requests */
-	if (nr_requests == NR_REQUESTS) {
-		execute_requests(dev);
-		nr_requests = 0;
-	}
+	if (nr_requests == NR_REQUESTS)
+		execute_requests();
 
 	/* create new request */
 	requests[nr_requests].dev = bh->b_dev;
@@ -90,13 +91,12 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 	}
 
 	/* make requests */
-	for (i = 0, nr_requests = 0; i < nr_bhs; i++) {
-		make_request(dev, rw, bhs[i]);
+	for (i = 0; i < nr_bhs; i++) {
+		make_request(rw, bhs[i]);
 		mark_buffer_clean(bhs[i]);
 		mark_buffer_uptodate(bhs[i], 1);
 	}
 
 	/* execute requests */
-	if (nr_requests)
-	 	execute_requests(dev);
+	execute_requests();
 }
