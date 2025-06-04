@@ -587,7 +587,6 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 		/* read buffer on disk */
 		ll_rw_block(READ, 1, &next);
-		execute_block_requests();
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;

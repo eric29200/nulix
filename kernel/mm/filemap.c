@@ -1,6 +1,7 @@
 #include <mm/mmap.h>
 #include <mm/paging.h>
 #include <mm/highmem.h>
+#include <drivers/block/blk_dev.h>
 #include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
@@ -42,6 +43,9 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 		__free_page(page);
 		return NULL;
 	}
+
+	/* wait on page */
+	execute_block_requests();
 
 	return page;
 }
@@ -138,6 +142,8 @@ int generic_file_read(struct file *filp, char *buf, int count)
 			break;
 		}
 
+		/* wait on page */
+		execute_block_requests();
 found_page:
 		/* adjust size */
 		if (nr > count)
