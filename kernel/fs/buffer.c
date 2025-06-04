@@ -544,18 +544,19 @@ int generic_readpage(struct inode *inode, struct page *page)
 {
 	struct super_block *sb = inode->i_sb;
 	struct buffer_head *bh, *next, *tmp;
-	uint32_t block, address;
+	void *page_address;
 	int nr, i, ret = 0;
+	uint32_t block;
 
 	/* compute blocks to read */
 	nr = PAGE_SIZE >> sb->s_blocksize_bits;
 	block = page->offset >> sb->s_blocksize_bits;
 
-	/* map page in kernel space */
-	address = (uint32_t) kmap(page);
+	/* get page address */
+	page_address = page_address(page);
 
 	/* create temporary buffers */
-	bh = create_buffers((void *) address, sb->s_blocksize);
+	bh = create_buffers(page_address, sb->s_blocksize);
 	if (!bh) {
 		ret = -ENOMEM;
 		goto out;
@@ -595,7 +596,6 @@ int generic_readpage(struct inode *inode, struct page *page)
 	}
 
 out:
-	kunmap(page);
 	return ret;
 }
 

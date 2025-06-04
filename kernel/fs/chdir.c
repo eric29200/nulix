@@ -21,7 +21,7 @@ int sys_chdir(const char *path)
 		iput(inode);
 		return -ENOTDIR;
 	}
-	
+
 	/* check permissions */
 	ret = permission(inode, MAY_EXEC);
 	if (ret) {

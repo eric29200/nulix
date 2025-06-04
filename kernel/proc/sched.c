@@ -696,7 +696,7 @@ int sys_setgroups(size_t size, const gid_t *list)
 	if (size >= NGROUPS)
 		return -EPERM;
 
-	/* set groups */	
+	/* set groups */
 	current_task->ngroups = size;
 	for (i = 0; i < size; i++)
 		current_task->groups[i] = list[i];

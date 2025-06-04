@@ -10,7 +10,7 @@
 #define BLKGETSIZE 		_IO(0x12, 96)
 #define BLKBSZGET		_IOR(0x12, 112, sizeof(int))
 #define BLKBSZSET		_IOW(0x12, 113, sizeof(int))
-#define BLKGETSIZE64		_IOR(0x12, 114, sizeof(uint64_t))	
+#define BLKGETSIZE64		_IOR(0x12, 114, sizeof(uint64_t))
 
 /*
  * Block device request.
