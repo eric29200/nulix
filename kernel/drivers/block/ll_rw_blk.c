@@ -31,14 +31,17 @@ void execute_block_requests()
  */
 static void make_request(int rw, struct buffer_head *bh)
 {
+	struct request *prev = nr_requests ? &requests[nr_requests - 1] : NULL;
+
 	/* merge with previous request */
-	if (nr_requests
-		&& requests[nr_requests - 1].cmd == rw
-		&& requests[nr_requests - 1].dev == bh->b_dev
-		&& requests[nr_requests - 1].block_size == bh->b_size
-		&& requests[nr_requests - 1].block + 1 == bh->b_block
-		&& requests[nr_requests - 1].buf + bh->b_size == bh->b_data) {
-		requests[nr_requests - 1].size += bh->b_size;
+	if (prev
+		&& prev->cmd == rw
+		&& prev->dev == bh->b_dev
+		&& prev->block_size == bh->b_size
+		&& prev->block + prev->nr_blocks == bh->b_block
+		&& prev->buf + prev->size == bh->b_data) {
+		prev->nr_blocks++;
+		prev->size += bh->b_size;
 		return;
 	}
 
@@ -53,6 +56,7 @@ static void make_request(int rw, struct buffer_head *bh)
 	requests[nr_requests].block_size = bh->b_size;
 	requests[nr_requests].buf = bh->b_data;
 	requests[nr_requests].size = bh->b_size;
+	requests[nr_requests].nr_blocks = 1;
 	nr_requests++;
 }
 

@@ -22,6 +22,7 @@ struct request {
 	size_t			block_size;
 	char *			buf;
 	size_t			size;
+	size_t			nr_blocks;
 };
 
 /*
