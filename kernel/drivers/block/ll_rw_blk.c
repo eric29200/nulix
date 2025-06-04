@@ -14,7 +14,7 @@ static size_t nr_requests = 0;
 /*
  * Execute requests.
  */
-static void execute_requests()
+void execute_block_requests()
 {
 	size_t i;
 
@@ -33,6 +33,8 @@ static void make_request(int rw, struct buffer_head *bh)
 {
 	/* merge with previous request */
 	if (nr_requests
+		&& requests[nr_requests - 1].cmd == rw
+		&& requests[nr_requests - 1].dev == bh->b_dev
 		&& requests[nr_requests - 1].block_size == bh->b_size
 		&& requests[nr_requests - 1].block + 1 == bh->b_block
 		&& requests[nr_requests - 1].buf + bh->b_size == bh->b_data) {
@@ -42,11 +44,11 @@ static void make_request(int rw, struct buffer_head *bh)
 
 	/* requests array full : execute requests */
 	if (nr_requests == NR_REQUESTS)
-		execute_requests();
+		execute_block_requests();
 
 	/* create new request */
-	requests[nr_requests].dev = bh->b_dev;
 	requests[nr_requests].cmd = rw;
+	requests[nr_requests].dev = bh->b_dev;
 	requests[nr_requests].block = bh->b_block;
 	requests[nr_requests].block_size = bh->b_size;
 	requests[nr_requests].buf = bh->b_data;
@@ -96,7 +98,4 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 		mark_buffer_clean(bhs[i]);
 		mark_buffer_uptodate(bhs[i], 1);
 	}
-
-	/* execute requests */
-	execute_requests();
 }

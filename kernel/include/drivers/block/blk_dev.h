@@ -35,5 +35,6 @@ struct blk_dev {
 extern struct blk_dev blk_dev[MAX_BLKDEV];
 
 void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[]);
+void execute_block_requests();
 
 #endif

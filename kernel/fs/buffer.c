@@ -15,7 +15,7 @@
 #define MAX_UNUSED_BUFFERS		32
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
-#define NBUF				16
+#define NBUF				32
 
 #define HASH_BITS			12
 #define HASH_SIZE			(1 << HASH_BITS)
@@ -406,6 +406,7 @@ struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize)
 
 	/* read it from device */
 	ll_rw_block(READ, 1, &bh);
+	execute_block_requests();
 
 	return bh;
 }
@@ -485,6 +486,7 @@ static void __bsync(dev_t dev)
 		/* write buffers */
 		if (bhs_count == NBUF) {
 			ll_rw_block(WRITE, bhs_count, bhs_list);
+			execute_block_requests();
 			bhs_count = 0;
 		}
 
@@ -493,8 +495,10 @@ static void __bsync(dev_t dev)
 	}
 
 	/* write last buffers */
-	if (bhs_count)
+	if (bhs_count) {
 		ll_rw_block(WRITE, bhs_count, bhs_list);
+		execute_block_requests();
+	}
 }
 
 /*
@@ -568,8 +572,10 @@ int generic_readpage(struct inode *inode, struct page *page)
 		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
 		if (tmp) {
 			/* read it from disk if needed */
-			if (!buffer_uptodate(tmp))
+			if (!buffer_uptodate(tmp)) {
 			 	ll_rw_block(READ, 1, &tmp);
+				execute_block_requests();
+			}
 
 			/* copy data to user address space */
 			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
@@ -581,6 +587,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 		/* read buffer on disk */
 		ll_rw_block(READ, 1, &next);
+		execute_block_requests();
  next:
 		/* clear temporary buffer */
 		tmp = next->b_this_page;
