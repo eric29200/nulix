@@ -1,5 +1,6 @@
 # <file system> <mount pt>      <type>  <options>       <dump>  <pass>
 /dev/root       /               ext2    rw,noauto       0       1
+/dev/hdc	/mnt/cdrom	isofs	defaults	0	0
 proc            /proc           proc    defaults        0       0
 devpts		/dev/pts	devpts	defaults	0	0
 tmpfs           /tmp            tmpfs   mode=1777       0       0
