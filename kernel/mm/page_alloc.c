@@ -340,10 +340,6 @@ static void __init_zone(int priority)
 		/* set priority */
 		page_array[i].priority = priority;
 
-		/* set virtual address for kernel pages */
-		if (priority == GFP_KERNEL)
-			page_array[i].virtual = (void *) __va(addr);
-
 		/* page not available */
 		if (!bios_map_address_available(addr)) {
 			page_array[i].count = 1;

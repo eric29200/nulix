@@ -84,9 +84,9 @@ static uint32_t map_new_virtual(struct page *page)
 }
 
 /*
- * Map a high page in kernel address space.
+ * Map a page in kernel adress space.
  */
-static void *kmap_high(struct page *page)
+void *kmap(struct page *page)
 {
 	uint32_t vaddr;
 
@@ -105,9 +105,9 @@ out:
 }
 
 /*
- * Unmap a high page in kernel address space.
+ * Unmap a page in kernel adress space.
  */
-static void kunmap_high(struct page *page)
+void kunmap(struct page *page)
 {
 	uint32_t vaddr;
 
@@ -116,30 +116,11 @@ static void kunmap_high(struct page *page)
 	if (!vaddr)
 		return;
 
+	/* reset virtual address */
+	page->virtual = NULL;
+
 	/* decrement reference count */
 	pkmap_count[PKMAP_NR(vaddr)]--;
-}
-
-/*
- * Map a page in kernel adress space.
- */
-void *kmap(struct page *page)
-{
-	if (page < highmem_start_page)
-		return page_address(page);
-
-	return kmap_high(page);
-}
-
-/*
- * Unmap a page in kernel adress space.
- */
-void kunmap(struct page *page)
-{
-	if (page < highmem_start_page)
-		return;
-
-	kunmap_high(page);
 }
 
 /*
