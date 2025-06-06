@@ -52,10 +52,11 @@ static struct buffer_head *ext2_read_block_bitmap(struct super_block *sb, uint32
  */
 int ext2_new_block(struct inode *inode, uint32_t goal)
 {
-	struct ext2_sb_info *sbi = ext2_sb(inode->i_sb);
-	struct buffer_head *gdp_bh, *bitmap_bh;
+	struct super_block *sb = inode->i_sb;
+	struct ext2_sb_info *sbi = ext2_sb(sb);
+	struct buffer_head *gdp_bh, *bitmap_bh, *bh;
+	uint32_t group_no, bgi, block_nr;
 	struct ext2_group_desc *gdp;
-	uint32_t group_no, bgi;
 	int grp_alloc_block;
 
 	/* adjust goal block */
@@ -70,7 +71,7 @@ int ext2_new_block(struct inode *inode, uint32_t goal)
 			group_no = 0;
 
 		/* get group descriptor */
-		gdp = ext2_get_group_desc(inode->i_sb, group_no, &gdp_bh);
+		gdp = ext2_get_group_desc(sb, group_no, &gdp_bh);
 		if (!gdp)
 			return -EIO;
 
@@ -79,7 +80,7 @@ int ext2_new_block(struct inode *inode, uint32_t goal)
 			continue;
 
 		/* get group blocks bitmap */
-		bitmap_bh = ext2_read_block_bitmap(inode->i_sb, group_no);
+		bitmap_bh = ext2_read_block_bitmap(sb, group_no);
 		if (!bitmap_bh)
 			return -EIO;
 
@@ -112,8 +113,19 @@ allocated:
 	/* mark inode dirty */
 	inode->i_dirt = 1;
 
-	/* compute global position of block */
-	return grp_alloc_block + ext2_group_first_block_no(inode->i_sb, group_no);
+	/* compute block number */
+	block_nr = grp_alloc_block + ext2_group_first_block_no(sb, group_no);
+
+	/* get a buffer and clear it */
+	bh = getblk(sb->s_dev, block_nr, sb->s_blocksize);
+	if (bh) {
+		memset(bh->b_data, 0, bh->b_size);
+		mark_buffer_dirty(bh);
+		mark_buffer_uptodate(bh, 1);
+		brelse(bh);
+	}
+
+	return block_nr;
 }
 
 /*
