@@ -538,6 +538,19 @@ int sys_fsync(int fd)
 }
 
 /*
+ * Generic block map.
+ */
+static int generic_block_bmap(struct inode *inode, uint32_t block)
+{
+	struct buffer_head bh;
+
+	if (inode->i_op->get_block(inode, block, &bh, 0))
+		return 0;
+
+	return bh.b_block;
+}
+
+/*
  * Read a page.
  */
 int generic_readpage(struct inode *inode, struct page *page)
@@ -566,7 +579,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 	for (i = 0, next = bh; i < nr; i++, block++) {
 		/* set block buffer */
 		next->b_dev = sb->s_dev;
-		next->b_block = inode->i_op->bmap(inode, block);
+		next->b_block = generic_block_bmap(inode, block);
 		mark_buffer_uptodate(next, 1);
 
 		/* check if buffer is already hashed */

@@ -187,7 +187,7 @@ struct inode_operations {
 	int (*rename)(struct inode *, const char *, size_t, struct inode *, const char *, size_t);
 	int (*mknod)(struct inode *, const char *, size_t, mode_t, dev_t);
 	void (*truncate)(struct inode *);
-	int (*bmap)(struct inode *, int);
+	int (*get_block)(struct inode *, uint32_t, struct buffer_head *, int create);
 	int (*readpage)(struct inode *, struct page *);
 };
 

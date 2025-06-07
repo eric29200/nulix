@@ -187,8 +187,8 @@ int init_ext2_fs();
 int ext2_read_inode(struct inode *inode);
 int ext2_write_inode(struct inode *inode);
 int ext2_put_inode(struct inode *inode);
+int ext2_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create);
 struct buffer_head *ext2_bread(struct inode *inode, uint32_t block, int create);
-int ext2_bmap(struct inode *inode, int block);
 
 /* Ext2 inode alloc prototypes */
 struct inode *ext2_new_inode(struct inode *dir, mode_t mode);

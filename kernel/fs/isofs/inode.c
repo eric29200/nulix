@@ -23,7 +23,7 @@ struct file_operations isofs_dir_fops = {
  */
 struct inode_operations isofs_file_iops = {
 	.fops		= &isofs_file_fops,
-	.bmap		= isofs_bmap,
+	.get_block	= isofs_get_block,
 	.readpage	= generic_readpage,
 };
 
@@ -124,7 +124,7 @@ int isofs_read_inode(struct inode *inode)
 /*
  * Get or create a block.
  */
-static int isofs_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
+int isofs_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
 {
 	/* isofs is read only */
 	if (create)
@@ -149,18 +149,4 @@ struct buffer_head *isofs_bread(struct inode *inode, int block, int create)
 
 	/* read block on disk */
 	return bread(inode->i_sb->s_dev, bh_res.b_block, inode->i_sb->s_blocksize);
-}
-
-/*
- * Get a block number.
- */
-int isofs_bmap(struct inode *inode, int block)
-{
-	struct buffer_head bh_res;
-
-	/* get block */
-	if (isofs_get_block(inode, block, &bh_res, 0))
-		return 0;
-
-	return bh_res.b_block;
 }

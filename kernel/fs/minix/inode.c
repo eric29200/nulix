@@ -38,7 +38,7 @@ struct inode_operations minix_symlink_iops = {
 struct inode_operations minix_file_iops = {
 	.fops			= &minix_file_fops,
 	.truncate		= minix_truncate,
-	.bmap			= minix_bmap,
+	.get_block		= minix_get_block,
 	.readpage		= generic_readpage,
 };
 
@@ -255,7 +255,7 @@ static int minix_block_getblk(struct inode *inode, struct buffer_head *bh, int b
 /*
  * Get or create a block.
  */
-static int minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
+int minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
 {
 	struct buffer_head *bh1 = NULL, *bh2 = NULL, *bh3 = NULL;
 	struct super_block *sb = inode->i_sb;
@@ -317,18 +317,4 @@ struct buffer_head *minix_bread(struct inode *inode, int block, int create)
 
 	/* read block on disk */
 	return bread(inode->i_sb->s_dev, bh_res.b_block, inode->i_sb->s_blocksize);
-}
-
-/*
- * Get a block number.
- */
-int minix_bmap(struct inode *inode, int block)
-{
-	struct buffer_head bh_res;
-
-	/* get block */
-	if (minix_get_block(inode, block, &bh_res, 0))
-		return 0;
-
-	return bh_res.b_block;
 }

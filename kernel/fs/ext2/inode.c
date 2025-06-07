@@ -25,7 +25,7 @@ struct file_operations ext2_dir_fops = {
 struct inode_operations ext2_file_iops = {
 	.fops		= &ext2_file_fops,
 	.truncate	= ext2_truncate,
-	.bmap		= ext2_bmap,
+	.get_block	= ext2_get_block,
 	.readpage	= generic_readpage,
 };
 
@@ -342,7 +342,7 @@ static int ext2_block_getblk(struct inode *inode, struct buffer_head *bh, int bl
 /*
  * Get or create a block.
  */
-static int ext2_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
+int ext2_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
 {
 	struct buffer_head *bh1 = NULL, *bh2 = NULL, *bh3 = NULL;
 	struct super_block *sb = inode->i_sb;
@@ -410,18 +410,4 @@ struct buffer_head *ext2_bread(struct inode *inode, uint32_t block, int create)
 
 	/* read block on disk */
 	return bread(inode->i_sb->s_dev, bh_res.b_block, inode->i_sb->s_blocksize);
-}
-
-/*
- * Get a block number.
- */
-int ext2_bmap(struct inode *inode, int block)
-{
-	struct buffer_head bh_res;
-
-	/* get block */
-	if (ext2_get_block(inode, block, &bh_res, 0))
-		return 0;
-
-	return bh_res.b_block;
 }

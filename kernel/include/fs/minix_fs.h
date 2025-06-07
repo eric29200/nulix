@@ -103,8 +103,8 @@ int init_minix_fs();
 int minix_read_inode(struct inode *inode);
 int minix_write_inode(struct inode *inode);
 int minix_put_inode(struct inode *inode);
+int minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create);
 struct buffer_head *minix_bread(struct inode *inode, int block, int create);
-int minix_bmap(struct inode *inode, int block);
 
 /* minix truncate prototypes */
 void minix_truncate(struct inode *inode);
