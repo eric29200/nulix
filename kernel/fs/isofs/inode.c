@@ -122,23 +122,33 @@ int isofs_read_inode(struct inode *inode)
 }
 
 /*
- * Get or create a buffer.
+ * Get or create a block.
  */
-struct buffer_head *isofs_getblk(struct inode *inode, int block, int create)
+static int isofs_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
 {
-	struct super_block *sb = inode->i_sb;
-
 	/* isofs is read only */
 	if (create)
+		return -EROFS;
+
+	/* set result */
+	bh_res->b_block = (inode->u.iso_i.i_first_extent >> inode->i_sb->s_blocksize_bits) + block;
+
+	return 0;
+}
+
+/*
+ * Get or create a buffer.
+ */
+struct buffer_head *isofs_bread(struct inode *inode, int block, int create)
+{
+	struct buffer_head bh_res;
+
+	/* get block */
+	if (isofs_get_block(inode, block, &bh_res, create))
 		return NULL;
 
-	/* get block number */
-	block = isofs_bmap(inode, block);
-	if (block <= 0)
-		return NULL;
-
-	/* read block */
-	return bread(sb->s_dev, block, sb->s_blocksize);
+	/* read block on disk */
+	return bread(inode->i_sb->s_dev, bh_res.b_block, inode->i_sb->s_blocksize);
 }
 
 /*
@@ -146,8 +156,11 @@ struct buffer_head *isofs_getblk(struct inode *inode, int block, int create)
  */
 int isofs_bmap(struct inode *inode, int block)
 {
-	if (block < 0)
+	struct buffer_head bh_res;
+
+	/* get block */
+	if (isofs_get_block(inode, block, &bh_res, 0))
 		return 0;
 
-	return (inode->u.iso_i.i_first_extent >> inode->i_sb->s_blocksize_bits) + block;
+	return bh_res.b_block;
 }

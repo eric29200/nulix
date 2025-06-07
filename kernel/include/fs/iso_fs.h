@@ -107,7 +107,7 @@ int isofs_read_inode(struct inode *inode);
 
 /* isofs name resolution prototypes */
 int isofs_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode);
-struct buffer_head *isofs_getblk(struct inode *inode, int block, int create);
+struct buffer_head *isofs_bread(struct inode *inode, int block, int create);
 int isofs_bmap(struct inode *inode, int block);
 
 /* isofs file operations prototypes */
