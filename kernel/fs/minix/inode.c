@@ -195,22 +195,34 @@ static int minix_inode_getblk(struct inode *inode, int inode_block, struct buffe
 {
 	struct minix_inode_info *minix_inode = &inode->u.minix_i;
 
-	/* create block if needed */
-	if (create && !minix_inode->i_zone[inode_block])
-		if ((minix_inode->i_zone[inode_block] = minix_new_block(inode->i_sb)))
-			inode->i_dirt = 1;
+	/* existing block */
+	if (minix_inode->i_zone[inode_block])
+		goto found;
 
+	/* don't create a new block */
+	if (!create)
+		return -EIO;
+
+	/* create a new block */
+	minix_inode->i_zone[inode_block] = minix_new_block(inode->i_sb);
 	if (!minix_inode->i_zone[inode_block])
 		return -EIO;
 
-	/* read block on disk */
+	/* update inode */
+	inode->i_blocks++;
+	inode->i_dirt = 1;
+
+found:
+	/* set result */
 	if (*bh_res) {
 		(*bh_res)->b_block = minix_inode->i_zone[inode_block];
-	} else {
-		*bh_res = bread(inode->i_sb->s_dev, minix_inode->i_zone[inode_block], inode->i_sb->s_blocksize);
-		if (!*bh_res)
-			return -EIO;
+		return 0;
 	}
+
+	/* read block on disk */
+	*bh_res = bread(inode->i_sb->s_dev, minix_inode->i_zone[inode_block], inode->i_sb->s_blocksize);
+	if (!*bh_res)
+		return -EIO;
 
 	return 0;
 }
@@ -225,31 +237,43 @@ static int minix_block_getblk(struct inode *inode, struct buffer_head *bh, int b
 	if (!bh)
 		return -EIO;
 
-	/* create block if needed */
+	/* existing block */
 	i = ((uint32_t *) bh->b_data)[block_block];
-	if (create && !i) {
-		if ((i = minix_new_block(inode->i_sb))) {
-			((uint32_t *) (bh->b_data))[block_block] = i;
-			mark_buffer_dirty(bh);
-		}
-	}
+	if (i)
+		goto found;
 
-	/* release block */
+	/* don't create a new block */
+	if (!create)
+		goto err;
+
+	/* create a new block */
+	i = minix_new_block(inode->i_sb);
+	if (!i)
+		goto err;
+
+	/* update parent block */
+	((uint32_t *) (bh->b_data))[block_block] = i;
+	mark_buffer_dirty(bh);
+
+found:
+	/* release parent block */
 	brelse(bh);
 
-	if (!i)
-		return -EIO;
-
-	/* read block on disk */
+	/* set result */
 	if (*bh_res) {
 		(*bh_res)->b_block = i;
-	} else {
-		*bh_res = bread(inode->i_sb->s_dev, i, inode->i_sb->s_blocksize);
-		if (!*bh_res)
-			return -EIO;
+		return 0;
 	}
 
+	/* read block on disk */
+	*bh_res = bread(inode->i_sb->s_dev, i, inode->i_sb->s_blocksize);
+	if (!*bh_res)
+		return -EIO;
+
 	return 0;
+err:
+	brelse(bh);
+	return -EIO;
 }
 
 /*

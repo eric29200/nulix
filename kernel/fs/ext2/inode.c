@@ -250,40 +250,46 @@ static int ext2_inode_getblk(struct inode *inode, int inode_block, struct buffer
 	uint32_t goal = 0;
 	int i;
 
-	/* create block if needed */
-	if (create && !ext2_inode->i_data[inode_block]) {
-		/* try to reuse last block of inode */
-		for (i = inode_block - 1; i >= 0; i--) {
-			if (ext2_inode->i_data[i]) {
-				goal = ext2_inode->i_data[i];
-				break;
-			}
-		}
+	/* existing block */
+	if (ext2_inode->i_data[inode_block])
+		goto found;
 
-		/* else use block of this inode */
-		if (!goal)
-			goal = ext2_inode->i_block_group * sbi->s_blocks_per_group + sbi->s_es->s_first_data_block;
+	/* don't create a new block */
+	if (!create)
+		return -EIO;
 
-		/* create new block */
-		ext2_inode->i_data[inode_block] = ext2_new_block(inode, goal);
-		if (ext2_inode->i_data[inode_block]) {
-			inode->i_blocks++;
-			inode->i_dirt = 1;
+	/* try to reuse last block of inode */
+	for (i = inode_block - 1; i >= 0; i--) {
+		if (ext2_inode->i_data[i]) {
+			goal = ext2_inode->i_data[i];
+			break;
 		}
 	}
 
-	/* check block */
+	/* else use block of this inode */
+	if (!goal)
+		goal = ext2_inode->i_block_group * sbi->s_blocks_per_group + sbi->s_es->s_first_data_block;
+
+	/* create new block */
+	ext2_inode->i_data[inode_block] = ext2_new_block(inode, goal);
 	if (!ext2_inode->i_data[inode_block])
 		return -EIO;
 
-	/* read block on disk */
+	/* update inode */
+	inode->i_blocks++;
+	inode->i_dirt = 1;
+
+found:
+	/* set result */
 	if (*bh_res) {
 		(*bh_res)->b_block = ext2_inode->i_data[inode_block];
-	} else {
-		*bh_res = bread(inode->i_sb->s_dev, ext2_inode->i_data[inode_block], inode->i_sb->s_blocksize);
-		if (!*bh_res)
-			return -EIO;
+		return 0;
 	}
+
+	/* read block on disk */
+	*bh_res = bread(inode->i_sb->s_dev, ext2_inode->i_data[inode_block], inode->i_sb->s_blocksize);
+	if (!*bh_res)
+		return -EIO;
 
 	return 0;
 }
@@ -299,43 +305,53 @@ static int ext2_block_getblk(struct inode *inode, struct buffer_head *bh, int bl
 	if (!bh)
 		return -EIO;
 
-	/* create block if needed */
+	/* existing block */
 	i = ((uint32_t *) bh->b_data)[block_block];
-	if (create && !i) {
-		/* try to reuse previous blocks */
-		for (tmp = block_block - 1; tmp >= 0; tmp--) {
-			if (((uint32_t *) bh->b_data)[tmp]) {
-				goal = ((uint32_t *) bh->b_data)[tmp];
-			}
-		}
+	if (i)
+		goto found;
 
-		/* else use this indirect block */
-		if (!goal)
-			goal = bh->b_block;
+	/* don't create a new block */
+	if (!create)
+		goto err;
 
-		/* create new block */
-		i = ext2_new_block(inode, goal);
-		if (i) {
-			((uint32_t *) bh->b_data)[block_block] = i;
-			mark_buffer_dirty(bh);
+	/* try to reuse previous blocks */
+	for (tmp = block_block - 1; tmp >= 0; tmp--) {
+		if (((uint32_t *) bh->b_data)[tmp]) {
+			goal = ((uint32_t *) bh->b_data)[tmp];
 		}
 	}
 
+	/* else use this indirect block */
+	if (!goal)
+		goal = bh->b_block;
+
+	/* create new block */
+	i = ext2_new_block(inode, goal);
+	if (!i)
+		goto err;
+
+	/* update parent block */
+	((uint32_t *) bh->b_data)[block_block] = i;
+	mark_buffer_dirty(bh);
+
+found:
 	/* release parent block */
 	brelse(bh);
 
-	if (!i)
-		return -EIO;
-
-	/* read block on disk */
+	/* set result */
 	if (*bh_res) {
 		(*bh_res)->b_block = i;
-	} else {
-		*bh_res = bread(inode->i_sb->s_dev, i, inode->i_sb->s_blocksize);
-		if (!*bh_res)
-			return -EIO;
+		return 0;
 	}
 
+	/* read block on disk */
+	*bh_res = bread(inode->i_sb->s_dev, i, inode->i_sb->s_blocksize);
+	if (!*bh_res)
+		return -EIO;
+
+	return 0;
+err:
+	brelse(bh);
 	return 0;
 }
 
