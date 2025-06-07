@@ -267,6 +267,62 @@ found_page:
 }
 
 /*
+ * Generic file write.
+ */
+int generic_file_write(struct file *filp, const char *buf, int count)
+{
+	struct inode *inode = filp->f_inode;
+	struct super_block *sb = inode->i_sb;
+	struct buffer_head tmp, *bh;
+	size_t pos, nr_chars, left;
+
+	/* handle append flag */
+	if (filp->f_flags & O_APPEND)
+		filp->f_pos = inode->i_size;
+
+	/* write block by block */
+	for (left = count; left > 0;) {
+		/* get or create block */
+		if (inode->i_op->get_block(inode, filp->f_pos / sb->s_blocksize, &tmp, 1))
+			break;
+
+		/* read block */
+		bh = bread(sb->s_dev, tmp.b_block, sb->s_blocksize);
+		if (!bh)
+			break;
+
+		/* find position and numbers of chars to read */
+		pos = filp->f_pos % sb->s_blocksize;
+		nr_chars = sb->s_blocksize - pos <= left ? sb->s_blocksize - pos : left;
+
+		/* copy to buffer */
+		memcpy(bh->b_data + pos, buf, nr_chars);
+
+		/* release block */
+		mark_buffer_dirty(bh);
+		brelse(bh);
+
+		/* update page cache */
+		update_vm_cache(inode, buf, pos, nr_chars);
+
+		/* update sizes */
+		filp->f_pos += nr_chars;
+		buf += nr_chars;
+		left -= nr_chars;
+
+		/* end of file : grow it and mark inode dirty */
+		if (filp->f_pos > filp->f_inode->i_size) {
+			inode->i_size = filp->f_pos;
+			inode->i_dirt = 1;
+		}
+	}
+
+	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
+	inode->i_dirt = 1;
+	return count - left;
+}
+
+/*
  * Truncate inode pages.
  */
 void truncate_inode_pages(struct inode *inode, off_t start)
