@@ -191,35 +191,45 @@ int minix_put_inode(struct inode *inode)
 /*
  * Get an inode buffer.
  */
-static struct buffer_head *minix_inode_getblk(struct inode *inode, int nr, int create)
+static int minix_inode_getblk(struct inode *inode, int inode_block, struct buffer_head **bh_res, int create)
 {
+	struct minix_inode_info *minix_inode = &inode->u.minix_i;
+
 	/* create block if needed */
-	if (create && !inode->u.minix_i.i_zone[nr])
-		if ((inode->u.minix_i.i_zone[nr] = minix_new_block(inode->i_sb)))
+	if (create && !minix_inode->i_zone[inode_block])
+		if ((minix_inode->i_zone[inode_block] = minix_new_block(inode->i_sb)))
 			inode->i_dirt = 1;
 
-	if (!inode->u.minix_i.i_zone[nr])
-		return NULL;
+	if (!minix_inode->i_zone[inode_block])
+		return -EIO;
 
-	/* read block from device */
-	return bread(inode->i_sb->s_dev, inode->u.minix_i.i_zone[nr], inode->i_sb->s_blocksize);
+	/* read block on disk */
+	if (*bh_res) {
+		(*bh_res)->b_block = minix_inode->i_zone[inode_block];
+	} else {
+		*bh_res = bread(inode->i_sb->s_dev, minix_inode->i_zone[inode_block], inode->i_sb->s_blocksize);
+		if (!*bh_res)
+			return -EIO;
+	}
+
+	return 0;
 }
 
 /*
  * Get a block buffer.
  */
-static struct buffer_head *minix_block_getblk(struct inode *inode, struct buffer_head *bh, int block, int create)
+static int minix_block_getblk(struct inode *inode, struct buffer_head *bh, int block_block, struct buffer_head **bh_res, int create)
 {
 	int i;
 
 	if (!bh)
-		return NULL;
+		return -EIO;
 
 	/* create block if needed */
-	i = ((uint32_t *) bh->b_data)[block];
+	i = ((uint32_t *) bh->b_data)[block_block];
 	if (create && !i) {
 		if ((i = minix_new_block(inode->i_sb))) {
-			((uint32_t *) (bh->b_data))[block] = i;
+			((uint32_t *) (bh->b_data))[block_block] = i;
 			mark_buffer_dirty(bh);
 		}
 	}
@@ -228,10 +238,70 @@ static struct buffer_head *minix_block_getblk(struct inode *inode, struct buffer
 	brelse(bh);
 
 	if (!i)
-		return NULL;
+		return -EIO;
 
-	/* read block from device */
-	return bread(inode->i_sb->s_dev, i, inode->i_sb->s_blocksize);
+	/* read block on disk */
+	if (*bh_res) {
+		(*bh_res)->b_block = i;
+	} else {
+		*bh_res = bread(inode->i_sb->s_dev, i, inode->i_sb->s_blocksize);
+		if (!*bh_res)
+			return -EIO;
+	}
+
+	return 0;
+}
+
+/*
+ * Get or create a block.
+ */
+static int minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
+{
+	struct buffer_head *bh1 = NULL, *bh2 = NULL, *bh3 = NULL;
+	struct super_block *sb = inode->i_sb;
+	int ret;
+
+	/* check block number */
+	if (block >= minix_sb(sb)->s_max_size / sb->s_blocksize)
+		return -EIO;
+
+	/* direct block */
+	if (block < 7)
+		return minix_inode_getblk(inode, block, &bh_res, create);
+
+	/* indirect block */
+	block -= 7;
+	if (block < 256) {
+		ret = minix_inode_getblk(inode, 7, &bh1, create);
+		if (ret)
+			return ret;
+		return minix_block_getblk(inode, bh1, block, &bh_res, create);
+	}
+
+	/* double indirect block */
+	block -= 256;
+	if (block < 256 * 256) {
+		ret = minix_inode_getblk(inode, 8, &bh1, create);
+		if (ret)
+			return ret;
+		ret = minix_block_getblk(inode, bh1, (block >> 8) & 255, &bh2, create);
+		if (ret)
+			return ret;
+		return minix_block_getblk(inode, bh2, block & 255, &bh_res, create);
+	}
+
+	/* triple indirect block */
+	block -= 256 * 256;
+	ret = minix_inode_getblk(inode, 9, &bh1, create);
+	if (ret)
+		return ret;
+	ret = minix_block_getblk(inode, bh1, (block >> 16) & 255, &bh2, create);
+	if (ret)
+		return ret;
+	ret = minix_block_getblk(inode, bh2, (block >> 8) & 255, &bh3, create);
+	if (ret)
+		return ret;
+	return minix_block_getblk(inode, bh3, block & 255, &bh_res, create);
 }
 
 /*
@@ -239,61 +309,14 @@ static struct buffer_head *minix_block_getblk(struct inode *inode, struct buffer
  */
 struct buffer_head *minix_bread(struct inode *inode, int block, int create)
 {
-	struct super_block *sb = inode->i_sb;
-	struct buffer_head *bh;
+	struct buffer_head bh_res;
 
-	/* check block number */
-	if (block < 0 || (uint32_t) block >= minix_sb(sb)->s_max_size / sb->s_blocksize)
+	/* get block */
+	if (minix_get_block(inode, block, &bh_res, create))
 		return NULL;
 
-	/* direct block */
-	if (block < 7)
-		return minix_inode_getblk(inode, block, create);
-
-	/* indirect block */
-	block -= 7;
-	if (block < 256) {
-		bh = minix_inode_getblk(inode, 7, create);
-		return minix_block_getblk(inode, bh, block, create);
-	}
-
-	/* double indirect block */
-	block -= 256;
-	if (block < 256 * 256) {
-		bh = minix_inode_getblk(inode, 8, create);
-		bh = minix_block_getblk(inode, bh, (block >> 8) & 255, create);
-		return minix_block_getblk(inode, bh, block & 255, create);
-	}
-
-	/* triple indirect block */
-	block -= 256 * 256;
-	bh = minix_inode_getblk(inode, 9, create);
-	bh = minix_block_getblk(inode, bh, (block >> 16) & 255, create);
-	bh = minix_block_getblk(inode, bh, (block >> 8) & 255, create);
-	return minix_block_getblk(inode, bh, block & 255, create);
-}
-
-/*
- * Get a block number.
- */
-static int inode_bmap(struct inode *inode, int nr)
-{
-	return inode->u.minix_i.i_zone[nr];
-}
-
-/*
- * Get a block number.
- */
-static int block_bmap(struct buffer_head *bh, int nr)
-{
-	int ret;
-
-	if (!bh)
-		return 0;
-
-	ret = ((uint32_t *) bh->b_data)[nr];
-	brelse(bh);
-	return ret;
+	/* read block on disk */
+	return bread(inode->i_sb->s_dev, bh_res.b_block, inode->i_sb->s_blocksize);
 }
 
 /*
@@ -301,48 +324,11 @@ static int block_bmap(struct buffer_head *bh, int nr)
  */
 int minix_bmap(struct inode *inode, int block)
 {
-	struct super_block *sb = inode->i_sb;
-	int i;
+	struct buffer_head bh_res;
 
-	/* check block number */
-	if (block < 0 || (uint32_t) block >= minix_sb(sb)->s_max_size / sb->s_blocksize)
+	/* get block */
+	if (minix_get_block(inode, block, &bh_res, 0))
 		return 0;
 
-	/* direct block */
-	if (block < 7)
-		return inode_bmap(inode, block);
-
-	/* indirect block */
-	block -= 7;
-	if (block < 256) {
-		i = inode_bmap(inode, 7);
-		if (!i)
-			return 0;
-		return block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block);
-	}
-
-	/* double indirect block */
-	block -= 256;
-	if (block < 256 * 256) {
-		i = inode_bmap(inode, 8);
-		if (!i)
-			return 0;
-		i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block >> 8);
-		if (!i)
-			return 0;
-		return block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block & 255);
-	}
-
-	/* triple indirect block */
-	block -= 256 * 256;
-	i = inode_bmap(inode, 9);
-	if (!i)
-		return 0;
-	i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block >> 16);
-	if (!i)
-		return 0;
-	i = block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block >> 8);
-	if (!i)
-		return 0;
-	return block_bmap(bread(sb->s_dev, i, sb->s_blocksize), block & 255);
+	return bh_res.b_block;
 }
