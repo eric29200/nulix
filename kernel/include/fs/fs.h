@@ -37,6 +37,9 @@
 #define MAY_WRITE			2
 #define MAY_READ			4
 
+#define BH_Uptodate			0
+#define BH_Dirty			1
+
 #define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
 
 struct super_block;
@@ -48,9 +51,8 @@ struct buffer_head {
 	uint32_t			b_block;		/* block number */
 	char *				b_data;			/* data */
 	size_t				b_size;			/* block size */
-	int				b_count;			/* reference counter */
-	char				b_dirt;			/* dirty flag */
-	char				b_uptodate;		/* up to date flag */
+	int				b_count;		/* reference counter */
+	uint32_t			b_state;		/* buffer state */
 	dev_t				b_dev;			/* device number */
 	struct buffer_head *		b_this_page;		/* next buffer in page */
 	struct list_head		b_list;			/* next buffer in list */
@@ -218,8 +220,10 @@ int get_vfs_mount_list(char *buf, int count);
 int fs_may_umount(struct super_block *sb);
 
 /* buffer operations */
-int buffer_dirty(struct buffer_head *bh);
-int buffer_uptodate(struct buffer_head *bh);
+#define __buffer_state(bh, state)		(((bh)->b_state & (1UL << (state))) != 0)
+#define buffer_uptodate(bh)			__buffer_state(bh, BH_Uptodate)
+#define buffer_dirty(bh)			__buffer_state(bh, BH_Dirty)
+
 void mark_buffer_clean(struct buffer_head *bh);
 void mark_buffer_dirty(struct buffer_head *bh);
 void mark_buffer_uptodate(struct buffer_head *bh, int on);

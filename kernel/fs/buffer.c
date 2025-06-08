@@ -38,28 +38,12 @@ static struct list_head free_list[NR_SIZES];
 size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
 
 /*
- * Is a buffer dirty ?
- */
-int buffer_dirty(struct buffer_head *bh)
-{
-	return bh->b_dirt == 1;
-}
-
-/*
- * Is a buffer up to date ?
- */
-int buffer_uptodate(struct buffer_head *bh)
-{
-	return bh->b_uptodate == 1;
-}
-
-/*
  * Mark a buffer clean.
  */
 void mark_buffer_clean(struct buffer_head *bh)
 {
-	if (bh->b_dirt) {
-		bh->b_dirt = 0;
+	if (buffer_dirty(bh)) {
+		bh->b_state &= ~(1UL << BH_Dirty);
 		list_del(&bh->b_list);
 		list_add(&bh->b_list, &used_list);
 	}
@@ -73,8 +57,8 @@ void mark_buffer_dirty(struct buffer_head *bh)
 	struct buffer_head *next = NULL;
 	struct list_head *pos;
 
-	if (!bh->b_dirt) {
-		bh->b_dirt = 1;
+	if (!buffer_dirty(bh)) {
+		bh->b_state |= (1UL << BH_Dirty);
 		list_del(&bh->b_list);
 
 		/* keep dirty list sorted */
@@ -99,7 +83,10 @@ void mark_buffer_dirty(struct buffer_head *bh)
  */
 void mark_buffer_uptodate(struct buffer_head *bh, int on)
 {
-	bh->b_uptodate = on;
+	if (on)
+		bh->b_state |= (1UL << BH_Uptodate);
+	else
+		bh->b_state &= ~(1UL << BH_Uptodate);
 }
 
 /*
