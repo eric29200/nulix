@@ -274,6 +274,9 @@ void reclaim_pages()
 	struct page *page;
 	uint32_t i;
 
+	/* synchronize buffers */
+	bsync();
+
 	for (i = 0; i < nr_pages; i++) {
 		page = &page_array[i];
 		bh = page->buffers;
