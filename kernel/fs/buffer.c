@@ -241,7 +241,7 @@ static struct buffer_head *get_unused_buffer_head()
 /*
  * Create new buffers.
  */
-static struct buffer_head *create_buffers(void *page, size_t size)
+static struct buffer_head *create_buffers(struct page *page, struct inode *inode, size_t size)
 {
 	struct buffer_head *bh, *head, *tail;
 	int offset;
@@ -256,8 +256,10 @@ static struct buffer_head *create_buffers(void *page, size_t size)
 			goto err;
 
 		/* set buffer */
-		bh->b_data = (char *) (page + offset);
+		bh->b_dev = inode ? inode->i_sb->s_dev : 0;
+		bh->b_data = page_address(page) + offset;
 		bh->b_size = size;
+		bh->b_page = page;
 		bh->b_this_page = head;
 
 		/* set tail and head */
@@ -289,17 +291,17 @@ static int grow_buffers(size_t size)
 {
 	struct buffer_head *bh, *tmp;
 	size_t isize = BUFSIZE_INDEX(size);
-	void *page;
+	struct page *page;
 
 	/* get a page */
-	page = get_free_page();
+	page = __get_free_page(GFP_KERNEL);
 	if (!page)
 		return -ENOMEM;
 
 	/* create buffers */
-	bh = create_buffers(page, size);
+	bh = create_buffers(page, NULL, size);
 	if (!bh) {
-		free_page(page);
+		__free_page(page);
 		return -ENOMEM;
 	}
 
@@ -313,7 +315,7 @@ static int grow_buffers(size_t size)
 	} while (tmp != bh);
 
 	/* set page buffers */
-	page_array[MAP_NR((uint32_t) page)].buffers = bh;
+	page->buffers = bh;
 	buffermem_pages++;
 
 	return 0;
@@ -424,11 +426,7 @@ void brelse(struct buffer_head *bh)
 void try_to_free_buffer(struct buffer_head *bh)
 {
 	struct buffer_head *tmp, *tmp1;
-	uint32_t page;
-
-	/* get page */
-	page = (uint32_t) bh->b_data;
-	page &= PAGE_MASK;
+	struct page *page = bh->b_page;
 
 	/* check if all page buffers can be freed */
 	tmp = bh;
@@ -458,8 +456,8 @@ void try_to_free_buffer(struct buffer_head *bh)
 
 	/* free page */
 	buffermem_pages--;
-	page_array[MAP_NR(page)].buffers = NULL;
-	free_page((void *) page);
+	page->buffers = NULL;
+	__free_page(page);
 }
 
 /*
@@ -552,7 +550,6 @@ int generic_readpage(struct inode *inode, struct page *page)
 {
 	struct super_block *sb = inode->i_sb;
 	struct buffer_head *bh, *next, *tmp;
-	void *page_address;
 	int nr, i, ret = 0;
 	uint32_t block;
 
@@ -560,11 +557,8 @@ int generic_readpage(struct inode *inode, struct page *page)
 	nr = PAGE_SIZE >> sb->s_blocksize_bits;
 	block = page->offset >> sb->s_blocksize_bits;
 
-	/* get page address */
-	page_address = page_address(page);
-
 	/* create temporary buffers */
-	bh = create_buffers(page_address, sb->s_blocksize);
+	bh = create_buffers(page, inode, sb->s_blocksize);
 	if (!bh) {
 		ret = -ENOMEM;
 		goto out;
