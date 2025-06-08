@@ -54,9 +54,9 @@ int ext2_new_block(struct inode *inode, uint32_t goal)
 {
 	struct super_block *sb = inode->i_sb;
 	struct ext2_sb_info *sbi = ext2_sb(sb);
-	struct buffer_head *gdp_bh, *bitmap_bh, *bh;
-	uint32_t group_no, bgi, block_nr;
+	struct buffer_head *gdp_bh, *bitmap_bh;
 	struct ext2_group_desc *gdp;
+	uint32_t group_no, bgi;
 	int grp_alloc_block;
 
 	/* adjust goal block */
@@ -114,18 +114,7 @@ allocated:
 	inode->i_dirt = 1;
 
 	/* compute block number */
-	block_nr = grp_alloc_block + ext2_group_first_block_no(sb, group_no);
-
-	/* get a buffer and clear it */
-	bh = getblk(sb->s_dev, block_nr, sb->s_blocksize);
-	if (bh) {
-		memset(bh->b_data, 0, bh->b_size);
-		mark_buffer_dirty(bh);
-		mark_buffer_uptodate(bh, 1);
-		brelse(bh);
-	}
-
-	return block_nr;
+	return grp_alloc_block + ext2_group_first_block_no(sb, group_no);
 }
 
 /*

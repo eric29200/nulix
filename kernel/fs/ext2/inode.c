@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <fs/ext2_fs.h>
 #include <stderr.h>
+#include <stdio.h>
 #include <fcntl.h>
 
 /*
@@ -247,8 +248,9 @@ static int ext2_inode_getblk(struct inode *inode, int inode_block, struct buffer
 {
 	struct ext2_inode_info *ext2_inode = &inode->u.ext2_i;
 	struct ext2_sb_info *sbi = ext2_sb(inode->i_sb);
+	struct super_block *sb = inode->i_sb;
 	uint32_t goal = 0;
-	int i;
+	int new = 0, i;
 
 	/* existing block */
 	if (ext2_inode->i_data[inode_block])
@@ -271,6 +273,7 @@ static int ext2_inode_getblk(struct inode *inode, int inode_block, struct buffer
 		goal = ext2_inode->i_block_group * sbi->s_blocks_per_group + sbi->s_es->s_first_data_block;
 
 	/* create new block */
+	new = 1;
 	ext2_inode->i_data[inode_block] = ext2_new_block(inode, goal);
 	if (!ext2_inode->i_data[inode_block])
 		return -EIO;
@@ -282,7 +285,22 @@ static int ext2_inode_getblk(struct inode *inode, int inode_block, struct buffer
 found:
 	/* set result */
 	if (*bh_res) {
+		if (new)
+			mark_buffer_new(*bh_res);
+
 		(*bh_res)->b_block = ext2_inode->i_data[inode_block];
+		return 0;
+	}
+
+	/* new buffer : hash and clear it */
+	if (new) {
+		*bh_res = getblk(sb->s_dev, ext2_inode->i_data[inode_block], sb->s_blocksize);
+		if (!*bh_res)
+			return -EIO;
+
+		memset((*bh_res)->b_data, 0, (*bh_res)->b_size);
+		mark_buffer_dirty(*bh_res);
+		mark_buffer_uptodate(*bh_res, 1);
 		return 0;
 	}
 
@@ -299,8 +317,9 @@ found:
  */
 static int ext2_block_getblk(struct inode *inode, struct buffer_head *bh, int block_block, struct buffer_head **bh_res, int create)
 {
+	struct super_block *sb = inode->i_sb;
+	int i, tmp, new = 0;
 	uint32_t goal = 0;
-	int i, tmp;
 
 	if (!bh)
 		return -EIO;
@@ -326,6 +345,7 @@ static int ext2_block_getblk(struct inode *inode, struct buffer_head *bh, int bl
 		goal = bh->b_block;
 
 	/* create new block */
+	new = 1;
 	i = ext2_new_block(inode, goal);
 	if (!i)
 		goto err;
@@ -340,7 +360,22 @@ found:
 
 	/* set result */
 	if (*bh_res) {
+		if (new)
+			mark_buffer_new(*bh_res);
+
 		(*bh_res)->b_block = i;
+		return 0;
+	}
+
+	/* new buffer : hash and clear it */
+	if (new) {
+		*bh_res = getblk(sb->s_dev, i, sb->s_blocksize);
+		if (!*bh_res)
+			return -EIO;
+
+		memset((*bh_res)->b_data, 0, (*bh_res)->b_size);
+		mark_buffer_dirty(*bh_res);
+		mark_buffer_uptodate(*bh_res, 1);
 		return 0;
 	}
 
@@ -352,7 +387,7 @@ found:
 	return 0;
 err:
 	brelse(bh);
-	return 0;
+	return -EIO;
 }
 
 /*
@@ -418,12 +453,25 @@ int ext2_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_r
  */
 struct buffer_head *ext2_bread(struct inode *inode, uint32_t block, int create)
 {
-	struct buffer_head bh_res;
+	struct super_block *sb = inode->i_sb;
+	struct buffer_head tmp = { 0 }, *bh;
 
 	/* get block */
-	if (ext2_get_block(inode, block, &bh_res, create))
+	if (ext2_get_block(inode, block, &tmp, create))
 		return NULL;
 
+	/* new buffer : hash and clear it */
+	if (buffer_new(&tmp)) {
+		bh = getblk(sb->s_dev, tmp.b_block, sb->s_blocksize);
+		if (!bh)
+			return NULL;
+
+		memset(bh->b_data, 0, bh->b_size);
+		mark_buffer_dirty(bh);
+		mark_buffer_uptodate(bh, 1);
+		return bh;
+	}
+
 	/* read block on disk */
-	return bread(inode->i_sb->s_dev, bh_res.b_block, inode->i_sb->s_blocksize);
+	return bread(inode->i_sb->s_dev, tmp.b_block, inode->i_sb->s_blocksize);
 }

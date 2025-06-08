@@ -53,7 +53,6 @@ static inline int minix_get_free_bitmap(struct buffer_head *bh)
 uint32_t minix_new_block(struct super_block *sb)
 {
 	struct minix_sb_info *sbi = minix_sb(sb);
-	struct buffer_head *bh;
 	uint32_t block_nr, i;
 	int j;
 
@@ -72,17 +71,6 @@ uint32_t minix_new_block(struct super_block *sb)
 	block_nr = j + i * sb->s_blocksize * 8 + sbi->s_firstdatazone - 1;
 	if (block_nr >= sbi->s_nzones)
 		return 0;
-
-	/* get a buffer */
-	bh = getblk(sb->s_dev, block_nr, sb->s_blocksize);
-	if (!bh)
-		return 0;
-
-	/* memzero buffer and release it */
-	memset(bh->b_data, 0, bh->b_size);
-	mark_buffer_dirty(bh);
-	mark_buffer_uptodate(bh, 1);
-	brelse(bh);
 
 	/* set block in bitmap */
 	MINIX_SET_BITMAP(sbi->s_zmap[i], j);

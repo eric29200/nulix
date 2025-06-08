@@ -90,6 +90,14 @@ void mark_buffer_uptodate(struct buffer_head *bh, int on)
 }
 
 /*
+ * Mark a buffer new.
+ */
+void mark_buffer_new(struct buffer_head *bh)
+{
+	bh->b_state |= (1UL << BH_New);
+}
+
+/*
  * Hash a buffer.
  */
 static inline int __buffer_hashfn(dev_t dev, uint32_t block)
@@ -529,12 +537,12 @@ int sys_fsync(int fd)
  */
 static int generic_block_bmap(struct inode *inode, uint32_t block)
 {
-	struct buffer_head bh;
+	struct buffer_head tmp = { 0 };
 
-	if (inode->i_op->get_block(inode, block, &bh, 0))
+	if (inode->i_op->get_block(inode, block, &tmp, 0))
 		return 0;
 
-	return bh.b_block;
+	return tmp.b_block;
 }
 
 /*

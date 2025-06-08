@@ -194,6 +194,8 @@ int minix_put_inode(struct inode *inode)
 static int minix_inode_getblk(struct inode *inode, int inode_block, struct buffer_head **bh_res, int create)
 {
 	struct minix_inode_info *minix_inode = &inode->u.minix_i;
+	struct super_block *sb = inode->i_sb;
+	int new = 0;
 
 	/* existing block */
 	if (minix_inode->i_zone[inode_block])
@@ -204,6 +206,7 @@ static int minix_inode_getblk(struct inode *inode, int inode_block, struct buffe
 		return -EIO;
 
 	/* create a new block */
+	new = 1;
 	minix_inode->i_zone[inode_block] = minix_new_block(inode->i_sb);
 	if (!minix_inode->i_zone[inode_block])
 		return -EIO;
@@ -215,7 +218,22 @@ static int minix_inode_getblk(struct inode *inode, int inode_block, struct buffe
 found:
 	/* set result */
 	if (*bh_res) {
+		if (new)
+			mark_buffer_new(*bh_res);
+
 		(*bh_res)->b_block = minix_inode->i_zone[inode_block];
+		return 0;
+	}
+
+	/* new buffer : hash and clear it */
+	if (new) {
+		*bh_res = getblk(sb->s_dev, minix_inode->i_zone[inode_block], sb->s_blocksize);
+		if (!*bh_res)
+			return -EIO;
+
+		memset((*bh_res)->b_data, 0, (*bh_res)->b_size);
+		mark_buffer_dirty(*bh_res);
+		mark_buffer_uptodate(*bh_res, 1);
 		return 0;
 	}
 
@@ -232,7 +250,8 @@ found:
  */
 static int minix_block_getblk(struct inode *inode, struct buffer_head *bh, int block_block, struct buffer_head **bh_res, int create)
 {
-	int i;
+	struct super_block *sb = inode->i_sb;
+	int new = 0, i;
 
 	if (!bh)
 		return -EIO;
@@ -247,6 +266,7 @@ static int minix_block_getblk(struct inode *inode, struct buffer_head *bh, int b
 		goto err;
 
 	/* create a new block */
+	new = 1;
 	i = minix_new_block(inode->i_sb);
 	if (!i)
 		goto err;
@@ -261,7 +281,22 @@ found:
 
 	/* set result */
 	if (*bh_res) {
+		if (new)
+			mark_buffer_new(*bh_res);
+
 		(*bh_res)->b_block = i;
+		return 0;
+	}
+
+	/* new buffer : hash and clear it */
+	if (new) {
+		*bh_res = getblk(sb->s_dev, i, sb->s_blocksize);
+		if (!*bh_res)
+			return -EIO;
+
+		memset((*bh_res)->b_data, 0, (*bh_res)->b_size);
+		mark_buffer_dirty(*bh_res);
+		mark_buffer_uptodate(*bh_res, 1);
 		return 0;
 	}
 
@@ -333,12 +368,25 @@ int minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_
  */
 struct buffer_head *minix_bread(struct inode *inode, int block, int create)
 {
-	struct buffer_head bh_res;
+	struct super_block *sb = inode->i_sb;
+	struct buffer_head tmp = { 0 }, *bh;
 
 	/* get block */
-	if (minix_get_block(inode, block, &bh_res, create))
+	if (minix_get_block(inode, block, &tmp, create))
 		return NULL;
 
+	/* new buffer : hash and clear it */
+	if (buffer_new(&tmp)) {
+		bh = getblk(sb->s_dev, tmp.b_block, sb->s_blocksize);
+		if (!bh)
+			return NULL;
+
+		memset(bh->b_data, 0, bh->b_size);
+		mark_buffer_dirty(bh);
+		mark_buffer_uptodate(bh, 1);
+		return bh;
+	}
+
 	/* read block on disk */
-	return bread(inode->i_sb->s_dev, bh_res.b_block, inode->i_sb->s_blocksize);
+	return bread(inode->i_sb->s_dev, tmp.b_block, inode->i_sb->s_blocksize);
 }

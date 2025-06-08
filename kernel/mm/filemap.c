@@ -273,7 +273,7 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 {
 	struct inode *inode = filp->f_inode;
 	struct super_block *sb = inode->i_sb;
-	struct buffer_head tmp, *bh;
+	struct buffer_head tmp = { 0 }, *bh;
 	size_t pos, nr_chars, left;
 
 	/* handle append flag */
@@ -287,9 +287,19 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 			break;
 
 		/* read block */
-		bh = bread(sb->s_dev, tmp.b_block, sb->s_blocksize);
-		if (!bh)
-			break;
+		if (buffer_new(&tmp)) {
+			bh = getblk(sb->s_dev, tmp.b_block, sb->s_blocksize);
+			if (!bh)
+				break;
+
+			memset(bh->b_data, 0, bh->b_size);
+			mark_buffer_dirty(bh);
+			mark_buffer_uptodate(bh, 1);
+		} else {
+			bh = bread(sb->s_dev, tmp.b_block, sb->s_blocksize);
+			if (!bh)
+				break;
+		}
 
 		/* find position and numbers of chars to read */
 		pos = filp->f_pos % sb->s_blocksize;

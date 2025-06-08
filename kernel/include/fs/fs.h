@@ -39,6 +39,7 @@
 
 #define BH_Uptodate			0
 #define BH_Dirty			1
+#define BH_New				2
 
 #define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
 
@@ -223,10 +224,12 @@ int fs_may_umount(struct super_block *sb);
 #define __buffer_state(bh, state)		(((bh)->b_state & (1UL << (state))) != 0)
 #define buffer_uptodate(bh)			__buffer_state(bh, BH_Uptodate)
 #define buffer_dirty(bh)			__buffer_state(bh, BH_Dirty)
+#define buffer_new(bh)				__buffer_state(bh, BH_New)
 
 void mark_buffer_clean(struct buffer_head *bh);
 void mark_buffer_dirty(struct buffer_head *bh);
 void mark_buffer_uptodate(struct buffer_head *bh, int on);
+void mark_buffer_new(struct buffer_head *bh);
 struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize);
 struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize);
 void brelse(struct buffer_head *bh);
