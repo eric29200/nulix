@@ -322,14 +322,6 @@ static int grow_buffers(size_t size)
 }
 
 /*
- * Refill free list.
- */
-static void refill_freelist(size_t blocksize)
-{
-	grow_buffers(blocksize);
-}
-
-/*
  * Find a buffer in hash table.
  */
 struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize)
@@ -361,7 +353,7 @@ struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize)
 
 	/* refill free list if needed */
 	if (list_empty(&free_list[isize])) {
-		refill_freelist(blocksize);
+		grow_buffers(blocksize);
 
 		/* recheck free list */
 		if (list_empty(&free_list[isize]))
