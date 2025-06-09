@@ -16,9 +16,8 @@ static size_t nr_requests = 0;
  */
 static void end_request(struct request *req)
 {
-	struct buffer_head *bh, *next, *tmp;
 	struct list_head *pos, *n;
-	int used;
+	struct buffer_head *bh;
 
 	list_for_each_safe(pos, n, &req->bhs_list) {
 		/* mark buffer clean */
@@ -31,22 +30,8 @@ static void end_request(struct request *req)
 		list_del(&bh->b_list_req);
 
 		/* free buffer */
-		if (buffer_free_on_io(bh)) {
-			/* check if some buffers in page are still used */
-			used = 0;
-			tmp = bh;
-			do {
-				next = tmp->b_this_page;
-				used = next->b_count != 0;
-				if (used)
-					break;
-				tmp = next;
-			} while (tmp != bh);
-
-			/* ok to free buffers */
-			if (!used)
-				free_async_buffers(bh);
-		}
+		if (buffer_free_on_io(bh))
+			try_to_free_buffer(bh);
 	}
 }
 

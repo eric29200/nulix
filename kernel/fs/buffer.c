@@ -260,7 +260,6 @@ static struct buffer_head *create_buffers(struct page *page, struct inode *inode
 		bh->b_dev = inode ? inode->i_sb->s_dev : 0;
 		bh->b_data = page_address(page) + offset;
 		bh->b_size = size;
-		bh->b_page = page;
 		bh->b_this_page = head;
 
 		/* set tail and head */
@@ -309,6 +308,7 @@ static int grow_buffers(size_t size)
 	/* add new buffers to free list */
 	tmp = bh;
 	do {
+		tmp->b_page = page;
 		list_del(&tmp->b_list);
 		list_add_tail(&tmp->b_list, &free_list[isize]);
 		nr_buffers++;
@@ -456,9 +456,11 @@ void try_to_free_buffer(struct buffer_head *bh)
 	} while (tmp != bh);
 
 	/* free page */
-	buffermem_pages--;
-	page->buffers = NULL;
-	__free_page(page);
+	if (page) {
+		buffermem_pages--;
+		page->buffers = NULL;
+		__free_page(page);
+	}
 }
 
 /*
@@ -547,7 +549,7 @@ static int generic_block_bmap(struct inode *inode, uint32_t block)
 /*
  * Free buffers.
  */
-void free_async_buffers(struct buffer_head *bh)
+static void free_async_buffers(struct buffer_head *bh)
 {
 	struct buffer_head *tmp = bh, *next;
 
