@@ -222,7 +222,6 @@ static struct buffer_head *get_unused_buffer_head()
 		list_del(&bh->b_list);
 		list_add(&bh->b_list, &used_list);
 		nr_unused_buffer_heads--;
-
 		return bh;
 	}
 
