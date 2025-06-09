@@ -16,6 +16,7 @@
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
 #define NBUF				32
+#define MAX_BUF_PER_PAGE		(PAGE_SIZE / 512)
 
 #define HASH_BITS			12
 #define HASH_SIZE			(1 << HASH_BITS)
@@ -544,12 +545,27 @@ static int generic_block_bmap(struct inode *inode, uint32_t block)
 }
 
 /*
+ * Free buffers.
+ */
+void free_async_buffers(struct buffer_head *bh)
+{
+	struct buffer_head *tmp = bh, *next;
+
+	do {
+		next = tmp->b_this_page;
+		put_unused_buffer_head(tmp);
+		tmp = next;
+	} while (tmp != bh);
+}
+
+/*
  * Read a page.
  */
 int generic_readpage(struct inode *inode, struct page *page)
 {
+	struct buffer_head *bh, *next, *tmp, *bhs_list[MAX_BUF_PER_PAGE];
 	struct super_block *sb = inode->i_sb;
-	struct buffer_head *bh, *next, *tmp;
+	size_t bhs_count = 0;
 	int nr, i, ret = 0;
 	uint32_t block;
 
@@ -565,9 +581,10 @@ int generic_readpage(struct inode *inode, struct page *page)
 	}
 
 	/* read block by block */
-	for (i = 0, next = bh; i < nr; i++, block++) {
+	for (i = 0, next = bh; i < nr; i++, block++, next = next->b_this_page) {
 		/* set block buffer */
 		next->b_block = generic_block_bmap(inode, block);
+		next->b_state |= (1UL << BH_FreeOnIO);
 		mark_buffer_uptodate(next, 1);
 
 		/* check if buffer is already hashed */
@@ -584,17 +601,19 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 			/* release buffer */
 			brelse(tmp);
-			goto next;
+			next->b_count--;
+			continue;
 		}
 
-		/* read buffer on disk */
-		ll_rw_block(READ, 1, &next);
- next:
-		/* clear temporary buffer */
-		tmp = next->b_this_page;
-		put_unused_buffer_head(next);
-		next = tmp;
+		/* add buffer to read */
+		bhs_list[bhs_count++] = next;
 	}
+
+	/* read buffers on disk or destroy buffers */
+	if (bhs_count)
+		ll_rw_block(READ, bhs_count, bhs_list);
+	else
+		free_async_buffers(bh);
 
 out:
 	return ret;

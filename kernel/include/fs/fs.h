@@ -40,6 +40,7 @@
 #define BH_Uptodate			0
 #define BH_Dirty			1
 #define BH_New				2
+#define BH_FreeOnIO			3
 
 #define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
 
@@ -58,6 +59,7 @@ struct buffer_head {
 	struct page *			b_page;			/* page */
 	struct buffer_head *		b_this_page;		/* next buffer in page */
 	struct list_head		b_list;			/* next buffer in list */
+	struct list_head		b_list_req;		/* next buffer in request */
 	struct buffer_head *		b_next_hash;		/* next buffer in hash list */
 	struct buffer_head *		b_prev_hash;		/* previous buffer in hash list */
 };
@@ -226,6 +228,7 @@ int fs_may_umount(struct super_block *sb);
 #define buffer_uptodate(bh)			__buffer_state(bh, BH_Uptodate)
 #define buffer_dirty(bh)			__buffer_state(bh, BH_Dirty)
 #define buffer_new(bh)				__buffer_state(bh, BH_New)
+#define buffer_free_on_io(bh)			__buffer_state(bh, BH_FreeOnIO)
 
 void mark_buffer_clean(struct buffer_head *bh);
 void mark_buffer_dirty(struct buffer_head *bh);
@@ -238,6 +241,7 @@ void bsync();
 void bsync_dev(dev_t dev);
 void init_buffer();
 struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize);
+void free_async_buffers(struct buffer_head *bh);
 void try_to_free_buffer(struct buffer_head *bh);
 void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_read(struct file *filp, char *buf, int count);

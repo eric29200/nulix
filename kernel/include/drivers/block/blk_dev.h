@@ -23,6 +23,7 @@ struct request {
 	char *			buf;
 	size_t			size;
 	size_t			nr_blocks;
+	struct list_head	bhs_list;
 };
 
 /*
