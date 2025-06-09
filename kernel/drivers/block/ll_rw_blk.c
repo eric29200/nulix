@@ -31,7 +31,7 @@ void execute_block_requests()
  */
 static void make_request(int rw, struct buffer_head *bh)
 {
-	struct request *prev = nr_requests ? &requests[nr_requests - 1] : NULL;
+	struct request *req, *prev = nr_requests ? &requests[nr_requests - 1] : NULL;
 
 	/* merge with previous request */
 	if (prev
@@ -50,14 +50,14 @@ static void make_request(int rw, struct buffer_head *bh)
 		execute_block_requests();
 
 	/* create new request */
-	requests[nr_requests].cmd = rw;
-	requests[nr_requests].dev = bh->b_dev;
-	requests[nr_requests].block = bh->b_block;
-	requests[nr_requests].block_size = bh->b_size;
-	requests[nr_requests].buf = bh->b_data;
-	requests[nr_requests].size = bh->b_size;
-	requests[nr_requests].nr_blocks = 1;
-	nr_requests++;
+	req = &requests[nr_requests++];
+	req->cmd = rw;
+	req->dev = bh->b_dev;
+	req->block = bh->b_block;
+	req->block_size = bh->b_size;
+	req->buf = bh->b_data;
+	req->size = bh->b_size;
+	req->nr_blocks = 1;
 }
 
 /*
