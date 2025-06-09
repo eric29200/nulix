@@ -191,7 +191,7 @@ void set_blocksize(dev_t dev, size_t blocksize)
 /*
  * Put a buffer in unused list.
  */
-static void put_unused_buffer_head(struct buffer_head *bh)
+void put_unused_buffer_head(struct buffer_head *bh)
 {
 	/* free buffer */
 	if (nr_unused_buffer_heads >= MAX_UNUSED_BUFFERS) {
@@ -549,7 +549,7 @@ static int generic_block_bmap(struct inode *inode, uint32_t block)
 int generic_readpage(struct inode *inode, struct page *page)
 {
 	struct super_block *sb = inode->i_sb;
-	struct buffer_head *bh, *next, *tmp;
+	struct buffer_head *bh, *tmp;
 	int nr, i, ret = 0;
 	uint32_t block;
 
@@ -565,14 +565,14 @@ int generic_readpage(struct inode *inode, struct page *page)
 	}
 
 	/* read block by block */
-	for (i = 0, next = bh; i < nr; i++, block++) {
+	for (i = 0; i < nr; i++, block++, bh = bh->b_this_page) {
 		/* set block buffer */
-		next->b_dev = sb->s_dev;
-		next->b_block = generic_block_bmap(inode, block);
-		mark_buffer_uptodate(next, 1);
+		bh->b_block = generic_block_bmap(inode, block);
+		bh->b_state |= (1UL << BH_FreeOnIO);
+		mark_buffer_uptodate(bh, 1);
 
 		/* check if buffer is already hashed */
-		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
+		tmp = find_buffer(sb->s_dev, bh->b_block, sb->s_blocksize);
 		if (tmp) {
 			/* read it from disk if needed */
 			if (!buffer_uptodate(tmp)) {
@@ -581,20 +581,16 @@ int generic_readpage(struct inode *inode, struct page *page)
 			}
 
 			/* copy data to user address space */
-			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
+			memcpy(bh->b_data, tmp->b_data, sb->s_blocksize);
 
 			/* release buffer */
 			brelse(tmp);
-			goto next;
+			put_unused_buffer_head(bh);
+			continue;
 		}
 
 		/* read buffer on disk */
-		ll_rw_block(READ, 1, &next);
- next:
-		/* clear temporary buffer */
-		tmp = next->b_this_page;
-		put_unused_buffer_head(next);
-		next = tmp;
+		ll_rw_block(READ, 1, &bh);
 	}
 
 out:
