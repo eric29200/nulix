@@ -195,6 +195,7 @@ struct inode_operations {
 	void (*truncate)(struct inode *);
 	int (*get_block)(struct inode *, uint32_t, struct buffer_head *, int create);
 	int (*readpage)(struct inode *, struct page *);
+	int (*writepage)(struct inode *, struct page *, off_t, size_t, const char *, int *);
 };
 
 /*
@@ -246,6 +247,7 @@ void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_read(struct file *filp, char *buf, int count);
 int generic_block_write(struct file *filp, const char *buf, int count);
 int generic_readpage(struct inode *inode, struct page *page);
+int generic_writepage(struct inode *inode, struct page *page, off_t offset, size_t bytes, const char *buf, int *partial);
 int generic_file_read(struct file *filp, char *buf, int count);
 int generic_file_write(struct file *filp, const char *buf, int count);
 

@@ -206,8 +206,17 @@ int generic_file_read(struct file *filp, char *buf, int count)
 
 		/* try to find page in cache */
 		page = find_page(inode, pos & PAGE_MASK);
-		if (page)
+		if (page) {
+			/* map page in kernel address space */
+			kaddr = kmap(page);
+			if (!kaddr) {
+				__free_page(page);
+				err = -ENOMEM;
+				break;
+			}
+
 			goto found_page;
+		}
 
 		/* get a free page */
 		page = __get_free_page(GFP_HIGHUSER);
@@ -221,6 +230,10 @@ int generic_file_read(struct file *filp, char *buf, int count)
 
 		/* map page in kernel address space */
 		kaddr = kmap(page);
+		if (!kaddr) {
+			err = -ENOMEM;
+			break;
+		}
 
 		/* read page */
 		err = inode->i_op->readpage(inode, page);
@@ -241,8 +254,6 @@ found_page:
 			nr = inode->i_size - pos;
 
 		/* copy to user buffer */
-		if (!kaddr)
-			kaddr = kmap(page);
 		memcpy(buf, kaddr + offset, nr);
 
 		/* release page */
@@ -272,64 +283,84 @@ found_page:
 int generic_file_write(struct file *filp, const char *buf, int count)
 {
 	struct inode *inode = filp->f_inode;
-	struct super_block *sb = inode->i_sb;
-	struct buffer_head tmp = { 0 }, *bh;
-	size_t pos, nr_chars, left;
+	int written = 0, err = 0, nr;
+	size_t pos = filp->f_pos;
+	int partial, new_page;
+	struct page *page;
+	off_t offset;
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)
-		filp->f_pos = inode->i_size;
+		pos = inode->i_size;
 
-	/* write block by block */
-	for (left = count; left > 0;) {
-		/* get or create block */
-		if (inode->i_op->get_block(inode, filp->f_pos / sb->s_blocksize, &tmp, 1))
+	/* write page by page */
+	while (count) {
+		new_page = 0;
+
+		/* compute offset in page */
+		offset = pos & ~PAGE_MASK;
+		nr = PAGE_SIZE - offset;
+		if (nr > count)
+			nr = count;
+
+		/* try to find page in cache */
+		page = find_page(inode, pos & PAGE_MASK);
+		if (page)
+			goto found_page;
+
+		/* get a free page */
+		page = __get_free_page(GFP_HIGHUSER);
+		if (!page) {
+			err = -ENOMEM;
+			break;
+		}
+
+		/* add it to cache */
+		add_to_page_cache(page, inode, pos & PAGE_MASK);
+		new_page = 1;
+
+found_page:
+		/* map page in kernel address space */
+		if (!kmap(page)) {
+			err = -ENOMEM;
+			__free_page(page);
+			break;
+		}
+
+		/* write page */
+		err = inode->i_op->writepage(inode, page, offset, nr, buf, &partial);
+
+		/* release page */
+		kunmap(page);
+		__free_page(page);
+
+		/* exit on error */
+		if (err < 0)
 			break;
 
-		/* read block */
-		if (buffer_new(&tmp)) {
-			bh = getblk(sb->s_dev, tmp.b_block, sb->s_blocksize);
-			if (!bh)
-				break;
-
-			memset(bh->b_data, 0, bh->b_size);
-			mark_buffer_dirty(bh);
-			mark_buffer_uptodate(bh, 1);
-		} else {
-			bh = bread(sb->s_dev, tmp.b_block, sb->s_blocksize);
-			if (!bh)
-				break;
+		/* partial page : remove it from cache */
+		if (partial && new_page) {
+			remove_from_page_cache(page);
+			__free_page(page);
 		}
-
-		/* find position and numbers of chars to read */
-		pos = filp->f_pos % sb->s_blocksize;
-		nr_chars = sb->s_blocksize - pos <= left ? sb->s_blocksize - pos : left;
-
-		/* copy to buffer */
-		memcpy(bh->b_data + pos, buf, nr_chars);
-
-		/* release block */
-		mark_buffer_dirty(bh);
-		brelse(bh);
-
-		/* update page cache */
-		update_vm_cache(inode, buf, pos, nr_chars);
 
 		/* update sizes */
-		filp->f_pos += nr_chars;
-		buf += nr_chars;
-		left -= nr_chars;
-
-		/* end of file : grow it and mark inode dirty */
-		if (filp->f_pos > filp->f_inode->i_size) {
-			inode->i_size = filp->f_pos;
-			inode->i_dirt = 1;
-		}
+		buf += nr;
+		pos += nr;
+		written += nr;
+		count -= nr;
+		if (pos > inode->i_size)
+			inode->i_size = pos;
 	}
 
+	/* update position */
+	filp->f_pos = pos;
+
+	/* update inode */
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	inode->i_dirt = 1;
-	return count - left;
+
+	return written ? written : err;
 }
 
 /*
@@ -356,44 +387,5 @@ void truncate_inode_pages(struct inode *inode, off_t start)
 		offset = start - offset;
 		if (offset < PAGE_SIZE)
 			clear_user_highpage_partial(page, offset);
-	}
-}
-
-/*
- * Update a page cache copy.
- */
-void update_vm_cache(struct inode *inode, const char *buf, size_t pos, size_t count)
-{
-	struct page *page;
-	off_t offset;
-	void *kaddr;
-	size_t len;
-
-	offset = pos & ~PAGE_MASK;
-	pos = pos & PAGE_MASK;
-	len = PAGE_SIZE - offset;
-
-	while (count > 0) {
-		/* adjust size */
-		if (len > count)
-			len = count;
-
-		/* find page in cache */
-		page = find_page(inode, pos);
-		if (page) {
-			/* update page */
-			kaddr = kmap(page);
-			memcpy(kaddr + offset, buf, len);
-			kunmap(page);
-
-			/* release page */
-			__free_page(page);
-		}
-
-		count -= len;
-		buf += len;
-		pos += PAGE_SIZE;
-		len = PAGE_SIZE;
-		offset = 0;
 	}
 }

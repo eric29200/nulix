@@ -613,6 +613,104 @@ out:
 }
 
 /*
+ * Write a page.
+ */
+int generic_writepage(struct inode *inode, struct page *page, off_t offset, size_t bytes, const char *buf, int *partial)
+{
+	size_t start_block, end_block, start_offset, start_bytes, end_bytes;
+	struct super_block *sb = inode->i_sb;
+	struct buffer_head tmp, *bh;
+	size_t blocks, len, i;
+	char *target_buf;
+	uint32_t block;
+	int ret;
+
+	/* partial page ? */
+	*partial = 0;
+
+	/* target buffer */
+	target_buf = (char *) page_address(page) + offset;
+
+	/* compute first block */
+	block = page->offset >> sb->s_blocksize_bits;
+	blocks = PAGE_SIZE >> sb->s_blocksize_bits;
+
+	/* compute start block */
+	start_block = offset >> sb->s_blocksize_bits;
+	start_offset = offset & (sb->s_blocksize - 1);
+	start_bytes = sb->s_blocksize - start_offset;
+	if (start_bytes > bytes)
+		start_bytes = bytes;
+
+	/* compute end block */
+	end_block = (offset + bytes - 1) >> sb->s_blocksize_bits;
+	end_bytes = (offset + bytes) & (sb->s_blocksize - 1);
+	if (end_bytes > bytes)
+		end_bytes = bytes;
+
+	for (i = 0; i < blocks; i++, block++) {
+		/* skip out of scope */
+		if (i < start_block || i > end_block) {
+			*partial = 1;
+			continue;
+		}
+
+		/* get or create block */
+		memset(&tmp, 0, sizeof(struct buffer_head));
+		ret = inode->i_op->get_block(inode, block, &tmp, 1);
+		if (ret)
+			goto err;
+
+		/* read block if needed */
+		if (buffer_new(&tmp)) {
+			bh = getblk(sb->s_dev, tmp.b_block, sb->s_blocksize);
+			if (!bh) {
+				ret = -EIO;
+				goto err;
+			}
+
+			memset(bh->b_data, 0, bh->b_size);
+			mark_buffer_dirty(bh);
+			mark_buffer_uptodate(bh, 1);
+			bh->b_state |= (1UL << BH_FreeOnIO);
+		} else {
+			bh = bread(sb->s_dev, tmp.b_block, sb->s_blocksize);
+			if (!bh) {
+				ret = -EIO;
+				goto err;
+			}
+		}
+
+		/* compute number of characters to write */
+		len = sb->s_blocksize;
+		if (start_offset) {
+			len = start_bytes;
+		} else if (end_bytes && i == end_block) {
+			len = end_bytes;
+			end_bytes = 0;
+		}
+
+		/* copy to block buffer */
+		memcpy(bh->b_data + start_offset, buf, len);
+		mark_buffer_dirty(bh);
+		brelse(bh);
+
+		/* copy to page */
+		memcpy(target_buf, buf, len);
+
+		/* update sizes */
+		buf += len;
+		target_buf += len;
+		if (start_offset)
+			start_offset = 0;
+	}
+
+	return bytes;
+err:
+	return ret;
+}
+
+/*
  * Init buffers.
  */
 void init_buffer()
