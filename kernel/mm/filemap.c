@@ -114,16 +114,15 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 /*
  * Read ahead some pages.
  */
-static void try_to_read_ahead(struct file *filp, int count)
+static void generic_file_readahead(struct inode *inode, size_t pos, int count)
 {
 	struct page *page, *pages_list[MAX_READ_AHEAD_PAGES];
-	struct inode *inode = filp->f_inode;
-	size_t pos, pages_count = 0, i;
+	size_t pages_count = 0, i;
 	off_t offset;
 	int nr;
 
 	/* read */
-	for (pos = filp->f_pos; count && pos < inode->i_size && pages_count < MAX_READ_AHEAD_PAGES;) {
+	while (count && pos < inode->i_size) {
 		/* compute offset in page */
 		offset = pos & ~PAGE_MASK;
 		nr = PAGE_SIZE - offset;
@@ -155,7 +154,10 @@ static void try_to_read_ahead(struct file *filp, int count)
 			break;
 		}
 
+		/* page must be read */
 		pages_list[pages_count++] = page;
+		if (pages_count == MAX_READ_AHEAD_PAGES)
+			break;
 next:
 		/* adjust size */
 		if (nr > count)
@@ -194,9 +196,6 @@ int generic_file_read(struct file *filp, char *buf, int count)
 	char *kaddr;
 	size_t pos;
 
-	/* try to read ahead some pages */
-	try_to_read_ahead(filp, count);
-
 	/* read */
 	for (pos = filp->f_pos; count && pos < inode->i_size;) {
 		/* compute offset in page */
@@ -204,54 +203,29 @@ int generic_file_read(struct file *filp, char *buf, int count)
 		nr = PAGE_SIZE - offset;
 		kaddr = NULL;
 
+repeat:
 		/* try to find page in cache */
 		page = find_page(inode, pos & PAGE_MASK);
-		if (page) {
-			/* map page in kernel address space */
-			kaddr = kmap(page);
-			if (!kaddr) {
-				__free_page(page);
-				err = -ENOMEM;
-				break;
-			}
-
+		if (page)
 			goto found_page;
-		}
 
-		/* get a free page */
-		page = __get_free_page(GFP_HIGHUSER);
-		if (!page) {
-			err = -ENOMEM;
-			break;
-		}
-
-		/* add it to cache */
-		add_to_page_cache(page, inode, pos & PAGE_MASK);
-
-		/* map page in kernel address space */
-		kaddr = kmap(page);
-		if (!kaddr) {
-			err = -ENOMEM;
-			break;
-		}
-
-		/* read page */
-		err = inode->i_op->readpage(inode, page);
-		if (err) {
-			kunmap(page);
-			remove_from_page_cache(page);
-			__free_page(page);
-			break;
-		}
-
-		/* wait on page */
-		execute_block_requests();
+		/* try to read some pages */
+		generic_file_readahead(inode, pos, count);
+		goto repeat;
 found_page:
 		/* adjust size */
 		if (nr > count)
 			nr = count;
 		if (pos + nr > inode->i_size)
 			nr = inode->i_size - pos;
+
+		/* map page in kernel address space */
+		kaddr = kmap(page);
+		if (!kaddr) {
+			__free_page(page);
+			err = -ENOMEM;
+			break;
+		}
 
 		/* copy to user buffer */
 		memcpy(buf, kaddr + offset, nr);
