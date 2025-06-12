@@ -112,23 +112,21 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 }
 
 /*
- * Read ahead some pages.
+ * Read ahead some pages = try to grab maximum up to date ahead pages.
  */
-static void generic_file_readahead(struct inode *inode, size_t pos, int count)
+static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t max_pages)
 {
 	struct page *page, *pages_list[MAX_READ_AHEAD_PAGES];
-	size_t pages_count = 0, i;
-	off_t offset;
-	int nr;
+	size_t nr_pages_read = 0, i;
+
+	/* limit max pages */
+	if (max_pages > MAX_READ_AHEAD_PAGES)
+		max_pages = MAX_READ_AHEAD_PAGES;
 
 	/* read */
-	while (count && pos < inode->i_size) {
-		/* compute offset in page */
-		offset = pos & ~PAGE_MASK;
-		nr = PAGE_SIZE - offset;
-
+	for (i = 0; i < max_pages; i++, page_offset += PAGE_SIZE) {
 		/* try to find page in cache */
-		page = find_page(inode, pos & PAGE_MASK);
+		page = find_page(inode, page_offset);
 		if (page)
 			goto next;
 
@@ -144,7 +142,7 @@ static void generic_file_readahead(struct inode *inode, size_t pos, int count)
 		}
 
 		/* add it to cache */
-		add_to_page_cache(page, inode, pos & PAGE_MASK);
+		add_to_page_cache(page, inode, page_offset);
 
 		/* read page */
 		if (inode->i_op->readpage(inode, page)) {
@@ -155,33 +153,25 @@ static void generic_file_readahead(struct inode *inode, size_t pos, int count)
 		}
 
 		/* page must be read */
-		pages_list[pages_count++] = page;
-		if (pages_count == MAX_READ_AHEAD_PAGES)
-			break;
-next:
-		/* adjust size */
-		if (nr > count)
-			nr = count;
-		if (pos + nr > inode->i_size)
-			nr = inode->i_size - pos;
+		nr_pages_read++;
 
-		/* update sizes */
-		pos += nr;
-		count -= nr;
+next:
+		pages_list[i] = page;
 	}
 
-	/* nothing to read */
-	if (!pages_count)
-		return;
+	/* no way to get a page */
+	if (i == 0)
+		return -EINVAL;
 
-	/* execute block request */
-	execute_block_requests();
+	/* execute block request if needed */
+	if (nr_pages_read)
+		execute_block_requests();
 
 	/* release pages */
-	for (i = 0; i < pages_count; i++) {
-		kunmap(pages_list[i]);
+	while (i--)
 		__free_page(pages_list[i]);
-	}
+
+	return 0;
 }
 
 /*
@@ -191,44 +181,39 @@ int generic_file_read(struct file *filp, char *buf, int count)
 {
 	struct inode *inode = filp->f_inode;
 	int read = 0, err = 0, nr;
+	off_t offset, page_offset;
 	struct page *page;
-	off_t offset;
-	char *kaddr;
 	size_t pos;
 
+	/* fix number of characters to read */
+	pos = filp->f_pos;
+	if (pos + count > inode->i_size)
+		count = inode->i_size - pos;
+
 	/* read */
-	for (pos = filp->f_pos; count && pos < inode->i_size;) {
+	while (count) {
 		/* compute offset in page */
+		page_offset = pos & PAGE_MASK;
 		offset = pos & ~PAGE_MASK;
 		nr = PAGE_SIZE - offset;
-		kaddr = NULL;
+		if (nr > count)
+			nr = count;
 
 repeat:
 		/* try to find page in cache */
-		page = find_page(inode, pos & PAGE_MASK);
+		page = find_page(inode, page_offset);
 		if (page)
 			goto found_page;
 
 		/* try to read some pages */
-		generic_file_readahead(inode, pos, count);
+		err = generic_file_readahead(inode, page_offset, ((pos + count) >> PAGE_SHIFT) - (pos >> PAGE_SHIFT) + 1);
+		if (err)
+			break;
+
 		goto repeat;
 found_page:
-		/* adjust size */
-		if (nr > count)
-			nr = count;
-		if (pos + nr > inode->i_size)
-			nr = inode->i_size - pos;
-
-		/* map page in kernel address space */
-		kaddr = kmap(page);
-		if (!kaddr) {
-			__free_page(page);
-			err = -ENOMEM;
-			break;
-		}
-
 		/* copy to user buffer */
-		memcpy(buf, kaddr + offset, nr);
+		memcpy(buf, page_address(page) + offset, nr);
 
 		/* release page */
 		kunmap(page);
