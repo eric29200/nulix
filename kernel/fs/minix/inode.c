@@ -40,7 +40,8 @@ struct inode_operations minix_file_iops = {
 	.truncate		= minix_truncate,
 	.get_block		= minix_get_block,
 	.readpage		= generic_readpage,
-	.writepage		= generic_writepage,
+	.prepare_write	= generic_prepare_write,
+	.commit_write	= generic_commit_write,
 };
 
 /*

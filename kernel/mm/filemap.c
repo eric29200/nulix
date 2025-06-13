@@ -263,6 +263,7 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 	size_t pos = filp->f_pos;
 	struct page *page;
 	off_t offset;
+	char *kaddr;
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)
@@ -283,15 +284,14 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 			break;
 		}
 
-		/* map page in kernel address space */
-		if (!kmap(page)) {
-			err = -ENOMEM;
-			__free_page(page);
-			break;
+		/* prepare write page */
+		kaddr = kmap(page);
+		err = inode->i_op->prepare_write(inode, page, offset, offset + nr);
+		if (!err) {
+			/* write to page */
+			memcpy(kaddr + offset, buf, nr);
+			err = inode->i_op->commit_write(inode, page, offset, offset + nr);
 		}
-
-		/* write page */
-		err = inode->i_op->writepage(inode, page, offset, nr, buf);
 
 		/* release page */
 		kunmap(page);

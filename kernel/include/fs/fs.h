@@ -195,7 +195,8 @@ struct inode_operations {
 	void (*truncate)(struct inode *);
 	int (*get_block)(struct inode *, uint32_t, struct buffer_head *, int create);
 	int (*readpage)(struct inode *, struct page *);
-	int (*writepage)(struct inode *, struct page *, off_t, size_t, const char *);
+	int (*prepare_write)(struct inode *, struct page *, uint32_t, uint32_t);
+	int (*commit_write)(struct inode *, struct page *, uint32_t, uint32_t);
 };
 
 /*
@@ -228,7 +229,7 @@ int fs_may_umount(struct super_block *sb);
 #define __buffer_state(bh, state)		(((bh)->b_state & (1UL << (state))) != 0)
 #define buffer_uptodate(bh)			__buffer_state(bh, BH_Uptodate)
 #define buffer_dirty(bh)			__buffer_state(bh, BH_Dirty)
-#define buffer_new(bh)				__buffer_state(bh, BH_New)
+#define buffer_new(bh)				__buffer_state(bh, BH_New) 
 
 void mark_buffer_clean(struct buffer_head *bh);
 void mark_buffer_dirty(struct buffer_head *bh);
@@ -250,6 +251,8 @@ int generic_readpage(struct inode *inode, struct page *page);
 int generic_writepage(struct inode *inode, struct page *page, off_t offset, size_t bytes, const char *buf);
 int generic_file_read(struct file *filp, char *buf, int count);
 int generic_file_write(struct file *filp, const char *buf, int count);
+int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to);
+int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to);
 
 /* inode operations */
 struct inode *iget(struct super_block *sb, ino_t ino);

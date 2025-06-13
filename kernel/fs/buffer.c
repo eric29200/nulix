@@ -678,6 +678,118 @@ out:
 }
 
 /*
+ * Prepare write = make up to date buffers.
+ */
+int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to)
+{
+	struct buffer_head *head, *bh, *bhs_list[MAX_BUF_PER_PAGE];
+	uint32_t block, start_block, end_block;
+	struct super_block *sb = inode->i_sb;
+	size_t bhs_count = 0;
+	int ret;
+
+	/* create buffers */
+	head = create_buffers(page, inode, sb->s_blocksize);
+	if (!head)
+		return -ENOMEM;
+
+	/* compute first block */
+	block = page->offset >> sb->s_blocksize_bits;
+
+	/* for each block */
+	for(bh = head, start_block = 0; bh != head || !start_block; block++, start_block = end_block, bh = bh->b_this_page) {
+		end_block = start_block + sb->s_blocksize;
+
+		/* block out of scope */
+		if (end_block <= from)
+			continue;
+		if (start_block >= to)
+			break;
+
+		/* get or create block */
+		ret = inode->i_op->get_block(inode, block, bh, 1);
+		if (ret)
+			goto err;
+
+		/* new block = clear it */
+		if (buffer_new(bh)) {
+			if (PageUptodate(page)) {
+				mark_buffer_uptodate(bh, 1);
+				continue;
+			}
+
+			if (end_block > to)
+				memset(page_address(page) + to, 0, end_block - to);
+			if (start_block < from)
+				memset(page_address(page) + start_block, 0, from - start_block);
+
+			continue;
+		}
+
+		/* page up to date = block up to date */
+		if (PageUptodate(page)) {
+			mark_buffer_uptodate(bh, 1);
+			continue; 
+		}
+
+		/* read block */
+		if (!buffer_uptodate(bh) && (start_block < from || end_block > to))
+			bhs_list[bhs_count++] = bh;
+	}
+
+	/* issue read command */
+	if (bhs_count) {
+		ll_rw_block(READ, bhs_count, bhs_list);
+		execute_block_requests();
+	}
+
+	return 0;
+err:
+	free_async_buffers(head);
+	return ret;
+}
+
+/*
+ * Commit write.
+ */
+int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to)
+{
+	struct buffer_head *head, *bh, *bhs_list[MAX_BUF_PER_PAGE];
+	struct super_block *sb = inode->i_sb;
+	uint32_t start_block, end_block;
+	size_t bhs_count = 0;
+	int partial;
+
+	/* for each block */
+	for (bh = head = page->buffers, start_block = 0; bh != head || !start_block; start_block = end_block, bh = bh->b_this_page) {
+		end_block = start_block + sb->s_blocksize;
+
+		/* block out of scope */
+		if (end_block <= from || start_block >= to) {
+			if (!buffer_uptodate(bh))
+				partial = 1;
+		}
+
+		/* block need to be written */
+		bhs_list[bhs_count++] = bh;
+		bh->b_end_io = end_buffer_io_async;
+	}
+
+	/* write buffers on disk or destroy buffers */
+	if (bhs_count) {
+		ll_rw_block(WRITE, bhs_count, bhs_list);
+		execute_block_requests();
+	} else {
+		free_async_buffers(bh);
+	}
+
+	if (!partial)
+		SetPageUptodate(page);
+
+	return 0;
+}
+
+/*
  * Write a page.
  */
 int generic_writepage(struct inode *inode, struct page *page, off_t offset, size_t bytes, const char *buf)
