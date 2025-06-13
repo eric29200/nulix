@@ -248,7 +248,6 @@ void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_read(struct file *filp, char *buf, int count);
 int generic_block_write(struct file *filp, const char *buf, int count);
 int generic_readpage(struct inode *inode, struct page *page);
-int generic_writepage(struct inode *inode, struct page *page, off_t offset, size_t bytes, const char *buf);
 int generic_file_read(struct file *filp, char *buf, int count);
 int generic_file_write(struct file *filp, const char *buf, int count);
 int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to);
