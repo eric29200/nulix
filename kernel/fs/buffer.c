@@ -642,7 +642,6 @@ int generic_readpage(struct inode *inode, struct page *page)
 		/* set block buffer */
 		next->b_block = generic_block_bmap(inode, block);
 		next->b_end_io = end_buffer_io_async;
-		mark_buffer_uptodate(next, 1);
 
 		/* check if buffer is already hashed */
 		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
@@ -655,10 +654,10 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 			/* copy data to user address space */
 			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
+			mark_buffer_uptodate(next, 1);
 
 			/* release buffer */
 			brelse(tmp);
-			next->b_count--;
 			continue;
 		}
 
