@@ -242,6 +242,7 @@ void bsync();
 void bsync_dev(dev_t dev);
 void init_buffer();
 struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize);
+void free_async_buffers(struct buffer_head *bh);
 void try_to_free_buffer(struct buffer_head *bh);
 void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_read(struct file *filp, char *buf, int count);

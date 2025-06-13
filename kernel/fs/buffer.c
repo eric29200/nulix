@@ -540,7 +540,7 @@ static int generic_block_bmap(struct inode *inode, uint32_t block)
 /*
  * Free buffers.
  */
-static void free_async_buffers(struct buffer_head *bh)
+void free_async_buffers(struct buffer_head *bh)
 {
 	struct buffer_head *tmp = bh, *next;
 
@@ -618,15 +618,20 @@ out:
 int generic_writepage(struct inode *inode, struct page *page, off_t offset, size_t bytes, const char *buf, int *partial)
 {
 	size_t start_block, end_block, start_offset, start_bytes, end_bytes;
+	struct buffer_head *head, *bh, *bhs_list[MAX_BUF_PER_PAGE];
 	struct super_block *sb = inode->i_sb;
-	struct buffer_head tmp, *bh;
-	size_t blocks, len, i;
+	size_t blocks, len, bhs_count = 0, i;
 	char *target_buf;
 	uint32_t block;
 	int ret;
 
 	/* partial page ? */
 	*partial = 0;
+
+	/* create buffers */
+	head = create_buffers(page, inode, sb->s_blocksize);
+	if (!head)
+		return -ENOMEM;
 
 	/* target buffer */
 	target_buf = (char *) page_address(page) + offset;
@@ -648,7 +653,7 @@ int generic_writepage(struct inode *inode, struct page *page, off_t offset, size
 	if (end_bytes > bytes)
 		end_bytes = bytes;
 
-	for (i = 0; i < blocks; i++, block++) {
+	for (i = 0, bh = head; i < blocks; i++, block++, bh = bh->b_this_page) {
 		/* skip out of scope */
 		if (i < start_block || i > end_block) {
 			*partial = 1;
@@ -656,29 +661,16 @@ int generic_writepage(struct inode *inode, struct page *page, off_t offset, size
 		}
 
 		/* get or create block */
-		memset(&tmp, 0, sizeof(struct buffer_head));
-		ret = inode->i_op->get_block(inode, block, &tmp, 1);
+		ret = inode->i_op->get_block(inode, block, bh, 1);
 		if (ret)
 			goto err;
 
 		/* read block if needed */
-		if (buffer_new(&tmp)) {
-			bh = getblk(sb->s_dev, tmp.b_block, sb->s_blocksize);
-			if (!bh) {
-				ret = -EIO;
-				goto err;
-			}
-
+		if (buffer_new(bh)) {
 			memset(bh->b_data, 0, bh->b_size);
-			mark_buffer_dirty(bh);
-			mark_buffer_uptodate(bh, 1);
-			bh->b_state |= (1UL << BH_FreeOnIO);
 		} else {
-			bh = bread(sb->s_dev, tmp.b_block, sb->s_blocksize);
-			if (!bh) {
-				ret = -EIO;
-				goto err;
-			}
+			ll_rw_block(READ, 1, &bh);
+			execute_block_requests();
 		}
 
 		/* compute number of characters to write */
@@ -690,19 +682,24 @@ int generic_writepage(struct inode *inode, struct page *page, off_t offset, size
 			end_bytes = 0;
 		}
 
-		/* copy to block buffer */
-		memcpy(bh->b_data + start_offset, buf, len);
-		mark_buffer_dirty(bh);
-		brelse(bh);
-
-		/* copy to page */
+		/* write to block */
 		memcpy(target_buf, buf, len);
+		bhs_list[bhs_count++] = bh;
+		bh->b_state |= (1UL << BH_FreeOnIO);
 
 		/* update sizes */
 		buf += len;
 		target_buf += len;
 		if (start_offset)
 			start_offset = 0;
+	}
+
+	/* write buffers on disk or destroy buffers */
+	if (bhs_count) {
+		ll_rw_block(WRITE, bhs_count, bhs_list);
+		execute_block_requests();
+	} else {
+		free_async_buffers(bh);
 	}
 
 	return bytes;
