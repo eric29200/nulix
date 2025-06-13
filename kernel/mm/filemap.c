@@ -167,7 +167,6 @@ static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t
 
 		/* page must be read */
 		nr_pages_read++;
-
 next:
 		pages_list[i] = page;
 	}
@@ -181,10 +180,8 @@ next:
 		execute_block_requests();
 
 	/* release pages */
-	while (i--) {
-		kunmap(pages_list[i]);
+	while (i--)
 		__free_page(pages_list[i]);
-	}
 
 	return 0;
 }
@@ -294,7 +291,6 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 		}
 
 		/* release page */
-		kunmap(page);
 		__free_page(page);
 
 		/* exit on error */
@@ -309,6 +305,9 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 		if (pos > inode->i_size)
 			inode->i_size = pos;
 	}
+
+	/* execute block requests */
+	execute_block_requests();
 
 	/* update position */
 	filp->f_pos = pos;
