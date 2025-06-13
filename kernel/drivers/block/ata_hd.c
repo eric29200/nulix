@@ -123,7 +123,7 @@ static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_se
 
 	return 0;
 }
-#include <stdio.h>
+
 /*
  * Init an ata hard disk.
  */
