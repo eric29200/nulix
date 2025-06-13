@@ -260,6 +260,7 @@ static struct buffer_head *create_buffers(struct page *page, struct inode *inode
 		bh->b_data = page_address(page) + offset;
 		bh->b_size = size;
 		bh->b_this_page = head;
+		bh->b_page = page;
 
 		/* set tail and head */
 		if (!head)
@@ -270,6 +271,9 @@ static struct buffer_head *create_buffers(struct page *page, struct inode *inode
 	/* end circular list */
 	if (tail)
 		tail->b_this_page = head;
+
+	/* set buffers */
+	page->buffers = head;
 
 	return head;
 err:
@@ -543,12 +547,16 @@ static int generic_block_bmap(struct inode *inode, uint32_t block)
 void free_async_buffers(struct buffer_head *bh)
 {
 	struct buffer_head *tmp = bh, *next;
+	struct page *page = bh->b_page;
 
 	do {
 		next = tmp->b_this_page;
 		put_unused_buffer_head(tmp);
 		tmp = next;
 	} while (tmp != bh);
+
+	if (page)
+		page->buffers = NULL;
 }
 
 /*
@@ -603,10 +611,12 @@ int generic_readpage(struct inode *inode, struct page *page)
 	}
 
 	/* read buffers on disk or destroy buffers */
-	if (bhs_count)
+	if (bhs_count) {
 		ll_rw_block(READ, bhs_count, bhs_list);
-	else
+	} else {
 		free_async_buffers(bh);
+		SetPageUptodate(page);
+	}
 
 out:
 	return ret;
@@ -615,18 +625,15 @@ out:
 /*
  * Write a page.
  */
-int generic_writepage(struct inode *inode, struct page *page, off_t offset, size_t bytes, const char *buf, int *partial)
+int generic_writepage(struct inode *inode, struct page *page, off_t offset, size_t bytes, const char *buf)
 {
 	size_t start_block, end_block, start_offset, start_bytes, end_bytes;
 	struct buffer_head *head, *bh, *bhs_list[MAX_BUF_PER_PAGE];
 	struct super_block *sb = inode->i_sb;
 	size_t blocks, len, bhs_count = 0, i;
+	int ret, partial = 0;
 	char *target_buf;
 	uint32_t block;
-	int ret;
-
-	/* partial page ? */
-	*partial = 0;
 
 	/* create buffers */
 	head = create_buffers(page, inode, sb->s_blocksize);
@@ -656,7 +663,7 @@ int generic_writepage(struct inode *inode, struct page *page, off_t offset, size
 	for (i = 0, bh = head; i < blocks; i++, block++, bh = bh->b_this_page) {
 		/* skip out of scope */
 		if (i < start_block || i > end_block) {
-			*partial = 1;
+			partial = 1;
 			continue;
 		}
 
@@ -701,6 +708,10 @@ int generic_writepage(struct inode *inode, struct page *page, off_t offset, size
 	} else {
 		free_async_buffers(bh);
 	}
+
+	/* set page up to date */
+	if (!partial)
+		SetPageUptodate(page);
 
 	return bytes;
 err:

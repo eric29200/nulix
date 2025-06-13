@@ -18,6 +18,7 @@ static void end_request(struct request *req)
 {
 	struct buffer_head *bh, *tmp;
 	struct list_head *pos, *n;
+	struct page *page;
 	int still_used;
 
 	list_for_each_safe(pos, n, &req->bhs_list) {
@@ -25,6 +26,7 @@ static void end_request(struct request *req)
 		bh = list_entry(pos, struct buffer_head, b_list_req);
 		mark_buffer_clean(bh);
 		mark_buffer_uptodate(bh, 1);
+		page = bh->b_page;
 		bh->b_count--;
 
 		/* remove it from request */
@@ -46,8 +48,10 @@ static void end_request(struct request *req)
 			} while (tmp != bh);
 
 			/* free buffer */
-			if (!still_used)
+			if (!still_used) {
 				free_async_buffers(bh);
+				SetPageUptodate(page);
+			}
 		}
 	}
 }

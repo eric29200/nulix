@@ -10,6 +10,29 @@
 #define MAX_READ_AHEAD_PAGES		32
 
 /*
+ * Get a page from cache or create it.
+ */
+static struct page *grab_cache_page(struct inode *inode, off_t offset)
+{
+	struct page *page;
+
+	/* try to get page from cache */
+	page = find_page(inode, offset);
+	if (page)
+		return page;
+
+	/* get a new page */
+	page = __get_free_page(GFP_HIGHUSER);
+	if (!page)
+		return NULL;
+
+	/* add it to cache */
+	add_to_page_cache(page, inode, offset);
+
+	return page;
+}
+
+/*
  * Handle a page fault = read page from file.
  */
 static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
@@ -26,18 +49,14 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 	if (offset >= inode->i_size)
 		return NULL;
 
-	/* try to get page from cache */
-	page = find_page(inode, offset);
-	if (page)
-		return page;
-
-	/* get a new page */
-	page = __get_free_page(GFP_HIGHUSER);
+	/* get page */
+	page = grab_cache_page(inode, offset);
 	if (!page)
 		return NULL;
 
-	/* add it to cache */
-	add_to_page_cache(page, inode, offset);
+	/* page up to date */
+	if (PageUptodate(page))
+		return page;
 
 	/* map page in kernel address space */
 	kmap(page);
@@ -45,7 +64,6 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 	/* read page */
 	if (inode->i_op->readpage(inode, page)) {
 		kunmap(page);
-		remove_from_page_cache(page);
 		__free_page(page);
 		return NULL;
 	}
@@ -125,15 +143,14 @@ static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t
 
 	/* read */
 	for (i = 0; i < max_pages; i++, page_offset += PAGE_SIZE) {
-		/* try to find page in cache */
-		page = find_page(inode, page_offset);
-		if (page)
-			goto next;
-
-		/* get a free page */
-		page = __get_free_page(GFP_HIGHUSER);
+		/* get page */
+		page = grab_cache_page(inode, page_offset);
 		if (!page)
 			break;
+
+		/* page up to date */
+		if (PageUptodate(page))
+			goto next;
 
 		/* map page in kernel address space */
 		if (!kmap(page)) {
@@ -141,13 +158,9 @@ static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t
 			break;
 		}
 
-		/* add it to cache */
-		add_to_page_cache(page, inode, page_offset);
-
 		/* read page */
 		if (inode->i_op->readpage(inode, page)) {
 			kunmap(page);
-			remove_from_page_cache(page);
 			__free_page(page);
 			break;
 		}
@@ -244,7 +257,6 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 	struct inode *inode = filp->f_inode;
 	int written = 0, err = 0, nr;
 	size_t pos = filp->f_pos;
-	int partial, new_page;
 	struct page *page;
 	off_t offset;
 
@@ -254,31 +266,19 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 
 	/* write page by page */
 	while (count) {
-		new_page = 0;
-
 		/* compute offset in page */
 		offset = pos & ~PAGE_MASK;
 		nr = PAGE_SIZE - offset;
 		if (nr > count)
 			nr = count;
 
-		/* try to find page in cache */
-		page = find_page(inode, pos & PAGE_MASK);
-		if (page)
-			goto found_page;
-
-		/* get a free page */
-		page = __get_free_page(GFP_HIGHUSER);
+		/* get page */
+		page = grab_cache_page(inode, pos & PAGE_MASK);
 		if (!page) {
 			err = -ENOMEM;
 			break;
 		}
 
-		/* add it to cache */
-		add_to_page_cache(page, inode, pos & PAGE_MASK);
-		new_page = 1;
-
-found_page:
 		/* map page in kernel address space */
 		if (!kmap(page)) {
 			err = -ENOMEM;
@@ -287,7 +287,7 @@ found_page:
 		}
 
 		/* write page */
-		err = inode->i_op->writepage(inode, page, offset, nr, buf, &partial);
+		err = inode->i_op->writepage(inode, page, offset, nr, buf);
 
 		/* release page */
 		kunmap(page);
@@ -296,12 +296,6 @@ found_page:
 		/* exit on error */
 		if (err < 0)
 			break;
-
-		/* partial page : remove it from cache */
-		if (partial && new_page) {
-			remove_from_page_cache(page);
-			__free_page(page);
-		}
 
 		/* update sizes */
 		buf += nr;

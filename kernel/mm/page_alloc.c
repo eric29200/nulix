@@ -148,6 +148,7 @@ found:
 	page->offset = 0;
 	page->buffers = NULL;
 	page->count = 1;
+	page->flags = 0;
 	__delete_from_free_pages(page);
 
 	/* add remaining pages to free list */

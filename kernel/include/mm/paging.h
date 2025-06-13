@@ -66,6 +66,12 @@ typedef uint32_t pte_t;
 #define GFP_HIGHUSER			1
 #define NR_ZONES			2
 
+#define PG_Uptodate			0
+
+#define __page_flag(page, flag)		(((page)->flags & (1UL << (flag))) != 0)
+#define PageUptodate(page)		__page_flag(page, PG_Uptodate)
+#define SetPageUptodate(page)		((page)->flags |= (1UL << PG_Uptodate))
+
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
 #define page_address(page)		((page)->virtual ? (page)->virtual : __va(((page) - page_array) * PAGE_SIZE))
@@ -130,6 +136,7 @@ struct page {
 	uint8_t			priority;				/* priority : GFP_KERNEL or GFP_USER */
 	struct inode *		inode;					/* inode */
 	off_t			offset;					/* offset in inode */
+	uint32_t		flags;					/* flags */
 	struct buffer_head *	buffers;				/* buffers of this page */
 	void *			virtual;				/* virtual address (used to map high pages in kernel space) */
 	void *			private;				/* used for page allocation */
