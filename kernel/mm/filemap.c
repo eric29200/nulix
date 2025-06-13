@@ -181,8 +181,10 @@ next:
 		execute_block_requests();
 
 	/* release pages */
-	while (i--)
+	while (i--) {
+		kunmap(pages_list[i]);
 		__free_page(pages_list[i]);
+	}
 
 	return 0;
 }
@@ -196,6 +198,7 @@ int generic_file_read(struct file *filp, char *buf, int count)
 	int read = 0, err = 0, nr;
 	off_t offset, page_offset;
 	struct page *page;
+	char *kaddr;
 	size_t pos;
 
 	/* fix number of characters to read */
@@ -226,10 +229,11 @@ repeat:
 		goto repeat;
 found_page:
 		/* copy to user buffer */
-		memcpy(buf, page_address(page) + offset, nr);
+		kaddr = kmap(page);
+		memcpy(buf, kaddr + offset, nr);
+		kunmap(page);
 
 		/* release page */
-		kunmap(page);
 		__free_page(page);
 
 		/* update sizes */
