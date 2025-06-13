@@ -19,7 +19,7 @@ sudo parted --script $LOOP_DEVICE mktable msdos
 sudo parted --script $LOOP_DEVICE mkpart primary 2048s 100%
 
 # create file system
-sudo mkfs.ext2 ${LOOP_DEVICE}p1
+sudo mkfs.minix -3 ${LOOP_DEVICE}p1
 
 # mount disk
 mkdir tmp >& /dev/null

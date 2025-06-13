@@ -190,6 +190,61 @@ void set_blocksize(dev_t dev, size_t blocksize)
 }
 
 /*
+ * End of IO.
+ */
+static void end_buffer_io_sync(struct buffer_head *bh, int uptodate)
+{
+	/* mark buffer up to date */
+	mark_buffer_clean(bh);
+	mark_buffer_uptodate(bh, uptodate);
+	bh->b_count--;
+
+	/* remove it from request */
+	list_del(&bh->b_list_req);
+}
+
+/*
+ * End of IO.
+ */
+static void end_buffer_io_async(struct buffer_head *bh, int uptodate)
+{
+	struct page *page = bh->b_page;
+	struct buffer_head *tmp;
+	int fullup = 1;
+
+	/* mark buffer up to date */
+	mark_buffer_clean(bh);
+	mark_buffer_uptodate(bh, uptodate);
+	bh->b_count--;
+
+	/* remove it from request */
+	list_del(&bh->b_list_req);
+
+	/* check buffer of this page */
+	tmp = bh;
+	do {
+		/* buffer stil used */
+		if (tmp->b_count)
+			return;
+
+		/* buffer/page not up to date */
+		if (!buffer_uptodate(bh))
+			fullup = 0;
+
+		tmp = tmp->b_this_page;
+	} while (tmp != bh);
+
+	/* mark page up to date */
+	if (fullup)
+		SetPageUptodate(page);
+
+	/* free buffers */
+	free_async_buffers(bh);
+
+	return;
+}
+
+/*
  * Put a buffer in unused list.
  */
 static void put_unused_buffer_head(struct buffer_head *bh)
@@ -261,6 +316,7 @@ static struct buffer_head *create_buffers(struct page *page, struct inode *inode
 		bh->b_size = size;
 		bh->b_this_page = head;
 		bh->b_page = page;
+		bh->b_end_io = end_buffer_io_sync;
 
 		/* set tail and head */
 		if (!head)
@@ -585,7 +641,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 	for (i = 0, next = bh; i < nr; i++, block++, next = next->b_this_page) {
 		/* set block buffer */
 		next->b_block = generic_block_bmap(inode, block);
-		next->b_state |= (1UL << BH_FreeOnIO);
+		next->b_end_io = end_buffer_io_async;
 		mark_buffer_uptodate(next, 1);
 
 		/* check if buffer is already hashed */
@@ -692,7 +748,7 @@ int generic_writepage(struct inode *inode, struct page *page, off_t offset, size
 		/* write to block */
 		memcpy(target_buf, buf, len);
 		bhs_list[bhs_count++] = bh;
-		bh->b_state |= (1UL << BH_FreeOnIO);
+		bh->b_end_io = end_buffer_io_async;
 
 		/* update sizes */
 		buf += len;

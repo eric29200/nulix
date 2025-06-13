@@ -16,43 +16,12 @@ static size_t nr_requests = 0;
  */
 static void end_request(struct request *req)
 {
-	struct buffer_head *bh, *tmp;
 	struct list_head *pos, *n;
-	struct page *page;
-	int still_used;
+	struct buffer_head *bh;
 
 	list_for_each_safe(pos, n, &req->bhs_list) {
-		/* mark buffer clean */
 		bh = list_entry(pos, struct buffer_head, b_list_req);
-		mark_buffer_clean(bh);
-		mark_buffer_uptodate(bh, 1);
-		page = bh->b_page;
-		bh->b_count--;
-
-		/* remove it from request */
-		list_del(&bh->b_list_req);
-
-		/* free buffer */
-		if (buffer_free_on_io(bh)) {
-			still_used = 0;
-
-			/* check if buffer is still used */
-			tmp = bh;
-			do {
-				if (tmp->b_count) {
-					still_used = 1;
-					break;
-				}
-
-				tmp = tmp->b_this_page;
-			} while (tmp != bh);
-
-			/* free buffer */
-			if (!still_used) {
-				free_async_buffers(bh);
-				SetPageUptodate(page);
-			}
-		}
+		bh->b_end_io(bh, 1);
 	}
 }
 
@@ -68,7 +37,6 @@ void execute_block_requests()
 		blk_dev[major(requests[i].dev)].request(&requests[i]);
 		end_request(&requests[i]);
 	}
-
 
 	/* clear requests */
 	nr_requests = 0;
