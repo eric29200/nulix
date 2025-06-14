@@ -476,24 +476,23 @@ void brelse(struct buffer_head *bh)
 /*
  * Try to free a buffer.
  */
-void try_to_free_buffer(struct buffer_head *bh)
+int try_to_free_buffers(struct page *page)
 {
 	struct buffer_head *tmp, *tmp1;
-	struct page *page = bh->b_page;
 
 	/* check if all page buffers can be freed */
-	tmp = bh;
+	tmp = page->buffers;
 	do {
 		/* used buffer */
 		if (tmp->b_count || buffer_dirty(tmp))
-			return;
+			return 0;
 
 		/* go to next buffer in page */
 		tmp = tmp->b_this_page;
-	} while (tmp != bh);
+	} while (tmp != page->buffers);
 
 	/* ok to free buffers */
-	tmp = bh;
+	tmp = page->buffers;
 	do {
 		/* save next buffer */
 		tmp1 = tmp->b_this_page;
@@ -505,14 +504,14 @@ void try_to_free_buffer(struct buffer_head *bh)
 
 		/* go to next buffer in page */
 		tmp = tmp1;
-	} while (tmp != bh);
+	} while (tmp != page->buffers);
 
 	/* free page */
-	if (page) {
-		buffermem_pages--;
-		page->buffers = NULL;
-		__free_page(page);
-	}
+	buffermem_pages--;
+	page->buffers = NULL;
+	__free_page(page);
+
+	return 1;
 }
 
 /*

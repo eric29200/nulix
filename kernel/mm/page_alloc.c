@@ -271,7 +271,6 @@ static void merge_free_pages()
  */
 void reclaim_pages()
 {
-	struct buffer_head *bh;
 	struct page *page;
 	uint32_t i;
 
@@ -280,7 +279,6 @@ void reclaim_pages()
 
 	for (i = 0; i < nr_pages; i++) {
 		page = &page_array[i];
-		bh = page->buffers;
 
 		/* skip used pages */
 		if (page->count > 1)
@@ -289,6 +287,12 @@ void reclaim_pages()
 		/* skip shared memory pages */
 		if (page->inode && page->inode->i_shm == 1)
 			continue;
+		
+		/* is it a buffer cached page ? */
+		if (page->buffers) {
+			try_to_free_buffers(page);
+			continue;
+		}
 
 		/* is it a page cached page ? */
 		if (page->inode) {
@@ -297,13 +301,8 @@ void reclaim_pages()
 
 			/* free page */
 			__free_page(page);
-
-			continue;
 		}
 
-		/* is it a buffer cached page ? */
-		if (bh)
-			try_to_free_buffer(bh);
 	}
 
 	/* merge free pages */
