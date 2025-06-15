@@ -287,7 +287,7 @@ void reclaim_pages()
 		/* skip shared memory pages */
 		if (page->inode && page->inode->i_shm == 1)
 			continue;
-		
+
 		/* is it a buffer cached page ? */
 		if (page->buffers) {
 			try_to_free_buffers(page);

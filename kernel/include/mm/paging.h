@@ -68,10 +68,9 @@ typedef uint32_t pte_t;
 
 #define PG_Uptodate			0
 
-#define __page_flag(page, flag)		(((page)->flags & (1UL << (flag))) != 0)
-#define PageUptodate(page)		__page_flag(page, PG_Uptodate)
-#define ClearPageUptodate(page)		((page)->flags &= ~(1UL << PG_Uptodate))
-#define SetPageUptodate(page)		((page)->flags |= (1UL << PG_Uptodate))
+#define PageUptodate(page)		test_bit((page)->flags, PG_Uptodate)
+#define ClearPageUptodate(page)		set_bit((page)->flags, PG_Uptodate)
+#define SetPageUptodate(page)		clear_bit((page)->flags, PG_Uptodate)
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
