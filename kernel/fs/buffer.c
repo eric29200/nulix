@@ -349,8 +349,8 @@ err:
  */
 static int grow_buffers(size_t size)
 {
-	struct buffer_head *bh, *tmp;
 	size_t isize = BUFSIZE_INDEX(size);
+	struct buffer_head *bh, *tmp;
 	struct page *page;
 
 	/* get a page */
@@ -359,11 +359,13 @@ static int grow_buffers(size_t size)
 		return -ENOMEM;
 
 	/* create buffers */
-	bh = create_buffers(page, NULL, size);
-	if (!bh) {
-		__free_page(page);
-		return -ENOMEM;
+	if (!page->buffers) {
+		if (!create_buffers(page, NULL, size)) {
+			__free_page(page);
+			return -ENOMEM;
+		}
 	}
+	bh = page->buffers;
 
 	/* add new buffers to free list */
 	tmp = bh;
@@ -587,7 +589,7 @@ int sys_fsync(int fd)
 /*
  * Generic block map.
  */
-static int generic_block_bmap(struct inode *inode, uint32_t block)
+int generic_block_bmap(struct inode *inode, uint32_t block)
 {
 	struct buffer_head tmp = { 0 };
 
@@ -616,6 +618,31 @@ void free_async_buffers(struct buffer_head *bh)
 }
 
 /*
+ * Read/write a page.
+ */
+int brw_page(int rw, struct page *page, struct inode *inode, uint32_t blocks[])
+{
+	struct super_block *sb = inode->i_sb;
+	struct buffer_head *head, *bh, *next;
+
+	/* create buffers */
+	head = bh = create_buffers(page, inode, sb->s_blocksize);
+	if (!head)
+		return -ENOMEM;
+
+	/* read/write blocks */
+	do {
+		next = bh->b_this_page;
+		bh->b_block = *(blocks++);
+		bh->b_end_io = end_buffer_io_async;
+		ll_rw_block(rw, 1, &bh);
+		bh = next;
+	} while (bh != head);
+
+	return 0;
+}
+
+/*
  * Read a page.
  */
 int generic_readpage(struct inode *inode, struct page *page)
@@ -623,24 +650,23 @@ int generic_readpage(struct inode *inode, struct page *page)
 	struct buffer_head *bh, *next, *tmp, *bhs_list[MAX_BUF_PER_PAGE];
 	struct super_block *sb = inode->i_sb;
 	size_t bhs_count = 0;
-	int nr, i, ret = 0;
 	uint32_t block;
+	int nr, i;
 
 	/* compute blocks to read */
 	nr = PAGE_SIZE >> sb->s_blocksize_bits;
 	block = page->offset >> sb->s_blocksize_bits;
 
-	/* create temporary buffers */
-	bh = create_buffers(page, inode, sb->s_blocksize);
-	if (!bh) {
-		ret = -ENOMEM;
-		goto out;
-	}
+	/* create buffers */
+	if (!page->buffers)
+		if (!create_buffers(page, inode, sb->s_blocksize))
+			return -ENOMEM;
+	bh = page->buffers;
 
 	/* read block by block */
 	for (i = 0, next = bh; i < nr; i++, block++, next = next->b_this_page) {
 		/* set block buffer */
-		next->b_block = generic_block_bmap(inode, block);
+		next->b_block = inode->i_op->bmap(inode, block);
 		next->b_end_io = end_buffer_io_async;
 
 		/* check if buffer is already hashed */
@@ -674,8 +700,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 		SetPageUptodate(page);
 	}
 
-out:
-	return ret;
+	return 0;
 }
 
 /*
@@ -689,10 +714,10 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 	size_t bhs_count = 0;
 	int ret;
 
-	/* create buffers */
-	head = create_buffers(page, inode, sb->s_blocksize);
-	if (!head)
-		return -ENOMEM;
+	if (!page->buffers)
+		if (!create_buffers(page, inode, sb->s_blocksize))
+			return -ENOMEM;
+	head = page->buffers;
 
 	/* compute first block */
 	block = page->offset >> sb->s_blocksize_bits;

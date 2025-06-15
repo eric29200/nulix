@@ -70,6 +70,7 @@ typedef uint32_t pte_t;
 
 #define __page_flag(page, flag)		(((page)->flags & (1UL << (flag))) != 0)
 #define PageUptodate(page)		__page_flag(page, PG_Uptodate)
+#define ClearPageUptodate(page)		((page)->flags &= ~(1UL << PG_Uptodate))
 #define SetPageUptodate(page)		((page)->flags |= (1UL << PG_Uptodate))
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)

@@ -27,6 +27,7 @@ struct inode_operations ext2_file_iops = {
 	.fops		= &ext2_file_fops,
 	.truncate	= ext2_truncate,
 	.get_block	= ext2_get_block,
+	.bmap		= generic_block_bmap,
 	.readpage	= generic_readpage,
 	.prepare_write	= generic_prepare_write,
 	.commit_write	= generic_commit_write,

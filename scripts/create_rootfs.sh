@@ -81,6 +81,8 @@ sudo mknod tmp/dev/fb0 c 29 0
 sudo mknod tmp/dev/hda b 3 0
 sudo mknod tmp/dev/hda1 b 3 1
 sudo mknod tmp/dev/hdc b 3 32
+sudo dd if=/dev/zero of=tmp/swap bs=1M count=32
+sudo mkswap tmp/swap
 sudo ln -s /dev/hda1 tmp/dev/root
 
 # permissions

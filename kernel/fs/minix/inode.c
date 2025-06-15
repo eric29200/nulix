@@ -39,9 +39,10 @@ struct inode_operations minix_file_iops = {
 	.fops			= &minix_file_fops,
 	.truncate		= minix_truncate,
 	.get_block		= minix_get_block,
+	.bmap			= generic_block_bmap,
 	.readpage		= generic_readpage,
-	.prepare_write	= generic_prepare_write,
-	.commit_write	= generic_commit_write,
+	.prepare_write		= generic_prepare_write,
+	.commit_write		= generic_commit_write,
 };
 
 /*
