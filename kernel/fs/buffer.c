@@ -619,31 +619,6 @@ void free_async_buffers(struct buffer_head *bh)
 }
 
 /*
- * Read/write a page.
- */
-int brw_page(int rw, struct page *page, struct inode *inode, uint32_t blocks[])
-{
-	struct super_block *sb = inode->i_sb;
-	struct buffer_head *head, *bh, *next;
-
-	/* create buffers */
-	head = bh = create_buffers(page, inode, sb->s_blocksize);
-	if (!head)
-		return -ENOMEM;
-
-	/* read/write blocks */
-	do {
-		next = bh->b_this_page;
-		bh->b_block = *(blocks++);
-		bh->b_end_io = end_buffer_io_async;
-		ll_rw_block(rw, 1, &bh);
-		bh = next;
-	} while (bh != head);
-
-	return 0;
-}
-
-/*
  * Read a page.
  */
 int generic_readpage(struct inode *inode, struct page *page)

@@ -243,7 +243,6 @@ void bsync();
 void bsync_dev(dev_t dev);
 void init_buffer();
 struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize);
-int brw_page(int rw, struct page *page, struct inode *inode, uint32_t blocks[]);
 void free_async_buffers(struct buffer_head *bh);
 int try_to_free_buffers(struct page *page);
 void set_blocksize(dev_t dev, size_t blocksize);
