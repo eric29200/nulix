@@ -78,29 +78,16 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 }
 
 /*
- * Open a memory region.
+ * Private file mapping operations.
  */
-void filemap_open(struct vm_area *vma)
-{
-	vma->vm_inode->i_count++;
-	list_add(&vma->list_share, &vma->vm_inode->i_mmap);
-}
+static struct vm_operations file_shared_mmap = {
+	.nopage		= filemap_nopage,
+};
 
 /*
- * Close a memory region.
+ * Shared file mapping operations.
  */
-void filemap_close(struct vm_area *vma)
-{
-	list_del(&vma->list_share);
-	iput(vma->vm_inode);
-}
-
-/*
- * File mapping operations.
- */
-static struct vm_operations file_mmap = {
-	.open		= filemap_open,
-	.close		= filemap_close,
+static struct vm_operations file_private_mmap = {
 	.nopage		= filemap_nopage,
 };
 
@@ -109,13 +96,30 @@ static struct vm_operations file_mmap = {
  */
 int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 {
+	struct vm_operations *ops;
+
+	/* choose operations */
+	if ((vma->vm_flags & VM_SHARED) && (vma->vm_flags & VM_WRITE)) {
+		ops = &file_shared_mmap;
+
+		/* offset must be page aligned */
+		if (vma->vm_offset & (PAGE_SIZE - 1))
+			return -EINVAL;
+	} else {
+		ops = &file_private_mmap;
+
+		/* offset must be block aligned */
+		if (vma->vm_offset & (inode->i_sb->s_blocksize - 1))
+			return -EINVAL;
+	}
+
 	/* inode must be a regular file */
 	if (!inode->i_sb || !S_ISREG(inode->i_mode))
 		return -EACCES;
 
-	/* offset must be block aligned */
-	if (vma->vm_offset & (inode->i_sb->s_blocksize - 1))
-		return -EINVAL;
+	/* inode must implement readpage */
+	if (!inode->i_op || !inode->i_op->readpage)
+		return -ENOEXEC;
 
 	/* update inode */
 	inode->i_atime = CURRENT_TIME;
@@ -124,7 +128,7 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 
 	/* set memory region */
 	vma->vm_inode = inode;
-	vma->vm_ops = &file_mmap;
+	vma->vm_ops = ops;
 
 	return 0;
 }

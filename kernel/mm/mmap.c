@@ -104,6 +104,8 @@ void *move_vma(struct vm_area *vm, uint32_t old_address, size_t old_size, uint32
 	*vm_new = *vm;
 	vm_new->vm_start = new_address;
 	vm_new->vm_end = new_address + new_size;
+	if (vm_new->vm_inode)
+		vm_new->vm_inode->i_count++;
 	if (vm_new->vm_inode && vm_new->vm_ops && vm_new->vm_ops->open)
 		vm_new->vm_ops->open(vm_new);
 
@@ -270,6 +272,8 @@ static int unmap_fixup(struct vm_area *vm, uint32_t addr, size_t len)
 	if (addr == vm->vm_start && end == vm->vm_end) {
 		if (vm->vm_ops && vm->vm_ops->close)
 			vm->vm_ops->close(vm);
+		if (vm->vm_inode)
+			iput(vm->vm_inode);
 
 		list_del(&vm->list);
 		kfree(vm);
@@ -299,6 +303,8 @@ static int unmap_fixup(struct vm_area *vm, uint32_t addr, size_t len)
 		vm_new->vm_ops = vm->vm_ops;
 
 		/* open region */
+		if (vm_new->vm_inode)
+			vm_new->vm_inode->i_count++;
 		if (vm_new->vm_ops && vm_new->vm_ops->open)
 			vm_new->vm_ops->open(vm_new);
 
