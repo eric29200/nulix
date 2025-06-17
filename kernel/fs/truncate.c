@@ -26,7 +26,7 @@ int do_truncate(struct inode *inode, off_t length)
 		inode->i_op->truncate(inode);
 
 	/* release inode */
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	return 0;
 }

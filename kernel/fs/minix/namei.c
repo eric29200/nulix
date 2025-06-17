@@ -102,7 +102,7 @@ static int minix_add_entry(struct inode *dir, const char *name, int name_len, st
 		/* last entry : update directory size */
 		if (i == nr_entries) {
 			dir->i_size = (i + 1) * sbi->s_dirsize;
-			dir->i_dirt = 1;
+			mark_inode_dirty(dir);
 		}
 
 		/* get directory entry */
@@ -133,7 +133,7 @@ found_free_entry:
 
 	/* update parent directory */
 	dir->i_mtime = dir->i_ctime = CURRENT_TIME;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	return 0;
 }
@@ -267,7 +267,7 @@ int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 	inode->i_gid = current_task->fsgid;
 	inode->i_op = &minix_file_iops;
 	inode->i_mode = S_IFREG | mode;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
 	err = minix_add_entry(dir, name, name_len, inode);
@@ -324,7 +324,7 @@ int minix_link(struct inode *old_inode, struct inode *dir, const char *name, siz
 	/* update old inode */
 	old_inode->i_ctime = CURRENT_TIME;
 	old_inode->i_nlinks++;
-	old_inode->i_dirt = 1;
+	mark_inode_dirty(old_inode);
 
 	/* release inodes */
 	iput(old_inode);
@@ -378,12 +378,12 @@ int minix_unlink(struct inode *dir, const char *name, size_t name_len)
 
 	/* update directory */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* update inode */
 	inode->i_ctime = dir->i_ctime;
 	inode->i_nlinks--;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* release inode */
 	iput(inode);
@@ -415,7 +415,7 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	inode->i_gid = current_task->fsgid;
 	inode->i_op = &minix_symlink_iops;
 	inode->i_mode = S_IFLNK | (0777 & ~current_task->fs->umask);
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* get/create first block */
 	bh = minix_bread(inode, 0, 1);
@@ -435,7 +435,7 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 
 	/* update inode size */
 	inode->i_size = i;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* check if file exists */
 	bh = minix_find_entry(dir, name, name_len, &de);
@@ -497,7 +497,7 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	inode->i_mode = S_IFDIR | (mode & ~current_task->fs->umask & 0777);
 	inode->i_nlinks = 2;
 	inode->i_size = sbi->s_dirsize * 2;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* get/create first block */
 	bh = minix_bread(inode, 0, 1);
@@ -533,7 +533,7 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 
 	/* update directory links and mark it dirty */
 	dir->i_nlinks++;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* release inode */
 	iput(dir);
@@ -596,12 +596,12 @@ int minix_rmdir(struct inode *dir, const char *name, size_t name_len)
 	/* update dir */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
 	dir->i_nlinks--;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* update inode */
 	inode->i_ctime = dir->i_ctime;
 	inode->i_nlinks = 0;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* release inode and directory */
 	iput(inode);
@@ -668,7 +668,7 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 		/* update new inode */
 		new_inode->i_nlinks--;
 		new_inode->i_atime = new_inode->i_mtime = CURRENT_TIME;
-		new_inode->i_dirt = 1;
+		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
 		err = minix_add_entry(new_dir, new_name, new_name_len, old_inode);
@@ -684,9 +684,9 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 
 	/* update old and new directories */
 	old_dir->i_atime = old_dir->i_mtime = CURRENT_TIME;
-	old_dir->i_dirt = 1;
+	mark_inode_dirty(old_dir);
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
-	new_dir->i_dirt = 1;
+	mark_inode_dirty(new_dir);
 
 	err = 0;
 out:
@@ -733,7 +733,7 @@ int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	inode->i_gid = current_task->fsgid;
 	inode->i_mode = mode;
 	inode->i_rdev = dev;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
 	err = minix_add_entry(dir, name, name_len, inode);

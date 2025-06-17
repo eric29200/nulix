@@ -171,8 +171,8 @@ static int fb_mmap(struct inode *inode, struct vm_area *vma)
 
 	/* update inode */
 	inode->i_atime = CURRENT_TIME;
-	inode->i_dirt = 1;
 	inode->i_count++;
+	mark_inode_dirty(inode);
 
 	/* set memory region */
 	vma->vm_inode = inode;

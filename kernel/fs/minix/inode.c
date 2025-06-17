@@ -216,7 +216,7 @@ static int minix_inode_getblk(struct inode *inode, int inode_block, struct buffe
 
 	/* update inode */
 	inode->i_blocks++;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 found:
 	/* set result */

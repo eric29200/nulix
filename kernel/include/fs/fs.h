@@ -34,6 +34,8 @@
 #define READ				0
 #define WRITE				1
 
+#define I_DIRTY				1
+
 #define MAY_EXEC			1
 #define MAY_WRITE			2
 #define MAY_READ			4
@@ -107,7 +109,7 @@ struct inode {
 	ino_t				i_ino;
 	struct super_block *		i_sb;
 	int				i_count;
-	char				i_dirt;
+	uint32_t			i_state;
 	struct inode_operations *	i_op;
 	dev_t				i_rdev;
 	char				i_pipe;
@@ -256,6 +258,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to);
 
 /* inode operations */
+void mark_inode_dirty(struct inode *inode);
 struct inode *iget(struct super_block *sb, ino_t ino);
 void iput(struct inode *inode);
 struct file *fget(int fd);

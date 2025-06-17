@@ -110,7 +110,7 @@ static int ext2_add_entry(struct inode *dir, const char *name, size_t name_len, 
 				de->d_inode = 0;
 				de->d_rec_len = dir->i_sb->s_blocksize;
 				dir->i_size = offset + dir->i_sb->s_blocksize;
-				dir->i_dirt = 1;
+				mark_inode_dirty(dir);
 			}
 		}
 
@@ -154,7 +154,7 @@ found_entry:
 
 	/* update parent directory */
 	dir->i_mtime = dir->i_ctime = CURRENT_TIME;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	return 0;
 }
@@ -343,7 +343,7 @@ int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mod
 
 	/* set inode */
 	inode->i_op = &ext2_file_iops;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
 	err = ext2_add_entry(dir, name, name_len, inode);
@@ -400,7 +400,7 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	inode->i_op = &ext2_dir_iops;
 	inode->i_nlinks = 2;
 	inode->i_size = inode->i_sb->s_blocksize;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* read first block */
 	bh = ext2_bread(inode, 0, 1);
@@ -440,7 +440,7 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 
 	/* update directory links and mark it dirty */
 	dir->i_nlinks++;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* release inode */
 	iput(dir);
@@ -505,12 +505,12 @@ int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
 	/* update dir */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
 	dir->i_nlinks--;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* update inode */
 	inode->i_ctime = dir->i_ctime;
 	inode->i_nlinks = 0;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 out:
 	brelse(bh);
@@ -549,7 +549,7 @@ int ext2_link(struct inode *old_inode, struct inode *dir, const char *name, size
 	/* update old inode */
 	old_inode->i_ctime = CURRENT_TIME;
 	old_inode->i_nlinks++;
-	old_inode->i_dirt = 1;
+	mark_inode_dirty(old_inode);
 
 	/* release inodes */
 	iput(old_inode);
@@ -602,12 +602,12 @@ int ext2_unlink(struct inode *dir, const char *name, size_t name_len)
 
 	/* update directory */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* update inode */
 	inode->i_ctime = dir->i_ctime;
 	inode->i_nlinks--;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 out:
 	brelse(bh);
@@ -636,7 +636,7 @@ static int ext2_block_symlink(struct inode *inode, const char *target)
 
 	/* mark inode dirty */
 	inode->i_size = i;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* release block buffer */
 	brelse(bh);
@@ -680,7 +680,7 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 	}
 
 	/* mark inode dirty */
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* check if file exists */
 	bh = ext2_find_entry(dir, name, name_len, &de);
@@ -761,7 +761,7 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 		/* update new inode */
 		new_inode->i_nlinks--;
 		new_inode->i_atime = new_inode->i_mtime = CURRENT_TIME;
-		new_inode->i_dirt = 1;
+		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
 		err = ext2_add_entry(new_dir, new_name, new_name_len, old_inode);
@@ -779,9 +779,9 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 
 	/* update old and new directories */
 	old_dir->i_atime = old_dir->i_mtime = CURRENT_TIME;
-	old_dir->i_dirt = 1;
+	mark_inode_dirty(old_dir);
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
-	new_dir->i_dirt = 1;
+	mark_inode_dirty(new_dir);
 
 	err = 0;
 out:
@@ -824,7 +824,7 @@ int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode
 
 	/* set inode */
 	inode->i_rdev = dev;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
 	err = ext2_add_entry(dir, name, name_len, inode);

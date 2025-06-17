@@ -195,5 +195,5 @@ void ext2_truncate(struct inode *inode)
 
 	/* mark inode dirty */
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 }

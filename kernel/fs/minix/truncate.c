@@ -171,5 +171,5 @@ void minix_truncate(struct inode *inode)
 	minix_free_tindirect_blocks(inode, 7 + 256 + 256 * 256, &inode->u.minix_i.i_zone[9]);
 
 	/* mark inode dirty */
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 }

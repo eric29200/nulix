@@ -18,6 +18,14 @@ static int nr_inodes = 0;
 static struct inode *inode_hash_table[HASH_SIZE];
 
 /*
+ * Mark an inode dirty.
+ */
+void mark_inode_dirty(struct inode *inode)
+{
+	inode->i_state |= I_DIRTY;
+}
+
+/*
  * Hash an inode.
  */
 static inline int __inode_hashfn(dev_t dev, ino_t ino)
@@ -226,15 +234,12 @@ struct inode *iget(struct super_block *sb, ino_t ino)
 }
 
 /*
- * Synchronize inode on disk.
+ * Write inode on disk.
  */
-static void sync_inode(struct inode *inode)
+static void write_inode(struct inode *inode)
 {
-	/* write inode if needed */
-	if (inode->i_dirt && inode->i_sb) {
+	if (inode->i_sb && inode->i_sb->s_op && inode->i_sb->s_op->write_inode)
 		inode->i_sb->s_op->write_inode(inode);
-		inode->i_dirt = 0;
-	}
 }
 
 /*
@@ -255,8 +260,9 @@ void iput(struct inode *inode)
 			return;
 	}
 
-	/* sync inode */
-	sync_inode(inode);
+	/* write inode if needed */
+	if (inode->i_state & I_DIRTY)
+		write_inode(inode);
 }
 
 /*

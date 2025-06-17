@@ -260,7 +260,7 @@ int tmpfs_link(struct inode *old_inode, struct inode *dir, const char *name, siz
 	/* update old inode */
 	old_inode->i_ctime = CURRENT_TIME;
 	old_inode->i_nlinks++;
-	old_inode->i_dirt = 1;
+	mark_inode_dirty(old_inode);
 
 	/* release inodes */
 	iput(old_inode);
@@ -303,12 +303,12 @@ int tmpfs_unlink(struct inode *dir, const char *name, size_t name_len)
 
 	/* update directory */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* update inode */
 	inode->i_ctime = dir->i_ctime;
 	inode->i_nlinks--;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* release inode */
 	iput(inode);
@@ -419,7 +419,7 @@ int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 
 	/* update directory links and mark it dirty */
 	dir->i_nlinks++;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* release inode */
 	iput(dir);
@@ -475,12 +475,12 @@ int tmpfs_rmdir(struct inode *dir, const char *name, size_t name_len)
 	/* update dir */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
 	dir->i_nlinks--;
-	dir->i_dirt = 1;
+	mark_inode_dirty(dir);
 
 	/* update inode */
 	inode->i_ctime = dir->i_ctime;
 	inode->i_nlinks = 0;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* release inode and directory */
 	iput(inode);
@@ -535,7 +535,7 @@ int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 		/* update new inode */
 		new_inode->i_nlinks--;
 		new_inode->i_atime = new_inode->i_mtime = CURRENT_TIME;
-		new_inode->i_dirt = 1;
+		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
 		ret = tmpfs_add_entry(new_dir, new_name, new_name_len, old_inode);
@@ -549,9 +549,9 @@ int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 
 	/* update old and new directories */
 	old_dir->i_atime = old_dir->i_mtime = CURRENT_TIME;
-	old_dir->i_dirt = 1;
+	mark_inode_dirty(old_dir);
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
-	new_dir->i_dirt = 1;
+	mark_inode_dirty(new_dir);
 
 	ret = 0;
 out:

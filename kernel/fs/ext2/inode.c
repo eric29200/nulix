@@ -283,7 +283,7 @@ static int ext2_inode_getblk(struct inode *inode, int inode_block, struct buffer
 
 	/* update inode */
 	inode->i_blocks++;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 found:
 	/* set result */

@@ -219,7 +219,7 @@ static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 
 	/* change mode */
 	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 	iput(inode);
 
 	return 0;
@@ -255,7 +255,7 @@ static int do_fchmod(int fd, mode_t mode)
 
 	/* change mode */
 	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	return 0;
 }
@@ -293,7 +293,7 @@ static int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, u
 	/* update inode */
 	inode->i_uid = owner;
 	inode->i_gid = group;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 	iput(inode);
 
 	return 0;
@@ -332,7 +332,7 @@ static int do_fchown(int fd, uid_t owner, gid_t group)
 	inode = filp->f_inode;
 	inode->i_uid = owner;
 	inode->i_gid = group;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	return 0;
 }
@@ -380,9 +380,7 @@ static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *
 		inode->i_atime = inode->i_mtime = CURRENT_TIME;
 
 	/* mark inode dirty */
-	inode->i_dirt = 1;
-
-	/* release inode */
+	mark_inode_dirty(inode);
 	iput(inode);
 
 	return 0;

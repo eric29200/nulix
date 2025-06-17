@@ -123,8 +123,8 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 
 	/* update inode */
 	inode->i_atime = CURRENT_TIME;
-	inode->i_dirt = 1;
 	inode->i_count++;
+	mark_inode_dirty(inode);
 
 	/* set memory region */
 	vma->vm_inode = inode;
@@ -249,7 +249,7 @@ found_page:
 
 	/* update inode */
 	inode->i_atime = CURRENT_TIME;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	return read ? read : err;
 }
@@ -318,7 +318,7 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 
 	/* update inode */
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	return written ? written : err;
 }

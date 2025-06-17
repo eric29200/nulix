@@ -137,8 +137,7 @@ int proc_read_inode(struct inode *inode)
  */
 int proc_write_inode(struct inode *inode)
 {
-	/* procfs is read only */
-	inode->i_dirt = 0;
+	UNUSED(inode);
 	return 0;
 }
 

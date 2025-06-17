@@ -94,7 +94,6 @@ allocated:
 	inode->i_nlinks = 1;
 	inode->i_op = NULL;
 	inode->i_count = 1;
-	inode->i_dirt = 1;
 	inode->u.ext2_i.i_block_group = group_no;
 	inode->u.ext2_i.i_flags = dir->u.ext2_i.i_flags;
 	inode->u.ext2_i.i_faddr = 0;
@@ -123,7 +122,7 @@ allocated:
 	mark_buffer_dirty(sbi->s_sbh);
 
 	/* mark inode dirty */
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	return inode;
 }

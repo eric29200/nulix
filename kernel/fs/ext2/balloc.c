@@ -111,7 +111,7 @@ allocated:
 	mark_buffer_dirty(sbi->s_sbh);
 
 	/* mark inode dirty */
-	inode->i_dirt = 1;
+	mark_inode_dirty(inode);
 
 	/* compute block number */
 	return grp_alloc_block + ext2_group_first_block_no(sb, group_no);
