@@ -78,9 +78,146 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 }
 
 /*
+ * Write a page.
+ */
+static int filemap_write_page(struct vm_area *vma, struct page *page)
+{
+	struct inode *inode = vma->vm_inode;
+	int ret;
+
+	/* prepare write */
+	ret = inode->i_op->prepare_write(inode, page, 0, PAGE_SIZE);
+	if (ret)
+		return 0;
+
+	/* commit write*/
+	ret = inode->i_op->commit_write(inode, page, 0, PAGE_SIZE);
+	if (ret)
+		return 0;
+
+	return 1;
+}
+
+/*
+ * Synchronize a memory region.
+ */
+static int filemap_sync_pte(pte_t *pte, struct vm_area *vma, uint32_t address, uint32_t flags)
+{
+	struct page *page;
+	int ret;
+
+	UNUSED(flags);
+
+	if (pte_none(*pte))
+		return 0;
+
+	if (!pte_present(*pte))
+		return 0;
+
+	if (!pte_dirty(*pte))
+		return 0;
+
+	/* make pte clean */
+	*pte = pte_mkclean(*pte);
+	flush_tlb_page(vma->vm_mm->pgd, address);
+
+	/* write page */
+	page = pte_page(*pte);
+	page->count++;
+	ret = filemap_write_page(vma, page);
+	__free_page(page);
+
+	return ret;
+}
+
+/*
+ * Synchronize a memory region.
+ */
+static int filemap_sync_pte_range(pmd_t *pmd, uint32_t address, size_t size,  struct vm_area *vma, uint32_t offset, uint32_t flags)
+{
+	uint32_t end;
+	int ret = 0;
+	pte_t *pte;
+
+	if (pmd_none(*pmd))
+		return 0;
+
+	pte = pte_offset(pmd, address);
+	offset += address & PMD_MASK;
+	address &= ~PMD_MASK;
+	end = address + size;
+	if (end > PMD_SIZE)
+		end = PMD_SIZE;
+
+	do {
+		ret |= filemap_sync_pte(pte, vma, address + offset, flags);
+		address += PAGE_SIZE;
+		pte++;
+	} while (address < end);
+
+	return ret;
+}
+
+/*
+ * Synchronize a memory region.
+ */
+static int filemap_sync_pmd_range(pgd_t *pgd, uint32_t address, size_t size, struct vm_area *vma, uint32_t flags)
+{
+	uint32_t offset, end;
+	int ret = 0;
+	pmd_t *pmd;
+
+	pmd = pmd_offset(pgd);
+	offset = address & PGDIR_MASK;
+	address &= ~PGDIR_MASK;
+	end = address + size;
+	if (end > PGDIR_SIZE)
+		end = PGDIR_SIZE;
+
+	do {
+		ret |= filemap_sync_pte_range(pmd, address, end - address, vma, offset, flags);
+		address = (address + PMD_SIZE) & PMD_MASK;
+		pmd++;
+	} while (address < end);
+
+	return ret;
+}
+
+/*
+ * Synchronize a memory region.
+ */
+static int filemap_sync(struct vm_area *vma, uint32_t address, size_t size, uint32_t flags)
+{
+	uint32_t end = address + size;
+	int ret = 0;
+	pgd_t *dir;
+
+	dir = pgd_offset(vma->vm_mm->pgd, address);
+	while (address < end) {
+		ret |= filemap_sync_pmd_range(dir, address, end - address, vma, flags);
+		address = (address + PGDIR_SIZE) & PGDIR_MASK;
+		dir++;
+	}
+
+	flush_tlb(vma->vm_mm->pgd);
+	execute_block_requests();
+
+	return ret;
+}
+
+/*
+ * Unmap a memory region.
+ */
+static void filemap_unmap(struct vm_area *vma, uint32_t start, size_t len)
+{
+	filemap_sync(vma, start, len, MS_ASYNC);
+}
+
+/*
  * Private file mapping operations.
  */
 static struct vm_operations file_shared_mmap = {
+	.unmap		= filemap_unmap,
 	.nopage		= filemap_nopage,
 };
 

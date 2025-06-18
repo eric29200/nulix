@@ -36,6 +36,7 @@ struct vm_area {
 struct vm_operations {
 	void (*open)(struct vm_area *);
 	void (*close)(struct vm_area *);
+	void (*unmap)(struct vm_area *, uint32_t, size_t);
 	struct page *(*nopage)(struct vm_area *, uint32_t);
 };
 

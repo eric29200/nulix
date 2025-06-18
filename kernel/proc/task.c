@@ -147,7 +147,7 @@ static int task_copy_rlim(struct task *task, struct task *parent)
  */
 struct mm_struct *task_dup_mm(struct mm_struct *mm)
 {
-	struct vm_area *vm_parent, *vm_child;
+	struct vm_area *vma_parent, *vma_child;
 	struct mm_struct *mm_new;
 	struct list_head *pos;
 	int ret;
@@ -187,29 +187,29 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	/* copy virtual memory areas */
 	if (mm) {
 		list_for_each(pos, &mm->vm_list) {
-			vm_parent = list_entry(pos, struct vm_area, list);
-			vm_child = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-			if (!vm_child)
+			vma_parent = list_entry(pos, struct vm_area, list);
+			vma_child = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+			if (!vma_child)
 				goto err;
 
 			/* copy memory area */
-			memset(vm_child, 0, sizeof(struct vm_area));
-			vm_child->vm_start = vm_parent->vm_start;
-			vm_child->vm_end = vm_parent->vm_end;
-			vm_child->vm_flags = vm_parent->vm_flags;
-			vm_child->vm_page_prot = vm_parent->vm_page_prot;
-			vm_child->vm_offset = vm_parent->vm_offset;
-			vm_child->vm_inode = vm_parent->vm_inode;
-			vm_child->vm_ops = vm_parent->vm_ops;
-			vm_child->vm_mm = mm_new;
-			list_add_tail(&vm_child->list, &mm_new->vm_list);
+			memset(vma_child, 0, sizeof(struct vm_area));
+			vma_child->vm_start = vma_parent->vm_start;
+			vma_child->vm_end = vma_parent->vm_end;
+			vma_child->vm_flags = vma_parent->vm_flags;
+			vma_child->vm_page_prot = vma_parent->vm_page_prot;
+			vma_child->vm_offset = vma_parent->vm_offset;
+			vma_child->vm_inode = vma_parent->vm_inode;
+			vma_child->vm_ops = vma_parent->vm_ops;
+			vma_child->vm_mm = mm_new;
+			list_add_tail(&vma_child->list, &mm_new->vm_list);
 
 			/* copy pages */
-			copy_page_range(mm->pgd, mm_new->pgd, vm_child);
+			copy_page_range(mm->pgd, mm_new->pgd, vma_child);
 
 			/* open region */
-			if (vm_child->vm_ops && vm_child->vm_ops->open)
-				vm_child->vm_ops->open(vm_child);
+			if (vma_child->vm_ops && vma_child->vm_ops->open)
+				vma_child->vm_ops->open(vma_child);
 		}
 
 		/* flush tlb */
@@ -416,25 +416,27 @@ void task_exit_files(struct task *task)
 void task_exit_mmap(struct mm_struct *mm)
 {
 	struct list_head *pos, *n;
-	struct vm_area *vm_area;
+	struct vm_area *vma;
 
 	/* clear memory size */
 	mm->rss = 0;
 
 	/* free memory regions */
 	list_for_each_safe(pos, n, &mm->vm_list) {
-		vm_area = list_entry(pos, struct vm_area, list);
-		if (vm_area) {
-			/* release inode */
-			if (vm_area->vm_ops && vm_area->vm_ops->close)
-				vm_area->vm_ops->close(vm_area);
+		vma = list_entry(pos, struct vm_area, list);
+		if (vma) {
+			/* unmap and close */
+			if (vma->vm_ops && vma->vm_ops->unmap)
+				vma->vm_ops->unmap(vma, vma->vm_start, vma->vm_end - vma->vm_start);
+			if (vma->vm_ops && vma->vm_ops->close)
+				vma->vm_ops->close(vma);
 
 			/* unmap pages */
-			zap_page_range(mm->pgd, vm_area->vm_start, vm_area->vm_end - vm_area->vm_start);
+			zap_page_range(mm->pgd, vma->vm_start, vma->vm_end - vma->vm_start);
 
 			/* free memory region */
-			list_del(&vm_area->list);
-			kfree(vm_area);
+			list_del(&vma->list);
+			kfree(vma);
 		}
 	}
 }

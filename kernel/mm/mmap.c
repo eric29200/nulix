@@ -19,14 +19,14 @@ uint32_t protection_map[16] = {
 struct vm_area *find_vma(struct task *task, uint32_t addr)
 {
 	struct list_head *pos;
-	struct vm_area *vm;
+	struct vm_area *vma;
 
 	list_for_each(pos, &task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area, list);
-		if (addr < vm->vm_start)
+		vma = list_entry(pos, struct vm_area, list);
+		if (addr < vma->vm_start)
 			break;
-		if (addr < vm->vm_end)
-			return vm;
+		if (addr < vma->vm_end)
+			return vma;
 	}
 
 	return NULL;
@@ -37,18 +37,18 @@ struct vm_area *find_vma(struct task *task, uint32_t addr)
  */
 struct vm_area *find_vma_prev(struct task *task, uint32_t addr)
 {
-	struct vm_area *vm, *vm_prev = NULL;
+	struct vm_area *vma, *vma_prev = NULL;
 	struct list_head *pos;
 
 	list_for_each(pos, &task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area, list);
-		if (addr < vm->vm_end)
+		vma = list_entry(pos, struct vm_area, list);
+		if (addr < vma->vm_end)
 			break;
 
-		vm_prev = vm;
+		vma_prev = vma;
 	}
 
-	return vm_prev;
+	return vma_prev;
 }
 
 /*
@@ -57,12 +57,12 @@ struct vm_area *find_vma_prev(struct task *task, uint32_t addr)
 struct vm_area *find_vma_next(struct task *task, uint32_t addr)
 {
 	struct list_head *pos;
-	struct vm_area *vm;
+	struct vm_area *vma;
 
 	list_for_each(pos, &task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area, list);
-		if (addr < vm->vm_start)
-			return vm;
+		vma = list_entry(pos, struct vm_area, list);
+		if (addr < vma->vm_start)
+			return vma;
 	}
 
 	return NULL;
@@ -72,12 +72,12 @@ struct vm_area *find_vma_next(struct task *task, uint32_t addr)
  */
 struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_t end)
 {
-	struct vm_area *vm_prev, *vm_next = NULL;
+	struct vm_area *vma_prev, *vm_next = NULL;
 
 	/* find previous and next vma */
-	vm_prev = find_vma_prev(task, start);
-	if (vm_prev)
-		vm_next = list_next_entry_or_null(vm_prev, &task->mm->vm_list, list);
+	vma_prev = find_vma_prev(task, start);
+	if (vma_prev)
+		vm_next = list_next_entry_or_null(vma_prev, &task->mm->vm_list, list);
 	else if (!list_empty(&task->mm->vm_list))
 		vm_next = list_first_entry(&task->mm->vm_list, struct vm_area, list);
 
@@ -91,38 +91,38 @@ struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_
 /*
  * Move a memory region.
  */
-void *move_vma(struct vm_area *vm, uint32_t old_address, size_t old_size, uint32_t new_address, size_t new_size)
+void *move_vma(struct vm_area *vma, uint32_t old_address, size_t old_size, uint32_t new_address, size_t new_size)
 {
-	struct vm_area *vm_new, *vm_prev;
+	struct vm_area *vma_new, *vma_prev;
 
 	/* create new memory region */
-	vm_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-	if (!vm_new)
+	vma_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!vma_new)
 		return NULL;
 
 	/* set new memory region */
-	*vm_new = *vm;
-	vm_new->vm_start = new_address;
-	vm_new->vm_end = new_address + new_size;
-	if (vm_new->vm_inode)
-		vm_new->vm_inode->i_count++;
-	if (vm_new->vm_inode && vm_new->vm_ops && vm_new->vm_ops->open)
-		vm_new->vm_ops->open(vm_new);
+	*vma_new = *vma;
+	vma_new->vm_start = new_address;
+	vma_new->vm_end = new_address + new_size;
+	if (vma_new->vm_inode)
+		vma_new->vm_inode->i_count++;
+	if (vma_new->vm_inode && vma_new->vm_ops && vma_new->vm_ops->open)
+		vma_new->vm_ops->open(vma_new);
 
 	/* unmap existing pages */
 	do_munmap(new_address, new_size);
 
 	/* add it to the list */
-	vm_prev = find_vma_prev(current_task, vm_new->vm_start);
-	if (vm_prev)
-		list_add(&vm_new->list, &vm_prev->list);
+	vma_prev = find_vma_prev(current_task, vma_new->vm_start);
+	if (vma_prev)
+		list_add(&vma_new->list, &vma_prev->list);
 	else
-		list_add(&vm_new->list, &current_task->mm->vm_list);
+		list_add(&vma_new->list, &current_task->mm->vm_list);
 
 	/* unmap old region */
 	do_munmap(old_address, old_size);
 
-	return (void *) vm_new->vm_start;
+	return (void *) vma_new->vm_start;
 }
 
 /*
@@ -130,25 +130,25 @@ void *move_vma(struct vm_area *vm, uint32_t old_address, size_t old_size, uint32
  */
 static struct vm_area *generic_mmap(uint32_t addr, size_t len, int prot, int flags, struct file *filp, off_t offset)
 {
-	struct vm_area *vm, *vm_prev;
+	struct vm_area *vma, *vma_prev;
 	int ret;
 
 	/* create new memory region */
-	vm = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-	if (!vm)
+	vma = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!vma)
 		return NULL;
 
 	/* set new memory region */
-	memset(vm, 0, sizeof(struct vm_area));
-	vm->vm_start = addr;
-	vm->vm_end = addr + len;
-	vm->vm_flags = prot & (VM_READ | VM_WRITE | VM_EXEC);
-	vm->vm_flags |= flags & (VM_GROWSDOWN | VM_DENYWRITE | VM_EXECUTABLE);
-	vm->vm_page_prot = protection_map[vm->vm_flags & 0x0F];
-	vm->vm_offset = offset;
-	vm->vm_inode = NULL;
-	vm->vm_ops = NULL;
-	vm->vm_mm = current_task->mm;
+	memset(vma, 0, sizeof(struct vm_area));
+	vma->vm_start = addr;
+	vma->vm_end = addr + len;
+	vma->vm_flags = prot & (VM_READ | VM_WRITE | VM_EXEC);
+	vma->vm_flags |= flags & (VM_GROWSDOWN | VM_DENYWRITE | VM_EXECUTABLE);
+	vma->vm_page_prot = protection_map[vma->vm_flags & 0x0F];
+	vma->vm_offset = offset;
+	vma->vm_inode = NULL;
+	vma->vm_ops = NULL;
+	vma->vm_mm = current_task->mm;
 
 	/* unmap existing pages */
 	do_munmap(addr, len);
@@ -157,27 +157,27 @@ static struct vm_area *generic_mmap(uint32_t addr, size_t len, int prot, int fla
 	if (filp) {
 		/* shared mapping */
 		if (flags & MAP_SHARED)
-			vm->vm_flags |= VM_SHARED;
+			vma->vm_flags |= VM_SHARED;
 
 		/* mmap file */
-		ret = filp->f_op->mmap(filp->f_inode, vm);
+		ret = filp->f_op->mmap(filp->f_inode, vma);
 		if (ret)
 			goto err;
 
 		/* add memory region to inode */
-		list_add_tail(&vm->list_share, &filp->f_inode->i_mmap);
+		list_add_tail(&vma->list_share, &filp->f_inode->i_mmap);
 	}
 
 	/* add it to the list */
-	vm_prev = find_vma_prev(current_task, vm->vm_start);
-	if (vm_prev)
-		list_add(&vm->list, &vm_prev->list);
+	vma_prev = find_vma_prev(current_task, vma->vm_start);
+	if (vma_prev)
+		list_add(&vma->list, &vma_prev->list);
 	else
-		list_add(&vm->list, &current_task->mm->vm_list);
+		list_add(&vma->list, &current_task->mm->vm_list);
 
-	return vm;
+	return vma;
 err:
-	kfree(vm);
+	kfree(vma);
 	return NULL;
 }
 
@@ -186,7 +186,7 @@ err:
  */
 static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 {
-	struct vm_area *vm, *vm_prev, *vm_next = NULL;
+	struct vm_area *vma, *vma_prev, *vm_next = NULL;
 	struct list_head *pos;
 
 	/* fixed address */
@@ -201,9 +201,9 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 		*addr = PAGE_ALIGN_UP(*addr);
 
 		/* find previous and next vm */
-		vm_prev = find_vma_prev(current_task, *addr);
-		if (vm_prev)
-			vm_next = list_next_entry_or_null(vm_prev, &current_task->mm->vm_list, list);
+		vma_prev = find_vma_prev(current_task, *addr);
+		if (vma_prev)
+			vm_next = list_next_entry_or_null(vma_prev, &current_task->mm->vm_list, list);
 		else if (!list_empty(&current_task->mm->vm_list))
 			vm_next = list_first_entry(&current_task->mm->vm_list, struct vm_area, list);
 
@@ -215,11 +215,11 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 	/* find a memory region */
 	*addr = UMAP_START;
 	list_for_each(pos, &current_task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area, list);
-		if (*addr + len <= vm->vm_start)
+		vma = list_entry(pos, struct vm_area, list);
+		if (*addr + len <= vma->vm_start)
 			break;
-		if (vm->vm_end > *addr)
-			*addr = vm->vm_end;
+		if (vma->vm_end > *addr)
+			*addr = vma->vm_end;
 	}
 
 	/* check memory map overflow */
@@ -234,7 +234,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
  */
 void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file *filp, off_t offset)
 {
-	struct vm_area *vm = NULL;
+	struct vm_area *vma = NULL;
 
 	/* check flags */
 	if (!filp && (flags & MAP_TYPE) != MAP_PRIVATE)
@@ -254,67 +254,67 @@ void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file *filp,
 		return NULL;
 
 	/* create a new area */
-	vm = generic_mmap(addr, len, prot, flags, filp, offset);
-	if (!vm)
+	vma = generic_mmap(addr, len, prot, flags, filp, offset);
+	if (!vma)
 		return NULL;
 
-	return (void *) vm->vm_start;
+	return (void *) vma->vm_start;
 }
 
 /*
  * Unmap a region (create a hole if needed).
  */
-static int unmap_fixup(struct vm_area *vm, uint32_t addr, size_t len)
+static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 {
 	uint32_t end = addr + len;
-	struct vm_area *vm_new;
+	struct vm_area *vma_new;
 
 	/* unmap the whole area */
-	if (addr == vm->vm_start && end == vm->vm_end) {
-		if (vm->vm_ops && vm->vm_ops->close)
-			vm->vm_ops->close(vm);
-		if (vm->vm_inode)
-			iput(vm->vm_inode);
+	if (addr == vma->vm_start && end == vma->vm_end) {
+		if (vma->vm_ops && vma->vm_ops->close)
+			vma->vm_ops->close(vma);
+		if (vma->vm_inode)
+			iput(vma->vm_inode);
 
-		list_del(&vm->list);
-		kfree(vm);
+		list_del(&vma->list);
+		kfree(vma);
 		return 0;
 	}
 
 	/* shrink area or create a hole */
-	if (end == vm->vm_end) {
-		vm->vm_end = addr;
-	} else if (addr == vm->vm_start) {
-		vm->vm_offset += (end - vm->vm_start);
-		vm->vm_start = end;
+	if (end == vma->vm_end) {
+		vma->vm_end = addr;
+	} else if (addr == vma->vm_start) {
+		vma->vm_offset += (end - vma->vm_start);
+		vma->vm_start = end;
 	} else {
 		/* create new memory region */
-		vm_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-		if (!vm_new)
+		vma_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+		if (!vma_new)
 			return -ENOMEM;
 
 		/* set new memory region = after the hole */
-		memset(vm_new, 0, sizeof(struct vm_area));
-		vm_new->vm_start = end;
-		vm_new->vm_end = vm->vm_end;
-		vm_new->vm_flags = vm->vm_flags;
-		vm_new->vm_page_prot = vm->vm_page_prot;
-		vm_new->vm_offset = vm->vm_offset + (end - vm->vm_start);
-		vm_new->vm_inode = vm->vm_inode;
-		vm_new->vm_ops = vm->vm_ops;
-		vm_new->vm_mm = vm->vm_mm;
+		memset(vma_new, 0, sizeof(struct vm_area));
+		vma_new->vm_start = end;
+		vma_new->vm_end = vma->vm_end;
+		vma_new->vm_flags = vma->vm_flags;
+		vma_new->vm_page_prot = vma->vm_page_prot;
+		vma_new->vm_offset = vma->vm_offset + (end - vma->vm_start);
+		vma_new->vm_inode = vma->vm_inode;
+		vma_new->vm_ops = vma->vm_ops;
+		vma_new->vm_mm = vma->vm_mm;
 
 		/* open region */
-		if (vm_new->vm_inode)
-			vm_new->vm_inode->i_count++;
-		if (vm_new->vm_ops && vm_new->vm_ops->open)
-			vm_new->vm_ops->open(vm_new);
+		if (vma_new->vm_inode)
+			vma_new->vm_inode->i_count++;
+		if (vma_new->vm_ops && vma_new->vm_ops->open)
+			vma_new->vm_ops->open(vma_new);
 
 		/* add new memory region after old one */
-		list_add(&vm_new->list, &vm->list);
+		list_add(&vma_new->list, &vma->list);
 
 		/* update old memory region */
-		vm->vm_end = addr;
+		vma->vm_end = addr;
 	}
 
 	return 0;
@@ -327,7 +327,7 @@ int do_munmap(uint32_t addr, size_t len)
 {
 	struct list_head *pos, *n;
 	uint32_t start, end, nr;
-	struct vm_area *vm;
+	struct vm_area *vma;
 
 	/* add must be page aligned */
 	if (addr & ~PAGE_MASK)
@@ -338,18 +338,22 @@ int do_munmap(uint32_t addr, size_t len)
 
 	/* find regions to unmap */
 	list_for_each_safe(pos, n, &current_task->mm->vm_list) {
-		vm = list_entry(pos, struct vm_area, list);
-		if (addr >= vm->vm_end)
+		vma = list_entry(pos, struct vm_area, list);
+		if (addr >= vma->vm_end)
 			continue;
-		if (addr + len <= vm->vm_start)
+		if (addr + len <= vma->vm_start)
 			break;
 
 		/* compute area to unmap */
-		start = addr < vm->vm_start ? vm->vm_start : addr;
-		end = addr + len > vm->vm_end ? vm->vm_end : addr + len;
+		start = addr < vma->vm_start ? vma->vm_start : addr;
+		end = addr + len > vma->vm_end ? vma->vm_end : addr + len;
+
+		/* unmap */
+		if (vma->vm_ops && vma->vm_ops->unmap)
+			vma->vm_ops->unmap(vma, start, end - start);
 
 		/* unmap it */
-		unmap_fixup(vm, start, end - start);
+		unmap_fixup(vma, start, end - start);
 	}
 
 	/* unmap region */
@@ -464,79 +468,79 @@ err:
 /*
  * Change memory protection.
  */
-static int mprotect_fixup_all(struct vm_area *vm, uint16_t newflags, uint32_t newprot)
+static int mprotect_fixup_all(struct vm_area *vma, uint16_t newflags, uint32_t newprot)
 {
-	vm->vm_flags = newflags;
-	vm->vm_page_prot = newprot;
+	vma->vm_flags = newflags;
+	vma->vm_page_prot = newprot;
 	return 0;
 }
 
 /*
- * Change memory protection (start of vm).
+ * Change memory protection (start of vma).
  */
-static int mprotect_fixup_start(struct vm_area *vm, uint32_t end, uint16_t newflags, uint32_t newprot)
+static int mprotect_fixup_start(struct vm_area *vma, uint32_t end, uint16_t newflags, uint32_t newprot)
 {
-	struct vm_area *vm_new;
+	struct vm_area *vma_new;
 
 	/* create new memory region */
-	vm_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-	if (!vm_new)
+	vma_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!vma_new)
 		return -ENOMEM;
 
 	/* set new memory region */
-	*vm_new = *vm;
-	if (vm_new->vm_inode)
-		vm_new->vm_inode->i_count++;
-	vm_new->vm_flags = newflags;
-	vm_new->vm_page_prot = newprot;
+	*vma_new = *vma;
+	if (vma_new->vm_inode)
+		vma_new->vm_inode->i_count++;
+	vma_new->vm_flags = newflags;
+	vma_new->vm_page_prot = newprot;
 
 	/* split region */
-	vm_new->vm_end = end;
-	vm->vm_start = end;
-	vm->vm_offset += vm->vm_start - vm_new->vm_start;
+	vma_new->vm_end = end;
+	vma->vm_start = end;
+	vma->vm_offset += vma->vm_start - vma_new->vm_start;
 
 	/* add new memory region before old one */
-	list_add_tail(&vm_new->list, &vm->list);
+	list_add_tail(&vma_new->list, &vma->list);
 
 	return 0;
 }
 
 /*
- * Change memory protection (end of vm).
+ * Change memory protection (end of vma).
  */
-static int mprotect_fixup_end(struct vm_area *vm, uint32_t start, uint16_t newflags, uint32_t newprot)
+static int mprotect_fixup_end(struct vm_area *vma, uint32_t start, uint16_t newflags, uint32_t newprot)
 {
-	struct vm_area *vm_new;
+	struct vm_area *vma_new;
 
 	/* create new memory region */
-	vm_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-	if (!vm_new)
+	vma_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!vma_new)
 		return -ENOMEM;
 
 	/* set new memory region */
-	*vm_new = *vm;
-	if (vm_new->vm_inode)
-		vm_new->vm_inode->i_count++;
-	vm_new->vm_flags = newflags;
-	vm_new->vm_page_prot = newprot;
+	*vma_new = *vma;
+	if (vma_new->vm_inode)
+		vma_new->vm_inode->i_count++;
+	vma_new->vm_flags = newflags;
+	vma_new->vm_page_prot = newprot;
 
 	/* split region */
-	vm->vm_end = start;
-	vm_new->vm_start = start;
-	vm_new->vm_offset += vm_new->vm_start - vm->vm_start;
+	vma->vm_end = start;
+	vma_new->vm_start = start;
+	vma_new->vm_offset += vma_new->vm_start - vma->vm_start;
 
 	/* add new memory region after old one */
-	list_add(&vm_new->list, &vm->list);
+	list_add(&vma_new->list, &vma->list);
 
 	return 0;
 }
 
 /*
- * Change memory protection (middle of vm).
+ * Change memory protection (middle of vma).
  */
-static int mprotect_fixup_middle(struct vm_area *vm, uint32_t start, uint32_t end, uint16_t newflags, uint32_t newprot)
+static int mprotect_fixup_middle(struct vm_area *vma, uint32_t start, uint32_t end, uint16_t newflags, uint32_t newprot)
 {
-	UNUSED(vm);
+	UNUSED(vma);
 	UNUSED(start);
 	UNUSED(end);
 	UNUSED(newflags);
@@ -548,27 +552,27 @@ static int mprotect_fixup_middle(struct vm_area *vm, uint32_t start, uint32_t en
 /*
  * Change memory protection (split memory region if needed).
  */
-static int mprotect_fixup(struct vm_area *vm, uint32_t start, uint32_t end, uint16_t newflags)
+static int mprotect_fixup(struct vm_area *vma, uint32_t start, uint32_t end, uint16_t newflags)
 {
 	uint32_t newprot;
 	int ret;
 
 	/* nothing to do */
-	if (vm->vm_flags == newflags)
+	if (vma->vm_flags == newflags)
 		return 0;
 
 	/* get new protection */
 	newprot = protection_map[newflags & 0x0F];
 
 	/* fix and split */
-	if (vm->vm_start == start && vm->vm_end == end)
-		ret = mprotect_fixup_all(vm, newflags, newprot);
-	else if (vm->vm_start == start)
-		ret = mprotect_fixup_start(vm, end, newflags, newprot);
-	else if (vm->vm_end == end)
-		ret = mprotect_fixup_end(vm, start, newflags, newprot);
+	if (vma->vm_start == start && vma->vm_end == end)
+		ret = mprotect_fixup_all(vma, newflags, newprot);
+	else if (vma->vm_start == start)
+		ret = mprotect_fixup_start(vma, end, newflags, newprot);
+	else if (vma->vm_end == end)
+		ret = mprotect_fixup_end(vma, start, newflags, newprot);
 	else
-		ret = mprotect_fixup_middle(vm, start, end, newflags, newprot);
+		ret = mprotect_fixup_middle(vma, start, end, newflags, newprot);
 
 	return ret;
 }
@@ -578,7 +582,7 @@ static int mprotect_fixup(struct vm_area *vm, uint32_t start, uint32_t end, uint
  */
 int do_mprotect(uint32_t start, size_t size, int prot)
 {
-	struct vm_area *vm, *next;
+	struct vm_area *vma, *next;
 	uint32_t nstart, end, tmp;
 	uint16_t newflags;
 	int ret = 0;
@@ -604,34 +608,34 @@ int do_mprotect(uint32_t start, size_t size, int prot)
 		return 0;
 
 	/* find first memory region */
-	vm = find_vma(current_task, start);
-	if (!vm)
+	vma = find_vma(current_task, start);
+	if (!vma)
 		return -EFAULT;
 
 	/* change memory regions */
 	for (nstart = start;;) {
 		/* compute new flags */
-		newflags = prot | (vm->vm_flags & ~(PROT_READ | PROT_WRITE | PROT_EXEC));
+		newflags = prot | (vma->vm_flags & ~(PROT_READ | PROT_WRITE | PROT_EXEC));
 
 		/* last memory region */
-		if (vm->vm_end >= end) {
-			ret = mprotect_fixup(vm, nstart, end, newflags);
+		if (vma->vm_end >= end) {
+			ret = mprotect_fixup(vma, nstart, end, newflags);
 			break;
 		}
 
 		/* protect memory region */
-		tmp = vm->vm_end;
-		next = list_next_entry_or_null(vm, &current_task->mm->vm_list, list);
-		ret = mprotect_fixup(vm, nstart, tmp, newflags);
+		tmp = vma->vm_end;
+		next = list_next_entry_or_null(vma, &current_task->mm->vm_list, list);
+		ret = mprotect_fixup(vma, nstart, tmp, newflags);
 		if (ret)
 			break;
 
 		/* go to next memory region */
 		nstart = tmp;
-		vm = next;
+		vma = next;
 
 		/* hole or no more regions */
-		if (!vm || vm->vm_start != nstart) {
+		if (!vma || vma->vm_start != nstart) {
 			ret = -EFAULT;
 			break;
 		}

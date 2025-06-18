@@ -30,6 +30,10 @@
 #define PROT_EXEC		0x4		/* page can be executed */
 #define PROT_NONE		0x0		/* page can not be accessed */
 
+#define MS_ASYNC		1
+#define MS_INVALIDATE		2
+#define MS_SYNC			4
+
 void *do_mmap(uint32_t addr, size_t length, int prot, int flags, struct file *filp, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
 void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address);

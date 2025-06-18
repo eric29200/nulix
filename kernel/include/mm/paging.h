@@ -86,6 +86,7 @@ typedef uint32_t pte_t;
 #define pte_prot(pte)			((pte) & (PAGE_SIZE - 1))
 #define pte_clear(pte)			(*(pte) = 0)
 #define pte_none(pte)			(!(pte))
+#define pte_dirty(pte)			((pte) & PAGE_DIRTY)
 #define pte_present(pte)		((pte) & (PAGE_PRESENT | PAGE_PROTNONE))
 #define pte_offset(pmd, addr) 		((pte_t *) (pmd_page(*pmd) + ((addr >> 10) & ((PTRS_PER_PTE - 1) << 2))))
 
