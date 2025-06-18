@@ -201,6 +201,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vm_child->vm_offset = vm_parent->vm_offset;
 			vm_child->vm_inode = vm_parent->vm_inode;
 			vm_child->vm_ops = vm_parent->vm_ops;
+			vm_child->vm_mm = mm_new;
 			list_add_tail(&vm_child->list, &mm_new->vm_list);
 
 			/* copy pages */

@@ -24,6 +24,7 @@ struct vm_area {
 	uint32_t			vm_page_prot;
 	off_t				vm_offset;
 	struct inode *			vm_inode;
+	struct mm_struct *		vm_mm;
 	struct vm_operations *		vm_ops;
 	struct list_head		list;
 	struct list_head		list_share;

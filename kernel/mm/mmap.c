@@ -148,6 +148,7 @@ static struct vm_area *generic_mmap(uint32_t addr, size_t len, int prot, int fla
 	vm->vm_offset = offset;
 	vm->vm_inode = NULL;
 	vm->vm_ops = NULL;
+	vm->vm_mm = current_task->mm;
 
 	/* unmap existing pages */
 	do_munmap(addr, len);
@@ -301,6 +302,7 @@ static int unmap_fixup(struct vm_area *vm, uint32_t addr, size_t len)
 		vm_new->vm_offset = vm->vm_offset + (end - vm->vm_start);
 		vm_new->vm_inode = vm->vm_inode;
 		vm_new->vm_ops = vm->vm_ops;
+		vm_new->vm_mm = vm->vm_mm;
 
 		/* open region */
 		if (vm_new->vm_inode)

@@ -300,7 +300,7 @@ size_t zap_page_range(pgd_t *pgd, uint32_t address, uint32_t size)
 /*
  * Anonymous page mapping.
  */
-static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte, int write_access)
+static int do_anonymous_page(struct vm_area *vma, pte_t *pte, int write_access)
 {
 	struct page *page;
 
@@ -318,7 +318,7 @@ static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte,
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
 	/* update memory size */
-	task->mm->rss++;
+	vma->vm_mm->rss++;
 
 	return 0;
 }
@@ -326,7 +326,7 @@ static int do_anonymous_page(struct task *task, struct vm_area *vma, pte_t *pte,
 /*
  * Handle a no page fault.
  */
-static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, int write_access, pte_t *pte)
+static int do_no_page(struct vm_area *vma, uint32_t address, int write_access, pte_t *pte)
 {
 	struct page *page, *new_page;
 
@@ -335,7 +335,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 
 	/* anonymous page mapping */
 	if (!vma->vm_ops || !vma->vm_ops->nopage)
-		return do_anonymous_page(task, vma, pte, write_access);
+		return do_anonymous_page(vma, pte, write_access);
 
 	/* specific mapping */
 	new_page = vma->vm_ops->nopage(vma, address);
@@ -365,7 +365,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
 
 	/* update memory size */
-	task->mm->rss++;
+	vma->vm_mm->rss++;
 
 	return 0;
 }
@@ -373,7 +373,7 @@ static int do_no_page(struct task *task, struct vm_area *vma, uint32_t address, 
 /*
  * Handle a read only page fault.
  */
-static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address, pte_t *pte)
+static int do_wp_page(struct vm_area *vma, uint32_t address, pte_t *pte)
 {
 	struct page *old_page, *new_page;
 
@@ -383,7 +383,7 @@ static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address, 
 	/* only one user make page table entry writable */
 	if (old_page->count == 1) {
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
-		flush_tlb_page(task->mm->pgd, address);
+		flush_tlb_page(vma->vm_mm->pgd, address);
 		return 0;
 	}
 
@@ -397,13 +397,13 @@ static int do_wp_page(struct task *task, struct vm_area *vma, uint32_t address, 
 
 	/* set pte */
 	*pte = pte_mkdirty(pte_mkwrite(mk_pte(new_page, vma->vm_page_prot)));
-	flush_tlb_page(task->mm->pgd, address);
+	flush_tlb_page(vma->vm_mm->pgd, address);
 
 	/* free old page */
 	__free_page(old_page);
 
 	/* update memory size */
-	task->mm->rss++;
+	vma->vm_mm->rss++;
 
 	return 0;
 }
@@ -429,15 +429,15 @@ static int expand_stack(struct vm_area *vma, uint32_t addr)
 /*
  * Handle memory fault.
  */
-static int handle_pte_fault(struct task *task, struct vm_area *vma, uint32_t address, int write_access, pte_t *pte)
+static int handle_pte_fault(struct vm_area *vma, uint32_t address, int write_access, pte_t *pte)
 {
 	/* page not present */
 	if (!pte_present(*pte))
-		return do_no_page(task, vma, address, write_access, pte);
+		return do_no_page(vma, address, write_access, pte);
 
 	/* write access */
 	if (write_access)
-		return do_wp_page(task, vma, address, pte);
+		return do_wp_page(vma, address, pte);
 
 	return 0;
 }
@@ -445,14 +445,14 @@ static int handle_pte_fault(struct task *task, struct vm_area *vma, uint32_t add
 /*
  * Handle memory fault.
  */
-static int handle_mm_fault(struct task *task, struct vm_area *vma, uint32_t address, int write_access)
+static int handle_mm_fault(struct vm_area *vma, uint32_t address, int write_access)
 {
 	pgd_t *pgd;
 	pmd_t *pmd;
 	pte_t *pte;
 
 	/* get page table entry */
-	pgd = pgd_offset(task->mm->pgd, address);
+	pgd = pgd_offset(vma->vm_mm->pgd, address);
 	pmd = pmd_alloc(pgd, address);
 	if (!pmd)
 		return -ENOMEM;
@@ -461,7 +461,7 @@ static int handle_mm_fault(struct task *task, struct vm_area *vma, uint32_t addr
 		return -ENOMEM;
 
 	/* handle fault */
-	return handle_pte_fault(task, vma, address, write_access, pte);
+	return handle_pte_fault(vma, address, write_access, pte);
 }
 
 /*
@@ -511,7 +511,7 @@ good_area:
 		goto bad_area;
 
 	/* handle fault */
-	ret = handle_mm_fault(current_task, vma, fault_addr, write_access);
+	ret = handle_mm_fault(vma, fault_addr, write_access);
 	if (ret)
 		goto bad_area;
 
