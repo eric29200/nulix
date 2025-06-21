@@ -98,6 +98,7 @@ static int filemap_writepage(struct vm_area *vma, struct page *page)
 
 	/* commit write */
 	ret = inode->i_op->commit_write(inode, page, 0, PAGE_SIZE);
+	execute_block_requests();
 out:
 	return ret;
 }
@@ -204,7 +205,6 @@ static int filemap_sync(struct vm_area *vma, uint32_t address, size_t size, uint
 	}
 
 	flush_tlb(vma->vm_mm->pgd);
-	execute_block_requests();
 
 	return ret;
 }
