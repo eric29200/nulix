@@ -80,7 +80,7 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 /*
  * Write a page.
  */
-static int filemap_write_page(struct vm_area *vma, struct page *page)
+static int filemap_writepage(struct vm_area *vma, struct page *page)
 {
 	struct inode *inode = vma->vm_inode;
 	int ret;
@@ -88,14 +88,12 @@ static int filemap_write_page(struct vm_area *vma, struct page *page)
 	/* prepare write */
 	ret = inode->i_op->prepare_write(inode, page, 0, PAGE_SIZE);
 	if (ret)
-		return 0;
+		goto out;
 
 	/* commit write*/
 	ret = inode->i_op->commit_write(inode, page, 0, PAGE_SIZE);
-	if (ret)
-		return 0;
-
-	return 1;
+out:
+	return ret;
 }
 
 /*
@@ -124,7 +122,7 @@ static int filemap_sync_pte(pte_t *pte, struct vm_area *vma, uint32_t address, u
 	/* write page */
 	page = pte_page(*pte);
 	page->count++;
-	ret = filemap_write_page(vma, page);
+	ret = filemap_writepage(vma, page);
 	__free_page(page);
 
 	return ret;
