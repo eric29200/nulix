@@ -444,12 +444,13 @@ void task_exit_mmap(struct mm_struct *mm)
 /*
  * Exit memory.
  */
-static void task_exit_mm(struct task *task)
+void task_exit_mm(struct task *task)
 {
 	struct mm_struct *mm = task->mm;
 
 	if (mm) {
 		task->mm = NULL;
+		task_release_mmap(task);
 
 		if (--mm->count <= 0) {
 			/* free areas */
@@ -667,9 +668,6 @@ void destroy_task(struct task *task)
 
 	/* free kernel stack */
 	kfree((void *) (task->thread.kernel_stack - STACK_SIZE));
-
-	/* exit memory */
-	task_exit_mm(task);
 
 	/* free task */
 	kfree(task);
