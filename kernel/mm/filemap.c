@@ -85,12 +85,18 @@ static int filemap_writepage(struct vm_area *vma, struct page *page)
 	struct inode *inode = vma->vm_inode;
 	int ret;
 
+	/* map page in kernel address space */
+	if (!kmap(page))
+		return -ENOMEM;
+
 	/* prepare write */
 	ret = inode->i_op->prepare_write(inode, page, 0, PAGE_SIZE);
-	if (ret)
+	if (ret) {
+		kunmap(page);
 		goto out;
+	}
 
-	/* commit write*/
+	/* commit write */
 	ret = inode->i_op->commit_write(inode, page, 0, PAGE_SIZE);
 out:
 	return ret;

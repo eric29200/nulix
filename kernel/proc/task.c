@@ -449,7 +449,7 @@ void task_exit_mm(struct task *task)
 	struct mm_struct *mm = task->mm;
 
 	if (mm) {
-		task->mm = NULL;
+		/* release mmap */
 		task_release_mmap(task);
 
 		if (--mm->count <= 0) {
@@ -466,6 +466,8 @@ void task_exit_mm(struct task *task)
 
 			kfree(mm);
 		}
+
+		task->mm = NULL;
 	}
 }
 
