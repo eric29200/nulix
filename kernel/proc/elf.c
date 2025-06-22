@@ -294,7 +294,7 @@ err_sig:
 int elf_load(const char *path, struct binargs *bargs)
 {
 	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
-	char name[TASK_NAME_LEN], *buf = NULL, *elf_intepreter = NULL;
+	char name[TASK_NAME_LEN], *buf = NULL, *elf_interpreter = NULL;
 	int fd, off, ret, elf_type, elf_prot, load_addr_set = 0;
 	struct elf_prog_header *ph, *last_ph = NULL;
 	struct elf_header *elf_header;
@@ -352,11 +352,12 @@ int elf_load(const char *path, struct binargs *bargs)
 		ph = (struct elf_prog_header *) (buf + off);
 		if (ph->p_type == PT_INTERP) {
 			/* allocate interpreter path */
-			elf_intepreter = (char *) kmalloc(ph->p_filesz);
-			if (!elf_intepreter) {
+			elf_interpreter = (char *) kmalloc(ph->p_filesz);
+			if (!elf_interpreter) {
 				ret = -ENOMEM;
 				goto out;
 			}
+			memset(elf_interpreter, 0, ph->p_filesz);
 
 			/* seek to interpreter path */
 			ret = do_lseek(filp, ph->p_offset, SEEK_SET);
@@ -364,7 +365,7 @@ int elf_load(const char *path, struct binargs *bargs)
 				goto out;
 
 			/* read interpreter path */
-			if ((size_t) do_read(filp, elf_intepreter, ph->p_filesz) != ph->p_filesz) {
+			if ((size_t) do_read(filp, elf_interpreter, ph->p_filesz) != ph->p_filesz) {
 				ret = -EINVAL;
 				goto out;
 			}
@@ -459,8 +460,8 @@ int elf_load(const char *path, struct binargs *bargs)
 	}
 
 	/* load ELF interpreter */
-	if (elf_intepreter) {
-		ret = elf_load_interpreter(elf_intepreter, &interp_load_addr, &elf_entry);
+	if (elf_interpreter) {
+		ret = elf_load_interpreter(elf_interpreter, &interp_load_addr, &elf_entry);
 		if (ret)
 			goto out;
 	}
@@ -494,8 +495,8 @@ int elf_load(const char *path, struct binargs *bargs)
 out:
 	if (current_task->files->filp[fd])
 		sys_close(fd);
-	if (elf_intepreter)
-		kfree(elf_intepreter);
+	if (elf_interpreter)
+		kfree(elf_interpreter);
 	if (buf)
 		free_page(buf);
 	return ret;
