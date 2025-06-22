@@ -357,7 +357,6 @@ int elf_load(const char *path, struct binargs *bargs)
 				ret = -ENOMEM;
 				goto out;
 			}
-			memset(elf_interpreter, 0, ph->p_filesz);
 
 			/* seek to interpreter path */
 			ret = do_lseek(filp, ph->p_offset, SEEK_SET);
