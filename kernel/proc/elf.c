@@ -114,7 +114,8 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
-	filp = current_task->files->filp[fd];
+	filp = fget(fd);
+	filp->f_count++;
 
 	/* get a free page */
 	buf = (char *) get_free_page();
