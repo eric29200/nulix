@@ -242,8 +242,6 @@ static void end_buffer_io_async(struct buffer_head *bh, int uptodate)
 	/* free buffers */
 	kunmap(bh->b_page);
 	free_async_buffers(bh);
-
-	return;
 }
 
 /*
