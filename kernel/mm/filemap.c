@@ -71,9 +71,6 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 	/* wait on page */
 	execute_block_requests();
 
-	/* unmap page */
-	kunmap(page);
-
 	return page;
 }
 
