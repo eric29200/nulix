@@ -59,19 +59,22 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 		return page;
 
 	/* map page in kernel address space */
-	kmap(page);
+	if (!kmap(page))
+		goto err_kmap;
 
 	/* read page */
-	if (inode->i_op->readpage(inode, page)) {
-		kunmap(page);
-		__free_page(page);
-		return NULL;
-	}
+	if (inode->i_op->readpage(inode, page))
+		goto err_read;
 
 	/* wait on page */
 	execute_block_requests();
 
 	return page;
+err_read:
+	kunmap(page);
+err_kmap:
+	__free_page(page);
+	return NULL;
 }
 
 /*
@@ -95,7 +98,6 @@ static int filemap_writepage(struct vm_area *vma, struct page *page)
 
 	/* commit write */
 	ret = inode->i_op->commit_write(inode, page, 0, PAGE_SIZE);
-	execute_block_requests();
 out:
 	return ret;
 }
