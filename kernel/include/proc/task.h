@@ -167,7 +167,6 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm);
 void task_exit_signals(struct task *task);
 void task_exit_fs(struct task *task);
 void task_exit_files(struct task *task);
-void task_exit_mm(struct task *task);
 void task_exit_mmap(struct mm_struct *mm);
 void task_release_mmap(struct task *task);
 int task_in_group(struct task *task, gid_t gid);

@@ -22,7 +22,7 @@ void sys_exit(int status)
 	task_exit_signals(current_task);
 	task_exit_files(current_task);
 	task_exit_fs(current_task);
-	task_exit_mm(current_task);
+	task_release_mmap(current_task);
 
 	/* mark task terminated and reschedule */
 	current_task->state = TASK_ZOMBIE;
