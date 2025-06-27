@@ -493,7 +493,7 @@ void truncate_inode_pages(struct inode *inode, off_t start)
 /*
  * Shrink mmap = try to free a page.
  */
-int shrink_mmap()
+int shrink_mmap(int count)
 {
 	static size_t clock = 0;
 	struct page *page;
@@ -514,17 +514,22 @@ int shrink_mmap()
 			continue;
 
 		/* is it a buffer cached page ? */
-		if (page->buffers && try_to_free_buffers(page))
-			return 1;
+		if (page->buffers) {
+			if (try_to_free_buffers(page))
+				if (!--count)
+					break;
+
+			continue;
+		}
 
 		/* free cached page */
 		if (page->inode) {
 			remove_from_page_cache(page);
 			__free_page(page);
-			return 1;
+			if (!--count)
+				break;
 		}
-
 	}
 
-	return 0;
+	return count;
 }

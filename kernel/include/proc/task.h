@@ -43,6 +43,7 @@ struct mm_struct {
 	uint32_t			rss;				/* resident memory */
 	struct desc_struct *		ldt;				/* Local Descriptor Table */
 	size_t				ldt_size;			/* Local Descriptor Table size */
+	uint32_t			swap_address;			/* swap address */
 	struct list_head		vm_list;			/* virtual memory areas */
 };
 

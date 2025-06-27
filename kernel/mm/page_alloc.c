@@ -284,14 +284,18 @@ static int reclaim_pages()
 	bsync();
 
 	/* try to free pages */
-	while (shrink_mmap())
-		if (!--count)
-			break;
+	count = shrink_mmap(count);
+	if (!count)
+		goto done;
+
+	/* try to swap out */
+	count = swap_out(count);
 
 	/* no way to free page */
 	if (count == SWAP_CLUSTER_MAX)
 		return 0;
 
+done:
 	/* merge free pages */
 	merge_free_pages();
 	return 1;
