@@ -42,7 +42,7 @@ static int swap_out_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, uint3
 	pte_t *pte;
 
 	if (pmd_none(*pmd))
-		return 0;
+		return count;
 
 	pte = pte_offset(pmd, address);
 
@@ -100,7 +100,7 @@ static int swap_out_vma(struct vm_area *vma, uint32_t address, int count)
 
 	/* don't try to swap out locked regions */
 	if (vma->vm_flags & VM_LOCKED)
-		return 0;
+		return count;
 
 	pgd = pgd_offset(vma->vm_mm->pgd, address);
 
