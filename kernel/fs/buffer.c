@@ -13,11 +13,12 @@
 #include <dev.h>
 
 #define NR_BUFFERS_MAX			65521
-#define MAX_UNUSED_BUFFERS		32
 #define NR_SIZES			4
 #define BUFSIZE_INDEX(size)		(buffersize_index[(size) >> 9])
-#define NBUF				32
+#define NBUF				64
 #define MAX_BUF_PER_PAGE		(PAGE_SIZE / 512)
+#define NR_RESERVED			(4 * (MAX_BUF_PER_PAGE))
+#define MAX_UNUSED_BUFFERS		((NR_RESERVED) + 20)
 
 #define HASH_BITS			12
 #define HASH_SIZE			(1 << HASH_BITS)
@@ -267,12 +268,12 @@ static void put_unused_buffer_head(struct buffer_head *bh)
 /*
  * Get an unused buffer.
  */
-static struct buffer_head *get_unused_buffer_head()
+static struct buffer_head *get_unused_buffer_head(int async)
 {
 	struct buffer_head *bh;
 
 	/* try to reuse a buffer */
-	if (!list_empty(&unused_list)) {
+	if (nr_unused_buffer_heads > NR_RESERVED || (async && nr_unused_buffer_heads > 0)) {
 		bh = list_first_entry(&unused_list, struct buffer_head, b_list);
 		list_del(&bh->b_list);
 		list_add(&bh->b_list, &used_list);
@@ -296,7 +297,7 @@ static struct buffer_head *get_unused_buffer_head()
 /*
  * Create new buffers.
  */
-static struct buffer_head *create_buffers(struct page *page, struct inode *inode, size_t size)
+static struct buffer_head *create_buffers(struct page *page, struct inode *inode, size_t size, int async)
 {
 	struct buffer_head *bh, *head, *tail;
 	int offset;
@@ -306,7 +307,7 @@ static struct buffer_head *create_buffers(struct page *page, struct inode *inode
 	tail = NULL;
 	for (offset = PAGE_SIZE - size; offset >= 0; offset -= size) {
 		/* get an unused buffer */
-		bh = get_unused_buffer_head();
+		bh = get_unused_buffer_head(async);
 		if (!bh)
 			goto err;
 
@@ -359,7 +360,7 @@ static int grow_buffers(size_t size)
 
 	/* create buffers */
 	if (!page->buffers) {
-		if (!create_buffers(page, NULL, size)) {
+		if (!create_buffers(page, NULL, size, 0)) {
 			__free_page(page);
 			return -ENOMEM;
 		}
@@ -633,7 +634,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 	/* create buffers */
 	if (!page->buffers)
-		if (!create_buffers(page, inode, sb->s_blocksize))
+		if (!create_buffers(page, inode, sb->s_blocksize, 1))
 			return -ENOMEM;
 	bh = page->buffers;
 
@@ -689,7 +690,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 	int ret;
 
 	if (!page->buffers)
-		if (!create_buffers(page, inode, sb->s_blocksize))
+		if (!create_buffers(page, inode, sb->s_blocksize, 1))
 			return -ENOMEM;
 	head = page->buffers;
 
@@ -794,6 +795,7 @@ int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, 
  */
 void init_buffer()
 {
+	struct buffer_head *bh;
 	int i;
 
 	/* init buffers list */
@@ -803,4 +805,17 @@ void init_buffer()
 	/* init hash table */
 	for (i = 0; i < HASH_SIZE; i++)
 		buffer_hash_table[i] = NULL;
+
+	/* create some buffers */
+	for (i = 0; i < MAX_UNUSED_BUFFERS; i++) {
+		bh = (struct buffer_head *) kmalloc(sizeof(struct buffer_head));
+		if (!bh)
+			break;
+
+		memset(bh, 0, sizeof(struct buffer_head));
+		list_add(&bh->b_list, &used_list);
+		nr_buffer_heads++;
+
+		put_unused_buffer_head(bh);
+	}
 }
