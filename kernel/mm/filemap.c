@@ -489,3 +489,42 @@ void truncate_inode_pages(struct inode *inode, off_t start)
 			clear_user_highpage_partial(page, offset);
 	}
 }
+
+/*
+ * Shrink mmap = try to free a page.
+ */
+int shrink_mmap()
+{
+	static size_t clock = 0;
+	struct page *page;
+	size_t i;
+
+	for (i = 0; i < nr_pages; i++, clock++) {
+		/* reset clock */
+		if (clock >= nr_pages)
+			clock = 0;
+
+		/* skip used pages */
+		page = &page_array[clock];
+		if (page->count > 1)
+			continue;
+
+		/* skip shared memory pages */
+		if (page->inode && page->inode->i_shm == 1)
+			continue;
+
+		/* is it a buffer cached page ? */
+		if (page->buffers && try_to_free_buffers(page))
+			return 1;
+
+		/* free cached page */
+		if (page->inode) {
+			remove_from_page_cache(page);
+			__free_page(page);
+			return 1;
+		}
+
+	}
+
+	return 0;
+}

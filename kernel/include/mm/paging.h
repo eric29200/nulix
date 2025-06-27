@@ -165,7 +165,6 @@ struct page *__get_free_pages(int priority, uint32_t order);
 void __free_pages(struct page *page, uint32_t order);
 void *get_free_pages(uint32_t order);
 void free_pages(void *address, uint32_t order);
-void reclaim_pages();
 
 /* page cache */
 void init_page_cache();
@@ -173,6 +172,7 @@ struct page *find_page(struct inode *inode, off_t offset);
 void add_to_page_cache(struct page *page, struct inode *inode, off_t offset);
 void remove_from_page_cache(struct page *page);
 void truncate_inode_pages(struct inode *inode, off_t start);
+int shrink_mmap();
 
 /*
  * Get page directory offset for an address.

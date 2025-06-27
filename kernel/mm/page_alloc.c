@@ -1,5 +1,6 @@
 #include <fs/fs.h>
 #include <mm/highmem.h>
+#include <mm/swap.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -26,6 +27,8 @@ struct zone {
 /* Memory zones */
 static struct zone zones[NR_ZONES];
 uint32_t totalram_pages = 0;
+
+static int reclaim_pages();
 
 /*
  * Get number of free pages.
@@ -132,13 +135,17 @@ struct page *__get_free_pages(int priority, uint32_t order)
 			goto found;
 	}
 
-	/* reclaim pages */
-	reclaim_pages();
+	/* try to free pages */
+	for (;;) {
+		/* reclaim pages */
+		if (!reclaim_pages())
+			break;
 
-	/* retry one last time */
-	node = __find_free_node(GFP_KERNEL, order);
-	if (node)
-		goto found;
+		/* retry one more time */
+		node = __find_free_node(GFP_KERNEL, order);
+		if (node)
+			goto found;
+	}
 
 	return NULL;
 found:
@@ -269,44 +276,25 @@ static void merge_free_pages()
 /*
  * Reclaim pages, when memory is low.
  */
-void reclaim_pages()
+static int reclaim_pages()
 {
-	struct page *page;
-	uint32_t i;
+	int count = SWAP_CLUSTER_MAX;
 
 	/* synchronize buffers */
 	bsync();
 
-	for (i = 0; i < nr_pages; i++) {
-		page = &page_array[i];
+	/* try to free pages */
+	while (shrink_mmap())
+		if (!--count)
+			break;
 
-		/* skip used pages */
-		if (page->count > 1)
-			continue;
-
-		/* skip shared memory pages */
-		if (page->inode && page->inode->i_shm == 1)
-			continue;
-
-		/* is it a buffer cached page ? */
-		if (page->buffers) {
-			try_to_free_buffers(page);
-			continue;
-		}
-
-		/* is it a page cached page ? */
-		if (page->inode) {
-			/* remove from page cache */
-			remove_from_page_cache(page);
-
-			/* free page */
-			__free_page(page);
-		}
-
-	}
+	/* no way to free page */
+	if (count == SWAP_CLUSTER_MAX)
+		return 0;
 
 	/* merge free pages */
 	merge_free_pages();
+	return 1;
 }
 
 /*
