@@ -758,7 +758,7 @@ int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, 
 	struct super_block *sb = inode->i_sb;
 	uint32_t start_block, end_block;
 	size_t bhs_count = 0;
-	int partial;
+	int partial = 0;
 
 	/* for each block */
 	for (bh = head = page->buffers, start_block = 0; bh != head || !start_block; start_block = end_block, bh = bh->b_this_page) {
