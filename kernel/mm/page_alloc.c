@@ -160,7 +160,7 @@ found:
 
 	/* add remaining pages to free list */
 	if (order != node->order)
-		__add_to_free_pages(page + npages, priority, node->order_nr_pages - npages);
+		__add_to_free_pages(page + npages, page->priority, node->order_nr_pages - npages);
 
 	return page;
 }
