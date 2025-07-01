@@ -21,10 +21,17 @@ static int try_to_swap_out(struct vm_area *vma, uint32_t address, pte_t *pte)
 	if (!page->inode)
 		return 0;
 
-	/* page dirty */
-	if (pte_dirty(*pte))
+	/* clean page : drop pte */
+	if (!pte_dirty(*pte))
+		goto drop_pte;
+
+	/* swapout not implemented */
+	if (!vma->vm_ops || !vma->vm_ops->swapout)
 		return 0;
 
+	/* swap out page */
+	vma->vm_ops->swapout(vma, page);
+drop_pte:
 	/* drop pte and free page */
 	pte_clear(pte);
 	vma->vm_mm->rss--;

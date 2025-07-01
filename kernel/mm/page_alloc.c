@@ -5,6 +5,7 @@
 #include <string.h>
 
 #define NR_NODES		8
+#define NR_PAGES_LOW		32
 
 /*
  * Memory node.
@@ -28,7 +29,7 @@ struct zone {
 static struct zone zones[NR_ZONES];
 uint32_t totalram_pages = 0;
 
-static int reclaim_pages();
+static void reclaim_pages();
 
 /*
  * Get number of free pages.
@@ -135,18 +136,6 @@ struct page *__get_free_pages(int priority, uint32_t order)
 			goto found;
 	}
 
-	/* try to free pages */
-	for (;;) {
-		/* reclaim pages */
-		if (!reclaim_pages())
-			break;
-
-		/* retry one more time */
-		node = __find_free_node(GFP_KERNEL, order);
-		if (node)
-			goto found;
-	}
-
 	return NULL;
 found:
 	/* get first free page */
@@ -161,6 +150,10 @@ found:
 	/* add remaining pages to free list */
 	if (order != node->order)
 		__add_to_free_pages(page + npages, page->priority, node->order_nr_pages - npages);
+
+	/* low memory : reclaim pages */
+	if (node->zone->nr_free_pages < NR_PAGES_LOW)
+		reclaim_pages();
 
 	return page;
 }
@@ -276,29 +269,33 @@ static void merge_free_pages()
 /*
  * Reclaim pages, when memory is low.
  */
-static int reclaim_pages()
+static void reclaim_pages()
 {
 	int count = SWAP_CLUSTER_MAX;
+	static int lock = 0;
+
+	/* don't call reclaim pages recursively */
+	if (lock)
+		return;
+	else
+		lock++;
 
 	/* synchronize buffers */
 	bsync();
 
 	/* try to free pages */
 	count = shrink_mmap(count);
-	if (!count)
-		goto done;
 
 	/* try to swap out */
-	count = swap_out(count);
+	if (count)
+		count = swap_out(count);
 
-	/* no way to free page */
-	if (count == SWAP_CLUSTER_MAX)
-		return 0;
-
-done:
 	/* merge free pages */
-	merge_free_pages();
-	return 1;
+	if (count != SWAP_CLUSTER_MAX)
+		merge_free_pages();
+
+	/* unlock reclaim pages */
+	lock--;
 }
 
 /*

@@ -38,6 +38,7 @@ struct vm_operations {
 	void (*close)(struct vm_area *);
 	void (*unmap)(struct vm_area *, uint32_t, size_t);
 	struct page *(*nopage)(struct vm_area *, uint32_t);
+	int (*swapout)(struct vm_area *, struct page *);
 };
 
 void init_bios_map(struct multiboot_tag_mmap *mbi_mmap);

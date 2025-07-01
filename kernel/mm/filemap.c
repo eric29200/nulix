@@ -217,11 +217,20 @@ static void filemap_unmap(struct vm_area *vma, uint32_t start, size_t len)
 }
 
 /*
+ * Swap out a page.
+ */
+static int filemap_swapout(struct vm_area *vma, struct page *page)
+{
+	return filemap_writepage(vma, page);
+}
+
+/*
  * Private file mapping operations.
  */
 static struct vm_operations file_shared_mmap = {
 	.unmap		= filemap_unmap,
 	.nopage		= filemap_nopage,
+	.swapout	= filemap_swapout,
 };
 
 /*
