@@ -618,63 +618,87 @@ void free_async_buffers(struct buffer_head *bh)
 }
 
 /*
- * Read a page.
+ * Read/write a page.
  */
-int generic_readpage(struct inode *inode, struct page *page)
+int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_blocks, size_t size)
 {
 	struct buffer_head *bh, *next, *tmp, *bhs_list[MAX_BUF_PER_PAGE];
-	struct super_block *sb = inode->i_sb;
-	size_t bhs_count = 0;
-	uint32_t block;
-	int nr, i;
-
-	/* compute blocks to read */
-	nr = PAGE_SIZE >> sb->s_blocksize_bits;
-	block = page->offset >> sb->s_blocksize_bits;
+	size_t bhs_count = 0, i;
 
 	/* create buffers */
 	if (!page->buffers)
-		if (!create_buffers(page, sb->s_dev, sb->s_blocksize, 1))
+		if (!create_buffers(page, dev, size, 1))
 			return -ENOMEM;
 	bh = page->buffers;
 
-	/* read block by block */
-	for (i = 0, next = bh; i < nr; i++, block++, next = next->b_this_page) {
+	/* read/write block by block */
+	for (i = 0, next = bh; i < nr_blocks; i++, next = next->b_this_page) {
 		/* set block buffer */
-		next->b_block = inode->i_op->bmap(inode, block);
+		next->b_block = *(blocks++);
 		next->b_end_io = end_buffer_io_async;
 
 		/* check if buffer is already hashed */
-		tmp = find_buffer(sb->s_dev, next->b_block, sb->s_blocksize);
+		tmp = find_buffer(dev, next->b_block, size);
 		if (tmp) {
 			/* read it from disk if needed */
 			if (!buffer_uptodate(tmp)) {
-			 	ll_rw_block(READ, 1, &tmp);
+				if (rw == READ)
+					ll_rw_block(READ, 1, &tmp);
 				execute_block_requests();
 			}
 
-			/* copy data to user address space */
-			memcpy(next->b_data, tmp->b_data, sb->s_blocksize);
-			mark_buffer_uptodate(next, 1);
+			/* copy data */
+			if (rw == READ) {
+				memcpy(next->b_data, tmp->b_data, size);
+			} else {
+				memcpy(tmp->b_data, next->b_data, size);
+				mark_buffer_dirty(tmp);
+			}
 
 			/* release buffer */
 			brelse(tmp);
 			continue;
 		}
 
-		/* add buffer to read */
+		/* set buffer state */
+		if (rw == READ)
+			mark_buffer_uptodate(bh, 0);
+		else
+			mark_buffer_dirty(next);
+
+		/* add buffer to read/write */
 		bhs_list[bhs_count++] = next;
 	}
 
-	/* read buffers on disk or destroy buffers */
+	/* read/write buffers on disk or destroy buffers */
 	if (bhs_count) {
-		ll_rw_block(READ, bhs_count, bhs_list);
+		ll_rw_block(rw, bhs_count, bhs_list);
 	} else {
 		free_async_buffers(bh);
 		kunmap(page);
 		SetPageUptodate(page);
 	}
 
+	return 0;
+}
+
+/*
+ * Read a page.
+ */
+int generic_readpage(struct inode *inode, struct page *page)
+{
+	uint32_t block, blocks[MAX_BUF_PER_PAGE];
+	size_t nr, i;
+
+	nr = PAGE_SIZE >> inode->i_sb->s_blocksize_bits;
+	block = page->offset >> inode->i_sb->s_blocksize_bits;
+
+	/* compute blocks */
+	for (i = 0; i < nr; i++, block++)
+		blocks[i] = inode->i_op->bmap(inode, block);
+
+	/* read/write page */
+	brw_page(READ, page, inode->i_sb->s_dev, blocks, nr, inode->i_sb->s_blocksize);
 	return 0;
 }
 
