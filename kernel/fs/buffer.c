@@ -297,7 +297,7 @@ static struct buffer_head *get_unused_buffer_head(int async)
 /*
  * Create new buffers.
  */
-static struct buffer_head *create_buffers(struct page *page, struct inode *inode, size_t size, int async)
+static struct buffer_head *create_buffers(struct page *page, dev_t dev, size_t blocksize, int async)
 {
 	struct buffer_head *bh, *head, *tail;
 	int offset;
@@ -305,16 +305,16 @@ static struct buffer_head *create_buffers(struct page *page, struct inode *inode
 	/* create buffers */
 	head = NULL;
 	tail = NULL;
-	for (offset = PAGE_SIZE - size; offset >= 0; offset -= size) {
+	for (offset = PAGE_SIZE - blocksize; offset >= 0; offset -= blocksize) {
 		/* get an unused buffer */
 		bh = get_unused_buffer_head(async);
 		if (!bh)
 			goto err;
 
 		/* set buffer */
-		bh->b_dev = inode ? inode->i_sb->s_dev : 0;
+		bh->b_dev = dev;
 		bh->b_data = page_address(page) + offset;
-		bh->b_size = size;
+		bh->b_size = blocksize;
 		bh->b_this_page = head;
 		bh->b_page = page;
 		bh->b_end_io = end_buffer_io_sync;
@@ -360,7 +360,7 @@ static int grow_buffers(size_t size)
 
 	/* create buffers */
 	if (!page->buffers) {
-		if (!create_buffers(page, NULL, size, 0)) {
+		if (!create_buffers(page, 0, size, 0)) {
 			__free_page(page);
 			return -ENOMEM;
 		}
@@ -634,7 +634,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 	/* create buffers */
 	if (!page->buffers)
-		if (!create_buffers(page, inode, sb->s_blocksize, 1))
+		if (!create_buffers(page, sb->s_dev, sb->s_blocksize, 1))
 			return -ENOMEM;
 	bh = page->buffers;
 
@@ -690,7 +690,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 	int ret;
 
 	if (!page->buffers)
-		if (!create_buffers(page, inode, sb->s_blocksize, 1))
+		if (!create_buffers(page, sb->s_dev, sb->s_blocksize, 1))
 			return -ENOMEM;
 	head = page->buffers;
 
