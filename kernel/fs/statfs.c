@@ -47,12 +47,16 @@ int sys_statfs64(const char *path, size_t size, struct statfs64 *buf)
 /*
  * Fstatfs system call.
  */
-int sys_fstatfs64(int fd, struct statfs64 *buf)
+int sys_fstatfs64(int fd, size_t size, struct statfs64 *buf)
 {
 	struct file *filp;
 
 	/* check output buffer */
 	if (!buf)
+		return -EINVAL;
+
+	/* check size */
+	if (size != sizeof(*buf))
 		return -EINVAL;
 
 	/* get file */

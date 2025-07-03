@@ -360,7 +360,7 @@ int sys_fstat64(int fd, struct stat64 *statbuf);
 int sys_fstatat64(int dirfd, const char *pathname, struct stat64 *statbuf, int flags);
 int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statbuf);
 int sys_statfs64(const char *path, size_t size, struct statfs64 *buf);
-int sys_fstatfs64(int fd, struct statfs64 *buf);
+int sys_fstatfs64(int fd, size_t size, struct statfs64 *buf);
 int sys_truncate64(const char *pathname, off_t length);
 int sys_ftruncate64(int fd, off_t length);
 int sys_sync();
