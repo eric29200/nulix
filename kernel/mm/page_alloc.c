@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define NR_NODES		8
-#define NR_PAGES_LOW		32
+#define NR_FREE_PAGES_LOW	32
 
 /*
  * Memory node.
@@ -124,16 +124,21 @@ struct page *__get_free_pages(int priority, uint32_t order)
 	struct node *node;
 	struct page *page;
 
-	/* find free node */
-	node = __find_free_node(priority, order);
-	if (node)
-		goto found;
-
-	/* try to use kernel pages */
-	if (priority != GFP_KERNEL) {
-		node = __find_free_node(GFP_KERNEL, order);
+	for (;;) {
+		/* find free node */
+		node = __find_free_node(priority, order);
 		if (node)
 			goto found;
+
+		/* try to use kernel pages */
+		if (priority != GFP_KERNEL) {
+			node = __find_free_node(GFP_KERNEL, order);
+			if (node)
+				goto found;
+		}
+
+		/* reclaim memory */
+		reclaim_pages();
 	}
 
 	return NULL;
@@ -152,7 +157,7 @@ found:
 		__add_to_free_pages(page + npages, page->priority, node->order_nr_pages - npages);
 
 	/* low memory : reclaim pages */
-	if (node->zone->nr_free_pages < NR_PAGES_LOW)
+	if (nr_free_pages() < NR_FREE_PAGES_LOW)
 		reclaim_pages();
 
 	return page;
