@@ -46,7 +46,7 @@ size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
 void mark_buffer_clean(struct buffer_head *bh)
 {
 	if (buffer_dirty(bh)) {
-		clear_bit(bh->b_state, BH_Dirty);
+		clear_bit(&bh->b_state, BH_Dirty);
 		list_del(&bh->b_list);
 		list_add(&bh->b_list, &used_list);
 	}
@@ -61,7 +61,7 @@ void mark_buffer_dirty(struct buffer_head *bh)
 	struct list_head *pos;
 
 	if (!buffer_dirty(bh)) {
-		set_bit(bh->b_state, BH_Dirty);
+		set_bit(&bh->b_state, BH_Dirty);
 		list_del(&bh->b_list);
 
 		/* keep dirty list sorted */
@@ -87,9 +87,9 @@ void mark_buffer_dirty(struct buffer_head *bh)
 void mark_buffer_uptodate(struct buffer_head *bh, int on)
 {
 	if (on)
-	 	set_bit(bh->b_state, BH_Uptodate);
+	 	set_bit(&bh->b_state, BH_Uptodate);
 	else
-	 	clear_bit(bh->b_state, BH_Uptodate);
+	 	clear_bit(&bh->b_state, BH_Uptodate);
 }
 
 /*
@@ -97,7 +97,7 @@ void mark_buffer_uptodate(struct buffer_head *bh, int on)
  */
 void mark_buffer_new(struct buffer_head *bh)
 {
-	set_bit(bh->b_state, BH_New);
+	set_bit(&bh->b_state, BH_New);
 }
 
 /*

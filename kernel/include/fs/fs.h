@@ -230,9 +230,9 @@ int get_vfs_mount_list(char *buf, int count);
 int fs_may_umount(struct super_block *sb);
 
 /* buffer operations */
-#define buffer_uptodate(bh)			test_bit((bh)->b_state, BH_Uptodate)
-#define buffer_dirty(bh)			test_bit((bh)->b_state, BH_Dirty)
-#define buffer_new(bh)				test_bit((bh)->b_state, BH_New)
+#define buffer_uptodate(bh)			test_bit(&(bh)->b_state, BH_Uptodate)
+#define buffer_dirty(bh)			test_bit(&(bh)->b_state, BH_Dirty)
+#define buffer_new(bh)				test_bit(&(bh)->b_state, BH_New)
 
 void mark_buffer_clean(struct buffer_head *bh);
 void mark_buffer_dirty(struct buffer_head *bh);

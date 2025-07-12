@@ -66,11 +66,11 @@ typedef uint32_t pte_t;
 #define GFP_HIGHUSER			1
 #define NR_ZONES			2
 
-#define PG_Uptodate			0
+#define PG_uptodate			0
 
-#define PageUptodate(page)		test_bit((page)->flags, PG_Uptodate)
-#define ClearPageUptodate(page)		clear_bit((page)->flags, PG_Uptodate)
-#define SetPageUptodate(page)		set_bit((page)->flags, PG_Uptodate)
+#define PageUptodate(page)		test_bit(&(page)->flags, PG_uptodate)
+#define ClearPageUptodate(page)		clear_bit(&(page)->flags, PG_uptodate)
+#define SetPageUptodate(page)		set_bit(&(page)->flags, PG_uptodate)
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
