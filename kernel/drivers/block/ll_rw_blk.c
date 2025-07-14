@@ -49,6 +49,9 @@ static void make_request(int rw, struct buffer_head *bh)
 {
 	struct request *req, *prev = nr_requests ? &requests[nr_requests - 1] : NULL;
 
+	/* lock buffer */
+	lock_buffer(bh);
+
 	/* merge with previous request */
 	if (prev
 		&& prev->cmd == rw

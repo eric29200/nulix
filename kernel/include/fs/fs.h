@@ -43,6 +43,7 @@
 #define BH_Uptodate			0
 #define BH_Dirty			1
 #define BH_New				2
+#define BH_Lock				3
 
 #define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
 
@@ -233,7 +234,11 @@ int fs_may_umount(struct super_block *sb);
 #define buffer_uptodate(bh)			test_bit(&(bh)->b_state, BH_Uptodate)
 #define buffer_dirty(bh)			test_bit(&(bh)->b_state, BH_Dirty)
 #define buffer_new(bh)				test_bit(&(bh)->b_state, BH_New)
+#define buffer_locked(bh)			test_bit(&(bh)->b_state, BH_Lock)
 
+void wait_on_buffer(struct buffer_head *bh);
+void lock_buffer(struct buffer_head *bh);
+void unlock_buffer(struct buffer_head *bh);
 void mark_buffer_clean(struct buffer_head *bh);
 void mark_buffer_dirty(struct buffer_head *bh);
 void mark_buffer_uptodate(struct buffer_head *bh, int on);

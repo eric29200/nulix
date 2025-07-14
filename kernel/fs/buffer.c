@@ -41,6 +41,47 @@ static struct list_head free_list[NR_SIZES];
 size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
 
 /*
+ * Wait on a buffer.
+ */
+void wait_on_buffer(struct buffer_head *bh)
+{
+	if (!buffer_locked(bh))
+		return;
+
+	execute_block_requests();
+
+	if (buffer_locked(bh))
+		panic("wait_on_buffer: buffer still locked after execute_block_requests()");
+}
+
+/*
+ * Wait on buffers.
+ */
+void wait_on_buffers(size_t bhs_count, struct buffer_head **bhs)
+{
+	size_t i;
+
+	for (i = 0; i < bhs_count; i++)
+		wait_on_buffer(bhs[i]);
+}
+
+/*
+ * Lock a buffer.
+ */
+void lock_buffer(struct buffer_head *bh)
+{
+	set_bit(&bh->b_state, BH_Lock);
+}
+
+/*
+ * Unlock a buffer.
+ */
+void unlock_buffer(struct buffer_head *bh)
+{
+	clear_bit(&bh->b_state, BH_Lock);
+}
+
+/*
  * Mark a buffer clean.
  */
 void mark_buffer_clean(struct buffer_head *bh)
@@ -199,6 +240,7 @@ static void end_buffer_io_sync(struct buffer_head *bh, int uptodate)
 	/* mark buffer up to date */
 	mark_buffer_clean(bh);
 	mark_buffer_uptodate(bh, uptodate);
+	unlock_buffer(bh);
 	bh->b_count--;
 
 	/* remove it from request */
@@ -217,6 +259,7 @@ static void end_buffer_io_async(struct buffer_head *bh, int uptodate)
 	/* mark buffer up to date */
 	mark_buffer_clean(bh);
 	mark_buffer_uptodate(bh, uptodate);
+	unlock_buffer(bh);
 	bh->b_count--;
 
 	/* remove it from request */
@@ -458,7 +501,7 @@ struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize)
 
 	/* read it from device */
 	ll_rw_block(READ, 1, &bh);
-	execute_block_requests();
+	wait_on_buffer(bh);
 
 	return bh;
 }
@@ -535,7 +578,7 @@ static void __bsync(dev_t dev)
 		/* write buffers */
 		if (bhs_count == NBUF) {
 			ll_rw_block(WRITE, bhs_count, bhs_list);
-			execute_block_requests();
+			wait_on_buffers(bhs_count, bhs_list);
 			bhs_count = 0;
 		}
 
@@ -546,7 +589,7 @@ static void __bsync(dev_t dev)
 	/* write last buffers */
 	if (bhs_count) {
 		ll_rw_block(WRITE, bhs_count, bhs_list);
-		execute_block_requests();
+		wait_on_buffers(bhs_count, bhs_list);
 	}
 }
 
@@ -644,7 +687,7 @@ int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_b
 			if (!buffer_uptodate(tmp)) {
 				if (rw == READ)
 					ll_rw_block(READ, 1, &tmp);
-				execute_block_requests();
+				wait_on_buffer(tmp);
 			}
 
 			/* copy data */
@@ -765,7 +808,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 	/* issue read command */
 	if (bhs_count) {
 		ll_rw_block(READ, bhs_count, bhs_list);
-		execute_block_requests();
+		wait_on_buffers(bhs_count, bhs_list);
 	}
 
 	return 0;

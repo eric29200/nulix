@@ -90,9 +90,7 @@ static uint32_t map_new_virtual(struct page *page)
 void *kmap(struct page *page)
 {
 	uint32_t vaddr;
-	int retry = 1;
 
-repeat:
 	/* page already mapped */
 	vaddr = (uint32_t) page->virtual;
 	if (vaddr)
@@ -102,13 +100,6 @@ repeat:
 	vaddr = map_new_virtual(page);
 	if (vaddr)
 		goto mapped;
-
-	/* execute block requests (to unmap async buffers) */
-	if (retry) {
-		execute_block_requests();
-		retry = 0;
-		goto repeat;
-	}
 
 	return NULL;
 mapped:
