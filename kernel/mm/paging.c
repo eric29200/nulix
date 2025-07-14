@@ -1,5 +1,6 @@
 #include <mm/mm.h>
 #include <proc/sched.h>
+#include <drivers/block/blk_dev.h>
 #include <mm/paging.h>
 #include <mm/highmem.h>
 #include <sys/syscall.h>
@@ -13,6 +14,20 @@ struct page *page_array;
 
 /* page directories */
 pgd_t *pgd_kernel = NULL;
+
+/*
+ * Wait on a page.
+ */
+void wait_on_page(struct page *page)
+{
+	if (!PageLocked(page))
+		return;
+
+	execute_block_requests();
+
+	if (PageLocked(page))
+		panic("wait_on_page: page still locked after execute_block_requests()");
+}
 
 /*
  * Flush a Translation Lookaside Buffer entry.

@@ -284,6 +284,7 @@ static void end_buffer_io_async(struct buffer_head *bh, int uptodate)
 		SetPageUptodate(page);
 
 	/* free buffers */
+	UnlockPage(page);
 	kunmap(bh->b_page);
 	free_async_buffers(bh);
 }
@@ -669,9 +670,12 @@ int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_b
 	size_t bhs_count = 0, i;
 
 	/* create buffers */
-	if (!page->buffers)
-		if (!create_buffers(page, dev, size, 1))
+	if (!page->buffers) {
+		if (!create_buffers(page, dev, size, 1)) {
+			UnlockPage(page);
 			return -ENOMEM;
+		}
+	}
 	bh = page->buffers;
 
 	/* read/write block by block */
@@ -717,6 +721,7 @@ int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_b
 	if (bhs_count) {
 		ll_rw_block(rw, bhs_count, bhs_list);
 	} else {
+		UnlockPage(page);
 		free_async_buffers(bh);
 		kunmap(page);
 		SetPageUptodate(page);
@@ -735,6 +740,9 @@ int generic_readpage(struct inode *inode, struct page *page)
 
 	nr = PAGE_SIZE >> inode->i_sb->s_blocksize_bits;
 	block = page->offset >> inode->i_sb->s_blocksize_bits;
+
+	/* lock page */
+	LockPage(page);
 
 	/* compute blocks */
 	for (i = 0; i < nr; i++, block++)
@@ -756,9 +764,12 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 	size_t bhs_count = 0;
 	int ret;
 
-	if (!page->buffers)
-		if (!create_buffers(page, sb->s_dev, sb->s_blocksize, 1))
+	if (!page->buffers) {
+		if (!create_buffers(page, sb->s_dev, sb->s_blocksize, 1)) {
+			UnlockPage(page);
 			return -ENOMEM;
+		}
+	}
 	head = page->buffers;
 
 	/* compute first block */
@@ -813,6 +824,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 
 	return 0;
 err:
+	UnlockPage(page);
 	free_async_buffers(head);
 	return ret;
 }
@@ -847,6 +859,7 @@ int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, 
 	if (bhs_count) {
 		ll_rw_block(WRITE, bhs_count, bhs_list);
 	} else {
+		UnlockPage(page);
 		free_async_buffers(bh);
 		kunmap(page);
 	}

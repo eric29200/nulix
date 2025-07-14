@@ -67,10 +67,14 @@ typedef uint32_t pte_t;
 #define NR_ZONES			2
 
 #define PG_uptodate			0
+#define PG_lock				1
 
 #define PageUptodate(page)		test_bit(&(page)->flags, PG_uptodate)
 #define ClearPageUptodate(page)		clear_bit(&(page)->flags, PG_uptodate)
 #define SetPageUptodate(page)		set_bit(&(page)->flags, PG_uptodate)
+#define PageLocked(page)		test_bit(&(page)->flags, PG_lock)
+#define UnlockPage(page)		clear_bit(&(page)->flags, PG_lock)
+#define LockPage(page)			set_bit(&(page)->flags, PG_lock)
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))
@@ -157,6 +161,7 @@ pgd_t *create_page_directory();
 void free_pgd(pgd_t *pgd);
 void flush_tlb_page(pgd_t *pgd, uint32_t address);
 void flush_tlb(pgd_t *pgd);
+void wait_on_page(struct page *page);
 
 /* page allocation */
 int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end);

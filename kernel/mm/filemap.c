@@ -67,7 +67,7 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 		goto err_read;
 
 	/* wait on page */
-	execute_block_requests();
+	wait_on_page(page);
 
 	return page;
 err_read:
@@ -328,13 +328,11 @@ next:
 	if (i == 0)
 		return -EINVAL;
 
-	/* execute block request if needed */
-	if (nr_pages_read)
-		execute_block_requests();
-
 	/* release pages */
-	while (i--)
+	while (i--) {
+		wait_on_page(pages_list[i]);
 		__free_page(pages_list[i]);
+	}
 
 	return 0;
 }
@@ -411,7 +409,7 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 	struct inode *inode = filp->f_inode;
 	int written = 0, err = 0, nr;
 	size_t pos = filp->f_pos;
-	struct page *page;
+	struct page *page, *tmp;
 	off_t offset;
 	char *kaddr;
 
@@ -434,21 +432,32 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 			break;
 		}
 
-		/* prepare write page */
+		/* lock page */
+		LockPage(page);
+
+		/* map page in kernel address space */
 		kaddr = kmap(page);
+
+		/* prepare write */
 		err = inode->i_op->prepare_write(inode, page, offset, offset + nr);
-		if (!err) {
-			/* write to page */
-			memcpy(kaddr + offset, buf, nr);
-			err = inode->i_op->commit_write(inode, page, offset, offset + nr);
+		if (err) {
+			__free_page(page);
+			break;
+		}
+
+		/* write to page */
+		memcpy(kaddr + offset, buf, nr);
+
+		/* commit write */
+		err = inode->i_op->commit_write(inode, page, offset, offset + nr);
+		if (err) {
+			__free_page(page);
+			break;
 		}
 
 		/* release page */
+		tmp = page;
 		__free_page(page);
-
-		/* exit on error */
-		if (err < 0)
-			break;
 
 		/* update sizes */
 		buf += nr;
@@ -460,7 +469,7 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 	}
 
 	/* execute block requests */
-	execute_block_requests();
+	wait_on_page(tmp);
 
 	/* update position */
 	filp->f_pos = pos;
