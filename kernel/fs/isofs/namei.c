@@ -125,7 +125,9 @@ static struct buffer_head *isofs_find_entry(struct inode *dir, const char *name,
 			strcpy(name_tmp, "..");
 			name_len_tmp = 2;
 		} else {
-			name_len_tmp = isofs_name_translate(de->name, de->name_len[0], name_tmp);
+			name_len_tmp = get_rock_ridge_filename(de, name_tmp, dir);
+			if (!name_len_tmp)
+				name_len_tmp = isofs_name_translate(de->name, de->name_len[0], name_tmp);
 			*backlink_ino = dir->i_ino;
 		}
 

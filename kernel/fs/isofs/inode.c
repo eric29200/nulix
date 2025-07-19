@@ -1,6 +1,7 @@
 #include <fs/iso_fs.h>
 #include <proc/sched.h>
 #include <stderr.h>
+#include <stdio.h>
 #include <fcntl.h>
 
 /*
@@ -24,6 +25,7 @@ struct file_operations isofs_dir_fops = {
 struct inode_operations isofs_file_iops = {
 	.fops		= &isofs_file_fops,
 	.get_block	= isofs_get_block,
+	.bmap		= generic_block_bmap,
 	.readpage	= generic_readpage,
 };
 
@@ -103,6 +105,9 @@ int isofs_read_inode(struct inode *inode)
 	inode->u.iso_i.i_first_extent = (isofs_num733(raw_inode->extent) + isofs_num711(raw_inode->ext_attr_length)) << isofs_sb(sb)->s_log_zone_size;
 	inode->u.iso_i.i_backlink = 0xFFFFFFFF;
 
+	/* parse rock ridge inode */
+	parse_rock_ridge_inode(raw_inode, inode);
+
 	/* set operations */
 	if (S_ISREG(inode->i_mode))
 		inode->i_op = &isofs_file_iops;
@@ -126,12 +131,19 @@ int isofs_read_inode(struct inode *inode)
  */
 int isofs_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
 {
+	off_t b_off;
+
 	/* isofs is read only */
 	if (create)
 		return -EROFS;
 
+	/* compute block offset */
+	b_off = block << inode->i_sb->s_blocksize_bits;
+	if (b_off >= inode->i_size)
+		return 0;
+
 	/* set result */
-	bh_res->b_block = (inode->u.iso_i.i_first_extent >> inode->i_sb->s_blocksize_bits) + block;
+	bh_res->b_block = (b_off + inode->u.iso_i.i_first_extent) >> inode->i_sb->s_blocksize_bits;
 
 	return 0;
 }

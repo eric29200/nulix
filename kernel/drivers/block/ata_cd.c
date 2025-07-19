@@ -1,6 +1,7 @@
 #include <drivers/block/ata.h>
 #include <x86/io.h>
 #include <stderr.h>
+#include <stdio.h>
 
 /*
  * Wait for operation completion.
@@ -13,6 +14,9 @@ static int ata_cd_wait(struct ata_device *device)
 		status = inb(device->io_base + ATA_REG_STATUS);
 		if (!status)
 			return -ENXIO;
+
+		if (status & ATA_SR_ERR)
+			return -EIO;
 
 		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ))
 			break;

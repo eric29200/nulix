@@ -124,7 +124,7 @@ static void ata_request(struct request *request)
 
 	/* print error */
 	if (ret)
-		printf("ata_request: error on request (cmd = %x, block = %ld\n", request->cmd, request->block);
+		printf("ata_request: error on request (cmd = %x, block = %ld)\n", request->cmd, request->block);
 }
 
 /*

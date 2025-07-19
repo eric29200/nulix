@@ -122,7 +122,9 @@ int isofs_getdents64(struct file *filp, void *dirp, size_t count)
 		}
 
 		/* translate name */
-		name_len = isofs_name_translate(de->name, de->name_len[0], name);
+		name_len = get_rock_ridge_filename(de, name, inode);
+		if (!name_len)
+			name_len = isofs_name_translate(de->name, de->name_len[0], name);
 
 		/* fill in directory entry */ 
 		ret = filldir(dirent, name, name_len, ino, count);

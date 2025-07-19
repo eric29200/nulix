@@ -80,6 +80,41 @@ char *strncpy(char *dest, const char *src, size_t n)
 }
 
 /*
+ * Concat 2 strings.
+ */
+char *strcat(char *dest, const char *src)
+{
+	char *tmp = dest;
+
+	while (*dest)
+		dest++;
+	while ((*dest++ = *src++) != 0);
+
+	return tmp;
+}
+
+/*
+ * Concat 2 strings.
+ */
+char *strncat(char *dest, const char *src, size_t n)
+{
+	char *tmp = dest;
+
+	if (n) {
+		while (*dest)
+			dest++;
+		while ((*dest++ = *src++) != 0) {
+			if (--n == 0) {
+				*dest = 0;
+				break;
+			}
+		}
+	}
+
+	return tmp;
+}
+
+/*
  * Duplicate a string.
  */
 char *strdup(const char *s)

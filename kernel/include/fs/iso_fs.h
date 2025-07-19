@@ -123,4 +123,8 @@ int isofs_date(char *p);
 ino_t isofs_parent_ino(struct inode *inode);
 int isofs_name_translate(char *old, size_t old_len, char *new);
 
+/* rock ridge prototypes */
+int parse_rock_ridge_inode(struct iso_directory_record *de, struct inode *inode);
+int get_rock_ridge_filename(struct iso_directory_record *de, char *retname, struct inode *inode);
+
 #endif
