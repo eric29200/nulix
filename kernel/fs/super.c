@@ -3,6 +3,7 @@
 #include <fs/minix_fs.h>
 #include <fs/proc_fs.h>
 #include <proc/sched.h>
+#include <drivers/block/blk_dev.h>
 #include <mm/mm.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -241,6 +242,10 @@ static int fs_may_remount_ro(struct super_block *sb)
 static int do_remount_sb(struct super_block *sb, uint32_t flags)
 {
 	struct vfs_mount *vfs_mount;
+
+	/* read only device */
+	if (!(flags & MS_RDONLY) && sb->s_dev && is_read_only(sb->s_dev))
+		return -EACCES;
 
 	/* check if we can remount read only */
 	if ((flags & MS_RDONLY) && !(sb->s_flags & MS_RDONLY))

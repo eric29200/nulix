@@ -413,6 +413,10 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 	off_t offset;
 	char *kaddr;
 
+	/* read only device */
+	if (is_read_only(inode->i_rdev))
+		return -EPERM;
+
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)
 		pos = inode->i_size;

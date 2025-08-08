@@ -6,10 +6,47 @@
 
 /* block devices */
 struct blk_dev blk_dev[MAX_BLKDEV];
+static long ro_bits[MAX_BLKDEV][8] = { 0 };
 
 /* requests */
 static struct request requests[NR_REQUESTS];
 static size_t nr_requests = 0;
+
+/*
+ * Is a device read only ?
+ */
+int is_read_only(dev_t dev)
+{
+	int major, minor;
+
+	major = major(dev);
+	minor = minor(dev);
+
+	if (major < 0 || major >= MAX_BLKDEV)
+		return 0;
+
+	return ro_bits[major][minor >> 5] & (1 << (minor & 31));
+}
+
+/*
+ * Set/Unset a device read only.
+ */
+void set_device_ro(dev_t dev, int flag)
+{
+
+	int major, minor;
+
+	major = major(dev);
+	minor = minor(dev);
+
+	if (major < 0 || major >= MAX_BLKDEV)
+		return;
+
+	if (flag)
+		ro_bits[major][minor >> 5] |= 1 << (minor & 31);
+	else
+		ro_bits[major][minor >> 5] &= ~(1 << (minor & 31));
+}
 
 /*
  * End a request.
@@ -118,6 +155,12 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 			printf("ll_rw_block: only %d blocks implemented\n", correct_size);
 			return;
 		}
+	}
+
+	/* read only device */
+	if (rw == WRITE && is_read_only(bhs[0]->b_dev)) {
+		printf("ll_rw_block: can't write to read only device 0x%x\n", bhs[0]->b_dev);
+		return;
 	}
 
 	/* make requests */
