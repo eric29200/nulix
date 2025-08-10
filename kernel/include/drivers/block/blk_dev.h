@@ -18,11 +18,9 @@
 struct request {
 	dev_t			dev;
 	int			cmd;
-	uint32_t		block;
-	size_t			block_size;
+	uint32_t		sector;
+	uint32_t		nr_sectors;
 	char *			buf;
-	size_t			size;
-	size_t			nr_blocks;
 	struct list_head	bhs_list;
 };
 

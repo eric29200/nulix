@@ -59,6 +59,7 @@ struct buffer_head {
 	int				b_count;		/* reference counter */
 	uint32_t			b_state;		/* buffer state */
 	dev_t				b_dev;			/* device number */
+	uint32_t			b_rsector;		/* real location on disk */
 	struct page *			b_page;			/* page */
 	struct buffer_head *		b_this_page;		/* next buffer in page */
 	struct list_head		b_list;			/* next buffer in list */

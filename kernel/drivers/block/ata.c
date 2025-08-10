@@ -106,8 +106,8 @@ static void ata_request(struct request *request)
 
 	/* get partition start sector */
 	start_sector = ata_get_start_sector(device, request->dev);
-	sector = start_sector + request->block * request->block_size / device->sector_size;
-	nr_sectors = request->size / device->sector_size;
+	sector = start_sector + (request->sector << 9) / device->sector_size;
+	nr_sectors = (request->nr_sectors << 9) / device->sector_size;
 
 	/* find request function */
 	switch (request->cmd) {
@@ -124,7 +124,7 @@ static void ata_request(struct request *request)
 
 	/* print error */
 	if (ret)
-		printf("ata_request: error on request (cmd = %x, block = %ld)\n", request->cmd, request->block);
+		printf("ata_request: error on request (cmd = %x, sector = %ld)\n", request->cmd, request->sector);
 }
 
 /*

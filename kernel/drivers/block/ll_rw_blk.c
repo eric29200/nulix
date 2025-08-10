@@ -85,20 +85,24 @@ void execute_block_requests()
 static void make_request(int rw, struct buffer_head *bh)
 {
 	struct request *req, *prev = nr_requests ? &requests[nr_requests - 1] : NULL;
+	uint32_t sector;
+	size_t count;
 
 	/* lock buffer */
 	lock_buffer(bh);
+
+	/* get first sector and number of sectors */
+	sector = bh->b_rsector;
+	count = bh->b_size >> 9;
 
 	/* merge with previous request */
 	if (prev
 		&& prev->cmd == rw
 		&& prev->dev == bh->b_dev
-		&& prev->block_size == bh->b_size
-		&& prev->block + prev->nr_blocks == bh->b_block
-		&& prev->buf + prev->size == bh->b_data) {
+		&& prev->sector + prev->nr_sectors == sector
+		&& prev->buf + (prev->nr_sectors << 9) == bh->b_data) {
 		list_add_tail(&bh->b_list_req, &prev->bhs_list);
-		prev->nr_blocks++;
-		prev->size += bh->b_size;
+		prev->nr_sectors += count;
 		return;
 	}
 
@@ -110,11 +114,9 @@ static void make_request(int rw, struct buffer_head *bh)
 	req = &requests[nr_requests++];
 	req->cmd = rw;
 	req->dev = bh->b_dev;
-	req->block = bh->b_block;
-	req->block_size = bh->b_size;
+	req->sector = sector;
+	req->nr_sectors = count;
 	req->buf = bh->b_data;
-	req->size = bh->b_size;
-	req->nr_blocks = 1;
 
 	/* add buffer to request */
 	INIT_LIST_HEAD(&req->bhs_list);
@@ -138,7 +140,7 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 	/* check device */
 	if (!dev || !dev->request) {
 		printf("ll_rw_block: trying to read non existent block device 0x%x\n", bhs[0]->b_dev);
-		return;
+		goto err;
 	}
 
 	/* get correct size */
@@ -153,14 +155,17 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 	for (i = 0; i < nr_bhs; i++) {
 		if (bhs[i] && bhs[i]->b_size != correct_size) {
 			printf("ll_rw_block: only %d blocks implemented\n", correct_size);
-			return;
+			goto err;
 		}
+
+		/* set real location */
+		bhs[i]->b_rsector = bhs[i]->b_block * (bhs[i]->b_size >> 9);
 	}
 
 	/* read only device */
 	if (rw == WRITE && is_read_only(bhs[0]->b_dev)) {
 		printf("ll_rw_block: can't write to read only device 0x%x\n", bhs[0]->b_dev);
-		return;
+		goto err;
 	}
 
 	/* make requests */
@@ -168,4 +173,9 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 		bhs[i]->b_count++;
 		make_request(rw, bhs[i]);
 	}
+
+	return;
+err:
+	for (i = 0; i < nr_bhs; i++)
+		mark_buffer_clean(bhs[i]);
 }
