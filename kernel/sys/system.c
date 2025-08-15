@@ -12,8 +12,8 @@
  
 #define UTS_SYSNAME		"nulix"
 #define UTS_NODENAME		"nulix"
-#define UTS_RELEASE		"0.0.1"
-#define UTS_VERSION		"nulix 0.0.1"
+#define UTS_RELEASE		"2.4.0"
+#define UTS_VERSION		"nulix 2.4.0"
 #define UTS_MACHINE		"x86"
 
 /*

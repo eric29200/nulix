@@ -656,20 +656,24 @@ void vmtruncate(struct inode *inode, off_t offset)
 }
 
 /*
- * Memory map system call.
+ * Old mmap system call.
  */
-void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+void *old_mmap(struct mmap_arg_struct *arg)
 {
 	struct file *filp = NULL;
 
+	/* offset must be page aligned */
+	if (arg->offset & ~PAGE_MASK)
+		return NULL;
+
 	/* get file */
-	if (fd >= 0) {
-		filp = fget(fd);
+	if (!(arg->flags & MAP_ANONYMOUS)) {
+		filp = fget(arg->fd);
 		if (!filp)
 			return NULL;
 	}
 
-	return do_mmap((uint32_t) addr, length, prot, flags, filp, offset);
+	return do_mmap(arg->addr, arg->len, arg->prot, arg->flags, filp, arg->offset);
 }
 
 /*
