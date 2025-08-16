@@ -2,6 +2,7 @@
 #define _TIMER_H_
 
 #include <lib/list.h>
+#include <time.h>
 #include <stddef.h>
 
 /*
@@ -19,5 +20,8 @@ void timer_event_add(struct timer_event *tm);
 void timer_event_del(struct timer_event *tm);
 void timer_event_mod(struct timer_event *tm, time_t expires);
 void update_timers();
+
+int sys_nanosleep(const struct old_timespec *req, struct old_timespec *rem);
+int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value);
 
 #endif

@@ -107,38 +107,6 @@ int sys_getrusage(int who, struct rusage *ru)
 }
 
 /*
- * Nano sleep system call.
- */
-int sys_nanosleep(const struct old_timespec *req, struct old_timespec *rem)
-{
-	time_t timeout;
-
-	/* check request */
-	if (req->tv_nsec < 0 || req->tv_sec < 0)
-		return -EINVAL;
-
-	/* compute delay in jiffies */
-	timeout = old_timespec_to_jiffies(req) + (req->tv_sec || req->tv_nsec) + jiffies;
-
-	/* set current state sleeping and set timeout */
-	current_task->state = TASK_SLEEPING;
-	current_task->timeout = timeout;
-
-	/* reschedule */
-	schedule();
-
-	/* task interrupted before timer end */
-	if (timeout > jiffies) {
-		if (rem)
-			jiffies_to_old_timespec(timeout - jiffies - (timeout > jiffies + 1), rem);
-
-		return -EINTR;
-	}
-
-	return 0;
-}
-
-/*
  * Pause system call.
  */
 int sys_pause()
@@ -235,48 +203,6 @@ int sys_reboot(int magic1, int magic2, int cmd, void *arg)
 			break;
 		default:
 			return -EINVAL;
-	}
-
-	return 0;
-}
-
-/*
- * Timer handler = send a SIGALRM signal to caller.
- */
-static void itimer_handler(void *arg)
-{
-	pid_t *pid = (pid_t *) arg;
-	task_signal(*pid, SIGALRM);
-}
-
-/*
- * Set an interval timer (send SIGALRM signal at expiration).
- */
-int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value)
-{
-	uint32_t expires_ms;
-
-	/* unused old value */
-	UNUSED(old_value);
-
-	/* implement only real timer */
-	if (which != ITIMER_REAL) {
-		printf("setitimer (%d) not implemented\n", which);
-		return -ENOSYS;
-	}
-
-	/* compute expiration in ms */
-	expires_ms = new_value->it_value_sec * 1000;
-	expires_ms += (new_value->it_value_usec / 1000);
-
-	/* delete timer */
-	if (current_task->sig_tm.list.next)
-		timer_event_del(&current_task->sig_tm);
-
-	/* set timer */
-	if (new_value->it_value_sec || new_value->it_value_usec) {
-		timer_event_init(&current_task->sig_tm, itimer_handler, &current_task->pid, jiffies + ms_to_jiffies(expires_ms));
-		timer_event_add(&current_task->sig_tm);
 	}
 
 	return 0;
