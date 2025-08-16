@@ -168,3 +168,26 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
 
 	return 0;
 }
+
+/*
+ * Alarm system call.
+ */
+int sys_alarm(uint32_t seconds)
+{
+	struct itimerval it_new, it_old;
+	uint32_t oldalarm;
+
+	/* set timer */
+	it_new.it_interval_sec = 0;
+	it_new.it_interval_usec = 0;
+	it_new.it_value_sec = seconds;
+	it_new.it_value_usec = 0;
+	sys_setitimer(ITIMER_REAL, &it_new, &it_old);
+
+	/* set old alarm */
+	oldalarm = it_old.it_value_sec;
+	if (it_old.it_value_usec)
+		oldalarm++;
+
+	return oldalarm;
+}

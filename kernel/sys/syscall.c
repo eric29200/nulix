@@ -164,6 +164,7 @@ static const void *syscalls[] = {
 	[__NR_sethostname]		= sys_sethostname,
 	[__NR_prctl]			= sys_prctl,
 	[__NR_getgroups32]		= sys_getgroups,
+	[__NR_alarm]			= sys_alarm,
 };
 
 /*

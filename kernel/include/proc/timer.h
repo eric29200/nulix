@@ -23,5 +23,6 @@ void update_timers();
 
 int sys_nanosleep(const struct old_timespec *req, struct old_timespec *rem);
 int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval *old_value);
+int sys_alarm(uint32_t seconds);
 
 #endif

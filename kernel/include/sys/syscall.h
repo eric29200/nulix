@@ -24,6 +24,7 @@
 #define __NR_mount			21
 #define __NR_setuid			23
 #define __NR_getuid			24
+#define __NR_alarm			27
 #define __NR_pause			29
 #define __NR_access			33
 #define __NR_sync			36
