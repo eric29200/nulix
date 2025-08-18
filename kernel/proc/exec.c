@@ -43,10 +43,6 @@ static int bargs_init(struct binargs *bargs, char *const argv[], char *const env
 		bargs->envp_len += strlen(envp[i]) + 1;
 	bargs->envc = i;
 
-	/* check total size */
-	if (bargs->argv_len + bargs->envp_len > PAGE_SIZE)
-		return -ENOMEM;
-
 	/* allocate buffer */
 	bargs->buf = bargs->p = (char *) kmalloc(bargs->argv_len + bargs->envp_len);
 	if (!bargs->buf)
