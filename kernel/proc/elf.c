@@ -360,7 +360,7 @@ int elf_load(const char *path, struct binargs *bargs)
 			}
 
 			/* seek to interpreter path */
-			ret = do_lseek(filp, ph->p_offset, SEEK_SET);
+			ret = do_llseek(filp, ph->p_offset, SEEK_SET);
 			if (ret < 0)
 				goto out;
 

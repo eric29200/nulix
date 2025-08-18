@@ -41,7 +41,7 @@ ssize_t do_write(struct file *filp, const char *buf, int count)
 /*
  * Generic lseek.
  */
-off_t generic_lseek(struct file *filp, off_t offset, int whence)
+off_t generic_file_llseek(struct file *filp, off_t offset, int whence)
 {
 	off_t new_offset;
 
@@ -68,13 +68,13 @@ off_t generic_lseek(struct file *filp, off_t offset, int whence)
 /*
  * Lseek system call.
  */
-off_t do_lseek(struct file *filp, off_t offset, int whence)
+off_t do_llseek(struct file *filp, off_t offset, int whence)
 {
-	/* specific lseek */
-	if (filp->f_op && filp->f_op->lseek)
-		return filp->f_op->lseek(filp, offset, whence);
+	/* specific llseek */
+	if (filp->f_op && filp->f_op->llseek)
+		return filp->f_op->llseek(filp, offset, whence);
 
-	return generic_lseek(filp, offset, whence);
+	return generic_file_llseek(filp, offset, whence);
 }
 
 /*
@@ -89,7 +89,7 @@ off_t sys_lseek(int fd, off_t offset, int whence)
 	if (!filp)
 		return -EBADF;
 
-	return do_lseek(filp, offset, whence);
+	return do_llseek(filp, offset, whence);
 }
 
 /*
@@ -109,7 +109,7 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
 	offset = ((unsigned long long) offset_high << 32) | offset_low;
 
 	/* seek */
-	*result = do_lseek(filp, offset, whence);
+	*result = do_llseek(filp, offset, whence);
 
 	return 0;
 }
@@ -134,7 +134,7 @@ static int do_pread64(struct file *filp, void *buf, size_t count, off_t offset)
 		return -EPERM;
 
 	/* seek to offset */
-	ret = do_lseek(filp, offset, SEEK_SET);
+	ret = do_llseek(filp, offset, SEEK_SET);
 	if (ret < 0)
 		return ret;
 

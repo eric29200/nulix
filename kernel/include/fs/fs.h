@@ -213,7 +213,7 @@ struct file_operations {
 	int (*close)(struct file *file);
 	int (*read)(struct file *, char *, int);
 	int (*write)(struct file *, const char *, int);
-	int (*lseek)(struct file *, off_t, int);
+	int (*llseek)(struct file *, off_t, int);
 	int (*getdents64)(struct file *, void *, size_t);
 	int (*poll)(struct file *, struct select_table *);
 	int (*ioctl)(struct file *, int, unsigned long);
@@ -301,7 +301,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int do_close(struct file *filp);
 ssize_t do_read(struct file *filp, char *buf, int count);
 ssize_t do_write(struct file *filp, const char *buf, int count);
-off_t do_lseek(struct file *filp, off_t offset, int whence);
+off_t do_llseek(struct file *filp, off_t offset, int whence);
 int do_truncate(struct inode *inode, off_t length);
 
 /* system calls */
