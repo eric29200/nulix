@@ -703,3 +703,11 @@ int sys_setgroups(size_t size, const gid_t *list)
 
 	return 0;
 }
+
+/*
+ * Get process group id.
+ */
+pid_t sys_getpgrp()
+{
+	return current_task->pgrp;
+}

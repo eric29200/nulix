@@ -48,6 +48,7 @@
 #define __NR_chroot			61
 #define __NR_dup2			63
 #define __NR_getppid			64
+#define __NR_getpgrp			65
 #define __NR_setsid			66
 #define __NR_sigaction			67
 #define __NR_sethostname		74

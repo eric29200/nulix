@@ -166,6 +166,7 @@ static const void *syscalls[] = {
 	[__NR_getgroups32]		= sys_getgroups,
 	[__NR_alarm]			= sys_alarm,
 	[__NR_time]			= sys_time,
+	[__NR_getpgrp]			= sys_getpgrp,
 };
 
 /*
