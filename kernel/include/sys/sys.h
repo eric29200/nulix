@@ -9,6 +9,7 @@
 
 int sys_clock_gettime64(clockid_t clockid, struct timespec *tp);
 int sys_clock_gettime32(clockid_t clockid, struct old_timespec *tp);
+int sys_time(int *tloc);
 int sys_getrandom(void *buf, size_t buflen, unsigned int flags);
 int sys_getrusage(int who, struct rusage *ru);
 int sys_pause();

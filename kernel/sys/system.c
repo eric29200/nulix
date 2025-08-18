@@ -81,6 +81,19 @@ int sys_clock_gettime32(clockid_t clockid, struct old_timespec *tp)
 }
 
 /*
+ * Get time in seconds.
+ */
+int sys_time(int *tloc)
+{
+	time_t ret = xtimes.tv_sec;
+
+	if (tloc)
+		*tloc = ret;
+
+	return ret;
+}
+
+/*
  * Get random system call.
  */
 int sys_getrandom(void *buf, size_t buflen, unsigned int flags)

@@ -17,6 +17,7 @@
 #define __NR_unlink			10
 #define __NR_execve			11
 #define __NR_chdir			12
+#define __NR_time			13
 #define __NR_mknod			14
 #define __NR_chmod			15
 #define __NR_lseek			19
