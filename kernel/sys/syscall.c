@@ -167,6 +167,7 @@ static const void *syscalls[] = {
 	[__NR_alarm]			= sys_alarm,
 	[__NR_time]			= sys_time,
 	[__NR_getpgrp]			= sys_getpgrp,
+	[__NR_umount]			= sys_umount,
 };
 
 /*

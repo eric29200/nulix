@@ -482,6 +482,14 @@ static int do_umount(const char *target, int flags)
 }
 
 /*
+ * Umount system call.
+ */
+int sys_umount(const char *target)
+{
+	return sys_umount2(target, 0);
+}
+
+/*
  * Umount2 system call.
  */
 int sys_umount2(const char *target, int flags)

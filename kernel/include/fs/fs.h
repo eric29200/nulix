@@ -310,6 +310,7 @@ int sys_faccessat(int dirfd, const char *pathname, mode_t mode, int flags);
 int sys_faccessat2(int dirfd, const char *pathname, mode_t mode, int flags);
 int sys_fadvise64(int fd, off_t offset, off_t len, int advice);
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data);
+int sys_umount(const char *target);
 int sys_umount2(const char *target, int flags);
 int sys_open(const char *pathname, int flags, mode_t mode);
 int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode);
