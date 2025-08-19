@@ -114,8 +114,12 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
-	filp = fget(fd);
-	filp->f_count++;
+
+	/* get file */
+	filp = current_task->files->filp[fd];
+
+	/* update reference count */
+	filp->f_inode->i_count++;
 
 	/* get a free page */
 	buf = (char *) get_free_page();
@@ -161,7 +165,7 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
 					   elf_prot,
 					   elf_type,
-					   current_task->files->filp[fd],
+					   filp,
 					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
 			if (!buf_mmap) {
 				ret = -ENOMEM;
@@ -306,8 +310,12 @@ int elf_load(const char *path, struct binargs *bargs)
 	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
-	filp = fget(fd);
-	filp->f_count++;
+
+	/* get file */
+	filp = current_task->files->filp[fd];
+
+	/* update reference count */
+	filp->f_inode->i_count++;
 
 	/* check permissions */
 	ret = permission(filp->f_inode, MAY_EXEC);
@@ -423,9 +431,6 @@ int elf_load(const char *path, struct binargs *bargs)
 		}
 	}
 
-	/* release file */
-	do_close(filp);
-
 	/* no segment */
 	if (!last_ph) {
 		ret = -ENOEXEC;
@@ -493,8 +498,7 @@ int elf_load(const char *path, struct binargs *bargs)
 	current_task->thread.regs.eip = elf_entry;
 	current_task->thread.regs.useresp = sp;
 out:
-	if (current_task->files->filp[fd])
-		sys_close(fd);
+	sys_close(fd);
 	if (elf_interpreter)
 		kfree(elf_interpreter);
 	if (buf)
