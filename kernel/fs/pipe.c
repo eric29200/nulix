@@ -308,7 +308,7 @@ static int do_pipe(int pipefd[2], int flags)
 	/* set 1st file descriptor as read channel */
 	filps[0]->f_inode = inode;
 	filps[0]->f_pos = 0;
-	filps[0]->f_flags |= O_WRONLY | flags;
+	filps[0]->f_flags |= O_RDONLY | flags;
 	filps[0]->f_mode = 1;
 	filps[0]->f_op = &read_pipe_fops;
 	pipefd[0] = fd[0];
