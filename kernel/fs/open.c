@@ -98,7 +98,6 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	}
 
 	/* set file */
-	current_task->files->filp[fd] = filp;
 	FD_CLR(fd, &current_task->files->close_on_exec);
 	filp->f_inode = inode;
 	filp->f_pos = 0;
@@ -118,6 +117,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 			goto err;
 	}
 
+	current_task->files->filp[fd] = filp;
 	return fd;
 err:
 	if (filp->f_path)
