@@ -443,6 +443,9 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 		return -EINVAL;
 	}
 
+	/* set socket file */
+	new_sock->file = current_task->files->filp[fd];
+
 	sockfd_put(sock);
 	return fd;
 }
