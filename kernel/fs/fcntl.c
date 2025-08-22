@@ -10,6 +10,25 @@
  */
 static int dupfd(int oldfd, int newfd)
 {
+	/* check old file descriptor */
+	if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->files->filp[oldfd])
+		return -EBADF;
+
+	/* check new file descriptor */
+	if (newfd < 0 || newfd >= NR_OPEN)
+		return -EINVAL;
+
+	/* find a free slot */
+	for (newfd = 0; newfd < NR_OPEN; newfd++)
+		if (current_task->files->filp[newfd] == NULL)
+			break;
+
+	/* no free slot */
+	if (newfd >= NR_OPEN)
+		return -EMFILE;
+
+	/* install new file */
+	FD_CLR(oldfd, &current_task->files->close_on_exec);
 	current_task->files->filp[newfd] = current_task->files->filp[oldfd];
 	current_task->files->filp[newfd]->f_count++;
 
@@ -21,24 +40,20 @@ static int dupfd(int oldfd, int newfd)
  */
 int sys_dup2(int oldfd, int newfd)
 {
-	int ret;
+	/* check old file descriptor */
+	if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->files->filp[oldfd])
+		return -EBADF;
 
-	/* check parameters */
-	if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->files->filp[oldfd] || newfd < 0 || newfd >= NR_OPEN)
+	/* check new file descriptor */
+	if (newfd < 0 || newfd >= NR_OPEN)
 		return -EBADF;
 
 	/* same fd */
 	if (oldfd == newfd)
 		return oldfd;
 
-	/* close existing file */
-	if (current_task->files->filp[newfd] != NULL) {
-		ret = sys_close(newfd);
-		if (ret < 0)
-			return ret;
-	}
-
 	/* duplicate */
+	sys_close(newfd);
 	return dupfd(oldfd, newfd);
 }
 
@@ -47,35 +62,7 @@ int sys_dup2(int oldfd, int newfd)
  */
 int sys_dup(int oldfd)
 {
-	int newfd;
-
-	/* check parameter */
-	if (oldfd < 0 || oldfd >= NR_OPEN || current_task->files->filp[oldfd] == NULL)
-		return -EBADF;
-
-	/* find a free slot */
-	for (newfd = 0; newfd < NR_OPEN; newfd++)
-		if (current_task->files->filp[newfd] == NULL)
-			return dupfd(oldfd, newfd);
-
-	/* no free slot : too many files open */
-	return -EMFILE;
-}
-
-/*
- * Dup system call.
- */
-static int dup_after(int oldfd, int min_slot)
-{
-	int newfd;
-
-	/* find a free slot */
-	for (newfd = min_slot; newfd < NR_OPEN; newfd++)
-		if (current_task->files->filp[newfd] == NULL)
-			return dupfd(oldfd, newfd);
-
-	/* no free slot : too many files open */
-	return -EMFILE;
+	return dupfd(oldfd, 0);
 }
 
 /*
@@ -93,10 +80,10 @@ int sys_fcntl(int fd, int cmd, unsigned long arg)
 
 	switch (cmd) {
 		case F_DUPFD:
-			ret = dup_after(fd, arg);
+			ret = dupfd(fd, arg);
 			break;
 		case F_DUPFD_CLOEXEC:
-			ret = dup_after(fd, arg);
+			ret = dupfd(fd, arg);
 			if (ret >= 0)
 				FD_SET(ret, &current_task->files->close_on_exec);
 			break;
