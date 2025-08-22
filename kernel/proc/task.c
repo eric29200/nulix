@@ -395,15 +395,21 @@ void task_exit_fs(struct task *task)
 void task_exit_files(struct task *task)
 {
 	struct files_struct *files = task->files;
+	struct file *filp;
 	int i;
 
 	if (files) {
 		task->files = NULL;
 
 		if (--files->count <= 0) {
-			for (i = 0; i < NR_OPEN; i++)
-				if (files->filp[i])
-					do_close(files->filp[i]);
+			for (i = 0; i < NR_OPEN; i++) {
+				filp = files->filp[i];
+
+				if (filp) {
+					files->filp[i] = NULL;
+					close_fp(filp);
+				}
+			}
 
 			kfree(files);
 		}

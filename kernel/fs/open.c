@@ -36,6 +36,37 @@ struct file *fget(int fd)
 }
 
 /*
+ * Release a file.
+ */
+static void __fput(struct file *filp)
+{
+	/* specific close operation */
+	if (filp->f_op && filp->f_op->close)
+		filp->f_op->close(filp);
+
+	/* release inode */
+	iput(filp->f_inode);
+
+	/* free path */
+	if (filp->f_path)
+		kfree(filp->f_path);
+
+	/* clear inode */
+	memset(filp, 0, sizeof(struct file));
+}
+
+/*
+ * Release a file.
+ */
+void fput(struct file *filp)
+{
+	int count = filp->f_count - 1;
+	if (!count)
+		__fput(filp);
+	filp->f_count = count;
+}
+
+/*
  * Get an empty file.
  */
 struct file *get_empty_filp()
@@ -151,29 +182,17 @@ int sys_openat(int dirfd, const char *pathname, int flags, mode_t mode)
 }
 
 /*
- * Close system call.
+ * Close a file.
  */
-int do_close(struct file *filp)
+int close_fp(struct file *filp)
 {
-	filp->f_count--;
-
-	/* release file if not used anymore */
-	if (filp->f_count <= 0) {
-		/* specific close operation */
-		if (filp->f_op && filp->f_op->close)
-			filp->f_op->close(filp);
-
-		/* release inode */
-		iput(filp->f_inode);
-
-		/* free path */
-		if (filp->f_path)
-			kfree(filp->f_path);
-
-		/* clear inode */
-		memset(filp, 0, sizeof(struct file));
+	/* check file */
+	if (filp->f_count == 0) {
+		printf("VFS: Close: file count is 0\n");
+		return 0;
 	}
 
+	fput(filp);
 	return 0;
 }
 
@@ -191,7 +210,7 @@ int sys_close(int fd)
 		return -EINVAL;
 
 	/* close file */
-	ret = do_close(filp);
+	ret = close_fp(filp);
 	if (ret)
 		return ret;
 

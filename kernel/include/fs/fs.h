@@ -268,6 +268,7 @@ void mark_inode_dirty(struct inode *inode);
 struct inode *iget(struct super_block *sb, ino_t ino);
 void iput(struct inode *inode);
 struct file *fget(int fd);
+void fput(struct file *filp);
 struct inode *get_empty_inode(struct super_block *sb);
 void clear_inode(struct inode *inode);
 void add_to_inode_cache(struct inode *inode);
@@ -298,7 +299,7 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma);
 /* generic operations */
 int do_mount_root(dev_t dev, const char *dev_name);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
-int do_close(struct file *filp);
+int close_fp(struct file *filp);
 ssize_t do_read(struct file *filp, char *buf, int count);
 ssize_t do_write(struct file *filp, const char *buf, int count);
 off_t do_llseek(struct file *filp, off_t offset, int whence);

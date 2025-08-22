@@ -51,7 +51,7 @@ static struct file *shmem_file_setup(int size)
 	/* get an inode */
 	inode = shm_get_inode(S_IFREG | S_IRWXUGO, 0, size);
 	if (!inode) {
-		do_close(filp);
+		close_fp(filp);
 		return NULL;
 	}
 
@@ -112,7 +112,7 @@ static int shm_newseg(int key, int size, int shmflg)
 	return shm->shm_id;
 no_id:
 	filp->f_inode->i_nlinks = 0;
-	do_close(filp);
+	close_fp(filp);
 no_file:
 	kfree(shm);
 	return ret;
@@ -128,7 +128,7 @@ int shm_destroy(struct shmid *shm)
 
 	/* remove file */
 	shm->shm_filp->f_inode->i_nlinks = 0;
-	do_close(shm->shm_filp);
+	close_fp(shm->shm_filp);
 
 	/* free segment */
 	kfree(shm);
