@@ -79,6 +79,7 @@ int sys_lstat64(const char *pathname, struct stat64 *statbuf)
 int sys_fstat64(int fd, struct stat64 *statbuf)
 {
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
@@ -86,7 +87,12 @@ int sys_fstat64(int fd, struct stat64 *statbuf)
 		return -EINVAL;
 
 	/* do stat */
-	return do_stat64(filp->f_inode, statbuf);
+	ret = do_stat64(filp->f_inode, statbuf);
+
+	/* release file */
+	fput(filp);
+
+	return ret;
 }
 
 /*

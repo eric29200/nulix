@@ -41,6 +41,9 @@ static void do_pollfd(struct pollfd *fds, int *count, struct select_table *wait)
 
 		/* update mask */
 		mask &= fds->events | POLLERR | POLLHUP;
+
+		/* release file */
+		fput(filp);
 	}
 
 	/* set number of events */

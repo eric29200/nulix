@@ -58,6 +58,7 @@ static int do_ftruncate(int fd, off_t length)
 {
 	struct inode *inode;
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
@@ -67,7 +68,13 @@ static int do_ftruncate(int fd, off_t length)
 	/* get inode */
 	inode = filp->f_inode;
 
-	return do_truncate(inode, length);
+	/* do truncate */
+	ret = do_truncate(inode, length);
+
+	/* release file */
+	fput(filp);
+
+	return ret;
 }
 
 /*

@@ -29,10 +29,16 @@ int get_unused_fd()
  */
 struct file *fget(int fd)
 {
+	struct file *filp;
+
 	if (fd < 0 || fd >= NR_OPEN)
 		return NULL;
 
-	return current_task->files->filp[fd];
+	filp = current_task->files->filp[fd];
+	if (filp)
+		filp->f_count++;
+
+	return filp;
 }
 
 /*
@@ -202,21 +208,15 @@ int close_fp(struct file *filp)
 int sys_close(int fd)
 {
 	struct file *filp;
-	int ret;
 
 	/* get file */
-	filp = fget(fd);
-	if (!filp)
-		return -EINVAL;
+	if (fd < 0 || fd >= NR_OPEN || (filp = current_task->files->filp[fd]) == NULL)
+		return -EBADF;
 
 	/* close file */
-	ret = close_fp(filp);
-	if (ret)
-		return ret;
-
 	FD_CLR(fd, &current_task->files->close_on_exec);
 	current_task->files->filp[fd] = NULL;
-	return 0;
+	return close_fp(filp);
 }
 
 /*
@@ -275,6 +275,9 @@ static int do_fchmod(int fd, mode_t mode)
 	/* change mode */
 	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
 	mark_inode_dirty(inode);
+
+	/* release file */
+	fput(filp);
 
 	return 0;
 }
@@ -352,6 +355,9 @@ static int do_fchown(int fd, uid_t owner, gid_t group)
 	inode->i_uid = owner;
 	inode->i_gid = group;
 	mark_inode_dirty(inode);
+
+	/* release file */
+	fput(filp);
 
 	return 0;
 }

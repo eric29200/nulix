@@ -35,6 +35,7 @@ static struct socket *sock_alloc()
 	memset(sock, 0, sizeof(struct socket));
 	sock->state = SS_UNCONNECTED;
 	sock->inode = inode;
+	sock->file = NULL;
 
 	return sock;
 }
@@ -59,6 +60,7 @@ static void sock_release(struct socket *sock)
 		sock->ops->release(sock);
 
 	/* release inode */
+	sock->file = NULL;
 	iput(sock->inode);
 }
 
@@ -96,8 +98,9 @@ static int get_fd(struct inode *inode)
 /*
  * Find socket on a file descriptor.
  */
-static struct socket *sockfd_lookup(int fd, struct file **filpp, int *err)
+static struct socket *sockfd_lookup(int fd, int *err)
 {
+	struct socket *sock;
 	struct file *filp;
 
 	/* get file */
@@ -110,14 +113,28 @@ static struct socket *sockfd_lookup(int fd, struct file **filpp, int *err)
 	/* get socket */
 	if (!filp->f_inode || !filp->f_inode->i_sock) {
 		*err = -ENOTSOCK;
+		fput(filp);
 		return NULL;
 	}
 
-	/* set filpp */
-	if (filpp)
-		*filpp = filp;
+	/* get socket */
+	sock = &filp->f_inode->u.socket_i;
 
-	return &filp->f_inode->u.socket_i;
+	/* check socket file */
+	if (sock->file != filp) {
+		printf("sockfd_lookup: socket file changed\n");
+		sock->file = filp;
+	}
+
+	return sock;
+}
+
+/*
+ * Release a socket file.
+ */
+static void sockfd_put(struct socket *sock)
+{
+	fput(sock->file);
 }
 
 /*
@@ -289,6 +306,9 @@ int sys_socket(int domain, int type, int protocol)
 		return -EINVAL;
 	}
 
+	/* set socket file */
+	sock->file = current_task->files->filp[fd];
+
 	return fd;
 }
 
@@ -301,15 +321,19 @@ int sys_bind(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* bind not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->bind)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->bind(sock, addr, addrlen);
+	err = sock->ops->bind(sock, addr, addrlen);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -321,15 +345,19 @@ int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* connect not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->connect)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->connect(sock, addr, addrlen);
+	err = sock->ops->connect(sock, addr, addrlen);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -344,15 +372,19 @@ int sys_listen(int sockfd, int backlog)
 	UNUSED(backlog);
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* listen not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->listen)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->listen(sock);
+	err = sock->ops->listen(sock);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -367,14 +399,16 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	UNUSED(addrlen);
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* allocate a new socket */
 	new_sock = sock_alloc();
-	if (!new_sock)
+	if (!new_sock) {
+		sockfd_put(sock);
 		return -ENOSR;
+	}
 
 	/* duplicate socket */
 	new_sock->type = sock->type;
@@ -382,12 +416,14 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	err = sock->ops->dup(sock, new_sock);
 	if (err < 0) {
 		sock_release(new_sock);
+		sockfd_put(sock);
 		return err;
 	}
 
 	/* accept not implemented */
 	if (!new_sock->ops || !new_sock->ops->accept) {
 		sock_release(new_sock);
+		sockfd_put(sock);
 		return -EINVAL;
 	}
 
@@ -395,6 +431,7 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	err = new_sock->ops->accept(sock, new_sock, addr);
 	if (err < 0) {
 		sock_release(new_sock);
+		sockfd_put(sock);
 		return err;
 	}
 
@@ -402,9 +439,11 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	fd = get_fd(new_sock->inode);
 	if (fd < 0) {
 		sock_release(new_sock);
+		sockfd_put(sock);
 		return -EINVAL;
 	}
 
+	sockfd_put(sock);
 	return fd;
 }
 
@@ -424,20 +463,20 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	struct socket *sock;
 	struct iovec iovec;
 	struct msghdr msg;
-	struct file *filp;
 	int err;
 
 	/* unused address length */
 	UNUSED(addrlen);
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, &filp, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* send message not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->sendmsg)
-		return -EINVAL;
+		goto out;
 
 	/* build buffer */
 	iovec.iov_base = (void *) buf;
@@ -453,7 +492,10 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	msg.msg_flags = 0;
 
 	/* send message */
-	return sock->ops->sendmsg(sock, &msg, filp->f_flags & O_NONBLOCK, flags);
+	err = sock->ops->sendmsg(sock, &msg, sock->file->f_flags & O_NONBLOCK, flags);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -462,19 +504,22 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 {
 	struct socket *sock;
-	struct file *filp;
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, &filp, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* send message not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->sendmsg)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->sendmsg(sock, msg, filp->f_flags & O_NONBLOCK, flags);
+	err = sock->ops->sendmsg(sock, msg, sock->file->f_flags & O_NONBLOCK, flags);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -493,20 +538,20 @@ int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sock
 	struct socket *sock;
 	struct iovec iovec;
 	struct msghdr msg;
-	struct file *filp;
 	int err;
 
 	/* unused address length */
 	UNUSED(addrlen);
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, &filp, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* receive message not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->recvmsg)
-		return -EINVAL;
+		goto out;
 
 	/* build buffer */
 	iovec.iov_base = (void *) buf;
@@ -521,7 +566,10 @@ int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sock
 	msg.msg_controllen = 0;
 	msg.msg_flags = 0;
 
-	return sock->ops->recvmsg(sock, &msg, filp->f_flags & O_NONBLOCK, flags);
+	err = sock->ops->recvmsg(sock, &msg, sock->file->f_flags & O_NONBLOCK, flags);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -530,19 +578,22 @@ int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sock
 int sys_recvmsg(int sockfd, struct msghdr *msg, int flags)
 {
 	struct socket *sock;
-	struct file *filp;
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, &filp, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* receive message not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->recvmsg)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->recvmsg(sock, msg, filp->f_flags & O_NONBLOCK, flags);
+	err = sock->ops->recvmsg(sock, msg, sock->file->f_flags & O_NONBLOCK, flags);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -554,15 +605,19 @@ int sys_shutdown(int sockfd, int how)
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* shutdown not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->shutdown)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->shutdown(sock, how);
+	err = sock->ops->shutdown(sock, how);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -574,15 +629,19 @@ int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* getpeername not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->getpeername)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->getpeername(sock, addr, addrlen);
+	err = sock->ops->getpeername(sock, addr, addrlen);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -594,15 +653,19 @@ int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* getsockname not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->getsockname)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->getsockname(sock, addr, addrlen);
+	err = sock->ops->getsockname(sock, addr, addrlen);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -664,19 +727,25 @@ int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t *opt
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* socket options */
-	if (level == SOL_SOCKET)
-		return sock_getsockopt(sock, optname, optval, optlen);
+	if (level == SOL_SOCKET) {
+		err = sock_getsockopt(sock, optname, optval, optlen);
+		goto out;
+	}
 
 	/* setsockopt not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->getsockopt)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->getsockopt(sock, level, optname, optval, optlen);
+	err = sock->ops->getsockopt(sock, level, optname, optval, optlen);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -688,19 +757,25 @@ int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optl
 	int err;
 
 	/* find socket */
-	sock = sockfd_lookup(sockfd, NULL, &err);
+	sock = sockfd_lookup(sockfd, &err);
 	if (!sock)
 		return err;
 
 	/* socket options */
-	if (level == SOL_SOCKET)
-		return sock_setsockopt(sock, optname, optval, optlen);
+	if (level == SOL_SOCKET) {
+		err = sock_setsockopt(sock, optname, optval, optlen);
+		goto out;
+	}
 
 	/* setsockopt not implemented */
+	err = -EINVAL;
 	if (!sock->ops || !sock->ops->setsockopt)
-		return -EINVAL;
+		goto out;
 
-	return sock->ops->setsockopt(sock, level, optname, optval, optlen);
+	err = sock->ops->setsockopt(sock, level, optname, optval, optlen);
+out:
+	sockfd_put(sock);
+	return err;
 }
 
 /*
@@ -711,7 +786,7 @@ int sys_socketcall(int call, unsigned long *args)
 	int err;
 
 	/* check call */
-	if(call < 1|| call > SYS_RECVMSG)
+	if(call < 1 || call > SYS_RECVMSG)
 		return -EINVAL;
 
 	switch(call) {
@@ -767,5 +842,6 @@ int sys_socketcall(int call, unsigned long *args)
 			err = -EINVAL;
 			break;
 	}
+
 	return err;
 }

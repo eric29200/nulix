@@ -661,6 +661,7 @@ void vmtruncate(struct inode *inode, off_t offset)
 void *old_mmap(struct mmap_arg_struct *arg)
 {
 	struct file *filp = NULL;
+	void *ret;
 
 	/* offset must be page aligned */
 	if (arg->offset & ~PAGE_MASK)
@@ -673,7 +674,14 @@ void *old_mmap(struct mmap_arg_struct *arg)
 			return NULL;
 	}
 
-	return do_mmap(arg->addr, arg->len, arg->prot, arg->flags, filp, arg->offset);
+	/* do mmap */
+	ret = do_mmap(arg->addr, arg->len, arg->prot, arg->flags, filp, arg->offset);
+
+	/* release file */
+	if (filp)
+		fput(filp);
+
+	return ret;
 }
 
 /*
@@ -682,6 +690,7 @@ void *old_mmap(struct mmap_arg_struct *arg)
 void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
 	struct file *filp = NULL;
+	void *ret;
 
 	/* get file */
 	if (fd >= 0) {
@@ -690,7 +699,14 @@ void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pg
 			return NULL;
 	}
 
-	return do_mmap((uint32_t) addr, length, prot, flags, filp, pgoffset * PAGE_SIZE);
+	/* do mmap */
+	ret = do_mmap((uint32_t) addr, length, prot, flags, filp, pgoffset * PAGE_SIZE);
+
+	/* release file */
+	if (filp)
+		fput(filp);
+
+	return ret;
 }
 
 /*

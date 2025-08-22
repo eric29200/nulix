@@ -9,6 +9,7 @@
 static int do_getdents64(int fd, void *dirp, size_t count)
 {
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
@@ -16,10 +17,18 @@ static int do_getdents64(int fd, void *dirp, size_t count)
 		return -EINVAL;
 
 	/* getdents not implemented */
-	if (!filp->f_op || !filp->f_op->getdents64)
+	if (!filp->f_op || !filp->f_op->getdents64) {
+		fput(filp);
 		return -EPERM;
+	}
 
-	return filp->f_op->getdents64(filp, dirp, count);
+	/* do getdents */
+	ret = filp->f_op->getdents64(filp, dirp, count);
+
+	/* release file */
+	fput(filp);
+
+	return ret;
 }
 
 /*

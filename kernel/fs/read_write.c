@@ -83,13 +83,20 @@ off_t do_llseek(struct file *filp, off_t offset, int whence)
 off_t sys_lseek(int fd, off_t offset, int whence)
 {
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		return -EBADF;
 
-	return do_llseek(filp, offset, whence);
+	/* do llseek */
+	ret = do_llseek(filp, offset, whence);
+
+	/* release file */
+	fput(filp);
+
+	return ret;
 }
 
 /*
@@ -110,6 +117,9 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
 
 	/* seek */
 	*result = do_llseek(filp, offset, whence);
+
+	/* release file */
+	fput(filp);
 
 	return 0;
 }
@@ -153,13 +163,20 @@ static int do_pread64(struct file *filp, void *buf, size_t count, off_t offset)
 int sys_read(int fd, char *buf, int count)
 {
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		return -EBADF;
 
-	return do_read(filp, buf, count);
+	/* do read */
+	ret = do_read(filp, buf, count);
+
+	/* release file */
+	fput(filp);
+
+	return ret;
 }
 
 /*
@@ -168,13 +185,20 @@ int sys_read(int fd, char *buf, int count)
 int sys_write(int fd, const char *buf, int count)
 {
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		return -EBADF;
 
-	return do_write(filp, buf, count);
+	/* do write */
+	ret = do_write(filp, buf, count);
+
+	/* release file */
+	fput(filp);
+
+	return ret;
 }
 
 /*
@@ -195,14 +219,19 @@ ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 	for (i = 0; i < iovcnt; i++, iov++) {
 		/* read into buffer */
 		n = do_read(filp, iov->iov_base, iov->iov_len);
-		if (n < 0)
-			return n;
+		if (n < 0) {
+			ret = n;
+			break;
+		}
 
 		/* check end of file */
 		ret += n;
 		if (n != (ssize_t) iov->iov_len)
 			break;
 	}
+
+	/* release file */
+	fput(filp);
 
 	return ret;
 }
@@ -225,14 +254,19 @@ ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 	for (i = 0; i < iovcnt; i++, iov++) {
 		/* write into buffer */
 		n = do_write(filp, iov->iov_base, iov->iov_len);
-		if (n < 0)
-			return n;
+		if (n < 0) {
+			ret = n;
+			break;
+		}
 
 		/* check end of file */
 		ret += n;
 		if (n != (ssize_t) iov->iov_len)
 			break;
 	}
+
+	/* release file */
+	fput(filp);
 
 	return ret;
 }
@@ -243,13 +277,20 @@ ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 int sys_pread64(int fd, void *buf, size_t count, off_t offset)
 {
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		return -EBADF;
 
-	return do_pread64(filp, buf, count, offset);
+	/* do pread */
+	ret = do_pread64(filp, buf, count, offset);
+
+	/* release file */
+	fput(filp);
+
+	return ret;
 }
 
 /*
@@ -285,13 +326,18 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 
 	/* get output file */
 	filp_out = fget(fd_out);
-	if (!filp_out)
+	if (!filp_out) {
+		fput(filp_in);
 		return -EBADF;
+	}
 
 	/* get a free buffer */
 	buf = get_free_page();
-	if (!buf)
+	if (!buf) {
+		fput(filp_in);
+		fput(filp_out);
 		return -ENOMEM;
+	}
 
 	/* set input file position */
 	if (offset) {
@@ -322,6 +368,10 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 		*offset = filp_in->f_pos;
 		filp_in->f_pos = f_pos;
 	}
+
+	/* release files */
+	fput(filp_in);
+	fput(filp_out);
 
 	/* free page */
 	free_page(buf);

@@ -114,6 +114,7 @@ struct socket {
 	struct prot_ops *	ops;
 	struct wait_queue *	wait;
 	struct inode *		inode;
+	struct file *		file;
 	struct sock *		sk;
 };
 

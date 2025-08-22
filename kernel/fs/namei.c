@@ -185,6 +185,7 @@ int namei(int dirfd, struct inode *base, const char *pathname, int follow_links,
 
 		filp->f_inode->i_count++;
 		*res_inode = filp->f_inode;
+		fput(filp);
 		return 0;
 	}
 

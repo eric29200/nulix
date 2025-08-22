@@ -107,5 +107,8 @@ int sys_fcntl(int fd, int cmd, unsigned long arg)
 			break;
 	}
 
+	/* release file */
+	fput(filp);
+
 	return ret;
 }

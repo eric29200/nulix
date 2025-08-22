@@ -9,7 +9,7 @@
 int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 {
 	struct file *filp;
-	int on;
+	int ret = 0, on;
 
 	/* get file */
 	filp = fget(fd);
@@ -25,15 +25,23 @@ int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 			else
 				filp->f_flags &= ~O_NONBLOCK;
 
-			return 0;
+			break;
 		case FIONREAD:
 			*((int *) arg) = filp->f_inode->i_size - filp->f_pos;
-			return 0;
+			break;
 		default:
 			/* ioctl not implemented */
-			if (!filp->f_op || !filp->f_op->ioctl)
-				return -EPERM;
+			if (!filp->f_op || !filp->f_op->ioctl) {
+				ret = -EPERM;
+				break;
+			}
 
-			return filp->f_op->ioctl(filp, request, arg);
+			ret = filp->f_op->ioctl(filp, request, arg);
+			break;
 	}
+
+	/* release file */
+	fput(filp);
+
+	return ret;
 }

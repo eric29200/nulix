@@ -54,23 +54,32 @@ int sys_fchdir(int fd)
 
 	/* fd must be a directory */
 	inode = filp->f_inode;
-	if (!S_ISDIR(inode->i_mode))
+	if (!S_ISDIR(inode->i_mode)) {
+		fput(filp);
 		return -ENOTDIR;
+	}
 
 	/* check permissions */
 	ret = permission(inode, MAY_EXEC);
-	if (ret)
+	if (ret) {
+		fput(filp);
 		return ret;
+	}
 
 	/* no change */
-	if (inode == current_task->fs->cwd)
+	if (inode == current_task->fs->cwd) {
+		fput(filp);
 		return 0;
+	}
 
 	/* release current working dir */
 	iput(current_task->fs->cwd);
 
 	/* set current working dir */
 	current_task->fs->cwd = inode;
+
+	/* release file */
+	fput(filp);
 
 	return 0;
 }
