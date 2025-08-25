@@ -238,8 +238,10 @@ int minix_lookup(struct inode *dir, const char *name, size_t name_len, struct in
  */
 int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
 {
-	struct inode *inode, *tmp;
+	struct buffer_head *bh;
+	struct inode *inode;
 	ino_t ino;
+	void *de;
 	int err;
 
 	/* check directory */
@@ -249,8 +251,9 @@ int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 
 	/* check if file already exists */
 	dir->i_count++;
-	if (minix_lookup(dir, name, name_len, &tmp) == 0) {
-		iput(tmp);
+	bh = minix_find_entry(dir, name, name_len, &de);
+	if (bh) {
+		brelse(bh);
 		iput(dir);
 		return -EEXIST;
 	}
@@ -706,7 +709,9 @@ out:
  */
 int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
 {
-	struct inode *inode, *tmp;
+	struct buffer_head *bh;
+	struct inode *inode;
+	void *de;
 	int err;
 
 	/* check directory */
@@ -715,8 +720,9 @@ int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 
 	/* check if file already exists */
 	dir->i_count++;
-	if (minix_lookup(dir, name, name_len, &tmp) == 0) {
-		iput(tmp);
+	bh = minix_find_entry(dir, name, name_len, &de);
+	if (bh) {
+		brelse(bh);
 		iput(dir);
 		return -EEXIST;
 	}

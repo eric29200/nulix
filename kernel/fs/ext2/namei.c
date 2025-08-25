@@ -317,7 +317,9 @@ int ext2_lookup(struct inode *dir, const char *name, size_t name_len, struct ino
  */
 int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
 {
-	struct inode *inode, *tmp;
+	struct ext2_dir_entry *de;
+	struct buffer_head *bh;
+	struct inode *inode;
 	ino_t ino;
 	int err;
 
@@ -328,8 +330,9 @@ int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mod
 
 	/* check if file already exists */
 	dir->i_count++;
-	if (ext2_lookup(dir, name, name_len, &tmp) == 0) {
-		iput(tmp);
+	bh = ext2_find_entry(dir, name, name_len, &de);
+	if (bh) {
+		brelse(bh);
 		iput(dir);
 		return -EEXIST;
 	}
@@ -800,7 +803,9 @@ out:
  */
 int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
 {
-	struct inode *inode, *tmp;
+	struct ext2_dir_entry *de;
+	struct buffer_head *bh;
+	struct inode *inode;
 	int err;
 
 	/* check directory */
@@ -809,8 +814,9 @@ int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode
 
 	/* check if file already exists */
 	dir->i_count++;
-	if (ext2_lookup(dir, name, name_len, &tmp) == 0) {
-		iput(tmp);
+	bh = ext2_find_entry(dir, name, name_len, &de);
+	if (bh) {
+		brelse(bh);
 		iput(dir);
 		return -EEXIST;
 	}

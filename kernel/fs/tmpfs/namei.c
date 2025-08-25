@@ -192,7 +192,7 @@ int tmpfs_lookup(struct inode *dir, const char *name, size_t name_len, struct in
  */
 int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
 {
-	struct inode *inode, *tmp;
+	struct inode *inode;
 	int ret;
 
 	/* check directory */
@@ -202,8 +202,7 @@ int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 
 	/* check if file already exists */
 	dir->i_count++;
-	if (tmpfs_lookup(dir, name, name_len, &tmp) == 0) {
-		iput(tmp);
+	if (tmpfs_find_entry(dir, name, name_len)) {
 		iput(dir);
 		return -EEXIST;
 	}
@@ -569,7 +568,7 @@ out:
  */
 int tmpfs_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
 {
-	struct inode *inode, *tmp;
+	struct inode *inode;
 	int ret;
 
 	/* check directory */
@@ -578,8 +577,7 @@ int tmpfs_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 
 	/* check if file already exists */
 	dir->i_count++;
-	if (tmpfs_lookup(dir, name, name_len, &tmp) == 0) {
-		iput(tmp);
+	if (tmpfs_find_entry(dir, name, name_len)) {
 		iput(dir);
 		return -EEXIST;
 	}
