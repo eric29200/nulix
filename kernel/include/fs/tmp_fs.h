@@ -35,7 +35,7 @@ int tmpfs_lookup(struct inode *dir, const char *name, size_t name_len, struct in
 int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode);
 int tmpfs_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
 int tmpfs_unlink(struct inode *dir, struct dentry *dentry);
-int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const char *target);
+int tmpfs_symlink(struct inode *dir, struct dentry *dentry, const char *target);
 int tmpfs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
 int tmpfs_rmdir(struct inode *dir, struct dentry *dentry);
 int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,

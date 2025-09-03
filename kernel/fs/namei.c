@@ -406,7 +406,7 @@ static int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *
 	ret = dir_namei(newdirfd, NULL, newpath, &basename, &basename_len, &new_dir);
 	if (ret)
 		goto out;
-	
+
 	/* set dentry */
 	new_dentry.d_count = 1;
 	new_dentry.d_inode = NULL;
@@ -461,6 +461,7 @@ int sys_linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newp
  */
 static int do_symlink(const char *target, int newdirfd, const char *linkpath)
 {
+	struct dentry dentry;
 	const char *basename;
 	size_t basename_len;
 	struct inode *dir;
@@ -471,29 +472,32 @@ static int do_symlink(const char *target, int newdirfd, const char *linkpath)
 	if (ret)
 		return ret;
 
+	/* set dentry */
+	dentry.d_count = 1;
+	dentry.d_inode = NULL;
+	dentry.d_name.name = (char *) basename;
+	dentry.d_name.len = basename_len;
+	dentry.d_name.hash = 0;
+
 	/* check directory name */
-	if (!basename_len) {
-		iput(dir);
-		return -ENOENT;
-	}
+	ret = -ENOENT;
+	if (!basename_len)
+		goto out;
 
 	/* check permissions */
 	ret = permission(dir, MAY_WRITE | MAY_EXEC);
-	if (ret) {
-		iput(dir);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/* symlink not implemented */
-	if (!dir->i_op || !dir->i_op->symlink) {
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!dir->i_op || !dir->i_op->symlink)
+		goto out;
 
 	/* create symbolic link */
-	dir->i_count++;
-	ret = dir->i_op->symlink(dir, basename, basename_len, target);
-
+	ret = dir->i_op->symlink(dir, &dentry, target);
+out:
+	dput(&dentry);
 	iput(dir);
 	return ret;
 }

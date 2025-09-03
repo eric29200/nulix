@@ -624,13 +624,13 @@ static int ext2_block_symlink(struct inode *inode, const char *target)
 /*
  * Create a symbolic link.
  */
-int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const char *target)
+int ext2_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 {
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
 	size_t target_len;
-	int err;
+	int ret;
 
 	/* check name length */
 	target_len = strlen(target) + 1;
@@ -639,16 +639,14 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 
 	/* create a new inode */
 	inode = ext2_new_inode(dir, S_IFLNK | (0777 & ~current_task->fs->umask));
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* write target link */
 	if (target_len > sizeof(inode->u.ext2_i.i_data)) {
 		inode->i_op = &ext2_page_symlink_iops;
-		err = ext2_block_symlink(inode, target);
-		if (err)
+		ret = ext2_block_symlink(inode, target);
+		if (ret)
 			goto err;
 	} else {
 		inode->i_op = &ext2_fast_symlink_iops;
@@ -660,28 +658,26 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 	mark_inode_dirty(inode);
 
 	/* check if file exists */
-	bh = ext2_find_entry(dir, name, name_len, &de);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
-		err = -EEXIST;
+		ret = -EEXIST;
 		brelse(bh);
 		goto err;
 	}
 
 	/* add entry */
-	err = ext2_add_entry(dir, name, name_len, inode);
-	if (err)
+	ret = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret)
 		goto err;
 
-	/* release inode */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 err:
 	inode->i_nlinks = 0;
 	iput(inode);
-	iput(dir);
-	return err;
+	return ret;
 }
 
 /*

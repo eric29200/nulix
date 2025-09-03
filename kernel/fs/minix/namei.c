@@ -312,7 +312,7 @@ int minix_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 		brelse(bh);
 		return -EEXIST;
 	}
-	
+
 	/* add entry */
 	ret = minix_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret)
@@ -379,20 +379,18 @@ out:
 /*
  * Create a symbolic link.
  */
-int minix_symlink(struct inode *dir, const char *name, size_t name_len, const char *target)
+int minix_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 {
 	struct minix3_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
 	size_t i;
-	int err;
+	int ret;
 
 	/* create a new inode */
 	inode = minix_new_inode(dir->i_sb);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* set new inode */
 	inode->i_uid = current_task->fsuid;
@@ -406,7 +404,6 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	if(!bh) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -ENOSPC;
 	}
 
@@ -422,26 +419,24 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	mark_inode_dirty(inode);
 
 	/* check if file exists */
-	bh = minix_find_entry(dir, name, name_len, &de);
+	bh = minix_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* add entry */
-	err = minix_add_entry(dir, name, name_len, inode);
-	if (err) {
+	ret = minix_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret) {
+		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
-		return err;
+		return ret;
 	}
 
-	/* release inode */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

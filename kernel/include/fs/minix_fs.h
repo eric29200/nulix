@@ -126,7 +126,7 @@ int minix_lookup(struct inode *dir, const char *name, size_t name_len, struct in
 int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode);
 int minix_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
 int minix_unlink(struct inode *dir, struct dentry *dentry);
-int minix_symlink(struct inode *dir, const char *name, size_t name_len, const char *target);
+int minix_symlink(struct inode *dir, struct dentry *dentry, const char *target);
 int minix_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
 int minix_rmdir(struct inode *dir, struct dentry *dentry);
 int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,

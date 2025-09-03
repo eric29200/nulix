@@ -311,7 +311,7 @@ out:
 /*
  * Create a symbolic link.
  */
-int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const char *target)
+int tmpfs_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 {
 	struct tmpfs_dir_entry *de;
 	struct inode *inode;
@@ -321,17 +321,14 @@ int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 
 	/* create a new inode */
 	inode = tmpfs_new_inode(dir->i_sb, S_IFLNK | (0777 & ~current_task->fs->umask), 0);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* create first page */
 	ret = tmpfs_inode_grow_size(inode, PAGE_SIZE);
 	if (ret) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -ENOMEM;
 	}
 
@@ -346,26 +343,23 @@ int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	kunmap(page);
 
 	/* check if file exists */
-	de = tmpfs_find_entry(dir, name, name_len);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
 	if (de) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* add entry */
-	ret = tmpfs_add_entry(dir, name, name_len, inode);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
-	/* release inode */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }
