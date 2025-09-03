@@ -148,9 +148,10 @@ static struct buffer_head *isofs_find_entry(struct inode *dir, const char *name,
 /*
  * Lookup for a file in a directory.
  */
-int isofs_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+int isofs_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct buffer_head *bh = NULL;
+	struct inode *inode = NULL;
 	ino_t ino, backlink;
 
 	/* check dir */
@@ -158,32 +159,27 @@ int isofs_lookup(struct inode *dir, const char *name, size_t name_len, struct in
 		return -ENOENT;
 
 	/* dir must be a directory */
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* find entry */
-	bh = isofs_find_entry(dir, name, name_len, &ino, &backlink);
-	if (!bh) {
-		iput(dir);
-		return -ENOENT;
-	}
+	bh = isofs_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &ino, &backlink);
+	if (!bh)
+		goto out;
 
 	/* release block buffer */
 	brelse(bh);
 
 	/* get inode */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, ino);
+	if (!inode)
 		return -EACCES;
-	}
 
 	/* save backlink */
 	if (backlink)
 		dir->u.iso_i.i_backlink = backlink;
 
-	iput(dir);
+out:
+	d_add(dentry, inode);
 	return 0;
 }

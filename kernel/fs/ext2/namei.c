@@ -272,8 +272,9 @@ static int ext2_empty_dir(struct inode *inode)
 /*
  * Lookup for a file in a directory.
  */
-int ext2_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+int ext2_lookup(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = NULL;
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
 	ino_t ino;
@@ -283,32 +284,25 @@ int ext2_lookup(struct inode *dir, const char *name, size_t name_len, struct ino
 		return -ENOENT;
 
 	/* dir must be a directory */
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* find entry */
-	bh = ext2_find_entry(dir, name, name_len, &de);
-	if (!bh) {
-		iput(dir);
-		return -ENOENT;
-	}
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
+	if (!bh)
+		goto out;
 
 	/* get inode number */
 	ino = de->d_inode;
-
-	/* release block buffer */
 	brelse(bh);
 
 	/* get inode */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, ino);
+	if (!inode)
 		return -EACCES;
-	}
 
-	iput(dir);
+out:
+	d_add(dentry, inode);
 	return 0;
 }
 

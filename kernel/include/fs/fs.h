@@ -204,7 +204,7 @@ struct super_operations {
  */
 struct inode_operations {
 	struct file_operations *fops;
-	int (*lookup)(struct inode *, const char *, size_t, struct inode **);
+	int (*lookup)(struct inode *, struct dentry *);
 	int (*create)(struct inode *, struct dentry *, mode_t);
 	int (*follow_link)(struct inode *, struct inode *, int, mode_t, struct inode **);
 	ssize_t (*readlink)(struct inode *, char *, size_t);
@@ -296,6 +296,7 @@ void init_inode();
 /* dentry operations */
 void dput(struct dentry *dentry);
 void d_instantiate(struct dentry *dentry, struct inode *inode);
+void d_add(struct dentry *dentry, struct inode *inode);
 void d_delete(struct dentry *dentry);
 void d_move(struct dentry *dentry, struct dentry *target);
 

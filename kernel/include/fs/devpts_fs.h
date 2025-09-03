@@ -55,6 +55,6 @@ int devpts_put_inode(struct inode *inode);
 int devpts_getdents64(struct file *filp, void *dirp, size_t count);
 
 /* name resolution operations */
-int devpts_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode);
+int devpts_lookup(struct inode *dir, struct dentry *dentry);
 
 #endif

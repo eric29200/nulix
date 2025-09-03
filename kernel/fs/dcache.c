@@ -33,6 +33,14 @@ void d_instantiate(struct dentry *dentry, struct inode *inode)
 }
 
 /*
+ * Add a dentry.
+ */
+void d_add(struct dentry *dentry, struct inode *inode)
+{
+	d_instantiate(dentry, inode);
+}
+
+/*
  * Delete a dentry.
  */
 void d_delete(struct dentry *dentry)

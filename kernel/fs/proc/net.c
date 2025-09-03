@@ -43,22 +43,23 @@ static int proc_net_getdents64(struct file *filp, void *dirp, size_t count)
 /*
  * Lookup net dir.
  */
-static int proc_net_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+static int proc_net_lookup(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = NULL;
 	ino_t ino;
 	size_t i;
 
-	/* dir must be a directory */
+	/* check dir */
 	if (!dir)
 		return -ENOENT;
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+
+	/* dir must be a directory */
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* find matching entry */
 	for (i = 0; i < NR_NET_DIRENTRY; i++) {
-		if (proc_match(name, name_len, &net_dir[i])) {
+		if (proc_match(dentry->d_name.name, dentry->d_name.len, &net_dir[i])) {
 			ino = net_dir[i].ino;
 			goto found;
 		}
@@ -67,13 +68,11 @@ static int proc_net_lookup(struct inode *dir, const char *name, size_t name_len,
 	return -ENOENT;
 found:
 	/* get inode */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, ino);
+	if (!inode)
 		return -EACCES;
-	}
 
-	iput(dir);
+	d_add(dentry, inode);
 	return 0;
 }
 

@@ -477,33 +477,32 @@ static int proc_base_getdents64(struct file *filp, void *dirp, size_t count)
 /*
  * Lookup for a file.
  */
-static int proc_base_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+static int proc_base_lookup(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = NULL;
 	struct proc_dir_entry *de;
 	ino_t ino;
 	size_t i;
 
-	/* dir must be a directory */
+	/* check dir */
 	if (!dir)
 		return -ENOENT;
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+
+	/* dir must be a directory */
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* find matching entry */
 	for (i = 0, de = NULL; i < NR_BASE_DIRENTRY; i++) {
-		if (proc_match(name, name_len, &base_dir[i])) {
+		if (proc_match(dentry->d_name.name, dentry->d_name.len, &base_dir[i])) {
 			de = &base_dir[i];
 			break;
 		}
 	}
 
 	/* no such entry */
-	if (!de) {
-		iput(dir);
+	if (!de)
 		return -ENOENT;
-	}
 
 	/* create a fake inode */
 	if (de->ino == 1)
@@ -512,13 +511,11 @@ static int proc_base_lookup(struct inode *dir, const char *name, size_t name_len
 		ino = dir->i_ino - PROC_PID_INO + de->ino;
 
 	/* get inode */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, ino);
+	if (!inode)
 		return -EACCES;
-	}
 
-	iput(dir);
+	d_add(dentry, inode);
 	return 0;
 }
 

@@ -52,6 +52,7 @@ static int follow_link(struct inode *dir, struct inode *inode, int flags, mode_t
 static int lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
 {
 	struct super_block *sb;
+	struct dentry dentry;
 	int ret;
 
 	/* reset result inode */
@@ -95,8 +96,23 @@ static int lookup(struct inode *dir, const char *name, size_t name_len, struct i
 		return 0;
 	}
 
+	/* set dentry */
+	dentry.d_count = 1;
+	dentry.d_inode = NULL;
+	dentry.d_name.name = (char *) name;
+	dentry.d_name.len = name_len;
+	dentry.d_name.hash = 0;
+
 	/* real lookup */
-	return dir->i_op->lookup(dir, name, name_len, res_inode);
+	ret = dir->i_op->lookup(dir, &dentry);
+	if (ret == 0) {
+		*res_inode = dentry.d_inode;
+		if (!*res_inode)
+			ret = -ENOENT;
+	}
+
+	iput(dir);
+	return ret;
 }
 
 /*

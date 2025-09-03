@@ -84,67 +84,61 @@ static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
 /*
  * Lookup for a file.
  */
-static int proc_fd_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+static int proc_fd_lookup(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = NULL;
 	struct task *task;
 	ino_t ino;
 	pid_t pid;
 	int fd;
 
-	/* dir must be a directory */
+	/* check dir */
 	if (!dir)
 		return -ENOENT;
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+
+	/* dir must be a directory */
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* get pid */
 	pid = dir->i_ino >> 16;
 
 	/* current directory */
-	if (!name_len || (name_len == 1 && name[0] == '.')) {
-		*res_inode = dir;
-		return 0;
+	if (!dentry->d_name.len || (dentry->d_name.len == 1 && dentry->d_name.name[0] == '.')) {
+		dir->i_count++;
+		inode = dir;
+		goto out;
 	}
 
 	/* parent directory */
-	if (name_len == 2 && name[0] == '.' && name[1] == '.') {
-		   *res_inode = iget(dir->i_sb, (pid << 16) + PROC_PID_INO);
-		   if (!*res_inode) {
-			iput(dir);
+	if (dentry->d_name.len == 2 && dentry->d_name.name[0] == '.' && dentry->d_name.name[1] == '.') {
+		inode = iget(dir->i_sb, (pid << 16) + PROC_PID_INO);
+		if (!inode) 
 			return -ENOENT;
-		   }
 
-		   iput(dir);
-		   return 0;
+		goto out;
 	    }
 
 	/* get task */
 	task = find_task(pid);
-	if (!task) {
-		iput(dir);
+	if (!task)
 		return -ENOENT;
-	}
 
 	/* try to find matching file descriptor */
-	fd = atoi(name);
-	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd]) {
-		iput(dir);
+	fd = atoi(dentry->d_name.name);
+	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd])
 		return -ENOENT;
-	}
 
 	/* create a fake inode */
 	ino = (pid << 16) + (PROC_PID_FD_INO << 8) + fd;
 
 	/* get inode */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, ino);
+	if (!inode)
 		return -EACCES;
-	}
 
-	iput(dir);
+out:
+	d_add(dentry, inode);
 	return 0;
 }
 
