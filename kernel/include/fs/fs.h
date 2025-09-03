@@ -213,7 +213,7 @@ struct inode_operations {
 	int (*symlink)(struct inode *, struct dentry *, const char *);
 	int (*mkdir)(struct inode *, struct dentry *, mode_t);
 	int (*rmdir)(struct inode *, struct dentry *);
-	int (*rename)(struct inode *, const char *, size_t, struct inode *, const char *, size_t);
+	int (*rename)(struct inode *, struct dentry *, struct inode *, struct dentry *);
 	int (*mknod)(struct inode *, struct dentry *, mode_t, dev_t);
 	void (*truncate)(struct inode *);
 	int (*bmap)(struct inode *, uint32_t);
@@ -297,6 +297,7 @@ void init_inode();
 void dput(struct dentry *dentry);
 void d_instantiate(struct dentry *dentry, struct inode *inode);
 void d_delete(struct dentry *dentry);
+void d_move(struct dentry *dentry, struct dentry *target);
 
 /* file operations */
 int get_unused_fd();

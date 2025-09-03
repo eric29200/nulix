@@ -216,8 +216,7 @@ int ext2_rmdir(struct inode *dir, struct dentry *dentry);
 int ext2_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
 int ext2_unlink(struct inode *dir, struct dentry *dentry);
 int ext2_symlink(struct inode *dir, struct dentry *dentry, const char *target);
-int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
-		struct inode *new_dir, const char *new_name, size_t new_name_len);
+int ext2_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry);
 int ext2_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 
 /* Ext2 file prototypes */

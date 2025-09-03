@@ -575,56 +575,38 @@ out:
 /*
  * Rename a file.
  */
-int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
-		 struct inode *new_dir, const char *new_name, size_t new_name_len)
+int minix_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
 {
-	struct inode *old_inode = NULL, *new_inode = NULL;
+	struct inode *old_inode = old_dentry->d_inode, *new_inode = new_dentry->d_inode;
 	struct buffer_head *old_bh = NULL, *new_bh = NULL;
 	struct minix3_dir_entry *old_de, *new_de;
 	struct minix_sb_info *sbi;
-	ino_t old_ino, new_ino;
-	int err;
+	int ret;
 
 	/* find old entry */
-	old_bh = minix_find_entry(old_dir, old_name, old_name_len, &old_de);
-	if (!old_bh) {
-		err = -ENOENT;
+	ret = -ENOENT;
+	old_bh = minix_find_entry(old_dir, old_dentry->d_name.name, old_dentry->d_name.len, &old_de);
+	if (!old_bh)
 		goto out;
-	}
 
-	/* get old inode number */
-	sbi = minix_sb(old_dir->i_sb);
-	old_ino = old_de->d_inode;
-
-	/* get old inode */
-	old_inode = iget(old_dir->i_sb, old_ino);
-	if (!old_inode) {
-		err = -ENOSPC;
+	/* check old inode */
+	if (old_inode->i_ino != old_de->d_inode)
 		goto out;
-	}
 
 	/* find new entry (if exists) or add new one */
-	new_bh = minix_find_entry(new_dir, new_name, new_name_len, &new_de);
+	new_bh = minix_find_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len, &new_de);
 	if (new_bh) {
-		/* get new inode number */
-		sbi = minix_sb(new_dir->i_sb);
-		new_ino = new_de->d_inode;
-
-		/* get new inode */
-		new_inode = iget(new_dir->i_sb, new_ino);
-		if (!new_inode) {
-			err = -ENOSPC;
+		/* check new inode */
+		ret = -ENOENT;
+		if (!new_inode || new_inode->i_ino != new_de->d_inode)
 			goto out;
-		}
 
 		/* same inode : exit */
-		if (old_inode->i_ino == new_inode->i_ino) {
-			err = 0;
+		ret = 0;
+		if (old_inode->i_ino == new_inode->i_ino)
 			goto out;
-		}
 
 		/* modify new directory entry inode */
-		sbi = minix_sb(old_dir->i_sb);
 		new_de->d_inode = old_inode->i_ino;
 
 		/* update new inode */
@@ -633,8 +615,8 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
-		err = minix_add_entry(new_dir, new_name, new_name_len, old_inode);
-		if (err)
+		ret = minix_add_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len, old_inode);
+		if (ret)
 			goto out;
 	}
 
@@ -650,17 +632,13 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
 	mark_inode_dirty(new_dir);
 
-	err = 0;
+	/* update dcache */
+	d_move(old_dentry, new_dentry);
+	ret = 0;
 out:
-	/* release buffers and inodes */
 	brelse(old_bh);
 	brelse(new_bh);
-	iput(old_inode);
-	iput(new_inode);
-	iput(old_dir);
-	iput(new_dir);
-
-	return err;
+	return ret;
 }
 
 /*

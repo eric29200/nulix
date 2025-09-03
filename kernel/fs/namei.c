@@ -695,7 +695,8 @@ static int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char
 {
 	size_t old_basename_len, new_basename_len;
 	const char *old_basename, *new_basename;
-	struct inode *old_dir, *new_dir, *tmp;
+	struct dentry old_dentry, new_dentry;
+	struct inode *old_dir, *new_dir;
 	int ret;
 
 	/* get old directory */
@@ -704,73 +705,79 @@ static int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char
 		return ret;
 
 	/* do not allow to move '.' and '..' */
-	if (!old_basename_len || (old_basename[0] == '.' && (old_basename_len == 1 || (old_basename[1] == '.' && old_basename_len == 2)))) {
-		iput(old_dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!old_basename_len || (old_basename[0] == '.' && (old_basename_len == 1 || (old_basename[1] == '.' && old_basename_len == 2))))
+		goto out_release_old_dir;
 
 	/* check permissions */
 	ret = permission(old_dir, MAY_WRITE | MAY_EXEC);
-	if (ret) {
-		iput(old_dir);
-		return ret;
-	}
+	if (ret)
+		goto out_release_old_dir;
+
+	/* set old dentry */
+	old_dentry.d_count = 1;
+	old_dentry.d_inode = NULL;
+	old_dentry.d_name.name = (char *) old_basename;
+	old_dentry.d_name.len = old_basename_len;
+	old_dentry.d_name.hash = 0;
+	old_dentry.d_inode = NULL;
+
+	/* find old file */
+	ret = lookup(old_dir, old_basename, old_basename_len, &old_dentry.d_inode);
+	if (ret)
+		goto out_release_old_dentry;
 
 	/* get new directory */
 	ret = dir_namei(newdirfd, NULL, newpath, &new_basename, &new_basename_len, &new_dir);
-	if (ret) {
-		iput(old_dir);
-		return ret;
-	}
+	if (ret)
+		goto out_release_old_dentry;
 
 	/* do not allow to move to '.' and '..' */
-	if (!new_basename_len || (new_basename[0] == '.' && (new_basename_len == 1 || (new_basename[1] == '.' && new_basename_len == 2)))) {
-		iput(old_dir);
-		iput(new_dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!new_basename_len || (new_basename[0] == '.' && (new_basename_len == 1 || (new_basename[1] == '.' && new_basename_len == 2))))
+		goto out_release_new_dir;
 
 	/* check permissions */
 	ret = permission(new_dir, MAY_WRITE | MAY_EXEC);
-	if (ret) {
-		iput(old_dir);
-		iput(new_dir);
-		return ret;
-	}
+	if (ret)
+		goto out_release_new_dir;
 
 	/* do not allow to move to another device */
-	if (old_dir->i_sb != new_dir->i_sb) {
-		iput(old_dir);
-		iput(new_dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (old_dir->i_sb != new_dir->i_sb)
+		goto out_release_new_dir;
 
 	/* rename not implemented */
-	if (!old_dir->i_op || !old_dir->i_op->rename) {
-		iput(old_dir);
-		iput(new_dir);
-		return -EPERM;
-	}
+	if (!old_dir->i_op || !old_dir->i_op->rename)
+		goto out_release_new_dir;
+
+	/* set new dentry */
+	new_dentry.d_count = 1;
+	new_dentry.d_inode = NULL;
+	new_dentry.d_name.name = (char *) new_basename;
+	new_dentry.d_name.len = new_basename_len;
+	new_dentry.d_name.hash = 0;
+	new_dentry.d_inode = NULL;
+
+	/* find new file */
+	lookup(new_dir, new_basename, new_basename_len, &new_dentry.d_inode);
 
 	/* check if target already exists */
-	if (flags & RENAME_NOREPLACE) {
-		ret = lookup(new_dir, new_basename, new_basename_len, &tmp);
-		if (ret == 0) {
-			/* do not allow to replace directory */
-			if (S_ISDIR(tmp->i_mode)) {
-				iput(tmp);
-				iput(old_dir);
-				iput(new_dir);
-				return -EEXIST;
-			}
+	ret = -EEXIST;
+	if ((flags & RENAME_NOREPLACE) && new_dentry.d_inode && S_ISDIR(new_dentry.d_inode->i_mode))
+		goto out_release_new_dentry;
 
-			/* release inode */
-			iput(tmp);
-		}
-	}
-
-	new_dir->i_count++;
-	return old_dir->i_op->rename(old_dir, old_basename, old_basename_len, new_dir, new_basename, new_basename_len);
+	/* rename */
+	ret = old_dir->i_op->rename(old_dir, &old_dentry, new_dir, &new_dentry);
+out_release_new_dentry:
+	dput(&new_dentry);
+out_release_new_dir:
+	iput(new_dir);
+out_release_old_dentry:
+	dput(&old_dentry);
+out_release_old_dir:
+	iput(old_dir);
+	return ret;
 }
 
 /*

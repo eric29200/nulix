@@ -38,8 +38,7 @@ int tmpfs_unlink(struct inode *dir, struct dentry *dentry);
 int tmpfs_symlink(struct inode *dir, struct dentry *dentry, const char *target);
 int tmpfs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
 int tmpfs_rmdir(struct inode *dir, struct dentry *dentry);
-int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
-	         struct inode *new_dir, const char *new_name, size_t new_name_len);
+int tmpfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry);
 int tmpfs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 
 /* file operations */

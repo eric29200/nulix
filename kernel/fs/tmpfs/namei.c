@@ -469,42 +469,34 @@ out:
 /*
  * Rename a file.
  */
-int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
-	         struct inode *new_dir, const char *new_name, size_t new_name_len)
+int tmpfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
 {
-	struct inode *old_inode = NULL, *new_inode = NULL;
+	struct inode *old_inode = old_dentry->d_inode, *new_inode = new_dentry->d_inode;
 	struct tmpfs_dir_entry *old_de, *new_de;
 	int ret;
 
 	/* find old entry */
-	old_de = tmpfs_find_entry(old_dir, old_name, old_name_len);
-	if (!old_de) {
-		ret = -ENOENT;
+	ret = -ENOENT;
+	old_de = tmpfs_find_entry(old_dir, old_dentry->d_name.name, old_dentry->d_name.len);
+	if (!old_de)
 		goto out;
-	}
 
-	/* get old inode */
-	old_inode = iget(old_dir->i_sb, old_de->d_inode);
-	if (!old_inode) {
-		ret = -ENOSPC;
+	/* check old inode */
+	if (old_inode->i_ino != old_de->d_inode)
 		goto out;
-	}
 
 	/* find new entry (if exists) or add new one */
-	new_de = tmpfs_find_entry(new_dir, new_name, new_name_len);
+	new_de = tmpfs_find_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len);
 	if (new_de) {
-		/* get new inode */
-		new_inode = iget(new_dir->i_sb, new_de->d_inode);
-		if (!new_inode) {
-			ret = -ENOSPC;
+		/* check new inode */
+		ret = -ENOENT;
+		if (!new_inode || new_inode->i_ino != new_de->d_inode)
 			goto out;
-		}
 
 		/* same inode : exit */
-		if (old_inode->i_ino == new_inode->i_ino) {
-			ret = 0;
+		ret = 0;
+		if (old_inode->i_ino == new_inode->i_ino)
 			goto out;
-		}
 
 		/* modify new directory entry inode */
 		new_de->d_inode = old_inode->i_ino;
@@ -515,7 +507,7 @@ int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
-		ret = tmpfs_add_entry(new_dir, new_name, new_name_len, old_inode);
+		ret = tmpfs_add_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len, old_inode);
 		if (ret)
 			goto out;
 	}
@@ -530,14 +522,10 @@ int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
 	mark_inode_dirty(new_dir);
 
+	/* update dcache */
+	d_move(old_dentry, new_dentry);
 	ret = 0;
 out:
-	/* release inodes */
-	iput(old_inode);
-	iput(new_inode);
-	iput(old_dir);
-	iput(new_dir);
-
 	return ret;
 }
 
