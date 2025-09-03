@@ -36,7 +36,7 @@ int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 int tmpfs_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len);
 int tmpfs_unlink(struct inode *dir, const char *name, size_t name_len);
 int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const char *target);
-int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode);
+int tmpfs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
 int tmpfs_rmdir(struct inode *dir, const char *name, size_t name_len);
 int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
 	         struct inode *new_dir, const char *new_name, size_t new_name_len);

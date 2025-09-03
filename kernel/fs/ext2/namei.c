@@ -377,7 +377,7 @@ int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mod
 /*
  * Make a Ext2 directory.
  */
-int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode)
+int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
@@ -385,19 +385,16 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	int err;
 
 	/* check if file exists */
-	bh = ext2_find_entry(dir, name, name_len, &de);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* allocate a new inode */
 	inode = ext2_new_inode(dir, S_IFDIR | (mode & ~current_task->fs->umask & 0777));
-	if (!inode) {
-		iput(dir);
-		return -ENOMEM;
-	}
+	if (!inode)
+		return -ENOSPC;
 
 	/* set inode */
 	inode->i_op = &ext2_dir_iops;
@@ -410,7 +407,6 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	if (!bh) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -ENOSPC;
 	}
 
@@ -433,11 +429,10 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	brelse(bh);
 
 	/* add entry to parent dir */
-	err = ext2_add_entry(dir, name, name_len, inode);
+	err = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (err) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return err;
 	}
 
@@ -445,9 +440,8 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	dir->i_nlinks++;
 	mark_inode_dirty(dir);
 
-	/* release inode */
-	iput(dir);
-	iput(inode);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

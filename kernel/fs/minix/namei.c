@@ -463,7 +463,7 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 /*
  * Create a directory.
  */
-int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode)
+int minix_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
 	struct minix3_dir_entry *de;
 	struct minix_sb_info *sbi;
@@ -472,19 +472,16 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	int err;
 
 	/* check if file exists */
-	bh = minix_find_entry(dir, name, name_len, &de);
+	bh = minix_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* allocate a new inode */
 	inode = minix_new_inode(dir->i_sb);
-	if (!inode) {
-		iput(dir);
-		return -ENOMEM;
-	}
+	if (!inode)
+		return -ENOSPC;
 
 	/* set inode */
 	sbi = minix_sb(dir->i_sb);
@@ -501,7 +498,6 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	if (!bh) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -ENOSPC;
 	}
 
@@ -520,11 +516,10 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	brelse(bh);
 
 	/* add entry to parent dir */
-	err = minix_add_entry(dir, name, name_len, inode);
+	err = minix_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (err) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return err;
 	}
 
@@ -532,9 +527,8 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	dir->i_nlinks++;
 	mark_inode_dirty(dir);
 
-	/* release inode */
-	iput(dir);
-	iput(inode);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

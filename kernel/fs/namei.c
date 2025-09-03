@@ -324,6 +324,7 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
  */
 static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 {
+	struct dentry dentry;
 	const char *basename;
 	size_t basename_len;
 	struct inode *dir;
@@ -334,30 +335,32 @@ static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 	if (ret)
 		return ret;
 
+	/* set dentry */
+	dentry.d_inode = NULL;
+	dentry.d_name.name = (char *) basename;
+	dentry.d_name.len = basename_len;
+	dentry.d_name.hash = 0;
+
 	/* check name length */
-	if (!basename_len) {
-		iput(dir);
-		return -EEXIST;
-	}
+	ret = -EEXIST;
+	if (!basename_len)
+		goto out;
 
 	/* check permissions */
 	ret = permission(dir, MAY_WRITE | MAY_EXEC);
-	if (ret) {
-		iput(dir);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/* mkdir not implemented */
-	if (!dir->i_op || !dir->i_op->mkdir) {
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!dir->i_op || !dir->i_op->mkdir)
+		goto out;
 
 	/* create directory */
-	dir->i_count++;
-	ret = dir->i_op->mkdir(dir, basename, basename_len, mode);
+	ret = dir->i_op->mkdir(dir, &dentry, mode);
+out:
+	dput(&dentry);
 	iput(dir);
-
 	return ret;
 }
 

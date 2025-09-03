@@ -135,6 +135,23 @@ struct inode {
 };
 
 /*
+ * String.
+ */
+struct qstr {
+	char *				name;
+	size_t				len;
+	uint32_t			hash;
+};
+
+/*
+ * Dentry.
+ */
+struct dentry {
+	struct inode *			d_inode;
+	struct qstr			d_name;
+};
+
+/*
  * Opened file.
  */
 struct file {
@@ -193,7 +210,7 @@ struct inode_operations {
 	int (*link)(struct inode *, struct inode *, const char *, size_t);
 	int (*unlink)(struct inode *, const char *, size_t);
 	int (*symlink)(struct inode *, const char *, size_t, const char *);
-	int (*mkdir)(struct inode *, const char *, size_t, mode_t);
+	int (*mkdir)(struct inode *, struct dentry *, mode_t);
 	int (*rmdir)(struct inode *, const char *, size_t);
 	int (*rename)(struct inode *, const char *, size_t, struct inode *, const char *, size_t);
 	int (*mknod)(struct inode *, const char *, size_t, mode_t, dev_t);
@@ -274,6 +291,10 @@ void clear_inode(struct inode *inode);
 void add_to_inode_cache(struct inode *inode);
 struct inode *find_inode(struct super_block *sb, ino_t ino);
 void init_inode();
+
+/* dentry operations */
+void dput(struct dentry *dentry);
+void d_instantiate(struct dentry *dentry, struct inode *inode);
 
 /* file operations */
 int get_unused_fd();

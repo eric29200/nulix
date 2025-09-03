@@ -381,25 +381,21 @@ int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 /*
  * Create a directory.
  */
-int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode)
+int tmpfs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
 	struct tmpfs_dir_entry *de;
 	struct inode *inode;
 	int ret;
 
 	/* check if file exists */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (de) {
-		iput(dir);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (de)
 		return -EEXIST;
-	}
 
 	/* allocate a new inode */
 	inode = tmpfs_new_inode(dir->i_sb, S_IFDIR | (mode & ~current_task->fs->umask & 0777), 0);
-	if (!inode) {
-		iput(dir);
-		return -ENOMEM;
-	}
+	if (!inode)
+		return -ENOSPC;
 
 	/* create "." entry in root directory */
 	ret = tmpfs_add_entry(inode, ".", 1, inode);
@@ -412,7 +408,7 @@ int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 		goto err;
 
 	/* add entry to parent dir */
-	ret = tmpfs_add_entry(dir, name, name_len, inode);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) 
 		goto err;
 
@@ -420,15 +416,13 @@ int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	dir->i_nlinks++;
 	mark_inode_dirty(dir);
 
-	/* release inode */
-	iput(dir);
-	iput(inode);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 err:
 	inode->i_nlinks = 0;
 	iput(inode);
-	iput(dir);
 	return ret;
 }
 
