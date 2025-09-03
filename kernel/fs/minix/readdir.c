@@ -13,9 +13,9 @@ int minix_getdents64(struct file *filp, void *dirp, size_t count)
 	struct super_block *sb = filp->f_inode->i_sb;
 	struct inode *inode = filp->f_inode;
 	struct buffer_head *bh = NULL;
-	struct minix3_dir_entry *de3;
-	struct dirent64 *dirent;
+	struct minix3_dir_entry *de;
 	int entries_size = 0, ret;
+	struct dirent64 *dirent;
 	uint32_t offset, block;
 	size_t name_len;
 
@@ -36,18 +36,18 @@ int minix_getdents64(struct file *filp, void *dirp, size_t count)
 		/* read all entries in block */
 		while (filp->f_pos < inode->i_size && offset < sb->s_blocksize) {
 			/* check next entry */
-			de3 = (struct minix3_dir_entry *) (bh->b_data + offset);
+			de = (struct minix3_dir_entry *) (bh->b_data + offset);
 
 			/* skip null entry */
-			if (de3->d_inode == 0) {
+			if (de->d_inode == 0) {
 				offset += sbi->s_dirsize;
 				filp->f_pos += sbi->s_dirsize;
 				continue;
 			}
 
 			/* fill in directory entry */
-			name_len = strlen(de3->d_name);
-			ret = filldir(dirent, de3->d_name, name_len, de3->d_inode, count);
+			name_len = strlen(de->d_name);
+			ret = filldir(dirent, de->d_name, name_len, de->d_inode, count);
 			if (ret) {
 				brelse(bh);
 				return entries_size;
