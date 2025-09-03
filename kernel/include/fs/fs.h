@@ -147,6 +147,7 @@ struct qstr {
  * Dentry.
  */
 struct dentry {
+	int				d_count;
 	struct inode *			d_inode;
 	struct qstr			d_name;
 };
@@ -208,10 +209,10 @@ struct inode_operations {
 	int (*follow_link)(struct inode *, struct inode *, int, mode_t, struct inode **);
 	ssize_t (*readlink)(struct inode *, char *, size_t);
 	int (*link)(struct inode *, struct inode *, const char *, size_t);
-	int (*unlink)(struct inode *, const char *, size_t);
+	int (*unlink)(struct inode *, struct dentry *);
 	int (*symlink)(struct inode *, const char *, size_t, const char *);
 	int (*mkdir)(struct inode *, struct dentry *, mode_t);
-	int (*rmdir)(struct inode *, const char *, size_t);
+	int (*rmdir)(struct inode *, struct dentry *);
 	int (*rename)(struct inode *, const char *, size_t, struct inode *, const char *, size_t);
 	int (*mknod)(struct inode *, struct dentry *, mode_t, dev_t);
 	void (*truncate)(struct inode *);
@@ -295,6 +296,7 @@ void init_inode();
 /* dentry operations */
 void dput(struct dentry *dentry);
 void d_instantiate(struct dentry *dentry, struct inode *inode);
+void d_delete(struct dentry *dentry);
 
 /* file operations */
 int get_unused_fd();

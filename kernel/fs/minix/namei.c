@@ -334,45 +334,31 @@ int minix_link(struct inode *old_inode, struct inode *dir, const char *name, siz
 /*
  * Remove a file.
  */
-int minix_unlink(struct inode *dir, const char *name, size_t name_len)
+int minix_unlink(struct inode *dir, struct dentry *dentry)
 {
+	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
+	struct inode *inode = dentry->d_inode;
 	struct minix3_dir_entry *de;
-	struct minix_sb_info *sbi;
 	struct buffer_head *bh;
-	struct inode *inode;
-	ino_t ino;
+	int ret;
 
 	/* get directory entry */
-	bh = minix_find_entry(dir, name, name_len, &de);
-	if (!bh) {
-		iput(dir);
+	bh = minix_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
+	if (!bh)
 		return -ENOENT;
-	}
-
-	/* get inode number */
-	sbi = minix_sb(dir->i_sb);
-	ino = ((struct minix3_dir_entry *) de)->d_inode;
-
-	/* get inode */
-	inode = iget(dir->i_sb, ino);
-	if (!inode) {
-		iput(dir);
-		brelse(bh);
-		return -ENOENT;
-	}
 
 	/* remove regular files only */
-	if (S_ISDIR(inode->i_mode)) {
-		iput(inode);
-		iput(dir);
-		brelse(bh);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (S_ISDIR(inode->i_mode))
+		goto out;
+
+	/* check inode */
+	if (de->d_inode != inode->i_ino)
+		goto out;
 
 	/* reset directory entry */
 	memset(de, 0, sbi->s_dirsize);
 	mark_buffer_dirty(bh);
-	brelse(bh);
 
 	/* update directory */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
@@ -383,11 +369,12 @@ int minix_unlink(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks--;
 	mark_inode_dirty(inode);
 
-	/* release inode */
-	iput(inode);
-	iput(dir);
-
-	return 0;
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
+out:
+	brelse(bh);
+	return ret;
 }
 
 /*
@@ -536,53 +523,42 @@ int minix_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 /*
  * Remove a directory.
  */
-int minix_rmdir(struct inode *dir, const char *name, size_t name_len)
+int minix_rmdir(struct inode *dir, struct dentry *dentry)
 {
+	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
+	struct inode *inode = dentry->d_inode;
 	struct minix3_dir_entry *de;
-	struct minix_sb_info *sbi;
 	struct buffer_head *bh;
-	struct inode *inode;
-	ino_t ino;
+	int ret;
 
 	/* check if file exists */
-	bh = minix_find_entry(dir, name, name_len, &de);
-	if (!bh) {
-		iput(dir);
+	bh = minix_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
+	if (!bh)
 		return -ENOENT;
-	}
 
-	/* get inode number */
-	sbi = minix_sb(dir->i_sb);
-	ino = ((struct minix3_dir_entry *) de)->d_inode;
+	/* can't remove "." */
+	ret = -EPERM;
+	if (inode == dir)
+		goto out;
 
-	/* get inode */
-	inode = iget(dir->i_sb, ino);
-	if (!inode) {
-		brelse(bh);
-		iput(dir);
-		return -ENOENT;
-	}
+	/* must be a directory */
+	ret = -ENOTDIR;
+	if (!S_ISDIR(inode->i_mode))
+		goto out;
 
-	/* remove directories only and do not allow to remove '.' */
-	if (!S_ISDIR(inode->i_mode) || inode->i_ino == dir->i_ino) {
-		brelse(bh);
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	/* check inode */
+	ret = -ENOENT;
+	if (inode->i_ino != de->d_inode)
+		goto out;
 
 	/* directory must be empty */
-	if (!minix_empty_dir(inode)) {
-		brelse(bh);
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!minix_empty_dir(inode))
+		goto out;
 
 	/* reset entry */
 	memset(de, 0, sbi->s_dirsize);
 	mark_buffer_dirty(bh);
-	brelse(bh);
 
 	/* update dir */
 	dir->i_ctime = dir->i_mtime = CURRENT_TIME;
@@ -594,11 +570,12 @@ int minix_rmdir(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks = 0;
 	mark_inode_dirty(inode);
 
-	/* release inode and directory */
-	iput(inode);
-	iput(dir);
-
-	return 0;
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
+out:
+	brelse(bh);
+	return ret;
 }
 
 /*

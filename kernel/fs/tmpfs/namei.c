@@ -271,31 +271,25 @@ int tmpfs_link(struct inode *old_inode, struct inode *dir, const char *name, siz
 /*
  * Remove a file.
  */
-int tmpfs_unlink(struct inode *dir, const char *name, size_t name_len)
+int tmpfs_unlink(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = dentry->d_inode;
 	struct tmpfs_dir_entry *de;
-	struct inode *inode;
+	int ret;
 
 	/* get directory entry */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (!de) {
-		iput(dir);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (!de)
 		return -ENOENT;
-	}
-
-	/* get inode */
-	inode = iget(dir->i_sb, de->d_inode);
-	if (!inode) {
-		iput(dir);
-		return -ENOENT;
-	}
 
 	/* remove regular files only */
-	if (S_ISDIR(inode->i_mode)) {
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (S_ISDIR(inode->i_mode))
+		goto out;
+
+	/* check inode */
+	if (de->d_inode != inode->i_ino)
+		goto out;
 
 	/* reset directory entry */
 	memset(de, 0, sizeof(struct tmpfs_dir_entry));
@@ -309,11 +303,11 @@ int tmpfs_unlink(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks--;
 	mark_inode_dirty(inode);
 
-	/* release inode */
-	iput(inode);
-	iput(dir);
-
-	return 0;
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
+out:
+	return ret;
 }
 
 /*
@@ -429,38 +423,36 @@ err:
 /*
  * Remove a directory.
  */
-int tmpfs_rmdir(struct inode *dir, const char *name, size_t name_len)
+int tmpfs_rmdir(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = dentry->d_inode;
 	struct tmpfs_dir_entry *de;
-	struct inode *inode;
+	int ret;
 
 	/* check if file exists */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (!de) {
-		iput(dir);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (!de)
 		return -ENOENT;
-	}
 
-	/* get inode */
-	inode = iget(dir->i_sb, de->d_inode);
-	if (!inode) {
-		iput(dir);
-		return -ENOENT;
-	}
+	/* can't remove "." */
+	ret = -EPERM;
+	if (inode == dir)
+		goto out;
 
-	/* remove directories only and do not allow to remove '.' */
-	if (!S_ISDIR(inode->i_mode) || inode->i_ino == dir->i_ino) {
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	/* must be a directory */
+	ret = -ENOTDIR;
+	if (!S_ISDIR(inode->i_mode))
+		goto out;
+
+	/* check inode */
+	ret = -ENOENT;
+	if (inode->i_ino != de->d_inode)
+		goto out;
 
 	/* directory must be empty */
-	if (!tmpfs_empty_dir(inode)) {
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!tmpfs_empty_dir(inode))
+		goto out;
 
 	/* reset entry */
 	memset(de, 0, sizeof(struct tmpfs_dir_entry));
@@ -475,11 +467,11 @@ int tmpfs_rmdir(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks = 0;
 	mark_inode_dirty(inode);
 
-	/* release inode and directory */
-	iput(inode);
-	iput(dir);
-
-	return 0;
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
+out:
+	return ret;
 }
 
 /*

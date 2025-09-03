@@ -449,51 +449,41 @@ int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 /*
  * Remove a directory.
  */
-int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
+int ext2_rmdir(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = dentry->d_inode;
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
-	struct inode *inode;
-	ino_t ino;
-	int err;
+	int ret;
 
 	/* check if file exists */
-	bh = ext2_find_entry(dir, name, name_len, &de);
-	if (!bh) {
-		iput(dir);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
+	if (!bh)
 		return -ENOENT;
-	}
 
-	/* get inode number */
-	ino = de->d_inode;
+	/* can't remove "." */
+	ret = -EPERM;
+	if (inode == dir)
+		goto out;
 
-	/* get inode */
-	inode = iget(dir->i_sb, ino);
-	if (!inode) {
-		brelse(bh);
-		iput(dir);
-		return -ENOENT;
-	}
+	/* must be a directory */
+	ret = -ENOTDIR;
+	if (!S_ISDIR(inode->i_mode))
+		goto out;
 
-	/* remove directories only and do not allow to remove '.' */
-	if (!S_ISDIR(inode->i_mode) || inode->i_ino == dir->i_ino) {
-		brelse(bh);
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	/* check inode */
+	ret = -ENOENT;
+	if (inode->i_ino != de->d_inode)
+		goto out;
 
 	/* directory must be empty */
-	if (!ext2_empty_dir(inode)) {
-		brelse(bh);
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!ext2_empty_dir(inode))
+		goto out;
 
 	/* remove entry */
-	err = ext2_delete_entry(de, bh);
-	if (err)
+	ret = ext2_delete_entry(de, bh);
+	if (ret)
 		goto out;
 
 	/* mark buffer diry */
@@ -509,12 +499,12 @@ int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks = 0;
 	mark_inode_dirty(inode);
 
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
 out:
 	brelse(bh);
-	iput(inode);
-	iput(dir);
-
-	return 0;
+	return ret;
 }
 
 /*
@@ -558,40 +548,30 @@ int ext2_link(struct inode *old_inode, struct inode *dir, const char *name, size
 /*
  * Unlink (remove) a file.
  */
-int ext2_unlink(struct inode *dir, const char *name, size_t name_len)
+int ext2_unlink(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = dentry->d_inode;
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
-	struct inode *inode;
-	ino_t ino, err = 0;
+	int ret;
 
 	/* get directory entry */
-	bh = ext2_find_entry(dir, name, name_len, &de);
-	if (!bh) {
-		iput(dir);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
+	if (!bh)
 		return -ENOENT;
-	}
-
-	/* get inode number */
-	ino = de->d_inode;
-
-	/* get inode */
-	inode = iget(dir->i_sb, ino);
-	if (!inode) {
-		iput(dir);
-		brelse(bh);
-		return -ENOENT;
-	}
 
 	/* remove regular files only */
-	if (S_ISDIR(inode->i_mode)) {
-		err = -EPERM;
+	ret = -EPERM;
+	if (S_ISDIR(inode->i_mode))
 		goto out;
-	}
+
+	/* check inode */
+	if (de->d_inode != inode->i_ino)
+		goto out;
 
 	/* delete entry */
-	err = ext2_delete_entry(de, bh);
-	if (err)
+	ret = ext2_delete_entry(de, bh);
+	if (ret)
 		goto out;
 
 	/* mark buffer dirty */
@@ -606,11 +586,12 @@ int ext2_unlink(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks--;
 	mark_inode_dirty(inode);
 
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
 out:
 	brelse(bh);
-	iput(inode);
-	iput(dir);
-	return err;
+	return ret;
 }
 
 /*

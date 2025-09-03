@@ -336,6 +336,7 @@ static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 		return ret;
 
 	/* set dentry */
+	dentry.d_count = 1;
 	dentry.d_inode = NULL;
 	dentry.d_name.name = (char *) basename;
 	dentry.d_name.len = basename_len;
@@ -519,6 +520,7 @@ int sys_symlinkat(const char *target, int newdirfd, const char *linkpath)
  */
 static int do_rmdir(int dirfd, const char *pathname)
 {
+	struct dentry dentry;
 	const char *basename;
 	size_t basename_len;
 	struct inode *dir;
@@ -529,27 +531,39 @@ static int do_rmdir(int dirfd, const char *pathname)
 	if (ret)
 		return ret;
 
+	/* set dentry */
+	dentry.d_count = 1;
+	dentry.d_inode = NULL;
+	dentry.d_name.name = (char *) basename;
+	dentry.d_name.len = basename_len;
+	dentry.d_name.hash = 0;
+	dentry.d_inode = NULL;
+
 	/* check name length */
-	if (!basename_len) {
-		iput(dir);
-		return -ENOENT;
-	}
+	ret = -ENOENT;
+	if (!basename_len)
+		goto out;
+
+	/* find file */
+	ret = lookup(dir, basename, basename_len, &dentry.d_inode);
+	if (ret)
+		goto out;
 
 	/* check permissions */
 	ret = permission(dir, MAY_WRITE | MAY_EXEC);
-	if (ret) {
-		iput(dir);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/* rmdir not implemented */
-	if (!dir->i_op || !dir->i_op->rmdir) {
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!dir->i_op || !dir->i_op->rmdir)
+		goto out;
 
 	/* remove directory */
-	ret = dir->i_op->rmdir(dir, basename, basename_len);
+	ret = dir->i_op->rmdir(dir, &dentry);
+out:
+	dput(&dentry);
+	iput(dir);
 	return ret;
 }
 
@@ -566,6 +580,7 @@ int sys_rmdir(const char *pathname)
  */
 static int do_unlink(int dirfd, const char *pathname)
 {
+	struct dentry dentry;
 	const char *basename;
 	size_t basename_len;
 	struct inode *dir;
@@ -576,27 +591,39 @@ static int do_unlink(int dirfd, const char *pathname)
 	if (ret)
 		return ret;
 
+	/* set dentry */
+	dentry.d_count = 1;
+	dentry.d_inode = NULL;
+	dentry.d_name.name = (char *) basename;
+	dentry.d_name.len = basename_len;
+	dentry.d_name.hash = 0;
+	dentry.d_inode = NULL;
+
 	/* check name length */
-	if (!basename_len) {
-		iput(dir);
-		return -ENOENT;
-	}
+	ret = -ENOENT;
+	if (!basename_len)
+		goto out;
+
+	/* find file */
+	ret = lookup(dir, basename, basename_len, &dentry.d_inode);
+	if (ret)
+		goto out;
 
 	/* check permissions */
 	ret = permission(dir, MAY_WRITE | MAY_EXEC);
-	if (ret) {
-		iput(dir);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/* unlink not implemented */
-	if (!dir->i_op || !dir->i_op->unlink) {
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!dir->i_op || !dir->i_op->unlink)
+		goto out;
 
 	/* unlink file */
-	ret = dir->i_op->unlink(dir, basename, basename_len);
+	ret = dir->i_op->unlink(dir, &dentry);
+out:
+	dput(&dentry);
+	iput(dir);
 	return ret;
 }
 
@@ -784,6 +811,7 @@ static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 		return ret;
 
 	/* set dentry */
+	dentry.d_count = 1;
 	dentry.d_inode = NULL;
 	dentry.d_name.name = (char *) basename;
 	dentry.d_name.len = basename_len;
