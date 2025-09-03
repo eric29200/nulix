@@ -52,30 +52,21 @@ ssize_t minix_readlink(struct inode *inode, char *buf, size_t bufsize)
 	size_t len;
 
 	/* inode must be link */
-	if (!S_ISLNK(inode->i_mode)) {
-		iput(inode);
+	if (!S_ISLNK(inode->i_mode))
 		return -EINVAL;
-	}
 
 	/* limit buffer size to block size */
 	if (bufsize > sb->s_blocksize - 1)
 		bufsize = sb->s_blocksize - 1;
 
 	/* check 1st block */
-	if (!inode->u.minix_i.i_zone[0]) {
-		iput(inode);
+	if (!inode->u.minix_i.i_zone[0])
 		return 0;
-	}
 
 	/* get 1st block */
 	bh = minix_bread(inode, 0, 0);
-	if (!bh) {
-		iput(inode);
+	if (!bh)
 		return 0;
-	}
-
-	/* release inode */
-	iput(inode);
 
 	/* copy target name to user buffer */
 	for (len = 0; len < bufsize; len++)

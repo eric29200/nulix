@@ -44,10 +44,8 @@ ssize_t ext2_fast_readlink(struct inode *inode, char *buf, size_t bufsize)
 	size_t len;
 
 	/* inode must be a link */
-	if (!S_ISLNK(inode->i_mode)) {
-		iput(inode);
+	if (!S_ISLNK(inode->i_mode))
 		return -EINVAL;
-	}
 
 	/* get target link */
 	target = (char *) inode->u.ext2_i.i_data;
@@ -59,9 +57,6 @@ ssize_t ext2_fast_readlink(struct inode *inode, char *buf, size_t bufsize)
 
 	/* copy target */
 	memcpy(buf, target, len);
-
-	/* release inode */
-	iput(inode);
 
 	return len;
 }
@@ -114,30 +109,21 @@ ssize_t ext2_page_readlink(struct inode *inode, char *buf, size_t bufsize)
 	size_t len;
 
 	/* inode must be link */
-	if (!S_ISLNK(inode->i_mode)) {
-		iput(inode);
+	if (!S_ISLNK(inode->i_mode))
 		return -EINVAL;
-	}
 
 	/* limit buffer size to block size */
 	if (bufsize > inode->i_sb->s_blocksize)
 		bufsize = inode->i_sb->s_blocksize - 1;
 
 	/* check 1st block */
-	if (!inode->u.ext2_i.i_data[0]) {
-		iput(inode);
+	if (!inode->u.ext2_i.i_data[0])
 		return 0;
-	}
 
 	/* read 1st block */
 	bh = ext2_bread(inode, 0, 0);
-	if (!bh) {
-		iput(inode);
+	if (!bh)
 		return 0;
-	}
-
-	/* release inode */
-	iput(inode);
 
 	/* copy target name to user buffer */
 	for (len = 0; len < bufsize; len++)

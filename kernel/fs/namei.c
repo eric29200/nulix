@@ -691,13 +691,15 @@ static ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bu
 		return ret;
 
 	/* readlink not implemented */
-	if (!inode->i_op || !inode->i_op->readlink) {
-		iput(inode);
-		return -EINVAL;
-	}
+	ret = -EPERM;
+	if (!inode->i_op || !inode->i_op->readlink)
+		goto out;
 
 	/* read link */
-	return inode->i_op->readlink(inode, buf, bufsize);
+	ret = inode->i_op->readlink(inode, buf, bufsize);
+out:
+	iput(inode);
+	return ret;
 }
 
 /*

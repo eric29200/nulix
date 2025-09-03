@@ -35,8 +35,8 @@ static ssize_t proc_self_readlink(struct inode *inode, char *buf, size_t bufsize
 	char tmp[32];
 	size_t len;
 
-	/* release inode */
-	iput(inode);
+	/* unused inode */
+	UNUSED(inode);
 
 	/* set target link */
 	len = sprintf(tmp, "%d", current_task->pid) + 1;
