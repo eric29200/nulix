@@ -218,7 +218,7 @@ int ext2_unlink(struct inode *dir, const char *name, size_t name_len);
 int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const char *target);
 int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
 		struct inode *new_dir, const char *new_name, size_t new_name_len);
-int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev);
+int ext2_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 
 /* Ext2 file prototypes */
 int ext2_getdents64(struct file *filp, void *dirp, size_t count);

@@ -772,6 +772,7 @@ int sys_renameat2(int olddirfd, const char *oldpath, int newdirfd, const char *n
  */
 static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 {
+	struct dentry dentry;
 	const char *basename;
 	size_t basename_len;
 	struct inode *dir;
@@ -782,26 +783,33 @@ static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 	if (ret)
 		return ret;
 
+	/* set dentry */
+	dentry.d_inode = NULL;
+	dentry.d_name.name = (char *) basename;
+	dentry.d_name.len = basename_len;
+	dentry.d_name.hash = 0;
+
 	/* check name length */
-	if (!basename_len) {
-		iput(dir);
-		return -ENOENT;
-	}
+	ret = -ENOENT;
+	if (!basename_len)
+		goto out;
 
 	/* check permissions */
 	ret = permission(dir, MAY_WRITE | MAY_EXEC);
-	if (ret) {
-		iput(dir);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/* mknod not implemented */
-	if (!dir->i_op || !dir->i_op->mknod) {
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!dir->i_op || !dir->i_op->mknod)
+		goto out;
 
-	return dir->i_op->mknod(dir, basename, basename_len, mode, dev);
+	/* make node */
+	ret = dir->i_op->mknod(dir, &dentry, mode, dev);
+out:
+	iput(dir);
+	dput(&dentry);
+	return ret;
 }
 
 /*

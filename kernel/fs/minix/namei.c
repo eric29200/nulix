@@ -695,7 +695,7 @@ out:
 /*
  * Create a node.
  */
-int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
+int minix_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 {
 	struct minix3_dir_entry *de;
 	struct buffer_head *bh;
@@ -707,20 +707,16 @@ int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_count++;
-	bh = minix_find_entry(dir, name, name_len, &de);
+	bh = minix_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* create a new inode */
 	inode = minix_new_inode(dir->i_sb);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* set inode */
 	inode->i_uid = current_task->fsuid;
@@ -730,17 +726,15 @@ int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	err = minix_add_entry(dir, name, name_len, inode);
+	err = minix_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (err) {
 		inode->i_nlinks--;
 		iput(inode);
-		iput(dir);
 		return err;
 	}
 
-	/* release inode (to write it on disk) */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

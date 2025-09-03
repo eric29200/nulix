@@ -213,7 +213,7 @@ struct inode_operations {
 	int (*mkdir)(struct inode *, struct dentry *, mode_t);
 	int (*rmdir)(struct inode *, const char *, size_t);
 	int (*rename)(struct inode *, const char *, size_t, struct inode *, const char *, size_t);
-	int (*mknod)(struct inode *, const char *, size_t, mode_t, dev_t);
+	int (*mknod)(struct inode *, struct dentry *, mode_t, dev_t);
 	void (*truncate)(struct inode *);
 	int (*bmap)(struct inode *, uint32_t);
 	int (*get_block)(struct inode *, uint32_t, struct buffer_head *, int create);

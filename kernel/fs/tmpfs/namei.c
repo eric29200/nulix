@@ -560,7 +560,7 @@ out:
 /*
  * Create a node.
  */
-int tmpfs_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
+int tmpfs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 {
 	struct inode *inode;
 	int ret;
@@ -570,31 +570,24 @@ int tmpfs_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_count++;
-	if (tmpfs_find_entry(dir, name, name_len)) {
-		iput(dir);
+	if (tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len))
 		return -EEXIST;
-	}
 
 	/* create a new inode */
 	inode = tmpfs_new_inode(dir->i_sb, mode, dev);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* add new entry to dir */
-	ret = tmpfs_add_entry(dir, name, name_len, inode);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
 		inode->i_nlinks--;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
-	/* release inode (to write it on disk) */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

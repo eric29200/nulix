@@ -795,7 +795,7 @@ out:
 /*
  * Create a node.
  */
-int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
+int ext2_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 {
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
@@ -807,37 +807,31 @@ int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_count++;
-	bh = ext2_find_entry(dir, name, name_len, &de);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* create a new inode */
 	inode = ext2_new_inode(dir, mode);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* set inode */
 	inode->i_rdev = dev;
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	err = ext2_add_entry(dir, name, name_len, inode);
+	err = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (err) {
 		inode->i_nlinks--;
 		iput(inode);
-		iput(dir);
 		return err;
 	}
 
-	/* release inode (to write it on disk) */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }
