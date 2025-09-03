@@ -228,6 +228,7 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 	size_t basename_len;
 	int ret;
 
+	/* reset result inode */
 	*res_inode = NULL;
 
 	/* find directory */
@@ -290,8 +291,11 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 		/* create new inode */
 		ret = dir->i_op->create(dir, &dentry, mode);
 
+		/* set result inode */
+		if (ret == 0)
+			*res_inode = dentry.d_inode;
+
 		/* release directory */
-		dput(&dentry);
 		iput(dir);
 		return ret;
 	}
