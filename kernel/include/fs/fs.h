@@ -205,7 +205,7 @@ struct super_operations {
 struct inode_operations {
 	struct file_operations *fops;
 	int (*lookup)(struct inode *, const char *, size_t, struct inode **);
-	int (*create)(struct inode *, const char *, size_t, mode_t, struct inode **);
+	int (*create)(struct inode *, struct dentry *, mode_t);
 	int (*follow_link)(struct inode *, struct inode *, int, mode_t, struct inode **);
 	ssize_t (*readlink)(struct inode *, char *, size_t);
 	int (*link)(struct inode *, struct inode *, struct dentry *dentry);

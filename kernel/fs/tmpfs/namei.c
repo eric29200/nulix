@@ -190,44 +190,26 @@ int tmpfs_lookup(struct inode *dir, const char *name, size_t name_len, struct in
 /*
  * Create a file in a directory.
  */
-int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
+int tmpfs_create(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
 	struct inode *inode;
 	int ret;
 
-	/* check directory */
-	*res_inode = NULL;
-	if (!dir)
-		return -ENOENT;
-
-	/* check if file already exists */
-	dir->i_count++;
-	if (tmpfs_find_entry(dir, name, name_len)) {
-		iput(dir);
-		return -EEXIST;
-	}
-
 	/* create a new inode */
 	inode = tmpfs_new_inode(dir->i_sb, mode, 0);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* add new entry to dir */
-	ret = tmpfs_add_entry(dir, name, name_len, inode);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
-		inode->i_nlinks--;
+		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
-	/* set result inode */
-	*res_inode = inode;
-
-	/* release directory */
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

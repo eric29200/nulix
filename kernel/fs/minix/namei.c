@@ -231,34 +231,15 @@ int minix_lookup(struct inode *dir, const char *name, size_t name_len, struct in
 /*
  * Create a file in a directory.
  */
-int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
+int minix_create(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
-	struct minix3_dir_entry *de;
-	struct buffer_head *bh;
 	struct inode *inode;
-	ino_t ino;
-	int err;
-
-	/* check directory */
-	*res_inode = NULL;
-	if (!dir)
-		return -ENOENT;
-
-	/* check if file already exists */
-	dir->i_count++;
-	bh = minix_find_entry(dir, name, name_len, &de);
-	if (bh) {
-		brelse(bh);
-		iput(dir);
-		return -EEXIST;
-	}
+	int ret;
 
 	/* create a new inode */
 	inode = minix_new_inode(dir->i_sb);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* set inode */
 	inode->i_uid = current_task->fsuid;
@@ -268,27 +249,15 @@ int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	err = minix_add_entry(dir, name, name_len, inode);
-	if (err) {
-		inode->i_nlinks--;
+	ret = minix_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret) {
+		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
-		return err;
+		return ret;
 	}
 
-	/* release inode (to write it on disk) */
-	ino = inode->i_ino;
-	iput(inode);
-
-	/* read inode from disk */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
-		return -EACCES;
-	}
-
-	/* release directory */
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

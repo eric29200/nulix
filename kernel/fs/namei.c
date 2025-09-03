@@ -223,6 +223,7 @@ int namei(int dirfd, struct inode *base, const char *pathname, int follow_links,
 int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode, struct inode **res_inode)
 {
 	struct inode *dir, *inode;
+	struct dentry dentry;
 	const char *basename;
 	size_t basename_len;
 	int ret;
@@ -279,11 +280,18 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 			return ret;
 		}
 
+		/* set dentry */
+		dentry.d_count = 1;
+		dentry.d_inode = NULL;
+		dentry.d_name.name = (char *) basename;
+		dentry.d_name.len = basename_len;
+		dentry.d_name.hash = 0;
+
 		/* create new inode */
-		dir->i_count++;
-		ret = dir->i_op->create(dir, basename, basename_len, mode, res_inode);
+		ret = dir->i_op->create(dir, &dentry, mode);
 
 		/* release directory */
+		dput(&dentry);
 		iput(dir);
 		return ret;
 	}

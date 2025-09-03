@@ -123,7 +123,7 @@ ssize_t minix_readlink(struct inode *inode, char *buf, size_t bufsize);
 
 /* minix name resolutions prototypes */
 int minix_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode);
-int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode);
+int minix_create(struct inode *dir, struct dentry *dentry, mode_t mode);
 int minix_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
 int minix_unlink(struct inode *dir, struct dentry *dentry);
 int minix_symlink(struct inode *dir, struct dentry *dentry, const char *target);
