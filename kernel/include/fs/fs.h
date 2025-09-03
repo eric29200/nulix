@@ -208,7 +208,7 @@ struct inode_operations {
 	int (*create)(struct inode *, const char *, size_t, mode_t, struct inode **);
 	int (*follow_link)(struct inode *, struct inode *, int, mode_t, struct inode **);
 	ssize_t (*readlink)(struct inode *, char *, size_t);
-	int (*link)(struct inode *, struct inode *, const char *, size_t);
+	int (*link)(struct inode *, struct inode *, struct dentry *dentry);
 	int (*unlink)(struct inode *, struct dentry *);
 	int (*symlink)(struct inode *, const char *, size_t, const char *);
 	int (*mkdir)(struct inode *, struct dentry *, mode_t);

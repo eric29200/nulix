@@ -235,35 +235,33 @@ int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 /*
  * Make a new name for a file = hard link.
  */
-int tmpfs_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len)
+int tmpfs_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 {
 	struct tmpfs_dir_entry *de;
 	int ret;
 
+	/* inode must not be a directory */
+	if (S_ISDIR(inode->i_mode))
+		return -EPERM;
+
 	/* check if new file exists */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (de) {
-		iput(old_inode);
-		iput(dir);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (de)
 		return -EEXIST;
-	}
 
 	/* add entry */
-	ret = tmpfs_add_entry(dir, name, name_len, old_inode);
-	if (ret) {
-		iput(old_inode);
-		iput(dir);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret)
 		return ret;
-	}
 
 	/* update old inode */
-	old_inode->i_ctime = CURRENT_TIME;
-	old_inode->i_nlinks++;
-	mark_inode_dirty(old_inode);
+	inode->i_ctime = CURRENT_TIME;
+	inode->i_nlinks++;
+	mark_inode_dirty(inode);
 
-	/* release inodes */
-	iput(old_inode);
-	iput(dir);
+	/* instantiate dentry */
+	inode->i_count++;
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

@@ -213,7 +213,7 @@ int ext2_lookup(struct inode *dir, const char *name, size_t name_len, struct ino
 int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode);
 int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
 int ext2_rmdir(struct inode *dir, struct dentry *dentry);
-int ext2_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len);
+int ext2_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
 int ext2_unlink(struct inode *dir, struct dentry *dentry);
 int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const char *target);
 int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,

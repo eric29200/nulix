@@ -296,37 +296,36 @@ int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 /*
  * Make a new name for a file = hard link.
  */
-int minix_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len)
+int minix_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 {
 	struct minix3_dir_entry *de;
 	struct buffer_head *bh;
-	int err;
+	int ret;
+
+	/* inode must not be a directory */
+	if (S_ISDIR(inode->i_mode))
+		return -EPERM;
 
 	/* check if new file exists */
-	bh = minix_find_entry(dir, name, name_len, &de);
+	bh = minix_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
-		iput(old_inode);
-		iput(dir);
 		return -EEXIST;
 	}
-
+	
 	/* add entry */
-	err = minix_add_entry(dir, name, name_len, old_inode);
-	if (err) {
-		iput(old_inode);
-		iput(dir);
-		return err;
-	}
+	ret = minix_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret)
+		return ret;
 
 	/* update old inode */
-	old_inode->i_ctime = CURRENT_TIME;
-	old_inode->i_nlinks++;
-	mark_inode_dirty(old_inode);
+	inode->i_ctime = CURRENT_TIME;
+	inode->i_nlinks++;
+	mark_inode_dirty(inode);
 
-	/* release inodes */
-	iput(old_inode);
-	iput(dir);
+	/* instantiate dentry */
+	inode->i_count++;
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

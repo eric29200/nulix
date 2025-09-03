@@ -386,7 +386,8 @@ int sys_mkdirat(int dirfd, const char *pathname, mode_t mode)
  */
 static int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
 {
-	struct inode *old_inode, *dir;
+	struct inode *old_inode, *new_dir = NULL;
+	struct dentry new_dentry;
 	const char *basename;
 	size_t basename_len;
 	int ret;
@@ -397,46 +398,44 @@ static int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *
 		return ret;
 
 	/* do not allow to rename directory */
-	if (S_ISDIR(old_inode->i_mode)) {
-		iput(old_inode);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (S_ISDIR(old_inode->i_mode))
+		goto out;
 
 	/* get directory of new file */
-	ret = dir_namei(newdirfd, NULL, newpath, &basename, &basename_len, &dir);
-	if (ret) {
-		iput(old_inode);
-		return -EACCES;
-	}
+	ret = dir_namei(newdirfd, NULL, newpath, &basename, &basename_len, &new_dir);
+	if (ret)
+		goto out;
+	
+	/* set dentry */
+	new_dentry.d_count = 1;
+	new_dentry.d_inode = NULL;
+	new_dentry.d_name.name = (char *) basename;
+	new_dentry.d_name.len = basename_len;
+	new_dentry.d_name.hash = 0;
 
 	/* no name to new file */
-	if (!basename_len) {
-		iput(old_inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -ENOENT;
+	if (!basename_len)
+		goto out_release_dentry;
 
 	/* check permissions */
-	ret = permission(dir, MAY_WRITE | MAY_EXEC);
-	if (ret) {
-		iput(old_inode);
-		iput(dir);
-		return ret;
-	}
+	ret = permission(new_dir, MAY_WRITE | MAY_EXEC);
+	if (ret)
+		goto out_release_dentry;
 
 	/* link not implemented */
-	if (!dir->i_op || !dir->i_op->link) {
-		iput(old_inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!new_dir->i_op || !new_dir->i_op->link)
+		goto out_release_dentry;
 
 	/* create link */
-	dir->i_count++;
-	ret = dir->i_op->link(old_inode, dir, basename, basename_len);
-
+	ret = new_dir->i_op->link(old_inode, new_dir, &new_dentry);
+out_release_dentry:
+	dput(&new_dentry);
+out:
+	iput(new_dir);
 	iput(old_inode);
-	iput(dir);
 	return ret;
 }
 
