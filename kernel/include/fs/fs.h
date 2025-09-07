@@ -315,7 +315,7 @@ struct file *get_empty_filp();
 
 /* name operations */
 int permission(struct inode *inode, int mask);
-int namei(int dirfd, struct inode *base, const char *pathname, int follow_link, struct inode **res_inode);
+struct dentry *namei(int dirfd, struct inode *base, const char *pathname, int follow_link);
 int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode, struct inode **res_inode);
 
 /* directory operations */

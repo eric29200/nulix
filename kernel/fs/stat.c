@@ -36,19 +36,18 @@ static int do_stat64(struct inode *inode, struct stat64 *statbuf)
  */
 int sys_stat64(const char *pathname, struct stat64 *statbuf)
 {
-	struct inode *inode;
+	struct dentry *dentry;
 	int ret;
 
-	/* get inode */
-	ret = namei(AT_FDCWD, NULL, pathname, 1, &inode);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = namei(AT_FDCWD, NULL, pathname, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* do stat */
-	ret = do_stat64(inode, statbuf);
+	ret = do_stat64(dentry->d_inode, statbuf);
 
-	/* release inode */
-	iput(inode);
+	dput(dentry);
 	return ret;
 }
 
@@ -57,19 +56,18 @@ int sys_stat64(const char *pathname, struct stat64 *statbuf)
  */
 int sys_lstat64(const char *pathname, struct stat64 *statbuf)
 {
-	struct inode *inode;
+	struct dentry *dentry;
 	int ret;
 
-	/* get inode */
-	ret = namei(AT_FDCWD, NULL, pathname, 0, &inode);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = namei(AT_FDCWD, NULL, pathname, 0);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* do stat */
-	ret = do_stat64(inode, statbuf);
+	ret = do_stat64(dentry->d_inode, statbuf);
 
-	/* release inode */
-	iput(inode);
+	dput(dentry);
 	return ret;
 }
 
@@ -100,19 +98,18 @@ int sys_fstat64(int fd, struct stat64 *statbuf)
  */
 int sys_fstatat64(int dirfd, const char *pathname, struct stat64 *statbuf, int flags)
 {
-	struct inode *inode;
+	struct dentry *dentry;
 	int ret;
 
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
-	if (ret)
-		return ret;
+	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* do stat */
-	ret = do_stat64(inode, statbuf);
+	ret = do_stat64(dentry->d_inode, statbuf);
 
-	/* release inode */
-	iput(inode);
+	dput(dentry);
 	return ret;
 }
 
@@ -121,16 +118,19 @@ int sys_fstatat64(int dirfd, const char *pathname, struct stat64 *statbuf, int f
  */
 int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, struct statx *statbuf)
 {
+	struct dentry *dentry;
 	struct inode *inode;
-	int ret;
 
 	/* unused mask */
 	UNUSED(mask);
 
+	/* resolve path */
+	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* reset stat buf */
 	memset(statbuf, 0, sizeof(struct statx));
@@ -156,7 +156,6 @@ int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, str
 		statbuf->stx_rdev_minor = minor(inode->i_rdev);
 	}
 
-	/* release inode */
-	iput(inode);
+	dput(dentry);
 	return 0;
 }

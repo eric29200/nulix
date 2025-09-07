@@ -224,13 +224,16 @@ int sys_close(int fd)
  */
 static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 {
+	struct dentry *dentry;
 	struct inode *inode;
-	int ret;
+
+	/* resolve path */
+	dentry = namei(dirfd, NULL, pathname, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* adjust mode */
 	if (mode == (mode_t) - 1)
@@ -239,8 +242,8 @@ static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 	/* change mode */
 	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
 	mark_inode_dirty(inode);
-	iput(inode);
 
+	dput(dentry);
 	return 0;
 }
 
@@ -304,20 +307,23 @@ int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flag
  */
 static int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags)
 {
+	struct dentry *dentry;
 	struct inode *inode;
-	int ret;
+
+	/* resolve path */
+	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* update inode */
 	inode->i_uid = owner;
 	inode->i_gid = group;
 	mark_inode_dirty(inode);
-	iput(inode);
 
+	dput(dentry);
 	return 0;
 }
 
@@ -383,20 +389,22 @@ int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsi
  */
 static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *times, int flags)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	int ret;
 
+	/* resolve path */
+	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* check permissions */
 	ret = permission(inode, MAY_WRITE);
-	if (ret) {
-		iput(inode);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/* set time */
 	if (times)
@@ -406,9 +414,9 @@ static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *
 
 	/* mark inode dirty */
 	mark_inode_dirty(inode);
-	iput(inode);
-
-	return 0;
+out:
+	dput(dentry);
+	return ret;
 }
 
 /*
@@ -432,21 +440,29 @@ int sys_utimensat(int dirfd, const char *pathname, struct timespec *times, int f
  */
 int sys_chroot(const char *path)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	int ret;
 
+	/* resolve path */
+	dentry = namei(AT_FDCWD, NULL, path, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* get inode */
-	ret = namei(AT_FDCWD, NULL, path, 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* check if it's a directory */
+	ret = -ENOTDIR;
 	if (!S_ISDIR(inode->i_mode))
-		return -ENOTDIR;
+		goto out;
 
 	/* release current root directory and change it */
 	iput(current_task->fs->root);
 	current_task->fs->root = inode;
-
-	return 0;
+	inode->i_count++;
+	ret = 0;
+out:
+	dput(dentry);
+	return ret;
 }

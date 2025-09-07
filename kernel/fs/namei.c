@@ -107,7 +107,7 @@ out:
 /*
  * Lookup a file.
  */
-static struct dentry *lookup1(struct inode *dir, const char *name, size_t name_len)
+static struct dentry *lookup(struct inode *dir, const char *name, size_t name_len)
 {
 	struct dentry *dentry;
 	int ret;
@@ -189,7 +189,7 @@ static int dir_namei(int dirfd, struct inode *base, const char *pathname, const 
 
 		/* lookup */
 		inode->i_count++;
-		dentry = lookup1(inode, name, name_len);
+		dentry = lookup(inode, name, name_len);
 		if (IS_ERR(dentry)) {
 			iput(inode);
 			return PTR_ERR(dentry);
@@ -254,7 +254,7 @@ static struct dentry *lookup_dentry(int dirfd, struct inode *base, const char *p
 
 	/* lookup file */
 	dir->i_count++;
-	dentry = lookup1(dir, basename, basename_len);
+	dentry = lookup(dir, basename, basename_len);
 	if (IS_ERR(dentry)) {
 		iput(dir);
 		return dentry;
@@ -293,7 +293,7 @@ out:
 	}
 
 	/* allocate dentry */
-	dentry = d_alloc(dget(parent), &(const struct qstr) { (char *) basename, basename_len, 0 });
+	dentry = d_alloc(parent, &(const struct qstr) { (char *) basename, basename_len, 0 });
 	if (!dentry) {
 		iput(inode);
 		d_free(parent);
@@ -307,65 +307,24 @@ out:
 }
 
 /*
- * Resolve a path name to the matching inode.
+ * Resolve a path.
  */
-int namei(int dirfd, struct inode *base, const char *pathname, int follow_link, struct inode **res_inode)
+struct dentry *namei(int dirfd, struct inode *base, const char *pathname, int follow_link)
 {
-	struct inode *dir, *inode;
 	struct dentry *dentry;
-	const char *basename;
-	size_t basename_len;
-	struct file *filp;
-	int ret;
 
-	/* use directly dir fd */
-	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
-		filp = fget(dirfd);
-		if (!filp)
-			return -EINVAL;
+	/* resolve path */
+	dentry = lookup_dentry(dirfd, base, pathname, follow_link);
+	if (IS_ERR(dentry))
+		return dentry;
 
-		filp->f_inode->i_count++;
-		*res_inode = filp->f_inode;
-		fput(filp);
-		return 0;
+	/* no such entry */
+	if (!dentry->d_inode) {
+		dput(dentry);
+		return ERR_PTR(-ENOENT);
 	}
 
-	/* find directory */
-	ret = dir_namei(dirfd, base, pathname, &basename, &basename_len, &dir);
-	if (ret)
-		return ret;
-
-	/* special case : '/' */
-	if (!basename_len) {
-		*res_inode = dir;
-		return 0;
-	}
-
-	/* lookup file */
-	dir->i_count++;
-	dentry = lookup1(dir, basename, basename_len);
-	if (IS_ERR(dentry)) {
-		iput(dir);
-		return PTR_ERR(dentry);
-	}
-
-	/* get result inode */
-	inode = dentry->d_inode;
-	d_free(dentry);
-
-	/* check result inode */
-	if (!inode) {
-		iput(dir);
-		return -ENOENT;
-	}
-
-	/* follow symbolic link */
-	if (follow_link)
-		ret = do_follow_link(dir, inode, 0, 0, &inode);
-
-	iput(dir);
-	*res_inode = inode;
-	return 0;
+	return dentry;
 }
 
 /*
@@ -412,7 +371,7 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 
 	/* lookup inode */
 	dir->i_count++;
-	dentry = lookup1(dir, basename, basename_len);
+	dentry = lookup(dir, basename, basename_len);
 	if (IS_ERR(dentry)) {
 		iput(dir);
 		return PTR_ERR(dentry);
@@ -807,13 +766,17 @@ int sys_unlinkat(int dirfd, const char *pathname, int flags)
  */
 static ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bufsize)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	int ret;
 
+	/* resolve path */
+	dentry = namei(dirfd, NULL, pathname, 0);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, 0, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* readlink not implemented */
 	ret = -EPERM;
@@ -823,7 +786,7 @@ static ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bu
 	/* read link */
 	ret = inode->i_op->readlink(inode, buf, bufsize);
 out:
-	iput(inode);
+	dput(dentry);
 	return ret;
 }
 

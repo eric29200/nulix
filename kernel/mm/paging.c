@@ -680,6 +680,8 @@ static void free_pmd(pmd_t *pmd)
 
 	/* get table entries */
 	ptes = (pte_t *) pmd_page(*pmd);
+	if (ptes < (pte_t *) PAGE_OFFSET)
+		return;
 
 	/* free pages */
 	for (i = 0; i < PTRS_PER_PTE; i++) {

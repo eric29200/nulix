@@ -15,12 +15,15 @@ static struct file_operations shm_file_operations;
 static struct inode *shm_get_inode(mode_t mode, dev_t dev, int size)
 {
 	struct inode *tmpfs_root_inode, *inode;
-	int ret;
+	struct dentry *dentry;
 
 	/* get tmpfs root inode */
-	ret = namei(AT_FDCWD, NULL, "/tmp", 0, &tmpfs_root_inode);
-	if (ret)
+	dentry = namei(AT_FDCWD, NULL, "/tmp", 0);
+	if (IS_ERR(dentry))
 		return NULL;
+
+	/* get tmpfs root inode */
+	tmpfs_root_inode = dentry->d_inode;
 
 	/* get a new tmpfs inode */
 	inode = tmpfs_new_inode(tmpfs_root_inode->i_sb, mode, dev);
@@ -30,7 +33,7 @@ static struct inode *shm_get_inode(mode_t mode, dev_t dev, int size)
 	}
 
 	/* release tmpfs root inode */
-	iput(tmpfs_root_inode);
+	dput(dentry);
 
 	return inode;
 }
