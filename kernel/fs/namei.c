@@ -47,72 +47,96 @@ static int do_follow_link(struct inode *dir, struct inode *inode, int flags, mod
 }
 
 /*
- * Lookup a file.
+ * Reserved lookup.
  */
-static int lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+static struct dentry *reserved_lookup(struct inode **dir, const char *name, size_t name_len)
 {
 	struct super_block *sb;
-	struct dentry dentry;
+
+	if (name_len != 2 || name[0] != '.' || name[1] != '.')
+		return NULL;
+
+	/* .. in root = root */
+	if (*dir == current_task->fs->root)
+		return d_alloc_root(*dir);
+
+	/* cross mount point */
+	sb = (*dir)->i_sb;
+	if (*dir == sb->s_root_inode) {
+		iput(*dir);
+		*dir = sb->s_covered;
+		if (!*dir)
+			return ERR_PTR(-ENOENT);
+		(*dir)->i_count++;
+	}
+
+	return NULL;
+}
+
+/*
+ * Real lookup.
+ */
+static struct dentry *real_lookup(struct inode *dir, const char *name, size_t name_len)
+{
+	struct dentry *dentry;
 	int ret;
 
-	/* reset result inode */
-	*res_inode = NULL;
+	/* allocate a new dentry */
+	dentry = d_alloc(NULL, &(const struct qstr) { (char *) name, name_len, 0});
+	if (!dentry)
+		return ERR_PTR(-ENOMEM);
+
+	/* directory */
+	if (!name_len) {
+		dir->i_count++;
+		d_instantiate(dentry, dir);
+		goto out;
+	}
+
+	/* lookup */
+	ret = dir->i_op->lookup(dir, dentry);
+	if (ret) {
+		d_free(dentry);
+		return ERR_PTR(ret);
+	}
+
+out:
+	return dget(dentry);
+}
+
+/*
+ * Lookup a file.
+ */
+static struct dentry *lookup1(struct inode *dir, const char *name, size_t name_len)
+{
+	struct dentry *dentry;
+	int ret;
 
 	/* no parent directory */
 	if (!dir)
-		return -ENOENT;
+		return ERR_PTR(-ENOENT);
 
 	/* check permissions */
 	ret = permission(dir, MAY_EXEC);
 	if (ret)
-		return ret;
+		return ERR_PTR(ret);
 
-	/* special cases */
-	if (name_len == 2 && name[0] == '.' && name[1] == '.') {
-		/* .. in root = root */
-		if (dir == current_task->fs->root) {
-			*res_inode = dir;
-			return 0;
-		}
-
-		/* cross mount point */
-		sb = dir->i_sb;
-		if (dir == sb->s_root_inode) {
-			iput(dir);
-			dir = sb->s_covered;
-			if (!dir)
-				return -ENOENT;
-			dir->i_count++;
-		}
-	}
+	/* reserved lookup */
+	dentry = reserved_lookup(&dir, name, name_len);
+	if (dentry)
+		return dentry;
 
 	/* lookup not implemented */
 	if (!dir->i_op || !dir->i_op->lookup)
-		return -ENOTDIR;
+		return ERR_PTR(-ENOTDIR);
 
-	/* dir */
-	if (!name_len) {
-		*res_inode = dir;
-		return 0;
-	}
+	/* lookup */
+	dentry = real_lookup(dir, name, name_len);
 
-	/* set dentry */
-	dentry.d_count = 1;
-	dentry.d_inode = NULL;
-	dentry.d_name.name = (char *) name;
-	dentry.d_name.len = name_len;
-	dentry.d_name.hash = 0;
-
-	/* real lookup */
-	ret = dir->i_op->lookup(dir, &dentry);
-	if (ret == 0) {
-		*res_inode = dentry.d_inode;
-		if (!*res_inode)
-			ret = -ENOENT;
-	}
-
+	/* release directory */
 	iput(dir);
-	return ret;
+
+	return dentry;
 }
 
 /*
@@ -121,6 +145,7 @@ static int lookup(struct inode *dir, const char *name, size_t name_len, struct i
 static int dir_namei(int dirfd, struct inode *base, const char *pathname, const char **basename, size_t *basename_len, struct inode **res_inode)
 {
 	struct inode *inode = NULL, *tmp;
+	struct dentry *dentry;
 	const char *name;
 	size_t name_len;
 	int ret;
@@ -164,10 +189,20 @@ static int dir_namei(int dirfd, struct inode *base, const char *pathname, const 
 
 		/* lookup */
 		inode->i_count++;
-		ret = lookup(inode, name, name_len, &tmp);
-		if (ret) {
+		dentry = lookup1(inode, name, name_len);
+		if (IS_ERR(dentry)) {
 			iput(inode);
-			return ret;
+			return PTR_ERR(dentry);
+		}
+
+		/* get result inode */
+		tmp = dentry->d_inode;
+		d_free(dentry);
+
+		/* check result inode */
+		if (!tmp) {
+			iput(inode);
+			return -ENOENT;
 		}
 
 		/* follow symbolic links */
@@ -183,11 +218,101 @@ static int dir_namei(int dirfd, struct inode *base, const char *pathname, const 
 }
 
 /*
+ * Resolve a path.
+ */
+static struct dentry *lookup_dentry(int dirfd, struct inode *base, const char *pathname, int follow_link)
+{
+	struct inode *dir = NULL, *inode = NULL;
+	struct dentry *dentry, *parent;
+	const char *basename;
+	size_t basename_len;
+	struct file *filp;
+	int ret;
+
+	/* use directly dir fd */
+	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
+		filp = fget(dirfd);
+		if (!filp)
+			return ERR_PTR(-EINVAL);
+
+		inode = filp->f_inode;
+		inode->i_count++;
+		fput(filp);
+		goto out;
+	}
+
+	/* find directory */
+	ret = dir_namei(dirfd, base, pathname, &basename, &basename_len, &dir);
+	if (ret)
+		return ERR_PTR(ret);
+
+	/* special case : '/' */
+	if (!basename_len) {
+		inode = dir;
+		goto out;
+	}
+
+	/* lookup file */
+	dir->i_count++;
+	dentry = lookup1(dir, basename, basename_len);
+	if (IS_ERR(dentry)) {
+		iput(dir);
+		return dentry;
+	}
+
+	/* get result inode */
+	inode = dentry->d_inode;
+	d_free(dentry);
+
+	/* check result inode */
+	if (!inode) {
+		iput(dir);
+		goto out;
+	}
+
+	/* follow symbolic link */
+	if (follow_link) {
+		ret = do_follow_link(dir, inode, 0, 0, &inode);
+		if (ret) {
+			iput(dir);
+			return ERR_PTR(ret);
+		}
+	}
+
+	iput(dir);
+out:
+	/* allocate a root inode */
+	if (!dir)
+		return d_alloc_root(inode);
+
+	/* allocate parent dentry */
+	parent = d_alloc_root(dir);
+	if (!parent) {
+		iput(inode);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	/* allocate dentry */
+	dentry = d_alloc(dget(parent), &(const struct qstr) { (char *) basename, basename_len, 0 });
+	if (!dentry) {
+		iput(inode);
+		d_free(parent);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
+
+	return dget(dentry);
+}
+
+/*
  * Resolve a path name to the matching inode.
  */
 int namei(int dirfd, struct inode *base, const char *pathname, int follow_link, struct inode **res_inode)
 {
 	struct inode *dir, *inode;
+	struct dentry *dentry;
 	const char *basename;
 	size_t basename_len;
 	struct file *filp;
@@ -218,10 +343,20 @@ int namei(int dirfd, struct inode *base, const char *pathname, int follow_link, 
 
 	/* lookup file */
 	dir->i_count++;
-	ret = lookup(dir, basename, basename_len, &inode);
-	if (ret) {
+	dentry = lookup1(dir, basename, basename_len);
+	if (IS_ERR(dentry)) {
 		iput(dir);
-		return ret;
+		return PTR_ERR(dentry);
+	}
+
+	/* get result inode */
+	inode = dentry->d_inode;
+	d_free(dentry);
+
+	/* check result inode */
+	if (!inode) {
+		iput(dir);
+		return -ENOENT;
 	}
 
 	/* follow symbolic link */
@@ -239,7 +374,7 @@ int namei(int dirfd, struct inode *base, const char *pathname, int follow_link, 
 int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode, struct inode **res_inode)
 {
 	struct inode *dir, *inode;
-	struct dentry dentry;
+	struct dentry *dentry;
 	const char *basename;
 	size_t basename_len;
 	int ret;
@@ -277,16 +412,28 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 
 	/* lookup inode */
 	dir->i_count++;
-	if (lookup(dir, basename, basename_len, &inode)) {
+	dentry = lookup1(dir, basename, basename_len);
+	if (IS_ERR(dentry)) {
+		iput(dir);
+		return PTR_ERR(dentry);
+	}
+
+	/* get result inode */
+	inode = dentry->d_inode;
+
+	/* create file if needed */
+	if (!inode) {
 		/* no such entry */
 		if (!(flags & O_CREAT)) {
 			iput(dir);
+			d_free(dentry);
 			return -ENOENT;
 		}
 
 		/* create not implemented */
 		if (!dir->i_op || !dir->i_op->create) {
 			iput(dir);
+			d_free(dentry);
 			return -EPERM;
 		}
 
@@ -294,27 +441,25 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 		ret = permission(dir, MAY_WRITE | MAY_EXEC);
 		if (ret) {
 			iput(dir);
+			d_free(dentry);
 			return ret;
 		}
 
-		/* set dentry */
-		dentry.d_count = 1;
-		dentry.d_inode = NULL;
-		dentry.d_name.name = (char *) basename;
-		dentry.d_name.len = basename_len;
-		dentry.d_name.hash = 0;
-
 		/* create new inode */
-		ret = dir->i_op->create(dir, &dentry, mode);
+		ret = dir->i_op->create(dir, dentry, mode);
 
 		/* set result inode */
 		if (ret == 0)
-			*res_inode = dentry.d_inode;
+			*res_inode = dentry->d_inode;
 
 		/* release directory */
 		iput(dir);
+		d_free(dentry);
 		return ret;
 	}
+
+	/* free dentry */
+	d_free(dentry);
 
 	/* follow symbolic link */
 	ret = do_follow_link(dir, inode, flags, mode, res_inode);
@@ -352,27 +497,26 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
  */
 static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 {
-	struct dentry dentry;
-	const char *basename;
-	size_t basename_len;
+	struct dentry *dentry;
 	struct inode *dir;
 	int ret;
 
-	/* get parent directory */
-	ret = dir_namei(dirfd, NULL, pathname, &basename, &basename_len, &dir);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = lookup_dentry(dirfd, NULL, pathname, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
-	/* set dentry */
-	dentry.d_count = 1;
-	dentry.d_inode = NULL;
-	dentry.d_name.name = (char *) basename;
-	dentry.d_name.len = basename_len;
-	dentry.d_name.hash = 0;
+	/* get directory */
+	dir = dentry->d_parent->d_inode;
 
-	/* check name length */
+	/* already exists */
 	ret = -EEXIST;
-	if (!basename_len)
+	if (dentry->d_inode)
+		goto out;
+
+	/* read only filesystem */
+	ret = -EROFS;
+	if (IS_RDONLY(dir))
 		goto out;
 
 	/* check permissions */
@@ -385,11 +529,10 @@ static int do_mkdir(int dirfd, const char *pathname, mode_t mode)
 	if (!dir->i_op || !dir->i_op->mkdir)
 		goto out;
 
-	/* create directory */
-	ret = dir->i_op->mkdir(dir, &dentry, mode);
+	/* make directory */
+	ret = dir->i_op->mkdir(dir, dentry, mode);
 out:
-	dput(&dentry);
-	iput(dir);
+	dput(dentry);
 	return ret;
 }
 
@@ -414,56 +557,56 @@ int sys_mkdirat(int dirfd, const char *pathname, mode_t mode)
  */
 static int do_link(int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
 {
-	struct inode *old_inode, *new_dir = NULL;
-	struct dentry new_dentry;
-	const char *basename;
-	size_t basename_len;
+	struct dentry *old_dentry, *new_dentry;
+	struct inode *dir, *inode;
 	int ret;
 
-	/* get old inode */
-	ret = namei(olddirfd, NULL, oldpath, 1, &old_inode);
-	if (ret)
-		return ret;
+	/* resolve old path */
+	old_dentry = lookup_dentry(olddirfd, NULL, oldpath, 1);
+	if (IS_ERR(old_dentry))
+		return PTR_ERR(old_dentry);
 
-	/* do not allow to rename directory */
-	ret = -EPERM;
-	if (S_ISDIR(old_inode->i_mode))
-		goto out;
+	/* resolve new path */
+	new_dentry = lookup_dentry(newdirfd, NULL, newpath, 1);
+	ret = PTR_ERR(new_dentry);
+	if (IS_ERR(new_dentry))
+		goto out_release_old;
 
-	/* get directory of new file */
-	ret = dir_namei(newdirfd, NULL, newpath, &basename, &basename_len, &new_dir);
-	if (ret)
-		goto out;
+	/* get directory */
+	dir = new_dentry->d_parent->d_inode;
 
-	/* set dentry */
-	new_dentry.d_count = 1;
-	new_dentry.d_inode = NULL;
-	new_dentry.d_name.name = (char *) basename;
-	new_dentry.d_name.len = basename_len;
-	new_dentry.d_name.hash = 0;
-
-	/* no name to new file */
+	/* no such entry */
 	ret = -ENOENT;
-	if (!basename_len)
-		goto out_release_dentry;
+	inode = old_dentry->d_inode;
+	if (!inode)
+		goto out_release_new;
+
+	/* newpath already exists */
+	ret = -EEXIST;
+	if (new_dentry->d_inode)
+		goto out_release_new;
+
+	/* read only filesystem */
+	ret = -EROFS;
+	if (IS_RDONLY(dir))
+		goto out_release_new;
 
 	/* check permissions */
-	ret = permission(new_dir, MAY_WRITE | MAY_EXEC);
+	ret = permission(dir, MAY_WRITE | MAY_EXEC);
 	if (ret)
-		goto out_release_dentry;
+		goto out_release_new;
 
 	/* link not implemented */
 	ret = -EPERM;
-	if (!new_dir->i_op || !new_dir->i_op->link)
-		goto out_release_dentry;
+	if (!dir->i_op || !dir->i_op->link)
+		goto out_release_new;
 
-	/* create link */
-	ret = new_dir->i_op->link(old_inode, new_dir, &new_dentry);
-out_release_dentry:
-	dput(&new_dentry);
-out:
-	iput(new_dir);
-	iput(old_inode);
+	/* make link */
+	ret = dir->i_op->link(inode, dir, new_dentry);
+out_release_new:
+	dput(new_dentry);
+out_release_old:
+	dput(old_dentry);
 	return ret;
 }
 
@@ -489,27 +632,26 @@ int sys_linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newp
  */
 static int do_symlink(const char *target, int newdirfd, const char *linkpath)
 {
-	struct dentry dentry;
-	const char *basename;
-	size_t basename_len;
+	struct dentry *dentry;
 	struct inode *dir;
 	int ret;
 
-	/* get new parent directory */
-	ret = dir_namei(newdirfd, NULL, linkpath, &basename, &basename_len, &dir);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = lookup_dentry(newdirfd, NULL, linkpath, 0);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
-	/* set dentry */
-	dentry.d_count = 1;
-	dentry.d_inode = NULL;
-	dentry.d_name.name = (char *) basename;
-	dentry.d_name.len = basename_len;
-	dentry.d_name.hash = 0;
+	/* get directory */
+	dir = dentry->d_parent->d_inode;
 
-	/* check directory name */
-	ret = -ENOENT;
-	if (!basename_len)
+	/* linkpath already exists */
+	ret = -EEXIST;
+	if (dentry->d_inode)
+		goto out;
+
+	/* read only filesystem */
+	ret = -EROFS;
+	if (IS_RDONLY(dir))
 		goto out;
 
 	/* check permissions */
@@ -522,11 +664,10 @@ static int do_symlink(const char *target, int newdirfd, const char *linkpath)
 	if (!dir->i_op || !dir->i_op->symlink)
 		goto out;
 
-	/* create symbolic link */
-	ret = dir->i_op->symlink(dir, &dentry, target);
+	/* make symbolic link */
+	ret = dir->i_op->symlink(dir, dentry, target);
 out:
-	dput(&dentry);
-	iput(dir);
+	dput(dentry);
 	return ret;
 }
 
@@ -551,33 +692,26 @@ int sys_symlinkat(const char *target, int newdirfd, const char *linkpath)
  */
 static int do_rmdir(int dirfd, const char *pathname)
 {
-	struct dentry dentry;
-	const char *basename;
-	size_t basename_len;
+	struct dentry *dentry;
 	struct inode *dir;
 	int ret;
 
-	/* get parent directory */
-	ret = dir_namei(dirfd, NULL, pathname, &basename, &basename_len, &dir);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = lookup_dentry(dirfd, NULL, pathname, 0);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
-	/* set dentry */
-	dentry.d_count = 1;
-	dentry.d_inode = NULL;
-	dentry.d_name.name = (char *) basename;
-	dentry.d_name.len = basename_len;
-	dentry.d_name.hash = 0;
-	dentry.d_inode = NULL;
+	/* get directory */
+	dir = dentry->d_parent->d_inode;
 
-	/* check name length */
+	/* no such entry */
 	ret = -ENOENT;
-	if (!basename_len)
+	if (!dentry->d_inode)
 		goto out;
 
-	/* find file */
-	ret = lookup(dir, basename, basename_len, &dentry.d_inode);
-	if (ret)
+	/* read only filesystem */
+	ret = -EROFS;
+	if (IS_RDONLY(dir))
 		goto out;
 
 	/* check permissions */
@@ -591,10 +725,9 @@ static int do_rmdir(int dirfd, const char *pathname)
 		goto out;
 
 	/* remove directory */
-	ret = dir->i_op->rmdir(dir, &dentry);
+	ret = dir->i_op->rmdir(dir, dentry);
 out:
-	dput(&dentry);
-	iput(dir);
+	dput(dentry);
 	return ret;
 }
 
@@ -611,33 +744,26 @@ int sys_rmdir(const char *pathname)
  */
 static int do_unlink(int dirfd, const char *pathname)
 {
-	struct dentry dentry;
-	const char *basename;
-	size_t basename_len;
+	struct dentry *dentry;
 	struct inode *dir;
 	int ret;
 
-	/* get parent directory */
-	ret = dir_namei(dirfd, NULL, pathname, &basename, &basename_len, &dir);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = lookup_dentry(dirfd, NULL, pathname, 0);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
-	/* set dentry */
-	dentry.d_count = 1;
-	dentry.d_inode = NULL;
-	dentry.d_name.name = (char *) basename;
-	dentry.d_name.len = basename_len;
-	dentry.d_name.hash = 0;
-	dentry.d_inode = NULL;
+	/* get directory */
+	dir = dentry->d_parent->d_inode;
 
-	/* check name length */
+	/* no such entry */
 	ret = -ENOENT;
-	if (!basename_len)
+	if (!dentry->d_inode)
 		goto out;
 
-	/* find file */
-	ret = lookup(dir, basename, basename_len, &dentry.d_inode);
-	if (ret)
+	/* read only filesystem */
+	ret = -EROFS;
+	if (IS_RDONLY(dir))
 		goto out;
 
 	/* check permissions */
@@ -650,11 +776,10 @@ static int do_unlink(int dirfd, const char *pathname)
 	if (!dir->i_op || !dir->i_op->unlink)
 		goto out;
 
-	/* unlink file */
-	ret = dir->i_op->unlink(dir, &dentry);
+	/* unlink */
+	ret = dir->i_op->unlink(dir, dentry);
 out:
-	dput(&dentry);
-	iput(dir);
+	dput(dentry);
 	return ret;
 }
 
@@ -723,90 +848,64 @@ ssize_t sys_readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz
  */
 static int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags)
 {
-	size_t old_basename_len, new_basename_len;
-	const char *old_basename, *new_basename;
-	struct dentry old_dentry, new_dentry;
+	struct dentry * old_dentry, *new_dentry;
 	struct inode *old_dir, *new_dir;
 	int ret;
 
-	/* get old directory */
-	ret = dir_namei(olddirfd, NULL, oldpath, &old_basename, &old_basename_len, &old_dir);
-	if (ret)
-		return ret;
+	/* resolve old path */
+	old_dentry = lookup_dentry(olddirfd, NULL, oldpath, 0);
+	if (IS_ERR(old_dentry))
+		return PTR_ERR(old_dentry);
 
-	/* do not allow to move '.' and '..' */
-	ret = -EPERM;
-	if (!old_basename_len || (old_basename[0] == '.' && (old_basename_len == 1 || (old_basename[1] == '.' && old_basename_len == 2))))
-		goto out_release_old_dir;
+	/* resolve new path */
+	new_dentry = lookup_dentry(newdirfd, NULL, newpath, 0);
+	ret = PTR_ERR(new_dentry);
+	if (IS_ERR(new_dentry))
+		goto out_release_old;
+
+	/* get directories */
+	new_dir = new_dentry->d_parent->d_inode;
+	old_dir = old_dentry->d_parent->d_inode;
+
+	/* no such entry */
+	ret = -ENOENT;
+	if (!old_dentry->d_inode)
+		goto out_release_new;
 
 	/* check permissions */
 	ret = permission(old_dir, MAY_WRITE | MAY_EXEC);
 	if (ret)
-		goto out_release_old_dir;
-
-	/* set old dentry */
-	old_dentry.d_count = 1;
-	old_dentry.d_inode = NULL;
-	old_dentry.d_name.name = (char *) old_basename;
-	old_dentry.d_name.len = old_basename_len;
-	old_dentry.d_name.hash = 0;
-	old_dentry.d_inode = NULL;
-
-	/* find old file */
-	ret = lookup(old_dir, old_basename, old_basename_len, &old_dentry.d_inode);
+		goto out_release_new;
+	ret = permission(new_dir,MAY_WRITE | MAY_EXEC);
 	if (ret)
-		goto out_release_old_dentry;
+		goto out_release_new;
 
-	/* get new directory */
-	ret = dir_namei(newdirfd, NULL, newpath, &new_basename, &new_basename_len, &new_dir);
-	if (ret)
-		goto out_release_old_dentry;
+	/* disallow moves to another device */
+	ret = -EXDEV;
+	if (new_dir->i_sb != old_dir->i_sb)
+		goto out_release_new;
 
-	/* do not allow to move to '.' and '..' */
-	ret = -EPERM;
-	if (!new_basename_len || (new_basename[0] == '.' && (new_basename_len == 1 || (new_basename[1] == '.' && new_basename_len == 2))))
-		goto out_release_new_dir;
-
-	/* check permissions */
-	ret = permission(new_dir, MAY_WRITE | MAY_EXEC);
-	if (ret)
-		goto out_release_new_dir;
-
-	/* do not allow to move to another device */
-	ret = -EPERM;
-	if (old_dir->i_sb != new_dir->i_sb)
-		goto out_release_new_dir;
+	/* read only filesystem */
+	ret = -EROFS;
+	if (IS_RDONLY(new_dir) || IS_RDONLY(old_dir))
+		goto out_release_new;
 
 	/* rename not implemented */
+	ret = -EPERM;
 	if (!old_dir->i_op || !old_dir->i_op->rename)
-		goto out_release_new_dir;
+		goto out_release_new;
 
-	/* set new dentry */
-	new_dentry.d_count = 1;
-	new_dentry.d_inode = NULL;
-	new_dentry.d_name.name = (char *) new_basename;
-	new_dentry.d_name.len = new_basename_len;
-	new_dentry.d_name.hash = 0;
-	new_dentry.d_inode = NULL;
-
-	/* find new file */
-	lookup(new_dir, new_basename, new_basename_len, &new_dentry.d_inode);
-
-	/* check if target already exists */
+	/* no replace */
 	ret = -EEXIST;
-	if ((flags & RENAME_NOREPLACE) && new_dentry.d_inode && S_ISDIR(new_dentry.d_inode->i_mode))
-		goto out_release_new_dentry;
+	if ((flags & RENAME_NOREPLACE) && new_dentry->d_inode && S_ISDIR(new_dentry->d_inode->i_mode))
+		goto out_release_new;
 
 	/* rename */
-	ret = old_dir->i_op->rename(old_dir, &old_dentry, new_dir, &new_dentry);
-out_release_new_dentry:
-	dput(&new_dentry);
-out_release_new_dir:
-	iput(new_dir);
-out_release_old_dentry:
-	dput(&old_dentry);
-out_release_old_dir:
-	iput(old_dir);
+	ret = old_dir->i_op->rename(old_dir, old_dentry, new_dir, new_dentry);
+out_release_new:
+	dput(new_dentry);
+out_release_old:
+	dput(old_dentry);
 	return ret;
 }
 
@@ -839,27 +938,26 @@ int sys_renameat2(int olddirfd, const char *oldpath, int newdirfd, const char *n
  */
 static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 {
-	struct dentry dentry;
-	const char *basename;
-	size_t basename_len;
+	struct dentry *dentry;
 	struct inode *dir;
 	int ret;
 
+	/* resolve path */
+	dentry = lookup_dentry(dirfd, NULL, pathname, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* get directory */
-	ret = dir_namei(dirfd, NULL, pathname, &basename, &basename_len, &dir);
-	if (ret)
-		return ret;
+	dir = dentry->d_parent->d_inode;
 
-	/* set dentry */
-	dentry.d_count = 1;
-	dentry.d_inode = NULL;
-	dentry.d_name.name = (char *) basename;
-	dentry.d_name.len = basename_len;
-	dentry.d_name.hash = 0;
+	/* already exists */
+	ret = -EEXIST;
+	if (dentry->d_inode)
+		goto out;
 
-	/* check name length */
-	ret = -ENOENT;
-	if (!basename_len)
+	/* read only filesystem */
+	ret = -EROFS;
+	if (IS_RDONLY(dir))
 		goto out;
 
 	/* check permissions */
@@ -873,10 +971,9 @@ static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 		goto out;
 
 	/* make node */
-	ret = dir->i_op->mknod(dir, &dentry, mode, dev);
+	ret = dir->i_op->mknod(dir, dentry, mode, dev);
 out:
-	iput(dir);
-	dput(&dentry);
+	dput(dentry);
 	return ret;
 }
 

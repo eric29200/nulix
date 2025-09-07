@@ -47,6 +47,10 @@
 
 #define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
 
+#define ERR_PTR(err)			((void *) ((long) (err)))
+#define PTR_ERR(ptr)			((long) (ptr))
+#define IS_ERR(ptr)			((unsigned long) (ptr) > (unsigned long) (-1000))
+
 struct super_block;
 
 /*
@@ -149,6 +153,7 @@ struct qstr {
 struct dentry {
 	int				d_count;
 	struct inode *			d_inode;
+	struct dentry *			d_parent;
 	struct qstr			d_name;
 };
 
@@ -294,7 +299,11 @@ struct inode *find_inode(struct super_block *sb, ino_t ino);
 void init_inode();
 
 /* dentry operations */
+struct dentry *dget(struct dentry *dentry);
 void dput(struct dentry *dentry);
+struct dentry *d_alloc(struct dentry *parent, const struct qstr *name);
+struct dentry *d_alloc_root(struct inode *root_inode);
+void d_free(struct dentry *dentry);
 void d_instantiate(struct dentry *dentry, struct inode *inode);
 void d_add(struct dentry *dentry, struct inode *inode);
 void d_delete(struct dentry *dentry);

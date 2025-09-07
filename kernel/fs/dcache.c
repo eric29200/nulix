@@ -8,6 +8,17 @@
 				} while (0)
 
 /*
+ * Get a dentry.
+ */
+struct dentry *dget(struct dentry *dentry)
+{
+	if (dentry)
+		dentry->d_count++;
+
+	return dentry;
+}
+
+/*
  * Release a dentry.
  */
 void dput(struct dentry *dentry)
@@ -20,8 +31,85 @@ void dput(struct dentry *dentry)
 	if (dentry->d_count < 0)
 		panic("dput: negative d_count");
 
+	/* still used */
+	if (dentry->d_count)
+		return;
+
 	/* release inode */
 	iput(dentry->d_inode);
+
+	/* release parent */
+	if (dentry->d_parent != dentry)
+		dput(dentry->d_parent);
+
+	/* free dentry */
+	d_free(dentry);
+}
+
+/*
+ * Allocate a dentry.
+ */
+struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
+{
+	struct dentry *dentry;
+	char *str;
+
+	/* allocate a new dentry */
+	dentry = kmalloc(sizeof(struct dentry));
+	if (!dentry)
+		return NULL;
+
+	/* allocate name */
+	str = kmalloc(name->len + 1);
+	if (!str) {
+		kfree(dentry);
+		return NULL;
+	}
+
+	/* set name */
+	memcpy(str, name->name, name->len);
+	str[name->len] = 0;
+
+	/* set dentry */
+	dentry->d_count = 0;
+	dentry->d_inode = NULL;
+	dentry->d_parent = parent;
+	dentry->d_name.name = str;
+	dentry->d_name.len = name->len;
+	dentry->d_name.hash = name->hash;
+
+	return dentry;
+}
+
+/*
+ * Allocate a root dentry.
+ */
+struct dentry *d_alloc_root(struct inode *root_inode)
+{
+	struct dentry *dentry;
+
+	/* allocate a new dentry */
+	dentry = d_alloc(NULL, &(const struct qstr) { "/", 1, 0 });
+	if (!dentry)
+		return NULL;
+
+	/* set dentry */
+	dentry->d_count = 1;
+	dentry->d_parent = dentry;
+
+	/* instantiate dentry */
+	d_instantiate(dentry, root_inode);
+
+	return dentry;
+}
+
+/*
+ * Free a dentry.
+ */
+void d_free(struct dentry *dentry)
+{
+	kfree(dentry->d_name.name);
+	kfree(dentry);
 }
 
 /*
