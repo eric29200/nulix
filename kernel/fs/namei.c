@@ -35,7 +35,7 @@ int permission(struct inode *inode, int mask)
 /*
  * Follow a link.
  */
-static int follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+static int do_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
 	/* not implemented : return inode */
 	if (!inode || !inode->i_op || !inode->i_op->follow_link) {
@@ -171,7 +171,7 @@ static int dir_namei(int dirfd, struct inode *base, const char *pathname, const 
 		}
 
 		/* follow symbolic links */
-		ret = follow_link(inode, tmp, 0, 0, &inode);
+		ret = do_follow_link(inode, tmp, 0, 0, &inode);
 		if (ret)
 			return ret;
 	}
@@ -185,7 +185,7 @@ static int dir_namei(int dirfd, struct inode *base, const char *pathname, const 
 /*
  * Resolve a path name to the matching inode.
  */
-int namei(int dirfd, struct inode *base, const char *pathname, int follow_links, struct inode **res_inode)
+int namei(int dirfd, struct inode *base, const char *pathname, int follow_link, struct inode **res_inode)
 {
 	struct inode *dir, *inode;
 	const char *basename;
@@ -225,8 +225,8 @@ int namei(int dirfd, struct inode *base, const char *pathname, int follow_links,
 	}
 
 	/* follow symbolic link */
-	if (follow_links)
-		ret = follow_link(dir, inode, 0, 0, &inode);
+	if (follow_link)
+		ret = do_follow_link(dir, inode, 0, 0, &inode);
 
 	iput(dir);
 	*res_inode = inode;
@@ -317,7 +317,7 @@ int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, m
 	}
 
 	/* follow symbolic link */
-	ret = follow_link(dir, inode, flags, mode, res_inode);
+	ret = do_follow_link(dir, inode, flags, mode, res_inode);
 	if (ret)
 		return ret;
 
