@@ -270,23 +270,19 @@ static int task_copy_fs(struct task *task, struct task *parent, uint32_t clone_f
 	/* init file system structure */
 	memset(task->fs, 0, sizeof(struct fs_struct));
 	task->fs->count = 1;
-	task->fs->cwd = NULL;
+	task->fs->pwd = NULL;
 	task->fs->root = NULL;
 
 	/* set umask */
 	task->fs->umask = parent ? parent->fs->umask : 0022;
 
 	/* duplicate current working dir */
-	if (parent && parent->fs->cwd) {
-		task->fs->cwd = parent->fs->cwd;
-		task->fs->cwd->i_count++;
-	}
+	if (parent && parent->fs->pwd)
+		task->fs->pwd = dget(parent->fs->pwd);
 
 	/* duplicate root dir */
-	if (parent && parent->fs->root) {
-		task->fs->root = parent->fs->root;
-		task->fs->root->i_count++;
-	}
+	if (parent && parent->fs->root)
+		task->fs->root = dget(parent->fs->root);
 
 	return 0;
 }
@@ -382,8 +378,8 @@ void task_exit_fs(struct task *task)
 		task->fs = NULL;
 
 		if (--fs->count <= 0) {
-			iput(fs->root);
-			iput(fs->cwd);
+			dput(fs->root);
+			dput(fs->pwd);
 			kfree(fs);
 		}
 	}

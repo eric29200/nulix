@@ -428,8 +428,8 @@ found:
 	/* set mount point */
 	sb->s_root_inode->i_count = 3;
 	sb->s_covered = NULL;
-	current_task->fs->cwd = sb->s_root_inode;
-	current_task->fs->root = sb->s_root_inode;
+	current_task->fs->pwd = d_alloc_root(sb->s_root_inode);
+	current_task->fs->root = d_alloc_root(sb->s_root_inode);
 
 	/* add mounted file system */
 	err = add_vfs_mount(dev, dev_name, "/", 0, sb);

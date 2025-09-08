@@ -8,7 +8,7 @@
  */
 int sys_chdir(const char *path)
 {
-	struct dentry *dentry;
+	struct dentry *dentry, *tmp;
 	struct inode *inode;
 	int ret;
 
@@ -30,12 +30,10 @@ int sys_chdir(const char *path)
 	if (ret)
 		goto out;
 
-	/* release current working dir */
-	iput(current_task->fs->cwd);
-
-	/* set current working dir */
-	current_task->fs->cwd = inode;
-	inode->i_count++;
+	/* exchange dentries */
+	tmp = current_task->fs->pwd;
+	current_task->fs->pwd = dentry;
+	dentry = tmp;
 out:
 	dput(dentry);
 	return ret;
@@ -46,6 +44,7 @@ out:
  */
 int sys_fchdir(int fd)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
 	int ret;
@@ -57,32 +56,25 @@ int sys_fchdir(int fd)
 
 	/* fd must be a directory */
 	inode = filp->f_inode;
-	if (!S_ISDIR(inode->i_mode)) {
-		fput(filp);
-		return -ENOTDIR;
-	}
+	ret = -ENOTDIR;
+	if (!S_ISDIR(inode->i_mode))
+		goto out;
 
 	/* check permissions */
 	ret = permission(inode, MAY_EXEC);
-	if (ret) {
-		fput(filp);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
-	/* no change */
-	if (inode == current_task->fs->cwd) {
-		fput(filp);
-		return 0;
-	}
+	/* allocate a new dentry */
+	dentry = d_alloc_root(inode);
+	ret = -ENOMEM;
+	if (!dentry)
+		goto out;
 
-	/* release current working dir */
-	iput(current_task->fs->cwd);
-
-	/* set current working dir */
-	current_task->fs->cwd = inode;
-
-	/* release file */
+	/* change directory */
+	dput(current_task->fs->pwd);
+	current_task->fs->pwd = dentry;
+out:
 	fput(filp);
-
-	return 0;
+	return ret;
 }

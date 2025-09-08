@@ -72,8 +72,8 @@ struct files_struct {
 struct fs_struct {
 	int				count;				/* reference counter */
 	uint16_t			umask;				/* umask */
-	struct inode *			cwd;				/* current working directory */
-	struct inode *			root;				/* root directory */
+	struct dentry *			pwd;				/* current working directory */
+	struct dentry *			root;				/* root directory */
 };
 
 /*

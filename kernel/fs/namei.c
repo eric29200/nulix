@@ -57,7 +57,7 @@ static struct dentry *reserved_lookup(struct inode **dir, const char *name, size
 		return NULL;
 
 	/* .. in root = root */
-	if (*dir == current_task->fs->root)
+	if (*dir == current_task->fs->root->d_inode)
 		return d_alloc_root(*dir);
 
 	/* cross mount point */
@@ -152,12 +152,12 @@ static int dir_namei(int dirfd, struct inode *base, const char *pathname, const 
 
 	/* absolute or relative path */
 	if (*pathname == '/') {
-		inode = current_task->fs->root;
+		inode = current_task->fs->root->d_inode;
 		pathname++;
 	} else if (base) {
 		inode = base;
 	} else if (dirfd == AT_FDCWD) {
-		inode = current_task->fs->cwd;
+		inode = current_task->fs->pwd->d_inode;
 	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->files->filp[dirfd]) {
 		inode = current_task->files->filp[dirfd]->f_inode;
 	}

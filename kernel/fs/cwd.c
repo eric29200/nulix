@@ -83,7 +83,7 @@ int sys_getcwd(char *buf, size_t size)
 		return -EINVAL;
 
 	/* root directory : return "/" */
-	if (current_task->fs->cwd == current_task->fs->root) {
+	if (current_task->fs->pwd->d_inode == current_task->fs->root->d_inode) {
 		strncpy(buf, "/", 1);
 		return 1;
 	}
@@ -94,7 +94,7 @@ int sys_getcwd(char *buf, size_t size)
 		return -ENOMEM;
 
 	/* walk up until root directory */
-	for (fd = AT_FDCWD, inode = current_task->fs->cwd; inode != current_task->fs->root;) {
+	for (fd = AT_FDCWD, inode = current_task->fs->pwd->d_inode; inode != current_task->fs->root->d_inode;) {
 		/* cross mount point */
 		if (inode == inode->i_sb->s_root_inode)
 			inode = inode->i_sb->s_covered;

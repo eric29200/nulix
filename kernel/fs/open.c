@@ -465,9 +465,8 @@ int sys_chroot(const char *path)
 		goto out;
 
 	/* release current root directory and change it */
-	iput(current_task->fs->root);
-	current_task->fs->root = inode;
-	inode->i_count++;
+	dput(current_task->fs->root);
+	current_task->fs->root = dentry;
 	ret = 0;
 out:
 	dput(dentry);
