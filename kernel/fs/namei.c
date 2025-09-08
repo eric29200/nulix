@@ -330,125 +330,82 @@ struct dentry *namei(int dirfd, struct inode *base, const char *pathname, int fo
 /*
  * Resolve and open a path name.
  */
-int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode, struct inode **res_inode)
+struct dentry *open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode)
 {
 	struct inode *dir, *inode;
 	struct dentry *dentry;
-	const char *basename;
-	size_t basename_len;
-	int ret;
-
-	/* reset result inode */
-	*res_inode = NULL;
-
-	/* find directory */
-	ret = dir_namei(dirfd, base, pathname, &basename, &basename_len, &dir);
-	if (ret)
-		return ret;
-
-	/* open a directory */
-	if (!basename_len) {
-		if (flags & 2) {
-			iput(dir);
-			return -EISDIR;
-		}
-
-		/* check permissions */
-		ret = permission(dir, ACC_MODE(flags));
-		if (ret) {
-			iput(dir);
-			return ret;
-		}
-
-		/* open directory */
-		*res_inode = dir;
-		return 0;
-	}
+	int acc_mode, ret;
 
 	/* set mode (needed if new file is created) */
-	mode &= ~current_task->fs->umask & 0777;
+	mode &= S_IALLUGO & ~current_task->fs->umask;
 	mode |= S_IFREG;
 
-	/* lookup inode */
-	dir->i_count++;
-	dentry = lookup(dir, basename, basename_len);
-	if (IS_ERR(dentry)) {
-		iput(dir);
-		return PTR_ERR(dentry);
-	}
-
-	/* get result inode */
-	inode = dentry->d_inode;
+	/* resolve path */
+	dentry = lookup_dentry(dirfd, base, pathname, 1);
+	if (IS_ERR(dentry))
+		return dentry;
 
 	/* create file if needed */
-	if (!inode) {
-		/* no such entry */
-		if (!(flags & O_CREAT)) {
-			iput(dir);
-			d_free(dentry);
-			return -ENOENT;
+	acc_mode = ACC_MODE(flags);
+	if (flags & O_CREAT) {
+		dir = dentry->d_parent->d_inode;
+
+		if (dentry->d_inode) {
+			ret = 0;
+			if (flags & O_EXCL)
+				ret = -EEXIST;
+		} else if (IS_RDONLY(dir)) {
+			ret = -EROFS;
+		} else if (!dir->i_op || !dir->i_op->create) {
+			ret = -EACCES;
+		} else {
+			ret = permission(dir, MAY_WRITE | MAY_EXEC);
+			if (ret == 0) {
+				ret = dir->i_op->create(dir, dentry, mode);
+				acc_mode = 0;
+			}
 		}
 
-		/* create not implemented */
-		if (!dir->i_op || !dir->i_op->create) {
-			iput(dir);
-			d_free(dentry);
-			return -EPERM;
-		}
-
-		/* check permissions */
-		ret = permission(dir, MAY_WRITE | MAY_EXEC);
-		if (ret) {
-			iput(dir);
-			d_free(dentry);
-			return ret;
-		}
-
-		/* create new inode */
-		ret = dir->i_op->create(dir, dentry, mode);
-
-		/* set result inode */
-		if (ret == 0)
-			*res_inode = dentry->d_inode;
-
-		/* release directory */
-		iput(dir);
-		d_free(dentry);
-		return ret;
+		if (ret)
+			goto err;
 	}
 
-	/* free dentry */
-	d_free(dentry);
+	/* no such entry */
+	ret = -ENOENT;
+	inode = dentry->d_inode;
+	if (!inode)
+		goto err;
 
-	/* follow symbolic link */
-	ret = do_follow_link(dir, inode, flags, mode, res_inode);
+	/* can't open a directory in write mode */
+	ret = -EISDIR;
+	if (S_ISDIR(inode->i_mode) && (flags & FMODE_WRITE))
+		goto err;
+
+	/* check permissions */
+	ret = permission(inode, acc_mode);
 	if (ret)
-		return ret;
+		goto err;
 
 	/* O_DIRECTORY : fails if inode is not a directory */
-	if ((flags & O_DIRECTORY) && !S_ISDIR((*res_inode)->i_mode)) {
-		iput(inode);
-		return -ENOTDIR;
-	}
+	if ((flags & O_DIRECTORY) && !S_ISDIR(inode->i_mode))
+		goto err;
 
 	/* truncate file */
 	if (flags & O_TRUNC) {
 		/* check permissions */
-		ret = permission(*res_inode, MAY_WRITE);
-		if (ret) {
-			iput(inode);
-			return ret;
-		}
+		ret = permission(inode, MAY_WRITE);
+		if (ret)
+			goto err;
 
-		/* truncate */
-		ret = do_truncate(*res_inode, 0);
-		if (ret) {
-			iput(inode);
-			return ret;
-		}
+		ret = do_truncate(inode, 0);
+		if (ret)
+			goto err;
 	}
 
-	return 0;
+	return dentry;
+err:
+	dput(dentry);
+	return ERR_PTR(ret);
 }
 
 /*

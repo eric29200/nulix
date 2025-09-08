@@ -9,7 +9,7 @@
 int minix_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
 	struct buffer_head *bh;
-	int ret;
+	struct dentry *dentry;
 
 	*res_inode = NULL;
 
@@ -33,13 +33,20 @@ int minix_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t 
 	/* release link inode */
 	iput(inode);
 
-	/* open target inode */
-	ret = open_namei(AT_FDCWD, dir, bh->b_data, flags, mode, res_inode);
-
-	/* release block buffer */
+	/* resolve path */
+	dentry = open_namei(AT_FDCWD, dir, bh->b_data, flags, mode);
 	brelse(bh);
 
-	return ret;
+	/* handle error */
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
+	/* get result inode */
+	*res_inode = dentry->d_inode;
+	(*res_inode)->i_count++;
+
+	dput(dentry);
+	return 0;
 }
 
 /*

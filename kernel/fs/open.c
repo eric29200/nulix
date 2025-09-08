@@ -95,6 +95,7 @@ struct file *get_empty_filp()
  */
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
 	int flag, fd, ret;
@@ -117,21 +118,24 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 		flag |= 2;
 
 	/* open file */
-	ret = open_namei(dirfd, NULL, pathname, flag, mode, &inode);
-	if (ret != 0)
-		goto err;
+	dentry = open_namei(dirfd, NULL, pathname, flag, mode);
+	ret = PTR_ERR(dentry);
+	if (IS_ERR(dentry))
+		goto err_cleanup_file;
+
+	/* get inode */
+	inode = dentry->d_inode;
 
 	/* check inode operations */
-	if (!inode->i_op) {
-		ret = -EINVAL;
-		goto err;
-	}
+	ret = -EINVAL;
+	if (!inode->i_op)
+		goto err_cleanup_dentry;
 
 	/* check permissions */
 	if (filp->f_mode & FMODE_WRITE) {
 		ret = permission(inode, MAY_WRITE);
 		if (ret)
-			goto err;
+			goto err_cleanup_dentry;
 	}
 
 	/* set file */
@@ -141,22 +145,25 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	filp->f_op = inode->i_op->fops;
 
 	/* set path */
+	ret = -ENOMEM;
 	filp->f_path = strdup(pathname);
-	if (!filp->f_path) {
-		ret = -ENOMEM;
-		goto err;
-	}
+	if (!filp->f_path)
+		goto err_cleanup_dentry;
 
 	/* specific open function */
 	if (filp->f_op && filp->f_op->open) {
 		ret = filp->f_op->open(filp);
 		if (ret)
-			goto err;
+			goto err_cleanup_dentry;
 	}
 
 	current_task->files->filp[fd] = filp;
+	inode->i_count++;
+	dput(dentry);
 	return fd;
-err:
+err_cleanup_dentry:
+	dput(dentry);
+err_cleanup_file:
 	if (filp->f_path)
 		kfree(filp->f_path);
 	memset(filp, 0, sizeof(struct file));

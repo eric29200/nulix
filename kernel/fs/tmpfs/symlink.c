@@ -8,9 +8,9 @@
  */
 int tmpfs_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
 {
+	struct dentry *dentry;
 	struct page *page;
 	char *kaddr;
-	int ret;
 
 	*res_inode = NULL;
 
@@ -36,12 +36,21 @@ int tmpfs_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t 
 	/* release link inode */
 	iput(inode);
 
-	/* open target inode */
+	/* resolve path */
 	kaddr = kmap(page);
-	ret = open_namei(AT_FDCWD, dir, kaddr, flags, mode, res_inode);
+	dentry = open_namei(AT_FDCWD, dir, kaddr, flags, mode);
 	kunmap(page);
 
-	return ret;
+	/* handle error */
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
+	/* get result inode */
+	*res_inode = dentry->d_inode;
+	(*res_inode)->i_count++;
+
+	dput(dentry);
+	return 0;
 }
 
 /*
