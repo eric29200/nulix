@@ -35,15 +35,20 @@ int permission(struct inode *inode, int mask)
 /*
  * Follow a link.
  */
-static int do_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+static struct dentry *do_follow_link(struct dentry *base, struct dentry *dentry, int flags, mode_t mode)
 {
-	/* not implemented : return inode */
-	if (!inode || !inode->i_op || !inode->i_op->follow_link) {
-		*res_inode = inode;
-		return 0;
+	struct inode *inode = dentry->d_inode, *res;
+	int ret;
+
+	if (inode && inode->i_op && inode->i_op->follow_link) {
+		ret = inode->i_op->follow_link(base->d_inode, dentry->d_inode, flags, mode, &res);
+		if (ret)
+			return ERR_PTR(ret);
+
+		return d_alloc_root(res);
 	}
 
-	return inode->i_op->follow_link(dir, inode, flags, mode, res_inode);
+	return dentry;
 }
 
 /*
@@ -140,94 +145,16 @@ static struct dentry *lookup(struct inode *dir, const char *name, size_t name_le
 }
 
 /*
- * Resolve a path name to the inode of the top most directory.
- */
-static int dir_namei(int dirfd, struct inode *base, const char *pathname, const char **basename, size_t *basename_len, struct inode **res_inode)
-{
-	struct inode *inode = NULL, *tmp;
-	struct dentry *dentry;
-	const char *name;
-	size_t name_len;
-	int ret;
-
-	/* absolute or relative path */
-	if (*pathname == '/') {
-		inode = current_task->fs->root->d_inode;
-		pathname++;
-	} else if (base) {
-		inode = base;
-	} else if (dirfd == AT_FDCWD) {
-		inode = current_task->fs->pwd->d_inode;
-	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->files->filp[dirfd]) {
-		inode = current_task->files->filp[dirfd]->f_inode;
-	}
-
-	if (!inode)
-		return -ENOENT;
-
-	/* update reference count */
-	inode->i_count++;
-
-	while (1) {
-		/* check if inode is a directory */
-		if (!S_ISDIR(inode->i_mode)) {
-			iput(inode);
-			return -ENOTDIR;
-		}
-
-		/* compute next path name */
-		name = pathname;
-		for (name_len = 0; *pathname && *pathname++ != '/'; name_len++);
-
-		/* end : return current inode */
-		if (!*pathname)
-			break;
-
-		/* skip empty folder */
-		if (!name_len)
-			continue;
-
-		/* lookup */
-		inode->i_count++;
-		dentry = lookup(inode, name, name_len);
-		if (IS_ERR(dentry)) {
-			iput(inode);
-			return PTR_ERR(dentry);
-		}
-
-		/* get result inode */
-		tmp = dentry->d_inode;
-		d_free(dentry);
-
-		/* check result inode */
-		if (!tmp) {
-			iput(inode);
-			return -ENOENT;
-		}
-
-		/* follow symbolic links */
-		ret = do_follow_link(inode, tmp, 0, 0, &inode);
-		if (ret)
-			return ret;
-	}
-
-	*basename = name;
-	*basename_len = name_len;
-	*res_inode = inode;
-	return 0;
-}
-
-/*
  * Resolve a path.
  */
-static struct dentry *lookup_dentry(int dirfd, struct inode *base, const char *pathname, int follow_link)
+static struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const char *pathname, int follow_link)
 {
-	struct inode *dir = NULL, *inode = NULL;
-	struct dentry *dentry, *parent;
-	const char *basename;
-	size_t basename_len;
+	struct dentry *base, *dentry;
+	struct inode *inode;
 	struct file *filp;
-	int ret;
+	char trailing, c;
+	const char *name;
+	size_t name_len;
 
 	/* use directly dir fd */
 	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
@@ -238,72 +165,62 @@ static struct dentry *lookup_dentry(int dirfd, struct inode *base, const char *p
 		inode = filp->f_inode;
 		inode->i_count++;
 		fput(filp);
-		goto out;
-	}
-
-	/* find directory */
-	ret = dir_namei(dirfd, base, pathname, &basename, &basename_len, &dir);
-	if (ret)
-		return ERR_PTR(ret);
-
-	/* special case : '/' */
-	if (!basename_len) {
-		inode = dir;
-		goto out;
-	}
-
-	/* lookup file */
-	dir->i_count++;
-	dentry = lookup(dir, basename, basename_len);
-	if (IS_ERR(dentry)) {
-		iput(dir);
-		return dentry;
-	}
-
-	/* get result inode */
-	inode = dentry->d_inode;
-	d_free(dentry);
-
-	/* check result inode */
-	if (!inode) {
-		iput(dir);
-		goto out;
-	}
-
-	/* follow symbolic link */
-	if (follow_link) {
-		ret = do_follow_link(dir, inode, 0, 0, &inode);
-		if (ret) {
-			iput(dir);
-			return ERR_PTR(ret);
-		}
-	}
-
-	iput(dir);
-out:
-	/* allocate a root inode */
-	if (!dir)
 		return d_alloc_root(inode);
-
-	/* allocate parent dentry */
-	parent = d_alloc_root(dir);
-	if (!parent) {
-		iput(inode);
-		return ERR_PTR(-ENOMEM);
 	}
 
-	/* allocate dentry */
-	dentry = d_alloc(parent, &(const struct qstr) { (char *) basename, basename_len, 0 });
-	if (!dentry) {
-		iput(inode);
-		d_free(parent);
-		return ERR_PTR(-ENOMEM);
+	/* absolute or relative path */
+	if (*pathname == '/') {
+		base_inode = current_task->fs->root->d_inode;
+		pathname++;
+	} else if (base_inode) {
+		base_inode = base_inode;
+	} else if (dirfd == AT_FDCWD) {
+		base_inode = current_task->fs->pwd->d_inode;
+	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->files->filp[dirfd]) {
+		base_inode = current_task->files->filp[dirfd]->f_inode;
 	}
 
-	/* instantiate dentry */
-	d_instantiate(dentry, inode);
+	if (!base_inode)
+		return ERR_PTR(-ENOENT);
 
-	return dget(dentry);
+	/* allocate base */
+	base = d_alloc_root(base_inode);
+
+	for (;;) {
+		/* compute next path name */
+		name = pathname;
+		for (name_len = 0; (c = *pathname++) && (c != '/') ; name_len++);
+
+		/* remove trailing slashes? */
+		trailing = c;
+		if (c) {
+			while ((c = *pathname) == '/')
+				pathname++;
+		}
+
+		/* lookup */
+		base->d_inode->i_count++;
+		dentry = lookup(base->d_inode, name, name_len);
+		if (IS_ERR(dentry)) {
+			iput(base->d_inode);
+			return dentry;
+		}
+
+		/* set parent */
+		dentry->d_parent = base;
+
+		/* Last component? */
+		if (!c) {
+			if (!trailing && !follow_link)
+				break;
+
+			return do_follow_link(base, dentry, 0, 0);
+		}
+
+		base = do_follow_link(base, dentry, 0, 0);
+	}
+
+	return dentry;
 }
 
 /*
