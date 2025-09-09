@@ -235,7 +235,7 @@ static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 	struct inode *inode;
 
 	/* resolve path */
-	dentry = namei(dirfd, NULL, pathname, 1);
+	dentry = namei(dirfd, pathname, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
@@ -318,7 +318,7 @@ static int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, u
 	struct inode *inode;
 
 	/* resolve path */
-	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	dentry = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
@@ -401,7 +401,7 @@ static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *
 	int ret;
 
 	/* resolve path */
-	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	dentry = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
@@ -452,7 +452,7 @@ int sys_chroot(const char *path)
 	int ret;
 
 	/* resolve path */
-	dentry = namei(AT_FDCWD, NULL, path, 1);
+	dentry = namei(AT_FDCWD, path, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 

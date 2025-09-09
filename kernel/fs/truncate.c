@@ -40,7 +40,7 @@ int sys_truncate64(const char *pathname, off_t length)
 	int ret;
 
 	/* resolve path */
-	dentry = namei(AT_FDCWD, NULL, pathname, 1);
+	dentry = namei(AT_FDCWD, pathname, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 

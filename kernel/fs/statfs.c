@@ -31,7 +31,7 @@ int sys_statfs64(const char *path, size_t size, struct statfs64 *buf)
 		return -EINVAL;
 
 	/* resolve path */
-	dentry = namei(AT_FDCWD, NULL, path, 1);
+	dentry = namei(AT_FDCWD, path, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 

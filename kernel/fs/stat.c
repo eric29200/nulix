@@ -40,7 +40,7 @@ int sys_stat64(const char *pathname, struct stat64 *statbuf)
 	int ret;
 
 	/* resolve path */
-	dentry = namei(AT_FDCWD, NULL, pathname, 1);
+	dentry = namei(AT_FDCWD, pathname, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
@@ -60,7 +60,7 @@ int sys_lstat64(const char *pathname, struct stat64 *statbuf)
 	int ret;
 
 	/* resolve path */
-	dentry = namei(AT_FDCWD, NULL, pathname, 0);
+	dentry = namei(AT_FDCWD, pathname, 0);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
@@ -102,7 +102,7 @@ int sys_fstatat64(int dirfd, const char *pathname, struct stat64 *statbuf, int f
 	int ret;
 
 	/* get inode */
-	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	dentry = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
@@ -125,7 +125,7 @@ int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, str
 	UNUSED(mask);
 
 	/* resolve path */
-	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	dentry = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 

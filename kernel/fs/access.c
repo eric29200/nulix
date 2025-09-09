@@ -13,7 +13,7 @@ static int do_faccessat(int dirfd, const char *pathname, mode_t mode, int flags)
 	int ret;
 
 	/* resolve path */
-	dentry = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	dentry = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 

@@ -18,7 +18,7 @@ static struct inode *shm_get_inode(mode_t mode, dev_t dev, int size)
 	struct dentry *dentry;
 
 	/* get tmpfs root inode */
-	dentry = namei(AT_FDCWD, NULL, "/tmp", 0);
+	dentry = namei(AT_FDCWD, "/tmp", 0);
 	if (IS_ERR(dentry))
 		return NULL;
 

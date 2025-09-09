@@ -226,12 +226,12 @@ static struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const c
 /*
  * Resolve a path.
  */
-struct dentry *namei(int dirfd, struct inode *base, const char *pathname, int follow_link)
+struct dentry *namei(int dirfd, const char *pathname, int follow_link)
 {
 	struct dentry *dentry;
 
 	/* resolve path */
-	dentry = lookup_dentry(dirfd, base, pathname, follow_link);
+	dentry = lookup_dentry(dirfd, NULL, pathname, follow_link);
 	if (IS_ERR(dentry))
 		return dentry;
 
@@ -645,7 +645,7 @@ static ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bu
 	int ret;
 
 	/* resolve path */
-	dentry = namei(dirfd, NULL, pathname, 0);
+	dentry = namei(dirfd, pathname, 0);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 

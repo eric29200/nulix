@@ -13,7 +13,7 @@ int sys_chdir(const char *path)
 	int ret;
 
 	/* resolve path */
-	dentry = namei(AT_FDCWD, NULL, path, 1);
+	dentry = namei(AT_FDCWD, path, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 

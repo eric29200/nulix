@@ -198,7 +198,7 @@ static int get_mount_point(const char *mount_point, struct inode **res_inode)
 	int ret;
 
 	/* get mount point */
-	dentry = namei(AT_FDCWD, NULL, mount_point, 1);
+	dentry = namei(AT_FDCWD, mount_point, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
@@ -279,7 +279,7 @@ static int do_remount(const char *dir_name, uint32_t flags)
 	int ret;
 
 	/* resolve path */
-	dentry = namei(AT_FDCWD, NULL, dir_name, 1);
+	dentry = namei(AT_FDCWD, dir_name, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
@@ -368,7 +368,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 	/* if filesystem requires dev, find it */
 	if (fs->requires_dev) {
 		/* find device's inode */
-		dentry = namei(AT_FDCWD, NULL, dev_name, 1);
+		dentry = namei(AT_FDCWD, dev_name, 1);
 		if (IS_ERR(dentry))
 			return PTR_ERR(dentry);
 
@@ -454,7 +454,7 @@ static int do_umount(const char *target, int flags)
 	UNUSED(flags);
 
 	/* resolve path */
-	dentry = namei(AT_FDCWD, NULL, target, 1);
+	dentry = namei(AT_FDCWD, target, 1);
 	if (IS_ERR(dentry))
 		return PTR_ERR(dentry);
 
