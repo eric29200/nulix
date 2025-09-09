@@ -38,36 +38,29 @@ int permission(struct inode *inode, int mask)
 static struct dentry *do_follow_link(struct dentry *base, struct dentry *dentry)
 {
 	struct inode *inode = dentry->d_inode;
+	struct dentry *res;
 
-	if (inode && inode->i_op && inode->i_op->follow_link)
-		return inode->i_op->follow_link(inode, base);
+	if (inode && inode->i_op && inode->i_op->follow_link) {
+		res = inode->i_op->follow_link(inode, base);
+		base = dentry;
+		dentry = res;
+	}
 
+	dput(base);
 	return dentry;
 }
 
 /*
  * Reserved lookup.
  */
-static struct dentry *reserved_lookup(struct inode **dir, const char *name, size_t name_len)
+static struct dentry *reserved_lookup(struct dentry *dentry, const char *name, size_t name_len)
 {
-	struct super_block *sb;
-
 	if (name_len != 2 || name[0] != '.' || name[1] != '.')
 		return NULL;
 
 	/* .. in root = root */
-	if (*dir == current_task->fs->root->d_inode)
-		return d_alloc_root(*dir);
-
-	/* cross mount point */
-	sb = (*dir)->i_sb;
-	if (*dir == sb->s_root_inode) {
-		iput(*dir);
-		*dir = sb->s_covered;
-		if (!*dir)
-			return ERR_PTR(-ENOENT);
-		(*dir)->i_count++;
-	}
+	if (dentry == current_task->fs->root)
+		return dget(dentry);
 
 	return NULL;
 }
@@ -75,40 +68,37 @@ static struct dentry *reserved_lookup(struct inode **dir, const char *name, size
 /*
  * Real lookup.
  */
-static struct dentry *real_lookup(struct inode *dir, const char *name, size_t name_len)
+static struct dentry *real_lookup(struct dentry *dentry, const char *name, size_t name_len)
 {
-	struct dentry *dentry;
+	struct inode *dir = dentry->d_inode;
+	struct dentry *res;
 	int ret;
 
+	/* not a directory */
+	if (!dir || !dir->i_op || !dir->i_op->lookup)
+		return ERR_PTR(-ENOTDIR);
+
 	/* allocate a new dentry */
-	dentry = d_alloc(NULL, &(const struct qstr) { (char *) name, name_len, 0});
-	if (!dentry)
+	res = d_alloc(dentry, &(const struct qstr) { (char *) name, name_len, 0});
+	if (!res)
 		return ERR_PTR(-ENOMEM);
 
-	/* directory */
-	if (!name_len) {
-		dir->i_count++;
-		d_instantiate(dentry, dir);
-		goto out;
-	}
-
 	/* lookup */
-	ret = dir->i_op->lookup(dir, dentry);
+	ret = dir->i_op->lookup(dir, res);
 	if (ret) {
-		d_free(dentry);
+		d_free(res);
 		return ERR_PTR(ret);
 	}
 
-out:
-	return dget(dentry);
+	return dget(res);
 }
 
 /*
  * Lookup a file.
  */
-static struct dentry *lookup(struct inode *dir, const char *name, size_t name_len)
+static struct dentry *lookup(struct dentry *dir, const char *name, size_t name_len)
 {
-	struct dentry *dentry;
+	struct dentry *res;
 	int ret;
 
 	/* no parent directory */
@@ -116,26 +106,17 @@ static struct dentry *lookup(struct inode *dir, const char *name, size_t name_le
 		return ERR_PTR(-ENOENT);
 
 	/* check permissions */
-	ret = permission(dir, MAY_EXEC);
+	ret = permission(dir->d_inode, MAY_EXEC);
 	if (ret)
 		return ERR_PTR(ret);
 
 	/* reserved lookup */
-	dentry = reserved_lookup(&dir, name, name_len);
-	if (dentry)
-		return dentry;
-
-	/* lookup not implemented */
-	if (!dir->i_op || !dir->i_op->lookup)
-		return ERR_PTR(-ENOTDIR);
+	res = reserved_lookup(dir, name, name_len);
+	if (res)
+		return res;
 
 	/* lookup */
-	dentry = real_lookup(dir, name, name_len);
-
-	/* release directory */
-	iput(dir);
-
-	return dentry;
+	return real_lookup(dir, name, name_len);
 }
 
 /*
@@ -165,7 +146,9 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 	/* absolute or relative path */
 	if (*pathname == '/') {
 		base = dget(current_task->fs->root);
-		pathname++;
+		do {
+			pathname++;
+		} while (*pathname == '/');
 	} else if (base) {
 		base = base;
 	} else if (dirfd == AT_FDCWD) {
@@ -174,8 +157,13 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 		base = d_alloc_root(current_task->files->filp[dirfd]->f_inode);
 	}
 
+	/* no base */
 	if (!base)
 		return ERR_PTR(-ENOENT);
+
+	/* end of resolution */
+	if (!*pathname)
+		return base;
 
 	for (;;) {
 		/* compute next path name */
@@ -190,17 +178,15 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 		}
 
 		/* lookup */
-		base->d_inode->i_count++;
-		dentry = lookup(base->d_inode, name, name_len);
-		if (IS_ERR(dentry)) {
-			iput(base->d_inode);
-			return dentry;
-		}
+		dentry = lookup(base, name, name_len);
+		if (IS_ERR(dentry))
+			break;
 
-		/* set parent */
-		dentry->d_parent = base;
+		/* no such entry */
+		if (!dentry->d_inode)
+			break;
 
-		/* Last component? */
+		/* last component ? */
 		if (!c) {
 			if (!trailing && !follow_link)
 				break;
@@ -208,9 +194,11 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 			return do_follow_link(base, dentry);
 		}
 
+		/* follow link */
 		base = do_follow_link(base, dentry);
 	}
 
+	dput(base);
 	return dentry;
 }
 

@@ -23,27 +23,8 @@ struct dentry *dget(struct dentry *dentry)
  */
 void dput(struct dentry *dentry)
 {
-	if (!dentry)
-		return;
-
-	/* update reference count */
-	dentry->d_count--;
-	if (dentry->d_count < 0)
-		panic("dput: negative d_count");
-
-	/* still used */
-	if (dentry->d_count)
-		return;
-
-	/* release inode */
-	iput(dentry->d_inode);
-
-	/* release parent */
-	if (dentry->d_parent != dentry)
-		dput(dentry->d_parent);
-
-	/* free dentry */
-	d_free(dentry);
+	if (dentry)
+		dentry->d_count--;
 }
 
 /*

@@ -2,6 +2,7 @@
 #include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
+#include <stdio.h>
 
 /*
  * Change directory system call.
