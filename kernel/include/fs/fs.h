@@ -154,6 +154,7 @@ struct dentry {
 	struct dentry *			d_parent;
 	struct dentry *			d_mounts;
 	struct dentry *			d_covers;
+	struct list_head		d_hash;
 	struct qstr			d_name;
 };
 
@@ -299,6 +300,9 @@ struct inode *find_inode(struct super_block *sb, ino_t ino);
 void init_inode();
 
 /* dentry operations */
+uint32_t init_name_hash();
+uint32_t partial_name_hash(char c, uint32_t prev_hash);
+uint32_t end_name_hash(uint32_t hash);
 struct dentry *dget(struct dentry *dentry);
 void dput(struct dentry *dentry);
 struct dentry *d_alloc(struct dentry *parent, const struct qstr *name);
@@ -308,6 +312,8 @@ void d_instantiate(struct dentry *dentry, struct inode *inode);
 void d_add(struct dentry *dentry, struct inode *inode);
 void d_delete(struct dentry *dentry);
 void d_move(struct dentry *dentry, struct dentry *target);
+struct dentry *d_lookup(struct dentry *parent, struct qstr *name);
+void init_dcache();
 
 /* file operations */
 int get_unused_fd();

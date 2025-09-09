@@ -53,22 +53,42 @@ static struct dentry *do_follow_link(struct dentry *base, struct dentry *dentry)
 /*
  * Reserved lookup.
  */
-static struct dentry *reserved_lookup(struct dentry *dentry, const char *name, size_t name_len)
+static struct dentry *reserved_lookup(struct dentry *parent, struct qstr *name)
 {
-	if (name_len != 2 || name[0] != '.' || name[1] != '.')
-		return NULL;
+	struct dentry *res = NULL;
 
-	/* .. in root = root */
-	if (dentry == current_task->fs->root)
-		return dget(dentry);
+	if (name->name[0] == '.') {
+		switch (name->len) {
+			case 1:
+				res = parent;
+				break;
+			case 2:
+				if (parent == current_task->fs->root)
+					res = parent;
+				else
+					res = parent->d_covers->d_parent;
 
-	return NULL;
+				break;
+			default:
+				break;
+		}
+	}
+
+	return res;
+}
+
+/*
+ * Cached lookup.
+ */
+static struct dentry *cached_lookup(struct dentry *parent, struct qstr *name)
+{
+	return d_lookup(parent, name);
 }
 
 /*
  * Real lookup.
  */
-static struct dentry *real_lookup(struct dentry *dentry, const char *name, size_t name_len)
+static struct dentry *real_lookup(struct dentry *dentry, struct qstr *name)
 {
 	struct inode *dir = dentry->d_inode;
 	struct dentry *res;
@@ -79,7 +99,7 @@ static struct dentry *real_lookup(struct dentry *dentry, const char *name, size_
 		return ERR_PTR(-ENOTDIR);
 
 	/* allocate a new dentry */
-	res = d_alloc(dentry, &(const struct qstr) { (char *) name, name_len, 0});
+	res = d_alloc(dentry, name);
 	if (!res)
 		return ERR_PTR(-ENOMEM);
 
@@ -96,7 +116,7 @@ static struct dentry *real_lookup(struct dentry *dentry, const char *name, size_
 /*
  * Lookup a file.
  */
-static struct dentry *lookup(struct dentry *dir, const char *name, size_t name_len)
+static struct dentry *lookup(struct dentry *dir, struct qstr *name)
 {
 	struct dentry *res;
 	int ret;
@@ -111,12 +131,17 @@ static struct dentry *lookup(struct dentry *dir, const char *name, size_t name_l
 		return ERR_PTR(ret);
 
 	/* reserved lookup */
-	res = reserved_lookup(dir, name, name_len);
+	res = reserved_lookup(dir, name);
+	if (res)
+		goto out;
+
+	/* cached lookup */
+	res = cached_lookup(dir, name);
 	if (res)
 		goto out;
 
 	/* lookup */
-	res = real_lookup(dir, name, name_len);
+	res = real_lookup(dir, name);
 out:
 	if (!IS_ERR(res))
 		res = dget(res->d_mounts);
@@ -133,8 +158,7 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 	struct inode *inode;
 	struct file *filp;
 	char trailing, c;
-	const char *name;
-	size_t name_len;
+	struct qstr this;
 
 	/* use directly dir fd */
 	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
@@ -172,8 +196,16 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 
 	for (;;) {
 		/* compute next path name */
-		name = pathname;
-		for (name_len = 0; (c = *pathname++) && (c != '/') ; name_len++);
+		this.name = (char *) pathname;
+		this.len = 0;
+		this.hash = init_name_hash();
+		do {
+			this.len++;
+			pathname++;
+			this.hash = partial_name_hash(c, this.hash);
+			c = *pathname;
+		} while (c && (c != '/'));
+		this.hash = end_name_hash(this.hash);
 
 		/* remove trailing slashes? */
 		trailing = c;
@@ -183,7 +215,7 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 		}
 
 		/* lookup */
-		dentry = lookup(base, name, name_len);
+		dentry = lookup(base, &this);
 		if (IS_ERR(dentry))
 			break;
 

@@ -204,6 +204,10 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	printf("[Kernel] Inodes init\n");
 	init_inode();
 
+	/* init dentries */
+	printf("[Kernel] Dentries init\n");
+	init_dcache();
+
 	/* init block buffers */
 	printf("[Kernel] Block buffers init\n");
 	init_buffer();
