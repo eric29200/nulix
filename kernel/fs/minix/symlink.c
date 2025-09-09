@@ -6,47 +6,22 @@
 /*
  * Resolve a symbolic link.
  */
-int minix_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+struct dentry *minix_follow_link(struct inode *inode, struct dentry *base)
 {
 	struct buffer_head *bh;
-	struct dentry *dentry;
-
-	*res_inode = NULL;
-
-	/* null inode */
-	if (!inode)
-		return -ENOENT;
-
-	/* not a link */
-	if (!S_ISLNK(inode->i_mode)) {
-		*res_inode = inode;
-		return 0;
-	}
 
 	/* get first link block */
 	bh = minix_bread(inode, 0, 0);
 	if (!bh) {
-		iput(inode);
-		return -EIO;
+		dput(base);
+		return ERR_PTR(-EIO);
 	}
 
-	/* release link inode */
-	iput(inode);
+	/* resolve target */
+	base = lookup_dentry(AT_FDCWD, base->d_inode, bh->b_data, 1);
 
-	/* resolve path */
-	dentry = open_namei(AT_FDCWD, dir, bh->b_data, flags, mode);
 	brelse(bh);
-
-	/* handle error */
-	if (IS_ERR(dentry))
-		return PTR_ERR(dentry);
-
-	/* get result inode */
-	*res_inode = dentry->d_inode;
-	(*res_inode)->i_count++;
-
-	dput(dentry);
-	return 0;
+	return base;
 }
 
 /*

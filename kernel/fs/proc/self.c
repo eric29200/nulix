@@ -8,23 +8,17 @@
 /*
  * Follow self link.
  */
-static int proc_self_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+static struct dentry *proc_self_follow_link(struct inode *inode, struct dentry *base)
 {
-	/* unused */
-	UNUSED(dir);
-	UNUSED(flags);
-	UNUSED(mode);
+	struct inode *res_inode;
 
 	/* get target inode */
-	*res_inode = iget(inode->i_sb, (current_task->pid << 16) + PROC_PID_INO);
+	res_inode = iget(inode->i_sb, (current_task->pid << 16) + PROC_PID_INO);
+	if (res_inode)
+		return d_alloc_root(res_inode);
 
-	/* release inode */
-	iput(inode);
-
-	if (!*res_inode)
-		return -ENOENT;
-
-	return 0;
+	dput(base);
+	return ERR_PTR(-ENOENT);
 }
 
 /*

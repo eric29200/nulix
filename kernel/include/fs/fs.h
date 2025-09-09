@@ -211,7 +211,7 @@ struct inode_operations {
 	struct file_operations *fops;
 	int (*lookup)(struct inode *, struct dentry *);
 	int (*create)(struct inode *, struct dentry *, mode_t);
-	int (*follow_link)(struct inode *, struct inode *, int, mode_t, struct inode **);
+	struct dentry *(*follow_link)(struct inode *, struct dentry *dentry);
 	ssize_t (*readlink)(struct inode *, char *, size_t);
 	int (*link)(struct inode *, struct inode *, struct dentry *dentry);
 	int (*unlink)(struct inode *, struct dentry *);
@@ -315,6 +315,7 @@ struct file *get_empty_filp();
 
 /* name operations */
 int permission(struct inode *inode, int mask);
+struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const char *pathname, int follow_link);
 struct dentry *namei(int dirfd, const char *pathname, int follow_link);
 struct dentry *open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode);
 

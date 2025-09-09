@@ -35,18 +35,12 @@ int permission(struct inode *inode, int mask)
 /*
  * Follow a link.
  */
-static struct dentry *do_follow_link(struct dentry *base, struct dentry *dentry, int flags, mode_t mode)
+static struct dentry *do_follow_link(struct dentry *base, struct dentry *dentry)
 {
-	struct inode *inode = dentry->d_inode, *res;
-	int ret;
+	struct inode *inode = dentry->d_inode;
 
-	if (inode && inode->i_op && inode->i_op->follow_link) {
-		ret = inode->i_op->follow_link(base->d_inode, dentry->d_inode, flags, mode, &res);
-		if (ret)
-			return ERR_PTR(ret);
-
-		return d_alloc_root(res);
-	}
+	if (inode && inode->i_op && inode->i_op->follow_link)
+		return inode->i_op->follow_link(inode, base);
 
 	return dentry;
 }
@@ -147,7 +141,7 @@ static struct dentry *lookup(struct inode *dir, const char *name, size_t name_le
 /*
  * Resolve a path.
  */
-static struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const char *pathname, int follow_link)
+struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const char *pathname, int follow_link)
 {
 	struct dentry *base, *dentry;
 	struct inode *inode;
@@ -214,10 +208,10 @@ static struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const c
 			if (!trailing && !follow_link)
 				break;
 
-			return do_follow_link(base, dentry, 0, 0);
+			return do_follow_link(base, dentry);
 		}
 
-		base = do_follow_link(base, dentry, 0, 0);
+		base = do_follow_link(base, dentry);
 	}
 
 	return dentry;

@@ -118,7 +118,7 @@ int minix_free_block(struct super_block *sb, uint32_t block);
 uint32_t minix_count_free_blocks(struct super_block *sb);
 
 /* minix symlink prototypes */
-int minix_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode);
+struct dentry *minix_follow_link(struct inode *inode, struct dentry *base);
 ssize_t minix_readlink(struct inode *inode, char *buf, size_t bufsize);
 
 /* minix name resolutions prototypes */

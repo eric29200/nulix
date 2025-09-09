@@ -160,39 +160,27 @@ struct inode_operations proc_fd_iops = {
 /*
  * Follow fd link.
  */
-static int proc_fd_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+static struct dentry *proc_fd_follow_link(struct inode *inode, struct dentry *base)
 {
 	struct task *task;
 	pid_t pid;
 	int fd;
 
-	/* unused dir/flags/mode */
-	UNUSED(dir);
-	UNUSED(flags);
-	UNUSED(mode);
-
 	/* get task */
 	pid = inode->i_ino >> 16;
 	task = find_task(pid);
 	if (!task) {
-		iput(inode);
-		return -ENOENT;
+		dput(base);
+		return ERR_PTR(-ENOENT);
 	}
 
 	/* get file descriptor */
 	fd = inode->i_ino & 0xFF;
 	if (fd >= 0 && fd < NR_OPEN && task->files->filp[fd])
-		*res_inode = task->files->filp[fd]->f_inode;
+		return d_alloc_root(task->files->filp[fd]->f_inode);
 
-	/* release link inode */
-	iput(inode);
-
-	/* no matching link */
-	if (!*res_inode)
-		return -ENOENT;
-
-	(*res_inode)->i_count++;
-	return 0;
+	dput(base);
+	return ERR_PTR(-ENOENT);
 }
 
 /*

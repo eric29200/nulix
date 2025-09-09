@@ -2,44 +2,20 @@
 #include <fs/ext2_fs.h>
 #include <stderr.h>
 #include <fcntl.h>
+#include <stdio.h>
 
 /*
- * Follow a link (inode will be released).
+ * Follow a link.
  */
-int ext2_fast_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+struct dentry *ext2_fast_follow_link(struct inode *inode, struct dentry *base)
 {
-	struct dentry *dentry;
 	char *target;
-
-	/* reset result inode */
-	*res_inode = NULL;
-
-	if (!inode)
-		return -ENOENT;
-
-	/* check if a inode is a link */
-	if (!S_ISLNK(inode->i_mode)) {
-		*res_inode = inode;
-		return 0;
-	}
 
 	/* get target link */
 	target = (char *) inode->u.ext2_i.i_data;
 
-	/* open target inode */
-	dentry = open_namei(AT_FDCWD, dir, target, flags, mode);
-	iput(inode);
-
-	/* handle error */
-	if (IS_ERR(dentry))
-		return PTR_ERR(dentry);
-
-	/* get result inode */
-	*res_inode = dentry->d_inode;
-	(*res_inode)->i_count++;
-
-	dput(dentry);
-	return 0;
+	/* resolve target */
+	return lookup_dentry(AT_FDCWD, base->d_inode, target, 1);
 }
 
 /*
@@ -71,47 +47,22 @@ ssize_t ext2_fast_readlink(struct inode *inode, char *buf, size_t bufsize)
 /*
  * Resolve a symbolic link.
  */
-int ext2_page_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+struct dentry *ext2_page_follow_link(struct inode *inode, struct dentry *base)
 {
 	struct buffer_head *bh;
-	struct dentry *dentry;
-
-	*res_inode = NULL;
-
-	/* null inode */
-	if (!inode) {
-		return -ENOENT;
-	}
-
-	if (!S_ISLNK(inode->i_mode)) {
-		*res_inode = inode;
-		return 0;
-	}
 
 	/* read first link block */
 	bh = ext2_bread(inode, 0, 0);
 	if (!bh) {
-		iput(inode);
-		return -EIO;
+		dput(base);
+		return ERR_PTR(-EIO);
 	}
 
-	/* release link inode */
-	iput(inode);
+	/* resolve target */
+	base = lookup_dentry(AT_FDCWD, base->d_inode, bh->b_data, 1);
 
-	/* open target inode */
-	dentry = open_namei(AT_FDCWD, dir, bh->b_data, flags, mode);
 	brelse(bh);
-
-	/* handle error */
-	if (IS_ERR(dentry))
-		return PTR_ERR(dentry);
-
-	/* get result inode */
-	*res_inode = dentry->d_inode;
-	(*res_inode)->i_count++;
-
-	dput(dentry);
-	return 0;
+	return base;
 }
 
 /*

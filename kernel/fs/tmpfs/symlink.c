@@ -6,51 +6,26 @@
 /*
  * Resolve a symbolic link.
  */
-int tmpfs_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+struct dentry *tmpfs_follow_link(struct inode *inode, struct dentry *base)
 {
-	struct dentry *dentry;
 	struct page *page;
 	char *kaddr;
 
-	*res_inode = NULL;
-
-	/* check inode */
-	if (!inode)
-		return -ENOENT;
-
-	/* not a link */
-	if (!S_ISLNK(inode->i_mode)) {
-		*res_inode = inode;
-		return 0;
-	}
-
 	/* check first page */
 	if (list_empty(&inode->u.tmp_i.i_pages)) {
-		iput(inode);
-		return -EIO;
+		dput(base);
+		return ERR_PTR(-EIO);
 	}
 
 	/* get first page */
 	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page, list);
 
-	/* release link inode */
-	iput(inode);
-
-	/* resolve path */
+	/* resolve target */
 	kaddr = kmap(page);
-	dentry = open_namei(AT_FDCWD, dir, kaddr, flags, mode);
+	base = lookup_dentry(AT_FDCWD, base->d_inode, kaddr, 1);
 	kunmap(page);
 
-	/* handle error */
-	if (IS_ERR(dentry))
-		return PTR_ERR(dentry);
-
-	/* get result inode */
-	*res_inode = dentry->d_inode;
-	(*res_inode)->i_count++;
-
-	dput(dentry);
-	return 0;
+	return base;
 }
 
 /*
