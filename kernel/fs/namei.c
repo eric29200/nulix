@@ -113,10 +113,15 @@ static struct dentry *lookup(struct dentry *dir, const char *name, size_t name_l
 	/* reserved lookup */
 	res = reserved_lookup(dir, name, name_len);
 	if (res)
-		return res;
+		goto out;
 
 	/* lookup */
-	return real_lookup(dir, name, name_len);
+	res = real_lookup(dir, name, name_len);
+out:
+	if (!IS_ERR(res))
+		res = dget(res->d_mounts);
+
+	return res;
 }
 
 /*

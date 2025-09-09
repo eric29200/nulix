@@ -190,39 +190,6 @@ static void del_vfs_mount(struct super_block *sb)
 }
 
 /*
- * Get mount point inode.
- */
-static int get_mount_point(const char *mount_point, struct inode **res_inode)
-{
-	struct dentry *dentry;
-	int ret;
-
-	/* get mount point */
-	dentry = namei(AT_FDCWD, mount_point, 1);
-	if (IS_ERR(dentry))
-		return PTR_ERR(dentry);
-
-	/* get inode */
-	*res_inode = dentry->d_inode;
-
-	/* mount point busy */
-	ret = -EBUSY;
-	if ((*res_inode)->i_count != 1 || (*res_inode)->i_mount)
-		goto out;
-
-	/* mount point must be a directory */
-	ret = -EPERM;
-	if (!S_ISDIR((*res_inode)->i_mode))
-		goto out;
-
-	(*res_inode)->i_count++;
-	ret = 0;
-out:
-	dput(dentry);
-	return ret;
-}
-
-/*
  * Check if a file system can be remounted read only.
  */
 static int fs_may_remount_ro(struct super_block *sb)
@@ -288,7 +255,7 @@ static int do_remount(const char *dir_name, uint32_t flags)
 
 	/* check mount point */
 	ret = -EINVAL;
-	if (dir_inode != dir_inode->i_sb->s_root_inode)
+	if (dir_inode != dir_inode->i_sb->s_root->d_inode)
 		goto out;
 
 	/* remount */
@@ -299,47 +266,79 @@ out:
 }
 
 /*
+ * Set mount.
+ */
+static void d_mount(struct dentry *covers, struct dentry *dentry)
+{
+	if (covers->d_mounts != covers) {
+		printf("d_mount: mount - already mounted\n");
+		return;
+	}
+
+	covers->d_mounts = dentry;
+	dentry->d_covers = covers;
+}
+
+/*
  * Mount a file system.
  */
 static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, uint32_t flags)
 {
-	struct inode *mount_point_dir = NULL;
+	struct dentry *mount_point_dentry = NULL;
 	struct super_block *sb;
-	int err;
+	int ret;
 
 	/* allocate a super block */
 	sb = (struct super_block *) kmalloc(sizeof(struct super_block));
 	if (!sb)
 		return -ENOMEM;
 
-	/* get mount point */
-	err = get_mount_point(mount_point, &mount_point_dir);
-	if (err)
+	/* resolove mount point */
+	mount_point_dentry = lookup_dentry(AT_FDCWD, NULL, mount_point, 1);
+	ret = PTR_ERR(mount_point_dentry);
+	if (IS_ERR(mount_point_dentry))
+		goto err;
+
+	/* no such entry */
+	ret = -ENOENT;
+	if (!mount_point_dentry->d_inode)
+		goto err;
+
+	/* mount point busy */
+	ret = -EBUSY;
+	if (mount_point_dentry->d_covers != mount_point_dentry)
+		goto err;
+
+	/* not a directory */
+	ret = -ENOTDIR;
+	if (!S_ISDIR(mount_point_dentry->d_inode->i_mode))
 		goto err;
 
 	/* read super block */
 	sb->s_type = fs;
 	sb->s_dev = dev;
-	sb->s_covered = mount_point_dir;
-	err = fs->read_super(sb, data, 0);
-	if (err)
+	ret = fs->read_super(sb, data, 0);
+	if (ret)
 		goto err;
 
-	/* set mount point */
-	mount_point_dir->i_mount = sb->s_root_inode;
+	/* check mount */
+	ret = -EBUSY;
+	if (sb->s_root->d_covers != sb->s_root)
+		goto err;
 
 	/* add mounted file system */
-	err = add_vfs_mount(dev, dev_name, mount_point, flags, sb);
-	if (err)
+	ret = add_vfs_mount(dev, dev_name, mount_point, flags, sb);
+	if (ret)
 		goto err;
+
+	/* set mount */
+	d_mount(mount_point_dentry, sb->s_root);
 
 	return 0;
 err:
-	if (mount_point_dir)
-		iput(mount_point_dir);
-
+	dput(mount_point_dentry);
 	kfree(sb);
-	return err;
+	return ret;
 }
 
 /*
@@ -425,11 +424,9 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	kfree(sb);
 	return -EINVAL;
 found:
-	/* set mount point */
-	sb->s_root_inode->i_count = 3;
-	sb->s_covered = NULL;
-	current_task->fs->pwd = d_alloc_root(sb->s_root_inode);
-	current_task->fs->root = d_alloc_root(sb->s_root_inode);
+	/* set current task */
+	current_task->fs->pwd = dget(sb->s_root);
+	current_task->fs->root = dget(sb->s_root);
 
 	/* add mounted file system */
 	err = add_vfs_mount(dev, dev_name, "/", 0, sb);
@@ -439,6 +436,24 @@ found:
 	}
 
 	return 0;
+}
+
+/*
+ * Unset mount.
+ */
+static void d_umount(struct dentry *dentry)
+{
+	struct dentry *covers = dentry->d_covers;
+
+	if (covers == dentry) {
+		printf("d_umount: unmount - covers == dentry ?\n");
+		return;
+	}
+
+	covers->d_mounts = covers;
+	dentry->d_covers = dentry;
+	dput(covers);
+	dput(dentry);
 }
 
 /*
@@ -461,7 +476,7 @@ static int do_umount(const char *target, int flags)
 	/* target inode must be a root inode */
 	inode = dentry->d_inode;
 	sb = inode->i_sb;
-	if (!sb || inode != sb->s_root_inode || !sb->s_covered || !sb->s_covered->i_mount) {
+	if (!sb || inode != sb->s_root->d_inode) {
 		dput(dentry);
 		return -EINVAL;
 	}
@@ -476,12 +491,11 @@ static int do_umount(const char *target, int flags)
 	/* sync buffers */
 	bsync_dev(sb->s_dev);
 
-	/* unmount file system */
-	sb->s_covered->i_mount = NULL;
-	iput(sb->s_covered);
-	sb->s_covered = NULL;
-	iput(sb->s_root_inode);
-	sb->s_root_inode = NULL;
+	/* unset mount */
+	if (sb->s_root) {
+		d_umount(sb->s_root);
+		d_delete(sb->s_root);
+	}
 
 	/* remove mounted file system */
 	del_vfs_mount(sb);

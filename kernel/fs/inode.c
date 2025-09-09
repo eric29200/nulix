@@ -193,22 +193,13 @@ struct inode *find_inode(struct super_block *sb, ino_t ino)
  */
 struct inode *iget(struct super_block *sb, ino_t ino)
 {
-	struct inode *inode, *tmp;
+	struct inode *inode;
 	int ret;
 
 	/* try to find inode in table */
 	inode = find_inode(sb, ino);
-	if (inode) {
-		/* cross mount point */
-		if (inode->i_mount) {
-			tmp = inode->i_mount;
-			tmp->i_count++;
-			iput(inode);
-			inode = tmp;
-		}
-
+	if (inode)
 		return inode;
-	}
 
 	/* read inode not implemented */
 	if (!sb->s_op->read_inode)
@@ -279,7 +270,7 @@ int fs_may_umount(struct super_block *sb)
 		if (inode->i_sb != sb || !inode->i_count)
 			continue;
 
-		if (inode == sb->s_root_inode && inode->i_count == (inode->i_mount != inode ? 1 : 2))
+		if (inode == sb->s_root->d_inode)
 			continue;
 
 		return 0;

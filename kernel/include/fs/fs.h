@@ -94,8 +94,7 @@ struct super_block {
 	uint16_t			s_magic;
 	uint32_t			s_flags;
 	struct file_system *		s_type;
-	struct inode *			s_root_inode;
-	struct inode *			s_covered;
+	struct dentry *			s_root;
 	struct super_operations *	s_op;
 };
 
@@ -121,7 +120,6 @@ struct inode {
 	char				i_pipe;
 	char				i_shm;
 	char				i_sock;
-	struct inode *			i_mount;
 	struct list_head		i_pages;
 	struct list_head		i_mmap;
 	struct list_head		i_list;
@@ -154,6 +152,8 @@ struct dentry {
 	int				d_count;
 	struct inode *			d_inode;
 	struct dentry *			d_parent;
+	struct dentry *			d_mounts;
+	struct dentry *			d_covers;
 	struct qstr			d_name;
 };
 

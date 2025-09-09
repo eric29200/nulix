@@ -75,8 +75,8 @@ static int tmpfs_read_super(struct super_block *sb, void *data, int silent)
 	sb->s_op = &tmpfs_sops;
 
 	/* get root inode */
-	sb->s_root_inode = tmpfs_mkroot(sb);
-	if (!sb->s_root_inode) {
+	sb->s_root = d_alloc_root(tmpfs_mkroot(sb));
+	if (!sb->s_root) {
 		if (!silent)
 			printf("[Tmp-fs] Can't create root inode\n");
 

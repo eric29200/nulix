@@ -55,6 +55,8 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	dentry->d_count = 0;
 	dentry->d_inode = NULL;
 	dentry->d_parent = parent;
+	dentry->d_mounts = dentry;
+	dentry->d_covers = dentry;
 	dentry->d_name.name = str;
 	dentry->d_name.len = name->len;
 	dentry->d_name.hash = name->hash;

@@ -55,7 +55,7 @@ static int minix_read_super(struct super_block *sb, void *data, int silent)
 	sb->s_blocksize = msb3->s_blocksize;
 	sb->s_blocksize_bits = blksize_bits(msb3->s_blocksize);
 	sb->s_op = &minix_sops;
-	sb->s_root_inode = NULL;
+	sb->s_root = NULL;
 
 	/* set real block size */
 	set_blocksize(sb->s_dev, sb->s_blocksize);
@@ -101,8 +101,8 @@ static int minix_read_super(struct super_block *sb, void *data, int silent)
 	}
 
 	/* get root inode */
-	sb->s_root_inode = iget(sb, MINIX_ROOT_INODE);
-	if (!sb->s_root_inode) {
+	sb->s_root = d_alloc_root(iget(sb, MINIX_ROOT_INODE));
+	if (!sb->s_root) {
 		ret = -EINVAL;
 		goto err_root_inode;
 	}
