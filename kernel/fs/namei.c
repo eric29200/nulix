@@ -241,7 +241,7 @@ struct dentry *namei(int dirfd, const char *pathname, int follow_link)
 /*
  * Resolve and open a path name.
  */
-struct dentry *open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode)
+struct dentry *open_namei(int dirfd, const char *pathname, int flags, mode_t mode)
 {
 	struct inode *dir, *inode;
 	struct dentry *dentry;
@@ -252,7 +252,7 @@ struct dentry *open_namei(int dirfd, struct inode *base, const char *pathname, i
 	mode |= S_IFREG;
 
 	/* resolve path */
-	dentry = lookup_dentry(dirfd, base, pathname, 1);
+	dentry = lookup_dentry(dirfd, NULL, pathname, 1);
 	if (IS_ERR(dentry))
 		return dentry;
 

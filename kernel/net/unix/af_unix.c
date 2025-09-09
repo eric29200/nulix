@@ -65,7 +65,7 @@ static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_soc
 			ret = -ECONNREFUSED;
 	} else {
 		/* resolve socket path */
-		dentry = open_namei(AT_FDCWD, NULL, sunaddr->sun_path, S_IFSOCK, 0);
+		dentry = open_namei(AT_FDCWD, sunaddr->sun_path, S_IFSOCK, 0);
 		if (IS_ERR(dentry))
 			return PTR_ERR(dentry);
 
@@ -389,7 +389,7 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 			return ret;
 
 		/* resolve path */
-		dentry = open_namei(AT_FDCWD, NULL, sunaddr->sun_path, 0, S_IFSOCK);
+		dentry = open_namei(AT_FDCWD, sunaddr->sun_path, 0, S_IFSOCK);
 		if (IS_ERR(dentry))
 			return PTR_ERR(dentry);
 

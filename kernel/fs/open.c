@@ -118,7 +118,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 		flag |= 2;
 
 	/* open file */
-	dentry = open_namei(dirfd, NULL, pathname, flag, mode);
+	dentry = open_namei(dirfd, pathname, flag, mode);
 	ret = PTR_ERR(dentry);
 	if (IS_ERR(dentry))
 		goto err_cleanup_file;

@@ -317,7 +317,7 @@ struct file *get_empty_filp();
 int permission(struct inode *inode, int mask);
 struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const char *pathname, int follow_link);
 struct dentry *namei(int dirfd, const char *pathname, int follow_link);
-struct dentry *open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode);
+struct dentry *open_namei(int dirfd, const char *pathname, int flags, mode_t mode);
 
 /* directory operations */
 int filldir(struct dirent64 *dirent, const char *name, size_t name_len, ino_t ino, size_t max_len);
