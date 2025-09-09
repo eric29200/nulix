@@ -22,7 +22,7 @@ struct dentry *tmpfs_follow_link(struct inode *inode, struct dentry *base)
 
 	/* resolve target */
 	kaddr = kmap(page);
-	base = lookup_dentry(AT_FDCWD, base->d_inode, kaddr, 1);
+	base = lookup_dentry(AT_FDCWD, base, kaddr, 1);
 	kunmap(page);
 
 	return base;

@@ -141,9 +141,9 @@ static struct dentry *lookup(struct inode *dir, const char *name, size_t name_le
 /*
  * Resolve a path.
  */
-struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const char *pathname, int follow_link)
+struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathname, int follow_link)
 {
-	struct dentry *base, *dentry;
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
 	char trailing, c;
@@ -164,21 +164,18 @@ struct dentry *lookup_dentry(int dirfd, struct inode *base_inode, const char *pa
 
 	/* absolute or relative path */
 	if (*pathname == '/') {
-		base_inode = current_task->fs->root->d_inode;
+		base = dget(current_task->fs->root);
 		pathname++;
-	} else if (base_inode) {
-		base_inode = base_inode;
+	} else if (base) {
+		base = base;
 	} else if (dirfd == AT_FDCWD) {
-		base_inode = current_task->fs->pwd->d_inode;
+		base = dget(current_task->fs->pwd);
 	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->files->filp[dirfd]) {
-		base_inode = current_task->files->filp[dirfd]->f_inode;
+		base = d_alloc_root(current_task->files->filp[dirfd]->f_inode);
 	}
 
-	if (!base_inode)
+	if (!base)
 		return ERR_PTR(-ENOENT);
-
-	/* allocate base */
-	base = d_alloc_root(base_inode);
 
 	for (;;) {
 		/* compute next path name */

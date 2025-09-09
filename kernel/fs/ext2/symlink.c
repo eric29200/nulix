@@ -15,7 +15,7 @@ struct dentry *ext2_fast_follow_link(struct inode *inode, struct dentry *base)
 	target = (char *) inode->u.ext2_i.i_data;
 
 	/* resolve target */
-	return lookup_dentry(AT_FDCWD, base->d_inode, target, 1);
+	return lookup_dentry(AT_FDCWD, base, target, 1);
 }
 
 /*
@@ -59,7 +59,7 @@ struct dentry *ext2_page_follow_link(struct inode *inode, struct dentry *base)
 	}
 
 	/* resolve target */
-	base = lookup_dentry(AT_FDCWD, base->d_inode, bh->b_data, 1);
+	base = lookup_dentry(AT_FDCWD, base, bh->b_data, 1);
 
 	brelse(bh);
 	return base;

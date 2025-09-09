@@ -18,7 +18,7 @@ struct dentry *minix_follow_link(struct inode *inode, struct dentry *base)
 	}
 
 	/* resolve target */
-	base = lookup_dentry(AT_FDCWD, base->d_inode, bh->b_data, 1);
+	base = lookup_dentry(AT_FDCWD, base, bh->b_data, 1);
 
 	brelse(bh);
 	return base;
