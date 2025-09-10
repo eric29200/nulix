@@ -222,6 +222,7 @@ static struct dentry *__dlookup(struct list_head *head, struct dentry *parent, s
 
 		return dentry;
 	}
+
 	return NULL;
 }
 

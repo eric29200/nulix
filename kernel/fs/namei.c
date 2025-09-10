@@ -212,13 +212,14 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 		/* compute next path name */
 		this.name = (char *) pathname;
 		this.len = 0;
+		c = *pathname;
 		this.hash = init_name_hash();
 		do {
 			this.len++;
 			pathname++;
 			this.hash = partial_name_hash(c, this.hash);
 			c = *pathname;
-		} while (c && (c != '/'));
+		} while (c && c != '/');
 		this.hash = end_name_hash(this.hash);
 
 		/* remove trailing slashes ? */
