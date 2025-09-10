@@ -1,5 +1,7 @@
 #include <fs/fs.h>
+#include <proc/sched.h>
 #include <stdio.h>
+#include <stderr.h>
 
 #define D_HASHBITS     10
 #define D_HASHSIZE     (1UL << D_HASHBITS)
@@ -232,6 +234,85 @@ static struct dentry *__dlookup(struct list_head *head, struct dentry *parent, s
 struct dentry * d_lookup(struct dentry *dir, struct qstr *name)
 {
 	return __dlookup(d_hash(dir, name->hash), dir, name);
+}
+
+/*
+ * Resolve a dentry full path.
+ */
+static char *d_path(struct dentry *dentry, char *buf, int len, int *error)
+{
+	struct dentry *root = current_task->fs->root, *parent;
+	char *end = buf + len;
+	int name_len;
+	char *ret;
+
+	/* reset error */
+	*error = 0;
+
+	/* end buffer */
+	*--end = 0;
+	len--;
+
+	/* deleted dentry */
+	if (dentry->d_parent != dentry && list_empty(&dentry->d_hash)) {
+		len -= 10;
+		end -= 10;
+		memcpy(end, " (deleted)", 10);
+	}
+
+	/* get '/' right */
+	ret = end - 1;
+	*ret = '/';
+
+	/* walk path */
+	for (;;) {
+		/* end */
+		if (dentry == root)
+			break;
+
+		/* end */
+		dentry = dentry->d_covers;
+		parent = dentry->d_parent;
+		if (dentry == parent)
+			break;
+
+		/* check buffer overflow */
+		name_len = dentry->d_name.len;
+		len -= name_len + 1;
+		if (len < 0) {
+			*error = -ENAMETOOLONG;
+			break;
+		}
+
+		/* add component */
+		end -= name_len;
+		memcpy(end, dentry->d_name.name, name_len);
+		*--end = '/';
+		ret = end;
+
+		/* go to parent */
+		dentry = parent;
+	}
+
+	return ret;
+}
+
+/*
+ * Get current working dir system call.
+ */
+int sys_getcwd(char *buf, size_t size)
+{
+	struct dentry *pwd = current_task->fs->pwd;
+	int err;
+
+	/* current directory unlinked ? */
+	if (pwd->d_parent != pwd && list_empty(&pwd->d_hash))
+		return -ENOENT;
+
+	/* resolve current working directory */
+	buf = d_path(pwd, buf, size, &err);
+
+	return err;
 }
 
 /*
