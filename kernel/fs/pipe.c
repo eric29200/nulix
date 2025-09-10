@@ -259,69 +259,66 @@ static struct inode *get_pipe_inode()
  */
 static int do_pipe(int pipefd[2], int flags)
 {
-	struct file *filps[2];
+	struct file *f1 = NULL, *f2 = NULL;
+	int fd1 = -1, fd2 = -2, ret;
 	struct inode *inode;
-	int fd[2];
-	int i, j;
 
-	/* find 2 file descriptors in global table */
-	for (i = 0, j = 0; i < NR_FILE && j < 2; i++)
-		if (!filp_table[i].f_count)
-			filps[j++] = &filp_table[i];
+	/* get a first file */
+	ret = -ENFILE;
+	f1 = get_empty_filp();
+	if (!f1)
+		goto err;
 
-	/* not enough available slots */
-	if (j < 2)
-		return -ENOSPC;
+	/* get a second file */
+	f2 = get_empty_filp();
+	if (!f2)
+		goto err_clear_f1;
 
-	/* update reference counts */
-	filps[0]->f_count++;
-	filps[1]->f_count++;
+	/* install first file */
+	fd1 = ret = get_unused_fd();
+	if (ret < 0)
+		goto err_clear_f2;
+	current_task->files->filp[fd1] = f1;
 
-	/* find 2 file descriptors in current task */
-	for (i = 0, j = 0; i < NR_OPEN && j < 2; i++) {
-		if (!current_task->files->filp[i]) {
-			fd[j] = i;
-			current_task->files->filp[i] = filps[j++];
-		}
-	}
-
-	/* not enough available slots */
-	if (j < 2) {
-		if (j == 1)
-			current_task->files->filp[fd[0]] = NULL;
-
-		filps[0]->f_count = 0;
-		filps[1]->f_count = 0;
-		return -ENOSPC;
-	}
+	/* install second file */
+	fd2 = ret = get_unused_fd();
+	if (ret < 0)
+		goto err_uninstall_f1;
+	current_task->files->filp[fd2] = f2;
 
 	/* get a pipe inode */
+	ret = -ENFILE;
 	inode = get_pipe_inode();
-	if (!inode) {
-		current_task->files->filp[fd[0]] = NULL;
-		current_task->files->filp[fd[1]] = NULL;
-		filps[0]->f_count = 0;
-		filps[1]->f_count = 0;
-		return -ENOSPC;
-	}
+	if (!inode)
+		goto err_uninstall_f2;
 
 	/* set 1st file descriptor as read channel */
-	filps[0]->f_inode = inode;
-	filps[0]->f_pos = 0;
-	filps[0]->f_flags |= O_RDONLY | flags;
-	filps[0]->f_mode = 1;
-	filps[0]->f_op = &read_pipe_fops;
-	pipefd[0] = fd[0];
+	f1->f_inode = inode;
+	f1->f_pos = 0;
+	f1->f_flags |= O_RDONLY | flags;
+	f1->f_mode = 1;
+	f1->f_op = &read_pipe_fops;
+	pipefd[0] = fd1;
 
 	/* set 2nd file descriptor as write channel */
-	filps[1]->f_inode = inode;
-	filps[1]->f_pos = 0;
-	filps[1]->f_flags |= O_WRONLY | flags;
-	filps[1]->f_mode = 2;
-	filps[1]->f_op = &write_pipe_fops;
-	pipefd[1] = fd[1];
+	f2->f_inode = inode;
+	f1->f_pos = 0;
+	f2->f_flags |= O_WRONLY | flags;
+	f2->f_mode = 2;
+	f2->f_op = &write_pipe_fops;
+	pipefd[1] = fd2;
 
 	return 0;
+err_uninstall_f2:
+	current_task->files->filp[fd2] = NULL;
+err_uninstall_f1:
+	current_task->files->filp[fd1] = NULL;
+err_clear_f2:
+	f2->f_count = 0;
+err_clear_f1:
+	f1->f_count = 0;
+err:
+	return ret;
 }
 
 /*
