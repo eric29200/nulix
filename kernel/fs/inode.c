@@ -10,8 +10,8 @@
 #define HASH_SIZE			(1 << HASH_BITS)
 
 /* inodes lists */
-static LIST_HEAD(free_inodes);
-static LIST_HEAD(used_inodes);
+static LIST_HEAD(inode_in_use);
+static LIST_HEAD(inode_unused);
 static int nr_inodes = 0;
 
 /* inode hash table */
@@ -99,13 +99,13 @@ void clear_inode(struct inode *inode)
 	memset(inode, 0, sizeof(struct inode));
 
 	/* put it in free list */
-	list_add(&inode->i_list, &free_inodes);
+	list_add(&inode->i_list, &inode_unused);
 }
 
 /*
  * Grow inodes.
  */
-static int grow_inodes()
+static struct inode *grow_inodes()
 {
 	struct inode *inodes;
 	int i, n;
@@ -113,7 +113,7 @@ static int grow_inodes()
 	/* get some memory */
 	inodes = (struct inode *) get_free_page();
 	if (!inodes)
-		return -ENOMEM;
+		return NULL;
 	memset(inodes, 0, PAGE_SIZE);
 
 	/* update number of inodes */
@@ -122,9 +122,29 @@ static int grow_inodes()
 
 	/* add inodes to free list */
 	for (i = 0; i < n; i++)
-		list_add(&inodes[i].i_list, &free_inodes);
+		list_add(&inodes[i].i_list, &inode_unused);
 
-	return 0;
+	return &inodes[0];
+}
+
+/*
+ * Try to free inodes.
+ */
+static void try_to_free_inodes()
+{
+	struct list_head *pos, *n;
+	struct inode *inode;
+
+	list_for_each_safe(pos, n, &inode_in_use) {
+		inode = list_entry(pos, struct inode, i_list);
+		
+		/* inode still used */
+		if (inode->i_count || inode->i_state)
+			continue;
+
+		/* clear inode */
+		clear_inode(inode);
+	}
 }
 
 /*
@@ -132,31 +152,22 @@ static int grow_inodes()
  */
 struct inode *get_empty_inode(struct super_block *sb)
 {
-	struct list_head *pos;
 	struct inode *inode;
 
-	/* grow inodes if needed */
-	if (list_empty(&free_inodes) && nr_inodes < NR_INODE)
-		grow_inodes();
+	/* try to free inodes */
+	try_to_free_inodes();
 
-	/* try to get a free inode */
-	if (!list_empty(&free_inodes)) {
-		inode = list_first_entry(&free_inodes, struct inode, i_list);
+	/* try to reuse a free inode */
+	if (!list_empty(&inode_unused)) {
+		inode = list_first_entry(&inode_unused, struct inode, i_list);
 		goto found;
 	}
 
-	/* if no free inodes, try to grab a used one */
-	if (list_empty(&free_inodes)) {
-		list_for_each(pos, &used_inodes) {
-			inode = list_entry(pos, struct inode, i_list);
-			if (!inode->i_count) {
-				clear_inode(inode);
-				goto found;
-			}
-		}
-	}
+	/* grow inodes */
+	inode = grow_inodes();
+	if (!inode)
+		return NULL;
 
-	return NULL;
 found:
 	/* set inode */
 	inode->i_sb = sb;
@@ -167,7 +178,7 @@ found:
 
 	/* put inode at the end of LRU list */
 	list_del(&inode->i_list);
-	list_add_tail(&inode->i_list, &used_inodes);
+	list_add_tail(&inode->i_list, &inode_in_use);
 
 	return inode;
 }
@@ -246,7 +257,7 @@ void sync_inodes(dev_t dev)
 	struct list_head *pos;
 	struct inode *inode;
 
-	list_for_each(pos, &used_inodes) {
+	list_for_each(pos, &inode_in_use) {
 		inode = list_entry(pos, struct inode, i_list);
 
 		/* clean inode */
@@ -289,7 +300,7 @@ int fs_may_umount(struct super_block *sb)
 	struct list_head *pos;
 	struct inode *inode;
 
-	list_for_each(pos, &used_inodes) {
+	list_for_each(pos, &inode_in_use) {
 		inode = list_entry(pos, struct inode, i_list);
 
 		if (inode->i_sb != sb || !inode->i_count)

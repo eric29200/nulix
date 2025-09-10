@@ -85,6 +85,7 @@ int sys_fchdir(int fd)
 	/* change directory */
 	dput(current_task->fs->pwd);
 	current_task->fs->pwd = dentry;
+	ret = 0;
 out:
 	fput(filp);
 	return ret;

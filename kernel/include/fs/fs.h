@@ -18,7 +18,6 @@
 #include <time.h>
 #include <string.h>
 
-#define NR_INODE			4096
 #define NR_FILE				256
 
 #define MS_RDONLY			1
@@ -315,7 +314,7 @@ void d_add(struct dentry *dentry, struct inode *inode);
 void d_delete(struct dentry *dentry);
 void d_move(struct dentry *dentry, struct dentry *target);
 struct dentry *d_lookup(struct dentry *parent, struct qstr *name);
-void shrink_dcache();
+int shrink_dcache(int count);
 void init_dcache();
 
 /* file operations */

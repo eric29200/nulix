@@ -376,7 +376,7 @@ int sys_getcwd(char *buf, size_t size)
 /*
  * Shrink dentries cache.
  */
-void shrink_dcache()
+int shrink_dcache(int count)
 {
 	struct dentry *dentry, *parent;
 	struct list_head *tmp;
@@ -412,7 +412,13 @@ void shrink_dcache()
 		parent = dentry->d_parent;
 		d_free(dentry);
 		dput(parent);
+
+		/* end */
+		if (!--count)
+			break;
 	}
+
+	return count;
 }
 
 /*
