@@ -333,6 +333,7 @@ struct dentry *open_namei(int dirfd, const char *pathname, int flags, mode_t mod
 		goto err;
 
 	/* O_DIRECTORY : fails if inode is not a directory */
+	ret = -ENOTDIR;
 	if ((flags & O_DIRECTORY) && !S_ISDIR(inode->i_mode))
 		goto err;
 
