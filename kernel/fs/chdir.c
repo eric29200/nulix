@@ -55,8 +55,18 @@ int sys_fchdir(int fd)
 	if (!filp)
 		return -EINVAL;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
+
 	/* fd must be a directory */
-	inode = filp->f_inode;
 	ret = -ENOTDIR;
 	if (!S_ISDIR(inode->i_mode))
 		goto out;

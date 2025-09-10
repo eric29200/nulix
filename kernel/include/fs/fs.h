@@ -166,8 +166,7 @@ struct file {
 	int				f_flags;
 	size_t				f_pos;
 	int				f_count;
-	struct inode *			f_inode;
-	char *				f_path;
+	struct dentry *			f_dentry;
 	void *				f_private;
 	struct file_operations *	f_op;
 };

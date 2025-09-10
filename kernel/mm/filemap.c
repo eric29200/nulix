@@ -342,12 +342,19 @@ next:
  */
 int generic_file_read(struct file *filp, char *buf, int count)
 {
-	struct inode *inode = filp->f_inode;
 	int read = 0, err = 0, nr;
 	off_t offset, page_offset;
+	struct inode *inode;
 	struct page *page;
 	char *kaddr;
 	size_t pos;
+
+	/* check inode */
+	if (!filp->f_dentry || !filp->f_dentry->d_inode)
+		return -ENOENT;
+
+	/* get inode */
+	inode = filp->f_dentry->d_inode;
 
 	/* fix number of characters to read */
 	pos = filp->f_pos;
@@ -406,12 +413,19 @@ found_page:
  */
 int generic_file_write(struct file *filp, const char *buf, int count)
 {
-	struct inode *inode = filp->f_inode;
 	int written = 0, err = 0, nr;
 	size_t pos = filp->f_pos;
 	struct page *page, *tmp;
+	struct inode *inode;
 	off_t offset;
 	char *kaddr;
+
+	/* check inode */
+	if (!filp->f_dentry || !filp->f_dentry->d_inode)
+		return -ENOENT;
+
+	/* get inode */
+	inode = filp->f_dentry->d_inode;
 
 	/* read only device */
 	if (is_read_only(inode->i_rdev))

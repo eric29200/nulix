@@ -69,6 +69,7 @@ static void sock_release(struct socket *sock)
  */
 static int get_fd(struct inode *inode)
 {
+	struct dentry *dentry;
 	struct file *filp;
 	int fd;
 
@@ -82,6 +83,13 @@ static int get_fd(struct inode *inode)
 	if (!filp)
 		return -EMFILE;
 
+	/* allocate a dentry */
+	dentry = d_alloc_root(inode);
+	if (!dentry) {
+		close_fp(filp);
+		return -ENOMEM;
+	}
+
 	/* set file */
 	current_task->files->filp[fd] = filp;
 	FD_CLR(fd, &current_task->files->close_on_exec);
@@ -89,7 +97,7 @@ static int get_fd(struct inode *inode)
 	filp->f_flags = 0;
 	filp->f_pos = 0;
 	filp->f_count = 1;
-	filp->f_inode = inode;
+	filp->f_dentry = dentry;
 	filp->f_op = &socket_fops;
 
 	return fd;
@@ -100,6 +108,7 @@ static int get_fd(struct inode *inode)
  */
 static struct socket *sockfd_lookup(int fd, int *err)
 {
+	struct inode *inode;
 	struct socket *sock;
 	struct file *filp;
 
@@ -110,15 +119,18 @@ static struct socket *sockfd_lookup(int fd, int *err)
 		return NULL;
 	}
 
+	/* get inode */
+	inode = filp->f_dentry->d_inode;
+
 	/* get socket */
-	if (!filp->f_inode || !filp->f_inode->i_sock) {
+	if (!inode || !inode->i_sock) {
 		*err = -ENOTSOCK;
 		fput(filp);
 		return NULL;
 	}
 
 	/* get socket */
-	sock = &filp->f_inode->u.socket_i;
+	sock = &inode->u.socket_i;
 
 	/* check socket file */
 	if (sock->file != filp) {
@@ -142,11 +154,21 @@ static void sockfd_put(struct socket *sock)
  */
 static int sock_close(struct file *filp)
 {
-	if (!filp->f_inode)
+	struct dentry *dentry;
+	struct inode *inode;
+
+	/* get dentry */
+	dentry = filp->f_dentry;
+	if (!dentry)
+		return 0;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
 		return 0;
 
 	/* release socket */
-	sock_release(&filp->f_inode->u.socket_i);
+	sock_release(&inode->u.socket_i);
 
 	return 0;
 }
@@ -160,7 +182,7 @@ static int sock_poll(struct file *filp, struct select_table *wait)
 	int mask = 0;
 
 	/* get socket */
-	sock = &filp->f_inode->u.socket_i;
+	sock = &filp->f_dentry->d_inode->u.socket_i;
 	if (!sock)
 		return -EINVAL;
 
@@ -179,7 +201,7 @@ static int sock_ioctl(struct file *filp, int cmd, unsigned long arg)
 	struct socket *sock;
 
 	/* get socket */
-	sock = &filp->f_inode->u.socket_i;
+	sock = &filp->f_dentry->d_inode->u.socket_i;
 	if (!sock)
 		return -EINVAL;
 
@@ -196,7 +218,7 @@ static int sock_read(struct file *filp, char *buf, int len)
 	struct iovec iov;
 
 	/* get socket */
-	sock = &filp->f_inode->u.socket_i;
+	sock = &filp->f_dentry->d_inode->u.socket_i;
 	if (!sock)
 		return -EINVAL;
 
@@ -224,7 +246,7 @@ static int sock_write(struct file *filp, const char *buf, int len)
 	struct iovec iov;
 
 	/* get socket */
-	sock = &filp->f_inode->u.socket_i;
+	sock = &filp->f_dentry->d_inode->u.socket_i;
 	if (!sock)
 		return -EINVAL;
 

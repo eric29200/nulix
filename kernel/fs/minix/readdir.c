@@ -9,9 +9,9 @@
  */
 int minix_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct minix_sb_info *sbi = minix_sb(filp->f_inode->i_sb);
-	struct super_block *sb = filp->f_inode->i_sb;
-	struct inode *inode = filp->f_inode;
+	struct minix_sb_info *sbi = minix_sb(filp->f_dentry->d_inode->i_sb);
+	struct super_block *sb = filp->f_dentry->d_inode->i_sb;
+	struct inode *inode = filp->f_dentry->d_inode;
 	struct buffer_head *bh = NULL;
 	struct minix3_dir_entry *de;
 	int entries_size = 0, ret;

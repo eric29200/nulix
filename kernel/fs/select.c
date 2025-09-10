@@ -174,7 +174,9 @@ static int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *
 			if (!(set & 1))
 				continue;
 
-			if (!current_task->files->filp[i] || !current_task->files->filp[i]->f_inode)
+			if (!current_task->files->filp[i]
+				|| !current_task->files->filp[i]->f_dentry
+				|| !current_task->files->filp[i]->f_dentry->d_inode)
 				return -EBADF;
 
 			max = i;

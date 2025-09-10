@@ -150,7 +150,7 @@ int fb_ioctl(struct file *filp, int request, unsigned long arg)
 			ret = fb->ops->put_var(fb, (struct fb_var_screeninfo *) arg);
 			break;
 		default:
-			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, filp->f_inode->i_rdev);
+			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, filp->f_dentry->d_inode->i_rdev);
 			break;
 	}
 

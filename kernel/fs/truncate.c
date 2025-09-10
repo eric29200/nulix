@@ -56,6 +56,7 @@ int sys_truncate64(const char *pathname, off_t length)
  */
 static int do_ftruncate(int fd, off_t length)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
 	int ret;
@@ -65,15 +66,21 @@ static int do_ftruncate(int fd, off_t length)
 	if (!filp)
 		return -EBADF;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
 	/* get inode */
-	inode = filp->f_inode;
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
 
 	/* do truncate */
 	ret = do_truncate(inode, length);
-
-	/* release file */
+out:
 	fput(filp);
-
 	return ret;
 }
 

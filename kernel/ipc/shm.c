@@ -43,27 +43,38 @@ static struct inode *shm_get_inode(mode_t mode, dev_t dev, int size)
  */
 static struct file *shmem_file_setup(int size)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
 
 	/* get an empty file */
 	filp = get_empty_filp();
 	if (!filp)
-		return NULL;
+		goto err;
 
 	/* get an inode */
 	inode = shm_get_inode(S_IFREG | S_IRWXUGO, 0, size);
-	if (!inode) {
-		close_fp(filp);
-		return NULL;
-	}
+	if (!inode)
+		goto err_release_file;
+
+	/* allocate a root dentry */
+	dentry = d_alloc_root(inode);
+	if (!dentry)
+		goto err_release_inode;
 
 	/* set file */
-	filp->f_inode = inode;
+	filp->f_dentry = dentry;
 	filp->f_mode = FMODE_READ | FMODE_WRITE;
 	filp->f_op = &shm_file_operations;
 
 	return filp;
+err_release_inode:
+	inode->i_nlinks = 0;
+	iput(inode);
+err_release_file:
+	close_fp(filp);
+err:
+	return NULL;
 }
 
 /*
@@ -110,11 +121,11 @@ static int shm_newseg(int key, int size, int shmflg)
 	shm->shm_lprid = 0;
 
 	/* attach segment id to inode */
-	shm->shm_filp->f_inode->u.tmp_i.i_shmid = shm->shm_id;
+	shm->shm_filp->f_dentry->d_inode->u.tmp_i.i_shmid = shm->shm_id;
 
 	return shm->shm_id;
 no_id:
-	filp->f_inode->i_nlinks = 0;
+	filp->f_dentry->d_inode->i_nlinks = 0;
 	close_fp(filp);
 no_file:
 	kfree(shm);
@@ -130,7 +141,7 @@ int shm_destroy(struct shmid *shm)
 	ipc_rm_id(shm->shm_id);
 
 	/* remove file */
-	shm->shm_filp->f_inode->i_nlinks = 0;
+	shm->shm_filp->f_dentry->d_inode->i_nlinks = 0;
 	close_fp(shm->shm_filp);
 
 	/* free segment */

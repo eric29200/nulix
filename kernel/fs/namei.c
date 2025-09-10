@@ -149,22 +149,9 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 {
 	struct dentry *dentry;
 	struct inode *inode;
-	struct file *filp;
 	struct qstr this;
 	char follow, c;
 	int ret;
-
-	/* use directly dir fd */
-	if (dirfd >= 0 && (!pathname || *pathname == 0)) {
-		filp = fget(dirfd);
-		if (!filp)
-			return ERR_PTR(-EINVAL);
-
-		inode = filp->f_inode;
-		inode->i_count++;
-		fput(filp);
-		return d_alloc_root(inode);
-	}
 
 	/* absolute or relative path */
 	if (*pathname == '/') {
@@ -180,7 +167,7 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 	} else if (dirfd == AT_FDCWD) {
 		base = dget(current_task->fs->pwd);
 	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->files->filp[dirfd]) {
-		base = d_alloc_root(current_task->files->filp[dirfd]->f_inode);
+		base = dget(current_task->files->filp[dirfd]->f_dentry);
 	}
 
 	/* no base */

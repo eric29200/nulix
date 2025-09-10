@@ -128,7 +128,7 @@ static int proc_array_read(struct file *filp, char *buf, int count)
 		return -ENOMEM;
 
 	/* get informations */
-	switch (filp->f_inode->i_ino) {
+	switch (filp->f_dentry->d_inode->i_ino) {
 		case PROC_UPTIME_INO:
 			len = proc_uptime_read(page);
 			break;

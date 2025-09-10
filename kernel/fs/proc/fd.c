@@ -17,12 +17,12 @@ static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
 	pid_t pid;
 
 	/* get pid */
-	pid = filp->f_inode->i_ino >> 16;
+	pid = filp->f_dentry->d_inode->i_ino >> 16;
 
 	/* add "." entry */
 	if (filp->f_pos == 0) {
 		/* fill in directory entry */ 
-		ret = filldir(dirent, ".", 1, filp->f_inode->i_ino, count);
+		ret = filldir(dirent, ".", 1, filp->f_dentry->d_inode->i_ino, count);
 		if (ret)
 			return n;
 
@@ -36,7 +36,7 @@ static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
 	/* add ".." entry */
 	if (filp->f_pos == 1) {
 		/* fill in directory entry */ 
-		ret = filldir(dirent, "..", 2, (filp->f_inode->i_ino & 0xFFFF0000) + PROC_PID_INO, count);
+		ret = filldir(dirent, "..", 2, (filp->f_dentry->d_inode->i_ino & 0xFFFF0000) + PROC_PID_INO, count);
 		if (ret)
 			return n;
 
@@ -177,7 +177,7 @@ static struct dentry *proc_fd_follow_link(struct inode *inode, struct dentry *ba
 	/* get file descriptor */
 	fd = inode->i_ino & 0xFF;
 	if (fd >= 0 && fd < NR_OPEN && task->files->filp[fd])
-		return d_alloc_root(task->files->filp[fd]->f_inode);
+		return dget(task->files->filp[fd]->f_dentry);
 
 	dput(base);
 	return ERR_PTR(-ENOENT);
@@ -189,7 +189,6 @@ static struct dentry *proc_fd_follow_link(struct inode *inode, struct dentry *ba
 static ssize_t proc_fd_readlink(struct inode *inode, char *buf, size_t bufsize)
 {
 	struct task *task;
-	struct file *filp;
 	char tmp[32];
 	size_t len;
 	pid_t pid;
@@ -205,17 +204,6 @@ static ssize_t proc_fd_readlink(struct inode *inode, char *buf, size_t bufsize)
 	fd = inode->i_ino & 0xFF;
 	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd])
 		return -ENOENT;
-	filp = task->files->filp[fd];
-
-	/* use file path */
-	if (filp->f_path) {
-		len = strlen(filp->f_path) + 1;
-		if (bufsize < len)
-			len = bufsize;
-
-		memcpy(buf, filp->f_path, len);
-		return len;
-	}
 
 	/* else concat <pid>:<fd> */
 	len = sprintf(tmp, "%d:%d", pid, fd) + 1;

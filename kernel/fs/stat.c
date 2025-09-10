@@ -76,6 +76,8 @@ int sys_lstat64(const char *pathname, struct stat64 *statbuf)
  */
 int sys_fstat64(int fd, struct stat64 *statbuf)
 {
+	struct dentry *dentry;
+	struct inode *inode;
 	struct file *filp;
 	int ret;
 
@@ -84,12 +86,21 @@ int sys_fstat64(int fd, struct stat64 *statbuf)
 	if (!filp)
 		return -EINVAL;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
+
 	/* do stat */
-	ret = do_stat64(filp->f_inode, statbuf);
-
-	/* release file */
+	ret = do_stat64(inode, statbuf);
+out:
 	fput(filp);
-
 	return ret;
 }
 

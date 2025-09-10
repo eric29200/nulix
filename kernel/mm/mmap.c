@@ -159,13 +159,17 @@ static struct vm_area *generic_mmap(uint32_t addr, size_t len, int prot, int fla
 		if (flags & MAP_SHARED)
 			vma->vm_flags |= VM_SHARED;
 
+		/* check inode */
+		if (!filp->f_dentry || !filp->f_dentry->d_inode)
+			goto err;
+
 		/* mmap file */
-		ret = filp->f_op->mmap(filp->f_inode, vma);
+		ret = filp->f_op->mmap(filp->f_dentry->d_inode, vma);
 		if (ret)
 			goto err;
 
 		/* add memory region to inode */
-		list_add_tail(&vma->list_share, &filp->f_inode->i_mmap);
+		list_add_tail(&vma->list_share, &filp->f_dentry->d_inode->i_mmap);
 	}
 
 	/* add it to the list */

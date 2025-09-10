@@ -194,15 +194,22 @@ static void del_vfs_mount(struct super_block *sb)
  */
 static int fs_may_remount_ro(struct super_block *sb)
 {
+	struct inode *inode;
 	struct file *filp;
 	size_t i;
 
 	for (i = 0; i < NR_FILE; i++) {
 		filp = &filp_table[i];
 
-		if (!filp->f_count || !filp->f_inode || filp->f_inode->i_sb != sb)
+		if (!filp->f_count)
 			continue;
-		if (S_ISREG(filp->f_inode->i_mode) && (filp->f_mode & MAY_WRITE))
+		if (!filp->f_dentry || !filp->f_dentry->d_inode)
+			continue;
+
+		inode = filp->f_dentry->d_inode;
+		if (!inode || inode->i_sb != sb)
+			continue;
+		if (S_ISREG(inode->i_mode) && (filp->f_mode & MAY_WRITE))
 			return 0;
 	}
 

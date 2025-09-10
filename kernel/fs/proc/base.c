@@ -377,8 +377,8 @@ static int proc_base_read(struct file *filp, char *buf, int count)
 	pid_t pid;
 
 	/* get inode number */
-	ino = filp->f_inode->i_ino & 0x0000FFFF;
-	pid = filp->f_inode->i_ino >> 16;
+	ino = filp->f_dentry->d_inode->i_ino & 0x0000FFFF;
+	pid = filp->f_dentry->d_inode->i_ino >> 16;
 
 	/* find task */
 	task = find_task(pid);
@@ -456,7 +456,7 @@ static int proc_base_getdents64(struct file *filp, void *dirp, size_t count)
 	size_t i;
 
 	/* get pid */
-	pid = filp->f_inode->i_ino >> 16;
+	pid = filp->f_dentry->d_inode->i_ino >> 16;
 
 	/* read root dir entries */
 	for (i = filp->f_pos, n = 0, dirent = (struct dirent64 *) dirp; i < NR_BASE_DIRENTRY; i++, filp->f_pos++) {

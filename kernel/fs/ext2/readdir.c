@@ -6,8 +6,8 @@
  */
 int ext2_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct super_block *sb = filp->f_inode->i_sb;
-	struct inode *inode = filp->f_inode;
+	struct super_block *sb = filp->f_dentry->d_inode->i_sb;
+	struct inode *inode = filp->f_dentry->d_inode;
 	struct buffer_head *bh = NULL;
 	struct ext2_dir_entry *de;
 	struct dirent64 *dirent;

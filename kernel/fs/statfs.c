@@ -47,6 +47,8 @@ int sys_statfs64(const char *path, size_t size, struct statfs64 *buf)
  */
 int sys_fstatfs64(int fd, size_t size, struct statfs64 *buf)
 {
+	struct dentry *dentry;
+	struct inode *inode;
 	struct file *filp;
 	int ret;
 
@@ -63,11 +65,20 @@ int sys_fstatfs64(int fd, size_t size, struct statfs64 *buf)
 	if (!filp)
 		return -EBADF;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
+
 	/* do statfs */
-	ret = do_statfs64(filp->f_inode, buf);
-
-	/* release file */
+	ret = do_statfs64(inode, buf);
+out:
 	fput(filp);
-
 	return ret;
 }

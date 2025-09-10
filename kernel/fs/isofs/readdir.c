@@ -9,11 +9,11 @@
  */
 int isofs_getdents64(struct file *filp, void *dirp, size_t count)
 {
-	struct isofs_inode_info *isofs_inode = &filp->f_inode->u.iso_i;
+	struct isofs_inode_info *isofs_inode = &filp->f_dentry->d_inode->u.iso_i;
+	struct super_block *sb = filp->f_dentry->d_inode->i_sb;
 	char name[ISOFS_MAX_NAME_LEN + 1], de_tmp[4096];
-	struct super_block *sb = filp->f_inode->i_sb;
+	struct inode *inode = filp->f_dentry->d_inode;
 	int de_len, entries_size = 0, name_len, ret;
-	struct inode *inode = filp->f_inode;
 	uint32_t offset, next_offset, block;
 	struct iso_directory_record *de;
 	struct dirent64 *dirent;

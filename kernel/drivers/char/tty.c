@@ -54,7 +54,7 @@ static int tty_open(struct file *filp)
 	dev_t dev;
 
 	/* get tty */
-	tty = tty_lookup(filp->f_inode->i_rdev);
+	tty = tty_lookup(filp->f_dentry->d_inode->i_rdev);
 	if (!tty)
 		return -EINVAL;
 
@@ -62,7 +62,7 @@ static int tty_open(struct file *filp)
 	filp->f_private = tty;
 
 	/* get tty device number */
-	dev = filp->f_inode->i_rdev;
+	dev = filp->f_dentry->d_inode->i_rdev;
 
 	/* check if tty must be associated to process */
 	noctty = filp->f_flags & O_NOCTTY;
@@ -477,7 +477,7 @@ int tty_ioctl(struct file *filp, int request, unsigned long arg)
 					return ret;
 			}
 
-			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) filp->f_inode->i_rdev);
+			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) filp->f_dentry->d_inode->i_rdev);
 			break;
 	}
 

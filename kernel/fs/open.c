@@ -50,12 +50,8 @@ static void __fput(struct file *filp)
 	if (filp->f_op && filp->f_op->close)
 		filp->f_op->close(filp);
 
-	/* release inode */
-	iput(filp->f_inode);
-
-	/* free path */
-	if (filp->f_path)
-		kfree(filp->f_path);
+	/* release dentry */
+	dput(filp->f_dentry);
 
 	/* clear inode */
 	memset(filp, 0, sizeof(struct file));
@@ -140,15 +136,9 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 
 	/* set file */
 	FD_CLR(fd, &current_task->files->close_on_exec);
-	filp->f_inode = inode;
+	filp->f_dentry = dentry;
 	filp->f_pos = 0;
 	filp->f_op = inode->i_op->fops;
-
-	/* set path */
-	ret = -ENOMEM;
-	filp->f_path = strdup(pathname);
-	if (!filp->f_path)
-		goto err_cleanup_dentry;
 
 	/* specific open function */
 	if (filp->f_op && filp->f_op->open) {
@@ -158,14 +148,10 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	}
 
 	current_task->files->filp[fd] = filp;
-	inode->i_count++;
-	dput(dentry);
 	return fd;
 err_cleanup_dentry:
 	dput(dentry);
 err_cleanup_file:
-	if (filp->f_path)
-		kfree(filp->f_path);
 	memset(filp, 0, sizeof(struct file));
 	return ret;
 }
@@ -267,16 +253,26 @@ int sys_chmod(const char *pathname, mode_t mode)
  */
 static int do_fchmod(int fd, mode_t mode)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		return -EINVAL;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
 	/* get inode */
-	inode = filp->f_inode;
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
 
 	/* adjust mode */
 	if (mode == (mode_t) - 1)
@@ -285,11 +281,10 @@ static int do_fchmod(int fd, mode_t mode)
 	/* change mode */
 	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
 	mark_inode_dirty(inode);
-
-	/* release file */
+	ret = 0;
+out:
 	fput(filp);
-
-	return 0;
+	return ret;
 }
 
 /*
@@ -355,24 +350,35 @@ int sys_lchown(const char *pathname, uid_t owner, gid_t group)
  */
 static int do_fchown(int fd, uid_t owner, gid_t group)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		return -EINVAL;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
+
 	/* update inode */
-	inode = filp->f_inode;
 	inode->i_uid = owner;
 	inode->i_gid = group;
 	mark_inode_dirty(inode);
-
-	/* release file */
+	ret = 0;
+out:
 	fput(filp);
-
-	return 0;
+	return ret;
 }
 
 /*

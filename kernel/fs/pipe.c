@@ -12,7 +12,7 @@ extern struct file filp_table[NR_FILE];
  */
 static int pipe_read(struct file *filp, char *buf, int count)
 {
-	struct inode *inode = filp->f_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 	int chars, size, read = 0;
 	char *pipebuf;
 
@@ -85,7 +85,7 @@ static int pipe_read(struct file *filp, char *buf, int count)
  */
 static int pipe_write(struct file *filp, const char *buf, int count)
 {
-	struct inode *inode = filp->f_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 	int chars, free, written = 0;
 	char *pipebuf;
 
@@ -155,7 +155,7 @@ static int pipe_write(struct file *filp, const char *buf, int count)
  */
 static int pipe_read_close(struct file *filp)
 {
-	struct inode *inode = filp->f_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 
 	PIPE_READERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
@@ -171,7 +171,7 @@ static int pipe_read_close(struct file *filp)
  */
 static int pipe_write_close(struct file *filp)
 {
-	struct inode *inode = filp->f_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 
 	PIPE_WRITERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
@@ -190,13 +190,13 @@ static int pipe_poll(struct file *filp, struct select_table *wait)
 	int mask;
 
 	/* reader or writer */
-	if (PIPE_EMPTY(filp->f_inode))
+	if (PIPE_EMPTY(filp->f_dentry->d_inode))
 		mask = POLLOUT;
 	else
 		mask = POLLIN;
 
 	/* add wait queue to select table */
-	select_wait(&PIPE_WAIT(filp->f_inode), wait);
+	select_wait(&PIPE_WAIT(filp->f_dentry->d_inode), wait);
 
 	return mask;
 }
@@ -261,6 +261,7 @@ static int do_pipe(int pipefd[2], int flags)
 {
 	struct file *f1 = NULL, *f2 = NULL;
 	int fd1 = -1, fd2 = -2, ret;
+	struct dentry *dentry;
 	struct inode *inode;
 
 	/* get a first file */
@@ -292,8 +293,14 @@ static int do_pipe(int pipefd[2], int flags)
 	if (!inode)
 		goto err_uninstall_f2;
 
+	/* allocate a root dentry */
+	ret = -ENOMEM;
+	dentry = dget(d_alloc_root(inode));
+	if (!dentry)
+		goto err_release_inode;
+
 	/* set 1st file descriptor as read channel */
-	f1->f_inode = inode;
+	f1->f_dentry = dentry;
 	f1->f_pos = 0;
 	f1->f_flags |= O_RDONLY | flags;
 	f1->f_mode = 1;
@@ -301,7 +308,7 @@ static int do_pipe(int pipefd[2], int flags)
 	pipefd[0] = fd1;
 
 	/* set 2nd file descriptor as write channel */
-	f2->f_inode = inode;
+	f2->f_dentry = dentry;
 	f1->f_pos = 0;
 	f2->f_flags |= O_WRONLY | flags;
 	f2->f_mode = 2;
@@ -309,6 +316,8 @@ static int do_pipe(int pipefd[2], int flags)
 	pipefd[1] = fd2;
 
 	return 0;
+err_release_inode:
+	iput(inode);
 err_uninstall_f2:
 	current_task->files->filp[fd2] = NULL;
 err_uninstall_f1:
