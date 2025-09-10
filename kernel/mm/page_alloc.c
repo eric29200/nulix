@@ -286,7 +286,7 @@ static void reclaim_pages()
 		lock++;
 
 	/* synchronize buffers */
-	bsync();
+	sync_dev(0);
 
 	/* try to free pages */
 	count = shrink_mmap(count);

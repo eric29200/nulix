@@ -271,8 +271,7 @@ void mark_buffer_new(struct buffer_head *bh);
 struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize);
 struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize);
 void brelse(struct buffer_head *bh);
-void bsync();
-void bsync_dev(dev_t dev);
+void sync_dev(dev_t dev);
 void init_buffer();
 struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void free_async_buffers(struct buffer_head *bh);
@@ -297,6 +296,7 @@ struct inode *get_empty_inode(struct super_block *sb);
 void clear_inode(struct inode *inode);
 void add_to_inode_cache(struct inode *inode);
 struct inode *find_inode(struct super_block *sb, ino_t ino);
+void sync_inodes(dev_t dev);
 void init_inode();
 
 /* dentry operations */

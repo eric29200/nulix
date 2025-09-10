@@ -22,7 +22,7 @@ static struct inode *inode_hash_table[HASH_SIZE];
  */
 void mark_inode_dirty(struct inode *inode)
 {
-	inode->i_state |= I_DIRTY;
+	set_bit(&inode->i_state, I_DIRTY);
 }
 
 /*
@@ -229,8 +229,32 @@ struct inode *iget(struct super_block *sb, ino_t ino)
  */
 static void write_inode(struct inode *inode)
 {
+	/* write inode */
 	if (inode->i_sb && inode->i_sb->s_op && inode->i_sb->s_op->write_inode)
 		inode->i_sb->s_op->write_inode(inode);
+
+	/* clear dirty state */
+	clear_bit(&inode->i_state, I_DIRTY);
+}
+
+/*
+ * Synchronize inodes on disk.
+ */
+void sync_inodes(dev_t dev)
+{
+	struct list_head *pos;
+	struct inode *inode;
+
+	list_for_each(pos, &used_inodes) {
+		inode = list_entry(pos, struct inode, i_list);
+
+		/* clean inode */
+		if (!test_bit(&inode->i_state, I_DIRTY) || (dev && inode->i_sb->s_dev != dev))
+			continue;
+
+		/* write inode */
+		write_inode(inode);
+	}
 }
 
 /*
@@ -252,7 +276,7 @@ void iput(struct inode *inode)
 	}
 
 	/* write inode if needed */
-	if (inode->i_state & I_DIRTY)
+	if (test_bit(&inode->i_state, I_DIRTY))
 		write_inode(inode);
 }
 

@@ -138,7 +138,7 @@ void do_timer_interrupt()
 	update_timers();
 
 	/* sync buffers on disk */
-	bsync();
+	sync_dev(0);
 
 	/* schedule */
 	if (need_resched)

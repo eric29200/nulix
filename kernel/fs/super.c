@@ -489,7 +489,7 @@ static int do_umount(const char *target, int flags)
 		return -EBUSY;
 
 	/* sync buffers */
-	bsync_dev(sb->s_dev);
+	sync_dev(sb->s_dev);
 
 	/* unset mount */
 	if (sb->s_root) {
