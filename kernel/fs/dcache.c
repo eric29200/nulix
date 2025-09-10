@@ -374,6 +374,48 @@ int sys_getcwd(char *buf, size_t size)
 }
 
 /*
+ * Shrink dentries cache.
+ */
+void shrink_dcache()
+{
+	struct dentry *dentry, *parent;
+	struct list_head *tmp;
+	struct inode *inode;
+
+	for (;;) {
+		/* get next unused dentry */
+		tmp = dentry_unused.prev;
+		if (tmp == &dentry_unused)
+			break;
+
+		/* remove it from list */
+		list_del(tmp);
+		INIT_LIST_HEAD(tmp);
+
+		/* still used */
+		dentry = list_entry(tmp, struct dentry, d_lru);
+		if (dentry->d_count)
+			continue;
+
+		/* unhash dentry */
+		list_del(&dentry->d_hash);
+
+		/* release inode */
+		if (dentry->d_inode) {
+			inode = dentry->d_inode;
+			list_del(&dentry->d_alias);
+			dentry->d_inode = NULL;
+			iput(inode);
+		}
+
+		/* free dentry and release parent */
+		parent = dentry->d_parent;
+		d_free(dentry);
+		dput(parent);
+	}
+}
+
+/*
  * Init dcache.
  */
 void init_dcache()
