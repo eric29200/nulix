@@ -122,6 +122,7 @@ struct inode {
 	char				i_sock;
 	struct list_head		i_pages;
 	struct list_head		i_mmap;
+	struct list_head		i_dentry;
 	struct list_head		i_list;
 	struct inode *			i_next_hash;
 	struct inode *			i_prev_hash;
@@ -155,6 +156,8 @@ struct dentry {
 	struct dentry *			d_mounts;
 	struct dentry *			d_covers;
 	struct list_head		d_hash;
+	struct list_head		d_alias;
+	struct list_head		d_lru;
 	struct qstr			d_name;
 };
 

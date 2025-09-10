@@ -15,6 +15,7 @@
 
 /* static variables */
 static struct list_head dentry_hashtable[D_HASHSIZE];
+static LIST_HEAD(dentry_unused);
 
 /*
  * Init name hash.
@@ -70,8 +71,43 @@ struct dentry *dget(struct dentry *dentry)
  */
 void dput(struct dentry *dentry)
 {
-	if (dentry)
-		dentry->d_count--;
+	struct dentry *parent;
+	struct inode *inode;
+
+	if (!dentry)
+		return;
+repeat:
+	/* update reference counter */
+	dentry->d_count--;
+	if (dentry->d_count < 0)
+		panic("dput: negative d_count");
+
+	/* still used */
+	if (dentry->d_count)
+		return;
+
+	list_del(&dentry->d_lru);
+	if (list_empty(&dentry->d_hash)) {
+		/* release inode */
+		inode = dentry->d_inode;
+		if (inode) {
+			list_del(&dentry->d_alias);
+			iput(inode);
+		}
+
+		/* free dentry */
+		parent = dentry->d_parent;
+		d_free(dentry);
+
+		/* release parent */
+		if (dentry == parent)
+			return;
+		dentry = parent;
+		goto repeat;
+	}
+
+	/* add dentry to unused list */
+	list_add(&dentry->d_lru, &dentry_unused);
 }
 
 /*
@@ -108,6 +144,8 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	dentry->d_name.len = name->len;
 	dentry->d_name.hash = name->hash;
 	INIT_LIST_HEAD(&dentry->d_hash);
+	INIT_LIST_HEAD(&dentry->d_alias);
+	INIT_LIST_HEAD(&dentry->d_lru);
 
 	return dentry;
 }
@@ -148,6 +186,9 @@ void d_free(struct dentry *dentry)
  */
 void d_instantiate(struct dentry *dentry, struct inode *inode)
 {
+	if (inode)
+		list_add(&dentry->d_alias, &inode->i_dentry);
+
 	dentry->d_inode = inode;
 }
 
@@ -163,14 +204,31 @@ void d_add(struct dentry *dentry, struct inode *inode)
 }
 
 /*
+ * Drop a dentry = unhash.
+ */
+static void d_drop(struct dentry *dentry)
+{
+	list_del(&dentry->d_hash);
+	INIT_LIST_HEAD(&dentry->d_hash);
+}
+
+/*
  * Delete a dentry.
  */
 void d_delete(struct dentry *dentry)
 {
 	struct inode *inode = dentry->d_inode;
 
-	dentry->d_inode = NULL;
-	iput(inode);
+	/* only one user : release inode */
+	if (dentry->d_count == 1) {
+		dentry->d_inode = NULL;
+		list_del(&dentry->d_alias);
+		iput(inode);
+		return;
+	}
+
+	/* drop dentry */
+	d_drop(dentry);
 }
 
 /*
@@ -231,7 +289,7 @@ static struct dentry *__dlookup(struct list_head *head, struct dentry *parent, s
 /*
  * Lookup in cache.
  */
-struct dentry * d_lookup(struct dentry *dir, struct qstr *name)
+struct dentry *d_lookup(struct dentry *dir, struct qstr *name)
 {
 	return __dlookup(d_hash(dir, name->hash), dir, name);
 }

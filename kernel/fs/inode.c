@@ -163,6 +163,7 @@ found:
 	inode->i_count = 1;
 	INIT_LIST_HEAD(&inode->i_pages);
 	INIT_LIST_HEAD(&inode->i_mmap);
+	INIT_LIST_HEAD(&inode->i_dentry);
 
 	/* put inode at the end of LRU list */
 	list_del(&inode->i_list);
