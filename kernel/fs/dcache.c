@@ -361,16 +361,16 @@ static char *d_path(struct dentry *dentry, char *buf, int len, int *error)
 int sys_getcwd(char *buf, size_t size)
 {
 	struct dentry *pwd = current_task->fs->pwd;
-	int err;
+	int ret;
 
 	/* current directory unlinked ? */
 	if (pwd->d_parent != pwd && list_empty(&pwd->d_hash))
 		return -ENOENT;
 
 	/* resolve current working directory */
-	buf = d_path(pwd, buf, size, &err);
+	buf = d_path(pwd, buf, size, &ret);
 
-	return err;
+	return ret;
 }
 
 /*

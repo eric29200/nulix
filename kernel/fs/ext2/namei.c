@@ -345,7 +345,7 @@ int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
-	int err;
+	int ret;
 
 	/* check if file exists */
 	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
@@ -392,11 +392,11 @@ int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 	brelse(bh);
 
 	/* add entry to parent dir */
-	err = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
-	if (err) {
+	ret = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		return err;
+		return ret;
 	}
 
 	/* update directory links and mark it dirty */
@@ -722,7 +722,7 @@ int ext2_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
-	int err;
+	int ret;
 
 	/* check directory */
 	if (!dir)
@@ -745,11 +745,11 @@ int ext2_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	err = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
-	if (err) {
+	ret = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret) {
 		inode->i_nlinks--;
 		iput(inode);
-		return err;
+		return ret;
 	}
 
 	/* instantiate dentry */

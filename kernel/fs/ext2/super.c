@@ -73,7 +73,7 @@ static struct super_operations ext2_sops = {
 static int ext2_read_super(struct super_block *sb, void *data, int silent)
 {
 	uint32_t block, sb_block = 1, offset = 0, logic_sb_block = 1;
-	int err = -ENOSPC, blocksize;
+	int ret = -ENOSPC, blocksize;
 	struct ext2_sb_info *sbi;
 	uint32_t i;
 
@@ -94,7 +94,7 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 	/* read first block = super block */
 	sbi->s_sbh = bread(sb->s_dev, sb_block, sb->s_blocksize);
 	if (!sbi->s_sbh) {
-		err = -EIO;
+		ret = -EIO;
 		goto err_bad_sb;
 	}
 
@@ -134,7 +134,7 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 		/* reread super block */
 		sbi->s_sbh = bread(sb->s_dev, logic_sb_block, sb->s_blocksize);
 		if (!sbi->s_sbh) {
-			err = -EIO;
+			ret = -EIO;
 			goto err_bad_sb;
 		}
 
@@ -173,7 +173,7 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 	/* allocate group descriptors buffers */
 	sbi->s_group_desc = (struct buffer_head **) kmalloc(sizeof(struct buffer_head *) * sbi->s_gdb_count);
 	if (!sbi->s_group_desc) {
-		err = -ENOMEM;
+		ret = -ENOMEM;
 		goto err_no_gdb;
 	}
 
@@ -189,7 +189,7 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 		/* read group descriptor */
 		sbi->s_group_desc[i] = bread(sb->s_dev, block, sb->s_blocksize);
 		if (!sbi->s_group_desc[i]) {
-			err = -EIO;
+			ret = -EIO;
 			goto err_read_gdb;
 		}
 	}
@@ -235,7 +235,7 @@ err_bad_sb:
 		printf("[Ext2-fs] Can't read super block\n");
 err:
 	kfree(sbi);
-	return err;
+	return ret;
 }
 
 /*
