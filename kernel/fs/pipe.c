@@ -289,7 +289,7 @@ static int do_pipe(int pipefd[2], int flags)
 
 	/* install second file */
 	current_task->files->filp[fd2] = f2;
-	
+
 	/* get a pipe inode */
 	inode = get_pipe_inode();
 	if (!inode)
