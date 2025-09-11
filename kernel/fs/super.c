@@ -295,7 +295,7 @@ static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, con
 {
 	struct inode *mount_point_dir = NULL;
 	struct super_block *sb;
-	int err;
+	int ret;
 
 	/* allocate a super block */
 	sb = (struct super_block *) kmalloc(sizeof(struct super_block));
@@ -303,24 +303,24 @@ static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, con
 		return -ENOMEM;
 
 	/* get mount point */
-	err = get_mount_point(mount_point, &mount_point_dir);
-	if (err)
+	ret = get_mount_point(mount_point, &mount_point_dir);
+	if (ret)
 		goto err;
 
 	/* read super block */
 	sb->s_type = fs;
 	sb->s_dev = dev;
 	sb->s_covered = mount_point_dir;
-	err = fs->read_super(sb, data, 0);
-	if (err)
+	ret = fs->read_super(sb, data, 0);
+	if (ret)
 		goto err;
 
 	/* set mount point */
 	mount_point_dir->i_mount = sb->s_root_inode;
 
 	/* add mounted file system */
-	err = add_vfs_mount(dev, dev_name, mount_point, flags, sb);
-	if (err)
+	ret = add_vfs_mount(dev, dev_name, mount_point, flags, sb);
+	if (ret)
 		goto err;
 
 	return 0;
@@ -329,7 +329,7 @@ err:
 		iput(mount_point_dir);
 
 	kfree(sb);
-	return err;
+	return ret;
 }
 
 /*
@@ -384,7 +384,7 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	struct file_system *fs;
 	struct super_block *sb;
 	struct list_head *pos;
-	int err;
+	int ret;
 
 	/* allocate a super block */
 	sb = (struct super_block *) kmalloc(sizeof(struct super_block));
@@ -404,8 +404,8 @@ int do_mount_root(dev_t dev, const char *dev_name)
 
 		/* read super block */
 		sb->s_type = fs;
-		err = fs->read_super(sb, NULL, 1);
-		if (err == 0)
+		ret = fs->read_super(sb, NULL, 1);
+		if (ret == 0)
 			goto found;
 	}
 
@@ -419,10 +419,10 @@ found:
 	current_task->fs->root = sb->s_root_inode;
 
 	/* add mounted file system */
-	err = add_vfs_mount(dev, dev_name, "/", 0, sb);
-	if (err) {
+	ret = add_vfs_mount(dev, dev_name, "/", 0, sb);
+	if (ret) {
 		kfree(sb);
-		return err;
+		return ret;
 	}
 
 	return 0;

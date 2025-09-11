@@ -321,7 +321,7 @@ int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	struct buffer_head *bh;
 	struct inode *inode;
 	ino_t ino;
-	int err;
+	int ret;
 
 	/* check directory */
 	*res_inode = NULL;
@@ -349,12 +349,12 @@ int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	err = ext2_add_entry(dir, name, name_len, inode);
-	if (err) {
+	ret = ext2_add_entry(dir, name, name_len, inode);
+	if (ret) {
 		inode->i_nlinks--;
 		iput(inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* release inode (to write it on disk) */
@@ -382,7 +382,7 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
-	int err;
+	int ret;
 
 	/* check if file exists */
 	bh = ext2_find_entry(dir, name, name_len, &de);
@@ -433,12 +433,12 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	brelse(bh);
 
 	/* add entry to parent dir */
-	err = ext2_add_entry(dir, name, name_len, inode);
-	if (err) {
+	ret = ext2_add_entry(dir, name, name_len, inode);
+	if (ret) {
 		inode->i_nlinks = 0;
 		iput(inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* update directory links and mark it dirty */
@@ -461,7 +461,7 @@ int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
 	struct buffer_head *bh;
 	struct inode *inode;
 	ino_t ino;
-	int err;
+	int ret;
 
 	/* check if file exists */
 	bh = ext2_find_entry(dir, name, name_len, &de);
@@ -498,8 +498,8 @@ int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
 	}
 
 	/* remove entry */
-	err = ext2_delete_entry(de, bh);
-	if (err)
+	ret = ext2_delete_entry(de, bh);
+	if (ret)
 		goto out;
 
 	/* mark buffer diry */
@@ -530,7 +530,7 @@ int ext2_link(struct inode *old_inode, struct inode *dir, const char *name, size
 {
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
-	int err;
+	int ret;
 
 	/* check if new file exists */
 	bh = ext2_find_entry(dir, name, name_len, &de);
@@ -542,11 +542,11 @@ int ext2_link(struct inode *old_inode, struct inode *dir, const char *name, size
 	}
 
 	/* add entry */
-	err = ext2_add_entry(dir, name, name_len, old_inode);
-	if (err) {
+	ret = ext2_add_entry(dir, name, name_len, old_inode);
+	if (ret) {
 		iput(old_inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* update old inode */
@@ -656,7 +656,7 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 	struct buffer_head *bh;
 	struct inode *inode;
 	size_t target_len;
-	int err;
+	int ret;
 
 	/* check name length */
 	target_len = strlen(target) + 1;
@@ -673,8 +673,8 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 	/* write target link */
 	if (target_len > sizeof(inode->u.ext2_i.i_data)) {
 		inode->i_op = &ext2_page_symlink_iops;
-		err = ext2_block_symlink(inode, target);
-		if (err)
+		ret = ext2_block_symlink(inode, target);
+		if (ret)
 			goto err;
 	} else {
 		inode->i_op = &ext2_fast_symlink_iops;
@@ -688,14 +688,14 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 	/* check if file exists */
 	bh = ext2_find_entry(dir, name, name_len, &de);
 	if (bh) {
-		err = -EEXIST;
+		ret = -EEXIST;
 		brelse(bh);
 		goto err;
 	}
 
 	/* add entry */
-	err = ext2_add_entry(dir, name, name_len, inode);
-	if (err)
+	ret = ext2_add_entry(dir, name, name_len, inode);
+	if (ret)
 		goto err;
 
 	/* release inode */
@@ -707,7 +707,7 @@ err:
 	inode->i_nlinks = 0;
 	iput(inode);
 	iput(dir);
-	return err;
+	return ret;
 }
 
 /*
@@ -720,12 +720,12 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 	struct buffer_head *old_bh = NULL, *new_bh = NULL;
 	struct ext2_dir_entry *old_de, *new_de;
 	ino_t old_ino, new_ino;
-	int err;
+	int ret;
 
 	/* find old entry */
 	old_bh = ext2_find_entry(old_dir, old_name, old_name_len, &old_de);
 	if (!old_bh) {
-		err = -ENOENT;
+		ret = -ENOENT;
 		goto out;
 	}
 
@@ -735,7 +735,7 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 	/* get old inode */
 	old_inode = iget(old_dir->i_sb, old_ino);
 	if (!old_inode) {
-		err = -ENOSPC;
+		ret = -ENOSPC;
 		goto out;
 	}
 
@@ -748,13 +748,13 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 		/* get new inode */
 		new_inode = iget(new_dir->i_sb, new_ino);
 		if (!new_inode) {
-			err = -ENOSPC;
+			ret = -ENOSPC;
 			goto out;
 		}
 
 		/* same inode : exit */
 		if (old_inode->i_ino == new_inode->i_ino) {
-			err = 0;
+			ret = 0;
 			goto out;
 		}
 
@@ -767,14 +767,14 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
-		err = ext2_add_entry(new_dir, new_name, new_name_len, old_inode);
-		if (err)
+		ret = ext2_add_entry(new_dir, new_name, new_name_len, old_inode);
+		if (ret)
 			goto out;
 	}
 
 	/* remove old directory entry */
-	err = ext2_delete_entry(old_de, old_bh);
-	if (err)
+	ret = ext2_delete_entry(old_de, old_bh);
+	if (ret)
 		goto out;
 
 	/* mark old directory buffer dirty */
@@ -786,7 +786,7 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
 	mark_inode_dirty(new_dir);
 
-	err = 0;
+	ret = 0;
 out:
 	/* release buffers and inodes */
 	brelse(old_bh);
@@ -795,7 +795,7 @@ out:
 	iput(new_inode);
 	iput(old_dir);
 	iput(new_dir);
-	return err;
+	return ret;
 }
 
 /*
@@ -806,7 +806,7 @@ int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
-	int err;
+	int ret;
 
 	/* check directory */
 	if (!dir)
@@ -833,12 +833,12 @@ int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	err = ext2_add_entry(dir, name, name_len, inode);
-	if (err) {
+	ret = ext2_add_entry(dir, name, name_len, inode);
+	if (ret) {
 		inode->i_nlinks--;
 		iput(inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* release inode (to write it on disk) */

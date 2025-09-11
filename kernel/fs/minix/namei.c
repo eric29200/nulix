@@ -237,7 +237,7 @@ int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 	struct buffer_head *bh;
 	struct inode *inode;
 	ino_t ino;
-	int err;
+	int ret;
 
 	/* check directory */
 	*res_inode = NULL;
@@ -268,12 +268,12 @@ int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	err = minix_add_entry(dir, name, name_len, inode);
-	if (err) {
+	ret = minix_add_entry(dir, name, name_len, inode);
+	if (ret) {
 		inode->i_nlinks--;
 		iput(inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* release inode (to write it on disk) */
@@ -300,7 +300,7 @@ int minix_link(struct inode *old_inode, struct inode *dir, const char *name, siz
 {
 	struct minix3_dir_entry *de;
 	struct buffer_head *bh;
-	int err;
+	int ret;
 
 	/* check if new file exists */
 	bh = minix_find_entry(dir, name, name_len, &de);
@@ -312,11 +312,11 @@ int minix_link(struct inode *old_inode, struct inode *dir, const char *name, siz
 	}
 
 	/* add entry */
-	err = minix_add_entry(dir, name, name_len, old_inode);
-	if (err) {
+	ret = minix_add_entry(dir, name, name_len, old_inode);
+	if (ret) {
 		iput(old_inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* update old inode */
@@ -399,7 +399,7 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	struct buffer_head *bh;
 	struct inode *inode;
 	size_t i;
-	int err;
+	int ret;
 
 	/* create a new inode */
 	inode = minix_new_inode(dir->i_sb);
@@ -446,11 +446,11 @@ int minix_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	}
 
 	/* add entry */
-	err = minix_add_entry(dir, name, name_len, inode);
-	if (err) {
+	ret = minix_add_entry(dir, name, name_len, inode);
+	if (ret) {
 		iput(inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* release inode */
@@ -469,7 +469,7 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	struct minix_sb_info *sbi;
 	struct buffer_head *bh;
 	struct inode *inode;
-	int err;
+	int ret;
 
 	/* check if file exists */
 	bh = minix_find_entry(dir, name, name_len, &de);
@@ -520,12 +520,12 @@ int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	brelse(bh);
 
 	/* add entry to parent dir */
-	err = minix_add_entry(dir, name, name_len, inode);
-	if (err) {
+	ret = minix_add_entry(dir, name, name_len, inode);
+	if (ret) {
 		inode->i_nlinks = 0;
 		iput(inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* update directory links and mark it dirty */
@@ -618,12 +618,12 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 	struct minix3_dir_entry *old_de, *new_de;
 	struct minix_sb_info *sbi;
 	ino_t old_ino, new_ino;
-	int err;
+	int ret;
 
 	/* find old entry */
 	old_bh = minix_find_entry(old_dir, old_name, old_name_len, &old_de);
 	if (!old_bh) {
-		err = -ENOENT;
+		ret = -ENOENT;
 		goto out;
 	}
 
@@ -634,7 +634,7 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 	/* get old inode */
 	old_inode = iget(old_dir->i_sb, old_ino);
 	if (!old_inode) {
-		err = -ENOSPC;
+		ret = -ENOSPC;
 		goto out;
 	}
 
@@ -648,13 +648,13 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 		/* get new inode */
 		new_inode = iget(new_dir->i_sb, new_ino);
 		if (!new_inode) {
-			err = -ENOSPC;
+			ret = -ENOSPC;
 			goto out;
 		}
 
 		/* same inode : exit */
 		if (old_inode->i_ino == new_inode->i_ino) {
-			err = 0;
+			ret = 0;
 			goto out;
 		}
 
@@ -668,8 +668,8 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
-		err = minix_add_entry(new_dir, new_name, new_name_len, old_inode);
-		if (err)
+		ret = minix_add_entry(new_dir, new_name, new_name_len, old_inode);
+		if (ret)
 			goto out;
 	}
 
@@ -685,7 +685,7 @@ int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
 	mark_inode_dirty(new_dir);
 
-	err = 0;
+	ret = 0;
 out:
 	/* release buffers and inodes */
 	brelse(old_bh);
@@ -694,8 +694,7 @@ out:
 	iput(new_inode);
 	iput(old_dir);
 	iput(new_dir);
-
-	return err;
+	return ret;
 }
 
 /*
@@ -706,7 +705,7 @@ int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	struct minix3_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
-	int err;
+	int ret;
 
 	/* check directory */
 	if (!dir)
@@ -736,12 +735,12 @@ int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	err = minix_add_entry(dir, name, name_len, inode);
-	if (err) {
+	ret = minix_add_entry(dir, name, name_len, inode);
+	if (ret) {
 		inode->i_nlinks--;
 		iput(inode);
 		iput(dir);
-		return err;
+		return ret;
 	}
 
 	/* release inode (to write it on disk) */
