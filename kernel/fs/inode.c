@@ -105,7 +105,7 @@ void clear_inode(struct inode *inode)
 /*
  * Grow inodes.
  */
-static int grow_inodes()
+static struct inode *grow_inodes()
 {
 	struct inode *inodes;
 	int i, n;
@@ -113,7 +113,7 @@ static int grow_inodes()
 	/* get some memory */
 	inodes = (struct inode *) get_free_page();
 	if (!inodes)
-		return -ENOMEM;
+		return NULL;
 	memset(inodes, 0, PAGE_SIZE);
 
 	/* update number of inodes */
@@ -124,7 +124,7 @@ static int grow_inodes()
 	for (i = 0; i < n; i++)
 		list_add(&inodes[i].i_list, &free_inodes);
 
-	return 0;
+	return &inodes[0];
 }
 
 /*
@@ -135,14 +135,17 @@ struct inode *get_empty_inode(struct super_block *sb)
 	struct list_head *pos;
 	struct inode *inode;
 
-	/* grow inodes if needed */
-	if (list_empty(&free_inodes) && nr_inodes < NR_INODE)
-		grow_inodes();
-
 	/* try to get a free inode */
 	if (!list_empty(&free_inodes)) {
 		inode = list_first_entry(&free_inodes, struct inode, i_list);
 		goto found;
+	}
+
+	/* grow inodes if needed */
+	if (nr_inodes < NR_INODE) {
+		inode = grow_inodes();
+		if (inode)
+			goto found;
 	}
 
 	/* if no free inodes, try to grab a used one */
