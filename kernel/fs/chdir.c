@@ -45,11 +45,11 @@ out:
  */
 int sys_fchdir(int fd)
 {
-	struct dentry *dentry;
+	struct dentry *dentry, *tmp;
 	struct inode *inode;
 	struct file *filp;
 	int ret;
-
+	
 	/* gt file */
 	filp = fget(fd);
 	if (!filp)
@@ -76,16 +76,10 @@ int sys_fchdir(int fd)
 	if (ret)
 		goto out;
 
-	/* allocate a new dentry */
-	dentry = d_alloc_root(inode);
-	ret = -ENOMEM;
-	if (!dentry)
-		goto out;
-
 	/* change directory */
-	dput(current_task->fs->pwd);
-	current_task->fs->pwd = dentry;
-	ret = 0;
+	tmp = current_task->fs->pwd;
+	current_task->fs->pwd = dget(dentry);
+	dput(tmp);
 out:
 	fput(filp);
 	return ret;
