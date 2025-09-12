@@ -3,6 +3,6 @@
 
 #define SWAP_CLUSTER_MAX		32
 
-int swap_out(int count);
+int swap_out();
 
 #endif

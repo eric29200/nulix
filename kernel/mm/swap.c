@@ -43,13 +43,14 @@ drop_pte:
 /*
  * Try to swap out a page table.
  */
-static int swap_out_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, uint32_t end, int count)
+static int swap_out_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, uint32_t end)
 {
 	uint32_t pmd_end;
 	pte_t *pte;
+	int ret;
 
 	if (pmd_none(*pmd))
-		return count;
+		return 0;
 
 	pte = pte_offset(pmd, address);
 
@@ -60,24 +61,25 @@ static int swap_out_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, uint3
 	do {
 		vma->vm_mm->swap_address = address + PAGE_SIZE;
 
-		count -= try_to_swap_out(vma, address, pte);
-		if (!count)
-			break;
+		ret -= try_to_swap_out(vma, address, pte);
+		if (ret)
+			return ret;
 
 		address += PAGE_SIZE;
 		pte++;
 	} while (address < end);
 
-	return count;
+	return 0;
 }
 
 /*
  * Try to swap out a page directory.
  */
-static int swap_out_pgd(struct vm_area *vma, pgd_t *pgd, uint32_t address, uint32_t end, int count)
+static int swap_out_pgd(struct vm_area *vma, pgd_t *pgd, uint32_t address, uint32_t end)
 {
 	uint32_t pgd_end;
 	pmd_t *pmd;
+	int ret;
 
 	pmd = pmd_offset(pgd);
 
@@ -86,50 +88,52 @@ static int swap_out_pgd(struct vm_area *vma, pgd_t *pgd, uint32_t address, uint3
 		end = pgd_end;
 
 	do {
-		count = swap_out_pmd(vma, pmd, address, end, count);
-		if (!count)
-			break;
+		ret = swap_out_pmd(vma, pmd, address, end);
+		if (ret)
+			return ret;
 
 		address = (address + PMD_SIZE) & PMD_MASK;
 		pmd++;
 	} while (address < end);
 
-	return count;
+	return 0;
 }
 
 /*
  * Try to swap out a memory region.
  */
-static int swap_out_vma(struct vm_area *vma, uint32_t address, int count)
+static int swap_out_vma(struct vm_area *vma, uint32_t address)
 {
 	uint32_t end;
 	pgd_t *pgd;
+	int ret;
 
 	/* don't try to swap out locked regions */
 	if (vma->vm_flags & VM_LOCKED)
-		return count;
+		return 0;
 
 	pgd = pgd_offset(vma->vm_mm->pgd, address);
 
 	for (end = vma->vm_end; address < end;) {
-		count = swap_out_pgd(vma, pgd, address, end, count);
-		if (!count)
-			break;
+		ret = swap_out_pgd(vma, pgd, address, end);
+		if (ret)
+			return ret;
 
 		address = (address + PGDIR_SIZE) & PGDIR_MASK;
 		pgd++;
 	}
 
-	return count;
+	return 0;
 }
 
 /*
  * Try to swap out a process.
  */
-static int swap_out_process(struct task *task, int count)
+static int swap_out_process(struct task *task)
 {
 	struct vm_area *vma;
 	uint32_t address;
+	int ret;
 
 	/* start at swap address */
 	address = task->mm->swap_address;
@@ -147,9 +151,9 @@ static int swap_out_process(struct task *task, int count)
 
 	for (;;) {
 		/* try to swap out memory region */
-		count = swap_out_vma(vma, address, count);
-		if (!count)
-			return count;
+		ret = swap_out_vma(vma, address);
+		if (ret)
+			return ret;
 
 		/* try next memory region */
 		vma = list_next_entry_or_null(vma, &task->mm->vm_list, list);
@@ -161,25 +165,26 @@ static int swap_out_process(struct task *task, int count)
 
 out:
 	task->mm->swap_address = 0;
-	return count;
+	return 0;
 }
 
 /*
  * Try to swap out some process.
  */
-int swap_out(int count)
+int swap_out()
 {
 	struct list_head *pos;
 	struct task *task;
+	int ret;
 
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);
 
 		/* try to swap out process */
-		count = swap_out_process(task, count);
-		if (!count)
-			break;
+		ret = swap_out_process(task);
+		if (ret)
+			return ret;
 	}
 
-	return count;
+	return 0;
 }

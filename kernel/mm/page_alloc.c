@@ -292,12 +292,16 @@ static void reclaim_pages()
 	prune_dcache(0, -1);
 
 	/* try to free pages */
-	count = shrink_mmap(count);
+	while (shrink_mmap())
+		if (!--count)
+			goto done;
 
 	/* try to swap out */
-	if (count)
-		count = swap_out(count);
+	while(swap_out())
+		if (!--count)
+			goto done;
 
+done:
 	/* merge free pages */
 	if (count != SWAP_CLUSTER_MAX)
 		merge_free_pages();
