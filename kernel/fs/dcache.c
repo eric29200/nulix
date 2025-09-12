@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stderr.h>
 
-#define D_HASHBITS     10
-#define D_HASHSIZE     (1UL << D_HASHBITS)
-#define D_HASHMASK     (D_HASHSIZE-1)
+#define D_HASHBITS     		10
+#define D_HASHSIZE     		(1UL << D_HASHBITS)
+#define D_HASHMASK     		(D_HASHSIZE - 1)
 
-#define switch(x, y) 		do {					\
+#define do_switch(x, y) 	do {					\
 					__typeof__ (x) __tmp = x;	\
 					x = y;				\
 					y = __tmp;			\
@@ -252,31 +252,51 @@ void d_delete(struct dentry *dentry)
 }
 
 /*
+ * Switch names.
+ */
+static void switch_names(struct dentry *dentry, struct dentry *target)
+{
+	char *old_name, *new_name;
+
+	memcpy(dentry->d_iname, target->d_iname, DNAME_INLINE_LEN); 
+
+	/* get old name */
+	old_name = target->d_name.name;
+	if (old_name == target->d_iname)
+		old_name = dentry->d_iname;
+
+	/* get new name */
+	new_name = dentry->d_name.name;
+	if (new_name == dentry->d_iname)
+		new_name = target->d_iname;
+
+	/* switch names */
+	target->d_name.name = new_name;
+	dentry->d_name.name = old_name;
+}
+
+/*
  * Move a dentry.
  */
 void d_move(struct dentry *dentry, struct dentry *target)
 {
-	struct list_head *old_head;
-
 	/* check inode */
 	if (!dentry->d_inode)
 		panic("d_move: moving negative dcache entry");
 
-	/* switch the hashes.. */
-	old_head = dentry->d_hash.prev;
+	/* move the dentry to the target hash queue */
 	list_del(&dentry->d_hash);
 	list_add(&dentry->d_hash, &target->d_hash);
+
+	/* unhash the target: dput() will then get rid of it */
 	list_del(&target->d_hash);
-	list_add(&target->d_hash, old_head);
+	INIT_LIST_HEAD(&target->d_hash);
 
-	/* switch names */
-	switch(dentry->d_parent, target->d_parent);
-	switch(dentry->d_name.name, target->d_name.name);
-	switch(dentry->d_name.len, target->d_name.len);
-	switch(dentry->d_name.hash, target->d_name.hash);
-
-	/* delete target */
-	d_delete(target);
+	/* switch the parents and the names */
+	switch_names(dentry, target);
+	do_switch(dentry->d_parent, target->d_parent);
+	do_switch(dentry->d_name.len, target->d_name.len);
+	do_switch(dentry->d_name.hash, target->d_name.hash);
 }
 
 /*
