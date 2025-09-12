@@ -199,7 +199,9 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vma_child->vm_flags = vma_parent->vm_flags;
 			vma_child->vm_page_prot = vma_parent->vm_page_prot;
 			vma_child->vm_offset = vma_parent->vm_offset;
-			vma_child->vm_inode = vma_parent->vm_inode;
+			vma_child->vm_file = vma_parent->vm_file;
+			if (vma_child->vm_file)
+				vma_child->vm_file->f_count++;
 			vma_child->vm_ops = vma_parent->vm_ops;
 			vma_child->vm_mm = mm_new;
 			list_add_tail(&vma_child->list, &mm_new->vm_list);

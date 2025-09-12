@@ -246,7 +246,7 @@ struct file_operations {
 	int (*getdents64)(struct file *, void *, size_t);
 	int (*poll)(struct file *, struct select_table *);
 	int (*ioctl)(struct file *, int, unsigned long);
-	int (*mmap)(struct inode *, struct vm_area *);
+	int (*mmap)(struct file *, struct vm_area *);
 };
 
 /* files table */
@@ -342,7 +342,7 @@ struct inode_operations *char_get_driver(struct inode *inode);
 struct inode_operations *block_get_driver(struct inode *inode);
 
 /* filemap operations */
-int generic_file_mmap(struct inode *inode, struct vm_area *vma);
+int generic_file_mmap(struct file *filp, struct vm_area *vma);
 
 /* generic operations */
 int do_mount_root(dev_t dev, const char *dev_name);

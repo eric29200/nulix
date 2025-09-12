@@ -37,7 +37,7 @@ static struct page *grab_cache_page(struct inode *inode, off_t offset)
  */
 static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 {
-	struct inode *inode = vma->vm_inode;
+	struct inode *inode = vma->vm_file->f_dentry->d_inode;
 	struct page *page;
 	uint32_t offset;
 
@@ -82,7 +82,7 @@ err_kmap:
  */
 static int filemap_writepage(struct vm_area *vma, struct page *page)
 {
-	struct inode *inode = vma->vm_inode;
+	struct inode *inode = vma->vm_file->f_dentry->d_inode;
 	int ret;
 
 	/* map page in kernel address space */
@@ -243,8 +243,9 @@ static struct vm_operations file_private_mmap = {
 /*
  * Generic mmap file.
  */
-int generic_file_mmap(struct inode *inode, struct vm_area *vma)
+int generic_file_mmap(struct file *filp, struct vm_area *vma)
 {
+	struct inode *inode = filp->f_dentry->d_inode;
 	struct vm_operations *ops;
 
 	/* choose operations */
@@ -276,7 +277,6 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 	mark_inode_dirty(inode);
 
 	/* set memory region */
-	vma->vm_inode = inode;
 	vma->vm_ops = ops;
 
 	return 0;

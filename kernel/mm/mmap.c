@@ -104,9 +104,9 @@ void *move_vma(struct vm_area *vma, uint32_t old_address, size_t old_size, uint3
 	*vma_new = *vma;
 	vma_new->vm_start = new_address;
 	vma_new->vm_end = new_address + new_size;
-	if (vma_new->vm_inode)
-		vma_new->vm_inode->i_count++;
-	if (vma_new->vm_inode && vma_new->vm_ops && vma_new->vm_ops->open)
+	if (vma_new->vm_file)
+		vma_new->vm_file->f_count++;
+	if (vma_new->vm_file && vma_new->vm_ops && vma_new->vm_ops->open)
 		vma_new->vm_ops->open(vma_new);
 
 	/* unmap existing pages */
@@ -146,7 +146,7 @@ static struct vm_area *generic_mmap(uint32_t addr, size_t len, int prot, int fla
 	vma->vm_flags |= flags & (VM_GROWSDOWN | VM_DENYWRITE | VM_EXECUTABLE);
 	vma->vm_page_prot = protection_map[vma->vm_flags & 0x0F];
 	vma->vm_offset = offset;
-	vma->vm_inode = NULL;
+	vma->vm_file = NULL;
 	vma->vm_ops = NULL;
 	vma->vm_mm = current_task->mm;
 
@@ -164,9 +164,13 @@ static struct vm_area *generic_mmap(uint32_t addr, size_t len, int prot, int fla
 			goto err;
 
 		/* mmap file */
-		ret = filp->f_op->mmap(filp->f_dentry->d_inode, vma);
+		ret = filp->f_op->mmap(filp, vma);
 		if (ret)
 			goto err;
+
+		/* update file reference count */
+		vma->vm_file = filp;
+		filp->f_count++;
 
 		/* add memory region to inode */
 		list_add_tail(&vma->list_share, &filp->f_dentry->d_inode->i_mmap);
@@ -277,8 +281,8 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 	if (addr == vma->vm_start && end == vma->vm_end) {
 		if (vma->vm_ops && vma->vm_ops->close)
 			vma->vm_ops->close(vma);
-		if (vma->vm_inode)
-			iput(vma->vm_inode);
+		if (vma->vm_file)
+			fput(vma->vm_file);
 
 		list_del(&vma->list);
 		kfree(vma);
@@ -304,13 +308,13 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 		vma_new->vm_flags = vma->vm_flags;
 		vma_new->vm_page_prot = vma->vm_page_prot;
 		vma_new->vm_offset = vma->vm_offset + (end - vma->vm_start);
-		vma_new->vm_inode = vma->vm_inode;
+		vma_new->vm_file = vma->vm_file;
 		vma_new->vm_ops = vma->vm_ops;
 		vma_new->vm_mm = vma->vm_mm;
 
 		/* open region */
-		if (vma_new->vm_inode)
-			vma_new->vm_inode->i_count++;
+		if (vma_new->vm_file)
+			vma_new->vm_file->f_count++;
 		if (vma_new->vm_ops && vma_new->vm_ops->open)
 			vma_new->vm_ops->open(vma_new);
 
@@ -493,8 +497,8 @@ static int mprotect_fixup_start(struct vm_area *vma, uint32_t end, uint16_t newf
 
 	/* set new memory region */
 	*vma_new = *vma;
-	if (vma_new->vm_inode)
-		vma_new->vm_inode->i_count++;
+	if (vma_new->vm_file)
+		vma_new->vm_file->f_count++;
 	vma_new->vm_flags = newflags;
 	vma_new->vm_page_prot = newprot;
 
@@ -523,8 +527,8 @@ static int mprotect_fixup_end(struct vm_area *vma, uint32_t start, uint16_t newf
 
 	/* set new memory region */
 	*vma_new = *vma;
-	if (vma_new->vm_inode)
-		vma_new->vm_inode->i_count++;
+	if (vma_new->vm_file)
+		vma_new->vm_file->f_count++;
 	vma_new->vm_flags = newflags;
 	vma_new->vm_page_prot = newprot;
 

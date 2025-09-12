@@ -129,7 +129,7 @@ static char *task_mem(struct task *task, char *buf)
 		vsize += len;
 
 		/* update data/stack size */
-		if (!vma->vm_inode) {
+		if (!vma->vm_file) {
 			if (vma->vm_flags & VM_GROWSDOWN)
 				stack += len;
 			else
