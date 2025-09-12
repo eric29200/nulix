@@ -529,13 +529,16 @@ void truncate_inode_pages(struct inode *inode, off_t start)
 /*
  * Shrink mmap = try to free a page.
  */
-int shrink_mmap()
+int shrink_mmap(int priority)
 {
 	static size_t clock = 0;
 	struct page *page;
-	size_t i;
+	size_t count, i;
 
-	for (i = 0; i < nr_pages; i++, clock++) {
+	/* compute number of pages to swan */
+	count = nr_pages / priority;
+
+	for (i = 0; i < count; i++, clock++) {
 		/* reset clock */
 		if (clock >= nr_pages)
 			clock = 0;

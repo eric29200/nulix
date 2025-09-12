@@ -276,7 +276,7 @@ static void merge_free_pages()
  */
 static void reclaim_pages()
 {
-	int count = SWAP_CLUSTER_MAX;
+	int count = SWAP_CLUSTER_MAX, priority = 5;
 	static int lock = 0;
 
 	/* don't call reclaim pages recursively */
@@ -288,18 +288,20 @@ static void reclaim_pages()
 	/* synchronize buffers */
 	sync_dev(0);
 
-	/* free all dentries */
-	prune_dcache(0, -1);
+	do {
+		/* shrink dentries */
+		shrink_dcache_memory(priority);
 
-	/* try to free pages */
-	while (shrink_mmap())
-		if (!--count)
-			goto done;
+		/* try to free pages */
+		while (shrink_mmap(priority))
+			if (!--count)
+				goto done;
 
-	/* try to swap out */
-	while(swap_out())
-		if (!--count)
-			goto done;
+		/* try to swap out */
+		while(swap_out(priority))
+			if (!--count)
+				goto done;
+	} while (--priority > 0);
 
 done:
 	/* merge free pages */

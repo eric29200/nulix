@@ -44,6 +44,7 @@ struct mm_struct {
 	struct desc_struct *		ldt;				/* Local Descriptor Table */
 	size_t				ldt_size;			/* Local Descriptor Table size */
 	uint32_t			swap_address;			/* swap address */
+	uint32_t			swap_cnt;			/* swap counter */
 	struct list_head		vm_list;			/* virtual memory areas */
 };
 

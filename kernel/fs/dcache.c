@@ -446,6 +446,21 @@ int prune_dcache(int dentries_count, int inodes_count)
 }
 
 /*
+ * Shrink dentries memory.
+ */
+void shrink_dcache_memory(int priority)
+{
+	int count = 0;
+
+	/* compute number of dentries to shrink */
+	if (priority > 1)
+		count = dentry_nr_unused / priority;
+
+	/* prune dentries */
+	prune_dcache(count, -1);
+}
+
+/*
  * Init dcache.
  */
 void init_dcache()

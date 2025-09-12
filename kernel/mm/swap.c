@@ -165,20 +165,61 @@ static int swap_out_process(struct task *task)
 
 out:
 	task->mm->swap_address = 0;
+	task->mm->swap_cnt = 0;
 	return 0;
+}
+
+/*
+ * Find best task to swap out.
+ */
+static struct task *__find_best_task_to_swap_out(int assign)
+{
+	struct task *task, *best = NULL;
+	struct list_head *pos;
+	uint32_t max_cnt = 0;
+
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+
+		if (task->mm->rss <= 0)
+			continue;
+
+		/* assign swap counter ? */
+		if (assign == 1)
+			task->mm->swap_cnt = task->mm->rss;
+
+		/* find task with max memory */
+		if (task->mm->swap_cnt > max_cnt) {
+			max_cnt = task->mm->swap_cnt;
+			best = task;
+		}
+	}
+
+	return best;
 }
 
 /*
  * Try to swap out some process.
  */
-int swap_out()
+int swap_out(int priority)
 {
-	struct list_head *pos;
 	struct task *task;
-	int ret;
+	int count, ret;
 
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
+	/* number of tasks to scan */
+	count = nr_tasks / priority;
+	if (count < 1)
+		count = 1;
+
+	for (; count >= 0; count--) {
+		/* find best task to swap out */
+		task = __find_best_task_to_swap_out(0);
+		if (!task) {
+			/* reassign swap counter */
+			task = __find_best_task_to_swap_out(1);
+			if (!task)
+				return 0;
+		}
 
 		/* try to swap out process */
 		ret = swap_out_process(task);
