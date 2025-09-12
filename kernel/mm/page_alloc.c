@@ -288,8 +288,8 @@ static void reclaim_pages()
 	/* synchronize buffers */
 	sync_dev(0);
 
-	/* try to free dentries */
-	count = prune_dcache(count);
+	/* free all dentries */
+	prune_dcache(0, -1);
 
 	/* try to free pages */
 	count = shrink_mmap(count);

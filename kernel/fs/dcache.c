@@ -410,10 +410,11 @@ static int prune_one_dentry(struct dentry *dentry)
 }
 
 /*
- * Prune dentries cache.
+ * Prune dentries cache (returns number of inodes released).
  */
-int prune_dcache(int count)
+int prune_dcache(int dentries_count, int inodes_count)
 {
+	int inodes_freed = inodes_count;
 	struct dentry *dentry;
 	struct list_head *tmp;
 
@@ -423,7 +424,7 @@ int prune_dcache(int count)
 		if (tmp == &dentry_unused)
 			break;
 
-		/* get dentry */
+		/* remove dentry from unused list */
 		list_del(tmp);
 		dentry = list_entry(tmp, struct dentry, d_lru);
 		dentry_nr_unused--;
@@ -434,13 +435,14 @@ int prune_dcache(int count)
 			continue;
 
 		/* prune dentry */
-		prune_one_dentry(dentry);
-
-		if (!--count)
+		inodes_count -= prune_one_dentry(dentry);
+		if (!inodes_count)
+			break;
+		if (!--dentries_count)
 			break;
 	}
 
-	return count;
+	return inodes_freed - inodes_count;
 }
 
 /*

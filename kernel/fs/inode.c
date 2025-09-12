@@ -139,7 +139,7 @@ static void try_to_free_inodes(int count)
 
 	/* still wanted inodes : shrink dcache */
 	if (count > 0) {
-		prune_dcache(count);
+		prune_dcache(0, count);
 		__free_inodes();
 	}
 }
