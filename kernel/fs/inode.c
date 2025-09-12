@@ -327,29 +327,6 @@ void iput(struct inode *inode)
 }
 
 /*
- * Check if a file system can be unmounted.
- */
-int fs_may_umount(struct super_block *sb)
-{
-	struct list_head *pos;
-	struct inode *inode;
-
-	list_for_each(pos, &inode_in_use) {
-		inode = list_entry(pos, struct inode, i_list);
-
-		if (inode->i_sb != sb || !inode->i_count)
-			continue;
-
-		if (inode == sb->s_root->d_inode)
-			continue;
-
-		return 0;
-	}
-
-	return 1;
-}
-
-/*
  * Init inodes.
  */
 void init_inode()

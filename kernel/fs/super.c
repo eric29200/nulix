@@ -448,19 +448,26 @@ found:
 /*
  * Unset mount.
  */
-static void d_umount(struct dentry *dentry)
+static int d_umount(struct super_block *sb)
 {
-	struct dentry *covers = dentry->d_covers;
+	struct dentry *root = sb->s_root;
+	struct dentry *covered = root->d_covers;
 
-	if (covers == dentry) {
-		printf("d_umount: unmount - covers == dentry ?\n");
-		return;
+	/* still busy */
+	if (root->d_count != 1 || root->d_inode->i_state)
+		return -EBUSY;
+
+	/* unset mount point */
+	sb->s_root = NULL;
+	if (covered != root) {
+		root->d_covers = root;
+		covered->d_mounts = covered;
+		dput(covered);
 	}
 
-	covers->d_mounts = covers;
-	dentry->d_covers = dentry;
-	dput(covers);
-	dput(dentry);
+	/* release root dentry */
+	dput(root);
+	return 0;
 }
 
 /*
@@ -471,6 +478,7 @@ static int do_umount(const char *target, int flags)
 	struct super_block *sb;
 	struct dentry *dentry;
 	struct inode *inode;
+	int ret;
 
 	/* unused flags */
 	UNUSED(flags);
@@ -491,18 +499,16 @@ static int do_umount(const char *target, int flags)
 	/* release inode */
 	dput(dentry);
 
-	/* check if file system is busy */
-	if (!fs_may_umount(sb))
-		return -EBUSY;
+	/* shrink dentries cache */
+	shrink_dcache_sb(sb);
 
-	/* sync buffers */
+	/* sync device on disk */
 	sync_dev(sb->s_dev);
 
 	/* unset mount */
-	if (sb->s_root) {
-		d_umount(sb->s_root);
-		d_delete(sb->s_root);
-	}
+	ret = d_umount(sb);
+	if (ret)
+		return ret;
 
 	/* remove mounted file system */
 	del_vfs_mount(sb);

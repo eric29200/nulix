@@ -160,6 +160,7 @@ struct dentry {
 	struct list_head		d_hash;
 	struct list_head		d_alias;
 	struct list_head		d_lru;
+	struct super_block *		d_sb;
 	struct qstr			d_name;
 	char				d_iname[DNAME_INLINE_LEN];
 };
@@ -258,7 +259,6 @@ int register_filesystem(struct file_system *fs);
 struct file_system *get_filesystem(const char *name);
 int get_filesystem_list(char *buf, int count);
 int get_vfs_mount_list(char *buf, int count);
-int fs_may_umount(struct super_block *sb);
 
 /* buffer operations */
 #define buffer_uptodate(bh)			test_bit(&(bh)->b_state, BH_Uptodate)
@@ -319,6 +319,7 @@ void d_delete(struct dentry *dentry);
 void d_move(struct dentry *dentry, struct dentry *target);
 struct dentry *d_lookup(struct dentry *parent, struct qstr *name);
 void shrink_dcache_memory(int priority);
+void shrink_dcache_sb(struct super_block *sb);
 int prune_dcache(int dentries_count, int inodes_count);
 void init_dcache();
 

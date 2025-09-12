@@ -161,6 +161,7 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	dentry->d_count = 1;
 	dentry->d_inode = NULL;
 	dentry->d_parent = NULL;
+	dentry->d_sb = NULL;
 	dentry->d_mounts = dentry;
 	dentry->d_covers = dentry;
 	dentry->d_name.name = str;
@@ -171,8 +172,10 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	INIT_LIST_HEAD(&dentry->d_lru);
 
 	/* set parent */
-	if (parent)
+	if (parent) {
 		dentry->d_parent = dget(parent);
+		dentry->d_sb = parent->d_sb;
+	}
 
 	return dentry;
 }
@@ -190,6 +193,7 @@ struct dentry *d_alloc_root(struct inode *root_inode)
 		return NULL;
 
 	/* set dentry */
+	dentry->d_sb = root_inode->i_sb;
 	dentry->d_parent = dentry;
 
 	/* instantiate dentry */
@@ -463,6 +467,27 @@ int prune_dcache(int dentries_count, int inodes_count)
 	}
 
 	return inodes_freed - inodes_count;
+}
+
+/*
+ * Shrink dentries for a super block.
+ */
+void shrink_dcache_sb(struct super_block * sb)
+{
+	struct list_head *pos, *n;
+	struct dentry *dentry;
+
+	list_for_each_safe(pos, n, &dentry_unused) {
+		dentry = list_entry(pos, struct dentry, d_lru);
+
+		if (dentry->d_sb != sb || dentry->d_count)
+			continue;
+
+		/* prune dentry */
+		list_del(&dentry->d_lru);
+		prune_one_dentry(dentry);
+		dentry_nr_unused--;
+	}
 }
 
 /*
