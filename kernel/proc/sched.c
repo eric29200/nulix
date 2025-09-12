@@ -19,6 +19,7 @@ struct task *current_task = NULL;			/* current task */
 static pid_t next_pid = 0;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
 int need_resched = 0;					/* reschedule needed ? */
+int nr_tasks = 0;
 
 struct kernel_stat kstat;				/* kernel statistics */
 
@@ -138,7 +139,7 @@ void do_timer_interrupt()
 	update_timers();
 
 	/* sync buffers on disk */
-	bsync();
+	sync_dev(0);
 
 	/* schedule */
 	if (need_resched)

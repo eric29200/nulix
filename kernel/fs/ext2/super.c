@@ -101,7 +101,7 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 	/* set super block */
 	sbi->s_es = (struct ext2_super_block *) sbi->s_sbh->b_data;
 	sb->s_magic = sbi->s_es->s_magic;
-	sb->s_root_inode = NULL;
+	sb->s_root = NULL;
 	sb->s_op = &ext2_sops;
 
 	/* check magic number */
@@ -195,8 +195,8 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 	}
 
 	/* get root inode */
-	sb->s_root_inode = iget(sb, EXT2_ROOT_INO);
-	if (!sb->s_root_inode)
+	sb->s_root = d_alloc_root(iget(sb, EXT2_ROOT_INO));
+	if (!sb->s_root)
 		goto err_root_inode;
 
 	return 0;

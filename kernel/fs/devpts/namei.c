@@ -6,10 +6,10 @@
 /*
  * Directory lookup.
  */
-int devpts_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+int devpts_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct devpts_entry *de_dir, *de;
-	int ret;
+	struct inode *inode = NULL;
 
 	/* check directory */
 	if (!dir)
@@ -17,24 +17,20 @@ int devpts_lookup(struct inode *dir, const char *name, size_t name_len, struct i
 
 	/* devpts entry must be a directory */
 	de_dir = dir->u.generic_i;
-	ret = -ENOTDIR;
 	if (!S_ISDIR(de_dir->mode))
-		goto out;
+		return -ENOENT;
 
 	/* find entry */
-	ret = -ENOENT;
-	de = devpts_find(de_dir, name, name_len);
+	de = devpts_find(de_dir, dentry->d_name.name, dentry->d_name.len);
 	if (!de)
 		goto out;
 
 	/* get inode */
-	*res_inode = devpts_iget(dir->i_sb, de);
-	if (!*res_inode)
-		ret = -EACCES;
-	else
-		ret = 0;
+	inode = devpts_iget(dir->i_sb, de);
+	if (!inode)
+		return -EACCES;
 
 out:
-	iput(dir);
-	return ret;
+	d_add(dentry, inode);
+	return 0;
 }

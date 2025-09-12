@@ -190,46 +190,26 @@ static void del_vfs_mount(struct super_block *sb)
 }
 
 /*
- * Get mount point inode.
- */
-static int get_mount_point(const char *mount_point, struct inode **res_inode)
-{
-	int ret;
-
-	/* get mount point */
-	ret = namei(AT_FDCWD, NULL, mount_point, 1, res_inode);
-	if (ret)
-		return ret;
-
-	/* mount point busy */
-	if ((*res_inode)->i_count != 1 || (*res_inode)->i_mount) {
-		iput(*res_inode);
-		return -EBUSY;
-	}
-
-	/* mount point must be a directory */
-	if (!S_ISDIR((*res_inode)->i_mode)) {
-		iput(*res_inode);
-		return -EPERM;
-	}
-
-	return 0;
-}
-
-/*
  * Check if a file system can be remounted read only.
  */
 static int fs_may_remount_ro(struct super_block *sb)
 {
+	struct inode *inode;
 	struct file *filp;
 	size_t i;
 
 	for (i = 0; i < NR_FILE; i++) {
 		filp = &filp_table[i];
 
-		if (!filp->f_count || !filp->f_inode || filp->f_inode->i_sb != sb)
+		if (!filp->f_count)
 			continue;
-		if (S_ISREG(filp->f_inode->i_mode) && (filp->f_mode & MAY_WRITE))
+		if (!filp->f_dentry || !filp->f_dentry->d_inode)
+			continue;
+
+		inode = filp->f_dentry->d_inode;
+		if (!inode || inode->i_sb != sb)
+			continue;
+		if (S_ISREG(inode->i_mode) && (filp->f_mode & MAY_WRITE))
 			return 0;
 	}
 
@@ -269,23 +249,41 @@ static int do_remount_sb(struct super_block *sb, uint32_t flags)
 static int do_remount(const char *dir_name, uint32_t flags)
 {
 	struct inode *dir_inode;
+	struct dentry *dentry;
 	int ret;
 
-	/* get directory */
-	ret = namei(AT_FDCWD, NULL, dir_name, 1, &dir_inode);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = namei(AT_FDCWD, dir_name, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
+	/* get inode */
+	dir_inode = dentry->d_inode;
 
 	/* check mount point */
-	if (dir_inode != dir_inode->i_sb->s_root_inode) {
-		iput(dir_inode);
-		return -EINVAL;
-	}
+	ret = -EINVAL;
+	if (dir_inode != dir_inode->i_sb->s_root->d_inode)
+		goto out;
 
 	/* remount */
 	ret = do_remount_sb(dir_inode->i_sb, flags);
-	iput(dir_inode);
-	return 0;
+out:
+	dput(dentry);
+	return ret;
+}
+
+/*
+ * Set mount.
+ */
+static void d_mount(struct dentry *covers, struct dentry *dentry)
+{
+	if (covers->d_mounts != covers) {
+		printf("d_mount: mount - already mounted\n");
+		return;
+	}
+
+	covers->d_mounts = dentry;
+	dentry->d_covers = covers;
 }
 
 /*
@@ -293,7 +291,7 @@ static int do_remount(const char *dir_name, uint32_t flags)
  */
 static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, uint32_t flags)
 {
-	struct inode *mount_point_dir = NULL;
+	struct dentry *mount_point_dentry = NULL;
 	struct super_block *sb;
 	int ret;
 
@@ -302,32 +300,50 @@ static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, con
 	if (!sb)
 		return -ENOMEM;
 
-	/* get mount point */
-	ret = get_mount_point(mount_point, &mount_point_dir);
-	if (ret)
+	/* resolove mount point */
+	mount_point_dentry = lookup_dentry(AT_FDCWD, NULL, mount_point, 1);
+	ret = PTR_ERR(mount_point_dentry);
+	if (IS_ERR(mount_point_dentry))
+		goto err;
+
+	/* no such entry */
+	ret = -ENOENT;
+	if (!mount_point_dentry->d_inode)
+		goto err;
+
+	/* mount point busy */
+	ret = -EBUSY;
+	if (mount_point_dentry->d_covers != mount_point_dentry)
+		goto err;
+
+	/* not a directory */
+	ret = -ENOTDIR;
+	if (!S_ISDIR(mount_point_dentry->d_inode->i_mode))
 		goto err;
 
 	/* read super block */
 	sb->s_type = fs;
 	sb->s_dev = dev;
-	sb->s_covered = mount_point_dir;
 	ret = fs->read_super(sb, data, 0);
 	if (ret)
 		goto err;
 
-	/* set mount point */
-	mount_point_dir->i_mount = sb->s_root_inode;
+	/* check mount */
+	ret = -EBUSY;
+	if (sb->s_root->d_covers != sb->s_root)
+		goto err;
 
 	/* add mounted file system */
 	ret = add_vfs_mount(dev, dev_name, mount_point, flags, sb);
 	if (ret)
 		goto err;
 
+	/* set mount */
+	d_mount(mount_point_dentry, sb->s_root);
+
 	return 0;
 err:
-	if (mount_point_dir)
-		iput(mount_point_dir);
-
+	dput(mount_point_dentry);
 	kfree(sb);
 	return ret;
 }
@@ -338,9 +354,9 @@ err:
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data)
 {
 	struct file_system *fs;
+	struct dentry *dentry;
 	struct inode *inode;
 	dev_t dev = 0;
-	int ret;
 
 	/* only root can mount */
 	if (!suser())
@@ -358,19 +374,22 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 	/* if filesystem requires dev, find it */
 	if (fs->requires_dev) {
 		/* find device's inode */
-		ret = namei(AT_FDCWD, NULL, dev_name, 1, &inode);
-		if (ret)
-			return ret;
+		dentry = namei(AT_FDCWD, dev_name, 1);
+		if (IS_ERR(dentry))
+			return PTR_ERR(dentry);
+
+		/* get inode */
+		inode = dentry->d_inode;
 
 		/* must be a block device */
 		if (!S_ISBLK(inode->i_mode)) {
-			iput(inode);
+			dput(dentry);
 			return -ENOTBLK;
 		}
 
 		/* get device */
 		dev = inode->i_rdev;
-		iput(inode);
+		dput(dentry);
 	}
 
 	return do_mount(fs, dev, dev_name, dir_name, data, flags);
@@ -412,11 +431,9 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	kfree(sb);
 	return -EINVAL;
 found:
-	/* set mount point */
-	sb->s_root_inode->i_count = 3;
-	sb->s_covered = NULL;
-	current_task->fs->cwd = sb->s_root_inode;
-	current_task->fs->root = sb->s_root_inode;
+	/* set current task */
+	current_task->fs->pwd = dget(sb->s_root);
+	current_task->fs->root = dget(sb->s_root);
 
 	/* add mounted file system */
 	ret = add_vfs_mount(dev, dev_name, "/", 0, sb);
@@ -425,7 +442,25 @@ found:
 		return ret;
 	}
 
-	return 0;
+	return ret;
+}
+
+/*
+ * Unset mount.
+ */
+static void d_umount(struct dentry *dentry)
+{
+	struct dentry *covers = dentry->d_covers;
+
+	if (covers == dentry) {
+		printf("d_umount: unmount - covers == dentry ?\n");
+		return;
+	}
+
+	covers->d_mounts = covers;
+	dentry->d_covers = dentry;
+	dput(covers);
+	dput(dentry);
 }
 
 /*
@@ -434,42 +469,40 @@ found:
 static int do_umount(const char *target, int flags)
 {
 	struct super_block *sb;
+	struct dentry *dentry;
 	struct inode *inode;
-	int ret;
 
 	/* unused flags */
 	UNUSED(flags);
 
-	/* get target inode */
-	ret = namei(AT_FDCWD, NULL, target, 1, &inode);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = namei(AT_FDCWD, target, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* target inode must be a root inode */
+	inode = dentry->d_inode;
 	sb = inode->i_sb;
-	if (!sb || inode != sb->s_root_inode || !sb->s_covered || !sb->s_covered->i_mount) {
-		iput(inode);
+	if (!sb || inode != sb->s_root->d_inode) {
+		dput(dentry);
 		return -EINVAL;
 	}
 
 	/* release inode */
-	iput(inode);
+	dput(dentry);
 
 	/* check if file system is busy */
-	if (!fs_may_umount(sb)) {
-		iput(inode);
+	if (!fs_may_umount(sb))
 		return -EBUSY;
-	}
 
 	/* sync buffers */
-	bsync_dev(sb->s_dev);
+	sync_dev(sb->s_dev);
 
-	/* unmount file system */
-	sb->s_covered->i_mount = NULL;
-	iput(sb->s_covered);
-	sb->s_covered = NULL;
-	iput(sb->s_root_inode);
-	sb->s_root_inode = NULL;
+	/* unset mount */
+	if (sb->s_root) {
+		d_umount(sb->s_root);
+		d_delete(sb->s_root);
+	}
 
 	/* remove mounted file system */
 	del_vfs_mount(sb);

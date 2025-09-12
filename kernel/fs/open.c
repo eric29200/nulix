@@ -50,12 +50,8 @@ static void __fput(struct file *filp)
 	if (filp->f_op && filp->f_op->close)
 		filp->f_op->close(filp);
 
-	/* release inode */
-	iput(filp->f_inode);
-
-	/* free path */
-	if (filp->f_path)
-		kfree(filp->f_path);
+	/* release dentry */
+	dput(filp->f_dentry);
 
 	/* clear inode */
 	memset(filp, 0, sizeof(struct file));
@@ -95,6 +91,7 @@ struct file *get_empty_filp()
  */
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
 	int flag, fd, ret;
@@ -117,48 +114,44 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 		flag |= 2;
 
 	/* open file */
-	ret = open_namei(dirfd, NULL, pathname, flag, mode, &inode);
-	if (ret != 0)
-		goto err;
+	dentry = open_namei(dirfd, pathname, flag, mode);
+	ret = PTR_ERR(dentry);
+	if (IS_ERR(dentry))
+		goto err_cleanup_file;
+
+	/* get inode */
+	inode = dentry->d_inode;
 
 	/* check inode operations */
-	if (!inode->i_op) {
-		ret = -EINVAL;
-		goto err;
-	}
+	ret = -EINVAL;
+	if (!inode->i_op)
+		goto err_cleanup_dentry;
 
 	/* check permissions */
 	if (filp->f_mode & FMODE_WRITE) {
 		ret = permission(inode, MAY_WRITE);
 		if (ret)
-			goto err;
+			goto err_cleanup_dentry;
 	}
 
 	/* set file */
 	FD_CLR(fd, &current_task->files->close_on_exec);
-	filp->f_inode = inode;
+	filp->f_dentry = dentry;
 	filp->f_pos = 0;
 	filp->f_op = inode->i_op->fops;
-
-	/* set path */
-	filp->f_path = strdup(pathname);
-	if (!filp->f_path) {
-		ret = -ENOMEM;
-		goto err;
-	}
 
 	/* specific open function */
 	if (filp->f_op && filp->f_op->open) {
 		ret = filp->f_op->open(filp);
 		if (ret)
-			goto err;
+			goto err_cleanup_dentry;
 	}
 
 	current_task->files->filp[fd] = filp;
 	return fd;
-err:
-	if (filp->f_path)
-		kfree(filp->f_path);
+err_cleanup_dentry:
+	dput(dentry);
+err_cleanup_file:
 	memset(filp, 0, sizeof(struct file));
 	return ret;
 }
@@ -224,13 +217,16 @@ int sys_close(int fd)
  */
 static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 {
+	struct dentry *dentry;
 	struct inode *inode;
-	int ret;
+
+	/* resolve path */
+	dentry = namei(dirfd, pathname, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* adjust mode */
 	if (mode == (mode_t) - 1)
@@ -239,8 +235,8 @@ static int do_chmod(int dirfd, const char *pathname, mode_t mode)
 	/* change mode */
 	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
 	mark_inode_dirty(inode);
-	iput(inode);
 
+	dput(dentry);
 	return 0;
 }
 
@@ -257,16 +253,26 @@ int sys_chmod(const char *pathname, mode_t mode)
  */
 static int do_fchmod(int fd, mode_t mode)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		return -EINVAL;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
 	/* get inode */
-	inode = filp->f_inode;
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
 
 	/* adjust mode */
 	if (mode == (mode_t) - 1)
@@ -275,11 +281,10 @@ static int do_fchmod(int fd, mode_t mode)
 	/* change mode */
 	inode->i_mode = (mode & S_IALLUGO) | (inode->i_mode & ~S_IALLUGO);
 	mark_inode_dirty(inode);
-
-	/* release file */
+	ret = 0;
+out:
 	fput(filp);
-
-	return 0;
+	return ret;
 }
 
 /*
@@ -304,20 +309,23 @@ int sys_fchmodat(int dirfd, const char *pathname, mode_t mode, unsigned int flag
  */
 static int do_chown(int dirfd, const char *pathname, uid_t owner, gid_t group, unsigned int flags)
 {
+	struct dentry *dentry;
 	struct inode *inode;
-	int ret;
+
+	/* resolve path */
+	dentry = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* update inode */
 	inode->i_uid = owner;
 	inode->i_gid = group;
 	mark_inode_dirty(inode);
-	iput(inode);
 
+	dput(dentry);
 	return 0;
 }
 
@@ -342,24 +350,35 @@ int sys_lchown(const char *pathname, uid_t owner, gid_t group)
  */
 static int do_fchown(int fd, uid_t owner, gid_t group)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
+	int ret;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		return -EINVAL;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
+
 	/* update inode */
-	inode = filp->f_inode;
 	inode->i_uid = owner;
 	inode->i_gid = group;
 	mark_inode_dirty(inode);
-
-	/* release file */
+	ret = 0;
+out:
 	fput(filp);
-
-	return 0;
+	return ret;
 }
 
 /*
@@ -383,20 +402,22 @@ int sys_fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, unsi
  */
 static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *times, int flags)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	int ret;
 
+	/* resolve path */
+	dentry = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* get inode */
-	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* check permissions */
 	ret = permission(inode, MAY_WRITE);
-	if (ret) {
-		iput(inode);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
 	/* set time */
 	if (times)
@@ -406,9 +427,9 @@ static int do_utimensat(int dirfd, const char *pathname, struct kernel_timeval *
 
 	/* mark inode dirty */
 	mark_inode_dirty(inode);
-	iput(inode);
-
-	return 0;
+out:
+	dput(dentry);
+	return ret;
 }
 
 /*
@@ -432,21 +453,28 @@ int sys_utimensat(int dirfd, const char *pathname, struct timespec *times, int f
  */
 int sys_chroot(const char *path)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	int ret;
 
+	/* resolve path */
+	dentry = namei(AT_FDCWD, path, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* get inode */
-	ret = namei(AT_FDCWD, NULL, path, 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* check if it's a directory */
+	ret = -ENOTDIR;
 	if (!S_ISDIR(inode->i_mode))
-		return -ENOTDIR;
+		goto out;
 
 	/* release current root directory and change it */
-	iput(current_task->fs->root);
-	current_task->fs->root = inode;
-
-	return 0;
+	dput(current_task->fs->root);
+	current_task->fs->root = dentry;
+	ret = 0;
+out:
+	dput(dentry);
+	return ret;
 }

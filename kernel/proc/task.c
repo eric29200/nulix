@@ -199,7 +199,9 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vma_child->vm_flags = vma_parent->vm_flags;
 			vma_child->vm_page_prot = vma_parent->vm_page_prot;
 			vma_child->vm_offset = vma_parent->vm_offset;
-			vma_child->vm_inode = vma_parent->vm_inode;
+			vma_child->vm_file = vma_parent->vm_file;
+			if (vma_child->vm_file)
+				vma_child->vm_file->f_count++;
 			vma_child->vm_ops = vma_parent->vm_ops;
 			vma_child->vm_mm = mm_new;
 			list_add_tail(&vma_child->list, &mm_new->vm_list);
@@ -270,23 +272,19 @@ static int task_copy_fs(struct task *task, struct task *parent, uint32_t clone_f
 	/* init file system structure */
 	memset(task->fs, 0, sizeof(struct fs_struct));
 	task->fs->count = 1;
-	task->fs->cwd = NULL;
+	task->fs->pwd = NULL;
 	task->fs->root = NULL;
 
 	/* set umask */
 	task->fs->umask = parent ? parent->fs->umask : 0022;
 
 	/* duplicate current working dir */
-	if (parent && parent->fs->cwd) {
-		task->fs->cwd = parent->fs->cwd;
-		task->fs->cwd->i_count++;
-	}
+	if (parent && parent->fs->pwd)
+		task->fs->pwd = dget(parent->fs->pwd);
 
 	/* duplicate root dir */
-	if (parent && parent->fs->root) {
-		task->fs->root = parent->fs->root;
-		task->fs->root->i_count++;
-	}
+	if (parent && parent->fs->root)
+		task->fs->root = dget(parent->fs->root);
 
 	return 0;
 }
@@ -382,8 +380,8 @@ void task_exit_fs(struct task *task)
 		task->fs = NULL;
 
 		if (--fs->count <= 0) {
-			iput(fs->root);
-			iput(fs->cwd);
+			dput(fs->root);
+			dput(fs->pwd);
 			kfree(fs);
 		}
 	}
@@ -534,9 +532,8 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	INIT_LIST_HEAD(&task->sig_tm.list);
 
 	/* copy task name and TLS */
-	if (parent) {
+	if (parent)
 		memcpy(task->name, parent->name, TASK_NAME_LEN);
-	}
 
 	/* copy task */
 	if (task_copy_flags(task, parent, clone_flags))
@@ -553,6 +550,9 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 		goto err_rlim;
 	if (task_copy_thread(task, parent, user_sp))
 		goto err_thread;
+
+	/* update number of tasks */
+	nr_tasks++;
 
 	return task;
 err_thread:
@@ -678,6 +678,9 @@ void destroy_task(struct task *task)
 
 	/* free task */
 	kfree(task);
+
+	/* update number of tasks */
+	nr_tasks--;
 }
 
 /*

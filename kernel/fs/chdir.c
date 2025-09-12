@@ -2,40 +2,42 @@
 #include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
+#include <stdio.h>
 
 /*
  * Change directory system call.
  */
 int sys_chdir(const char *path)
 {
+	struct dentry *dentry, *tmp;
 	struct inode *inode;
 	int ret;
 
+	/* resolve path */
+	dentry = namei(AT_FDCWD, path, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* get inode */
-	ret = namei(AT_FDCWD, NULL, path, 1, &inode);
-	if (ret)
-		return ret;
+	inode = dentry->d_inode;
 
 	/* check directory */
-	if (!S_ISDIR(inode->i_mode)) {
-		iput(inode);
-		return -ENOTDIR;
-	}
+	ret = -ENOTDIR;
+	if (!S_ISDIR(inode->i_mode))
+		goto out;
 
 	/* check permissions */
 	ret = permission(inode, MAY_EXEC);
-	if (ret) {
-		iput(inode);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
-	/* release current working dir */
-	iput(current_task->fs->cwd);
-
-	/* set current working dir */
-	current_task->fs->cwd = inode;
-
-	return 0;
+	/* exchange dentries */
+	tmp = current_task->fs->pwd;
+	current_task->fs->pwd = dentry;
+	dentry = tmp;
+out:
+	dput(dentry);
+	return ret;
 }
 
 /*
@@ -43,6 +45,7 @@ int sys_chdir(const char *path)
  */
 int sys_fchdir(int fd)
 {
+	struct dentry *dentry, *tmp;
 	struct inode *inode;
 	struct file *filp;
 	int ret;
@@ -52,34 +55,32 @@ int sys_fchdir(int fd)
 	if (!filp)
 		return -EINVAL;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
+
 	/* fd must be a directory */
-	inode = filp->f_inode;
-	if (!S_ISDIR(inode->i_mode)) {
-		fput(filp);
-		return -ENOTDIR;
-	}
+	ret = -ENOTDIR;
+	if (!S_ISDIR(inode->i_mode))
+		goto out;
 
 	/* check permissions */
 	ret = permission(inode, MAY_EXEC);
-	if (ret) {
-		fput(filp);
-		return ret;
-	}
+	if (ret)
+		goto out;
 
-	/* no change */
-	if (inode == current_task->fs->cwd) {
-		fput(filp);
-		return 0;
-	}
-
-	/* release current working dir */
-	iput(current_task->fs->cwd);
-
-	/* set current working dir */
-	current_task->fs->cwd = inode;
-
-	/* release file */
+	/* change directory */
+	tmp = current_task->fs->pwd;
+	current_task->fs->pwd = dget(dentry);
+	dput(tmp);
+out:
 	fput(filp);
-
-	return 0;
+	return ret;
 }

@@ -118,20 +118,19 @@ int minix_free_block(struct super_block *sb, uint32_t block);
 uint32_t minix_count_free_blocks(struct super_block *sb);
 
 /* minix symlink prototypes */
-int minix_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode);
+struct dentry *minix_follow_link(struct inode *inode, struct dentry *base);
 ssize_t minix_readlink(struct inode *inode, char *buf, size_t bufsize);
 
 /* minix name resolutions prototypes */
-int minix_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode);
-int minix_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode);
-int minix_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len);
-int minix_unlink(struct inode *dir, const char *name, size_t name_len);
-int minix_symlink(struct inode *dir, const char *name, size_t name_len, const char *target);
-int minix_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode);
-int minix_rmdir(struct inode *dir, const char *name, size_t name_len);
-int minix_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
-		 struct inode *new_dir, const char *new_name, size_t new_name_len);
-int minix_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev);
+int minix_lookup(struct inode *dir, struct dentry *dentry);
+int minix_create(struct inode *dir, struct dentry *dentry, mode_t mode);
+int minix_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
+int minix_unlink(struct inode *dir, struct dentry *dentry);
+int minix_symlink(struct inode *dir, struct dentry *dentry, const char *target);
+int minix_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
+int minix_rmdir(struct inode *dir, struct dentry *dentry);
+int minix_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry);
+int minix_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 
 /* minix file prototypes */
 int minix_getdents64(struct file *filp, void *dirp, size_t count);

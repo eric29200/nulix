@@ -43,13 +43,14 @@ drop_pte:
 /*
  * Try to swap out a page table.
  */
-static int swap_out_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, uint32_t end, int count)
+static int swap_out_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, uint32_t end)
 {
 	uint32_t pmd_end;
 	pte_t *pte;
+	int ret;
 
 	if (pmd_none(*pmd))
-		return count;
+		return 0;
 
 	pte = pte_offset(pmd, address);
 
@@ -60,24 +61,25 @@ static int swap_out_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, uint3
 	do {
 		vma->vm_mm->swap_address = address + PAGE_SIZE;
 
-		count -= try_to_swap_out(vma, address, pte);
-		if (!count)
-			break;
+		ret -= try_to_swap_out(vma, address, pte);
+		if (ret)
+			return ret;
 
 		address += PAGE_SIZE;
 		pte++;
 	} while (address < end);
 
-	return count;
+	return 0;
 }
 
 /*
  * Try to swap out a page directory.
  */
-static int swap_out_pgd(struct vm_area *vma, pgd_t *pgd, uint32_t address, uint32_t end, int count)
+static int swap_out_pgd(struct vm_area *vma, pgd_t *pgd, uint32_t address, uint32_t end)
 {
 	uint32_t pgd_end;
 	pmd_t *pmd;
+	int ret;
 
 	pmd = pmd_offset(pgd);
 
@@ -86,50 +88,52 @@ static int swap_out_pgd(struct vm_area *vma, pgd_t *pgd, uint32_t address, uint3
 		end = pgd_end;
 
 	do {
-		count = swap_out_pmd(vma, pmd, address, end, count);
-		if (!count)
-			break;
+		ret = swap_out_pmd(vma, pmd, address, end);
+		if (ret)
+			return ret;
 
 		address = (address + PMD_SIZE) & PMD_MASK;
 		pmd++;
 	} while (address < end);
 
-	return count;
+	return 0;
 }
 
 /*
  * Try to swap out a memory region.
  */
-static int swap_out_vma(struct vm_area *vma, uint32_t address, int count)
+static int swap_out_vma(struct vm_area *vma, uint32_t address)
 {
 	uint32_t end;
 	pgd_t *pgd;
+	int ret;
 
 	/* don't try to swap out locked regions */
 	if (vma->vm_flags & VM_LOCKED)
-		return count;
+		return 0;
 
 	pgd = pgd_offset(vma->vm_mm->pgd, address);
 
 	for (end = vma->vm_end; address < end;) {
-		count = swap_out_pgd(vma, pgd, address, end, count);
-		if (!count)
-			break;
+		ret = swap_out_pgd(vma, pgd, address, end);
+		if (ret)
+			return ret;
 
 		address = (address + PGDIR_SIZE) & PGDIR_MASK;
 		pgd++;
 	}
 
-	return count;
+	return 0;
 }
 
 /*
  * Try to swap out a process.
  */
-static int swap_out_process(struct task *task, int count)
+static int swap_out_process(struct task *task)
 {
 	struct vm_area *vma;
 	uint32_t address;
+	int ret;
 
 	/* start at swap address */
 	address = task->mm->swap_address;
@@ -147,9 +151,9 @@ static int swap_out_process(struct task *task, int count)
 
 	for (;;) {
 		/* try to swap out memory region */
-		count = swap_out_vma(vma, address, count);
-		if (!count)
-			return count;
+		ret = swap_out_vma(vma, address);
+		if (ret)
+			return ret;
 
 		/* try next memory region */
 		vma = list_next_entry_or_null(vma, &task->mm->vm_list, list);
@@ -161,25 +165,67 @@ static int swap_out_process(struct task *task, int count)
 
 out:
 	task->mm->swap_address = 0;
-	return count;
+	task->mm->swap_cnt = 0;
+	return 0;
+}
+
+/*
+ * Find best task to swap out.
+ */
+static struct task *__find_best_task_to_swap_out(int assign)
+{
+	struct task *task, *best = NULL;
+	struct list_head *pos;
+	uint32_t max_cnt = 0;
+
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+
+		if (task->mm->rss <= 0)
+			continue;
+
+		/* assign swap counter ? */
+		if (assign == 1)
+			task->mm->swap_cnt = task->mm->rss;
+
+		/* find task with max memory */
+		if (task->mm->swap_cnt > max_cnt) {
+			max_cnt = task->mm->swap_cnt;
+			best = task;
+		}
+	}
+
+	return best;
 }
 
 /*
  * Try to swap out some process.
  */
-int swap_out(int count)
+int swap_out(int priority)
 {
-	struct list_head *pos;
 	struct task *task;
+	int count, ret;
 
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
+	/* number of tasks to scan */
+	count = nr_tasks / priority;
+	if (count < 1)
+		count = 1;
+
+	for (; count >= 0; count--) {
+		/* find best task to swap out */
+		task = __find_best_task_to_swap_out(0);
+		if (!task) {
+			/* reassign swap counter */
+			task = __find_best_task_to_swap_out(1);
+			if (!task)
+				return 0;
+		}
 
 		/* try to swap out process */
-		count = swap_out_process(task, count);
-		if (!count)
-			break;
+		ret = swap_out_process(task);
+		if (ret)
+			return ret;
 	}
 
-	return count;
+	return 0;
 }

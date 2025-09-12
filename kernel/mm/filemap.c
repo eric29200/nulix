@@ -37,7 +37,7 @@ static struct page *grab_cache_page(struct inode *inode, off_t offset)
  */
 static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 {
-	struct inode *inode = vma->vm_inode;
+	struct inode *inode = vma->vm_file->f_dentry->d_inode;
 	struct page *page;
 	uint32_t offset;
 
@@ -82,7 +82,7 @@ err_kmap:
  */
 static int filemap_writepage(struct vm_area *vma, struct page *page)
 {
-	struct inode *inode = vma->vm_inode;
+	struct inode *inode = vma->vm_file->f_dentry->d_inode;
 	int ret;
 
 	/* map page in kernel address space */
@@ -243,8 +243,9 @@ static struct vm_operations file_private_mmap = {
 /*
  * Generic mmap file.
  */
-int generic_file_mmap(struct inode *inode, struct vm_area *vma)
+int generic_file_mmap(struct file *filp, struct vm_area *vma)
 {
+	struct inode *inode = filp->f_dentry->d_inode;
 	struct vm_operations *ops;
 
 	/* choose operations */
@@ -276,7 +277,6 @@ int generic_file_mmap(struct inode *inode, struct vm_area *vma)
 	mark_inode_dirty(inode);
 
 	/* set memory region */
-	vma->vm_inode = inode;
 	vma->vm_ops = ops;
 
 	return 0;
@@ -342,12 +342,19 @@ next:
  */
 int generic_file_read(struct file *filp, char *buf, int count)
 {
-	struct inode *inode = filp->f_inode;
 	int read = 0, err = 0, nr;
 	off_t offset, page_offset;
+	struct inode *inode;
 	struct page *page;
 	char *kaddr;
 	size_t pos;
+
+	/* check inode */
+	if (!filp->f_dentry || !filp->f_dentry->d_inode)
+		return -ENOENT;
+
+	/* get inode */
+	inode = filp->f_dentry->d_inode;
 
 	/* fix number of characters to read */
 	pos = filp->f_pos;
@@ -406,12 +413,19 @@ found_page:
  */
 int generic_file_write(struct file *filp, const char *buf, int count)
 {
-	struct inode *inode = filp->f_inode;
 	int written = 0, err = 0, nr;
 	size_t pos = filp->f_pos;
 	struct page *page, *tmp;
+	struct inode *inode;
 	off_t offset;
 	char *kaddr;
+
+	/* check inode */
+	if (!filp->f_dentry || !filp->f_dentry->d_inode)
+		return -ENOENT;
+
+	/* get inode */
+	inode = filp->f_dentry->d_inode;
 
 	/* read only device */
 	if (is_read_only(inode->i_rdev))
@@ -515,13 +529,16 @@ void truncate_inode_pages(struct inode *inode, off_t start)
 /*
  * Shrink mmap = try to free a page.
  */
-int shrink_mmap(int count)
+int shrink_mmap(int priority)
 {
 	static size_t clock = 0;
 	struct page *page;
-	size_t i;
+	size_t count, i;
 
-	for (i = 0; i < nr_pages; i++, clock++) {
+	/* compute number of pages to swan */
+	count = nr_pages / priority;
+
+	for (i = 0; i < count; i++, clock++) {
 		/* reset clock */
 		if (clock >= nr_pages)
 			clock = 0;
@@ -538,8 +555,7 @@ int shrink_mmap(int count)
 		/* is it a buffer cached page ? */
 		if (page->buffers) {
 			if (try_to_free_buffers(page))
-				if (!--count)
-					break;
+				return 1;
 
 			continue;
 		}
@@ -548,10 +564,9 @@ int shrink_mmap(int count)
 		if (page->inode) {
 			remove_from_page_cache(page);
 			__free_page(page);
-			if (!--count)
-				break;
+			return 1;
 		}
 	}
 
-	return count;
+	return 0;
 }

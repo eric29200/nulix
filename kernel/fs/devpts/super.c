@@ -53,8 +53,8 @@ static int devpts_read_super(struct super_block *sb, void *data, int silent)
 		goto err_no_root_entry;
 
 	/* get root inode */
-	sb->s_root_inode = devpts_iget(sb, root_entry);
-	if (!sb->s_root_inode)
+	sb->s_root = d_alloc_root(devpts_iget(sb, root_entry));
+	if (!sb->s_root)
 		goto err_no_root_inode;
 
 	return 0;

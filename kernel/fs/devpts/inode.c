@@ -23,21 +23,12 @@ static struct inode_operations devpts_dir_iops = {
  */
 struct inode *devpts_iget(struct super_block *sb, struct devpts_entry *de)
 {
-	struct inode *inode, *tmp;
+	struct inode *inode;
 
 	/* try to find inode in global table */
 	inode = find_inode(sb, de->ino);
-	if (inode) {
-		/* cross mount point */
-		if (inode->i_mount) {
-			tmp = inode->i_mount;
-			tmp->i_count++;
-			iput(inode);
-			inode = tmp;
-		}
-
+	if (inode)
 		return inode;
-	}
 
 	/* get an empty new inode */
 	inode = get_empty_inode(sb);

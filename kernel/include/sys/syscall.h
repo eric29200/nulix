@@ -67,7 +67,6 @@
 #define __NR_setitimer			104
 #define __NR_wait4			114
 #define __NR_sysinfo			116
-#define __NR_ipc			117
 #define __NR_fsync			118
 #define __NR_sigreturn			119
 #define __NR_clone			120

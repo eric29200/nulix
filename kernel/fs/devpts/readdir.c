@@ -9,12 +9,24 @@ int devpts_getdents64(struct file *filp, void *dirp, size_t count)
 {
 	struct devpts_entry *de_dir, *de;
 	struct dirent64 *dirent;
+	struct dentry *dentry;
 	struct list_head *pos;
 	int ret, entries_size;
+	struct inode *inode;
 	size_t i;
 
+	/* get dentry */
+	dentry = filp->f_dentry;
+	if (!dentry)
+		return -ENOENT;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		return -ENOENT;
+
 	/* get devpts entry */
-	de_dir = (struct devpts_entry *) filp->f_inode->u.generic_i;
+	de_dir = (struct devpts_entry *) inode->u.generic_i;
 	if (!S_ISDIR(de_dir->mode))
 		return -EINVAL;
 
@@ -25,7 +37,7 @@ int devpts_getdents64(struct file *filp, void *dirp, size_t count)
 	/* add "." entry */
 	if (filp->f_pos == 0) {
 		/* fill in directory entry */
-		ret = filldir(dirent, ".", 1, filp->f_inode->i_ino, count);
+		ret = filldir(dirent, ".", 1, inode->i_ino, count);
 		if (ret)
 			return entries_size;
 

@@ -44,6 +44,7 @@ extern unsigned long avenrun[];				/* Load averages */
 extern struct task *init_task;
 extern struct task *current_task;
 extern struct list_head tasks_list;
+extern int nr_tasks;
 extern pid_t last_pid;
 
 int init_scheduler(void (*kinit_func)());

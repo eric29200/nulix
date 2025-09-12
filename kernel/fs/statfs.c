@@ -23,24 +23,22 @@ static int do_statfs64(struct inode *inode, struct statfs64 *buf)
  */
 int sys_statfs64(const char *path, size_t size, struct statfs64 *buf)
 {
-	struct inode *inode;
+	struct dentry *dentry;
 	int ret;
 
 	/* check buffer size */
 	if (size != sizeof(*buf))
 		return -EINVAL;
 
-	/* get inode */
-	ret = namei(AT_FDCWD, NULL, path, 1, &inode);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = namei(AT_FDCWD, path, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* do statfs */
-	ret = do_statfs64(inode, buf);
+	ret = do_statfs64(dentry->d_inode, buf);
 
-	/* release inode */
-	iput(inode);
-
+	dput(dentry);
 	return ret;
 }
 
@@ -49,6 +47,8 @@ int sys_statfs64(const char *path, size_t size, struct statfs64 *buf)
  */
 int sys_fstatfs64(int fd, size_t size, struct statfs64 *buf)
 {
+	struct dentry *dentry;
+	struct inode *inode;
 	struct file *filp;
 	int ret;
 
@@ -65,11 +65,20 @@ int sys_fstatfs64(int fd, size_t size, struct statfs64 *buf)
 	if (!filp)
 		return -EBADF;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
+
 	/* do statfs */
-	ret = do_statfs64(filp->f_inode, buf);
-
-	/* release file */
+	ret = do_statfs64(inode, buf);
+out:
 	fput(filp);
-
 	return ret;
 }

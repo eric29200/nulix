@@ -34,8 +34,8 @@ static int proc_read_super(struct super_block *sb, void *data, int silent)
 	sb->s_op = &proc_sops;
 
 	/* get root inode */
-	sb->s_root_inode = iget(sb, PROC_ROOT_INO);
-	if (!sb->s_root_inode) {
+	sb->s_root = d_alloc_root(iget(sb, PROC_ROOT_INO));
+	if (!sb->s_root) {
 		if (!silent)
 			printf("[Proc-fs] Can't get root inode\n");
 

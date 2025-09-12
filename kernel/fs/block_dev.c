@@ -37,7 +37,7 @@ int generic_block_read(struct file *filp, char *buf, int count)
 		return 0;
 
 	/* get device and blocksize */
-	dev = filp->f_inode->i_rdev;
+	dev = filp->f_dentry->d_inode->i_rdev;
 	blocksize = blocksize_size[major(dev)][minor(dev)];
 	if (!blocksize)
 		return -EINVAL;
@@ -82,7 +82,7 @@ int generic_block_write(struct file *filp, const char *buf, int count)
 		return 0;
 
 	/* get device and blocksize */
-	dev = filp->f_inode->i_rdev;
+	dev = filp->f_dentry->d_inode->i_rdev;
 	blocksize = blocksize_size[major(dev)][minor(dev)];
 	if (!blocksize)
 		return -EINVAL;

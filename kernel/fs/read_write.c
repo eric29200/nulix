@@ -43,7 +43,19 @@ ssize_t do_write(struct file *filp, const char *buf, int count)
  */
 off_t generic_file_llseek(struct file *filp, off_t offset, int whence)
 {
+	struct dentry *dentry;
+	struct inode *inode;
 	off_t new_offset;
+
+	/* get dentry */
+	dentry = filp->f_dentry;
+	if (!dentry)
+		return -ENOENT;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		return -ENOENT;
 
 	/* compute new offset */
 	switch (whence) {
@@ -54,7 +66,7 @@ off_t generic_file_llseek(struct file *filp, off_t offset, int whence)
 			new_offset = filp->f_pos + offset;
 			break;
 		case SEEK_END:
-			new_offset = filp->f_inode->i_size + offset;
+			new_offset = inode->i_size + offset;
 			break;
 		default:
 			return -EINVAL;

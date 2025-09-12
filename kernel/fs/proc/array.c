@@ -24,18 +24,7 @@ static int proc_filesystems_read(char *page)
  */
 static int proc_loadavg_read(char *page)
 {
-	int ntasks = 0, nrun = 0, a, b, c;
-	struct list_head *pos;
-	struct task *task;
-
-	/* get number of tasks */
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
-		ntasks++;
-
-		if (task->state == TASK_RUNNING)
-			nrun++;
-	}
+	int nrun = 0, a, b, c;
 
 	/* compute load average */
 	CALC_LOAD(avenrun[0], EXP_1, nrun);
@@ -50,7 +39,7 @@ static int proc_loadavg_read(char *page)
 		      LOAD_INT(a), LOAD_FRAC(a),
 		      LOAD_INT(b), LOAD_FRAC(b),
 		      LOAD_INT(c), LOAD_FRAC(c),
-		      nrun, ntasks, last_pid);
+		      nrun, nr_tasks, last_pid);
 }
 
 /*
@@ -128,7 +117,7 @@ static int proc_array_read(struct file *filp, char *buf, int count)
 		return -ENOMEM;
 
 	/* get informations */
-	switch (filp->f_inode->i_ino) {
+	switch (filp->f_dentry->d_inode->i_ino) {
 		case PROC_UPTIME_INO:
 			len = proc_uptime_read(page);
 			break;

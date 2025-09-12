@@ -17,12 +17,12 @@ static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
 	pid_t pid;
 
 	/* get pid */
-	pid = filp->f_inode->i_ino >> 16;
+	pid = filp->f_dentry->d_inode->i_ino >> 16;
 
 	/* add "." entry */
 	if (filp->f_pos == 0) {
 		/* fill in directory entry */ 
-		ret = filldir(dirent, ".", 1, filp->f_inode->i_ino, count);
+		ret = filldir(dirent, ".", 1, filp->f_dentry->d_inode->i_ino, count);
 		if (ret)
 			return n;
 
@@ -36,7 +36,7 @@ static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
 	/* add ".." entry */
 	if (filp->f_pos == 1) {
 		/* fill in directory entry */ 
-		ret = filldir(dirent, "..", 2, (filp->f_inode->i_ino & 0xFFFF0000) + PROC_PID_INO, count);
+		ret = filldir(dirent, "..", 2, (filp->f_dentry->d_inode->i_ino & 0xFFFF0000) + PROC_PID_INO, count);
 		if (ret)
 			return n;
 
@@ -84,67 +84,61 @@ static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
 /*
  * Lookup for a file.
  */
-static int proc_fd_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+static int proc_fd_lookup(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = NULL;
 	struct task *task;
 	ino_t ino;
 	pid_t pid;
 	int fd;
 
-	/* dir must be a directory */
+	/* check dir */
 	if (!dir)
 		return -ENOENT;
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+
+	/* dir must be a directory */
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* get pid */
 	pid = dir->i_ino >> 16;
 
 	/* current directory */
-	if (!name_len || (name_len == 1 && name[0] == '.')) {
-		*res_inode = dir;
-		return 0;
+	if (!dentry->d_name.len || (dentry->d_name.len == 1 && dentry->d_name.name[0] == '.')) {
+		dir->i_count++;
+		inode = dir;
+		goto out;
 	}
 
 	/* parent directory */
-	if (name_len == 2 && name[0] == '.' && name[1] == '.') {
-		   *res_inode = iget(dir->i_sb, (pid << 16) + PROC_PID_INO);
-		   if (!*res_inode) {
-			iput(dir);
+	if (dentry->d_name.len == 2 && dentry->d_name.name[0] == '.' && dentry->d_name.name[1] == '.') {
+		inode = iget(dir->i_sb, (pid << 16) + PROC_PID_INO);
+		if (!inode) 
 			return -ENOENT;
-		   }
 
-		   iput(dir);
-		   return 0;
+		goto out;
 	    }
 
 	/* get task */
 	task = find_task(pid);
-	if (!task) {
-		iput(dir);
+	if (!task)
 		return -ENOENT;
-	}
 
 	/* try to find matching file descriptor */
-	fd = atoi(name);
-	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd]) {
-		iput(dir);
+	fd = atoi(dentry->d_name.name);
+	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd])
 		return -ENOENT;
-	}
 
 	/* create a fake inode */
 	ino = (pid << 16) + (PROC_PID_FD_INO << 8) + fd;
 
 	/* get inode */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, ino);
+	if (!inode)
 		return -EACCES;
-	}
 
-	iput(dir);
+out:
+	d_add(dentry, inode);
 	return 0;
 }
 
@@ -166,39 +160,27 @@ struct inode_operations proc_fd_iops = {
 /*
  * Follow fd link.
  */
-static int proc_fd_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+static struct dentry *proc_fd_follow_link(struct inode *inode, struct dentry *base)
 {
 	struct task *task;
 	pid_t pid;
 	int fd;
 
-	/* unused dir/flags/mode */
-	UNUSED(dir);
-	UNUSED(flags);
-	UNUSED(mode);
-
 	/* get task */
 	pid = inode->i_ino >> 16;
 	task = find_task(pid);
 	if (!task) {
-		iput(inode);
-		return -ENOENT;
+		dput(base);
+		return ERR_PTR(-ENOENT);
 	}
 
 	/* get file descriptor */
 	fd = inode->i_ino & 0xFF;
 	if (fd >= 0 && fd < NR_OPEN && task->files->filp[fd])
-		*res_inode = task->files->filp[fd]->f_inode;
+		return dget(task->files->filp[fd]->f_dentry);
 
-	/* release link inode */
-	iput(inode);
-
-	/* no matching link */
-	if (!*res_inode)
-		return -ENOENT;
-
-	(*res_inode)->i_count++;
-	return 0;
+	dput(base);
+	return ERR_PTR(-ENOENT);
 }
 
 /*
@@ -207,7 +189,6 @@ static int proc_fd_follow_link(struct inode *dir, struct inode *inode, int flags
 static ssize_t proc_fd_readlink(struct inode *inode, char *buf, size_t bufsize)
 {
 	struct task *task;
-	struct file *filp;
 	char tmp[32];
 	size_t len;
 	pid_t pid;
@@ -216,28 +197,13 @@ static ssize_t proc_fd_readlink(struct inode *inode, char *buf, size_t bufsize)
 	/* get task */
 	pid = inode->i_ino >> 16;
 	task = find_task(pid);
-	if (!task) {
-		iput(inode);
+	if (!task)
 		return -ENOENT;
-	}
 
 	/* get file */
 	fd = inode->i_ino & 0xFF;
-	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd]) {
-		iput(inode);
+	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd])
 		return -ENOENT;
-	}
-	filp = task->files->filp[fd];
-
-	/* use file path */
-	if (filp->f_path) {
-		len = strlen(filp->f_path) + 1;
-		if (bufsize < len)
-			len = bufsize;
-
-		memcpy(buf, filp->f_path, len);
-		goto out;
-	}
 
 	/* else concat <pid>:<fd> */
 	len = sprintf(tmp, "%d:%d", pid, fd) + 1;
@@ -247,8 +213,6 @@ static ssize_t proc_fd_readlink(struct inode *inode, char *buf, size_t bufsize)
 	/* copy target link */
 	memcpy(buf, tmp, len);
 
- out:
-	iput(inode);
 	return len;
 }
 

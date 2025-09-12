@@ -81,24 +81,25 @@ static int proc_root_getdents64(struct file *filp, void *dirp, size_t count)
 /*
  * Root dir lookup.
  */
-static int proc_root_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+static int proc_root_lookup(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = NULL;
 	struct task *task;
 	pid_t pid;
 	ino_t ino;
 	size_t i;
 
-	/* dir must be a directory */
+	/* check dir */
 	if (!dir)
 		return -ENOENT;
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+
+	/* dir must be a directory */
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* find matching entry */
 	for (i = 0; i < NR_ROOT_DIRENTRY; i++) {
-		if (proc_match(name, name_len, &root_dir[i])) {
+		if (proc_match(dentry->d_name.name, dentry->d_name.len, &root_dir[i])) {
 			ino = root_dir[i].ino;
 			break;
 		}
@@ -106,24 +107,20 @@ static int proc_root_lookup(struct inode *dir, const char *name, size_t name_len
 
 	/* else try to find matching process */
 	if (i >= NR_ROOT_DIRENTRY) {
-		pid = atoi(name);
-		task = find_task(atoi(name));
-		if (!pid || !task) {
-			iput(dir);
+		pid = atoi(dentry->d_name.name);
+		task = find_task(pid);
+		if (!pid || !task)
 			return -ENOENT;
-		}
 
 		ino = (task->pid << 16) + PROC_PID_INO;
 	}
 
 	/* get inode */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, ino);
+	if (!inode)
 		return -EACCES;
-	}
 
-	iput(dir);
+	d_add(dentry, inode);
 	return 0;
 }
 

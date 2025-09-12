@@ -6,40 +6,22 @@
 /*
  * Resolve a symbolic link.
  */
-int minix_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+struct dentry *minix_follow_link(struct inode *inode, struct dentry *base)
 {
 	struct buffer_head *bh;
-	int ret;
-
-	*res_inode = NULL;
-
-	/* null inode */
-	if (!inode)
-		return -ENOENT;
-
-	/* not a link */
-	if (!S_ISLNK(inode->i_mode)) {
-		*res_inode = inode;
-		return 0;
-	}
 
 	/* get first link block */
 	bh = minix_bread(inode, 0, 0);
 	if (!bh) {
-		iput(inode);
-		return -EIO;
+		dput(base);
+		return ERR_PTR(-EIO);
 	}
 
-	/* release link inode */
-	iput(inode);
+	/* resolve target */
+	base = lookup_dentry(AT_FDCWD, base, bh->b_data, 1);
 
-	/* open target inode */
-	ret = open_namei(AT_FDCWD, dir, bh->b_data, flags, mode, res_inode);
-
-	/* release block buffer */
 	brelse(bh);
-
-	return ret;
+	return base;
 }
 
 /*
@@ -52,30 +34,21 @@ ssize_t minix_readlink(struct inode *inode, char *buf, size_t bufsize)
 	size_t len;
 
 	/* inode must be link */
-	if (!S_ISLNK(inode->i_mode)) {
-		iput(inode);
+	if (!S_ISLNK(inode->i_mode))
 		return -EINVAL;
-	}
 
 	/* limit buffer size to block size */
 	if (bufsize > sb->s_blocksize - 1)
 		bufsize = sb->s_blocksize - 1;
 
 	/* check 1st block */
-	if (!inode->u.minix_i.i_zone[0]) {
-		iput(inode);
+	if (!inode->u.minix_i.i_zone[0])
 		return 0;
-	}
 
 	/* get 1st block */
 	bh = minix_bread(inode, 0, 0);
-	if (!bh) {
-		iput(inode);
+	if (!bh)
 		return 0;
-	}
-
-	/* release inode */
-	iput(inode);
 
 	/* copy target name to user buffer */
 	for (len = 0; len < bufsize; len++)

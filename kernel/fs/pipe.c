@@ -12,7 +12,7 @@ extern struct file filp_table[NR_FILE];
  */
 static int pipe_read(struct file *filp, char *buf, int count)
 {
-	struct inode *inode = filp->f_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 	int chars, size, read = 0;
 	char *pipebuf;
 
@@ -85,7 +85,7 @@ static int pipe_read(struct file *filp, char *buf, int count)
  */
 static int pipe_write(struct file *filp, const char *buf, int count)
 {
-	struct inode *inode = filp->f_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 	int chars, free, written = 0;
 	char *pipebuf;
 
@@ -155,7 +155,7 @@ static int pipe_write(struct file *filp, const char *buf, int count)
  */
 static int pipe_read_close(struct file *filp)
 {
-	struct inode *inode = filp->f_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 
 	PIPE_READERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
@@ -171,7 +171,7 @@ static int pipe_read_close(struct file *filp)
  */
 static int pipe_write_close(struct file *filp)
 {
-	struct inode *inode = filp->f_inode;
+	struct inode *inode = filp->f_dentry->d_inode;
 
 	PIPE_WRITERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
@@ -190,13 +190,13 @@ static int pipe_poll(struct file *filp, struct select_table *wait)
 	int mask;
 
 	/* reader or writer */
-	if (PIPE_EMPTY(filp->f_inode))
+	if (PIPE_EMPTY(filp->f_dentry->d_inode))
 		mask = POLLOUT;
 	else
 		mask = POLLIN;
 
 	/* add wait queue to select table */
-	select_wait(&PIPE_WAIT(filp->f_inode), wait);
+	select_wait(&PIPE_WAIT(filp->f_dentry->d_inode), wait);
 
 	return mask;
 }
@@ -259,12 +259,13 @@ static struct inode *get_pipe_inode()
  */
 static int do_pipe(int pipefd[2], int flags)
 {
-	struct file *f1, *f2;
+	struct file *f1 = NULL, *f2 = NULL;
+	int fd1 = -1, fd2 = -2, ret;
+	struct dentry *dentry;
 	struct inode *inode;
-	int ret = -ENFILE;
-	int fd1, fd2;
 
 	/* get a first file */
+	ret = -ENFILE;
 	f1 = get_empty_filp();
 	if (!f1)
 		goto err;
@@ -272,53 +273,58 @@ static int do_pipe(int pipefd[2], int flags)
 	/* get a second file */
 	f2 = get_empty_filp();
 	if (!f2)
-		goto err_release_f1;
-
-	/* get a first free slot */
-	fd1 = get_unused_fd();
-	if (fd1 < 0)
-		goto err_release_f2;
+		goto err_clear_f1;
 
 	/* install first file */
+	fd1 = ret = get_unused_fd();
+	if (ret < 0)
+		goto err_clear_f2;
 	current_task->files->filp[fd1] = f1;
 
-	/* get a second free slot */
-	fd2 = get_unused_fd();
-	if (fd2 < 0)
-		goto err_release_fd1;
-
 	/* install second file */
+	fd2 = ret = get_unused_fd();
+	if (ret < 0)
+		goto err_uninstall_f1;
 	current_task->files->filp[fd2] = f2;
 
 	/* get a pipe inode */
+	ret = -ENFILE;
 	inode = get_pipe_inode();
 	if (!inode)
-		goto err_release_fd2;
+		goto err_uninstall_f2;
 
-	/* set first file descriptor as read channel */
-	f1->f_inode = inode;
+	/* allocate a root dentry */
+	ret = -ENOMEM;
+	dentry = dget(d_alloc_root(inode));
+	if (!dentry)
+		goto err_release_inode;
+
+	/* set 1st file descriptor as read channel */
+	f1->f_dentry = dentry;
 	f1->f_pos = 0;
 	f1->f_flags |= O_RDONLY | flags;
 	f1->f_mode = 1;
 	f1->f_op = &read_pipe_fops;
 	pipefd[0] = fd1;
 
-	/* set second file descriptor as write channel */
-	f2->f_inode = inode;
-	f2->f_pos = 0;
+	/* set 2nd file descriptor as write channel */
+	f2->f_dentry = dentry;
+	f1->f_pos = 0;
 	f2->f_flags |= O_WRONLY | flags;
 	f2->f_mode = 2;
 	f2->f_op = &write_pipe_fops;
 	pipefd[1] = fd2;
 
 	return 0;
-err_release_fd2:
+err_release_inode:
+	iput(inode);
+err_uninstall_f2:
 	current_task->files->filp[fd2] = NULL;
-err_release_fd1:
+err_uninstall_f1:
 	current_task->files->filp[fd1] = NULL;
-err_release_f2:
+err_clear_f2:
 	f2->f_count = 0;
-err_release_f1:
+err_clear_f1:
 	f1->f_count = 0;
 err:
 	return ret;

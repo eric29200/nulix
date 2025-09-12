@@ -36,18 +36,18 @@ int do_truncate(struct inode *inode, off_t length)
  */
 int sys_truncate64(const char *pathname, off_t length)
 {
-	struct inode *inode;
+	struct dentry *dentry;
 	int ret;
 
-	/* get inode */
-	ret = namei(AT_FDCWD, NULL, pathname, 1, &inode);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = namei(AT_FDCWD, pathname, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* truncate */
-	ret = do_truncate(inode, length);
+	ret = do_truncate(dentry->d_inode, length);
 
-	iput(inode);
+	dput(dentry);
 	return ret;
 }
 
@@ -56,6 +56,7 @@ int sys_truncate64(const char *pathname, off_t length)
  */
 static int do_ftruncate(int fd, off_t length)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	struct file *filp;
 	int ret;
@@ -65,15 +66,21 @@ static int do_ftruncate(int fd, off_t length)
 	if (!filp)
 		return -EBADF;
 
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
 	/* get inode */
-	inode = filp->f_inode;
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
 
 	/* do truncate */
 	ret = do_truncate(inode, length);
-
-	/* release file */
+out:
 	fput(filp);
-
 	return ret;
 }
 

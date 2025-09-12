@@ -157,77 +157,57 @@ found:
 /*
  * Directory lookup.
  */
-int tmpfs_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+int tmpfs_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct tmpfs_dir_entry *de;
+	struct inode *inode = NULL;
 
-	/* dir must be a directory */
+	/* check dir */
 	if (!dir)
 		return -ENOENT;
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+
+	/* dir must be a directory */
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* find entry */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (!de) {
-		iput(dir);
-		return -ENOENT;
-	}
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (!de)
+		goto out;
 
 	/* get inode */
-	*res_inode = iget(dir->i_sb, de->d_inode);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, de->d_inode);
+	if (!inode)
 		return -EACCES;
-	}
 
-	iput(dir);
+out:
+	d_add(dentry, inode);
 	return 0;
 }
 
 /*
  * Create a file in a directory.
  */
-int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
+int tmpfs_create(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
 	struct inode *inode;
 	int ret;
 
-	/* check directory */
-	*res_inode = NULL;
-	if (!dir)
-		return -ENOENT;
-
-	/* check if file already exists */
-	dir->i_count++;
-	if (tmpfs_find_entry(dir, name, name_len)) {
-		iput(dir);
-		return -EEXIST;
-	}
-
 	/* create a new inode */
 	inode = tmpfs_new_inode(dir->i_sb, mode, 0);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* add new entry to dir */
-	ret = tmpfs_add_entry(dir, name, name_len, inode);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
-		inode->i_nlinks--;
+		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
-	/* set result inode */
-	*res_inode = inode;
-
-	/* release directory */
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }
@@ -235,35 +215,33 @@ int tmpfs_create(struct inode *dir, const char *name, size_t name_len, mode_t mo
 /*
  * Make a new name for a file = hard link.
  */
-int tmpfs_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len)
+int tmpfs_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 {
 	struct tmpfs_dir_entry *de;
 	int ret;
 
+	/* inode must not be a directory */
+	if (S_ISDIR(inode->i_mode))
+		return -EPERM;
+
 	/* check if new file exists */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (de) {
-		iput(old_inode);
-		iput(dir);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (de)
 		return -EEXIST;
-	}
 
 	/* add entry */
-	ret = tmpfs_add_entry(dir, name, name_len, old_inode);
-	if (ret) {
-		iput(old_inode);
-		iput(dir);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret)
 		return ret;
-	}
 
 	/* update old inode */
-	old_inode->i_ctime = CURRENT_TIME;
-	old_inode->i_nlinks++;
-	mark_inode_dirty(old_inode);
+	inode->i_ctime = CURRENT_TIME;
+	inode->i_nlinks++;
+	mark_inode_dirty(inode);
 
-	/* release inodes */
-	iput(old_inode);
-	iput(dir);
+	/* instantiate dentry */
+	inode->i_count++;
+	d_instantiate(dentry, inode);
 
 	return 0;
 }
@@ -271,31 +249,25 @@ int tmpfs_link(struct inode *old_inode, struct inode *dir, const char *name, siz
 /*
  * Remove a file.
  */
-int tmpfs_unlink(struct inode *dir, const char *name, size_t name_len)
+int tmpfs_unlink(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = dentry->d_inode;
 	struct tmpfs_dir_entry *de;
-	struct inode *inode;
+	int ret;
 
 	/* get directory entry */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (!de) {
-		iput(dir);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (!de)
 		return -ENOENT;
-	}
-
-	/* get inode */
-	inode = iget(dir->i_sb, de->d_inode);
-	if (!inode) {
-		iput(dir);
-		return -ENOENT;
-	}
 
 	/* remove regular files only */
-	if (S_ISDIR(inode->i_mode)) {
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (S_ISDIR(inode->i_mode))
+		goto out;
+
+	/* check inode */
+	if (de->d_inode != inode->i_ino)
+		goto out;
 
 	/* reset directory entry */
 	memset(de, 0, sizeof(struct tmpfs_dir_entry));
@@ -309,17 +281,17 @@ int tmpfs_unlink(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks--;
 	mark_inode_dirty(inode);
 
-	/* release inode */
-	iput(inode);
-	iput(dir);
-
-	return 0;
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
+out:
+	return ret;
 }
 
 /*
  * Create a symbolic link.
  */
-int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const char *target)
+int tmpfs_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 {
 	struct tmpfs_dir_entry *de;
 	struct inode *inode;
@@ -329,17 +301,14 @@ int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 
 	/* create a new inode */
 	inode = tmpfs_new_inode(dir->i_sb, S_IFLNK | (0777 & ~current_task->fs->umask), 0);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* create first page */
 	ret = tmpfs_inode_grow_size(inode, PAGE_SIZE);
 	if (ret) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -ENOMEM;
 	}
 
@@ -354,26 +323,23 @@ int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 	kunmap(page);
 
 	/* check if file exists */
-	de = tmpfs_find_entry(dir, name, name_len);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
 	if (de) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* add entry */
-	ret = tmpfs_add_entry(dir, name, name_len, inode);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
-	/* release inode */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }
@@ -381,25 +347,21 @@ int tmpfs_symlink(struct inode *dir, const char *name, size_t name_len, const ch
 /*
  * Create a directory.
  */
-int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode)
+int tmpfs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
 	struct tmpfs_dir_entry *de;
 	struct inode *inode;
 	int ret;
 
 	/* check if file exists */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (de) {
-		iput(dir);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (de)
 		return -EEXIST;
-	}
 
 	/* allocate a new inode */
 	inode = tmpfs_new_inode(dir->i_sb, S_IFDIR | (mode & ~current_task->fs->umask & 0777), 0);
-	if (!inode) {
-		iput(dir);
-		return -ENOMEM;
-	}
+	if (!inode)
+		return -ENOSPC;
 
 	/* create "." entry in root directory */
 	ret = tmpfs_add_entry(inode, ".", 1, inode);
@@ -412,7 +374,7 @@ int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 		goto err;
 
 	/* add entry to parent dir */
-	ret = tmpfs_add_entry(dir, name, name_len, inode);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) 
 		goto err;
 
@@ -420,53 +382,49 @@ int tmpfs_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mod
 	dir->i_nlinks++;
 	mark_inode_dirty(dir);
 
-	/* release inode */
-	iput(dir);
-	iput(inode);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 err:
 	inode->i_nlinks = 0;
 	iput(inode);
-	iput(dir);
 	return ret;
 }
 
 /*
  * Remove a directory.
  */
-int tmpfs_rmdir(struct inode *dir, const char *name, size_t name_len)
+int tmpfs_rmdir(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = dentry->d_inode;
 	struct tmpfs_dir_entry *de;
-	struct inode *inode;
+	int ret;
 
 	/* check if file exists */
-	de = tmpfs_find_entry(dir, name, name_len);
-	if (!de) {
-		iput(dir);
+	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
+	if (!de)
 		return -ENOENT;
-	}
 
-	/* get inode */
-	inode = iget(dir->i_sb, de->d_inode);
-	if (!inode) {
-		iput(dir);
-		return -ENOENT;
-	}
+	/* can't remove "." */
+	ret = -EPERM;
+	if (inode == dir)
+		goto out;
 
-	/* remove directories only and do not allow to remove '.' */
-	if (!S_ISDIR(inode->i_mode) || inode->i_ino == dir->i_ino) {
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	/* must be a directory */
+	ret = -ENOTDIR;
+	if (!S_ISDIR(inode->i_mode))
+		goto out;
+
+	/* check inode */
+	ret = -ENOENT;
+	if (inode->i_ino != de->d_inode)
+		goto out;
 
 	/* directory must be empty */
-	if (!tmpfs_empty_dir(inode)) {
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!tmpfs_empty_dir(inode))
+		goto out;
 
 	/* reset entry */
 	memset(de, 0, sizeof(struct tmpfs_dir_entry));
@@ -481,52 +439,44 @@ int tmpfs_rmdir(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks = 0;
 	mark_inode_dirty(inode);
 
-	/* release inode and directory */
-	iput(inode);
-	iput(dir);
-
-	return 0;
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
+out:
+	return ret;
 }
 
 /*
  * Rename a file.
  */
-int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
-	         struct inode *new_dir, const char *new_name, size_t new_name_len)
+int tmpfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
 {
-	struct inode *old_inode = NULL, *new_inode = NULL;
+	struct inode *old_inode = old_dentry->d_inode, *new_inode = new_dentry->d_inode;
 	struct tmpfs_dir_entry *old_de, *new_de;
 	int ret;
 
 	/* find old entry */
-	old_de = tmpfs_find_entry(old_dir, old_name, old_name_len);
-	if (!old_de) {
-		ret = -ENOENT;
+	ret = -ENOENT;
+	old_de = tmpfs_find_entry(old_dir, old_dentry->d_name.name, old_dentry->d_name.len);
+	if (!old_de)
 		goto out;
-	}
 
-	/* get old inode */
-	old_inode = iget(old_dir->i_sb, old_de->d_inode);
-	if (!old_inode) {
-		ret = -ENOSPC;
+	/* check old inode */
+	if (old_inode->i_ino != old_de->d_inode)
 		goto out;
-	}
 
 	/* find new entry (if exists) or add new one */
-	new_de = tmpfs_find_entry(new_dir, new_name, new_name_len);
+	new_de = tmpfs_find_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len);
 	if (new_de) {
-		/* get new inode */
-		new_inode = iget(new_dir->i_sb, new_de->d_inode);
-		if (!new_inode) {
-			ret = -ENOSPC;
+		/* check new inode */
+		ret = -ENOENT;
+		if (!new_inode || new_inode->i_ino != new_de->d_inode)
 			goto out;
-		}
 
 		/* same inode : exit */
-		if (old_inode->i_ino == new_inode->i_ino) {
-			ret = 0;
+		ret = 0;
+		if (old_inode->i_ino == new_inode->i_ino)
 			goto out;
-		}
 
 		/* modify new directory entry inode */
 		new_de->d_inode = old_inode->i_ino;
@@ -537,7 +487,7 @@ int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
-		ret = tmpfs_add_entry(new_dir, new_name, new_name_len, old_inode);
+		ret = tmpfs_add_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len, old_inode);
 		if (ret)
 			goto out;
 	}
@@ -552,21 +502,17 @@ int tmpfs_rename(struct inode *old_dir, const char *old_name, size_t old_name_le
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
 	mark_inode_dirty(new_dir);
 
+	/* update dcache */
+	d_move(old_dentry, new_dentry);
 	ret = 0;
 out:
-	/* release inodes */
-	iput(old_inode);
-	iput(new_inode);
-	iput(old_dir);
-	iput(new_dir);
-
 	return ret;
 }
 
 /*
  * Create a node.
  */
-int tmpfs_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
+int tmpfs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 {
 	struct inode *inode;
 	int ret;
@@ -576,31 +522,24 @@ int tmpfs_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mod
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_count++;
-	if (tmpfs_find_entry(dir, name, name_len)) {
-		iput(dir);
+	if (tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len))
 		return -EEXIST;
-	}
 
 	/* create a new inode */
 	inode = tmpfs_new_inode(dir->i_sb, mode, dev);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* add new entry to dir */
-	ret = tmpfs_add_entry(dir, name, name_len, inode);
+	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
 		inode->i_nlinks--;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
-	/* release inode (to write it on disk) */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

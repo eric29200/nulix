@@ -150,7 +150,7 @@ int fb_ioctl(struct file *filp, int request, unsigned long arg)
 			ret = fb->ops->put_var(fb, (struct fb_var_screeninfo *) arg);
 			break;
 		default:
-			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, filp->f_inode->i_rdev);
+			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, filp->f_dentry->d_inode->i_rdev);
 			break;
 	}
 
@@ -160,8 +160,9 @@ int fb_ioctl(struct file *filp, int request, unsigned long arg)
 /*
  * Framebuffer mmap.
  */
-static int fb_mmap(struct inode *inode, struct vm_area *vma)
+static int fb_mmap(struct file *filp, struct vm_area *vma)
 {
+	struct inode *inode = filp->f_dentry->d_inode;
 	struct framebuffer *fb = &direct_fb;
 	int ret;
 
@@ -173,9 +174,6 @@ static int fb_mmap(struct inode *inode, struct vm_area *vma)
 	inode->i_atime = CURRENT_TIME;
 	inode->i_count++;
 	mark_inode_dirty(inode);
-
-	/* set memory region */
-	vma->vm_inode = inode;
 
 	/* remap frame buffer */
 	ret = remap_page_range(vma->vm_start, fb->addr + vma->vm_offset, vma->vm_end - vma->vm_start, PAGE_SHARED);

@@ -231,6 +231,7 @@ int sys_sysinfo(struct sysinfo *info)
 
 	/* set info */
 	info->uptime = jiffies / HZ;
+	info->procs = nr_tasks - 1;
 	info->totalram = totalram_pages << PAGE_SHIFT;
 	info->freeram = nr_free_pages() << PAGE_SHIFT;
 	info->bufferram = buffermem_pages << PAGE_SHIFT;

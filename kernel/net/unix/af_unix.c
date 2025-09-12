@@ -51,6 +51,7 @@ static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size
  */
 static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_socket_t **res)
 {
+	struct dentry *dentry;
 	struct inode *inode;
 	int ret = 0;
 
@@ -63,10 +64,15 @@ static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_soc
 		if (!*res)
 			ret = -ECONNREFUSED;
 	} else {
-		/* find socket inode */
-		ret = open_namei(AT_FDCWD, NULL, sunaddr->sun_path, S_IFSOCK, 0, &inode);
-		if (ret)
-			return ret;
+		/* resolve socket path */
+		dentry = open_namei(AT_FDCWD, sunaddr->sun_path, S_IFSOCK, 0);
+		if (IS_ERR(dentry))
+			return PTR_ERR(dentry);
+
+		/* get inode */
+		inode = dentry->d_inode;
+		inode->i_count++;
+		dput(dentry);
 
 		/* find UNIX socket */
 		*res = unix_find_socket_by_inode(inode);
@@ -354,6 +360,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
+	struct dentry *dentry;
 	unix_socket_t *sk;
 	int ret;
 
@@ -381,10 +388,15 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 		if (ret)
 			return ret;
 
+		/* resolve path */
+		dentry = open_namei(AT_FDCWD, sunaddr->sun_path, 0, S_IFSOCK);
+		if (IS_ERR(dentry))
+			return PTR_ERR(dentry);
+
 		/* get inode */
-		ret = open_namei(AT_FDCWD, NULL, sunaddr->sun_path, 0, S_IFSOCK, &sk->protinfo.af_unix.inode);
-		if (ret)
-			return ret;
+		sk->protinfo.af_unix.inode = dentry->d_inode;
+		sk->protinfo.af_unix.inode->i_count++;
+		dput(dentry);
 	}
 
 	/* set socket address */

@@ -18,8 +18,8 @@
 #include <time.h>
 #include <string.h>
 
-#define NR_INODE			4096
 #define NR_FILE				256
+#define MAX_INODES			4096
 
 #define MS_RDONLY			1
 #define MS_REMOUNT			32
@@ -46,6 +46,12 @@
 #define BH_Lock				3
 
 #define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
+
+#define DNAME_INLINE_LEN		16
+
+#define ERR_PTR(err)			((void *) ((long) (err)))
+#define PTR_ERR(ptr)			((long) (ptr))
+#define IS_ERR(ptr)			((unsigned long) (ptr) > (unsigned long) (-1000))
 
 struct super_block;
 
@@ -90,8 +96,7 @@ struct super_block {
 	uint16_t			s_magic;
 	uint32_t			s_flags;
 	struct file_system *		s_type;
-	struct inode *			s_root_inode;
-	struct inode *			s_covered;
+	struct dentry *			s_root;
 	struct super_operations *	s_op;
 };
 
@@ -117,9 +122,9 @@ struct inode {
 	char				i_pipe;
 	char				i_shm;
 	char				i_sock;
-	struct inode *			i_mount;
 	struct list_head		i_pages;
 	struct list_head		i_mmap;
+	struct list_head		i_dentry;
 	struct list_head		i_list;
 	struct inode *			i_next_hash;
 	struct inode *			i_prev_hash;
@@ -135,6 +140,31 @@ struct inode {
 };
 
 /*
+ * String.
+ */
+struct qstr {
+	char *				name;
+	size_t				len;
+	uint32_t			hash;
+};
+
+/*
+ * Dentry.
+ */
+struct dentry {
+	int				d_count;
+	struct inode *			d_inode;
+	struct dentry *			d_parent;
+	struct dentry *			d_mounts;
+	struct dentry *			d_covers;
+	struct list_head		d_hash;
+	struct list_head		d_alias;
+	struct list_head		d_lru;
+	struct qstr			d_name;
+	char				d_iname[DNAME_INLINE_LEN];
+};
+
+/*
  * Opened file.
  */
 struct file {
@@ -142,8 +172,7 @@ struct file {
 	int				f_flags;
 	size_t				f_pos;
 	int				f_count;
-	struct inode *			f_inode;
-	char *				f_path;
+	struct dentry *			f_dentry;
 	void *				f_private;
 	struct file_operations *	f_op;
 };
@@ -186,17 +215,17 @@ struct super_operations {
  */
 struct inode_operations {
 	struct file_operations *fops;
-	int (*lookup)(struct inode *, const char *, size_t, struct inode **);
-	int (*create)(struct inode *, const char *, size_t, mode_t, struct inode **);
-	int (*follow_link)(struct inode *, struct inode *, int, mode_t, struct inode **);
+	int (*lookup)(struct inode *, struct dentry *);
+	int (*create)(struct inode *, struct dentry *, mode_t);
+	struct dentry *(*follow_link)(struct inode *, struct dentry *dentry);
 	ssize_t (*readlink)(struct inode *, char *, size_t);
-	int (*link)(struct inode *, struct inode *, const char *, size_t);
-	int (*unlink)(struct inode *, const char *, size_t);
-	int (*symlink)(struct inode *, const char *, size_t, const char *);
-	int (*mkdir)(struct inode *, const char *, size_t, mode_t);
-	int (*rmdir)(struct inode *, const char *, size_t);
-	int (*rename)(struct inode *, const char *, size_t, struct inode *, const char *, size_t);
-	int (*mknod)(struct inode *, const char *, size_t, mode_t, dev_t);
+	int (*link)(struct inode *, struct inode *, struct dentry *dentry);
+	int (*unlink)(struct inode *, struct dentry *);
+	int (*symlink)(struct inode *, struct dentry *, const char *);
+	int (*mkdir)(struct inode *, struct dentry *, mode_t);
+	int (*rmdir)(struct inode *, struct dentry *);
+	int (*rename)(struct inode *, struct dentry *, struct inode *, struct dentry *);
+	int (*mknod)(struct inode *, struct dentry *, mode_t, dev_t);
 	void (*truncate)(struct inode *);
 	int (*bmap)(struct inode *, uint32_t);
 	int (*get_block)(struct inode *, uint32_t, struct buffer_head *, int create);
@@ -217,7 +246,7 @@ struct file_operations {
 	int (*getdents64)(struct file *, void *, size_t);
 	int (*poll)(struct file *, struct select_table *);
 	int (*ioctl)(struct file *, int, unsigned long);
-	int (*mmap)(struct inode *, struct vm_area *);
+	int (*mmap)(struct file *, struct vm_area *);
 };
 
 /* files table */
@@ -247,8 +276,7 @@ void mark_buffer_new(struct buffer_head *bh);
 struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize);
 struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize);
 void brelse(struct buffer_head *bh);
-void bsync();
-void bsync_dev(dev_t dev);
+void sync_dev(dev_t dev);
 void init_buffer();
 struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void free_async_buffers(struct buffer_head *bh);
@@ -273,7 +301,26 @@ struct inode *get_empty_inode(struct super_block *sb);
 void clear_inode(struct inode *inode);
 void add_to_inode_cache(struct inode *inode);
 struct inode *find_inode(struct super_block *sb, ino_t ino);
+void sync_inodes(dev_t dev);
 void init_inode();
+
+/* dentry operations */
+uint32_t init_name_hash();
+uint32_t partial_name_hash(char c, uint32_t prev_hash);
+uint32_t end_name_hash(uint32_t hash);
+struct dentry *dget(struct dentry *dentry);
+void dput(struct dentry *dentry);
+struct dentry *d_alloc(struct dentry *parent, const struct qstr *name);
+struct dentry *d_alloc_root(struct inode *root_inode);
+void d_free(struct dentry *dentry);
+void d_instantiate(struct dentry *dentry, struct inode *inode);
+void d_add(struct dentry *dentry, struct inode *inode);
+void d_delete(struct dentry *dentry);
+void d_move(struct dentry *dentry, struct dentry *target);
+struct dentry *d_lookup(struct dentry *parent, struct qstr *name);
+void shrink_dcache_memory(int priority);
+int prune_dcache(int dentries_count, int inodes_count);
+void init_dcache();
 
 /* file operations */
 int get_unused_fd();
@@ -281,8 +328,9 @@ struct file *get_empty_filp();
 
 /* name operations */
 int permission(struct inode *inode, int mask);
-int namei(int dirfd, struct inode *base, const char *pathname, int follow_links, struct inode **res_inode);
-int open_namei(int dirfd, struct inode *base, const char *pathname, int flags, mode_t mode, struct inode **res_inode);
+struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathname, int follow_link);
+struct dentry *namei(int dirfd, const char *pathname, int follow_link);
+struct dentry *open_namei(int dirfd, const char *pathname, int flags, mode_t mode);
 
 /* directory operations */
 int filldir(struct dirent64 *dirent, const char *name, size_t name_len, ino_t ino, size_t max_len);
@@ -294,7 +342,7 @@ struct inode_operations *char_get_driver(struct inode *inode);
 struct inode_operations *block_get_driver(struct inode *inode);
 
 /* filemap operations */
-int generic_file_mmap(struct inode *inode, struct vm_area *vma);
+int generic_file_mmap(struct file *filp, struct vm_area *vma);
 
 /* generic operations */
 int do_mount_root(dev_t dev, const char *dev_name);

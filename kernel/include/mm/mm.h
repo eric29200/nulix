@@ -23,7 +23,7 @@ struct vm_area {
 	uint16_t			vm_flags;
 	uint32_t			vm_page_prot;
 	off_t				vm_offset;
-	struct inode *			vm_inode;
+	struct file *			vm_file;
 	struct mm_struct *		vm_mm;
 	struct vm_operations *		vm_ops;
 	struct list_head		list;

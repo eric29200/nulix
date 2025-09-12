@@ -226,7 +226,7 @@ void set_blocksize(dev_t dev, size_t blocksize)
 		return;
 
  	/* sync buffers */
-	bsync();
+	sync_dev(0);
 
 	/* set block size */
 	blocksize_size[major(dev)][minor(dev)] = blocksize;
@@ -563,7 +563,7 @@ int try_to_free_buffers(struct page *page)
 /*
  * Write all dirty buffers on disk.
  */
-static void __bsync(dev_t dev)
+static void sync_buffers(dev_t dev)
 {
 	struct buffer_head *bh, *bhs_list[NBUF];
 	struct list_head *pos, *n;
@@ -595,19 +595,12 @@ static void __bsync(dev_t dev)
 }
 
 /*
- * Write all dirty buffers on disk.
+ * Synchronize device on disk.
  */
-void bsync()
+void sync_dev(dev_t dev)
 {
-	__bsync(0);
-}
-
-/*
- * Write all dirty buffers on disk.
- */
-void bsync_dev(dev_t dev)
-{
-	__bsync(dev);
+	sync_buffers(dev);
+	sync_inodes(dev);
 }
 
 /*
@@ -615,9 +608,7 @@ void bsync_dev(dev_t dev)
  */
 int sys_sync()
 {
-	/* sync all buffers */
-	bsync();
-
+	sync_dev(0);
 	return 0;
 }
 

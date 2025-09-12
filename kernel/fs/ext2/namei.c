@@ -272,8 +272,9 @@ static int ext2_empty_dir(struct inode *inode)
 /*
  * Lookup for a file in a directory.
  */
-int ext2_lookup(struct inode *dir, const char *name, size_t name_len, struct inode **res_inode)
+int ext2_lookup(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = NULL;
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
 	ino_t ino;
@@ -283,93 +284,55 @@ int ext2_lookup(struct inode *dir, const char *name, size_t name_len, struct ino
 		return -ENOENT;
 
 	/* dir must be a directory */
-	if (!S_ISDIR(dir->i_mode)) {
-		iput(dir);
+	if (!S_ISDIR(dir->i_mode))
 		return -ENOENT;
-	}
 
 	/* find entry */
-	bh = ext2_find_entry(dir, name, name_len, &de);
-	if (!bh) {
-		iput(dir);
-		return -ENOENT;
-	}
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
+	if (!bh)
+		goto out;
 
 	/* get inode number */
 	ino = de->d_inode;
-
-	/* release block buffer */
 	brelse(bh);
 
 	/* get inode */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
+	inode = iget(dir->i_sb, ino);
+	if (!inode)
 		return -EACCES;
-	}
 
-	iput(dir);
+out:
+	d_add(dentry, inode);
 	return 0;
 }
 
 /*
  * Create a file in a directory.
  */
-int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mode, struct inode **res_inode)
+int ext2_create(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
-	struct ext2_dir_entry *de;
-	struct buffer_head *bh;
 	struct inode *inode;
-	ino_t ino;
 	int ret;
-
-	/* check directory */
-	*res_inode = NULL;
-	if (!dir)
-		return -ENOENT;
-
-	/* check if file already exists */
-	dir->i_count++;
-	bh = ext2_find_entry(dir, name, name_len, &de);
-	if (bh) {
-		brelse(bh);
-		iput(dir);
-		return -EEXIST;
-	}
 
 	/* create a new inode */
 	inode = ext2_new_inode(dir, S_IFREG | (mode & ~current_task->fs->umask & 0777));
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* set inode */
 	inode->i_op = &ext2_file_iops;
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	ret = ext2_add_entry(dir, name, name_len, inode);
+	ret = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
-		inode->i_nlinks--;
+		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
-	/* release inode (to write it on disk) */
-	ino = inode->i_ino;
-	iput(inode);
-
-	/* read inode from disk */
-	*res_inode = iget(dir->i_sb, ino);
-	if (!*res_inode) {
-		iput(dir);
-		return -EACCES;
-	}
-
-	/* release directory */
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }
@@ -377,7 +340,7 @@ int ext2_create(struct inode *dir, const char *name, size_t name_len, mode_t mod
 /*
  * Make a Ext2 directory.
  */
-int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode)
+int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
@@ -385,19 +348,16 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	int ret;
 
 	/* check if file exists */
-	bh = ext2_find_entry(dir, name, name_len, &de);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* allocate a new inode */
 	inode = ext2_new_inode(dir, S_IFDIR | (mode & ~current_task->fs->umask & 0777));
-	if (!inode) {
-		iput(dir);
-		return -ENOMEM;
-	}
+	if (!inode)
+		return -ENOSPC;
 
 	/* set inode */
 	inode->i_op = &ext2_dir_iops;
@@ -410,7 +370,6 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	if (!bh) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return -ENOSPC;
 	}
 
@@ -433,11 +392,10 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	brelse(bh);
 
 	/* add entry to parent dir */
-	ret = ext2_add_entry(dir, name, name_len, inode);
+	ret = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
 		inode->i_nlinks = 0;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
@@ -445,9 +403,8 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 	dir->i_nlinks++;
 	mark_inode_dirty(dir);
 
-	/* release inode */
-	iput(dir);
-	iput(inode);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }
@@ -455,47 +412,37 @@ int ext2_mkdir(struct inode *dir, const char *name, size_t name_len, mode_t mode
 /*
  * Remove a directory.
  */
-int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
+int ext2_rmdir(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = dentry->d_inode;
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
-	struct inode *inode;
-	ino_t ino;
 	int ret;
 
 	/* check if file exists */
-	bh = ext2_find_entry(dir, name, name_len, &de);
-	if (!bh) {
-		iput(dir);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
+	if (!bh)
 		return -ENOENT;
-	}
 
-	/* get inode number */
-	ino = de->d_inode;
+	/* can't remove "." */
+	ret = -EPERM;
+	if (inode == dir)
+		goto out;
 
-	/* get inode */
-	inode = iget(dir->i_sb, ino);
-	if (!inode) {
-		brelse(bh);
-		iput(dir);
-		return -ENOENT;
-	}
+	/* must be a directory */
+	ret = -ENOTDIR;
+	if (!S_ISDIR(inode->i_mode))
+		goto out;
 
-	/* remove directories only and do not allow to remove '.' */
-	if (!S_ISDIR(inode->i_mode) || inode->i_ino == dir->i_ino) {
-		brelse(bh);
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	/* check inode */
+	ret = -ENOENT;
+	if (inode->i_ino != de->d_inode)
+		goto out;
 
 	/* directory must be empty */
-	if (!ext2_empty_dir(inode)) {
-		brelse(bh);
-		iput(inode);
-		iput(dir);
-		return -EPERM;
-	}
+	ret = -EPERM;
+	if (!ext2_empty_dir(inode))
+		goto out;
 
 	/* remove entry */
 	ret = ext2_delete_entry(de, bh);
@@ -515,48 +462,47 @@ int ext2_rmdir(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks = 0;
 	mark_inode_dirty(inode);
 
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
 out:
 	brelse(bh);
-	iput(inode);
-	iput(dir);
-
-	return 0;
+	return ret;
 }
 
 /*
  * Make a new name for a file (= hard link).
  */
-int ext2_link(struct inode *old_inode, struct inode *dir, const char *name, size_t name_len)
+int ext2_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 {
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
 	int ret;
 
+	/* inode must not be a directory */
+	if (S_ISDIR(inode->i_mode))
+		return -EPERM;
+
 	/* check if new file exists */
-	bh = ext2_find_entry(dir, name, name_len, &de);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
-		iput(old_inode);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* add entry */
-	ret = ext2_add_entry(dir, name, name_len, old_inode);
-	if (ret) {
-		iput(old_inode);
-		iput(dir);
+	ret = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
+	if (ret)
 		return ret;
-	}
 
 	/* update old inode */
-	old_inode->i_ctime = CURRENT_TIME;
-	old_inode->i_nlinks++;
-	mark_inode_dirty(old_inode);
+	inode->i_ctime = CURRENT_TIME;
+	inode->i_nlinks++;
+	mark_inode_dirty(inode);
 
-	/* release inodes */
-	iput(old_inode);
-	iput(dir);
+	/* instantiate dentry */
+	inode->i_count++;
+	d_instantiate(dentry, inode);
 
 	return 0;
 }
@@ -564,40 +510,30 @@ int ext2_link(struct inode *old_inode, struct inode *dir, const char *name, size
 /*
  * Unlink (remove) a file.
  */
-int ext2_unlink(struct inode *dir, const char *name, size_t name_len)
+int ext2_unlink(struct inode *dir, struct dentry *dentry)
 {
+	struct inode *inode = dentry->d_inode;
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
-	struct inode *inode;
-	ino_t ino, err = 0;
+	int ret;
 
 	/* get directory entry */
-	bh = ext2_find_entry(dir, name, name_len, &de);
-	if (!bh) {
-		iput(dir);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
+	if (!bh)
 		return -ENOENT;
-	}
-
-	/* get inode number */
-	ino = de->d_inode;
-
-	/* get inode */
-	inode = iget(dir->i_sb, ino);
-	if (!inode) {
-		iput(dir);
-		brelse(bh);
-		return -ENOENT;
-	}
 
 	/* remove regular files only */
-	if (S_ISDIR(inode->i_mode)) {
-		err = -EPERM;
+	ret = -EPERM;
+	if (S_ISDIR(inode->i_mode))
 		goto out;
-	}
+
+	/* check inode */
+	if (de->d_inode != inode->i_ino)
+		goto out;
 
 	/* delete entry */
-	err = ext2_delete_entry(de, bh);
-	if (err)
+	ret = ext2_delete_entry(de, bh);
+	if (ret)
 		goto out;
 
 	/* mark buffer dirty */
@@ -612,11 +548,12 @@ int ext2_unlink(struct inode *dir, const char *name, size_t name_len)
 	inode->i_nlinks--;
 	mark_inode_dirty(inode);
 
+	/* delete dentry */
+	d_delete(dentry);
+	ret = 0;
 out:
 	brelse(bh);
-	iput(inode);
-	iput(dir);
-	return err;
+	return ret;
 }
 
 /*
@@ -650,7 +587,7 @@ static int ext2_block_symlink(struct inode *inode, const char *target)
 /*
  * Create a symbolic link.
  */
-int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const char *target)
+int ext2_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 {
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
@@ -665,10 +602,8 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 
 	/* create a new inode */
 	inode = ext2_new_inode(dir, S_IFLNK | (0777 & ~current_task->fs->umask));
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* write target link */
 	if (target_len > sizeof(inode->u.ext2_i.i_data)) {
@@ -686,7 +621,7 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 	mark_inode_dirty(inode);
 
 	/* check if file exists */
-	bh = ext2_find_entry(dir, name, name_len, &de);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		ret = -EEXIST;
 		brelse(bh);
@@ -694,69 +629,52 @@ int ext2_symlink(struct inode *dir, const char *name, size_t name_len, const cha
 	}
 
 	/* add entry */
-	ret = ext2_add_entry(dir, name, name_len, inode);
+	ret = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret)
 		goto err;
 
-	/* release inode */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 err:
 	inode->i_nlinks = 0;
 	iput(inode);
-	iput(dir);
 	return ret;
 }
 
 /*
  * Rename a file.
  */
-int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len,
-		struct inode *new_dir, const char *new_name, size_t new_name_len)
+int ext2_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
 {
-	struct inode *old_inode = NULL, *new_inode = NULL;
+	struct inode *old_inode = old_dentry->d_inode, *new_inode = new_dentry->d_inode;
 	struct buffer_head *old_bh = NULL, *new_bh = NULL;
 	struct ext2_dir_entry *old_de, *new_de;
-	ino_t old_ino, new_ino;
 	int ret;
 
 	/* find old entry */
-	old_bh = ext2_find_entry(old_dir, old_name, old_name_len, &old_de);
-	if (!old_bh) {
-		ret = -ENOENT;
+	ret = -ENOENT;
+	old_bh = ext2_find_entry(old_dir, old_dentry->d_name.name, old_dentry->d_name.len, &old_de);
+	if (!old_bh)
 		goto out;
-	}
 
-	/* get old inode number */
-	old_ino = old_de->d_inode;
-
-	/* get old inode */
-	old_inode = iget(old_dir->i_sb, old_ino);
-	if (!old_inode) {
-		ret = -ENOSPC;
+	/* check old inode */
+	if (old_inode->i_ino != old_de->d_inode)
 		goto out;
-	}
 
 	/* find new entry (if exists) or add new one */
-	new_bh = ext2_find_entry(new_dir, new_name, new_name_len, &new_de);
+	new_bh = ext2_find_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len, &new_de);
 	if (new_bh) {
-		/* get new inode number */
-		new_ino = new_de->d_inode;
-
-		/* get new inode */
-		new_inode = iget(new_dir->i_sb, new_ino);
-		if (!new_inode) {
-			ret = -ENOSPC;
+		/* check new inode */
+		ret = -ENOENT;
+		if (!new_inode || new_inode->i_ino != new_de->d_inode)
 			goto out;
-		}
 
 		/* same inode : exit */
-		if (old_inode->i_ino == new_inode->i_ino) {
-			ret = 0;
+		ret = 0;
+		if (old_inode->i_ino == new_inode->i_ino)
 			goto out;
-		}
 
 		/* modify new directory entry inode */
 		new_de->d_inode = old_inode->i_ino;
@@ -767,7 +685,7 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 		mark_inode_dirty(new_inode);
 	} else {
 		/* add new entry */
-		ret = ext2_add_entry(new_dir, new_name, new_name_len, old_inode);
+		ret = ext2_add_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len, old_inode);
 		if (ret)
 			goto out;
 	}
@@ -786,22 +704,20 @@ int ext2_rename(struct inode *old_dir, const char *old_name, size_t old_name_len
 	new_dir->i_atime = new_dir->i_mtime = CURRENT_TIME;
 	mark_inode_dirty(new_dir);
 
+	/* update dcache */
+	d_move(old_dentry, new_dentry);
 	ret = 0;
 out:
 	/* release buffers and inodes */
 	brelse(old_bh);
 	brelse(new_bh);
-	iput(old_inode);
-	iput(new_inode);
-	iput(old_dir);
-	iput(new_dir);
 	return ret;
 }
 
 /*
  * Create a node.
  */
-int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode, dev_t dev)
+int ext2_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 {
 	struct ext2_dir_entry *de;
 	struct buffer_head *bh;
@@ -813,37 +729,31 @@ int ext2_mknod(struct inode *dir, const char *name, size_t name_len, mode_t mode
 		return -ENOENT;
 
 	/* check if file already exists */
-	dir->i_count++;
-	bh = ext2_find_entry(dir, name, name_len, &de);
+	bh = ext2_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
 	if (bh) {
 		brelse(bh);
-		iput(dir);
 		return -EEXIST;
 	}
 
 	/* create a new inode */
 	inode = ext2_new_inode(dir, mode);
-	if (!inode) {
-		iput(dir);
+	if (!inode)
 		return -ENOSPC;
-	}
 
 	/* set inode */
 	inode->i_rdev = dev;
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
-	ret = ext2_add_entry(dir, name, name_len, inode);
+	ret = ext2_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
 	if (ret) {
 		inode->i_nlinks--;
 		iput(inode);
-		iput(dir);
 		return ret;
 	}
 
-	/* release inode (to write it on disk) */
-	iput(inode);
-	iput(dir);
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
 
 	return 0;
 }

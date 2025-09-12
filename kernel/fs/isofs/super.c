@@ -73,14 +73,14 @@ static int isofs_read_super(struct super_block *sb, void *data, int silent)
 	sbi->s_firstdatazone = (isofs_num733(root_dir->extent) + isofs_num711(root_dir->ext_attr_length)) << sbi->s_log_zone_size;
 	sb->s_magic = ISOFS_MAGIC;
 	sb->s_op = &isofs_sops;
-	sb->s_root_inode = NULL;
+	sb->s_root = NULL;
 
 	/* release super block buffer */
 	brelse(sbh);
 
 	/* get root inode */
-	sb->s_root_inode = iget(sb, sbi->s_firstdatazone);
-	if (!sb->s_root_inode)
+	sb->s_root = d_alloc_root(iget(sb, sbi->s_firstdatazone));
+	if (!sb->s_root)
 		goto err_root_inode;
 
 	return 0;

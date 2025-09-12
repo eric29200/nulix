@@ -9,18 +9,18 @@
  */
 static int do_faccessat(int dirfd, const char *pathname, mode_t mode, int flags)
 {
-	struct inode *inode;
+	struct dentry *dentry;
 	int ret;
 
-	/* check inode */
-	ret = namei(dirfd, NULL, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1, &inode);
-	if (ret)
-		return ret;
+	/* resolve path */
+	dentry = namei(dirfd, pathname, flags & AT_SYMLINK_NO_FOLLOW ? 0 : 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
 
 	/* check permissions */
-	ret = permission(inode, mode);
-	iput(inode);
+	ret = permission(dentry->d_inode, mode);
 
+	dput(dentry);
 	return ret;
 }
 

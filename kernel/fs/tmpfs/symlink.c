@@ -6,42 +6,26 @@
 /*
  * Resolve a symbolic link.
  */
-int tmpfs_follow_link(struct inode *dir, struct inode *inode, int flags, mode_t mode, struct inode **res_inode)
+struct dentry *tmpfs_follow_link(struct inode *inode, struct dentry *base)
 {
 	struct page *page;
 	char *kaddr;
-	int ret;
-
-	*res_inode = NULL;
-
-	/* check inode */
-	if (!inode)
-		return -ENOENT;
-
-	/* not a link */
-	if (!S_ISLNK(inode->i_mode)) {
-		*res_inode = inode;
-		return 0;
-	}
 
 	/* check first page */
 	if (list_empty(&inode->u.tmp_i.i_pages)) {
-		iput(inode);
-		return -EIO;
+		dput(base);
+		return ERR_PTR(-EIO);
 	}
 
 	/* get first page */
 	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page, list);
 
-	/* release link inode */
-	iput(inode);
-
-	/* open target inode */
+	/* resolve target */
 	kaddr = kmap(page);
-	ret = open_namei(AT_FDCWD, dir, kaddr, flags, mode, res_inode);
+	base = lookup_dentry(AT_FDCWD, base, kaddr, 1);
 	kunmap(page);
 
-	return ret;
+	return base;
 }
 
 /*
@@ -53,26 +37,19 @@ ssize_t tmpfs_readlink(struct inode *inode, char *buf, size_t bufsize)
 	void *kaddr;
 
 	/* inode must be link */
-	if (!S_ISLNK(inode->i_mode)) {
-		iput(inode);
+	if (!S_ISLNK(inode->i_mode))
 		return -EINVAL;
-	}
 
 	/* limit buffer size to page size */
 	if (bufsize > PAGE_SIZE)
 		bufsize = PAGE_SIZE;
 
 	/* check first page */
-	if (list_empty(&inode->u.tmp_i.i_pages)) {
-		iput(inode);
+	if (list_empty(&inode->u.tmp_i.i_pages))
 		return 0;
-	}
 
 	/* get first page */
 	page = list_first_entry(&inode->u.tmp_i.i_pages, struct page, list);
-
-	/* release inode */
-	iput(inode);
 
 	/* copy target name to user buffer */
 	kaddr = kmap(page);
