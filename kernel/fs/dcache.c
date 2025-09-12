@@ -142,11 +142,15 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	if (!dentry)
 		return NULL;
 
-	/* allocate name */
-	str = kmalloc(name->len + 1);
-	if (!str) {
-		kfree(dentry);
-		return NULL;
+	/* allocate name (or use inline name) */
+	if (name->len > DNAME_INLINE_LEN - 1) {
+		str = kmalloc(name->len + 1);
+		if (!str) {
+			kfree(dentry);
+			return NULL;
+		}
+	} else {
+		str = dentry->d_iname;
 	}
 
 	/* set name */
@@ -196,7 +200,8 @@ struct dentry *d_alloc_root(struct inode *root_inode)
  */
 void d_free(struct dentry *dentry)
 {
-	kfree(dentry->d_name.name);
+	if (dentry->d_name.name != dentry->d_iname)
+		kfree(dentry->d_name.name);
 	kfree(dentry);
 }
 

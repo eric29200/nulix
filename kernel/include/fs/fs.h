@@ -47,6 +47,8 @@
 
 #define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
 
+#define DNAME_INLINE_LEN		16
+
 #define ERR_PTR(err)			((void *) ((long) (err)))
 #define PTR_ERR(ptr)			((long) (ptr))
 #define IS_ERR(ptr)			((unsigned long) (ptr) > (unsigned long) (-1000))
@@ -159,6 +161,7 @@ struct dentry {
 	struct list_head		d_alias;
 	struct list_head		d_lru;
 	struct qstr			d_name;
+	char				d_iname[DNAME_INLINE_LEN];
 };
 
 /*
