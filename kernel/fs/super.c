@@ -330,7 +330,7 @@ static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, con
 
 	/* check mount */
 	ret = -EBUSY;
-	if (sb->s_root->d_covers != sb->s_root)
+	if (sb->s_root->d_count != 1 || sb->s_root->d_covers != sb->s_root)
 		goto err;
 
 	/* add mounted file system */

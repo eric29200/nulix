@@ -158,9 +158,9 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	str[name->len] = 0;
 
 	/* set dentry */
-	dentry->d_count = 0;
+	dentry->d_count = 1;
 	dentry->d_inode = NULL;
-	dentry->d_parent = parent;
+	dentry->d_parent = NULL;
 	dentry->d_mounts = dentry;
 	dentry->d_covers = dentry;
 	dentry->d_name.name = str;
@@ -169,6 +169,10 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	INIT_LIST_HEAD(&dentry->d_hash);
 	INIT_LIST_HEAD(&dentry->d_alias);
 	INIT_LIST_HEAD(&dentry->d_lru);
+
+	/* set parent */
+	if (parent)
+		dentry->d_parent = dget(parent);
 
 	return dentry;
 }
@@ -186,7 +190,6 @@ struct dentry *d_alloc_root(struct inode *root_inode)
 		return NULL;
 
 	/* set dentry */
-	dentry->d_count = 1;
 	dentry->d_parent = dentry;
 
 	/* instantiate dentry */
@@ -221,8 +224,7 @@ void d_instantiate(struct dentry *dentry, struct inode *inode)
  */
 void d_add(struct dentry *dentry, struct inode *inode)
 {
-	struct dentry *parent = dget(dentry->d_parent);
-
+	struct dentry *parent = dentry->d_parent;
 	list_add(&dentry->d_hash, d_hash(parent, dentry->d_name.hash));
 	d_instantiate(dentry, inode);
 }
@@ -302,8 +304,9 @@ void d_move(struct dentry *dentry, struct dentry *target)
 /*
  * Lookup in cache.
  */
-static struct dentry *__dlookup(struct list_head *head, struct dentry *parent, struct qstr *name)
+struct dentry *d_lookup(struct dentry *parent, struct qstr *name)
 {
+	struct list_head *head = d_hash(parent, name->hash);
 	struct list_head *tmp = head->next;
 	struct dentry *dentry;
 
@@ -320,18 +323,10 @@ static struct dentry *__dlookup(struct list_head *head, struct dentry *parent, s
 		if (memcmp(dentry->d_name.name, name->name, name->len))
 			continue;
 
-		return dentry;
+		return dget(dentry);
 	}
 
 	return NULL;
-}
-
-/*
- * Lookup in cache.
- */
-struct dentry *d_lookup(struct dentry *dir, struct qstr *name)
-{
-	return __dlookup(d_hash(dir, name->hash), dir, name);
 }
 
 /*

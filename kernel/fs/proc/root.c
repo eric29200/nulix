@@ -81,21 +81,13 @@ static int proc_root_getdents64(struct file *filp, void *dirp, size_t count)
 /*
  * Root dir lookup.
  */
-static int proc_root_lookup(struct inode *dir, struct dentry *dentry)
+static struct dentry *proc_root_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct inode *inode = NULL;
 	struct task *task;
 	pid_t pid;
 	ino_t ino;
 	size_t i;
-
-	/* check dir */
-	if (!dir)
-		return -ENOENT;
-
-	/* dir must be a directory */
-	if (!S_ISDIR(dir->i_mode))
-		return -ENOENT;
 
 	/* find matching entry */
 	for (i = 0; i < NR_ROOT_DIRENTRY; i++) {
@@ -110,7 +102,7 @@ static int proc_root_lookup(struct inode *dir, struct dentry *dentry)
 		pid = atoi(dentry->d_name.name);
 		task = find_task(pid);
 		if (!pid || !task)
-			return -ENOENT;
+			return ERR_PTR(-ENOENT);
 
 		ino = (task->pid << 16) + PROC_PID_INO;
 	}
@@ -118,10 +110,10 @@ static int proc_root_lookup(struct inode *dir, struct dentry *dentry)
 	/* get inode */
 	inode = iget(dir->i_sb, ino);
 	if (!inode)
-		return -EACCES;
+		return ERR_PTR(-EACCES);
 
 	d_add(dentry, inode);
-	return 0;
+	return NULL;
 }
 
 /*

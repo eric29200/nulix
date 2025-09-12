@@ -190,20 +190,12 @@ static int minix_empty_dir(struct inode *dir)
 /*
  * Lookup for a file in a directory.
  */
-int minix_lookup(struct inode *dir, struct dentry *dentry)
+struct dentry *minix_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct minix3_dir_entry *de;
 	struct inode *inode = NULL;
 	struct buffer_head *bh;
 	ino_t ino;
-
-	/* check dir */
-	if (!dir)
-		return -ENOENT;
-
-	/* dir must be a directory */
-	if (!S_ISDIR(dir->i_mode))
-		return -ENOENT;
 
 	/* find entry */
 	bh = minix_find_entry(dir, dentry->d_name.name, dentry->d_name.len, &de);
@@ -217,11 +209,11 @@ int minix_lookup(struct inode *dir, struct dentry *dentry)
 	/* get inode */
 	inode = iget(dir->i_sb, ino);
 	if (!inode)
-		return -EACCES;
+		return ERR_PTR(-EACCES);
 
 out:
 	d_add(dentry, inode);
-	return 0;
+	return NULL;
 }
 
 /*

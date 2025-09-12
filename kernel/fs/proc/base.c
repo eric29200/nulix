@@ -477,20 +477,12 @@ static int proc_base_getdents64(struct file *filp, void *dirp, size_t count)
 /*
  * Lookup for a file.
  */
-static int proc_base_lookup(struct inode *dir, struct dentry *dentry)
+static struct dentry *proc_base_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct inode *inode = NULL;
 	struct proc_dir_entry *de;
 	ino_t ino;
 	size_t i;
-
-	/* check dir */
-	if (!dir)
-		return -ENOENT;
-
-	/* dir must be a directory */
-	if (!S_ISDIR(dir->i_mode))
-		return -ENOENT;
 
 	/* find matching entry */
 	for (i = 0, de = NULL; i < NR_BASE_DIRENTRY; i++) {
@@ -502,7 +494,7 @@ static int proc_base_lookup(struct inode *dir, struct dentry *dentry)
 
 	/* no such entry */
 	if (!de)
-		return -ENOENT;
+		return ERR_PTR(-ENOENT);
 
 	/* create a fake inode */
 	if (de->ino == 1)
@@ -513,10 +505,10 @@ static int proc_base_lookup(struct inode *dir, struct dentry *dentry)
 	/* get inode */
 	inode = iget(dir->i_sb, ino);
 	if (!inode)
-		return -EACCES;
+		return ERR_PTR(-EACCES);
 
 	d_add(dentry, inode);
-	return 0;
+	return NULL;
 }
 
 /*

@@ -122,7 +122,7 @@ struct dentry *minix_follow_link(struct inode *inode, struct dentry *base);
 ssize_t minix_readlink(struct inode *inode, char *buf, size_t bufsize);
 
 /* minix name resolutions prototypes */
-int minix_lookup(struct inode *dir, struct dentry *dentry);
+struct dentry *minix_lookup(struct inode *dir, struct dentry *dentry);
 int minix_create(struct inode *dir, struct dentry *dentry, mode_t mode);
 int minix_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
 int minix_unlink(struct inode *dir, struct dentry *dentry);

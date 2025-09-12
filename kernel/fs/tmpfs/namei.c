@@ -157,18 +157,10 @@ found:
 /*
  * Directory lookup.
  */
-int tmpfs_lookup(struct inode *dir, struct dentry *dentry)
+struct dentry *tmpfs_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct tmpfs_dir_entry *de;
 	struct inode *inode = NULL;
-
-	/* check dir */
-	if (!dir)
-		return -ENOENT;
-
-	/* dir must be a directory */
-	if (!S_ISDIR(dir->i_mode))
-		return -ENOENT;
 
 	/* find entry */
 	de = tmpfs_find_entry(dir, dentry->d_name.name, dentry->d_name.len);
@@ -178,11 +170,11 @@ int tmpfs_lookup(struct inode *dir, struct dentry *dentry)
 	/* get inode */
 	inode = iget(dir->i_sb, de->d_inode);
 	if (!inode)
-		return -EACCES;
+		return ERR_PTR(-EACCES);
 
 out:
 	d_add(dentry, inode);
-	return 0;
+	return NULL;
 }
 
 /*

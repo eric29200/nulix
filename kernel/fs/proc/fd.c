@@ -84,21 +84,13 @@ static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
 /*
  * Lookup for a file.
  */
-static int proc_fd_lookup(struct inode *dir, struct dentry *dentry)
+static struct dentry *proc_fd_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct inode *inode = NULL;
 	struct task *task;
 	ino_t ino;
 	pid_t pid;
 	int fd;
-
-	/* check dir */
-	if (!dir)
-		return -ENOENT;
-
-	/* dir must be a directory */
-	if (!S_ISDIR(dir->i_mode))
-		return -ENOENT;
 
 	/* get pid */
 	pid = dir->i_ino >> 16;
@@ -114,7 +106,7 @@ static int proc_fd_lookup(struct inode *dir, struct dentry *dentry)
 	if (dentry->d_name.len == 2 && dentry->d_name.name[0] == '.' && dentry->d_name.name[1] == '.') {
 		inode = iget(dir->i_sb, (pid << 16) + PROC_PID_INO);
 		if (!inode) 
-			return -ENOENT;
+			return ERR_PTR(-ENOENT);
 
 		goto out;
 	    }
@@ -122,12 +114,12 @@ static int proc_fd_lookup(struct inode *dir, struct dentry *dentry)
 	/* get task */
 	task = find_task(pid);
 	if (!task)
-		return -ENOENT;
+		return ERR_PTR(-ENOENT);
 
 	/* try to find matching file descriptor */
 	fd = atoi(dentry->d_name.name);
 	if (fd < 0 || fd >= NR_OPEN || !task->files->filp[fd])
-		return -ENOENT;
+		return ERR_PTR(-ENOENT);
 
 	/* create a fake inode */
 	ino = (pid << 16) + (PROC_PID_FD_INO << 8) + fd;
@@ -135,11 +127,11 @@ static int proc_fd_lookup(struct inode *dir, struct dentry *dentry)
 	/* get inode */
 	inode = iget(dir->i_sb, ino);
 	if (!inode)
-		return -EACCES;
+		return ERR_PTR(-EACCES);
 
 out:
 	d_add(dentry, inode);
-	return 0;
+	return NULL;
 }
 
 /*

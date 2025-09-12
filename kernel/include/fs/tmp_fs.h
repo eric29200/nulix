@@ -31,7 +31,7 @@ int tmpfs_getdents64(struct file *filp, void *dirp, size_t count);
 
 /* name resolution operations */
 int tmpfs_add_entry(struct inode *dir, const char *name, int name_len, struct inode *inode);
-int tmpfs_lookup(struct inode *dir, struct dentry *dentry);
+struct dentry *tmpfs_lookup(struct inode *dir, struct dentry *dentry);
 int tmpfs_create(struct inode *dir, struct dentry *dentry, mode_t mode);
 int tmpfs_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
 int tmpfs_unlink(struct inode *dir, struct dentry *dentry);

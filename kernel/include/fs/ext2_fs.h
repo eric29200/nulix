@@ -209,7 +209,7 @@ ssize_t ext2_fast_readlink(struct inode *inode, char *buf, size_t bufsize);
 ssize_t ext2_page_readlink(struct inode *inode, char *buf, size_t bufsize);
 
 /* Ext2 name resolution prototypes */
-int ext2_lookup(struct inode *dir, struct dentry *dentry);
+struct dentry *ext2_lookup(struct inode *dir, struct dentry *dentry);
 int ext2_create(struct inode *dir, struct dentry *dentry, mode_t mode);
 int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
 int ext2_rmdir(struct inode *dir, struct dentry *dentry);

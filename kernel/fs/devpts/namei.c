@@ -6,31 +6,22 @@
 /*
  * Directory lookup.
  */
-int devpts_lookup(struct inode *dir, struct dentry *dentry)
+struct dentry *devpts_lookup(struct inode *dir, struct dentry *dentry)
 {
-	struct devpts_entry *de_dir, *de;
 	struct inode *inode = NULL;
-
-	/* check directory */
-	if (!dir)
-		return -ENOENT;
-
-	/* devpts entry must be a directory */
-	de_dir = dir->u.generic_i;
-	if (!S_ISDIR(de_dir->mode))
-		return -ENOENT;
+	struct devpts_entry *de;
 
 	/* find entry */
-	de = devpts_find(de_dir, dentry->d_name.name, dentry->d_name.len);
+	de = devpts_find(dir->u.generic_i, dentry->d_name.name, dentry->d_name.len);
 	if (!de)
 		goto out;
 
 	/* get inode */
 	inode = devpts_iget(dir->i_sb, de);
 	if (!inode)
-		return -EACCES;
+		return ERR_PTR(-EACCES);
 
 out:
 	d_add(dentry, inode);
-	return 0;
+	return NULL;
 }

@@ -74,7 +74,7 @@ static struct dentry *reserved_lookup(struct dentry *parent, struct qstr *name)
 		}
 	}
 
-	return res;
+	return dget(res);
 }
 
 /*
@@ -91,8 +91,7 @@ static struct dentry *cached_lookup(struct dentry *parent, struct qstr *name)
 static struct dentry *real_lookup(struct dentry *parent, struct qstr *name)
 {
 	struct inode *dir = parent->d_inode;
-	struct dentry *res;
-	int ret;
+	struct dentry *dentry, *res;
 
 	/* check cache first */
 	res = d_lookup(parent, name);
@@ -100,46 +99,34 @@ static struct dentry *real_lookup(struct dentry *parent, struct qstr *name)
 		return res;
 
 	/* allocate a new dentry */
-	res = d_alloc(parent, name);
-	if (!res)
+	dentry = d_alloc(parent, name);
+	if (!dentry)
 		return ERR_PTR(-ENOMEM);
 
 	/* lookup */
-	res->d_count++;
-	ret = dir->i_op->lookup(dir, res);
-	res->d_count--;
-	if (ret) {
-		d_free(res);
-		res = ERR_PTR(ret);
-	}
+	res = dir->i_op->lookup(dir, dentry);
+	if (res)
+		dput(dentry);
+	else
+		res = dentry;
 
 	return res;
 }
 
 /*
- * Lookup a file.
+ * Follow a mount point.
  */
-static struct dentry *lookup(struct dentry *dir, struct qstr *name)
+static struct dentry *follow_mount(struct dentry *dentry)
 {
-	struct dentry *res;
+	struct dentry *mnt = dentry->d_mounts;
 
-	/* reserved lookup */
-	res = reserved_lookup(dir, name);
-	if (res)
-		goto out;
+	if (mnt != dentry) {
+		dget(mnt);
+		dput(dentry);
+		dentry = mnt;
+	}
 
-	/* cached lookup */
-	res = cached_lookup(dir, name);
-	if (res)
-		goto out;
-
-	/* lookup */
-	res = real_lookup(dir, name);
-out:
-	if (!IS_ERR(res))
-		res = dget(res->d_mounts);
-
-	return res;
+	return dentry;
 }
 
 /*
@@ -219,9 +206,18 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 		}
 
 		/* lookup */
-		dentry = lookup(base, &this);
-		if (IS_ERR(dentry))
-			break;
+		dentry = reserved_lookup(base, &this);
+		if (!dentry) {
+			dentry = cached_lookup(base, &this);
+			if (!dentry) {
+				dentry = real_lookup(base, &this);
+				if (IS_ERR(dentry))
+					break;
+			}
+		}
+
+		/* check mountpoints */
+		dentry = follow_mount(dentry);
 
 		/* end */
 		if (!follow)
