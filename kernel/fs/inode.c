@@ -13,6 +13,7 @@
 static LIST_HEAD(inode_in_use);
 static LIST_HEAD(inode_unused);
 static int nr_inodes = 0;
+static int nr_free_inodes = 0;
 
 /* inode hash table */
 static struct inode *inode_hash_table[HASH_SIZE];
@@ -100,6 +101,47 @@ void clear_inode(struct inode *inode)
 
 	/* put it in free list */
 	list_add(&inode->i_list, &inode_unused);
+	nr_free_inodes++;
+}
+
+/*
+ * Free unused inodes.
+ */
+static int __free_inodes()
+{
+	struct list_head *pos, *n;
+	struct inode *inode;
+	int count = 0;
+
+	/* free unused inodes */
+	list_for_each_safe(pos, n, &inode_in_use) {
+		inode = list_entry(pos, struct inode, i_list);
+
+		/* inode still used */
+		if (inode->i_count || inode->i_state)
+			continue;
+
+		/* clear inode */
+		clear_inode(inode);
+		count++;
+	}
+
+	return count;
+}
+
+/*
+ * Try to free inodes.
+ */
+static void try_to_free_inodes(int count)
+{
+	/* try to get rid of unused */
+	count -= __free_inodes();
+
+	/* still wanted inodes : shrink dcache */
+	if (count > 0) {
+		prune_dcache(count);
+		__free_inodes();
+	}
 }
 
 /*
@@ -110,6 +152,19 @@ static struct inode *grow_inodes()
 	struct inode *inodes;
 	int i, n;
 
+	/* maximum number of inodes reached */
+	if (nr_inodes > MAX_INODES) {
+		/* try to free inodes */
+		try_to_free_inodes(nr_inodes >> 2);
+
+		/* no way to free inode */
+		if (list_empty(&inode_unused))
+			return NULL;
+
+		/* return first unused inode */
+		return list_first_entry(&inode_unused, struct inode, i_list);
+	}
+
 	/* get some memory */
 	inodes = (struct inode *) get_free_page();
 	if (!inodes)
@@ -119,6 +174,7 @@ static struct inode *grow_inodes()
 	/* update number of inodes */
 	n = PAGE_SIZE / sizeof(struct inode);
 	nr_inodes += n;
+	nr_free_inodes += n;
 
 	/* add inodes to free list */
 	for (i = 0; i < n; i++)
@@ -128,34 +184,11 @@ static struct inode *grow_inodes()
 }
 
 /*
- * Try to free inodes.
- */
-static void try_to_free_inodes()
-{
-	struct list_head *pos, *n;
-	struct inode *inode;
-
-	list_for_each_safe(pos, n, &inode_in_use) {
-		inode = list_entry(pos, struct inode, i_list);
-		
-		/* inode still used */
-		if (inode->i_count || inode->i_state)
-			continue;
-
-		/* clear inode */
-		clear_inode(inode);
-	}
-}
-
-/*
  * Get an empty inode.
  */
 struct inode *get_empty_inode(struct super_block *sb)
 {
 	struct inode *inode;
-
-	/* try to free inodes */
-	try_to_free_inodes();
 
 	/* try to reuse a free inode */
 	if (!list_empty(&inode_unused)) {
@@ -179,6 +212,7 @@ found:
 	/* put inode at the end of LRU list */
 	list_del(&inode->i_list);
 	list_add_tail(&inode->i_list, &inode_in_use);
+	nr_free_inodes--;
 
 	return inode;
 }

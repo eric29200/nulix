@@ -19,6 +19,7 @@
 #include <string.h>
 
 #define NR_FILE				256
+#define MAX_INODES			4096
 
 #define MS_RDONLY			1
 #define MS_REMOUNT			32

@@ -49,7 +49,7 @@ int sys_fchdir(int fd)
 	struct inode *inode;
 	struct file *filp;
 	int ret;
-	
+
 	/* gt file */
 	filp = fget(fd);
 	if (!filp)
