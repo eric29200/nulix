@@ -530,9 +530,8 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	INIT_LIST_HEAD(&task->sig_tm.list);
 
 	/* copy task name and TLS */
-	if (parent) {
+	if (parent)
 		memcpy(task->name, parent->name, TASK_NAME_LEN);
-	}
 
 	/* copy task */
 	if (task_copy_flags(task, parent, clone_flags))
@@ -549,6 +548,9 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 		goto err_rlim;
 	if (task_copy_thread(task, parent, user_sp))
 		goto err_thread;
+
+	/* update number of tasks */
+	nr_tasks++;
 
 	return task;
 err_thread:
@@ -674,6 +676,9 @@ void destroy_task(struct task *task)
 
 	/* free task */
 	kfree(task);
+
+	/* update number of tasks */
+	nr_tasks--;
 }
 
 /*
