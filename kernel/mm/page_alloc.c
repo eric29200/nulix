@@ -289,7 +289,7 @@ static void reclaim_pages()
 	sync_dev(0);
 
 	/* try to free dentries */
-	count = shrink_dcache(count);
+	count = prune_dcache(count);
 
 	/* try to free pages */
 	count = shrink_mmap(count);

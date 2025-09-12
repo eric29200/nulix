@@ -16,6 +16,7 @@
 /* static variables */
 static struct list_head dentry_hashtable[D_HASHSIZE];
 static LIST_HEAD(dentry_unused);
+static int dentry_nr_unused = 0;
 
 /*
  * Init name hash.
@@ -56,6 +57,27 @@ static struct list_head *d_hash(struct dentry * parent, uint32_t hash)
 }
 
 /*
+ * Release dentry's inode.
+ */
+static int dentry_iput(struct dentry *dentry)
+{
+	struct inode *inode = dentry->d_inode;
+	int ret;
+
+	if (!inode)
+		return 0;
+
+	/* release inode */
+	dentry->d_inode = NULL;
+	list_del(&dentry->d_alias);
+	INIT_LIST_HEAD(&dentry->d_alias);
+	ret = inode->i_count == 1;
+	iput(inode);
+
+	return ret;
+}
+
+/*
  * Get a dentry.
  */
 struct dentry *dget(struct dentry *dentry)
@@ -72,7 +94,6 @@ struct dentry *dget(struct dentry *dentry)
 void dput(struct dentry *dentry)
 {
 	struct dentry *parent;
-	struct inode *inode;
 
 	if (!dentry)
 		return;
@@ -86,20 +107,17 @@ repeat:
 	if (dentry->d_count)
 		return;
 
-	list_del(&dentry->d_lru);
-	if (list_empty(&dentry->d_hash)) {
-		/* release inode */
-		inode = dentry->d_inode;
-		if (inode) {
-			list_del(&dentry->d_alias);
-			iput(inode);
-		}
+	/* remove dentry from unused list */
+	if (!list_empty(&dentry->d_lru)) {
+		dentry_nr_unused--;
+		list_del(&dentry->d_lru);
+	}
 
-		/* free dentry */
+	/* free dentry and release parent */
+	if (list_empty(&dentry->d_hash)) {
+		dentry_iput(dentry);
 		parent = dentry->d_parent;
 		d_free(dentry);
-
-		/* release parent */
 		if (dentry == parent)
 			return;
 		dentry = parent;
@@ -108,6 +126,7 @@ repeat:
 
 	/* add dentry to unused list */
 	list_add(&dentry->d_lru, &dentry_unused);
+	dentry_nr_unused++;
 }
 
 /*
@@ -217,13 +236,9 @@ static void d_drop(struct dentry *dentry)
  */
 void d_delete(struct dentry *dentry)
 {
-	struct inode *inode = dentry->d_inode;
-
 	/* only one user : release inode */
 	if (dentry->d_count == 1) {
-		dentry->d_inode = NULL;
-		list_del(&dentry->d_alias);
-		iput(inode);
+		dentry_iput(dentry);
 		return;
 	}
 
@@ -374,13 +389,33 @@ int sys_getcwd(char *buf, size_t size)
 }
 
 /*
- * Shrink dentries cache.
+ * Prune a dentry.
  */
-int shrink_dcache(int count)
+static int prune_one_dentry(struct dentry *dentry)
 {
-	struct dentry *dentry, *parent;
+	struct dentry * parent;
+	int ret;
+
+	/* prune dentry */
+	list_del(&dentry->d_hash);
+	ret = dentry_iput(dentry);
+	parent = dentry->d_parent;
+	d_free(dentry);
+
+	/* release parent */
+	if (parent != dentry)
+		dput(parent);
+
+	return ret;
+}
+
+/*
+ * Prune dentries cache.
+ */
+int prune_dcache(int count)
+{
+	struct dentry *dentry;
 	struct list_head *tmp;
-	struct inode *inode;
 
 	for (;;) {
 		/* get next unused dentry */
@@ -388,32 +423,19 @@ int shrink_dcache(int count)
 		if (tmp == &dentry_unused)
 			break;
 
-		/* remove it from list */
+		/* get dentry */
 		list_del(tmp);
+		dentry = list_entry(tmp, struct dentry, d_lru);
+		dentry_nr_unused--;
 		INIT_LIST_HEAD(tmp);
 
 		/* still used */
-		dentry = list_entry(tmp, struct dentry, d_lru);
 		if (dentry->d_count)
 			continue;
 
-		/* unhash dentry */
-		list_del(&dentry->d_hash);
+		/* prune dentry */
+		prune_one_dentry(dentry);
 
-		/* release inode */
-		if (dentry->d_inode) {
-			inode = dentry->d_inode;
-			list_del(&dentry->d_alias);
-			dentry->d_inode = NULL;
-			iput(inode);
-		}
-
-		/* free dentry and release parent */
-		parent = dentry->d_parent;
-		d_free(dentry);
-		dput(parent);
-
-		/* end */
 		if (!--count)
 			break;
 	}

@@ -314,7 +314,7 @@ void d_add(struct dentry *dentry, struct inode *inode);
 void d_delete(struct dentry *dentry);
 void d_move(struct dentry *dentry, struct dentry *target);
 struct dentry *d_lookup(struct dentry *parent, struct qstr *name);
-int shrink_dcache(int count);
+int prune_dcache(int count);
 void init_dcache();
 
 /* file operations */
