@@ -171,9 +171,7 @@ static int fb_mmap(struct file *filp, struct vm_area *vma)
 		return -EINVAL;
 
 	/* update inode */
-	inode->i_atime = CURRENT_TIME;
-	inode->i_count++;
-	mark_inode_dirty(inode);
+	update_atime(inode);
 
 	/* remap frame buffer */
 	ret = remap_page_range(vma->vm_start, fb->addr + vma->vm_offset, vma->vm_end - vma->vm_start, PAGE_SHARED);

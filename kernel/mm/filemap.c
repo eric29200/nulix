@@ -272,9 +272,7 @@ int generic_file_mmap(struct file *filp, struct vm_area *vma)
 		return -ENOEXEC;
 
 	/* update inode */
-	inode->i_atime = CURRENT_TIME;
-	inode->i_count++;
-	mark_inode_dirty(inode);
+	update_atime(inode);
 
 	/* set memory region */
 	vma->vm_ops = ops;
@@ -402,8 +400,7 @@ found_page:
 	filp->f_pos = pos;
 
 	/* update inode */
-	inode->i_atime = CURRENT_TIME;
-	mark_inode_dirty(inode);
+	update_atime(inode);
 
 	return read ? read : err;
 }

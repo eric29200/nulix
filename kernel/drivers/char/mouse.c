@@ -243,7 +243,7 @@ static int mouse_read(struct file *filp, char *buf, int n)
 
 	/* upate inode */
 	if (i)
-		filp->f_dentry->d_inode->i_atime = CURRENT_TIME;
+		update_atime(filp->f_dentry->d_inode);
 
 	return i;
 }

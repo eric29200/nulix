@@ -302,6 +302,7 @@ void clear_inode(struct inode *inode);
 void add_to_inode_cache(struct inode *inode);
 struct inode *find_inode(struct super_block *sb, ino_t ino);
 void sync_inodes(dev_t dev);
+void update_atime(struct inode *inode);
 void init_inode();
 
 /* dentry operations */

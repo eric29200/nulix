@@ -395,7 +395,8 @@ int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 		return ret;
 	}
 
-	/* update directory links and mark it dirty */
+	/* update directory and mark it dirty */
+	dir->i_mtime = dir->i_ctime = CURRENT_TIME;
 	dir->i_nlinks++;
 	mark_inode_dirty(dir);
 

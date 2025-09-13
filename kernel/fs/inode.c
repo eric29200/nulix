@@ -327,6 +327,24 @@ void iput(struct inode *inode)
 }
 
 /*
+ * Update access time.
+ */
+void update_atime(struct inode *inode)
+{
+	/* already up to date */
+	if (inode->i_atime == CURRENT_TIME)
+		return;
+
+	/* read only */
+	if (IS_RDONLY(inode))
+		return;
+
+	/* update access time */
+	inode->i_atime = CURRENT_TIME;
+	mark_inode_dirty(inode);
+}
+
+/*
  * Init inodes.
  */
 void init_inode()

@@ -71,8 +71,10 @@ static int pipe_read(struct file *filp, char *buf, int count)
 	/* wake up writer */
 	wake_up(&PIPE_WAIT(inode));
 
-	if (read)
+	if (read) {
+		update_atime(inode);
 		return read;
+	}
 
 	if (PIPE_WRITERS(inode))
 		return -EAGAIN;
@@ -88,11 +90,12 @@ static int pipe_write(struct file *filp, const char *buf, int count)
 	struct inode *inode = filp->f_dentry->d_inode;
 	int chars, free, written = 0;
 	char *pipebuf;
+	int ret = 0;
 
 	/* no readers */
 	if (!PIPE_READERS(inode)) {
 		task_signal(current_task->pid, SIGPIPE);
-		return -EPIPE;
+		return -ESPIPE;
 	}
 
 	while (count > 0) {
@@ -101,16 +104,21 @@ static int pipe_write(struct file *filp, const char *buf, int count)
 			/* no readers */
 			if (!PIPE_READERS(inode)) {
 				task_signal(current_task->pid, SIGPIPE);
-				return written ? written : -EPIPE;
+				ret = -EPIPE;
+				goto out;
 			}
 
 			/* process interruption */
-			if (signal_pending(current_task))
-				return written ? written : -ERESTARTSYS;
+			if (signal_pending(current_task)) {
+				ret = -ERESTARTSYS;
+				goto out;
+			}
 
 			/* non blocking */
-			if (filp->f_flags & O_NONBLOCK)
-				return written ? written : -EAGAIN;
+			if (filp->f_flags & O_NONBLOCK) {
+				ret = -EAGAIN;
+				goto out;
+			}
 
 			/* wait for free space */
 			sleep_on(&PIPE_WAIT(inode));
@@ -147,7 +155,10 @@ static int pipe_write(struct file *filp, const char *buf, int count)
 		free = 1;
 	}
 
-	return written;
+out:
+	inode->i_ctime = inode->i_mtime = CURRENT_TIME;
+	mark_inode_dirty(inode);
+	return written ? written : ret;
 }
 
 /*
