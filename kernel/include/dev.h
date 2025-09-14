@@ -6,11 +6,7 @@
 #define DEV_CONSOLE		0x501		/* main console */
 #define DEV_PTMX		0x502		/* ptys master creator */
 
-#define DEV_NULL		0x103		/* /dev/null device */
-#define DEV_ZERO		0x105		/* /dev/zero device */
-#define DEV_RANDOM		0x108		/* /dev/random device */
-#define DEV_URANDOM		0x109		/* /dev/urandom device */
-
+#define DEV_MEMORY_MAJOR	1		/* memory major number (zero, null, random...) */
 #define DEV_ATA_MAJOR		3		/* ata major number */
 #define DEV_TTY_MAJOR		4		/* tty major number */
 #define DEV_MOUSE_MAJOR		13		/* mouse major number */

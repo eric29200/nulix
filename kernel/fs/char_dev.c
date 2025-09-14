@@ -1,7 +1,5 @@
 #include <fs/fs.h>
-#include <drivers/char/null.h>
-#include <drivers/char/zero.h>
-#include <drivers/char/random.h>
+#include <drivers/char/mem.h>
 #include <drivers/char/tty.h>
 #include <drivers/char/mouse.h>
 #include <drivers/video/fb.h>
@@ -17,17 +15,9 @@ struct inode_operations *char_get_driver(struct inode *inode)
 	if (!inode || !S_ISCHR(inode->i_mode))
 		return NULL;
 
-	/* null driver */
-	if (inode->i_rdev == DEV_NULL)
-		return &null_iops;
-
-	/* zero driver */
-	if (inode->i_rdev == DEV_ZERO)
-		return &zero_iops;
-
-	/* random driver */
-	if (inode->i_rdev == DEV_RANDOM || inode->i_rdev == DEV_URANDOM)
-		return &random_iops;
+	/* memory driver */
+	if (major(inode->i_rdev) == DEV_MEMORY_MAJOR)
+		return &memory_iops;
 
 	/* tty driver */
 	if (major(inode->i_rdev) == major(DEV_TTY0))

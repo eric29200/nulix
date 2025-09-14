@@ -1,4 +1,4 @@
-#include <drivers/char/random.h>
+#include <drivers/char/mem.h>
 #include <drivers/char/keyboard.h>
 #include <proc/sched.h>
 #include <sys/utsname.h>
@@ -102,7 +102,7 @@ int sys_getrandom(void *buf, size_t buflen, unsigned int flags)
 	UNUSED(flags);
 
 	/* use /dev/random */
-	return random_iops.fops->read(NULL, buf, buflen);
+	return random_read(NULL, buf, buflen);
 }
 
 /*
