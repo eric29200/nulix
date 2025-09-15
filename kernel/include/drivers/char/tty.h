@@ -52,7 +52,6 @@
 /*
  * TTY driver.
  */
-struct tty;
 struct tty_driver {
 	ssize_t			(*write)(struct tty *);					/* write function */
 	int			(*ioctl)(struct tty *, int, unsigned long);		/* ioctl function */

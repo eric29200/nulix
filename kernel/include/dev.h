@@ -11,7 +11,7 @@
 #define DEV_TTY_MAJOR		4		/* tty major number */
 #define DEV_MOUSE_MAJOR		13		/* mouse major number */
 #define DEV_FB_MAJOR		29		/* frame buffer major number */
-#define DEV_PTS_MAJOR		88		/* pty major number */
+#define DEV_PTS_MAJOR		136		/* pty major number */
 
 #define MAX_BLKDEV		128
 
