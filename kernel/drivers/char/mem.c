@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stderr.h>
 #include <math.h>
+#include <dev.h>
 
 /*
  * Read null device.
@@ -173,8 +174,9 @@ static struct file_operations memory_fops = {
 };
 
 /*
- * Memory device inode operations.
+ * Init memory devices.
  */
-struct inode_operations memory_iops = {
-	.fops		= &memory_fops,
-};
+int init_mem_devices()
+{
+	return register_chrdev(DEV_MEMORY_MAJOR, "mem", &memory_fops);
+}

@@ -92,9 +92,9 @@ struct inode *tmpfs_new_inode(struct super_block *sb, mode_t mode, dev_t dev)
 	else if (S_ISLNK(mode))
 		inode->i_op = &tmpfs_symlink_iops;
 	else if (S_ISCHR(inode->i_mode))
-		inode->i_op = char_get_driver(inode);
+		inode->i_op = &chrdev_iops;
 	else if (S_ISBLK(inode->i_mode))
-		inode->i_op = block_get_driver(inode);
+		inode->i_op = &blkdev_iops;
 	else
 		inode->i_op = &tmpfs_file_iops;
 

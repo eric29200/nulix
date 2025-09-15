@@ -125,6 +125,4 @@ int init_ata();
 int ata_hd_init(struct ata_device *device);
 int ata_cd_init(struct ata_device *device);
 
-extern struct inode_operations ata_iops;
-
 #endif

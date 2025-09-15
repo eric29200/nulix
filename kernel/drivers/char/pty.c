@@ -184,7 +184,7 @@ err:
 /*
  * Init ptys.
  */
-int init_pty()
+int init_pty(struct file_operations *fops)
 {
 	int i;
 
@@ -194,5 +194,6 @@ int init_pty()
 		pty_table[i].p_count = 0;
 	}
 
-	return 0;
+	/* register pty driver */
+	return register_chrdev(DEV_PTS_MAJOR, "pty", fops);
 }

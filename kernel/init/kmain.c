@@ -4,6 +4,7 @@
 #include <x86/io.h>
 #include <mm/mm.h>
 #include <grub/multiboot2.h>
+#include <drivers/char/mem.h>
 #include <drivers/char/serial.h>
 #include <drivers/char/pit.h>
 #include <drivers/char/rtc.h>
@@ -105,6 +106,11 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
  */
 static void kinit()
 {
+	/* init mouse */
+	printf("[Kernel] Memory devices Init\n");
+	if (init_mem_devices())
+		printf("[Kernel] Memory devices Init error\n");
+
 	/* init pci devices */
 	printf("[Kernel] PCI devices Init\n");
 	init_pci();
@@ -115,7 +121,8 @@ static void kinit()
 
 	/* init mouse */
 	printf("[Kernel] Mouse Init\n");
-	init_mouse();
+	if (init_mouse())
+		printf("[Kernel] Mouse Init error\n");
 
 	/* init realtek 8139 device */
 	printf("[Kernel] Realtek 8139 card Init\n");

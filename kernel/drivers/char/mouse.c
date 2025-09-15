@@ -280,10 +280,28 @@ static int mouse_poll(struct file *filp, struct select_table *wait)
 }
 
 /*
+ * Mouse file operations.
+ */
+static struct file_operations mouse_fops = {
+	.open		= mouse_open,
+	.close		= mouse_close,
+	.read		= mouse_read,
+	.write		= mouse_write,
+	.poll		= mouse_poll,
+};
+
+/*
  * Init mouse device.
  */
-void init_mouse()
+int init_mouse()
 {
+	int ret;
+
+	/* register mouse device */
+	ret = register_chrdev(DEV_MOUSE_MAJOR, "mouse", &mouse_fops);
+	if (ret)
+		return ret;
+
 	/* empty mouse input buffer */
 	while (inb(MOUSE_STATUS) & 0x01)
 		inb(MOUSE_PORT);
@@ -303,22 +321,6 @@ void init_mouse()
 	outb(MOUSE_COMMAND, MOUSE_CMD_WRITE);
 	mouse_poll_status_no_sleep();
 	outb(MOUSE_PORT, MOUSE_INTS_OFF);
+
+	return 0;
 }
-
-/*
- * Mouse file operations.
- */
-static struct file_operations mouse_fops = {
-	.open		= mouse_open,
-	.close		= mouse_close,
-	.read		= mouse_read,
-	.write		= mouse_write,
-	.poll		= mouse_poll,
-};
-
-/*
- * Mouse inode operations.
- */
-struct inode_operations mouse_iops = {
-	.fops		= &mouse_fops,
-};

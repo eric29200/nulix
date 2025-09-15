@@ -159,7 +159,4 @@ int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb);
 extern struct framebuffer_ops fb_text_ops;
 extern struct framebuffer_ops fb_rgb_ops;
 
-/* frame buffer inode operations */
-extern struct inode_operations fb_iops;
-
 #endif

@@ -91,9 +91,6 @@ void disassociate_ctty();
 /* pty controller functions */
 int ptmx_open(struct file *filp);
 
-/* inode operations */
-extern struct inode_operations tty_iops;
-
 /* global ttys */
 extern struct tty tty_table[NR_TTYS];
 extern int fg_console;

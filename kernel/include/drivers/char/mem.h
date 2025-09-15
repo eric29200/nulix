@@ -4,7 +4,6 @@
 #include <fs/fs.h>
 
 int random_read(struct file *filp, char *buf, int n);
-
-extern struct inode_operations memory_iops;
+int init_mem_devices();
 
 #endif

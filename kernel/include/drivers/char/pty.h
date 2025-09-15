@@ -14,6 +14,6 @@ struct pty {
 	struct devpts_entry *	de;		/* devpts entry */
 };
 
-int init_pty();
+int init_pty(struct file_operations *fops);
 
 #endif

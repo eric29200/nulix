@@ -241,6 +241,15 @@ static void ata_irq_handler(struct registers *regs)
 }
 
 /*
+ * ATA file operations.
+ */
+static struct file_operations ata_fops = {
+	.read		= generic_block_read,
+	.write		= generic_block_write,
+	.ioctl		= ata_ioctl,
+};
+
+/*
  * Init ata devices.
  */
 int init_ata()
@@ -250,6 +259,11 @@ int init_ata()
 	/* register interrupt handlers */
 	register_interrupt_handler(IRQ14, ata_irq_handler);
 	register_interrupt_handler(IRQ15, ata_irq_handler);
+
+	/* register ata device */
+	ret = register_blkdev(DEV_ATA_MAJOR, "ata", &ata_fops);
+	if (ret)
+		return ret;
 
 	/* set default block size */
 	blocksize_size[DEV_ATA_MAJOR] = ata_blocksizes;
@@ -272,19 +286,3 @@ int init_ata()
 
 	return 0;
 }
-
-/*
- * ATA file operations.
- */
-static struct file_operations ata_fops = {
-	.read		= generic_block_read,
-	.write		= generic_block_write,
-	.ioctl		= ata_ioctl,
-};
-
-/*
- * ATA inode operations.
- */
-struct inode_operations ata_iops = {
-	.fops		= &ata_fops,
-};

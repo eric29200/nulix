@@ -337,11 +337,15 @@ struct dentry *open_namei(int dirfd, const char *pathname, int flags, mode_t mod
 /* directory operations */
 int filldir(struct dirent64 *dirent, const char *name, size_t name_len, ino_t ino, size_t max_len);
 
-/* character device driver */
-struct inode_operations *char_get_driver(struct inode *inode);
+/* character/block devices operations */
+int register_chrdev(int major, const char *name, struct file_operations *fops);
+int register_blkdev(int major, const char *name, struct file_operations *fops);
+int unregister_chrdev(int major, const char *name);
+int unregister_blkdev(int major, const char *name);
 
-/* block device driver */
-struct inode_operations *block_get_driver(struct inode *inode);
+/* character/block devices inode operations */
+extern struct inode_operations chrdev_iops;
+extern struct inode_operations blkdev_iops;
 
 /* filemap operations */
 int generic_file_mmap(struct file *filp, struct vm_area *vma);

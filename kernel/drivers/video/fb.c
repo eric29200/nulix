@@ -14,14 +14,6 @@
 static struct framebuffer direct_fb;
 
 /*
- * Init direct frame buffer.
- */
-int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
-{
-	return init_framebuffer(&direct_fb, tag_fb, 0, 1, 0);
-}
-
-/*
  * Init the framebuffer.
  */
 int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct, int cursor_on)
@@ -180,7 +172,6 @@ static int fb_mmap(struct file *filp, struct vm_area *vma)
 
 	return 0;
 }
-
 /*
  * Framebuffer file operations.
  */
@@ -193,8 +184,16 @@ static struct file_operations fb_fops = {
 };
 
 /*
- * Framebuffer inode operations.
+ * Init direct frame buffer.
  */
-struct inode_operations fb_iops = {
-	.fops	= &fb_fops,
-};
+int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
+{
+	int ret;
+
+	/* register device */
+	ret = register_chrdev(DEV_FB_MAJOR, "fb", &fb_fops);
+	if (ret)
+		return 0;
+
+	return init_framebuffer(&direct_fb, tag_fb, 0, 1, 0);
+}

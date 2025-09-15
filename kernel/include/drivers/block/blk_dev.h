@@ -5,8 +5,6 @@
 #include <ioctl.h>
 #include <dev.h>
 
-#define MAX_BLKDEV		128
-
 #define BLKGETSIZE 		_IO(0x12, 96)
 #define BLKBSZGET		_IOR(0x12, 112, sizeof(int))
 #define BLKBSZSET		_IOW(0x12, 113, sizeof(int))

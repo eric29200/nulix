@@ -143,10 +143,10 @@ int ext2_read_inode(struct inode *inode)
 			inode->i_op = &ext2_page_symlink_iops;
 	} else if (S_ISCHR(inode->i_mode)) {
 		inode->i_rdev = raw_inode->i_block[0];
-		inode->i_op = char_get_driver(inode);
+		inode->i_op = &chrdev_iops;
 	} else if (S_ISBLK(inode->i_mode)) {
 		inode->i_rdev = raw_inode->i_block[0];
-		inode->i_op = block_get_driver(inode);
+		inode->i_op = &blkdev_iops;
 	} else {
 		inode->i_op = &ext2_file_iops;
 	}

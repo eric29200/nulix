@@ -586,29 +586,6 @@ void tty_destroy(struct tty *tty)
 }
 
 /*
- * Init TTYs.
- */
-int init_tty(struct multiboot_tag_framebuffer *tag_fb)
-{
-	int ret;
-
-	/* reset ttys */
-	memset(tty_table, 0, sizeof(struct tty) * NR_TTYS);
-
-	/* init ptys */
-	ret = init_pty();
-	if (ret)
-		return ret;
-
-	/* init consoles */
-	ret = init_console(tag_fb);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-/*
  * Tty file operations.
  */
 static struct file_operations tty_fops = {
@@ -621,8 +598,34 @@ static struct file_operations tty_fops = {
 };
 
 /*
- * Tty inode operations.
+ * Init TTYs.
  */
-struct inode_operations tty_iops = {
-	.fops		= &tty_fops,
-};
+int init_tty(struct multiboot_tag_framebuffer *tag_fb)
+{
+	int ret;
+
+	/* register tty device */
+	ret = register_chrdev(DEV_TTY_MAJOR, "tty", &tty_fops);
+	if (ret)
+		return ret;
+
+	/* register auxiliary tty device */
+	ret = register_chrdev(DEV_TTYAUX_MAJOR, "ttyaux", &tty_fops);
+	if (ret)
+		return ret;
+
+	/* reset ttys */
+	memset(tty_table, 0, sizeof(struct tty) * NR_TTYS);
+
+	/* init ptys */
+	ret = init_pty(&tty_fops);
+	if (ret)
+		return ret;
+
+	/* init consoles */
+	ret = init_console(tag_fb);
+	if (ret)
+		return ret;
+
+	return 0;
+}

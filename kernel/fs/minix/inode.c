@@ -111,10 +111,10 @@ int minix_read_inode(struct inode *inode)
 		inode->i_op = &minix_symlink_iops;
 	} else if (S_ISCHR(inode->i_mode)) {
 		inode->i_rdev = inode->u.minix_i.i_zone[0];
-		inode->i_op = char_get_driver(inode);
+		inode->i_op = &chrdev_iops;
 	} else if (S_ISBLK(inode->i_mode)) {
 		inode->i_rdev = inode->u.minix_i.i_zone[0];
-		inode->i_op = block_get_driver(inode);
+		inode->i_op = &blkdev_iops;
 	} else {
 		inode->i_op = &minix_file_iops;
 	}

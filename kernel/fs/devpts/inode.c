@@ -59,9 +59,9 @@ struct inode *devpts_iget(struct super_block *sb, struct devpts_entry *de)
 	if (S_ISDIR(inode->i_mode))
 		inode->i_op = &devpts_dir_iops;
 	else if (S_ISCHR(inode->i_mode))
-		inode->i_op = char_get_driver(inode);
+		inode->i_op = &chrdev_iops;
 	else if (S_ISBLK(inode->i_mode))
-		inode->i_op = block_get_driver(inode);
+		inode->i_op = &blkdev_iops;
 	else
 		goto err;
 

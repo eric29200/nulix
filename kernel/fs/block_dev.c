@@ -8,22 +8,6 @@
 #include <string.h>
 
 /*
- * Get block device driver.
- */
-struct inode_operations *block_get_driver(struct inode *inode)
-{
-	/* not a block device */
-	if (!inode || !S_ISBLK(inode->i_mode))
-		return NULL;
-
-	/* ata driver */
-	if (major(inode->i_rdev) == DEV_ATA_MAJOR)
-		return &ata_iops;
-
-	return NULL;
-}
-
-/*
  * Generic block read.
  */
 int generic_block_read(struct file *filp, char *buf, int count)
