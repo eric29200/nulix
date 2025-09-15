@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <dev.h>
 
-#define DEV_PTMX		0x502
+#define DEV_PTMX		mkdev(DEV_TTYAUX_MAJOR, 2)
 
 #define PTY_NAME_LEN		64
 
