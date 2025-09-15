@@ -88,10 +88,11 @@ void tty_change(int n);
 void tty_complete_change(int n);
 void disassociate_ctty();
 
+/* pty controller functions */
+int ptmx_open(struct file *filp);
+
 /* inode operations */
 extern struct inode_operations tty_iops;
-extern struct inode_operations ptm_iops;
-extern struct inode_operations pts_iops;
 
 /* global ttys */
 extern struct tty tty_table[NR_TTYS];

@@ -13,6 +13,11 @@
 #include <dev.h>
 #include <kd.h>
 
+#define DEV_TTY0		mkdev(DEV_TTY_MAJOR, 0)
+#define DEV_TTY			mkdev(DEV_TTYAUX_MAJOR, 0)
+#define DEV_CONSOLE		mkdev(DEV_TTYAUX_MAJOR, 1)
+#define DEV_PTMX		mkdev(DEV_TTYAUX_MAJOR, 2)
+
 /* global ttys table */
 struct tty tty_table[NR_TTYS];
 
@@ -49,20 +54,36 @@ static struct tty *tty_lookup(dev_t dev)
  */
 static int tty_open(struct file *filp)
 {
+	struct dentry *dentry;
+	struct inode *inode;
 	struct tty *tty;
 	int noctty;
 	dev_t dev;
 
+	/* get dentry */
+	dentry = filp->f_dentry;
+	if (!dentry)
+		return -EINVAL;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		return -EINVAL;
+
+	/* get tty device number */
+	dev = inode->i_rdev;
+
+	/* open pty controller */
+	if (filp->f_dentry->d_inode->i_rdev == DEV_PTMX)
+		return ptmx_open(filp);
+
 	/* get tty */
-	tty = tty_lookup(filp->f_dentry->d_inode->i_rdev);
+	tty = tty_lookup(inode->i_rdev);
 	if (!tty)
 		return -EINVAL;
 
 	/* attach tty to file */
 	filp->f_private = tty;
-
-	/* get tty device number */
-	dev = filp->f_dentry->d_inode->i_rdev;
 
 	/* check if tty must be associated to process */
 	noctty = filp->f_flags & O_NOCTTY;

@@ -6,16 +6,12 @@
 #include <fcntl.h>
 #include <dev.h>
 
+#define DEV_PTMX		0x502
+
 #define PTY_NAME_LEN		64
 
 /* pty table */
 static struct pty pty_table[NR_PTYS];
-
-/* Pty master/slave operations (set on init_pty) */
-static struct file_operations ptm_fops;
-static struct file_operations pts_fops;
-struct inode_operations ptm_iops;
-struct inode_operations pts_iops;
 
 /*
  * Master/slave pty write.
@@ -121,7 +117,7 @@ static struct tty_driver ptm_driver = {
 /*
  * Open PTY master = create a new pty master/slave.
  */
-static int ptmx_open(struct file *filp)
+int ptmx_open(struct file *filp)
 {
 	struct tty *ptm = NULL, *pts = NULL;
 	char name[PTY_NAME_LEN];
@@ -197,15 +193,6 @@ int init_pty()
 		pty_table[i].p_num = i;
 		pty_table[i].p_count = 0;
 	}
-
-	/* install master pty operations */
-	ptm_iops.fops = &ptm_fops;
-	ptm_fops = *tty_iops.fops;
-	ptm_fops.open = ptmx_open;
-
-	/* install slave pty operations */
-	pts_iops.fops = &pts_fops;
-	pts_fops = *tty_iops.fops;
 
 	return 0;
 }

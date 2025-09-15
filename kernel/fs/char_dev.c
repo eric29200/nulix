@@ -20,20 +20,16 @@ struct inode_operations *char_get_driver(struct inode *inode)
 		return &memory_iops;
 
 	/* tty driver */
-	if (major(inode->i_rdev) == major(DEV_TTY0))
+	if (major(inode->i_rdev) == DEV_TTY_MAJOR)
 		return &tty_iops;
 
-	/* console driver */
-	if (inode->i_rdev == DEV_TTY || inode->i_rdev == DEV_CONSOLE)
+	/* auxiliary tty driver */
+	if (major(inode->i_rdev) == DEV_TTYAUX_MAJOR)
 		return &tty_iops;
-
-	/* ptmx driver */
-	if (inode->i_rdev == DEV_PTMX)
-		return &ptm_iops;
 
 	/* pty driver */
 	if (major(inode->i_rdev) == DEV_PTS_MAJOR)
-		return &pts_iops;
+		return &tty_iops;
 
 	/* mouse driver */
 	if (major(inode->i_rdev) == DEV_MOUSE_MAJOR)
