@@ -12,8 +12,6 @@
 #define MAX_CHRDEV		255
 #define MAX_BLKDEV		255
 
-extern size_t *blocksize_size[MAX_BLKDEV];
-
 static inline uint32_t dev_t_to_nr(dev_t dev)
 {
 	return (major(dev) << 8) | minor(dev);

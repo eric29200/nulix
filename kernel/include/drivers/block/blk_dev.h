@@ -31,6 +31,7 @@ struct blk_dev {
 
 /* Block devices */
 extern struct blk_dev blk_dev[MAX_BLKDEV];
+extern size_t *blksize_size[MAX_BLKDEV];
 
 int is_read_only(dev_t dev);
 void set_device_ro(dev_t dev, int flag);

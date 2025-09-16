@@ -7,6 +7,7 @@
 /* block devices */
 struct blk_dev blk_dev[MAX_BLKDEV];
 static long ro_bits[MAX_BLKDEV][8] = { 0 };
+size_t *blksize_size[MAX_BLKDEV];
 
 /* requests */
 static struct request requests[NR_REQUESTS];
@@ -145,8 +146,8 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 
 	/* get correct size */
 	correct_size = BLOCK_SIZE;
-	if (blocksize_size[major]) {
-		i = blocksize_size[major][minor];
+	if (blksize_size[major]) {
+		i = blksize_size[major][minor];
 		if (i)
 			correct_size = i;
 	}

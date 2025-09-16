@@ -37,9 +37,6 @@ static LIST_HEAD(used_list);
 static LIST_HEAD(dirty_list);
 static struct list_head free_list[NR_SIZES];
 
-/* block size of devices */
-size_t *blocksize_size[MAX_BLKDEV] = { NULL, NULL };
-
 /*
  * Wait on a buffer.
  */
@@ -199,37 +196,6 @@ static void remove_from_buffer_cache(struct buffer_head *bh)
 	b = buffer_hash(bh->b_dev, bh->b_block);
 	if (*b == bh)
 		*b = next_hash;
-}
-
-/*
- * Set blocksize of a device.
- */
-void set_blocksize(dev_t dev, size_t blocksize)
-{
-	/* check device */
-	if (!blocksize_size[major(dev)])
-		return;
-
-	/* check block size */
-	switch (blocksize) {
-		case 512:
-		case 1024:
-		case 2048:
-		case 4096:
-			break;
-		default:
-			panic("set_blocksize : invalid block size");
-	}
-
-	/* nothing to do */
-	if (blocksize_size[major(dev)][minor(dev)] == blocksize)
-		return;
-
- 	/* sync buffers */
-	sync_dev(0);
-
-	/* set block size */
-	blocksize_size[major(dev)][minor(dev)] = blocksize;
 }
 
 /*
@@ -610,6 +576,37 @@ int sys_sync()
 {
 	sync_dev(0);
 	return 0;
+}
+
+/*
+ * Set blocksize of a device.
+ */
+void set_blocksize(dev_t dev, size_t blocksize)
+{
+	/* check device */
+	if (!blksize_size[major(dev)])
+		return;
+
+	/* check block size */
+	switch (blocksize) {
+		case 512:
+		case 1024:
+		case 2048:
+		case 4096:
+			break;
+		default:
+			panic("set_blocksize : invalid block size");
+	}
+
+	/* nothing to do */
+	if (blksize_size[major(dev)][minor(dev)] == blocksize)
+		return;
+
+ 	/* sync buffers */
+	sync_buffers(dev);
+
+	/* set block size */
+	blksize_size[major(dev)][minor(dev)] = blocksize;
 }
 
 /*

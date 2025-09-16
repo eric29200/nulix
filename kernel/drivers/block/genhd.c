@@ -1,4 +1,5 @@
 #include <drivers/block/genhd.h>
+#include <drivers/block/blk_dev.h>
 #include <fs/fs.h>
 #include <stderr.h>
 #include <stdio.h>
@@ -20,7 +21,7 @@ static int add_partition(struct gendisk *hd, int i, uint32_t start_sect, uint32_
 	sprintf(partition_name, "%s%d", hd->name, i);
 
 	/* set block size */
-	blocksize_size[major(hd->dev)][minor(hd->dev) + i] = BLOCK_SIZE;
+	blksize_size[major(hd->dev)][minor(hd->dev) + i] = BLOCK_SIZE;
 
 	return 0;
 }
