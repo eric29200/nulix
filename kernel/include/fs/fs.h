@@ -28,8 +28,8 @@
 #define RENAME_EXCHANGE			(1 << 1)
 #define RENAME_WHITEOUT			(1 << 2)
 
-#define DEFAULT_BLOCK_SIZE_BITS		10
-#define DEFAULT_BLOCK_SIZE		(1 << DEFAULT_BLOCK_SIZE_BITS)
+#define BLOCK_SIZE_BITS			10
+#define BLOCK_SIZE		(	1 << BLOCK_SIZE_BITS)
 
 #define READ				0
 #define WRITE				1

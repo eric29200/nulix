@@ -23,9 +23,9 @@ static int minix_read_super(struct super_block *sb, void *data, int silent)
 		return -ENOMEM;
 
 	/* set default block size */
-	set_blocksize(sb->s_dev, DEFAULT_BLOCK_SIZE);
-	sb->s_blocksize = DEFAULT_BLOCK_SIZE;
-	sb->s_blocksize_bits = DEFAULT_BLOCK_SIZE_BITS;
+	set_blocksize(sb->s_dev, BLOCK_SIZE);
+	sb->s_blocksize = BLOCK_SIZE;
+	sb->s_blocksize_bits = BLOCK_SIZE_BITS;
 
 	/* read super block */
 	sbi->s_sbh = bread(sb->s_dev, 1, sb->s_blocksize);

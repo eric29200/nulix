@@ -86,9 +86,9 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 		return -ENOMEM;
 
 	/* set default block size */
-	blocksize = DEFAULT_BLOCK_SIZE;
-	sb->s_blocksize = DEFAULT_BLOCK_SIZE;
-	sb->s_blocksize_bits = DEFAULT_BLOCK_SIZE_BITS;
+	blocksize = BLOCK_SIZE;
+	sb->s_blocksize = BLOCK_SIZE;
+	sb->s_blocksize_bits = BLOCK_SIZE_BITS;
 	set_blocksize(sb->s_dev, blocksize);
 
 	/* read first block = super block */
@@ -113,12 +113,12 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 		goto err_bad_rev;
 
 	/* check block size */
-	blocksize = DEFAULT_BLOCK_SIZE << sbi->s_es->s_log_block_size;
+	blocksize = BLOCK_SIZE << sbi->s_es->s_log_block_size;
 	if (blocksize != 1024 && blocksize != 2048 && blocksize != 4096)
 		goto err_bad_blocksize;
 
 	/* specific block size : reread super blockk */
-	if (blocksize != DEFAULT_BLOCK_SIZE) {
+	if (blocksize != BLOCK_SIZE) {
 		/* release super block buffer */
 		brelse(sbi->s_sbh);
 
@@ -128,8 +128,8 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 		set_blocksize(sb->s_dev, sb->s_blocksize);
 
 		/* compute super block offset */
-		logic_sb_block = (sb_block * DEFAULT_BLOCK_SIZE) / sb->s_blocksize;
-		offset = (sb_block * DEFAULT_BLOCK_SIZE) % sb->s_blocksize;
+		logic_sb_block = (sb_block * BLOCK_SIZE) / sb->s_blocksize;
+		offset = (sb_block * BLOCK_SIZE) % sb->s_blocksize;
 
 		/* reread super block */
 		sbi->s_sbh = bread(sb->s_dev, logic_sb_block, sb->s_blocksize);

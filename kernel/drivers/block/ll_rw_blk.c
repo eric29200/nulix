@@ -144,7 +144,7 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 	}
 
 	/* get correct size */
-	correct_size = DEFAULT_BLOCK_SIZE;
+	correct_size = BLOCK_SIZE;
 	if (blocksize_size[major]) {
 		i = blocksize_size[major][minor];
 		if (i)

@@ -278,7 +278,7 @@ int init_ata()
 			continue;
 
 		/* set default block size */
-		ata_blocksizes[i << PARTITION_MINOR_SHIFT] = DEFAULT_BLOCK_SIZE;
+		ata_blocksizes[i << PARTITION_MINOR_SHIFT] = BLOCK_SIZE;
 
 		/* discover partitions */
 		check_partition(&ata_devices[i].hd);
