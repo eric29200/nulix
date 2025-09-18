@@ -162,7 +162,7 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 		return ERR_PTR(-ENOENT);
 
 	/* end of resolution */
-	if (!*pathname)
+	if (!pathname || !*pathname)
 		return base;
 
 	for (;;) {
