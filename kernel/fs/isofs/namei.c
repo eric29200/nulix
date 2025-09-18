@@ -44,7 +44,7 @@ static struct buffer_head *isofs_find_entry(struct inode *dir, const char *name,
 		return NULL;
 
 	/* read first block */
-	bh = bread(sb->s_dev, block, sb->s_blocksize);
+	bh = bread(dir->i_dev, block, sb->s_blocksize);
 	if (!bh)
 		return NULL;
 
@@ -62,7 +62,7 @@ static struct buffer_head *isofs_find_entry(struct inode *dir, const char *name,
 				return NULL;
 
 			/* read next block */
-			bh = bread(sb->s_dev, block, sb->s_blocksize);
+			bh = bread(dir->i_dev, block, sb->s_blocksize);
 			if (!bh)
 				return NULL;
 		}
@@ -87,7 +87,7 @@ static struct buffer_head *isofs_find_entry(struct inode *dir, const char *name,
 				return NULL;
 
 			/* read next block */
-			bh = bread(sb->s_dev, block, sb->s_blocksize);
+			bh = bread(dir->i_dev, block, sb->s_blocksize);
 			if (!bh)
 				return NULL;
 
@@ -104,7 +104,7 @@ static struct buffer_head *isofs_find_entry(struct inode *dir, const char *name,
 			/* read next block buffer */
 			brelse(bh);
 			block = (isofs_inode->i_first_extent >> sb->s_blocksize_bits) + ((f_pos + de_len) >> sb->s_blocksize_bits);
-			bh = bread(sb->s_dev, block, sb->s_blocksize);
+			bh = bread(dir->i_dev, block, sb->s_blocksize);
 			if (!bh)
 				return NULL;
 

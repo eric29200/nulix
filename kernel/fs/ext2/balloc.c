@@ -134,7 +134,7 @@ int ext2_free_block(struct inode *inode, uint32_t block)
 	}
 
 	/* clear block buffer */
-	bh = find_buffer(inode->i_sb->s_dev, block, inode->i_sb->s_blocksize);
+	bh = find_buffer(inode->i_dev, block, inode->i_sb->s_blocksize);
 	if (bh) {
 		mark_buffer_clean(bh);
 		brelse(bh);

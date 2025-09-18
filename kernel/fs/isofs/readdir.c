@@ -30,7 +30,7 @@ int isofs_getdents64(struct file *filp, void *dirp, size_t count)
 		return entries_size;
 
 	/* read first block */
-	bh = bread(sb->s_dev, block, sb->s_blocksize);
+	bh = bread(inode->i_dev, block, sb->s_blocksize);
 	if (!bh)
 		return entries_size;
 
@@ -48,7 +48,7 @@ int isofs_getdents64(struct file *filp, void *dirp, size_t count)
 				return entries_size;
 
 			/* read next block */
-			bh = bread(sb->s_dev, block, sb->s_blocksize);
+			bh = bread(inode->i_dev, block, sb->s_blocksize);
 			if (!bh)
 				return entries_size;
 		}
@@ -73,7 +73,7 @@ int isofs_getdents64(struct file *filp, void *dirp, size_t count)
 				return entries_size;
 
 			/* read next block */
-			bh = bread(sb->s_dev, block, sb->s_blocksize);
+			bh = bread(inode->i_dev, block, sb->s_blocksize);
 			if (!bh)
 				return entries_size;
 
@@ -90,7 +90,7 @@ int isofs_getdents64(struct file *filp, void *dirp, size_t count)
 			/* read next block buffer */
 			brelse(bh);
 			block = (isofs_inode->i_first_extent >> sb->s_blocksize_bits) + ((filp->f_pos + de_len) >> sb->s_blocksize_bits);
-			bh = bread(sb->s_dev, block, sb->s_blocksize);
+			bh = bread(inode->i_dev, block, sb->s_blocksize);
 			if (!bh)
 				return entries_size;
 

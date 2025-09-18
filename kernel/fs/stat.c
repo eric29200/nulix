@@ -19,6 +19,7 @@ static int do_stat64(struct inode *inode, struct stat64 *statbuf)
 	statbuf->st_mode = inode->i_mode;
 	statbuf->st_uid = inode->i_uid;
 	statbuf->st_gid = inode->i_gid;
+	statbuf->st_dev = inode->i_dev;
 	statbuf->st_rdev = inode->i_rdev;
 	statbuf->st_size = inode->i_size;
 	statbuf->st_blksize = inode->i_sb->s_blocksize;
@@ -160,6 +161,8 @@ int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, str
 	statbuf->stx_btime.tv_sec = inode->i_atime;
 	statbuf->stx_ctime.tv_sec = inode->i_ctime;
 	statbuf->stx_mtime.tv_sec = inode->i_mtime;
+	statbuf->stx_dev_major = major(inode->i_dev);
+	statbuf->stx_dev_minor = minor(inode->i_dev);
 
 	/* set minor/major */
 	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode)) {

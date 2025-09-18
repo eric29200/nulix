@@ -36,7 +36,7 @@ static void minix_free_indirect_blocks(struct inode *inode, int offset, uint32_t
 		return;
 
 	/* get block */
-	bh = bread(inode->i_sb->s_dev, *block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, *block, inode->i_sb->s_blocksize);
 	if (!bh)
 		return;
 
@@ -78,7 +78,7 @@ static void minix_free_dindirect_blocks(struct inode *inode, int offset, uint32_
 		return;
 
 	/* get block */
-	bh = bread(inode->i_sb->s_dev, *block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, *block, inode->i_sb->s_blocksize);
 	if (!bh)
 		return;
 
@@ -120,7 +120,7 @@ static void minix_free_tindirect_blocks(struct inode *inode, int offset, uint32_
 		return;
 
 	/* get block */
-	bh = bread(inode->i_sb->s_dev, *block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, *block, inode->i_sb->s_blocksize);
 	if (!bh)
 		return;
 

@@ -180,7 +180,7 @@ static int __maybe_continue(struct inode *inode)
 	offset = cont_offset;
 	offset1 = 0;
 
-	bh = bread(inode->i_sb->s_dev, block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
 	if (!bh)
 		goto err;
 

@@ -49,7 +49,7 @@ void add_to_inode_cache(struct inode *inode)
 {
 	struct inode **i;
 
-	i = inode_hash(inode->i_sb->s_dev, inode->i_ino);
+	i = inode_hash(inode->i_dev, inode->i_ino);
 	inode->i_prev_hash = NULL;
 	inode->i_next_hash = *i;
 
@@ -81,7 +81,7 @@ static void remove_from_inode_cache(struct inode *inode)
 		prev_hash->i_next_hash = next_hash;
 
 	/* update head */
-	i = inode_hash(inode->i_sb->s_dev, inode->i_ino);
+	i = inode_hash(inode->i_dev, inode->i_ino);
 	if (*i == inode)
 		*i = next_hash;
 }
@@ -204,6 +204,7 @@ struct inode *get_empty_inode(struct super_block *sb)
 found:
 	/* set inode */
 	inode->i_sb = sb;
+	inode->i_dev = sb->s_dev;
 	inode->i_count = 1;
 	INIT_LIST_HEAD(&inode->i_pages);
 	INIT_LIST_HEAD(&inode->i_mmap);
@@ -295,7 +296,7 @@ void sync_inodes(dev_t dev)
 		inode = list_entry(pos, struct inode, i_list);
 
 		/* clean inode */
-		if (!test_bit(&inode->i_state, I_DIRTY) || (dev && inode->i_sb->s_dev != dev))
+		if (!test_bit(&inode->i_state, I_DIRTY) || (dev && inode->i_dev != dev))
 			continue;
 
 		/* write inode */

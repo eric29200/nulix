@@ -118,6 +118,7 @@ struct inode {
 	int				i_count;
 	uint32_t			i_state;
 	struct inode_operations *	i_op;
+	dev_t				i_dev;
 	dev_t				i_rdev;
 	char				i_pipe;
 	char				i_shm;

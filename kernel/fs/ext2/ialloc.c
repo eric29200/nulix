@@ -94,6 +94,7 @@ allocated:
 	inode->i_nlinks = 1;
 	inode->i_op = NULL;
 	inode->i_count = 1;
+	inode->i_dev = dir->i_sb->s_dev;
 	inode->u.ext2_i.i_block_group = group_no;
 	inode->u.ext2_i.i_flags = dir->u.ext2_i.i_flags;
 	inode->u.ext2_i.i_faddr = 0;

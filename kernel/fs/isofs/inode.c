@@ -52,7 +52,7 @@ int isofs_read_inode(struct inode *inode)
 
 	/* read inode block */
 	block = inode->i_ino >> sb->s_blocksize_bits;
-	bh = bread(sb->s_dev, block, sb->s_blocksize);
+	bh = bread(inode->i_dev, block, sb->s_blocksize);
 	if (!bh)
 		return -EIO;
 
@@ -78,7 +78,7 @@ int isofs_read_inode(struct inode *inode)
 
 		/* read next block */
 		brelse(bh);
-		bh = bread(sb->s_dev, ++block, sb->s_blocksize);
+		bh = bread(inode->i_dev, ++block, sb->s_blocksize);
 		if (!bh) {
 			kfree(cpnt);
 			return -EIO;
@@ -160,5 +160,5 @@ struct buffer_head *isofs_bread(struct inode *inode, int block, int create)
 		return NULL;
 
 	/* read block on disk */
-	return bread(inode->i_sb->s_dev, bh_res.b_block, inode->i_sb->s_blocksize);
+	return bread(inode->i_dev, bh_res.b_block, inode->i_sb->s_blocksize);
 }

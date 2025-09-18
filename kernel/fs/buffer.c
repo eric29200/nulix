@@ -737,7 +737,7 @@ int generic_readpage(struct inode *inode, struct page *page)
 		blocks[i] = inode->i_op->bmap(inode, block);
 
 	/* read/write page */
-	brw_page(READ, page, inode->i_sb->s_dev, blocks, nr, inode->i_sb->s_blocksize);
+	brw_page(READ, page, inode->i_dev, blocks, nr, inode->i_sb->s_blocksize);
 	return 0;
 }
 
@@ -753,7 +753,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 	int ret;
 
 	if (!page->buffers) {
-		if (!create_buffers(page, sb->s_dev, sb->s_blocksize, 1)) {
+		if (!create_buffers(page, inode->i_dev, sb->s_blocksize, 1)) {
 			UnlockPage(page);
 			return -ENOMEM;
 		}

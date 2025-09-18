@@ -82,7 +82,7 @@ int minix_read_inode(struct inode *inode)
 	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks + (inode->i_ino - 1) / inodes_per_block;
 
 	/* read inode store block */
-	bh = bread(inode->i_sb->s_dev, block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
 	if (!bh) {
 		iput(inode);
 		return -EIO;
@@ -141,7 +141,7 @@ int minix_write_inode(struct inode *inode)
 	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks + (inode->i_ino - 1) / inodes_per_block;
 
 	/* read inode store block */
-	bh = bread(inode->i_sb->s_dev, block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
 	if (!bh) {
 		iput(inode);
 		return -EIO;
@@ -230,7 +230,7 @@ found:
 
 	/* new buffer : hash and clear it */
 	if (new) {
-		*bh_res = getblk(sb->s_dev, minix_inode->i_zone[inode_block], sb->s_blocksize);
+		*bh_res = getblk(inode->i_dev, minix_inode->i_zone[inode_block], sb->s_blocksize);
 		if (!*bh_res)
 			return -EIO;
 
@@ -241,7 +241,7 @@ found:
 	}
 
 	/* read block on disk */
-	*bh_res = bread(inode->i_sb->s_dev, minix_inode->i_zone[inode_block], inode->i_sb->s_blocksize);
+	*bh_res = bread(inode->i_dev, minix_inode->i_zone[inode_block], inode->i_sb->s_blocksize);
 	if (!*bh_res)
 		return -EIO;
 
@@ -293,7 +293,7 @@ found:
 
 	/* new buffer : hash and clear it */
 	if (new) {
-		*bh_res = getblk(sb->s_dev, i, sb->s_blocksize);
+		*bh_res = getblk(inode->i_dev, i, sb->s_blocksize);
 		if (!*bh_res)
 			return -EIO;
 
@@ -304,7 +304,7 @@ found:
 	}
 
 	/* read block on disk */
-	*bh_res = bread(inode->i_sb->s_dev, i, inode->i_sb->s_blocksize);
+	*bh_res = bread(inode->i_dev, i, inode->i_sb->s_blocksize);
 	if (!*bh_res)
 		return -EIO;
 
@@ -380,7 +380,7 @@ struct buffer_head *minix_bread(struct inode *inode, int block, int create)
 
 	/* new buffer : hash and clear it */
 	if (buffer_new(&tmp)) {
-		bh = getblk(sb->s_dev, tmp.b_block, sb->s_blocksize);
+		bh = getblk(inode->i_dev, tmp.b_block, sb->s_blocksize);
 		if (!bh)
 			return NULL;
 
@@ -391,5 +391,5 @@ struct buffer_head *minix_bread(struct inode *inode, int block, int create)
 	}
 
 	/* read block on disk */
-	return bread(inode->i_sb->s_dev, tmp.b_block, inode->i_sb->s_blocksize);
+	return bread(inode->i_dev, tmp.b_block, inode->i_sb->s_blocksize);
 }

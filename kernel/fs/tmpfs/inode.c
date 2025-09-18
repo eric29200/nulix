@@ -78,6 +78,7 @@ struct inode *tmpfs_new_inode(struct super_block *sb, mode_t mode, dev_t dev)
 	inode->i_mode = mode;
 	inode->i_uid = current_task->fsuid;
 	inode->i_gid = current_task->fsgid;
+	inode->i_dev = sb->s_dev;
 	inode->i_rdev = dev;
 	INIT_LIST_HEAD(&inode->u.tmp_i.i_pages);
 	inode->u.tmp_i.i_shmid = -1;

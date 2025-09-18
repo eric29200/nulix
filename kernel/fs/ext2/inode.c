@@ -103,7 +103,7 @@ int ext2_read_inode(struct inode *inode)
 	block = gdp->bg_inode_table + (offset >> inode->i_sb->s_blocksize_bits);
 
 	/* read inode table block buffer */
-	bh = bread(inode->i_sb->s_dev, block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
 	if (!bh)
 		return -EIO;
 
@@ -185,7 +185,7 @@ int ext2_write_inode(struct inode *inode)
 	block = gdp->bg_inode_table + (offset >> inode->i_sb->s_blocksize_bits);
 
 	/* read inode table block buffer */
-	bh = bread(inode->i_sb->s_dev, block, inode->i_sb->s_blocksize);
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
 	if (!bh)
 		return -EIO;
 
@@ -297,7 +297,7 @@ found:
 
 	/* new buffer : hash and clear it */
 	if (new) {
-		*bh_res = getblk(sb->s_dev, ext2_inode->i_data[inode_block], sb->s_blocksize);
+		*bh_res = getblk(inode->i_dev, ext2_inode->i_data[inode_block], sb->s_blocksize);
 		if (!*bh_res)
 			return -EIO;
 
@@ -308,7 +308,7 @@ found:
 	}
 
 	/* read block on disk */
-	*bh_res = bread(inode->i_sb->s_dev, ext2_inode->i_data[inode_block], inode->i_sb->s_blocksize);
+	*bh_res = bread(inode->i_dev, ext2_inode->i_data[inode_block], inode->i_sb->s_blocksize);
 	if (!*bh_res)
 		return -EIO;
 
@@ -372,7 +372,7 @@ found:
 
 	/* new buffer : hash and clear it */
 	if (new) {
-		*bh_res = getblk(sb->s_dev, i, sb->s_blocksize);
+		*bh_res = getblk(inode->i_dev, i, sb->s_blocksize);
 		if (!*bh_res)
 			return -EIO;
 
@@ -383,7 +383,7 @@ found:
 	}
 
 	/* read block on disk */
-	*bh_res = bread(inode->i_sb->s_dev, i, inode->i_sb->s_blocksize);
+	*bh_res = bread(inode->i_dev, i, inode->i_sb->s_blocksize);
 	if (!*bh_res)
 		return -EIO;
 
@@ -465,7 +465,7 @@ struct buffer_head *ext2_bread(struct inode *inode, uint32_t block, int create)
 
 	/* new buffer : hash and clear it */
 	if (buffer_new(&tmp)) {
-		bh = getblk(sb->s_dev, tmp.b_block, sb->s_blocksize);
+		bh = getblk(inode->i_dev, tmp.b_block, sb->s_blocksize);
 		if (!bh)
 			return NULL;
 
@@ -476,5 +476,5 @@ struct buffer_head *ext2_bread(struct inode *inode, uint32_t block, int create)
 	}
 
 	/* read block on disk */
-	return bread(inode->i_sb->s_dev, tmp.b_block, inode->i_sb->s_blocksize);
+	return bread(inode->i_dev, tmp.b_block, inode->i_sb->s_blocksize);
 }
