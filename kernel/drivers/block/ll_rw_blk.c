@@ -146,11 +146,8 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 
 	/* get correct size */
 	correct_size = BLOCK_SIZE;
-	if (blksize_size[major]) {
-		i = blksize_size[major][minor];
-		if (i)
-			correct_size = i;
-	}
+	if (blksize_size[major] && blksize_size[major][minor])
+		correct_size = blksize_size[major][minor];
 
 	/* check buffers size */
 	for (i = 0; i < nr_bhs; i++) {

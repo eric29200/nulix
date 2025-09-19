@@ -20,11 +20,13 @@ int generic_block_read(struct file *filp, char *buf, int count)
 	if (count <= 0)
 		return 0;
 
-	/* get device and blocksize */
+	/* get device */
 	dev = filp->f_dentry->d_inode->i_rdev;
-	blocksize = blksize_size[major(dev)][minor(dev)];
-	if (!blocksize)
-		return -EINVAL;
+
+	/* get blocksize */
+	blocksize = BLOCK_SIZE;
+	if (blksize_size[major(dev)] && blksize_size[major(dev)][minor(dev)])
+		blocksize = blksize_size[major(dev)][minor(dev)];
 
 	left = count;
 	while (left > 0) {
@@ -65,11 +67,13 @@ int generic_block_write(struct file *filp, const char *buf, int count)
 	if (count <= 0)
 		return 0;
 
-	/* get device and blocksize */
+	/* get device */
 	dev = filp->f_dentry->d_inode->i_rdev;
-	blocksize = blksize_size[major(dev)][minor(dev)];
-	if (!blocksize)
-		return -EINVAL;
+
+	/* get blocksize */
+	blocksize = BLOCK_SIZE;
+	if (blksize_size[major(dev)] && blksize_size[major(dev)][minor(dev)])
+		blocksize = blksize_size[major(dev)][minor(dev)];
 
 	left = count;
 	while (left > 0) {
