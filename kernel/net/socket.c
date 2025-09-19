@@ -152,18 +152,11 @@ static void sockfd_put(struct socket *sock)
 /*
  * Close a socket.
  */
-static int sock_close(struct file *filp)
+static int sock_close(struct inode *inode, struct file *filp)
 {
-	struct dentry *dentry;
-	struct inode *inode;
+	UNUSED(filp);
 
-	/* get dentry */
-	dentry = filp->f_dentry;
-	if (!dentry)
-		return 0;
-
-	/* get inode */
-	inode = dentry->d_inode;
+	/* check inode */
 	if (!inode)
 		return 0;
 
@@ -196,12 +189,14 @@ static int sock_poll(struct file *filp, struct select_table *wait)
 /*
  * Ioctl on a socket.
  */
-static int sock_ioctl(struct file *filp, int cmd, unsigned long arg)
+static int sock_ioctl(struct inode *inode, struct file *filp, int cmd, unsigned long arg)
 {
 	struct socket *sock;
 
+	UNUSED(filp);
+
 	/* get socket */
-	sock = &filp->f_dentry->d_inode->u.socket_i;
+	sock = &inode->u.socket_i;
 	if (!sock)
 		return -EINVAL;
 
@@ -272,7 +267,7 @@ struct file_operations socket_fops = {
 	.write		= sock_write,
 	.poll		= sock_poll,
 	.ioctl		= sock_ioctl,
-	.close		= sock_close,
+	.release	= sock_close,
 };
 
 /*

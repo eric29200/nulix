@@ -240,14 +240,14 @@ struct inode_operations {
  * File operations.
  */
 struct file_operations {
-	int (*open)(struct file *file);
-	int (*close)(struct file *file);
+	int (*open)(struct inode *, struct file *file);
+	int (*release)(struct inode *, struct file *file);
 	int (*read)(struct file *, char *, int);
 	int (*write)(struct file *, const char *, int);
 	int (*llseek)(struct file *, off_t, int);
 	int (*getdents64)(struct file *, void *, size_t);
 	int (*poll)(struct file *, struct select_table *);
-	int (*ioctl)(struct file *, int, unsigned long);
+	int (*ioctl)(struct inode *inode, struct file *, int, unsigned long);
 	int (*mmap)(struct file *, struct vm_area *);
 };
 

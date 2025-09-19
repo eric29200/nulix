@@ -164,9 +164,9 @@ out:
 /*
  * Close a read pipe.
  */
-static int pipe_read_close(struct file *filp)
+static int pipe_read_release(struct inode *inode, struct file *filp)
 {
-	struct inode *inode = filp->f_dentry->d_inode;
+	UNUSED(filp);
 
 	PIPE_READERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
@@ -180,9 +180,9 @@ static int pipe_read_close(struct file *filp)
 /*
  * Close a write pipe.
  */
-static int pipe_write_close(struct file *filp)
+static int pipe_write_release(struct inode *inode, struct file *filp)
 {
-	struct inode *inode = filp->f_dentry->d_inode;
+	UNUSED(filp);
 
 	PIPE_WRITERS(inode)--;
 	if (!PIPE_READERS(inode) && !PIPE_WRITERS(inode))
@@ -217,7 +217,7 @@ static int pipe_poll(struct file *filp, struct select_table *wait)
  */
 static struct file_operations read_pipe_fops = {
 	.read		= pipe_read,
-	.close		= pipe_read_close,
+	.release	= pipe_read_release,
 	.poll		= pipe_poll,
 };
 
@@ -226,7 +226,7 @@ static struct file_operations read_pipe_fops = {
  */
 static struct file_operations write_pipe_fops = {
 	.write		= pipe_write,
-	.close		= pipe_write_close,
+	.release	= pipe_write_release,
 	.poll		= pipe_poll,
 };
 

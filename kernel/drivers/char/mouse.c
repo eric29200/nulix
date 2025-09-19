@@ -166,8 +166,9 @@ static void mouse_interrupt_handler(struct registers *regs)
 /*
  * Open mouse device.
  */
-static int mouse_open(struct file *filp)
+static int mouse_open(struct inode *inode, struct file *filp)
 {
+	UNUSED(inode);
 	UNUSED(filp);
 
 	/* mouse already installed */
@@ -194,8 +195,9 @@ static int mouse_open(struct file *filp)
 /*
  * Close mouse device.
  */
-static int mouse_close(struct file *filp)
+static int mouse_release(struct inode *inode, struct file *filp)
 {
+	UNUSED(inode);
 	UNUSED(filp);
 
 	/* device still used */
@@ -284,7 +286,7 @@ static int mouse_poll(struct file *filp, struct select_table *wait)
  */
 static struct file_operations mouse_fops = {
 	.open		= mouse_open,
-	.close		= mouse_close,
+	.release	= mouse_release,
 	.read		= mouse_read,
 	.write		= mouse_write,
 	.poll		= mouse_poll,

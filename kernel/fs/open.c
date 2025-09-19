@@ -47,8 +47,8 @@ struct file *fget(int fd)
 static void __fput(struct file *filp)
 {
 	/* specific close operation */
-	if (filp->f_op && filp->f_op->close)
-		filp->f_op->close(filp);
+	if (filp->f_op && filp->f_op->release)
+		filp->f_op->release(filp->f_dentry->d_inode, filp);
 
 	/* release dentry */
 	dput(filp->f_dentry);
@@ -142,7 +142,7 @@ int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 
 	/* specific open function */
 	if (filp->f_op && filp->f_op->open) {
-		ret = filp->f_op->open(filp);
+		ret = filp->f_op->open(inode, filp);
 		if (ret)
 			goto err_cleanup_dentry;
 	}

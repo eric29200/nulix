@@ -207,10 +207,12 @@ static int ata_detect(struct ata_device *device)
 /*
  * Ioctl write.
  */
-static int ata_ioctl(struct file *filp, int request, unsigned long arg)
+static int ata_ioctl(struct inode *inode, struct file *filp, int request, unsigned long arg)
 {
-	dev_t dev = filp->f_dentry->d_inode->i_rdev;
 	struct ata_device *device;
+	dev_t dev = inode->i_rdev;
+
+	UNUSED(filp);
 
 	/* get ata device */
 	device = ata_get_device(dev);
@@ -225,7 +227,7 @@ static int ata_ioctl(struct file *filp, int request, unsigned long arg)
 			*((uint64_t *) arg) = ata_get_nr_sectors(device, dev) * ATA_SECTOR_SIZE;
 			break;
 		default:
-			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) filp->f_dentry->d_inode->i_rdev);
+			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) dev);
 			break;
 	}
 

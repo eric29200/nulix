@@ -52,21 +52,13 @@ static struct tty *tty_lookup(dev_t dev)
 /*
  * Open a TTY.
  */
-static int tty_open(struct file *filp)
+static int tty_open(struct inode *inode, struct file *filp)
 {
-	struct dentry *dentry;
-	struct inode *inode;
 	struct tty *tty;
 	int noctty;
 	dev_t dev;
 
-	/* get dentry */
-	dentry = filp->f_dentry;
-	if (!dentry)
-		return -EINVAL;
-
-	/* get inode */
-	inode = dentry->d_inode;
+	/* check inode */
 	if (!inode)
 		return -EINVAL;
 
@@ -121,9 +113,11 @@ static int tty_check_count(struct tty *tty)
 /*
  * Close a TTY.
  */
-static int tty_close(struct file *filp)
+static int tty_release(struct inode *inode, struct file *filp)
 {
 	struct tty *tty = filp->f_private;
+
+	UNUSED(inode);
 
 	/* specifice close */
 	if (tty->driver && tty->driver->close)
@@ -423,10 +417,12 @@ void disassociate_ctty()
 /*
  * TTY ioctl.
  */
-int tty_ioctl(struct file *filp, int request, unsigned long arg)
+int tty_ioctl(struct inode *inode, struct file *filp, int request, unsigned long arg)
 {
 	struct tty *tty;
 	int ret;
+
+	UNUSED(inode);
 
 	/* get tty */
 	tty = filp->f_private;
@@ -590,7 +586,7 @@ void tty_destroy(struct tty *tty)
  */
 static struct file_operations tty_fops = {
 	.open		= tty_open,
-	.close		= tty_close,
+	.release	= tty_release,
 	.read		= tty_read,
 	.write		= tty_write,
 	.poll		= tty_poll,

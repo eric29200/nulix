@@ -74,15 +74,6 @@ err:
 }
 
 /*
- * Open a frame buffer.
- */
-static int fb_open(struct file *filp)
-{
-	UNUSED(filp);
-	return 0;
-}
-
-/*
  * Read a framebuffer.
  */
 static int fb_read(struct file *filp, char *buf, int n)
@@ -120,10 +111,12 @@ static int fb_write(struct file *filp, const char *buf, int n)
 /*
  * Framebuffer ioctl.
  */
-int fb_ioctl(struct file *filp, int request, unsigned long arg)
+int fb_ioctl(struct inode *inode, struct file *filp, int request, unsigned long arg)
 {
 	struct framebuffer *fb = &direct_fb;
 	int ret = 0;
+
+	UNUSED(filp);
 
 	switch (request) {
 		case FBIOGET_FSCREENINFO:
@@ -142,7 +135,7 @@ int fb_ioctl(struct file *filp, int request, unsigned long arg)
 			ret = fb->ops->put_var(fb, (struct fb_var_screeninfo *) arg);
 			break;
 		default:
-			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, filp->f_dentry->d_inode->i_rdev);
+			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, inode->i_rdev);
 			break;
 	}
 
@@ -176,7 +169,6 @@ static int fb_mmap(struct file *filp, struct vm_area *vma)
  * Framebuffer file operations.
  */
 static struct file_operations fb_fops = {
-	.open		= fb_open,
 	.read		= fb_read,
 	.write		= fb_write,
 	.ioctl		= fb_ioctl,

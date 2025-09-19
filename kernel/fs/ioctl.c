@@ -21,7 +21,7 @@ static int file_ioctl(struct file *filp, unsigned long request, unsigned long ar
 			if (!filp->f_op || !filp->f_op->ioctl)
 				break;
 
-			ret = filp->f_op->ioctl(filp, request, arg);
+			ret = filp->f_op->ioctl(inode, filp, request, arg);
 			break;
 	}
 

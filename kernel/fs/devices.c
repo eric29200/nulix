@@ -111,19 +111,11 @@ int unregister_blkdev(int major, const char *name)
 /*
  * Open a character device.
  */
-static int chrdev_open(struct file *filp)
+static int chrdev_open(struct inode *inode, struct file *filp)
 {
-	struct dentry *dentry;
-	struct inode *inode;
 	int major;
 
-	/* get dentry */
-	dentry = filp->f_dentry;
-	if (!dentry)
-		return -EINVAL;
-
-	/* get inode */
-	inode = dentry->d_inode;
+	/* check inode */
 	if (!inode)
 		return -EINVAL;
 
@@ -137,7 +129,7 @@ static int chrdev_open(struct file *filp)
 
 	/* specific open */
 	if (filp->f_op->open)
-		return filp->f_op->open(filp);
+		return filp->f_op->open(inode, filp);
 
 	return 0;
 }
@@ -145,19 +137,11 @@ static int chrdev_open(struct file *filp)
 /*
  * Open a block device.
  */
-static int blkdev_open(struct file *filp)
+static int blkdev_open(struct inode *inode, struct file *filp)
 {
-	struct dentry *dentry;
-	struct inode *inode;
 	int major;
 
-	/* get dentry */
-	dentry = filp->f_dentry;
-	if (!dentry)
-		return -EINVAL;
-
-	/* get inode */
-	inode = dentry->d_inode;
+	/* check inode */
 	if (!inode)
 		return -EINVAL;
 
@@ -171,7 +155,7 @@ static int blkdev_open(struct file *filp)
 
 	/* specific open */
 	if (filp->f_op->open)
-		return filp->f_op->open(filp);
+		return filp->f_op->open(inode, filp);
 
 	return 0;
 }

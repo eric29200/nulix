@@ -128,18 +128,9 @@ static struct file_operations random_fops = {
 /*
  * Open a memory device.
  */
-static int memory_open(struct file *filp)
+static int memory_open(struct inode *inode, struct file *filp)
 {
-	struct dentry *dentry;
-	struct inode *inode;
-
-	/* get dentry */
-	dentry = filp->f_dentry;
-	if (!dentry)
-		return -EINVAL;
-
-	/* get inode */
-	inode = dentry->d_inode;
+	/* check inode */
 	if (!inode)
 		return -EINVAL;
 
@@ -161,7 +152,7 @@ static int memory_open(struct file *filp)
 
 	/* open specific device */
 	if (filp->f_op && filp->f_op->open)
-		return filp->f_op->open(filp);
+		return filp->f_op->open(inode, filp);
 
 	return 0;
 }
