@@ -338,14 +338,14 @@ next:
 /*
  * Generic file read.
  */
-int generic_file_read(struct file *filp, char *buf, int count)
+int generic_file_read(struct file *filp, char *buf, size_t count)
 {
-	int read = 0, err = 0, nr;
 	off_t offset, page_offset;
+	int read = 0, ret = 0;
 	struct inode *inode;
 	struct page *page;
 	char *kaddr;
-	size_t pos;
+	size_t pos, nr;
 
 	/* check inode */
 	if (!filp->f_dentry || !filp->f_dentry->d_inode)
@@ -375,8 +375,8 @@ repeat:
 			goto found_page;
 
 		/* try to read some pages */
-		err = generic_file_readahead(inode, page_offset, ((pos + count) >> PAGE_SHIFT) - (pos >> PAGE_SHIFT) + 1);
-		if (err)
+		ret = generic_file_readahead(inode, page_offset, ((pos + count) >> PAGE_SHIFT) - (pos >> PAGE_SHIFT) + 1);
+		if (ret)
 			break;
 
 		goto repeat;
@@ -402,16 +402,16 @@ found_page:
 	/* update inode */
 	update_atime(inode);
 
-	return read ? read : err;
+	return read ? read : ret;
 }
 
 /*
  * Generic file write.
  */
-int generic_file_write(struct file *filp, const char *buf, int count)
+int generic_file_write(struct file *filp, const char *buf, size_t count)
 {
-	int written = 0, err = 0, nr;
-	size_t pos = filp->f_pos;
+	size_t pos = filp->f_pos, nr;
+	int written = 0, ret = 0;
 	struct page *page, *tmp;
 	struct inode *inode;
 	off_t offset;
@@ -443,7 +443,7 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 		/* get page */
 		page = grab_cache_page(inode, pos & PAGE_MASK);
 		if (!page) {
-			err = -ENOMEM;
+			ret = -ENOMEM;
 			break;
 		}
 
@@ -454,8 +454,8 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 		kaddr = kmap(page);
 
 		/* prepare write */
-		err = inode->i_op->prepare_write(inode, page, offset, offset + nr);
-		if (err) {
+		ret = inode->i_op->prepare_write(inode, page, offset, offset + nr);
+		if (ret) {
 			__free_page(page);
 			break;
 		}
@@ -464,8 +464,8 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 		memcpy(kaddr + offset, buf, nr);
 
 		/* commit write */
-		err = inode->i_op->commit_write(inode, page, offset, offset + nr);
-		if (err) {
+		ret = inode->i_op->commit_write(inode, page, offset, offset + nr);
+		if (ret) {
 			__free_page(page);
 			break;
 		}
@@ -493,7 +493,7 @@ int generic_file_write(struct file *filp, const char *buf, int count)
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 	mark_inode_dirty(inode);
 
-	return written ? written : err;
+	return written ? written : ret;
 }
 
 /*

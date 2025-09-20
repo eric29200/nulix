@@ -10,11 +10,15 @@ extern struct file filp_table[NR_FILE];
 /*
  * Read from a pipe.
  */
-static int pipe_read(struct file *filp, char *buf, int count)
+static int pipe_read(struct file *filp, char *buf, size_t count)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
-	int chars, size, read = 0;
+	size_t chars, size, read = 0;
 	char *pipebuf;
+
+	/* nothing to read */
+	if (!count)
+		return 0;
 
 	/* sleep while empty */
 	if (filp->f_flags & O_NONBLOCK) {
@@ -85,12 +89,16 @@ static int pipe_read(struct file *filp, char *buf, int count)
 /*
  * Write to a pipe.
  */
-static int pipe_write(struct file *filp, const char *buf, int count)
+static int pipe_write(struct file *filp, const char *buf, size_t count)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
-	int chars, free, written = 0;
+	int ret = 0, written = 0;
+	size_t chars, free;
 	char *pipebuf;
-	int ret = 0;
+
+	/* nothing to write */
+	if (!count)
+		return 0;
 
 	/* no readers */
 	if (!PIPE_READERS(inode)) {

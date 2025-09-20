@@ -10,14 +10,14 @@
 /*
  * Generic block read.
  */
-int generic_block_read(struct file *filp, char *buf, int count)
+int generic_block_read(struct file *filp, char *buf, size_t count)
 {
 	size_t blocksize, pos, nr_chars, left;
 	struct buffer_head *bh;
 	dev_t dev;
 
 	/* check size */
-	if (count <= 0)
+	if (!count)
 		return 0;
 
 	/* get device */
@@ -57,14 +57,14 @@ int generic_block_read(struct file *filp, char *buf, int count)
 /*
  * Generic block write.
  */
-int generic_block_write(struct file *filp, const char *buf, int count)
+int generic_block_write(struct file *filp, const char *buf, size_t count)
 {
 	size_t blocksize, pos, nr_chars, left;
 	struct buffer_head *bh;
 	dev_t dev;
 
 	/* check size */
-	if (count <= 0)
+	if (!count)
 		return 0;
 
 	/* get device */

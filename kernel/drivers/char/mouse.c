@@ -219,9 +219,9 @@ static int mouse_release(struct inode *inode, struct file *filp)
 /*
  * Read mouse device.
  */
-static int mouse_read(struct file *filp, char *buf, int n)
+static int mouse_read(struct file *filp, char *buf, size_t n)
 {
-	int i;
+	size_t i;
 
 	/* if queue is empty, wait for data */
 	if (queue_empty()) {
@@ -253,7 +253,7 @@ static int mouse_read(struct file *filp, char *buf, int n)
 /*
  * Write to mouse device.
  */
-static int mouse_write(struct file *filp, const char *buf, int n)
+static int mouse_write(struct file *filp, const char *buf, size_t n)
 {
 	UNUSED(filp);
 	UNUSED(buf);

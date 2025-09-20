@@ -86,7 +86,7 @@ struct inode_operations proc_net_iops = {
 /*
  * Read net dev.
  */
-static int proc_net_dev_read(struct file *filp, char *buf, int count)
+static int proc_net_dev_read(struct file *filp, char *buf, size_t count)
 {
 	char *page;
 	size_t len;

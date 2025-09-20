@@ -106,7 +106,7 @@ static int proc_uptime_read(char *page)
 /*
  * Read array.
  */
-static int proc_array_read(struct file *filp, char *buf, int count)
+static int proc_array_read(struct file *filp, char *buf, size_t count)
 {
 	char *page;
 	size_t len;

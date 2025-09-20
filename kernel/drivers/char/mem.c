@@ -7,7 +7,7 @@
 /*
  * Read null device.
  */
-static int null_read(struct file *filp, char *buf, int n)
+static int null_read(struct file *filp, char *buf, size_t n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -18,7 +18,7 @@ static int null_read(struct file *filp, char *buf, int n)
 /*
  * Write to null device.
  */
-static int null_write(struct file *filp, const char *buf, int n)
+static int null_write(struct file *filp, const char *buf, size_t n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -29,7 +29,7 @@ static int null_write(struct file *filp, const char *buf, int n)
 /*
  * Read zero device.
  */
-static int zero_read(struct file *filp, char *buf, int n)
+static int zero_read(struct file *filp, char *buf, size_t n)
 {
 	UNUSED(filp);
 	memset(buf, 0, n);
@@ -39,7 +39,7 @@ static int zero_read(struct file *filp, char *buf, int n)
 /*
  * Write to zero device.
  */
-static int zero_write(struct file *filp, const char *buf, int n)
+static int zero_write(struct file *filp, const char *buf, size_t n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -65,7 +65,7 @@ static void random_unaligned(uint8_t *buf, size_t n)
 /*
  * Read random device.
  */
-int random_read(struct file *filp, char *buf, int n)
+int random_read(struct file *filp, char *buf, size_t n)
 {
 	uint32_t *buf32;
 	size_t iter, i;
@@ -93,7 +93,7 @@ int random_read(struct file *filp, char *buf, int n)
 /*
  * Write to random device.
  */
-static int random_write(struct file *filp, const char *buf, int n)
+static int random_write(struct file *filp, const char *buf, size_t n)
 {
 	UNUSED(filp);
 	UNUSED(buf);

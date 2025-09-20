@@ -368,7 +368,7 @@ static int proc_environ_read(struct task *task, char *page)
 /*
  * Read array.
  */
-static int proc_base_read(struct file *filp, char *buf, int count)
+static int proc_base_read(struct file *filp, char *buf, size_t count)
 {
 	struct task *task;
 	char *page;

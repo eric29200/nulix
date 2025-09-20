@@ -7,7 +7,7 @@
 /*
  * Read a file.
  */
-int tmpfs_file_read(struct file *filp, char *buf, int count)
+int tmpfs_file_read(struct file *filp, char *buf, size_t count)
 {
 	size_t page_offset, offset, nr_chars, left;
 	struct list_head *pos;
@@ -63,7 +63,7 @@ int tmpfs_file_read(struct file *filp, char *buf, int count)
 /*
  * Write to a file.
  */
-int tmpfs_file_write(struct file *filp, const char *buf, int count)
+int tmpfs_file_write(struct file *filp, const char *buf, size_t count)
 {
 	size_t page_offset, left, offset, nr_chars;
 	struct list_head *pos;

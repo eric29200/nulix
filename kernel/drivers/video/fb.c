@@ -76,7 +76,7 @@ err:
 /*
  * Read a framebuffer.
  */
-static int fb_read(struct file *filp, char *buf, int n)
+static int fb_read(struct file *filp, char *buf, size_t n)
 {
 	UNUSED(filp);
 	UNUSED(buf);
@@ -87,7 +87,7 @@ static int fb_read(struct file *filp, char *buf, int n)
 /*
  * Write to a frame buffer.
  */
-static int fb_write(struct file *filp, const char *buf, int n)
+static int fb_write(struct file *filp, const char *buf, size_t n)
 {
 	struct framebuffer *fb = &direct_fb;
 

@@ -242,8 +242,8 @@ struct inode_operations {
 struct file_operations {
 	int (*open)(struct inode *, struct file *file);
 	int (*release)(struct inode *, struct file *file);
-	int (*read)(struct file *, char *, int);
-	int (*write)(struct file *, const char *, int);
+	int (*read)(struct file *, char *, size_t);
+	int (*write)(struct file *, const char *, size_t);
 	int (*llseek)(struct file *, off_t, int);
 	int (*getdents64)(struct file *, void *, size_t);
 	int (*poll)(struct file *, struct select_table *);
@@ -284,11 +284,11 @@ void free_async_buffers(struct buffer_head *bh);
 int try_to_free_buffers(struct page *page);
 void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_bmap(struct inode *inode, uint32_t block);
-int generic_block_read(struct file *filp, char *buf, int count);
-int generic_block_write(struct file *filp, const char *buf, int count);
+int generic_block_read(struct file *filp, char *buf, size_t count);
+int generic_block_write(struct file *filp, const char *buf, size_t count);
 int generic_readpage(struct inode *inode, struct page *page);
-int generic_file_read(struct file *filp, char *buf, int count);
-int generic_file_write(struct file *filp, const char *buf, int count);
+int generic_file_read(struct file *filp, char *buf, size_t count);
+int generic_file_write(struct file *filp, const char *buf, size_t count);
 int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to);
 int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to);
 

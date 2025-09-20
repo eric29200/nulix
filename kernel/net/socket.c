@@ -206,7 +206,7 @@ static int sock_ioctl(struct inode *inode, struct file *filp, int cmd, unsigned 
 /*
  * Socket read.
  */
-static int sock_read(struct file *filp, char *buf, int len)
+static int sock_read(struct file *filp, char *buf, size_t len)
 {
 	struct socket *sock;
 	struct msghdr msg;
@@ -234,7 +234,7 @@ static int sock_read(struct file *filp, char *buf, int len)
 /*
  * Socket write.
  */
-static int sock_write(struct file *filp, const char *buf, int len)
+static int sock_write(struct file *filp, const char *buf, size_t len)
 {
 	struct socket *sock;
 	struct msghdr msg;
