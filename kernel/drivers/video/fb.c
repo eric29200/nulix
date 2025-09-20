@@ -76,34 +76,38 @@ err:
 /*
  * Read a framebuffer.
  */
-static int fb_read(struct file *filp, char *buf, size_t n)
+static int fb_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 {
 	UNUSED(filp);
 	UNUSED(buf);
 	UNUSED(n);
+	UNUSED(ppos);
 	return 0;
 }
 
 /*
  * Write to a frame buffer.
  */
-static int fb_write(struct file *filp, const char *buf, size_t n)
+static int fb_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
 {
 	struct framebuffer *fb = &direct_fb;
 
+	/* unused file */
+	UNUSED(filp);
+
 	/* check position */
-	if (filp->f_pos > fb->real_width * fb->real_height * fb->bpp / 8)
+	if (*ppos > fb->real_width * fb->real_height * fb->bpp / 8)
 		return 0;
 
 	/* ajust size */
-	if (filp->f_pos + n > fb->real_width * fb->real_height * fb->bpp / 8)
-		n = fb->real_width * fb->real_height * fb->bpp / 8 - filp->f_pos;
+	if (*ppos + n > fb->real_width * fb->real_height * fb->bpp / 8)
+		n = fb->real_width * fb->real_height * fb->bpp / 8 - *ppos;
 
 	/* write */
-	memcpy((char *) (fb->addr + filp->f_pos), buf, n);
+	memcpy((char *) fb->addr + *ppos, buf, n);
 
 	/* update position */
-	filp->f_pos += n;
+	*ppos += n;
 
 	return n;
 }

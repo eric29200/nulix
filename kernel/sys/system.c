@@ -102,7 +102,7 @@ int sys_getrandom(void *buf, size_t buflen, unsigned int flags)
 	UNUSED(flags);
 
 	/* use /dev/random */
-	return random_read(NULL, buf, buflen);
+	return random_read(NULL, buf, buflen, NULL);
 }
 
 /*

@@ -172,7 +172,7 @@ struct dentry {
 struct file {
 	uint16_t			f_mode;
 	int				f_flags;
-	size_t				f_pos;
+	off_t				f_pos;
 	int				f_count;
 	struct dentry *			f_dentry;
 	void *				f_private;
@@ -242,8 +242,8 @@ struct inode_operations {
 struct file_operations {
 	int (*open)(struct inode *, struct file *file);
 	int (*release)(struct inode *, struct file *file);
-	int (*read)(struct file *, char *, size_t);
-	int (*write)(struct file *, const char *, size_t);
+	int (*read)(struct file *, char *, size_t, off_t *);
+	int (*write)(struct file *, const char *, size_t, off_t *);
 	int (*llseek)(struct file *, off_t, int);
 	int (*getdents64)(struct file *, void *, size_t);
 	int (*poll)(struct file *, struct select_table *);
@@ -284,11 +284,11 @@ void free_async_buffers(struct buffer_head *bh);
 int try_to_free_buffers(struct page *page);
 void set_blocksize(dev_t dev, size_t blocksize);
 int generic_block_bmap(struct inode *inode, uint32_t block);
-int generic_block_read(struct file *filp, char *buf, size_t count);
-int generic_block_write(struct file *filp, const char *buf, size_t count);
+int generic_block_read(struct file *filp, char *buf, size_t count, off_t *ppos);
+int generic_block_write(struct file *filp, const char *buf, size_t count, off_t *ppos);
 int generic_readpage(struct inode *inode, struct page *page);
-int generic_file_read(struct file *filp, char *buf, size_t count);
-int generic_file_write(struct file *filp, const char *buf, size_t count);
+int generic_file_read(struct file *filp, char *buf, size_t count, off_t *ppos);
+int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *ppos);
 int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to);
 int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, uint32_t to);
 
@@ -355,8 +355,8 @@ int generic_file_mmap(struct file *filp, struct vm_area *vma);
 int do_mount_root(dev_t dev, const char *dev_name);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int close_fp(struct file *filp);
-ssize_t do_read(struct file *filp, char *buf, int count);
-ssize_t do_write(struct file *filp, const char *buf, int count);
+ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos);
+ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t *ppos);
 off_t do_llseek(struct file *filp, off_t offset, int whence);
 int do_truncate(struct inode *inode, off_t length);
 

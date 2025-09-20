@@ -136,12 +136,15 @@ static int tty_release(struct inode *inode, struct file *filp)
 /*
  * Read TTY.
  */
-static int tty_read(struct file *filp, char *buf, size_t n)
+static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 {
 	size_t count = 0;
 	struct tty *tty;
 	uint8_t c;
 	int ret;
+
+	/* unused offset */
+	UNUSED(ppos);
 
 	/* get tty */
 	tty = filp->f_private;
@@ -298,10 +301,13 @@ void tty_do_cook(struct tty *tty)
 /*
  * Write to TTY.
  */
-static int tty_write(struct file *filp, const char *buf, size_t n)
+static int tty_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
 {
 	struct tty *tty;
 	size_t i;
+
+	/* unused offset */
+	UNUSED(ppos);
 
 	/* get tty */
 	tty = filp->f_private;

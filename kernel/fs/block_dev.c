@@ -10,7 +10,7 @@
 /*
  * Generic block read.
  */
-int generic_block_read(struct file *filp, char *buf, size_t count)
+int generic_block_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	size_t blocksize, pos, nr_chars, left;
 	struct buffer_head *bh;
@@ -31,12 +31,12 @@ int generic_block_read(struct file *filp, char *buf, size_t count)
 	left = count;
 	while (left > 0) {
 		/* read block */
-		bh = bread(dev, filp->f_pos / blocksize, blocksize);
+		bh = bread(dev, *ppos / blocksize, blocksize);
 		if (!bh)
 			break;
 
 		/* find position and number of chars to read */
-		pos = filp->f_pos % blocksize;
+		pos = *ppos % blocksize;
 		nr_chars = blocksize - pos <= left ? blocksize - pos : left;
 
 		/* copy into buffer */
@@ -46,7 +46,7 @@ int generic_block_read(struct file *filp, char *buf, size_t count)
 		brelse(bh);
 
 		/* update sizes */
-		filp->f_pos += nr_chars;
+		*ppos += nr_chars;
 		buf += nr_chars;
 		left -= nr_chars;
 	}
@@ -57,7 +57,7 @@ int generic_block_read(struct file *filp, char *buf, size_t count)
 /*
  * Generic block write.
  */
-int generic_block_write(struct file *filp, const char *buf, size_t count)
+int generic_block_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 {
 	size_t blocksize, pos, nr_chars, left;
 	struct buffer_head *bh;
@@ -78,12 +78,12 @@ int generic_block_write(struct file *filp, const char *buf, size_t count)
 	left = count;
 	while (left > 0) {
 		/* read block */
-		bh = bread(dev, filp->f_pos / blocksize, blocksize);
+		bh = bread(dev, *ppos / blocksize, blocksize);
 		if (!bh)
 			break;
 
 		/* find position and number of chars to write */
-		pos = filp->f_pos % blocksize;
+		pos = *ppos % blocksize;
 		nr_chars = blocksize - pos <= left ? blocksize - pos : left;
 
 		/* copy into block buffer */
@@ -94,7 +94,7 @@ int generic_block_write(struct file *filp, const char *buf, size_t count)
 		brelse(bh);
 
 		/* update sizes */
-		filp->f_pos += nr_chars;
+		*ppos += nr_chars;
 		buf += nr_chars;
 		left -= nr_chars;
 	}

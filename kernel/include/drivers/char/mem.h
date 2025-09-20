@@ -3,7 +3,7 @@
 
 #include <fs/fs.h>
 
-int random_read(struct file *filp, char *buf, size_t n);
+int random_read(struct file *filp, char *buf, size_t n, off_t *ppos);
 int init_mem_devices();
 
 #endif

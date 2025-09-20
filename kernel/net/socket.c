@@ -206,11 +206,15 @@ static int sock_ioctl(struct inode *inode, struct file *filp, int cmd, unsigned 
 /*
  * Socket read.
  */
-static int sock_read(struct file *filp, char *buf, size_t len)
+static int sock_read(struct file *filp, char *buf, size_t len, off_t *ppos)
 {
 	struct socket *sock;
 	struct msghdr msg;
 	struct iovec iov;
+
+	/* check position */
+	if (ppos != &filp->f_pos)
+		return -ESPIPE;
 
 	/* get socket */
 	sock = &filp->f_dentry->d_inode->u.socket_i;
@@ -234,11 +238,15 @@ static int sock_read(struct file *filp, char *buf, size_t len)
 /*
  * Socket write.
  */
-static int sock_write(struct file *filp, const char *buf, size_t len)
+static int sock_write(struct file *filp, const char *buf, size_t len, off_t *ppos)
 {
 	struct socket *sock;
 	struct msghdr msg;
 	struct iovec iov;
+
+	/* check position */
+	if (ppos != &filp->f_pos)
+		return -ESPIPE;
 
 	/* get socket */
 	sock = &filp->f_dentry->d_inode->u.socket_i;

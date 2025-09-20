@@ -368,7 +368,7 @@ static int proc_environ_read(struct task *task, char *page)
 /*
  * Read array.
  */
-static int proc_base_read(struct file *filp, char *buf, size_t count)
+static int proc_base_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	struct task *task;
 	char *page;
@@ -413,19 +413,18 @@ static int proc_base_read(struct file *filp, char *buf, size_t count)
 	}
 
 	/* file position after end */
-	if (filp->f_pos >= len) {
+	if (*ppos >= len) {
 		count = 0;
 		goto out;
 	}
 
 	/* update count */
-	if (filp->f_pos + count > len)
-		count = len - filp->f_pos;
+	if (*ppos + count > len)
+		count = len - *ppos;
 
 	/* copy content to user buffer and update file position */
-	memcpy(buf, page + filp->f_pos, count);
-	filp->f_pos += count;
-
+	memcpy(buf, page + *ppos, count);
+	*ppos += count;
 out:
 	free_page(page);
 	return count;

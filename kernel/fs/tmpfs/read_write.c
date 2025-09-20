@@ -7,7 +7,7 @@
 /*
  * Read a file.
  */
-int tmpfs_file_read(struct file *filp, char *buf, size_t count)
+int tmpfs_file_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	size_t page_offset, offset, nr_chars, left;
 	struct list_head *pos;
@@ -19,8 +19,8 @@ int tmpfs_file_read(struct file *filp, char *buf, size_t count)
 		return -ENOENT;
 
 	/* adjust size */
-	if (filp->f_pos + count > filp->f_dentry->d_inode->i_size)
-		count = filp->f_dentry->d_inode->i_size - filp->f_pos;
+	if (*ppos + count > filp->f_dentry->d_inode->i_size)
+		count = filp->f_dentry->d_inode->i_size - *ppos;
 
 	if (count <= 0)
 		return 0;
@@ -30,13 +30,13 @@ int tmpfs_file_read(struct file *filp, char *buf, size_t count)
 	left = count;
 	list_for_each(pos, &filp->f_dentry->d_inode->u.tmp_i.i_pages) {
 		page = list_entry(pos, struct page, list);
-		if (page_offset + PAGE_SIZE < filp->f_pos) {
+		if (page_offset + PAGE_SIZE < *ppos) {
 			page_offset += PAGE_SIZE;
 			continue;
 		}
 
 		/* compute offset in page and number of characters to read */
-		offset = filp->f_pos - page_offset;
+		offset = *ppos - page_offset;
 		nr_chars = PAGE_SIZE - offset;
 		if (nr_chars > left)
 			nr_chars = left;
@@ -47,7 +47,7 @@ int tmpfs_file_read(struct file *filp, char *buf, size_t count)
 		kunmap(page);
 
 		/* update sizes */
-		filp->f_pos += nr_chars;
+		*ppos += nr_chars;
 		buf += nr_chars;
 		left -= nr_chars;
 		page_offset += PAGE_SIZE;
@@ -63,7 +63,7 @@ int tmpfs_file_read(struct file *filp, char *buf, size_t count)
 /*
  * Write to a file.
  */
-int tmpfs_file_write(struct file *filp, const char *buf, size_t count)
+int tmpfs_file_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 {
 	size_t page_offset, left, offset, nr_chars;
 	struct list_head *pos;
@@ -76,23 +76,23 @@ int tmpfs_file_write(struct file *filp, const char *buf, size_t count)
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)
-		filp->f_pos = filp->f_dentry->d_inode->i_size;
+		*ppos = filp->f_dentry->d_inode->i_size;
 
 	/* grow inode size */
-	tmpfs_inode_grow_size(filp->f_dentry->d_inode, filp->f_pos + count);
+	tmpfs_inode_grow_size(filp->f_dentry->d_inode, *ppos + count);
 
 	/* walk through all pages */
 	page_offset = 0;
 	left = count;
 	list_for_each(pos, &filp->f_dentry->d_inode->u.tmp_i.i_pages) {
 		page = list_entry(pos, struct page, list);
-		if (page_offset + PAGE_SIZE < filp->f_pos) {
+		if (page_offset + PAGE_SIZE < *ppos) {
 			page_offset += PAGE_SIZE;
 			continue;
 		}
 
 		/* compute offset in page and number of characters to write */
-		offset = filp->f_pos - page_offset;
+		offset = *ppos - page_offset;
 		nr_chars = PAGE_SIZE - offset;
 		if (nr_chars > left)
 			nr_chars = left;
@@ -103,7 +103,7 @@ int tmpfs_file_write(struct file *filp, const char *buf, size_t count)
 		kunmap(page);
 
 		/* update sizes */
-		filp->f_pos += nr_chars;
+		*ppos += nr_chars;
 		buf += nr_chars;
 		left -= nr_chars;
 		page_offset += PAGE_SIZE;

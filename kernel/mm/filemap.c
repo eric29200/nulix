@@ -338,14 +338,14 @@ next:
 /*
  * Generic file read.
  */
-int generic_file_read(struct file *filp, char *buf, size_t count)
+int generic_file_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	off_t offset, page_offset;
 	int read = 0, ret = 0;
 	struct inode *inode;
 	struct page *page;
 	char *kaddr;
-	size_t pos, nr;
+	size_t nr;
 
 	/* check inode */
 	if (!filp->f_dentry || !filp->f_dentry->d_inode)
@@ -355,15 +355,14 @@ int generic_file_read(struct file *filp, char *buf, size_t count)
 	inode = filp->f_dentry->d_inode;
 
 	/* fix number of characters to read */
-	pos = filp->f_pos;
-	if (pos + count > inode->i_size)
-		count = inode->i_size - pos;
+	if (*ppos + count > inode->i_size)
+		count = inode->i_size - *ppos;
 
 	/* read */
 	while (count) {
 		/* compute offset in page */
-		page_offset = pos & PAGE_MASK;
-		offset = pos & ~PAGE_MASK;
+		page_offset = *ppos & PAGE_MASK;
+		offset = *ppos & ~PAGE_MASK;
 		nr = PAGE_SIZE - offset;
 		if (nr > count)
 			nr = count;
@@ -375,7 +374,7 @@ repeat:
 			goto found_page;
 
 		/* try to read some pages */
-		ret = generic_file_readahead(inode, page_offset, ((pos + count) >> PAGE_SHIFT) - (pos >> PAGE_SHIFT) + 1);
+		ret = generic_file_readahead(inode, page_offset, ((*ppos + count) >> PAGE_SHIFT) - (*ppos >> PAGE_SHIFT) + 1);
 		if (ret)
 			break;
 
@@ -391,13 +390,10 @@ found_page:
 
 		/* update sizes */
 		buf += nr;
-		pos += nr;
+		*ppos += nr;
 		read += nr;
 		count -= nr;
 	}
-
-	/* update position */
-	filp->f_pos = pos;
 
 	/* update inode */
 	update_atime(inode);
@@ -408,14 +404,14 @@ found_page:
 /*
  * Generic file write.
  */
-int generic_file_write(struct file *filp, const char *buf, size_t count)
+int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 {
-	size_t pos = filp->f_pos, nr;
 	int written = 0, ret = 0;
 	struct page *page, *tmp;
 	struct inode *inode;
 	off_t offset;
 	char *kaddr;
+	size_t nr;
 
 	/* check inode */
 	if (!filp->f_dentry || !filp->f_dentry->d_inode)
@@ -430,18 +426,18 @@ int generic_file_write(struct file *filp, const char *buf, size_t count)
 
 	/* handle append flag */
 	if (filp->f_flags & O_APPEND)
-		pos = inode->i_size;
+		*ppos = inode->i_size;
 
 	/* write page by page */
 	while (count) {
 		/* compute offset in page */
-		offset = pos & ~PAGE_MASK;
+		offset = *ppos & ~PAGE_MASK;
 		nr = PAGE_SIZE - offset;
 		if (nr > count)
 			nr = count;
 
 		/* get page */
-		page = grab_cache_page(inode, pos & PAGE_MASK);
+		page = grab_cache_page(inode, *ppos & PAGE_MASK);
 		if (!page) {
 			ret = -ENOMEM;
 			break;
@@ -476,18 +472,15 @@ int generic_file_write(struct file *filp, const char *buf, size_t count)
 
 		/* update sizes */
 		buf += nr;
-		pos += nr;
+		*ppos += nr;
 		written += nr;
 		count -= nr;
-		if (pos > inode->i_size)
-			inode->i_size = pos;
+		if (*ppos > inode->i_size)
+			inode->i_size = *ppos;
 	}
 
 	/* execute block requests */
 	wait_on_page(tmp);
-
-	/* update position */
-	filp->f_pos = pos;
 
 	/* update inode */
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;

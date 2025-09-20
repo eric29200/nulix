@@ -24,7 +24,7 @@ int script_load(const char *path, struct binargs *bargs)
 	filp = current_task->files->filp[fd];
 
 	/* read first characters */
-	n = do_read(filp, buf, 127);
+	n = do_read(filp, buf, 127, &filp->f_pos);
 	buf[127] = 0;
 
 	/* close file */

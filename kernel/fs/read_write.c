@@ -9,7 +9,7 @@
 /*
  * Read system call.
  */
-ssize_t do_read(struct file *filp, char *buf, int count)
+ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	/* no data to read */
 	if (!count)
@@ -19,13 +19,13 @@ ssize_t do_read(struct file *filp, char *buf, int count)
 	if (!filp->f_op || !filp->f_op->read)
 		return -EPERM;
 
-	return filp->f_op->read(filp, buf, count);
+	return filp->f_op->read(filp, buf, count, ppos);
 }
 
 /*
  * Write system call.
  */
-ssize_t do_write(struct file *filp, const char *buf, int count)
+ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 {
 	/* no data to write */
 	if (!count)
@@ -35,7 +35,7 @@ ssize_t do_write(struct file *filp, const char *buf, int count)
 	if (!filp->f_op || !filp->f_op->write)
 		return -EPERM;
 
-	return filp->f_op->write(filp, buf, count);
+	return filp->f_op->write(filp, buf, count, ppos);
 }
 
 /*
@@ -141,32 +141,16 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
  */
 static int do_pread64(struct file *filp, void *buf, size_t count, off_t offset)
 {
-	off_t offset_ori;
-	int ret;
-
 	/* no data to read */
 	if (!count)
 		return 0;
-
-	/* get current file */
-	offset_ori = filp->f_pos;
 
 	/* read not implemented */
 	if (!filp->f_op || !filp->f_op->read)
 		return -EPERM;
 
-	/* seek to offset */
-	ret = do_llseek(filp, offset, SEEK_SET);
-	if (ret < 0)
-		return ret;
-
 	/* read data */
-	ret = filp->f_op->read(filp, buf, count);
-
-	/* restore initial position */
-	filp->f_pos = offset_ori;
-
-	return ret;
+	return filp->f_op->read(filp, buf, count, &offset);
 }
 
 /*
@@ -183,7 +167,7 @@ int sys_read(int fd, char *buf, int count)
 		return -EBADF;
 
 	/* do read */
-	ret = do_read(filp, buf, count);
+	ret = do_read(filp, buf, count, &filp->f_pos);
 
 	/* release file */
 	fput(filp);
@@ -205,7 +189,7 @@ int sys_write(int fd, const char *buf, int count)
 		return -EBADF;
 
 	/* do write */
-	ret = do_write(filp, buf, count);
+	ret = do_write(filp, buf, count, &filp->f_pos);
 
 	/* release file */
 	fput(filp);
@@ -230,7 +214,7 @@ ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 	/* read into each buffer */
 	for (i = 0; i < iovcnt; i++, iov++) {
 		/* read into buffer */
-		n = do_read(filp, iov->iov_base, iov->iov_len);
+		n = do_read(filp, iov->iov_base, iov->iov_len, &filp->f_pos);
 		if (n < 0) {
 			ret = n;
 			break;
@@ -265,7 +249,7 @@ ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 	/* write each buffer */
 	for (i = 0; i < iovcnt; i++, iov++) {
 		/* write into buffer */
-		n = do_write(filp, iov->iov_base, iov->iov_len);
+		n = do_write(filp, iov->iov_base, iov->iov_len, &filp->f_pos);
 		if (n < 0) {
 			ret = n;
 			break;
@@ -327,7 +311,7 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 {
 	struct file *filp_in, *filp_out;
 	ssize_t n, tot = 0;
-	size_t f_pos;
+	off_t *f_pos;
 	int buf_len;
 	void *buf;
 
@@ -351,34 +335,25 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 		return -ENOMEM;
 	}
 
-	/* set input file position */
-	if (offset) {
-		f_pos = filp_in->f_pos;
-		filp_in->f_pos = *offset;
-	}
+	/* get input file position */
+	f_pos = offset ? offset : &filp_in->f_pos;
 
 	/* send */
 	while (count > 0) {
 		buf_len = PAGE_SIZE < count ? PAGE_SIZE : count;
 
 		/* read from input file */
-		n = do_read(filp_in, buf, buf_len);
+		n = do_read(filp_in, buf, buf_len, f_pos);
 		if (n <= 0)
 			break;
 
 		/* write to output file */
-		n = do_write(filp_out, buf, n);
+		n = do_write(filp_out, buf, n, &filp_out->f_pos);
 		if (n <= 0)
 			break;
 
 		count -= n;
 		tot += n;
-	}
-
-	/* update offset */
-	if (offset) {
-		*offset = filp_in->f_pos;
-		filp_in->f_pos = f_pos;
 	}
 
 	/* release files */

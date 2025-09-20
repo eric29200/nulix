@@ -42,8 +42,8 @@ int tmpfs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode 
 int tmpfs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 
 /* file operations */
-int tmpfs_file_read(struct file *filp, char *buf, size_t count);
-int tmpfs_file_write(struct file *filp, const char *buf, size_t count);
+int tmpfs_file_read(struct file *filp, char *buf, size_t count, off_t *ppos);
+int tmpfs_file_write(struct file *filp, const char *buf, size_t count, off_t *ppos);
 int tmpfs_readpage(struct inode *inode, struct page *page);
 
 /* symbolic link operations */

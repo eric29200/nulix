@@ -13,7 +13,7 @@ int tmpfs_getdents64(struct file *filp, void *dirp, size_t count)
 	/* walk through all entries */
 	for (entries_size = 0, dirent = (struct dirent64 *) dirp;;) {
 		/* read next drectory entry */
-		if (tmpfs_file_read(filp, (char *) &de, sizeof(struct tmpfs_dir_entry)) != sizeof(struct tmpfs_dir_entry))
+		if (tmpfs_file_read(filp, (char *) &de, sizeof(struct tmpfs_dir_entry), &filp->f_pos) != sizeof(struct tmpfs_dir_entry))
 			return entries_size;
 
 		/* skip null entries */

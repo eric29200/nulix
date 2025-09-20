@@ -86,11 +86,14 @@ struct inode_operations proc_net_iops = {
 /*
  * Read net dev.
  */
-static int proc_net_dev_read(struct file *filp, char *buf, size_t count)
+static int proc_net_dev_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	char *page;
 	size_t len;
 	int i;
+
+	/* unused filp */
+	UNUSED(filp);
 
 	/* get a page */
 	page = get_free_page();
@@ -109,19 +112,18 @@ static int proc_net_dev_read(struct file *filp, char *buf, size_t count)
 		len += sprintf(page + len, "%s: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n", net_devices[i].name);
 
 	/* file position after end */
-	if (filp->f_pos >= len) {
+	if (*ppos >= len) {
 		count = 0;
 		goto out;
 	}
 
 	/* update count */
-	if (filp->f_pos + count > len)
-		count = len - filp->f_pos;
+	if (*ppos + count > len)
+		count = len - *ppos;
 
 	/* copy content to user buffer and update file position */
-	memcpy(buf, page + filp->f_pos, count);
-	filp->f_pos += count;
-
+	memcpy(buf, page + *ppos, count);
+	*ppos += count;
 out:
 	free_page(page);
 	return count;

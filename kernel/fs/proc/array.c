@@ -106,7 +106,7 @@ static int proc_uptime_read(char *page)
 /*
  * Read array.
  */
-static int proc_array_read(struct file *filp, char *buf, size_t count)
+static int proc_array_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	char *page;
 	size_t len;
@@ -142,19 +142,18 @@ static int proc_array_read(struct file *filp, char *buf, size_t count)
 	}
 
 	/* file position after end */
-	if (filp->f_pos >= len) {
+	if (*ppos >= len) {
 		count = 0;
 		goto out;
 	}
 
 	/* update count */
-	if (filp->f_pos + count > len)
-		count = len - filp->f_pos;
+	if (*ppos + count > len)
+		count = len - *ppos;
 
 	/* copy content to user buffer and update file position */
-	memcpy(buf, page + filp->f_pos, count);
-	filp->f_pos += count;
-
+	memcpy(buf, page + *ppos, count);
+	*ppos += count;
 out:
 	free_page(page);
 	return count;
