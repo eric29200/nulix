@@ -38,6 +38,7 @@ static struct ata_device ata_devices[NR_ATA_DEVICES] = {
 
 /* ata block sizes */
 static size_t ata_blksizes[NR_ATA_DEVICES * NR_PARTITIONS] = { 0, };
+static size_t ata_sizes[NR_ATA_DEVICES * NR_PARTITIONS] = { 0, };
 
 /*
  * Get an ata device.
@@ -271,7 +272,7 @@ static struct file_operations ata_fops = {
  */
 int init_ata()
 {
-	int ret, i;
+	int ret, i, j;
 
 	/* register interrupt handlers */
 	register_interrupt_handler(IRQ14, ata_irq_handler);
@@ -284,6 +285,7 @@ int init_ata()
 
 	/* set default block size */
 	blksize_size[DEV_ATA_MAJOR] = ata_blksizes;
+	blk_size[DEV_ATA_MAJOR] = ata_sizes;
 
 	/* register block device */
 	blk_dev[DEV_ATA_MAJOR].request = ata_request;
@@ -299,6 +301,10 @@ int init_ata()
 
 		/* discover partitions */
 		check_partition(&ata_devices[i].hd);
+
+		/* set partitions size */
+		for (j = 0; j < NR_PARTITIONS; j++)
+			ata_sizes[(i << PARTITION_MINOR_SHIFT) + j] = ata_devices[i].hd.partitions[j].nr_sects >> (BLOCK_SIZE_BITS - 9);
 	}
 
 	return 0;

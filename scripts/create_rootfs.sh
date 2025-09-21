@@ -45,6 +45,7 @@ sudo cp -R musl/musl-install/i386-linux-musl/root tmp/
 sudo cp -R rootbase/etc/* tmp/etc/
 sudo cp -R rootbase/root tmp/
 sudo cp -R rootbase/home tmp/
+sudo cp nulix.iso tmp/root/
 
 # remove x86_64 binaries
 sudo rm -f tmp/bin/pkgconf tmp/bin/ar tmp/bin/as tmp/bin/ld tmp/bin/ld.bfd tmp/bin/objdump

@@ -6,10 +6,29 @@
 #include <dev.h>
 
 #define MAX_LOOP	4
+#define MAX_DISK_SIZE 	1024*1024*1024
 
 /* global variables */
 static struct loop_device loop_dev[MAX_LOOP];
+static size_t loop_sizes[MAX_LOOP];
 static size_t loop_blksizes[MAX_LOOP];
+
+/*
+ * Compute loop device size.
+ */
+static void figure_loop_size(struct loop_device *lo)
+{
+	size_t size;
+
+	if (S_ISREG(lo->lo_dentry->d_inode->i_mode))
+		size = (lo->lo_dentry->d_inode->i_size - lo->lo_offset) / BLOCK_SIZE;
+	else if (blk_size[major(lo->lo_device)])
+		size = blk_size[major(lo->lo_device)][minor(lo->lo_device)] - lo->lo_offset / BLOCK_SIZE;
+	else
+		size = MAX_DISK_SIZE;
+
+	loop_sizes[lo->lo_number] = size;
+}
 
 /*
  * Create a missing block.
@@ -255,6 +274,7 @@ static int loop_set_fd(struct loop_device *lo, dev_t dev, unsigned long arg)
 
 	/* attach file */
 	lo->lo_dentry = dget(filp->f_dentry);
+	figure_loop_size(lo);
 	ret = 0;
 out_fput:
 	fput(filp);
@@ -288,6 +308,7 @@ static int loop_clr_fd(struct loop_device *lo)
 	lo->lo_dentry = NULL;
 	lo->lo_backing_file = NULL;
 	lo->lo_offset = 0;
+	loop_sizes[lo->lo_number] = 0;
 
 	return 0;
 }
@@ -467,7 +488,9 @@ int init_loop()
 	blk_dev[DEV_LOOP_MAJOR].request = loop_request;
 
 	/* init block size */
+	memset(&loop_sizes, 0, sizeof(loop_sizes));
 	memset(&loop_blksizes, 0, sizeof(loop_blksizes));
+	blk_size[DEV_LOOP_MAJOR] = loop_sizes;
 	blksize_size[DEV_LOOP_MAJOR] = loop_blksizes;
 
 	/* init devices */

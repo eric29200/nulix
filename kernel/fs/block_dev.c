@@ -14,6 +14,7 @@ int generic_block_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	size_t blocksize, pos, nr_chars, left;
 	struct buffer_head *bh;
+	off_t size;
 	dev_t dev;
 
 	/* check size */
@@ -27,6 +28,18 @@ int generic_block_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 	blocksize = BLOCK_SIZE;
 	if (blksize_size[major(dev)] && blksize_size[major(dev)][minor(dev)])
 		blocksize = blksize_size[major(dev)][minor(dev)];
+
+	/* get device size */
+	if (blk_size[major(dev)])
+		size = (off_t) blk_size[major(dev)][minor(dev)] << BLOCK_SIZE_BITS;
+	else
+		size = INT_MAX;
+
+	/* limit to device */
+	if (*ppos > size)
+		return 0;
+	if (*ppos + count > size)
+		count = size - *ppos;
 
 	left = count;
 	while (left > 0) {
@@ -61,6 +74,7 @@ int generic_block_write(struct file *filp, const char *buf, size_t count, off_t 
 {
 	size_t blocksize, pos, nr_chars, left;
 	struct buffer_head *bh;
+	off_t size;
 	dev_t dev;
 
 	/* check size */
@@ -74,6 +88,18 @@ int generic_block_write(struct file *filp, const char *buf, size_t count, off_t 
 	blocksize = BLOCK_SIZE;
 	if (blksize_size[major(dev)] && blksize_size[major(dev)][minor(dev)])
 		blocksize = blksize_size[major(dev)][minor(dev)];
+
+	/* get device size */
+	if (blk_size[major(dev)])
+		size = (off_t) blk_size[major(dev)][minor(dev)] << BLOCK_SIZE_BITS;
+	else
+		size = INT_MAX;
+
+	/* limit to device */
+	if (*ppos > size)
+		return 0;
+	if (*ppos + count > size)
+		count = size - *ppos;
 
 	left = count;
 	while (left > 0) {
