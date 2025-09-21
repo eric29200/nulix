@@ -352,7 +352,6 @@ static int loop_set_status(struct loop_device *lo, struct loop_info64 *info)
 	lo->lo_offset = info->lo_offset;
 	memcpy(lo->lo_name, info->lo_file_name, LO_NAME_SIZE);
 	lo->lo_name[LO_NAME_SIZE - 1] = 0;
-	printf("%s\n", lo->lo_name);
 
 	return 0;
 }
