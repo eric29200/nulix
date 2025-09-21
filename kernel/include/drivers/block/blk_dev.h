@@ -5,6 +5,9 @@
 #include <ioctl.h>
 #include <dev.h>
 
+#define RQ_INACTIVE		-1
+#define RQ_ACTIVE		1
+
 #define BLKGETSIZE 		_IO(0x12, 96)
 #define BLKBSZGET		_IOR(0x12, 112, sizeof(int))
 #define BLKBSZSET		_IOW(0x12, 113, sizeof(int))
@@ -14,19 +17,22 @@
  * Block device request.
  */
 struct request {
-	dev_t			dev;
+	int			rq_status;
+	dev_t			rq_dev;
 	int			cmd;
 	uint32_t		sector;
 	uint32_t		nr_sectors;
 	char *			buf;
 	struct list_head	bhs_list;
+	struct request *	next;
 };
 
 /*
  * Block device.
  */
 struct blk_dev {
-	void (*request)(struct request *);
+	struct request *	current_request;
+	void 			(*request)();
 };
 
 /* Block devices */
@@ -37,5 +43,7 @@ int is_read_only(dev_t dev);
 void set_device_ro(dev_t dev, int flag);
 void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[]);
 void execute_block_requests();
+void end_request(struct request *req);
+void init_blk_dev();
 
 #endif

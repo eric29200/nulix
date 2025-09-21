@@ -12,6 +12,7 @@
 #include <drivers/char/keyboard.h>
 #include <drivers/char/mouse.h>
 #include <drivers/pci/pci.h>
+#include <drivers/block/blk_dev.h>
 #include <drivers/block/ata.h>
 #include <drivers/video/fb.h>
 #include <drivers/net/rtl8139.h>
@@ -128,6 +129,10 @@ static void kinit()
 	printf("[Kernel] Realtek 8139 card Init\n");
 	if (init_rtl8139(default_ip_address, default_ip_netmask, default_ip_route) != 0)
 		printf("[Kernel] Realtek 8139 card Init error\n");
+
+	/* init block devices */
+	printf("[Kernel] Bock devices Init\n");
+	init_blk_dev();
 
 	/* init ata devices */
 	printf("[Kernel] ATA devices Init\n");

@@ -91,40 +91,55 @@ static uint32_t ata_get_nr_sectors(struct ata_device *device, dev_t dev)
 /*
  * Handle a read/write request.
  */
-static void ata_request(struct request *request)
+static void ata_request()
 {
 	uint32_t start_sector, sector, nr_sectors;
 	struct ata_device *device;
+	struct request *request;
 	int ret;
 
-	/* get ata device */
-	device = ata_get_device(request->dev);
-	if (!device) {
-		printf("ata_request: can't find device 0x%x\n", request->dev);
-		return;
-	}
-
-	/* get partition start sector */
-	start_sector = ata_get_start_sector(device, request->dev);
-	sector = start_sector + (request->sector << 9) / device->sector_size;
-	nr_sectors = (request->nr_sectors << 9) / device->sector_size;
-
-	/* find request function */
-	switch (request->cmd) {
-		case READ:
-			ret = device->read(device, sector, nr_sectors, request->buf);
+	for (;;) {
+		/* get first request */
+		request = blk_dev[DEV_ATA_MAJOR].current_request;
+		if (!request)
 			break;
-		case WRITE:
-			ret = device->write(device, sector, nr_sectors, request->buf);
-			break;
-		default:
-			printf("ata_request: can't handle request %x\n", request->cmd);
-			return;
-	}
 
-	/* print error */
-	if (ret)
-		printf("ata_request: error on request (cmd = %x, sector = %ld)\n", request->cmd, request->sector);
+		/* remove it from queue */
+		blk_dev[DEV_ATA_MAJOR].current_request = request->next;
+
+		/* get ata device */
+		device = ata_get_device(request->rq_dev);
+		if (!device) {
+			printf("ata_request: can't find device 0x%x\n", request->rq_dev);
+			goto next;
+		}
+
+		/* get partition start sector */
+		start_sector = ata_get_start_sector(device, request->rq_dev);
+		sector = start_sector + (request->sector << 9) / device->sector_size;
+		nr_sectors = (request->nr_sectors << 9) / device->sector_size;
+
+		/* find request function */
+		switch (request->cmd) {
+			case READ:
+				ret = device->read(device, sector, nr_sectors, request->buf);
+				break;
+			case WRITE:
+				ret = device->write(device, sector, nr_sectors, request->buf);
+				break;
+			default:
+				printf("ata_request: can't handle request %x\n", request->cmd);
+				goto next;
+		}
+
+		/* print error */
+		if (ret)
+			printf("ata_request: error on request (cmd = %x, sector = %ld)\n", request->cmd, request->sector);
+
+next:
+		/* end this request */
+		end_request(request);
+	}
 }
 
 /*
