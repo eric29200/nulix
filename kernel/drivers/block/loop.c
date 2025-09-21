@@ -334,6 +334,25 @@ static int loop_get_status(struct loop_device *lo, struct loop_info64 *info)
 	info->lo_inode = lo->lo_dentry->d_inode->i_ino;
 	info->lo_rdevice = lo->lo_device;
 	info->lo_offset = lo->lo_offset;
+	strncpy((char *) info->lo_file_name, lo->lo_name, LO_NAME_SIZE);
+
+	return 0;
+}
+
+/*
+ * Set loop device status.
+ */
+static int loop_set_status(struct loop_device *lo, struct loop_info64 *info)
+{
+	/* check argument */
+	if (!info)
+		return -EINVAL;
+
+	/* set informations */
+	lo->lo_offset = info->lo_offset;
+	memcpy(lo->lo_name, info->lo_file_name, LO_NAME_SIZE);
+	lo->lo_name[LO_NAME_SIZE - 1] = 0;
+	printf("%s\n", lo->lo_name);
 
 	return 0;
 }
@@ -343,6 +362,14 @@ static int loop_get_status(struct loop_device *lo, struct loop_info64 *info)
  */
 static int loop_configure(struct loop_device *lo, dev_t dev, struct loop_config *config)
 {
+	int ret;
+
+	/* set status */
+	ret = loop_set_status(lo, &config->info);
+	if (ret)
+		return ret;
+
+	/* attach device */
 	return loop_set_fd(lo, dev, config->fd);
 }
 

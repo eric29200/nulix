@@ -32,6 +32,7 @@ struct loop_device {
 	int			lo_flags;
 	off_t			lo_offset;
 	struct file *		lo_backing_file;
+	char			lo_name[LO_NAME_SIZE];
 };
 
 /*
