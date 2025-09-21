@@ -176,6 +176,7 @@ void init_page_cache();
 struct page *find_page(struct inode *inode, off_t offset);
 void add_to_page_cache(struct page *page, struct inode *inode, off_t offset);
 void remove_from_page_cache(struct page *page);
+void invalidate_inode_pages(struct inode *inode);
 void truncate_inode_pages(struct inode *inode, off_t start);
 int shrink_mmap(int priority);
 

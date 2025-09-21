@@ -7,6 +7,7 @@
 /* block devices */
 struct blk_dev blk_dev[MAX_BLKDEV];
 static long ro_bits[MAX_BLKDEV][8] = { 0 };
+size_t *blk_size[MAX_BLKDEV];
 size_t *blksize_size[MAX_BLKDEV];
 
 /* requests */

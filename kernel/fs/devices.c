@@ -137,7 +137,7 @@ static int chrdev_open(struct inode *inode, struct file *filp)
 /*
  * Open a block device.
  */
-static int blkdev_open(struct inode *inode, struct file *filp)
+int blkdev_open(struct inode *inode, struct file *filp)
 {
 	int major;
 

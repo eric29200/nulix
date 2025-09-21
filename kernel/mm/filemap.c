@@ -490,6 +490,28 @@ int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *
 }
 
 /*
+ * Invalidate inode pages.
+ */
+void invalidate_inode_pages(struct inode *inode)
+{
+	struct list_head *pos, *n;
+	struct page *page;
+
+	list_for_each_safe(pos, n, &inode->i_pages) {
+		page = list_entry(pos, struct page, list);
+
+		/* page locked */
+		if (PageLocked(page))
+			continue;
+
+		/* remove page from cache */
+		remove_from_page_cache(page);
+		page->inode = NULL;
+		__free_page(page);
+	}
+}
+
+/*
  * Truncate inode pages.
  */
 void truncate_inode_pages(struct inode *inode, off_t start)

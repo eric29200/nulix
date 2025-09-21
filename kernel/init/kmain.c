@@ -14,6 +14,7 @@
 #include <drivers/pci/pci.h>
 #include <drivers/block/blk_dev.h>
 #include <drivers/block/ata.h>
+#include <drivers/block/loop.h>
 #include <drivers/video/fb.h>
 #include <drivers/net/rtl8139.h>
 #include <proc/sched.h>
@@ -138,6 +139,11 @@ static void kinit()
 	printf("[Kernel] ATA devices Init\n");
 	if (init_ata())
 		printf("[Kernel] ATA devices Init error\n");
+
+	/* init loop devices */
+	printf("[Kernel] Loop devices Init\n");
+	if (init_loop())
+		printf("[Kernel] Loop devices Init error\n");
 
 	/* init ttys */
 	printf("[Kernel] Ttys Init\n");
