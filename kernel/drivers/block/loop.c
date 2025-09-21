@@ -90,6 +90,10 @@ repeat:
 	len = request->nr_sectors << 9;
 	dest_addr = request->buf;
 
+	/* add loop offset */
+	block += lo->lo_offset / blocksize;
+	offset += lo->lo_offset % blocksize;
+
 	/* fix offset */
 	if (offset > blocksize) {
 		block++;
@@ -283,6 +287,7 @@ static int loop_clr_fd(struct loop_device *lo)
 	lo->lo_device = 0;
 	lo->lo_dentry = NULL;
 	lo->lo_backing_file = NULL;
+	lo->lo_offset = 0;
 
 	return 0;
 }
@@ -307,6 +312,7 @@ static int loop_get_status(struct loop_device *lo, struct loop_info64 *info)
 	info->lo_device = lo->lo_dentry->d_inode->i_dev;
 	info->lo_inode = lo->lo_dentry->d_inode->i_ino;
 	info->lo_rdevice = lo->lo_device;
+	info->lo_offset = lo->lo_offset;
 
 	return 0;
 }

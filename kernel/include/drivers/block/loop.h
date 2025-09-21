@@ -30,6 +30,7 @@ struct loop_device {
 	struct dentry *		lo_dentry;
 	dev_t			lo_device;
 	int			lo_flags;
+	off_t			lo_offset;
 	struct file *		lo_backing_file;
 };
 
