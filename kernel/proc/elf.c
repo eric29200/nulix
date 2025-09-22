@@ -118,9 +118,6 @@ int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t 
 	/* get file */
 	filp = current_task->files->filp[fd];
 
-	/* update reference count */
-	//filp->f_inode->i_count++;
-
 	/* get a free page */
 	buf = (char *) get_free_page();
 	if (!buf) {
@@ -313,9 +310,6 @@ int elf_load(const char *path, struct binargs *bargs)
 
 	/* get file */
 	filp = current_task->files->filp[fd];
-
-	/* update reference count */
-	//filp->f_inode->i_count++;
 
 	/* check permissions */
 	ret = permission(filp->f_dentry->d_inode, MAY_EXEC);

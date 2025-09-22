@@ -139,25 +139,25 @@ struct task {
  * Registers structure.
  */
 struct task_registers {
-	uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
-	uint32_t eip;
-	uint32_t return_address;
-	uint32_t parameter1;
-	uint32_t parameter2;
-	uint32_t parameter3;
+	uint32_t 			edi, esi, ebp, esp, ebx, edx, ecx, eax;
+	uint32_t 			eip;
+	uint32_t 			return_address;
+	uint32_t 			parameter1;
+	uint32_t 			parameter2;
+	uint32_t 			parameter3;
 };
 
 /*
  * Binary arguments.
  */
 struct binargs {
-	char	*buf;
-	char	*p;
-	int	argc;
-	int	argv_len;
-	int	envc;
-	int	envp_len;
-	char	dont_free;
+	char *				buf;
+	char *				p;
+	int				argc;
+	int				argv_len;
+	int				envc;
+	int				envp_len;
+	char				dont_free;
 };
 
 struct task *create_kinit_task(void (*kinit_func)());
