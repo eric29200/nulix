@@ -242,6 +242,11 @@ static int ata_ioctl(struct inode *inode, struct file *filp, int request, unsign
 		case BLKGETSIZE64:
 			*((uint64_t *) arg) = ata_get_nr_sectors(device, dev) * ATA_SECTOR_SIZE;
 			break;
+		case BLKROGET:
+		 	*((int *) arg) = is_read_only(dev);
+			break;
+		case BLKDISCARDZEROES:
+			break;
 		default:
 			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) dev);
 			break;

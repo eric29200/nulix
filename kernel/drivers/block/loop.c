@@ -479,6 +479,16 @@ static int lo_ioctl(struct inode *inode, struct file *filp, int request, unsigne
 			return loop_get_status(lo, (struct loop_info64 *) arg);
 		case LOOP_CONFIGURE:
 			return loop_configure(lo, inode->i_rdev, (struct loop_config *) arg);
+		case BLKGETSIZE:
+			if (!lo->lo_dentry)
+				return -ENXIO;
+			*((uint32_t *) arg) = loop_sizes[lo->lo_number] << 1;
+			break;
+		case BLKGETSIZE64:
+			if (!lo->lo_dentry)
+				return -ENXIO;
+			*((uint64_t *) arg) = loop_sizes[lo->lo_number] * BLOCK_SIZE;
+			break;
 		default:
 			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) inode->i_rdev);
 			return -EINVAL;
