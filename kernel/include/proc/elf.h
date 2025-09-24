@@ -122,6 +122,6 @@ struct elf_prog_header {
 		uint32_t	p_align;		/* segment alignment */
 };
 
-int elf_load(const char *path, struct binargs *bargs);
+int elf_load(const char *path, struct binprm *bprm);
 
 #endif

@@ -7,10 +7,10 @@
 /*
  * Load a script.
  */
-int script_load(const char *path, struct binargs *bargs)
+int script_load(const char *path, struct binprm *bprm)
 {
 	char *s, *interp, *interp_name, *i_arg = NULL;
-	struct binargs bargs_new;
+	struct binprm bprm_new;
 	struct file *filp;
 	char buf[128];
 	int fd, ret;
@@ -68,51 +68,51 @@ int script_load(const char *path, struct binargs *bargs)
 	if (*s)
 		i_arg = s;
 
-	/* create new binary arguments */
-	bargs_new.argc = 2 + (i_arg ? 1 : 0);
-	bargs_new.argv_len = strlen(interp_name) + 1 + (i_arg ? strlen(i_arg) + 1: 0) + strlen(path) + 1;
-	bargs_new.envc = bargs->envc;
-	bargs_new.envp_len = bargs->envp_len;
-	bargs_new.dont_free = 0;
+	/* create new binary program */
+	bprm_new.argc = 2 + (i_arg ? 1 : 0);
+	bprm_new.argv_len = strlen(interp_name) + 1 + (i_arg ? strlen(i_arg) + 1: 0) + strlen(path) + 1;
+	bprm_new.envc = bprm->envc;
+	bprm_new.envp_len = bprm->envp_len;
+	bprm_new.dont_free = 0;
 
 	/* add old arguments (remove first = script name) */
-	if (bargs->argc > 1) {
-		bargs_new.argc += bargs->argc - 1;
-		bargs_new.argv_len += bargs->argv_len - strlen(bargs->buf) - 1;
+	if (bprm->argc > 1) {
+		bprm_new.argc += bprm->argc - 1;
+		bprm_new.argv_len += bprm->argv_len - strlen(bprm->buf) - 1;
 	}
 
 	/* allocate buffer */
-	bargs_new.buf = bargs_new.p = (char *) kmalloc(bargs_new.argv_len + bargs_new.envp_len);
-	if (!bargs_new.buf)
+	bprm_new.buf = bprm_new.p = (char *) kmalloc(bprm_new.argv_len + bprm_new.envp_len);
+	if (!bprm_new.buf)
 		return -ENOMEM;
 
 	/* copy arguments */
-	copy_strings(&bargs_new, 1, &interp_name);
-	copy_strings(&bargs_new, 1, (char **) &path);
+	copy_strings(&bprm_new, 1, &interp_name);
+	copy_strings(&bprm_new, 1, (char **) &path);
 	if(i_arg)
-		copy_strings(&bargs_new, 1, &i_arg);
+		copy_strings(&bprm_new, 1, &i_arg);
 
 	/* copy old arguments */
-	if (bargs->argc > 1) {
-		t = strlen(bargs->buf) + 1;
-		memcpy(bargs_new.p, bargs->buf + t, bargs->argv_len - t);
-		bargs_new.p += bargs->argv_len - t;
+	if (bprm->argc > 1) {
+		t = strlen(bprm->buf) + 1;
+		memcpy(bprm_new.p, bprm->buf + t, bprm->argv_len - t);
+		bprm_new.p += bprm->argv_len - t;
 	}
 
 	/* copy environ */
-	memcpy(bargs_new.p, bargs->buf + bargs->argv_len, bargs->envp_len);
+	memcpy(bprm_new.p, bprm->buf + bprm->argv_len, bprm->envp_len);
 
 	/* free old binary arguments */
-	if (bargs->buf) {
-		bargs->dont_free = 1;
-		kfree(bargs->buf);
+	if (bprm->buf) {
+		bprm->dont_free = 1;
+		kfree(bprm->buf);
 	}
 
 	/* load binary */
-	ret = binary_load(interp, &bargs_new);
+	ret = binary_load(interp, &bprm_new);
 
-	if (!bargs_new.dont_free)
-		kfree(bargs_new.buf);
+	if (!bprm_new.dont_free)
+		kfree(bprm_new.buf);
 
 	return ret;
 }

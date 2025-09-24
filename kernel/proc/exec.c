@@ -4,11 +4,11 @@
 #include <stderr.h>
 
 /*
- * Copy strings to binary arguments structure.
+ * Copy strings to binary program structure.
  */
-void copy_strings(struct binargs *bargs, int argc, char **argv)
+void copy_strings(struct binprm *bprm, int argc, char **argv)
 {
-	char *str, *p = bargs->p;
+	char *str, *p = bprm->p;
 	int i;
 
 	/* copy argv */
@@ -19,33 +19,33 @@ void copy_strings(struct binargs *bargs, int argc, char **argv)
 		*p++ = 0;
 	}
 
-	/* update binargs position */
-	bargs->p = p;
+	/* update program position */
+	bprm->p = p;
 }
 
 /*
- * Init binary arguments.
+ * Init binary program.
  */
-static int bargs_init(struct binargs *bargs, char *const argv[], char *const envp[])
+static int bprm_init(struct binprm *bprm, char *const argv[], char *const envp[])
 {
 	int i;
 
 	/* reset barg */
-	memset(bargs, 0, sizeof(struct binargs));
+	memset(bprm, 0, sizeof(struct binprm));
 
 	/* get argc */
 	for (i = 0; argv && argv[i]; i++)
-		bargs->argv_len += strlen(argv[i]) + 1;
-	bargs->argc = i;
+		bprm->argv_len += strlen(argv[i]) + 1;
+	bprm->argc = i;
 
 	/* get envc */
 	for (i = 0; envp && envp[i]; i++)
-		bargs->envp_len += strlen(envp[i]) + 1;
-	bargs->envc = i;
+		bprm->envp_len += strlen(envp[i]) + 1;
+	bprm->envc = i;
 
 	/* allocate buffer */
-	bargs->buf = bargs->p = (char *) kmalloc(bargs->argv_len + bargs->envp_len);
-	if (!bargs->buf)
+	bprm->buf = bprm->p = (char *) kmalloc(bprm->argv_len + bprm->envp_len);
+	if (!bprm->buf)
 		return -ENOMEM;
 
 	return 0;
@@ -54,14 +54,14 @@ static int bargs_init(struct binargs *bargs, char *const argv[], char *const env
 /*
  * Load a binary file.
  */
-int binary_load(const char *path, struct binargs *bargs)
+int binary_load(const char *path, struct binprm *bprm)
 {
 	int ret;
 
 	/* try to load elf binary or script */
-	ret = elf_load(path, bargs);
+	ret = elf_load(path, bprm);
 	if (ret)
-		ret = script_load(path, bargs);
+		ret = script_load(path, bprm);
 
 	return ret;
 }
@@ -71,22 +71,22 @@ int binary_load(const char *path, struct binargs *bargs)
  */
 int sys_execve(const char *path, char *const argv[], char *const envp[])
 {
-	struct binargs bargs;
+	struct binprm bprm;
 	int ret;
 
-	/* init binary arguments */
-	ret = bargs_init(&bargs, argv, envp);
+	/* init binary program */
+	ret = bprm_init(&bprm, argv, envp);
 	if (ret)
 		goto out;
 
-	/* copy argv/envp to binary arguments structure */
-	copy_strings(&bargs, bargs.argc, (char **) argv);
-	copy_strings(&bargs, bargs.envc, (char **) envp);
+	/* copy argv/envp to binary program structure */
+	copy_strings(&bprm, bprm.argc, (char **) argv);
+	copy_strings(&bprm, bprm.envc, (char **) envp);
 
 	/* load binary */
-	ret = binary_load(path, &bargs);
+	ret = binary_load(path, &bprm);
 out:
-	if (!bargs.dont_free)
-		kfree(bargs.buf);
+	if (!bprm.dont_free)
+		kfree(bprm.buf);
 	return ret;
 }

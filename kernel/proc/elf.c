@@ -48,20 +48,20 @@ static int elf_check(struct elf_header *elf_header)
 /*
  * Create ELF table.
  */
-static int elf_create_tables(struct binargs *bargs, uint32_t *sp, char *args_str, struct elf_header *elf_header,
+static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, struct elf_header *elf_header,
 			     uint32_t load_addr, uint32_t load_bias, uint32_t interp_load_addr)
 {
 	int i;
 
 	/* put string arguments at the end of the stack */
-	memcpy((void *) args_str, bargs->buf, bargs->argv_len + bargs->envp_len);
+	memcpy((void *) args_str, bprm->buf, bprm->argv_len + bprm->envp_len);
 
 	/* put argc */
-	*sp++ = bargs->argc;
+	*sp++ = bprm->argc;
 
 	/* put argv */
 	current_task->mm->arg_start = (uint32_t) sp;
-	for (i = 0; i < bargs->argc; i++) {
+	for (i = 0; i < bprm->argc; i++) {
 		*sp++ = (uint32_t) args_str;
 		args_str += strlen((char *) args_str) + 1;
 	}
@@ -72,7 +72,7 @@ static int elf_create_tables(struct binargs *bargs, uint32_t *sp, char *args_str
 
 	/* put envp */
 	current_task->mm->env_start = (uint32_t) sp;
-	for (i = 0; i < bargs->envc; i++) {
+	for (i = 0; i < bprm->envc; i++) {
 		*sp++ = (uint32_t) args_str;
 		args_str += strlen((char *) args_str) + 1;
 	}
@@ -293,7 +293,7 @@ err_sig:
 /*
  * Load an ELF file in memory.
  */
-int elf_load(const char *path, struct binargs *bargs)
+int elf_load(const char *path, struct binprm *bprm)
 {
 	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
 	char name[TASK_NAME_LEN], *buf = NULL, *elf_interpreter = NULL;
@@ -467,10 +467,10 @@ int elf_load(const char *path, struct binargs *bargs)
 
 	/* setup stack */
 	sp = USTACK_START;
-	sp -= bargs->argv_len + bargs->envp_len;
+	sp -= bprm->argv_len + bprm->envp_len;
 	args_str = sp;
 	sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
-	sp -= (1 + (bargs->argc + 1) + (bargs->envc + 1)) * sizeof(uint32_t);
+	sp -= (1 + (bprm->argc + 1) + (bprm->envc + 1)) * sizeof(uint32_t);
 
 	/* map initial stack */
 	start = PAGE_ALIGN_DOWN(sp);
@@ -481,7 +481,7 @@ int elf_load(const char *path, struct binargs *bargs)
 	}
 
 	/* create ELF tables */
-	ret = elf_create_tables(bargs, (uint32_t *) sp, (char *) args_str, elf_header, load_addr, load_bias, interp_load_addr);
+	ret = elf_create_tables(bprm, (uint32_t *) sp, (char *) args_str, elf_header, load_addr, load_bias, interp_load_addr);
 	if (ret)
 		goto out;
 
