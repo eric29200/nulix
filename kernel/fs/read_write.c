@@ -9,7 +9,7 @@
 /*
  * Read system call.
  */
-ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos)
+static ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	/* no data to read */
 	if (!count)
@@ -25,7 +25,7 @@ ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 /*
  * Write system call.
  */
-ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
+static ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 {
 	/* no data to write */
 	if (!count)
@@ -41,7 +41,7 @@ ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 /*
  * Generic lseek.
  */
-off_t generic_file_llseek(struct file *filp, off_t offset, int whence)
+static off_t generic_file_llseek(struct file *filp, off_t offset, int whence)
 {
 	struct dentry *dentry;
 	struct inode *inode;
@@ -80,7 +80,7 @@ off_t generic_file_llseek(struct file *filp, off_t offset, int whence)
 /*
  * Lseek system call.
  */
-off_t do_llseek(struct file *filp, off_t offset, int whence)
+static off_t do_llseek(struct file *filp, off_t offset, int whence)
 {
 	/* specific llseek */
 	if (filp->f_op && filp->f_op->llseek)

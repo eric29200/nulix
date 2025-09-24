@@ -127,7 +127,7 @@ static int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, ui
 	}
 
 	/* read first block */
-	if ((size_t) do_read(filp, buf, PAGE_SIZE, &filp->f_pos) < sizeof(struct elf_header)) {
+	if ((size_t) filp->f_op->read(filp, buf, PAGE_SIZE, &filp->f_pos) < sizeof(struct elf_header)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -329,7 +329,7 @@ static int elf_load_binary(const char *path, struct binprm *bprm)
 	}
 
 	/* read first block */
-	if ((size_t) do_read(filp, buf, PAGE_SIZE, &filp->f_pos) < sizeof(struct elf_header)) {
+	if ((size_t) filp->f_op->read(filp, buf, PAGE_SIZE, &filp->f_pos) < sizeof(struct elf_header)) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -363,12 +363,16 @@ static int elf_load_binary(const char *path, struct binprm *bprm)
 			}
 
 			/* seek to interpreter path */
-			ret = do_llseek(filp, ph->p_offset, SEEK_SET);
-			if (ret < 0)
-				goto out;
+			if (filp->f_op->llseek) {
+				ret = filp->f_op->llseek(filp, ph->p_offset, SEEK_SET);
+				if (ret < 0)
+					goto out;
+			} else {
+				filp->f_pos = ph->p_offset;
+			}
 
 			/* read interpreter path */
-			if ((size_t) do_read(filp, elf_interpreter, ph->p_filesz, &filp->f_pos) != ph->p_filesz) {
+			if ((size_t) filp->f_op->read(filp, elf_interpreter, ph->p_filesz, &filp->f_pos) != ph->p_filesz) {
 				ret = -EINVAL;
 				goto out;
 			}

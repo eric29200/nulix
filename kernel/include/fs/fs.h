@@ -356,9 +356,6 @@ int generic_file_mmap(struct file *filp, struct vm_area *vma);
 int do_mount_root(dev_t dev, const char *dev_name);
 int do_open(int dirfd, const char *pathname, int flags, mode_t mode);
 int close_fp(struct file *filp);
-ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos);
-ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t *ppos);
-off_t do_llseek(struct file *filp, off_t offset, int whence);
 int do_truncate(struct inode *inode, off_t length);
 
 /* system calls */
