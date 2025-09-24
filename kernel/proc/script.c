@@ -1,4 +1,5 @@
 #include <proc/sched.h>
+#include <proc/binfmt.h>
 #include <fs/fs.h>
 #include <stderr.h>
 #include <stdio.h>
@@ -7,7 +8,7 @@
 /*
  * Load a script.
  */
-int script_load(const char *path, struct binprm *bprm)
+static int script_load_binary(const char *path, struct binprm *bprm)
 {
 	char *s, *interp, *interp_name, *i_arg = NULL;
 	struct binprm bprm_new;
@@ -115,4 +116,19 @@ int script_load(const char *path, struct binprm *bprm)
 		kfree(bprm_new.buf);
 
 	return ret;
+}
+
+/*
+ * Script binary format.
+ */
+static struct binfmt script_format = {
+	.load_binary		= script_load_binary,
+};
+
+/*
+ * Init Script binary format.
+ */
+int init_script_binfmt()
+{
+	return register_binfmt(&script_format);
 }

@@ -18,6 +18,7 @@
 #include <drivers/video/fb.h>
 #include <drivers/net/rtl8139.h>
 #include <proc/sched.h>
+#include <proc/binfmt.h>
 #include <sys/syscall.h>
 #include <fs/minix_fs.h>
 #include <fs/ext2_fs.h>
@@ -154,6 +155,10 @@ static void kinit()
 	printf("[Kernel] Direct frame buffer Init\n");
 	if (init_framebuffer_direct(&tag_fb))
 		panic("Cannot init direct frame buffer");
+
+	/* init binary formats */
+	printf("[Kernel] Binary formats Init\n");
+	init_binfmt();
 
 	/* register filesystems */
 	printf("[Kernel] Register file systems\n");

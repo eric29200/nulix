@@ -1,7 +1,11 @@
 #include <proc/sched.h>
+#include <proc/binfmt.h>
 #include <proc/elf.h>
 #include <stdio.h>
 #include <stderr.h>
+
+/* binary formats */
+static LIST_HEAD(formats);
 
 /*
  * Copy strings to binary program structure.
@@ -56,12 +60,19 @@ static int bprm_init(struct binprm *bprm, char *const argv[], char *const envp[]
  */
 int binary_load(const char *path, struct binprm *bprm)
 {
+	struct list_head *pos;
+	struct binfmt *fmt;
 	int ret;
 
-	/* try to load elf binary or script */
-	ret = elf_load(path, bprm);
-	if (ret)
-		ret = script_load(path, bprm);
+	/* find binary format */
+	list_for_each(pos, &formats) {
+		fmt = list_entry(pos, struct binfmt, list);
+
+		/* load binary */
+		ret = fmt->load_binary(path, bprm);
+		if (ret == 0)
+			return ret;
+	}
 
 	return ret;
 }
@@ -89,4 +100,38 @@ out:
 	if (!bprm.dont_free)
 		kfree(bprm.buf);
 	return ret;
+}
+
+/*
+ * Register a binary format.
+ */
+int register_binfmt(struct binfmt *fmt)
+{
+	struct list_head *pos;
+	struct binfmt *tmp;
+
+	/* check binary format */
+	if (!fmt)
+		return -EINVAL;
+
+	/* check if this binary format is already registered */
+	list_for_each(pos, &formats) {
+		tmp = list_entry(pos, struct binfmt, list);
+		if (fmt == tmp)
+			return -EBUSY;
+	}
+
+	/* register binary format */
+	list_add(&fmt->list, &formats);
+
+	return 0;
+}
+
+/*
+ * Init binary formats.
+ */
+void init_binfmt()
+{
+	init_elf_binfmt();
+	init_script_binfmt();
 }

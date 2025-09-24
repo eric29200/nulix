@@ -174,10 +174,8 @@ void task_exit_mmap(struct mm_struct *mm);
 void task_release_mmap(struct task *task);
 int task_in_group(struct task *task, gid_t gid);
 
-void copy_strings(struct binprm *bprm, int argc, char **argv);
 int binary_load(const char *path, struct binprm *bprm);
-int elf_load(const char *path, struct binprm *bprm);
-int script_load(const char *path, struct binprm *bprm);
+void copy_strings(struct binprm *bprm, int argc, char **argv);
 
 pid_t sys_fork();
 pid_t sys_vfork();

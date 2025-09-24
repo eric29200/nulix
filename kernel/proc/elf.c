@@ -1,5 +1,6 @@
 #include <proc/elf.h>
 #include <proc/sched.h>
+#include <proc/binfmt.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
 #include <sys/syscall.h>
@@ -101,7 +102,7 @@ static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, 
 /*
  * Load an ELF interpreter in memory.
  */
-int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t *elf_entry)
+static int elf_load_interpreter(const char *path, uint32_t *interp_load_addr, uint32_t *elf_entry)
 {
 	int fd, ret, off, elf_type, elf_prot, load_addr_set = 0;
 	struct elf_prog_header *ph, *last_ph = NULL;
@@ -293,7 +294,7 @@ err_sig:
 /*
  * Load an ELF file in memory.
  */
-int elf_load(const char *path, struct binprm *bprm)
+static int elf_load_binary(const char *path, struct binprm *bprm)
 {
 	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
 	char name[TASK_NAME_LEN], *buf = NULL, *elf_interpreter = NULL;
@@ -498,4 +499,19 @@ out:
 	if (buf)
 		free_page(buf);
 	return ret;
+}
+
+/*
+ * ELF binary format.
+ */
+static struct binfmt elf_format = {
+	.load_binary		= elf_load_binary,
+};
+
+/*
+ * Init ELF binary format.
+ */
+int init_elf_binfmt()
+{
+	return register_binfmt(&elf_format);
 }
