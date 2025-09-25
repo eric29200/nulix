@@ -55,7 +55,7 @@ static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, 
 	int i;
 
 	/* put string arguments at the end of the stack */
-	memcpy((void *) args_str, bprm->buf, bprm->argv_len + bprm->envp_len);
+	memcpy((void *) args_str, bprm->buf_args, bprm->argv_len + bprm->envp_len);
 
 	/* put argc */
 	*sp++ = bprm->argc;

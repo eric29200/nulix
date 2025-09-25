@@ -296,8 +296,6 @@ int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, 
 void mark_inode_dirty(struct inode *inode);
 struct inode *iget(struct super_block *sb, ino_t ino);
 void iput(struct inode *inode);
-struct file *fget(int fd);
-void fput(struct file *filp);
 struct inode *get_empty_inode(struct super_block *sb);
 void clear_inode(struct inode *inode);
 void add_to_inode_cache(struct inode *inode);
@@ -326,6 +324,8 @@ int prune_dcache(int dentries_count, int inodes_count);
 void init_dcache();
 
 /* file operations */
+struct file *fget(int fd);
+void fput(struct file *filp);
 int get_unused_fd();
 struct file *get_empty_filp();
 

@@ -151,7 +151,7 @@ struct task_registers {
  * Binary program.
  */
 struct binprm {
-	char *				buf;
+	char *				buf_args;
 	char *				p;
 	int				argc;
 	int				argv_len;

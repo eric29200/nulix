@@ -79,12 +79,12 @@ static int script_load_binary(const char *path, struct binprm *bprm)
 	/* add old arguments (remove first = script name) */
 	if (bprm->argc > 1) {
 		bprm_new.argc += bprm->argc - 1;
-		bprm_new.argv_len += bprm->argv_len - strlen(bprm->buf) - 1;
+		bprm_new.argv_len += bprm->argv_len - strlen(bprm->buf_args) - 1;
 	}
 
 	/* allocate buffer */
-	bprm_new.buf = bprm_new.p = (char *) kmalloc(bprm_new.argv_len + bprm_new.envp_len);
-	if (!bprm_new.buf)
+	bprm_new.buf_args = bprm_new.p = (char *) kmalloc(bprm_new.argv_len + bprm_new.envp_len);
+	if (!bprm_new.buf_args)
 		return -ENOMEM;
 
 	/* copy arguments */
@@ -95,25 +95,25 @@ static int script_load_binary(const char *path, struct binprm *bprm)
 
 	/* copy old arguments */
 	if (bprm->argc > 1) {
-		t = strlen(bprm->buf) + 1;
-		memcpy(bprm_new.p, bprm->buf + t, bprm->argv_len - t);
+		t = strlen(bprm->buf_args) + 1;
+		memcpy(bprm_new.p, bprm->buf_args + t, bprm->argv_len - t);
 		bprm_new.p += bprm->argv_len - t;
 	}
 
 	/* copy environ */
-	memcpy(bprm_new.p, bprm->buf + bprm->argv_len, bprm->envp_len);
+	memcpy(bprm_new.p, bprm->buf_args + bprm->argv_len, bprm->envp_len);
 
 	/* free old binary arguments */
-	if (bprm->buf) {
+	if (bprm->buf_args) {
 		bprm->dont_free = 1;
-		kfree(bprm->buf);
+		kfree(bprm->buf_args);
 	}
 
 	/* load binary */
 	ret = binary_load(interp, &bprm_new);
 
 	if (!bprm_new.dont_free)
-		kfree(bprm_new.buf);
+		kfree(bprm_new.buf_args);
 
 	return ret;
 }
