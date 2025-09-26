@@ -10,7 +10,7 @@
 /*
  * Open system call.
  */
-int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
+static int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 {
 	struct dentry *dentry;
 	struct inode *inode;
