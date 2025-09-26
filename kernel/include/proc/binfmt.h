@@ -5,7 +5,7 @@
  * Binary format.
  */
 struct binfmt {
-	int (*load_binary)(const char *, struct binprm *);
+	int (*load_binary)(struct binprm *);
 	struct list_head	list;
 };
 

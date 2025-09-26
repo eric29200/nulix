@@ -151,6 +151,7 @@ struct task_registers {
  * Binary program.
  */
 struct binprm {
+	const char *			filename;
 	char *				buf_args;
 	char *				p;
 	int				argc;
@@ -174,7 +175,7 @@ void task_exit_mmap(struct mm_struct *mm);
 void task_release_mmap(struct task *task);
 int task_in_group(struct task *task, gid_t gid);
 
-int binary_load(const char *path, struct binprm *bprm);
+int search_binary_handler(struct binprm *bprm);
 void copy_strings(struct binprm *bprm, int argc, char **argv);
 
 pid_t sys_fork();

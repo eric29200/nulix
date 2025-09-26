@@ -30,7 +30,7 @@ void copy_strings(struct binprm *bprm, int argc, char **argv)
 /*
  * Load a binary file.
  */
-int binary_load(const char *path, struct binprm *bprm)
+int search_binary_handler(struct binprm *bprm)
 {
 	struct list_head *pos;
 	struct binfmt *fmt;
@@ -41,7 +41,7 @@ int binary_load(const char *path, struct binprm *bprm)
 		fmt = list_entry(pos, struct binfmt, list);
 
 		/* load binary */
-		ret = fmt->load_binary(path, bprm);
+		ret = fmt->load_binary(bprm);
 		if (ret == 0)
 			return ret;
 	}
@@ -60,6 +60,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 
 	/* reset barg */
 	memset(&bprm, 0, sizeof(struct binprm));
+	bprm.filename = path;
 
 	/* get argc */
 	for (i = 0; argv && argv[i]; i++)
@@ -81,7 +82,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	copy_strings(&bprm, bprm.envc, (char **) envp);
 
 	/* load binary */
-	ret = binary_load(path, &bprm);
+	ret = search_binary_handler(&bprm);
 
 	/* free buffer */
 	if (!bprm.dont_free)

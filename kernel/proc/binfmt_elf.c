@@ -294,7 +294,7 @@ err_sig:
 /*
  * Load an ELF file in memory.
  */
-static int elf_load_binary(const char *path, struct binprm *bprm)
+static int elf_load_binary(struct binprm *bprm)
 {
 	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
 	char name[TASK_NAME_LEN], *buf = NULL, *elf_interpreter = NULL;
@@ -305,7 +305,7 @@ static int elf_load_binary(const char *path, struct binprm *bprm)
 	void *buf_mmap;
 
 	/* open file */
-	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
+	fd = do_open(AT_FDCWD, bprm->filename, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
 
@@ -318,7 +318,7 @@ static int elf_load_binary(const char *path, struct binprm *bprm)
 		goto out;
 
 	/* save path */
-	strncpy(name, path, TASK_NAME_LEN - 1);
+	strncpy(name, bprm->filename, TASK_NAME_LEN - 1);
 	name[TASK_NAME_LEN - 1] = 0;
 
 	/* get a free page */

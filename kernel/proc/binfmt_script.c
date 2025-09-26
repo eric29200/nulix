@@ -8,7 +8,7 @@
 /*
  * Load a script.
  */
-static int script_load_binary(const char *path, struct binprm *bprm)
+static int script_load_binary(struct binprm *bprm)
 {
 	char *s, *interp, *interp_name, *i_arg = NULL;
 	struct binprm bprm_new;
@@ -19,7 +19,7 @@ static int script_load_binary(const char *path, struct binprm *bprm)
 	size_t t;
 
 	/* open file */
-	fd = do_open(AT_FDCWD, path, O_RDONLY, 0);
+	fd = do_open(AT_FDCWD, bprm->filename, O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
 	filp = current_task->files->filp[fd];
@@ -70,8 +70,10 @@ static int script_load_binary(const char *path, struct binprm *bprm)
 		i_arg = s;
 
 	/* create new binary program */
+	memset(&bprm_new, 0, sizeof(struct binprm));
+	bprm_new.filename = interp;
 	bprm_new.argc = 2 + (i_arg ? 1 : 0);
-	bprm_new.argv_len = strlen(interp_name) + 1 + (i_arg ? strlen(i_arg) + 1: 0) + strlen(path) + 1;
+	bprm_new.argv_len = strlen(interp_name) + 1 + (i_arg ? strlen(i_arg) + 1: 0) + strlen(bprm->filename) + 1;
 	bprm_new.envc = bprm->envc;
 	bprm_new.envp_len = bprm->envp_len;
 	bprm_new.dont_free = 0;
@@ -89,7 +91,7 @@ static int script_load_binary(const char *path, struct binprm *bprm)
 
 	/* copy arguments */
 	copy_strings(&bprm_new, 1, &interp_name);
-	copy_strings(&bprm_new, 1, (char **) &path);
+	copy_strings(&bprm_new, 1, (char **) &bprm->filename);
 	if(i_arg)
 		copy_strings(&bprm_new, 1, &i_arg);
 
@@ -110,7 +112,7 @@ static int script_load_binary(const char *path, struct binprm *bprm)
 	}
 
 	/* load binary */
-	ret = binary_load(interp, &bprm_new);
+	ret = search_binary_handler(&bprm_new);
 
 	if (!bprm_new.dont_free)
 		kfree(bprm_new.buf_args);
