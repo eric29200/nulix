@@ -84,7 +84,7 @@ struct file *get_empty_filp()
 /*
  * Init a private file.
  */
-int init_private_file(struct file *filp, struct dentry *dentry, int mode)
+int init_private_file(struct file *filp, struct dentry *dentry, mode_t mode)
 {
 	/* memzero file */
 	memset(filp, 0, sizeof(struct file));

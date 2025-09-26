@@ -303,6 +303,12 @@ static int elf_load_binary(struct binprm *bprm)
 	struct elf_header *elf_header;
 	struct file *filp = NULL;
 	void *buf_mmap;
+	
+	/* check elf header */
+	elf_header = (struct elf_header *) bprm->buf;
+	ret = elf_check(elf_header);
+	if (ret)
+		return ret;	
 
 	/* open binary program */
 	fd = open_dentry(bprm->dentry, O_RDONLY);
@@ -311,11 +317,6 @@ static int elf_load_binary(struct binprm *bprm)
 
 	/* get file */
 	filp = current_task->files->filp[fd];
-
-	/* check permissions */
-	ret = permission(filp->f_dentry->d_inode, MAY_EXEC);
-	if (ret)
-		goto out;
 
 	/* save path */
 	strncpy(name, bprm->filename, TASK_NAME_LEN - 1);
@@ -333,12 +334,6 @@ static int elf_load_binary(struct binprm *bprm)
 		ret = -EINVAL;
 		goto out;
 	}
-
-	/* check elf header */
-	elf_header = (struct elf_header *) buf;
-	ret = elf_check(elf_header);
-	if (ret != 0)
-		goto out;
 
 	/* clear current executable */
 	ret = clear_old_exec();
@@ -362,20 +357,10 @@ static int elf_load_binary(struct binprm *bprm)
 				goto out;
 			}
 
-			/* seek to interpreter path */
-			if (filp->f_op->llseek) {
-				ret = filp->f_op->llseek(filp, ph->p_offset, SEEK_SET);
-				if (ret < 0)
-					goto out;
-			} else {
-				filp->f_pos = ph->p_offset;
-			}
-
 			/* read interpreter path */
-			if ((size_t) filp->f_op->read(filp, elf_interpreter, ph->p_filesz, &filp->f_pos) != ph->p_filesz) {
-				ret = -EINVAL;
+			ret = read_exec(bprm->dentry, ph->p_offset, elf_interpreter, ph->p_filesz);
+			if (ret < 0)
 				goto out;
-			}
 
 			break;
 		}

@@ -151,6 +151,7 @@ struct task_registers {
  * Binary program.
  */
 struct binprm {
+	char				buf[128];
 	const char *			filename;
 	struct dentry *			dentry;
 	char *				buf_args;
@@ -179,6 +180,7 @@ int search_binary_handler(struct binprm *bprm);
 void copy_strings(struct binprm *bprm, int argc, char **argv);
 int prepare_binprm(struct binprm *bprm);
 int open_dentry(struct dentry *dentry, mode_t mode);
+int read_exec(struct dentry *dentry, off_t offset, char *addr, size_t count);
 
 pid_t sys_fork();
 pid_t sys_vfork();

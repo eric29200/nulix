@@ -77,6 +77,42 @@ out:
 }
 
 /*
+ * Read a dentry.
+ */
+int read_exec(struct dentry *dentry, off_t offset, char *addr, size_t count)
+{
+	struct inode *inode = dentry->d_inode;
+	int ret = -ENOEXEC;
+	struct file file;
+
+	/* check inode */
+	if (!inode->i_op || !inode->i_op->fops)
+		goto out;
+
+	/* set a private file */
+	if (init_private_file(&file, dentry, 1))
+		goto out;
+	if (!file.f_op->read)
+		goto out_release;
+
+	/* seek to position */
+	if (file.f_op->llseek) {
+		if (file.f_op->llseek(&file, offset, 0) != offset)
+ 			goto out_release;
+	} else {
+		file.f_pos = offset;
+	}
+
+	/* read */
+	ret = file.f_op->read(&file, addr, count, &file.f_pos);
+out_release:
+	if (file.f_op->release)
+		file.f_op->release(inode, &file);
+out:
+	return ret;
+}
+
+/*
  * Prepare a binary program.
  */
 int prepare_binprm(struct binprm *bprm)
@@ -104,7 +140,9 @@ int prepare_binprm(struct binprm *bprm)
 	if (ret)
 		return ret;
 
-	return 0;
+	/* read header */
+	memset(bprm->buf, 0, sizeof(bprm->buf));
+	return read_exec(bprm->dentry, 0, bprm->buf, 128);
 }
 
 /*

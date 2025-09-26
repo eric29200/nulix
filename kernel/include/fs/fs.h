@@ -330,6 +330,7 @@ struct file *fget(int fd);
 void fput(struct file *filp);
 int get_unused_fd();
 struct file *get_empty_filp();
+int init_private_file(struct file *filp, struct dentry *dentry, mode_t mode);
 
 /* name operations */
 int permission(struct inode *inode, int mask);
