@@ -358,7 +358,7 @@ int minix_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 
 	/* get/create first block */
 	bh = minix_bread(inode, 0, 1);
-	if(!bh) {
+	if (!bh) {
 		inode->i_nlinks = 0;
 		iput(inode);
 		return -ENOSPC;

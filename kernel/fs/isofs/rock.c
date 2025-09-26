@@ -348,7 +348,7 @@ repeat:
 
 	return retname_len;
 out:
-	if(buf)
+	if (buf)
 		kfree(buf);
 
 	return 0;

@@ -764,7 +764,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 	block = page->offset >> sb->s_blocksize_bits;
 
 	/* for each block */
-	for(bh = head, start_block = 0; bh != head || !start_block; block++, start_block = end_block, bh = bh->b_this_page) {
+	for (bh = head, start_block = 0; bh != head || !start_block; block++, start_block = end_block, bh = bh->b_this_page) {
 		end_block = start_block + sb->s_blocksize;
 
 		/* block out of scope */

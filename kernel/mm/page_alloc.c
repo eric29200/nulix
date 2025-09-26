@@ -298,7 +298,7 @@ static void reclaim_pages()
 				goto done;
 
 		/* try to swap out */
-		while(swap_out(priority))
+		while (swap_out(priority))
 			if (!--count)
 				goto done;
 	} while (--priority > 0);

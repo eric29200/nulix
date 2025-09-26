@@ -70,7 +70,7 @@ static uint32_t calibrate_tsc()
 	/* calibrate */
 	do {
 		count++;
-	} while((inb(0x61) & 0x20) == 0);
+	} while ((inb(0x61) & 0x20) == 0);
 
 	/* get end count down */
 	rdtsc(end_low, end_high);

@@ -814,7 +814,7 @@ int sys_socketcall(int call, unsigned long *args)
 	int ret;
 
 	/* check call */
-	if(call < 1 || call > SYS_RECVMSG)
+	if (call < 1 || call > SYS_RECVMSG)
 		return -EINVAL;
 
 	switch(call) {
