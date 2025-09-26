@@ -297,18 +297,19 @@ err_sig:
 static int elf_load_binary(struct binprm *bprm)
 {
 	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
-	char name[TASK_NAME_LEN], *buf = NULL, *elf_interpreter = NULL;
-	int fd, off, ret, elf_type, elf_prot, load_addr_set = 0;
-	struct elf_prog_header *ph, *last_ph = NULL;
+	struct elf_prog_header *ph, *first_ph, *last_ph = NULL;
+	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
+	char name[TASK_NAME_LEN], *elf_interpreter = NULL;
 	struct elf_header *elf_header;
 	struct file *filp = NULL;
 	void *buf_mmap;
-	
+	size_t size;
+
 	/* check elf header */
 	elf_header = (struct elf_header *) bprm->buf;
 	ret = elf_check(elf_header);
 	if (ret)
-		return ret;	
+		return ret;
 
 	/* open binary program */
 	fd = open_dentry(bprm->dentry, O_RDONLY);
@@ -322,18 +323,18 @@ static int elf_load_binary(struct binprm *bprm)
 	strncpy(name, bprm->filename, TASK_NAME_LEN - 1);
 	name[TASK_NAME_LEN - 1] = 0;
 
-	/* get a free page */
-	buf = (char *) get_free_page();
-	if (!buf) {
+	/* allocate program header */
+	size = elf_header->e_phentsize * elf_header->e_phnum;
+	first_ph = (struct elf_prog_header *) kmalloc(size);
+	if (!first_ph) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	/* read first block */
-	if ((size_t) filp->f_op->read(filp, buf, PAGE_SIZE, &filp->f_pos) < sizeof(struct elf_header)) {
-		ret = -EINVAL;
+	/* read first program header */
+	ret = read_exec(bprm->dentry, elf_header->e_phoff, (char *) first_ph, size);
+	if (ret < 0)
 		goto out;
-	}
 
 	/* clear current executable */
 	ret = clear_old_exec();
@@ -346,73 +347,73 @@ static int elf_load_binary(struct binprm *bprm)
 	elf_entry = elf_header->e_entry;
 
 	/* check if an ELF interpreter is needed */
-	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header)) {
-		/* load segment */
-		ph = (struct elf_prog_header *) (buf + off);
-		if (ph->p_type == PT_INTERP) {
-			/* allocate interpreter path */
-			elf_interpreter = (char *) kmalloc(ph->p_filesz);
-			if (!elf_interpreter) {
-				ret = -ENOMEM;
-				goto out;
-			}
+	for (i = 0, ph = first_ph; i < elf_header->e_phnum; i++, ph++) {
+		/* skip non interp segment */
+		if (ph->p_type != PT_INTERP)
+			continue;
 
-			/* read interpreter path */
-			ret = read_exec(bprm->dentry, ph->p_offset, elf_interpreter, ph->p_filesz);
-			if (ret < 0)
-				goto out;
-
-			break;
+		/* allocate interpreter path */
+		elf_interpreter = (char *) kmalloc(ph->p_filesz);
+		if (!elf_interpreter) {
+			ret = -ENOMEM;
+			goto out;
 		}
+
+		/* read interpreter path */
+		ret = read_exec(bprm->dentry, ph->p_offset, elf_interpreter, ph->p_filesz);
+		if (ret < 0)
+			goto out;
+
+		break;
 	}
 
 	/* read each elf segment */
-	for (i = 0, off = elf_header->e_phoff; i < elf_header->e_phnum; i++, off += sizeof(struct elf_prog_header)) {
-		/* load segment */
-		ph = (struct elf_prog_header *) (buf + off);
-		if (ph->p_type == PT_LOAD) {
-			elf_type = MAP_PRIVATE;
-			elf_prot = 0;
+	for (i = 0, ph = first_ph; i < elf_header->e_phnum; i++, ph++) {
+		/* skip non load segment */
+		if (ph->p_type != PT_LOAD)
+			continue;
 
-			/* set mmap protocol */
-			if (ph->p_flags & FLAG_READ)
-				elf_prot |= PROT_READ;
-			if (ph->p_flags & FLAG_WRITE)
-				elf_prot |= PROT_WRITE;
-			if (ph->p_flags & FLAG_READ)
-				elf_prot |= PROT_EXEC;
+		elf_type = MAP_PRIVATE;
+		elf_prot = 0;
 
-			/* set mmap type */
-			if (elf_header->e_type == ET_EXEC || load_addr_set)
-				elf_type |= MAP_FIXED;
-			else if (elf_header->e_type == ET_DYN)
-				load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - ph->p_vaddr);
+		/* set mmap protocol */
+		if (ph->p_flags & FLAG_READ)
+			elf_prot |= PROT_READ;
+		if (ph->p_flags & FLAG_WRITE)
+			elf_prot |= PROT_WRITE;
+		if (ph->p_flags & FLAG_READ)
+			elf_prot |= PROT_EXEC;
 
-			/* map elf segment */
-			buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_bias),
-					   ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
-					   elf_prot,
-					   elf_type,
-					   filp,
-					   ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
-			if (!buf_mmap) {
-				ret = -ENOMEM;
-				goto out;
-			}
+		/* set mmap type */
+		if (elf_header->e_type == ET_EXEC || load_addr_set)
+			elf_type |= MAP_FIXED;
+		else if (elf_header->e_type == ET_DYN)
+			load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - ph->p_vaddr);
 
-			/* set load address */
-			if (!load_addr_set) {
-				load_addr_set = 1;
-				load_addr = ph->p_vaddr - ph->p_offset;
-				if (elf_header->e_type == ET_DYN) {
-					load_bias += (uint32_t) buf_mmap - ELF_PAGESTART(load_bias + ph->p_vaddr);
-					load_addr += load_bias;
-				}
-			}
-
-			/* remember last segment */
-			last_ph = ph;
+		/* map elf segment */
+		buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_bias),
+					ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
+					elf_prot,
+					elf_type,
+					filp,
+					ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
+		if (!buf_mmap) {
+			ret = -ENOMEM;
+			goto out;
 		}
+
+		/* set load address */
+		if (!load_addr_set) {
+			load_addr_set = 1;
+			load_addr = ph->p_vaddr - ph->p_offset;
+			if (elf_header->e_type == ET_DYN) {
+				load_bias += (uint32_t) buf_mmap - ELF_PAGESTART(load_bias + ph->p_vaddr);
+				load_addr += load_bias;
+			}
+		}
+
+		/* remember last segment */
+		last_ph = ph;
 	}
 
 	/* no segment */
@@ -483,10 +484,8 @@ static int elf_load_binary(struct binprm *bprm)
 	current_task->thread.regs.useresp = sp;
 out:
 	sys_close(fd);
-	if (elf_interpreter)
-		kfree(elf_interpreter);
-	if (buf)
-		free_page(buf);
+	kfree(elf_interpreter);
+	kfree(first_ph);
 	return ret;
 }
 
