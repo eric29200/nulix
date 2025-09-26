@@ -152,15 +152,17 @@ int sys_prlimit64(pid_t pid, int resource, struct rlimit64 *new_limit, struct rl
 	if (!task)
 		return -ESRCH;
 
-	/* write prlimit not implemented */
-	if (new_limit)
-		printf("write prlimit not implemented\n");
-
-	/* get limit */
+	/* get old limit */
 	if (old_limit) {
 		memset(old_limit, 0, sizeof(struct rlimit64));
 		old_limit->rlim_cur = task->rlim[resource].rlim_cur;
 		old_limit->rlim_max = task->rlim[resource].rlim_max;
+	}
+
+	/* write new limit */
+	if (new_limit) {
+		task->rlim[resource].rlim_cur = new_limit->rlim_cur;
+		task->rlim[resource].rlim_max = new_limit->rlim_max;
 	}
 
 	return 0;
