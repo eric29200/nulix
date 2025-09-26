@@ -178,6 +178,7 @@ int task_in_group(struct task *task, gid_t gid);
 int search_binary_handler(struct binprm *bprm);
 void copy_strings(struct binprm *bprm, int argc, char **argv);
 int prepare_binprm(struct binprm *bprm);
+int open_dentry(struct dentry *dentry, mode_t mode);
 
 pid_t sys_fork();
 pid_t sys_vfork();

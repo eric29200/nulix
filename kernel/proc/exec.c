@@ -29,6 +29,54 @@ void copy_strings(struct binprm *bprm, int argc, char **argv)
 }
 
 /*
+ * Open a dentry.
+ */
+int open_dentry(struct dentry *dentry, mode_t mode)
+{
+	struct inode *inode = dentry->d_inode;
+	struct file *filp;
+	int fd, ret;
+
+	/* check inode */
+	ret = -EINVAL;
+	if (!inode->i_op || !inode->i_op->fops)
+		goto out;
+
+	/* get a file slot */
+	fd = get_unused_fd();
+	if (fd < 0)
+		return fd;
+
+	/* get a file */
+	ret = -ENFILE;
+	filp = get_empty_filp();
+	if (!filp)
+		goto out;
+
+	/* set file */
+	filp->f_flags = mode;
+	filp->f_mode = (mode + 1) & O_ACCMODE;
+	filp->f_dentry = dget(dentry);
+	filp->f_pos = 0;
+	filp->f_op = inode->i_op->fops;
+
+	/* open file */
+	if (filp->f_op->open) {
+		ret = filp->f_op->open(inode, filp);
+		if (ret)
+			goto out_fput;
+	}
+
+	/* install file */
+	current_task->files->filp[fd] = filp;
+	return fd;
+out_fput:
+	fput(filp);
+out:
+	return ret;
+}
+
+/*
  * Prepare a binary program.
  */
 int prepare_binprm(struct binprm *bprm)

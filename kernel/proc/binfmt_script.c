@@ -19,8 +19,8 @@ static int script_load_binary(struct binprm *bprm)
 	ssize_t n;
 	size_t t;
 
-	/* open file */
-	fd = do_open(AT_FDCWD, bprm->filename, O_RDONLY, 0);
+	/* open binary program */
+	fd = open_dentry(bprm->dentry, O_RDONLY);
 	if (fd < 0)
 		return fd;
 	filp = current_task->files->filp[fd];
