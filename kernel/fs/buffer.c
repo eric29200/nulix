@@ -619,6 +619,15 @@ int sys_fsync(int fd)
 }
 
 /*
+ * Fdatasync system call (don't do anything because all block buffers should be clean).
+ */
+int sys_fdatasync(int fd)
+{
+	UNUSED(fd);
+	return 0;
+}
+
+/*
  * Generic block map.
  */
 int generic_block_bmap(struct inode *inode, uint32_t block)

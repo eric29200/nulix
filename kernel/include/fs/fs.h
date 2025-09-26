@@ -428,6 +428,7 @@ int sys_truncate64(const char *pathname, off_t length);
 int sys_ftruncate64(int fd, off_t length);
 int sys_sync();
 int sys_fsync(int fd);
+int sys_fdatasync(int fd);
 ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count);
 
 /*
