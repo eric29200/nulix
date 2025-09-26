@@ -22,6 +22,7 @@
 #define MAX_INODES			4096
 
 #define MS_RDONLY			1
+#define MS_NOEXEC			8
 #define MS_REMOUNT			32
 
 #define RENAME_NOREPLACE		(1 << 0)
@@ -46,6 +47,7 @@
 #define BH_Lock				3
 
 #define IS_RDONLY(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_RDONLY))
+#define IS_NOEXEC(inode)		(((inode)->i_sb) && ((inode)->i_sb->s_flags & MS_NOEXEC))
 
 #define DNAME_INLINE_LEN		16
 

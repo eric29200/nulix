@@ -12,9 +12,10 @@ static int script_load_binary(struct binprm *bprm)
 {
 	char *s, *interp, *interp_name, *i_arg = NULL;
 	struct binprm bprm_new;
+	struct dentry *dentry;
 	struct file *filp;
 	char buf[128];
-	int fd, ret;
+	int ret, fd;
 	ssize_t n;
 	size_t t;
 
@@ -34,6 +35,10 @@ static int script_load_binary(struct binprm *bprm)
 	/* check first characters */
 	if (n < 3 || buf[0] != '#' || buf[1] != '!') 
 		return -ENOEXEC;
+
+	/* release dentry */
+	dput(bprm->dentry);
+	bprm->dentry = NULL;
 
 	/* keep first line only */
 	s = strchr(buf, '\n');
@@ -76,7 +81,6 @@ static int script_load_binary(struct binprm *bprm)
 	bprm_new.argv_len = strlen(interp_name) + 1 + (i_arg ? strlen(i_arg) + 1: 0) + strlen(bprm->filename) + 1;
 	bprm_new.envc = bprm->envc;
 	bprm_new.envp_len = bprm->envp_len;
-	bprm_new.dont_free = 0;
 
 	/* add old arguments (remove first = script name) */
 	if (bprm->argc > 1) {
@@ -106,18 +110,25 @@ static int script_load_binary(struct binprm *bprm)
 	memcpy(bprm_new.p, bprm->buf_args + bprm->argv_len, bprm->envp_len);
 
 	/* free old binary arguments */
-	if (bprm->buf_args) {
-		bprm->dont_free = 1;
+	if (bprm->buf_args)
 		kfree(bprm->buf_args);
-	}
+
+	/* set new binary program */
+	memcpy(bprm, &bprm_new, sizeof(struct binprm));
+
+	/* resolve interpreter path */
+	dentry = open_namei(AT_FDCWD, interp, 0, 0);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
+	/* prepare binary program */
+	bprm->dentry = dentry;
+	ret = prepare_binprm(bprm);
+	if (ret < 0)
+		return ret;
 
 	/* load binary */
-	ret = search_binary_handler(&bprm_new);
-
-	if (!bprm_new.dont_free)
-		kfree(bprm_new.buf_args);
-
-	return ret;
+	return search_binary_handler(bprm);
 }
 
 /*

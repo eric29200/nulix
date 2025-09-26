@@ -3,6 +3,7 @@
 #include <proc/elf.h>
 #include <stdio.h>
 #include <stderr.h>
+#include <fcntl.h>
 
 /* binary formats */
 static LIST_HEAD(formats);
@@ -28,6 +29,37 @@ void copy_strings(struct binprm *bprm, int argc, char **argv)
 }
 
 /*
+ * Prepare a binary program.
+ */
+int prepare_binprm(struct binprm *bprm)
+{
+	struct inode *inode = bprm->dentry->d_inode;
+	int mode = inode->i_mode;
+	int ret;
+
+	/* muse be a regular file */
+	if (!S_ISREG(mode))
+		return -EACCES;
+
+	/* with at least one execute bit set */
+	if (!(mode & 0111))
+		return -EACCES;
+
+	/* filesystem must not be mounted noexec */
+	if (IS_NOEXEC(inode))
+		return -EACCES;
+	if (!inode->i_sb)
+		return -EACCES;
+
+	/* check permissions */
+	ret = permission(inode, MAY_EXEC);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+/*
  * Load a binary file.
  */
 int search_binary_handler(struct binprm *bprm)
@@ -42,7 +74,13 @@ int search_binary_handler(struct binprm *bprm)
 
 		/* load binary */
 		ret = fmt->load_binary(bprm);
-		if (ret == 0)
+
+		/* handle success */
+		if (ret >= 0)
+			return ret;
+
+		/* handle fatal error */
+		if (ret != -ENOEXEC || !bprm->dentry)
 			return ret;
 	}
 
@@ -54,13 +92,25 @@ int search_binary_handler(struct binprm *bprm)
  */
 int sys_execve(const char *path, char *const argv[], char *const envp[])
 {
+	struct dentry *dentry;
 	struct binprm bprm;
 	size_t i;
 	int ret;
 
+	/* resolve path */
+	dentry = open_namei(AT_FDCWD, path, 0, 0);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
 	/* reset barg */
 	memset(&bprm, 0, sizeof(struct binprm));
 	bprm.filename = path;
+	bprm.dentry = dentry;
+
+	/* prepare binary program */
+	ret = prepare_binprm(&bprm);
+	if (ret < 0)
+		goto out;
 
 	/* get argc */
 	for (i = 0; argv && argv[i]; i++)
@@ -84,10 +134,14 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	/* load binary */
 	ret = search_binary_handler(&bprm);
 
-	/* free buffer */
-	if (!bprm.dont_free)
-		kfree(bprm.buf_args);
-
+	/* handle success */
+	if (ret >= 0)
+		return ret;
+out:
+	/* on error, clean binary program */
+	if (bprm.dentry)
+		dput(bprm.dentry);
+	kfree(bprm.buf_args);
 	return ret;
 }
 

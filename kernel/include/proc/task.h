@@ -152,13 +152,13 @@ struct task_registers {
  */
 struct binprm {
 	const char *			filename;
+	struct dentry *			dentry;
 	char *				buf_args;
 	char *				p;
 	int				argc;
 	int				argv_len;
 	int				envc;
 	int				envp_len;
-	char				dont_free;
 };
 
 struct task *create_kinit_task(void (*kinit_func)());
@@ -177,6 +177,7 @@ int task_in_group(struct task *task, gid_t gid);
 
 int search_binary_handler(struct binprm *bprm);
 void copy_strings(struct binprm *bprm, int argc, char **argv);
+int prepare_binprm(struct binprm *bprm);
 
 pid_t sys_fork();
 pid_t sys_vfork();
