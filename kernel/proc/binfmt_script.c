@@ -17,10 +17,11 @@ static int script_load_binary(struct binprm *bprm)
 	int ret;
 
 	/* check first characters */
-	if (bprm->buf[0] != '#' || bprm->buf[1] != '!') 
+	if (bprm->buf[0] != '#' || bprm->buf[1] != '!' || bprm->sh_bang) 
 		return -ENOEXEC;
 
 	/* release dentry */
+	bprm->sh_bang++;
 	dput(bprm->dentry);
 	bprm->dentry = NULL;
 

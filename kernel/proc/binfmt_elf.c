@@ -328,16 +328,6 @@ static int elf_load_binary(struct binprm *bprm)
 	if (ret < 0)
 		goto out;
 
-	/* clear current executable */
-	ret = clear_old_exec();
-	if (ret)
-		goto out;
-
-	/* reset code */
-	current_task->mm->start_text = 0;
-	current_task->mm->end_text = 0;
-	elf_entry = elf_header.e_entry;
-
 	/* check if an ELF interpreter is needed */
 	for (i = 0, ph = first_ph; i < elf_header.e_phnum; i++, ph++) {
 		/* skip non interp segment */
@@ -376,6 +366,16 @@ static int elf_load_binary(struct binprm *bprm)
 		interp_elf_header = *((struct elf_header *) bprm->buf);
 		break;
 	}
+
+	/* clear current executable */
+	ret = clear_old_exec();
+	if (ret)
+		goto out;
+
+	/* reset code */
+	current_task->mm->start_text = 0;
+	current_task->mm->end_text = 0;
+	elf_entry = elf_header.e_entry;
 
 	/* read each elf segment */
 	for (i = 0, ph = first_ph; i < elf_header.e_phnum; i++, ph++) {
@@ -436,6 +436,13 @@ static int elf_load_binary(struct binprm *bprm)
 	elf_entry += load_bias;
 	last_ph->p_vaddr += load_bias;
 
+	/* load ELF interpreter */
+	if (elf_interpreter) {
+		elf_entry = elf_load_interpreter(&interp_elf_header, interp_dentry, &interp_load_addr);
+		if (elf_entry == ~0UL)
+			goto out;
+	}
+
 	/* memzero fractionnal page of data section */
 	start = last_ph->p_vaddr + last_ph->p_filesz;
 	end = PAGE_ALIGN_UP(start);
@@ -457,13 +464,6 @@ static int elf_load_binary(struct binprm *bprm)
 		     PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0)) {
 		ret = -ENOMEM;
 		goto out;
-	}
-
-	/* load ELF interpreter */
-	if (elf_interpreter) {
-		elf_entry = elf_load_interpreter(&interp_elf_header, interp_dentry, &interp_load_addr);
-		if (elf_entry == ~0UL)
-			goto out;
 	}
 
 	/* setup stack */

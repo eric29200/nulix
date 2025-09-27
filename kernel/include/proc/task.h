@@ -160,6 +160,7 @@ struct binprm {
 	int				argv_len;
 	int				envc;
 	int				envp_len;
+	int				sh_bang;
 };
 
 struct task *create_kinit_task(void (*kinit_func)());
