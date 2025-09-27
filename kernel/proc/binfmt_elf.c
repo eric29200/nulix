@@ -102,29 +102,26 @@ static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, 
 /*
  * Load an ELF interpreter in memory.
  */
-static int elf_load_interpreter(struct elf_header *elf_header, struct dentry *interp_dentry, uint32_t *interp_load_addr, uint32_t *elf_entry)
+static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentry *interp_dentry, uint32_t *interp_load_addr)
 {
-	struct elf_prog_header *ph, *first_ph = NULL, *last_ph = NULL;
-	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
-	uint32_t i, load_addr = 0, start, end;
+	uint32_t i, load_addr = 0, map_addr, k, elf_bss, last_bss, ret = ~0UL;
+	int fd, elf_type, elf_prot, load_addr_set = 0;
+	struct elf_prog_header *ph, *first_ph = NULL;
 	struct file *filp;
-	char *buf_mmap;
 	size_t size;
 
 	/* check elf header */
-	ret = -ENOEXEC;
 	if (elf_header->e_type != ET_EXEC && elf_header->e_type != ET_DYN)
 		goto out;
 
 	/* check elf header */
-	ret = elf_check(elf_header);
-	if (ret != 0)
+	if (elf_check(elf_header))
 		goto out;
 
 	/* open file */
 	fd = open_dentry(interp_dentry, O_RDONLY);
 	if (fd < 0)
-		return fd;
+		goto out;
 
 	/* get file */
 	filp = current_task->files->filp[fd];
@@ -138,8 +135,7 @@ static int elf_load_interpreter(struct elf_header *elf_header, struct dentry *in
 	}
 
 	/* read first program header */
-	ret = read_exec(interp_dentry, elf_header->e_phoff, (char *) first_ph, size);
-	if (ret < 0)
+	if (read_exec(interp_dentry, elf_header->e_phoff, (char *) first_ph, size) < 0)
 		goto out;
 
 	/* read each elf segment */
@@ -148,7 +144,7 @@ static int elf_load_interpreter(struct elf_header *elf_header, struct dentry *in
 		if (ph->p_type != PT_LOAD)
 			continue;
 
-		elf_type = MAP_PRIVATE;
+		elf_type = MAP_PRIVATE | MAP_DENYWRITE;
 		elf_prot = 0;
 
 		/* set mmap protocol */
@@ -164,52 +160,43 @@ static int elf_load_interpreter(struct elf_header *elf_header, struct dentry *in
 			elf_type |= MAP_FIXED;
 
 		/* map elf segment */
-		buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_addr),
-					ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
-					elf_prot,
-					elf_type,
-					filp,
-					ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
-		if (!buf_mmap) {
-			ret = -ENOMEM;
+		map_addr = (uint32_t) do_mmap(ELF_PAGESTART(ph->p_vaddr + load_addr),
+						ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
+						elf_prot,
+						elf_type,
+						filp,
+						ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
+		if (!map_addr)
 			goto out;
-		}
 
 		/* set load address */
 		if (!load_addr_set && elf_header->e_type == ET_DYN) {
-			load_addr = (uint32_t) buf_mmap - ELF_PAGESTART(ph->p_vaddr);
+			load_addr = map_addr - ELF_PAGESTART(ph->p_vaddr);
 			load_addr_set = 1;
 		}
 
-		/* remember last header header */
-		last_ph = ph;
+		/* find the end of the file mapping */
+		k = load_addr + ph->p_vaddr + ph->p_filesz;
+		if (k > elf_bss)
+			elf_bss = k;
+
+		/* find the end of the memory mapping */
+		k = load_addr + ph->p_memsz + ph->p_vaddr;
+		if (k > last_bss)
+			last_bss = k;
 	}
 
-	/* no segment */
-	if (!last_ph) {
-		ret = -ENOEXEC;
-		goto out;
-	}
+	/* memzero fractionnal page of bss section */
+	memset((void *) elf_bss, 0, PAGE_ALIGN_UP(elf_bss) - elf_bss);
+
+	/* fill out BSS section */
+	elf_bss = ELF_PAGESTART(elf_bss + PAGE_SIZE - 1);
+	if (last_bss > elf_bss)
+		do_mmap(elf_bss, last_bss - elf_bss, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0);
 
 	/* apply load bias */
-	last_ph->p_vaddr += load_addr;
 	*interp_load_addr = load_addr;
-	*elf_entry = load_addr + elf_header->e_entry;
-
-	/* memzero fractionnal page of data section */
-	start = last_ph->p_vaddr + last_ph->p_filesz;
-	end = PAGE_ALIGN_UP(start);
-	memset((void *) start, 0, end - start);
-
-	/* setup BSS section */
-	start = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_filesz);
-	end = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
-	if (!do_mmap(start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0)) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	ret = 0;
+	ret = elf_header->e_entry + load_addr;
 out:
 	sys_close(fd);
 	kfree(first_ph);
@@ -474,8 +461,8 @@ static int elf_load_binary(struct binprm *bprm)
 
 	/* load ELF interpreter */
 	if (elf_interpreter) {
-		ret = elf_load_interpreter(&interp_elf_header, interp_dentry, &interp_load_addr, &elf_entry);
-		if (ret)
+		elf_entry = elf_load_interpreter(&interp_elf_header, interp_dentry, &interp_load_addr);
+		if (elf_entry == ~0UL)
 			goto out;
 	}
 

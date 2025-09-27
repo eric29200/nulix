@@ -33,6 +33,7 @@ struct mmap_arg_struct {
 #define MAP_TYPE         	0xF
 #define MAP_FIXED        	0x10
 #define MAP_ANONYMOUS    	0x20
+#define MAP_DENYWRITE		0x0800
 
 #define MREMAP_MAYMOVE		1
 #define MREMAP_FIXED		2
