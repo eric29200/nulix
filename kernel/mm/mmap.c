@@ -538,13 +538,51 @@ static int mprotect_fixup_end(struct vm_area *vma, uint32_t start, uint16_t newf
  */
 static int mprotect_fixup_middle(struct vm_area *vma, uint32_t start, uint32_t end, uint16_t newflags, uint32_t newprot)
 {
-	UNUSED(vma);
-	UNUSED(start);
-	UNUSED(end);
-	UNUSED(newflags);
-	UNUSED(newprot);
-	printf("mprotect_fixup_middle() not implemented\n");
-	return -EINVAL;
+	struct vm_area *left, *right;
+
+	/* allocate left memory area */
+	left = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!left)
+		return -ENOMEM;
+
+	/* allocate right memory area */
+	right = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!right) {
+		kfree(left);
+		return -ENOMEM;
+	}
+
+	/* set left memory area */
+	*left = *vma;
+	left->vm_end = start;
+
+	/* set right memory area */
+	*right = *vma;
+	right->vm_start = end;
+	right->vm_offset += right->vm_start - left->vm_start;
+
+	/* set middle memory area */
+	vma->vm_start = start;
+	vma->vm_end = end;
+	vma->vm_offset += vma->vm_start - left->vm_start;
+	vma->vm_flags = newflags;
+	vma->vm_page_prot = newprot;
+
+	/* update file reference count */
+	if (vma->vm_file)
+		vma->vm_file->f_count += 2;
+
+	/* open new memory areas */
+	if (vma->vm_ops && vma->vm_ops->open) {
+		vma->vm_ops->open(left);
+		vma->vm_ops->open(right);
+	}
+
+	/* add new memory areas */
+	list_add_tail(&left->list, &vma->list);
+	list_add(&right->list, &vma->list);
+
+	return 0;
 }
 
 /*
