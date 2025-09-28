@@ -47,6 +47,21 @@ static int elf_check(struct elf_header *elf_header)
 }
 
 /*
+ * Setup BSS and BRK sections.
+ */
+static void set_brk(uint32_t start, uint32_t end)
+{
+	/* page align addresses */
+	start = ELF_PAGEALIGN(start);
+	end = ELF_PAGEALIGN(end);
+	if (end <= start)
+		return;
+
+	/* map sections */
+	do_mmap(start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_PRIVATE, NULL, 0);
+}
+
+/*
  * Create ELF table.
  */
 static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, struct elf_header *elf_header,
@@ -104,7 +119,7 @@ static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, 
  */
 static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentry *interp_dentry, uint32_t *interp_load_addr)
 {
-	uint32_t i, load_addr = 0, map_addr, k, elf_bss, last_bss, ret = ~0UL;
+	uint32_t i, load_addr = 0, map_addr, k, elf_bss = 0, last_bss = 0, ret = ~0UL;
 	int fd, elf_type, elf_prot, load_addr_set = 0;
 	struct elf_prog_header *ph, *first_ph = NULL;
 	struct file *filp;
@@ -181,7 +196,7 @@ static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentr
 			elf_bss = k;
 
 		/* find the end of the memory mapping */
-		k = load_addr + ph->p_memsz + ph->p_vaddr;
+		k = load_addr + ph->p_vaddr + ph->p_memsz;
 		if (k > last_bss)
 			last_bss = k;
 	}
@@ -287,7 +302,7 @@ err_sig:
  */
 static int elf_load_binary(struct binprm *bprm)
 {
-	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry;
+	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry, elf_bss = 0, elf_brk = 0, k;
 	struct elf_prog_header *ph, *first_ph, *last_ph = NULL;
 	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *elf_interpreter = NULL;
@@ -422,6 +437,16 @@ static int elf_load_binary(struct binprm *bprm)
 			}
 		}
 
+		/* find the end of the file mapping */
+		k = ph->p_vaddr + ph->p_filesz;
+		if (k > elf_bss)
+			elf_bss = k;
+
+		/* find the end of the memory mapping */
+		k = ph->p_vaddr + ph->p_memsz;
+		if (k > elf_brk)
+			elf_brk = k;
+
 		/* remember last segment */
 		last_ph = ph;
 	}
@@ -434,6 +459,8 @@ static int elf_load_binary(struct binprm *bprm)
 
 	/* apply load bias */
 	elf_entry += load_bias;
+	elf_bss += load_bias;
+	elf_brk += load_bias;
 	last_ph->p_vaddr += load_bias;
 
 	/* load ELF interpreter */
@@ -443,28 +470,16 @@ static int elf_load_binary(struct binprm *bprm)
 			goto out;
 	}
 
-	/* memzero fractionnal page of data section */
-	start = last_ph->p_vaddr + last_ph->p_filesz;
-	end = PAGE_ALIGN_UP(start);
-	memset((void *) start, 0, end - start);
+	/* setup BSS and BRK sections */
+	set_brk(elf_bss, elf_brk);
 
-	/* setup BSS section */
-	start = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_filesz);
-	end = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
-	if (!do_mmap(start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0)) {
-		ret = -ENOMEM;
-		goto out;
-	}
+	/* memzero fractionnal page of bss section */
+	memset((void *) elf_bss, 0, PAGE_ALIGN_UP(elf_bss) - elf_bss);
 
-	/* setup HEAP section */
-	current_task->mm->end_text = PAGE_ALIGN_UP(last_ph->p_vaddr + last_ph->p_memsz);
-	current_task->mm->start_brk = current_task->mm->end_text;
-	current_task->mm->end_brk = current_task->mm->end_text + PAGE_SIZE;
-	if (!do_mmap(current_task->mm->start_brk, current_task->mm->end_brk - current_task->mm->start_brk,
-		     PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0)) {
-		ret = -ENOMEM;
-		goto out;
-	}
+	/* update task sections  */
+	current_task->mm->end_text = PAGE_ALIGN_UP(elf_brk);
+	current_task->mm->start_brk = elf_brk;
+	current_task->mm->end_brk = elf_brk + PAGE_SIZE;
 
 	/* setup stack */
 	sp = USTACK_START;
