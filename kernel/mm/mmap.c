@@ -91,14 +91,14 @@ struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_
 /*
  * Move a memory region.
  */
-void *move_vma(struct vm_area *vma, uint32_t old_address, size_t old_size, uint32_t new_address, size_t new_size)
+static uint32_t move_vma(struct vm_area *vma, uint32_t old_address, size_t old_size, uint32_t new_address, size_t new_size)
 {
 	struct vm_area *vma_new, *vma_prev;
 
 	/* create new memory region */
 	vma_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 	if (!vma_new)
-		return NULL;
+		return -ENOMEM;
 
 	/* set new memory region */
 	*vma_new = *vma;
@@ -122,7 +122,7 @@ void *move_vma(struct vm_area *vma, uint32_t old_address, size_t old_size, uint3
 	/* unmap old region */
 	do_munmap(old_address, old_size);
 
-	return (void *) vma_new->vm_start;
+	return vma_new->vm_start;
 }
 
 /*
@@ -364,10 +364,11 @@ int do_munmap(uint32_t addr, size_t len)
 /*
  * Memory region remap system call.
  */
-static void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
+static uint32_t do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
 {
 	struct vm_area *vma, *vma_next;
-	int ret, map_flags;
+	int ret = -EINVAL;
+	int map_flags;
 
 	/* check flags */
 	if (flags & ~(MREMAP_FIXED | MREMAP_MAYMOVE))
@@ -413,17 +414,18 @@ static void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, i
 
 		/* done */
 		if (!(flags & MREMAP_FIXED) || new_address == old_address)
-			return (void *) old_address;
+			return old_address;
 	}
 
 	/* find old memory region */
+	ret = -EFAULT;
 	vma = find_vma(current_task, old_address);
 	if (!vma || vma->vm_start > old_address)
-		return NULL;
+		goto err;
 
 	/* check old memory region size */
 	if (old_size > vma->vm_end - old_address)
-		return NULL;
+		goto err;
 
 	/* try to grow old region */
 	if (old_size == vma->vm_end - old_address
@@ -436,7 +438,7 @@ static void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, i
 			/* just expand old region */
 			if (!vma_next || vma_next->vm_start - old_address >= new_size) {
 				vma->vm_end = old_address + new_size;
-				return (void *) old_address;
+				return old_address;
 			}
 	}
 
@@ -447,7 +449,8 @@ static void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, i
 			if (vma->vm_flags & VM_SHARED)
 				map_flags |= MAP_SHARED;
 
-			if (get_unmapped_area(&new_address, new_size, map_flags))
+			ret = get_unmapped_area(&new_address, new_size, map_flags);
+			if (ret)
 				goto err;
 		}
 
@@ -455,7 +458,7 @@ static void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, i
 	}
 
 err:
-	return NULL;
+	return ret;
 }
 
 /*
@@ -658,13 +661,13 @@ int old_mmap(struct mmap_arg_struct *arg)
 
 	/* offset must be page aligned */
 	if (arg->offset & ~PAGE_MASK)
-		return 0;
+		return -EINVAL;
 
 	/* get file */
 	if (!(arg->flags & MAP_ANONYMOUS)) {
 		filp = fget(arg->fd);
 		if (!filp)
-			return 0;
+			return -EBADF;
 	}
 
 	/* do mmap */
@@ -674,7 +677,7 @@ int old_mmap(struct mmap_arg_struct *arg)
 	if (filp)
 		fput(filp);
 
-	return (uint32_t) ret;
+	return (int) ret;
 }
 
 /*
@@ -689,7 +692,7 @@ int sys_mmap2(uint32_t addr, size_t length, int prot, int flags, int fd, off_t p
 	if (fd >= 0) {
 		filp = fget(fd);
 		if (!filp)
-			return 0;
+			return -EBADF;
 	}
 
 	/* do mmap */
@@ -699,7 +702,7 @@ int sys_mmap2(uint32_t addr, size_t length, int prot, int flags, int fd, off_t p
 	if (filp)
 		fput(filp);
 
-	return (uint32_t) ret;
+	return (int) ret;
 }
 
 /*
@@ -715,7 +718,7 @@ int sys_munmap(uint32_t addr, size_t length)
  */
 int sys_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
 {
-	return (int) do_mremap(old_address, old_size, new_size, flags, new_address);
+	return do_mremap(old_address, old_size, new_size, flags, new_address);
 }
 
 /*
