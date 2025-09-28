@@ -195,13 +195,13 @@ static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentr
 			elf_type |= MAP_FIXED;
 
 		/* map elf segment */
-		map_addr = (uint32_t) do_mmap(filp,
-						ELF_PAGESTART(ph->p_vaddr + load_addr),
-						ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
-						elf_prot,
-						elf_type,
-						ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
-		if (!map_addr)
+		map_addr = do_mmap(filp,
+					ELF_PAGESTART(ph->p_vaddr + load_addr),
+					ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
+					elf_prot,
+					elf_type,
+					ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
+		if (map_addr > -1024UL)
 			goto out;
 
 		/* set load address */
@@ -322,7 +322,7 @@ err_sig:
  */
 static int elf_load_binary(struct binprm *bprm)
 {
-	uint32_t i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, k;
+	uint32_t i, k, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, map_addr;
 	uint32_t elf_entry, elf_bss = 0, elf_brk = 0, start_code, end_code, end_data;
 	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *elf_interpreter = NULL;
@@ -330,7 +330,6 @@ static int elf_load_binary(struct binprm *bprm)
 	struct elf_prog_header *ph, *first_ph;
 	struct dentry *interp_dentry = NULL;
 	struct file *filp = NULL;
-	void *buf_mmap;
 	size_t size;
 
 	/* check elf header */
@@ -437,23 +436,19 @@ static int elf_load_binary(struct binprm *bprm)
 			load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - ph->p_vaddr);
 
 		/* map elf segment */
-		buf_mmap = do_mmap(filp,
+		map_addr = do_mmap(filp,
 					ELF_PAGESTART(ph->p_vaddr + load_bias),
 					ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
 					elf_prot,
 					elf_type,
 					ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
-		if (!buf_mmap) {
-			ret = -ENOMEM;
-			goto out;
-		}
 
 		/* set load address */
 		if (!load_addr_set) {
 			load_addr_set = 1;
 			load_addr = ph->p_vaddr - ph->p_offset;
 			if (elf_header.e_type == ET_DYN) {
-				load_bias += (uint32_t) buf_mmap - ELF_PAGESTART(load_bias + ph->p_vaddr);
+				load_bias += map_addr - ELF_PAGESTART(load_bias + ph->p_vaddr);
 				load_addr += load_bias;
 			}
 		}

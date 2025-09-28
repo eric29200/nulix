@@ -176,32 +176,33 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 /*
  * Memory map system call.
  */
-void *do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int flags, off_t offset)
+uint32_t do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int flags, off_t offset)
 {
 	struct vm_area *vma, *vma_prev;
 	int ret;
 
 	/* check flags */
 	if (!filp && (flags & MAP_TYPE) != MAP_PRIVATE)
-		return NULL;
+		return -EINVAL;
 
 	/* check if mmap is implemented */
 	if (filp && (!filp->f_op || !filp->f_op->mmap))
-		return NULL;
+		return -ENODEV;
 
 	/* adjust length */
 	len = PAGE_ALIGN_UP(len);
 	if (len == 0)
-		return (void *) addr;
+		return addr;
 
 	/* get unmapped area */
-	if (get_unmapped_area(&addr, len, flags))
-		return NULL;
+	ret = get_unmapped_area(&addr, len, flags);
+	if (ret)
+		return ret;
 
 	/* create new memory region */
 	vma = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 	if (!vma)
-		return NULL;
+		return -ENOMEM;
 
 	/* set new memory region */
 	memset(vma, 0, sizeof(struct vm_area));
@@ -225,6 +226,7 @@ void *do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int flags,
 			vma->vm_flags |= VM_SHARED;
 
 		/* check inode */
+		ret = -EINVAL;
 		if (!filp->f_dentry || !filp->f_dentry->d_inode)
 			goto err;
 
@@ -248,10 +250,10 @@ void *do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int flags,
 	else
 		list_add(&vma->list, &current_task->mm->vm_list);
 
-	return (void *) vma->vm_start;
+	return vma->vm_start;
 err:
 	kfree(vma);
-	return NULL;
+	return ret;
 }
 
 /*
@@ -657,7 +659,7 @@ void vmtruncate(struct inode *inode, off_t offset)
 int old_mmap(struct mmap_arg_struct *arg)
 {
 	struct file *filp = NULL;
-	void *ret;
+	int ret;
 
 	/* offset must be page aligned */
 	if (arg->offset & ~PAGE_MASK)
@@ -677,7 +679,7 @@ int old_mmap(struct mmap_arg_struct *arg)
 	if (filp)
 		fput(filp);
 
-	return (int) ret;
+	return ret;
 }
 
 /*
@@ -686,7 +688,7 @@ int old_mmap(struct mmap_arg_struct *arg)
 int sys_mmap2(uint32_t addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
 	struct file *filp = NULL;
-	void *ret;
+	int ret;
 
 	/* get file */
 	if (fd >= 0) {
@@ -702,7 +704,7 @@ int sys_mmap2(uint32_t addr, size_t length, int prot, int flags, int fd, off_t p
 	if (filp)
 		fput(filp);
 
-	return (int) ret;
+	return ret;
 }
 
 /*
@@ -769,7 +771,7 @@ uint32_t sys_brk(uint32_t brk)
 		goto out;
 
 	/* map new pages */
-	if (do_mmap(NULL, oldbrk, newbrk - oldbrk, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, 0) != (void *) oldbrk)
+	if (do_mmap(NULL, oldbrk, newbrk - oldbrk, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, 0) != oldbrk)
 		goto out;
 set_brk:
 	current_task->mm->end_brk = brk;
