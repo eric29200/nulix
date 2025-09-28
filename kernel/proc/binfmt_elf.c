@@ -58,7 +58,7 @@ static void set_brk(uint32_t start, uint32_t end)
 		return;
 
 	/* map sections */
-	do_mmap(start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_PRIVATE, NULL, 0);
+	do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_PRIVATE, 0);
 }
 
 /*
@@ -175,11 +175,11 @@ static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentr
 			elf_type |= MAP_FIXED;
 
 		/* map elf segment */
-		map_addr = (uint32_t) do_mmap(ELF_PAGESTART(ph->p_vaddr + load_addr),
+		map_addr = (uint32_t) do_mmap(filp,
+						ELF_PAGESTART(ph->p_vaddr + load_addr),
 						ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
 						elf_prot,
 						elf_type,
-						filp,
 						ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
 		if (!map_addr)
 			goto out;
@@ -207,7 +207,7 @@ static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentr
 	/* fill out BSS section */
 	elf_bss = ELF_PAGESTART(elf_bss + PAGE_SIZE - 1);
 	if (last_bss > elf_bss)
-		do_mmap(elf_bss, last_bss - elf_bss, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, NULL, 0);
+		do_mmap(NULL, elf_bss, last_bss - elf_bss, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, 0);
 
 	/* apply load bias */
 	*interp_load_addr = load_addr;
@@ -417,11 +417,11 @@ static int elf_load_binary(struct binprm *bprm)
 			load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - ph->p_vaddr);
 
 		/* map elf segment */
-		buf_mmap = do_mmap(ELF_PAGESTART(ph->p_vaddr + load_bias),
+		buf_mmap = do_mmap(filp,
+					ELF_PAGESTART(ph->p_vaddr + load_bias),
 					ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
 					elf_prot,
 					elf_type,
-					filp,
 					ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
 		if (!buf_mmap) {
 			ret = -ENOMEM;
@@ -500,7 +500,7 @@ static int elf_load_binary(struct binprm *bprm)
 	/* map initial stack */
 	start = PAGE_ALIGN_DOWN(sp);
 	end = USTACK_START;
-	if (!do_mmap(start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | VM_GROWSDOWN, NULL, 0)) {
+	if (!do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | VM_GROWSDOWN, 0)) {
 		ret = -ENOMEM;
 		goto out;
 	}

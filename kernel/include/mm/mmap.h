@@ -47,7 +47,7 @@ struct mmap_arg_struct {
 #define MS_INVALIDATE		2
 #define MS_SYNC			4
 
-void *do_mmap(uint32_t addr, size_t length, int prot, int flags, struct file *filp, off_t offset);
+void *do_mmap(struct file *filp, uint32_t addr, size_t length, int prot, int flags, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
 struct vm_area *find_vma(struct task *task, uint32_t addr);
 struct vm_area *find_vma_prev(struct task *task, uint32_t addr);
