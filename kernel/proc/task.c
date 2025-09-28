@@ -174,9 +174,11 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			goto err;
 	}
 
-	/* copy text/brk start/end */
-	mm_new->start_text = mm ? mm->start_text : 0;
-	mm_new->end_text = mm ? mm->end_text : 0;
+	/* copy code/data/brk start/end */
+	mm_new->start_code = mm ? mm->start_code : 0;
+	mm_new->end_code = mm ? mm->end_code : 0;
+	mm_new->start_data = mm ? mm->start_data : 0;
+	mm_new->end_data = mm ? mm->end_data : 0;
 	mm_new->start_brk = mm ? mm->start_brk : 0;
 	mm_new->end_brk = mm ? mm->end_brk : 0;
 	mm_new->arg_start = mm ? mm->arg_end : 0;

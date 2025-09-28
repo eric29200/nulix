@@ -302,11 +302,12 @@ err_sig:
  */
 static int elf_load_binary(struct binprm *bprm)
 {
-	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, elf_entry, elf_bss = 0, elf_brk = 0, k;
-	struct elf_prog_header *ph, *first_ph, *last_ph = NULL;
+	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0;
+	uint32_t elf_entry, elf_bss = 0, elf_brk = 0, k, start_code, end_code, end_data;
 	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *elf_interpreter = NULL;
 	struct elf_header elf_header, interp_elf_header;
+	struct elf_prog_header *ph, *first_ph;
 	struct dentry *interp_dentry = NULL;
 	struct file *filp = NULL;
 	void *buf_mmap;
@@ -388,8 +389,8 @@ static int elf_load_binary(struct binprm *bprm)
 		goto out;
 
 	/* reset code */
-	current_task->mm->start_text = 0;
-	current_task->mm->end_text = 0;
+	current_task->mm->end_data = 0;
+	current_task->mm->end_code = 0;
 	elf_entry = elf_header.e_entry;
 
 	/* read each elf segment */
@@ -437,31 +438,37 @@ static int elf_load_binary(struct binprm *bprm)
 			}
 		}
 
+		/* find the start of code section */
+		k = ph->p_vaddr;
+		if (k < start_code)
+			start_code = k;
+
 		/* find the end of the file mapping */
 		k = ph->p_vaddr + ph->p_filesz;
 		if (k > elf_bss)
 			elf_bss = k;
 
+		/* find the end of code section */
+		if ((ph->p_flags & PF_X) && end_code < k)
+			end_code = k;
+
+		/* find the end of data section */
+		if (end_data < k)
+			end_data = k;
+
 		/* find the end of the memory mapping */
 		k = ph->p_vaddr + ph->p_memsz;
 		if (k > elf_brk)
 			elf_brk = k;
-
-		/* remember last segment */
-		last_ph = ph;
-	}
-
-	/* no segment */
-	if (!last_ph) {
-		ret = -ENOEXEC;
-		goto out;
 	}
 
 	/* apply load bias */
 	elf_entry += load_bias;
 	elf_bss += load_bias;
 	elf_brk += load_bias;
-	last_ph->p_vaddr += load_bias;
+	start_code += load_bias;
+	end_code += load_bias;
+	end_data += load_bias;
 
 	/* load ELF interpreter */
 	if (elf_interpreter) {
@@ -477,9 +484,11 @@ static int elf_load_binary(struct binprm *bprm)
 	memset((void *) elf_bss, 0, PAGE_ALIGN_UP(elf_bss) - elf_bss);
 
 	/* update task sections  */
-	current_task->mm->end_text = PAGE_ALIGN_UP(elf_brk);
 	current_task->mm->start_brk = elf_brk;
 	current_task->mm->end_brk = elf_brk + PAGE_SIZE;
+	current_task->mm->start_code = start_code;
+	current_task->mm->end_code = end_code;
+	current_task->mm->end_data = end_data;
 
 	/* setup stack */
 	sp = USTACK_START;

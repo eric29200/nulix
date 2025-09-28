@@ -55,6 +55,10 @@
 #define PT_LOPROC	0x70000000
 #define PT_HIPROC	0x7fffffff
 
+#define PF_R		0x4
+#define PF_W		0x2
+#define PF_X		0x1
+
 /* machine */
 #define EM_NONE		0	/* no machine */
 #define EM_386		3	/* intel 80386 */

@@ -32,10 +32,12 @@
 struct mm_struct {
 	int				count;				/* reference counter */
 	pgd_t  *			pgd;				/* page directory */
-	uint32_t			start_text;			/* user text segment start */
-	uint32_t			end_text;			/* user text segment end */
-	uint32_t			start_brk;			/* user data segment start */
-	uint32_t			end_brk;			/* user data segment end */
+	uint32_t			start_code;			/* user code segment start */
+	uint32_t			end_code;			/* user code segment end */
+	uint32_t			start_data;			/* user data segment start */
+	uint32_t			end_data;			/* user data segment end */
+	uint32_t			start_brk;			/* user BRK segment start */
+	uint32_t			end_brk;			/* user BRK segment end */
 	uint32_t			arg_start;			/* start argument */
 	uint32_t			arg_end;			/* end argument */
 	uint32_t			env_start;			/* start environ */

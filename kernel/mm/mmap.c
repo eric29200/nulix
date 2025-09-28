@@ -760,7 +760,7 @@ uint32_t sys_brk(uint32_t brk)
 	uint32_t newbrk, oldbrk;
 
 	/* current brk is asked */
-	if (brk < current_task->mm->end_text)
+	if (brk < current_task->mm->end_code)
 		goto out;
 
 	/* grow brk, without new page */
