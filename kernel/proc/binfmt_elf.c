@@ -442,8 +442,6 @@ static int elf_load_binary(struct binprm *bprm)
 		/* set mmap type */
 		if (elf_header.e_type == ET_EXEC || load_addr_set)
 			elf_type |= MAP_FIXED;
-		else if (elf_header.e_type == ET_DYN)
-			load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - ph->p_vaddr);
 
 		/* map elf segment */
 		map_addr = elf_map(filp, ph->p_vaddr + load_bias, ph, elf_prot, elf_type);
