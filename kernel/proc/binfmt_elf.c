@@ -47,6 +47,19 @@ static int elf_check(struct elf_header *elf_header)
 }
 
 /*
+ * Map an ELF segment in memory.
+ */
+static uint32_t elf_map(struct file *filp, uint32_t addr, struct elf_prog_header *ph, int prot, int type)
+{
+	return do_mmap(filp,
+		ELF_PAGESTART(addr),
+		ELF_PAGEOFFSET(ph->p_vaddr) + ph->p_filesz,
+		prot,
+		type,
+		ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
+}
+
+/*
  * Setup BSS and BRK sections.
  */
 static void set_brk(uint32_t start, uint32_t end)
@@ -195,14 +208,11 @@ static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentr
 			elf_type |= MAP_FIXED;
 
 		/* map elf segment */
-		map_addr = do_mmap(filp,
-					ELF_PAGESTART(ph->p_vaddr + load_addr),
-					ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
-					elf_prot,
-					elf_type,
-					ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
-		if (map_addr > -1024UL)
+		map_addr = elf_map(filp, ph->p_vaddr + load_addr, ph, elf_prot, elf_type);
+		if (map_addr > UMAP_END) {
+			ret = map_addr;
 			goto out;
+		}
 
 		/* set load address */
 		if (!load_addr_set && elf_header->e_type == ET_DYN) {
@@ -436,12 +446,11 @@ static int elf_load_binary(struct binprm *bprm)
 			load_bias = ELF_PAGESTART(ELF_ET_DYN_BASE - ph->p_vaddr);
 
 		/* map elf segment */
-		map_addr = do_mmap(filp,
-					ELF_PAGESTART(ph->p_vaddr + load_bias),
-					ph->p_filesz + ELF_PAGEOFFSET(ph->p_vaddr),
-					elf_prot,
-					elf_type,
-					ph->p_offset - ELF_PAGEOFFSET(ph->p_vaddr));
+		map_addr = elf_map(filp, ph->p_vaddr + load_bias, ph, elf_prot, elf_type);
+		if (map_addr > UMAP_END) {
+			ret = map_addr;
+			goto out;
+		}
 
 		/* set load address */
 		if (!load_addr_set) {
