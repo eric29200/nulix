@@ -75,62 +75,56 @@ static void set_brk(uint32_t start, uint32_t end)
 }
 
 /*
- * Setup stack.
+ * Create ELF tables and setup stack.
  */
-static void set_stack(struct binprm *bprm, uint32_t *sp, uint32_t *args_str)
+static int elf_create_tables(struct binprm *bprm, struct elf_header *elf_header, uint32_t load_addr, uint32_t load_bias, uint32_t interp_load_addr)
 {
-	uint32_t start, end;
-
-	/* setup stack */
-	*sp = USTACK_START;
-	*sp -= bprm->argv_len + bprm->envp_len;
-	*args_str = *sp;
-	*sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
-	*sp -= (1 + (bprm->argc + 1) + (bprm->envc + 1)) * sizeof(uint32_t);
-
-	/* map initial stack */
-	start = PAGE_ALIGN_DOWN(*sp);
-	end = USTACK_START;
-	do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | VM_GROWSDOWN, 0);
-}
-
-/*
- * Create ELF table.
- */
-static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, struct elf_header *elf_header,
-			     uint32_t load_addr, uint32_t load_bias, uint32_t interp_load_addr)
-{
+	uint32_t sp, *csp, start, end;
+	uint32_t args_str;
 	int i;
 
+	/* setup stack */
+	sp = USTACK_START;
+	sp -= bprm->argv_len + bprm->envp_len;
+	args_str = sp;
+	sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
+	sp -= (1 + (bprm->argc + 1) + (bprm->envc + 1)) * sizeof(uint32_t);
+
+	/* map initial stack */
+	start = PAGE_ALIGN_DOWN(sp);
+	end = USTACK_START;
+	do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | VM_GROWSDOWN, 0);
+
 	/* put string arguments at the end of the stack */
+	csp = (uint32_t *) sp;
 	memcpy((void *) args_str, bprm->buf_args, bprm->argv_len + bprm->envp_len);
 
 	/* put argc */
-	*sp++ = bprm->argc;
+	*csp++ = bprm->argc;
 
 	/* put argv */
-	current_task->mm->arg_start = (uint32_t) sp;
+	current_task->mm->arg_start = (uint32_t) csp;
 	for (i = 0; i < bprm->argc; i++) {
-		*sp++ = (uint32_t) args_str;
+		*csp++ = (uint32_t) args_str;
 		args_str += strlen((char *) args_str) + 1;
 	}
 
 	/* finish argv with NULL pointer */
-	current_task->mm->arg_end = (uint32_t) sp;
-	*sp++ = 0;
+	current_task->mm->arg_end = (uint32_t) csp;
+	*csp++ = 0;
 
 	/* put envp */
-	current_task->mm->env_start = (uint32_t) sp;
+	current_task->mm->env_start = (uint32_t) csp;
 	for (i = 0; i < bprm->envc; i++) {
-		*sp++ = (uint32_t) args_str;
+		*csp++ = (uint32_t) args_str;
 		args_str += strlen((char *) args_str) + 1;
 	}
 
 	/* finish envp with NULL pointer */
-	current_task->mm->env_end = (uint32_t) sp;
-	*sp++ = 0;
+	current_task->mm->env_end = (uint32_t) csp;
+	*csp++ = 0;
 
-#define AUX_ENT(id, val)	*sp++ = id; *sp++ = val;
+#define AUX_ENT(id, val)	*csp++ = id; *csp++ = val;
 	AUX_ENT(AT_PAGESZ, PAGE_SIZE);
 	AUX_ENT(AT_PHDR, load_addr + elf_header->e_phoff);
 	AUX_ENT(AT_PHENT, sizeof(struct elf_prog_header));
@@ -144,7 +138,7 @@ static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, 
 	AUX_ENT(AT_EGID, current_task->egid);
 #undef AUX_ENT
 
-	return 0;
+	return sp;
 }
 
 /*
@@ -332,7 +326,7 @@ err_sig:
  */
 static int elf_load_binary(struct binprm *bprm)
 {
-	uint32_t i, k, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, map_addr;
+	uint32_t i, k, sp, load_addr = 0, load_bias = 0, interp_load_addr = 0, map_addr;
 	uint32_t elf_entry, elf_bss = 0, elf_brk = 0, start_code, end_code, end_data;
 	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *elf_interpreter = NULL;
@@ -505,8 +499,8 @@ static int elf_load_binary(struct binprm *bprm)
 	/* setup BSS and BRK sections */
 	set_brk(elf_bss, elf_brk);
 
-	/* setup stack */
-	set_stack(bprm, &sp, &args_str);
+	/* create ELF tables */
+	sp = elf_create_tables(bprm, &elf_header, load_addr, load_bias, interp_load_addr);
 
 	/* update task sections  */
 	current_task->mm->start_brk = elf_brk;
@@ -514,11 +508,6 @@ static int elf_load_binary(struct binprm *bprm)
 	current_task->mm->start_code = start_code;
 	current_task->mm->end_code = end_code;
 	current_task->mm->end_data = end_data;
-
-	/* create ELF tables */
-	ret = elf_create_tables(bprm, (uint32_t *) sp, (char *) args_str, &elf_header, load_addr, load_bias, interp_load_addr);
-	if (ret)
-		goto out;
 
 	/* change task name */
 	memcpy(current_task->name, name, TASK_NAME_LEN);
