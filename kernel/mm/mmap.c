@@ -126,70 +126,6 @@ void *move_vma(struct vm_area *vma, uint32_t old_address, size_t old_size, uint3
 }
 
 /*
- * Generic mmap.
- */
-static struct vm_area *generic_mmap(uint32_t addr, size_t len, int prot, int flags, struct file *filp, off_t offset)
-{
-	struct vm_area *vma, *vma_prev;
-	int ret;
-
-	/* create new memory region */
-	vma = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-	if (!vma)
-		return NULL;
-
-	/* set new memory region */
-	memset(vma, 0, sizeof(struct vm_area));
-	vma->vm_start = addr;
-	vma->vm_end = addr + len;
-	vma->vm_flags = prot & (VM_READ | VM_WRITE | VM_EXEC);
-	vma->vm_flags |= flags & (VM_GROWSDOWN | VM_DENYWRITE | VM_EXECUTABLE);
-	vma->vm_page_prot = protection_map[vma->vm_flags & 0x0F];
-	vma->vm_offset = offset;
-	vma->vm_file = NULL;
-	vma->vm_ops = NULL;
-	vma->vm_mm = current_task->mm;
-
-	/* unmap existing pages */
-	do_munmap(addr, len);
-
-	/* map file */
-	if (filp) {
-		/* shared mapping */
-		if (flags & MAP_SHARED)
-			vma->vm_flags |= VM_SHARED;
-
-		/* check inode */
-		if (!filp->f_dentry || !filp->f_dentry->d_inode)
-			goto err;
-
-		/* mmap file */
-		ret = filp->f_op->mmap(filp, vma);
-		if (ret)
-			goto err;
-
-		/* update file reference count */
-		vma->vm_file = filp;
-		filp->f_count++;
-
-		/* add memory region to inode */
-		list_add_tail(&vma->list_share, &filp->f_dentry->d_inode->i_mmap);
-	}
-
-	/* add it to the list */
-	vma_prev = find_vma_prev(current_task, vma->vm_start);
-	if (vma_prev)
-		list_add(&vma->list, &vma_prev->list);
-	else
-		list_add(&vma->list, &current_task->mm->vm_list);
-
-	return vma;
-err:
-	kfree(vma);
-	return NULL;
-}
-
-/*
  * Get an unmapped area.
  */
 static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
@@ -242,7 +178,8 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
  */
 void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file *filp, off_t offset)
 {
-	struct vm_area *vma = NULL;
+	struct vm_area *vma, *vma_prev;
+	int ret;
 
 	/* check flags */
 	if (!filp && (flags & MAP_TYPE) != MAP_PRIVATE)
@@ -261,12 +198,60 @@ void *do_mmap(uint32_t addr, size_t len, int prot, int flags, struct file *filp,
 	if (get_unmapped_area(&addr, len, flags))
 		return NULL;
 
-	/* create a new area */
-	vma = generic_mmap(addr, len, prot, flags, filp, offset);
+	/* create new memory region */
+	vma = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 	if (!vma)
 		return NULL;
 
+	/* set new memory region */
+	memset(vma, 0, sizeof(struct vm_area));
+	vma->vm_start = addr;
+	vma->vm_end = addr + len;
+	vma->vm_flags = prot & (VM_READ | VM_WRITE | VM_EXEC);
+	vma->vm_flags |= flags & (VM_GROWSDOWN | VM_DENYWRITE | VM_EXECUTABLE);
+	vma->vm_page_prot = protection_map[vma->vm_flags & 0x0F];
+	vma->vm_offset = offset;
+	vma->vm_file = NULL;
+	vma->vm_ops = NULL;
+	vma->vm_mm = current_task->mm;
+
+	/* unmap existing pages */
+	do_munmap(addr, len);
+
+	/* map file */
+	if (filp) {
+		/* shared mapping */
+		if (flags & MAP_SHARED)
+			vma->vm_flags |= VM_SHARED;
+
+		/* check inode */
+		if (!filp->f_dentry || !filp->f_dentry->d_inode)
+			goto err;
+
+		/* mmap file */
+		ret = filp->f_op->mmap(filp, vma);
+		if (ret)
+			goto err;
+
+		/* update file reference count */
+		vma->vm_file = filp;
+		filp->f_count++;
+
+		/* add memory region to inode */
+		list_add_tail(&vma->list_share, &filp->f_dentry->d_inode->i_mmap);
+	}
+
+	/* add it to the list */
+	vma_prev = find_vma_prev(current_task, vma->vm_start);
+	if (vma_prev)
+		list_add(&vma->list, &vma_prev->list);
+	else
+		list_add(&vma->list, &current_task->mm->vm_list);
+
 	return (void *) vma->vm_start;
+err:
+	kfree(vma);
+	return NULL;
 }
 
 /*
@@ -379,7 +364,7 @@ int do_munmap(uint32_t addr, size_t len)
 /*
  * Memory region remap system call.
  */
-void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
+static void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
 {
 	struct vm_area *vma, *vma_next;
 	int ret, map_flags;
@@ -666,20 +651,20 @@ void vmtruncate(struct inode *inode, off_t offset)
 /*
  * Old mmap system call.
  */
-void *old_mmap(struct mmap_arg_struct *arg)
+int old_mmap(struct mmap_arg_struct *arg)
 {
 	struct file *filp = NULL;
 	void *ret;
 
 	/* offset must be page aligned */
 	if (arg->offset & ~PAGE_MASK)
-		return NULL;
+		return 0;
 
 	/* get file */
 	if (!(arg->flags & MAP_ANONYMOUS)) {
 		filp = fget(arg->fd);
 		if (!filp)
-			return NULL;
+			return 0;
 	}
 
 	/* do mmap */
@@ -689,13 +674,13 @@ void *old_mmap(struct mmap_arg_struct *arg)
 	if (filp)
 		fput(filp);
 
-	return ret;
+	return (uint32_t) ret;
 }
 
 /*
  * Memory map 2 system call.
  */
-void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
+int sys_mmap2(uint32_t addr, size_t length, int prot, int flags, int fd, off_t pgoffset)
 {
 	struct file *filp = NULL;
 	void *ret;
@@ -704,39 +689,39 @@ void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pg
 	if (fd >= 0) {
 		filp = fget(fd);
 		if (!filp)
-			return NULL;
+			return 0;
 	}
 
 	/* do mmap */
-	ret = do_mmap((uint32_t) addr, length, prot, flags, filp, pgoffset * PAGE_SIZE);
+	ret = do_mmap(addr, length, prot, flags, filp, pgoffset * PAGE_SIZE);
 
 	/* release file */
 	if (filp)
 		fput(filp);
 
-	return ret;
+	return (uint32_t) ret;
 }
 
 /*
  * Memory unmap system call.
  */
-int sys_munmap(void *addr, size_t length)
+int sys_munmap(uint32_t addr, size_t length)
 {
-	return do_munmap((uint32_t) addr, length);
+	return do_munmap(addr, length);
 }
 
 /*
  * Memory region remap system call.
  */
-void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address)
+int sys_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address)
 {
-	return do_mremap((uint32_t) old_address, old_size, new_size, flags, (uint32_t) new_address);
+	return (int) do_mremap(old_address, old_size, new_size, flags, new_address);
 }
 
 /*
  * Madvise system call.
  */
-int sys_madvise(void *addr, size_t length, int advice)
+int sys_madvise(uint32_t addr, size_t length, int advice)
 {
 	UNUSED(addr);
 	UNUSED(length);
@@ -747,9 +732,9 @@ int sys_madvise(void *addr, size_t length, int advice)
 /*
  * Mprotect system call.
  */
-int sys_mprotect(void *addr, size_t len, int prot)
+int sys_mprotect(uint32_t addr, size_t len, int prot)
 {
-	return do_mprotect((uint32_t) addr, len, prot);
+	return do_mprotect(addr, len, prot);
 }
 
 /*
@@ -793,7 +778,7 @@ out:
 /*
  * Determine wether pages are resident in memory.
  */
-int sys_mincore(void *addr, size_t len, unsigned char *vec)
+int sys_mincore(uint32_t addr, size_t len, unsigned char *vec)
 {
 	UNUSED(addr);
 	UNUSED(len);

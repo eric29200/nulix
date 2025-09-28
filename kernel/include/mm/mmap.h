@@ -49,20 +49,19 @@ struct mmap_arg_struct {
 
 void *do_mmap(uint32_t addr, size_t length, int prot, int flags, struct file *filp, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
-void *do_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address);
 struct vm_area *find_vma(struct task *task, uint32_t addr);
 struct vm_area *find_vma_prev(struct task *task, uint32_t addr);
 struct vm_area *find_vma_next(struct task *task, uint32_t addr);
 struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_t end);
 void vmtruncate(struct inode *inode, off_t offset);
 
-void *old_mmap(struct mmap_arg_struct *arg);
-void *sys_mmap2(void *addr, size_t length, int prot, int flags, int fd, off_t pgoffset);
-int sys_munmap(void *addr, size_t length);
-void *sys_mremap(void *old_address, size_t old_size, size_t new_size, int flags, void *new_address);
-int sys_madvise(void *addr, size_t length, int advice);
-int sys_mprotect(void *addr, size_t len, int prot);
-int sys_mincore(void *addr, size_t len, unsigned char *vec);
+int old_mmap(struct mmap_arg_struct *arg);
+int sys_mmap2(uint32_t addr, size_t length, int prot, int flags, int fd, off_t pgoffset);
+int sys_munmap(uint32_t addr, size_t length);
+int sys_mremap(uint32_t old_address, size_t old_size, size_t new_size, int flags, uint32_t new_address);
+int sys_madvise(uint32_t addr, size_t length, int advice);
+int sys_mprotect(uint32_t addr, size_t len, int prot);
+int sys_mincore(uint32_t addr, size_t len, unsigned char *vec);
 uint32_t sys_brk(uint32_t brk);
 
 #endif
