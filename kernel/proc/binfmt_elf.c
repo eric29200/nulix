@@ -62,6 +62,26 @@ static void set_brk(uint32_t start, uint32_t end)
 }
 
 /*
+ * Setup stack.
+ */
+static void set_stack(struct binprm *bprm, uint32_t *sp, uint32_t *args_str)
+{
+	uint32_t start, end;
+
+	/* setup stack */
+	*sp = USTACK_START;
+	*sp -= bprm->argv_len + bprm->envp_len;
+	*args_str = *sp;
+	*sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
+	*sp -= (1 + (bprm->argc + 1) + (bprm->envc + 1)) * sizeof(uint32_t);
+
+	/* map initial stack */
+	start = PAGE_ALIGN_DOWN(*sp);
+	end = USTACK_START;
+	do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | VM_GROWSDOWN, 0);
+}
+
+/*
  * Create ELF table.
  */
 static int elf_create_tables(struct binprm *bprm, uint32_t *sp, char *args_str, struct elf_header *elf_header,
@@ -302,8 +322,8 @@ err_sig:
  */
 static int elf_load_binary(struct binprm *bprm)
 {
-	uint32_t start, end, i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0;
-	uint32_t elf_entry, elf_bss = 0, elf_brk = 0, k, start_code, end_code, end_data;
+	uint32_t i, sp, args_str, load_addr = 0, load_bias = 0, interp_load_addr = 0, k;
+	uint32_t elf_entry, elf_bss = 0, elf_brk = 0, start_code, end_code, end_data;
 	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *elf_interpreter = NULL;
 	struct elf_header elf_header, interp_elf_header;
@@ -477,11 +497,14 @@ static int elf_load_binary(struct binprm *bprm)
 			goto out;
 	}
 
+	/* memzero fractionnal page of bss section */
+	memset((void *) elf_bss, 0, PAGE_ALIGN_UP(elf_bss) - elf_bss);
+
 	/* setup BSS and BRK sections */
 	set_brk(elf_bss, elf_brk);
 
-	/* memzero fractionnal page of bss section */
-	memset((void *) elf_bss, 0, PAGE_ALIGN_UP(elf_bss) - elf_bss);
+	/* setup stack */
+	set_stack(bprm, &sp, &args_str);
 
 	/* update task sections  */
 	current_task->mm->start_brk = elf_brk;
@@ -489,21 +512,6 @@ static int elf_load_binary(struct binprm *bprm)
 	current_task->mm->start_code = start_code;
 	current_task->mm->end_code = end_code;
 	current_task->mm->end_data = end_data;
-
-	/* setup stack */
-	sp = USTACK_START;
-	sp -= bprm->argv_len + bprm->envp_len;
-	args_str = sp;
-	sp -= 2 * DLINFO_ITEMS * sizeof(uint32_t);
-	sp -= (1 + (bprm->argc + 1) + (bprm->envc + 1)) * sizeof(uint32_t);
-
-	/* map initial stack */
-	start = PAGE_ALIGN_DOWN(sp);
-	end = USTACK_START;
-	if (!do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | VM_GROWSDOWN, 0)) {
-		ret = -ENOMEM;
-		goto out;
-	}
 
 	/* create ELF tables */
 	ret = elf_create_tables(bprm, (uint32_t *) sp, (char *) args_str, &elf_header, load_addr, load_bias, interp_load_addr);
