@@ -1,6 +1,7 @@
 #ifndef _DEV_H_
 #define _DEV_H_
 
+#define DEV_UNNAMED_MAJOR	0		/* unnamed devices major number */
 #define DEV_MEMORY_MAJOR	1		/* memory major number (zero, null, random...) */
 #define DEV_ATA_MAJOR		3		/* ata major number */
 #define DEV_TTY_MAJOR		4		/* tty major number */

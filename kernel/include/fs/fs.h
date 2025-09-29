@@ -19,6 +19,7 @@
 #include <string.h>
 
 #define NR_FILE				256
+#define NR_SUPER			256
 #define MAX_INODES			4096
 
 #define MS_RDONLY			1
@@ -102,6 +103,7 @@ struct super_block {
 	struct file_system_type *	s_type;
 	struct dentry *			s_root;
 	struct super_operations *	s_op;
+	struct list_head		s_list;
 };
 
 /*

@@ -14,6 +14,41 @@
 /* file systems and mounted fs lists */
 static struct file_system_type *file_systems = NULL;
 static LIST_HEAD(vfs_mounts_list);
+static LIST_HEAD(super_blocks);
+static size_t nr_super_blocks;
+
+/* unnamed devices */
+static uint32_t unnamed_dev_in_use[256 / (8 * sizeof(uint32_t))] = { 0, };
+
+/*
+ * Get an unnamed device.
+ */
+static dev_t get_unnamed_dev()
+{
+	int i;
+
+	for (i = 1; i < 256; i++) {
+		if (!test_bit(unnamed_dev_in_use, i)) {
+			set_bit(unnamed_dev_in_use, i);
+		 	return mkdev(DEV_UNNAMED_MAJOR, i);
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Release an unnamed device.
+ */
+void put_unnamed_dev(dev_t dev)
+{
+	/* check device */
+	if (!dev || major(dev) != DEV_UNNAMED_MAJOR)
+		return;
+
+	/* clear device */
+	clear_bit(unnamed_dev_in_use, minor(dev));
+}
 
 /*
  * Get a filesystem.
@@ -293,45 +328,136 @@ static void d_mount(struct dentry *covers, struct dentry *dentry)
 }
 
 /*
- * Mount a file system.
+ * Get an empty super block.
  */
-static int do_mount(struct file_system_type *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, uint32_t flags)
+static struct super_block *get_empty_super()
 {
-	struct dentry *mount_point_dentry = NULL;
+	struct super_block *sb;
+	struct list_head *pos;
+
+	/* try to get an unused super block */
+	list_for_each(pos, &super_blocks) {
+		sb = list_entry(pos, struct super_block, s_list);
+		if (!sb->s_dev)
+			return sb;
+	}
+
+	/* maximum number of super blocks reached */
+	if (nr_super_blocks >= NR_SUPER)
+		return NULL;
+
+	/* allocate a new super block */
+	sb = (struct super_block *) kmalloc(sizeof(struct super_block));
+	if (!sb)
+		return NULL;
+
+	/* init super block */
+	nr_super_blocks++;
+	memset(sb, 0, sizeof(struct super_block));
+	list_add(&sb->s_list, &super_blocks);
+
+	return sb;
+}
+
+/*
+ * Get a super block.
+ */
+struct super_block *get_super(dev_t dev)
+{
+	struct super_block *sb;
+	struct list_head *pos;
+
+	/* check device */
+	if (!dev)
+		return NULL;
+
+	/* find super block */
+	list_for_each(pos, &super_blocks) {
+		sb = list_entry(pos, struct super_block, s_list);
+		if (sb->s_dev == dev)
+			return sb;
+	}
+
+	return NULL;
+}
+
+/*
+ * Read a super block.
+ */
+static struct super_block *read_super(dev_t dev, const char *name, int flags, void *data, int silent)
+{
+	struct file_system_type *fs;
 	struct super_block *sb;
 	int ret;
 
-	/* allocate a super block */
-	sb = (struct super_block *) kmalloc(sizeof(struct super_block));
+	/* check device */
+	if (!dev)
+		return NULL;
+
+	/* get super block */
+	sb = get_super(dev);
+	if (sb)
+		return sb;
+
+	/* get filesystem */
+	fs = get_fs_type(name);
+	if (!fs)
+		return NULL;
+
+	/* get an empty super block */
+	sb = get_empty_super();
 	if (!sb)
-		return -ENOMEM;
+		return NULL;
+
+	/* set super block */
+	sb->s_dev = dev;
+	sb->s_flags = flags;
+	sb->s_type = fs;
+
+	/* read super block */
+	ret = fs->read_super(sb, data, silent);
+	if (ret) {
+		sb->s_dev = 0;
+		return NULL;
+	}
+
+	return sb;
+}
+
+/*
+ * Mount a file system.
+ */
+static int do_mount(dev_t dev, const char *dev_name, const char *dir_name, const char *type, int flags, void *data)
+{
+	struct dentry *dir_dentry = NULL;
+	struct super_block *sb;
+	int ret;
 
 	/* resolove mount point */
-	mount_point_dentry = lookup_dentry(AT_FDCWD, NULL, mount_point, 1);
-	ret = PTR_ERR(mount_point_dentry);
-	if (IS_ERR(mount_point_dentry))
+	dir_dentry = lookup_dentry(AT_FDCWD, NULL, dir_name, 1);
+	ret = PTR_ERR(dir_dentry);
+	if (IS_ERR(dir_dentry))
 		goto err;
 
 	/* no such entry */
 	ret = -ENOENT;
-	if (!mount_point_dentry->d_inode)
+	if (!dir_dentry->d_inode)
 		goto err;
 
 	/* mount point busy */
 	ret = -EBUSY;
-	if (mount_point_dentry->d_covers != mount_point_dentry)
+	if (dir_dentry->d_covers != dir_dentry)
 		goto err;
 
 	/* not a directory */
 	ret = -ENOTDIR;
-	if (!S_ISDIR(mount_point_dentry->d_inode->i_mode))
+	if (!S_ISDIR(dir_dentry->d_inode->i_mode))
 		goto err;
 
-	/* read super block */
-	sb->s_type = fs;
-	sb->s_dev = dev;
-	ret = fs->read_super(sb, data, 0);
-	if (ret)
+	/* get an empty super block */
+	ret = -EINVAL;
+	sb = read_super(dev, type, flags, data, 0);
+	if (!sb)
 		goto err;
 
 	/* check mount */
@@ -340,17 +466,16 @@ static int do_mount(struct file_system_type *fs, dev_t dev, const char *dev_name
 		goto err;
 
 	/* add mounted file system */
-	ret = add_vfs_mount(dev, dev_name, mount_point, flags, sb);
+	ret = add_vfs_mount(dev, dev_name, dir_name, flags, sb);
 	if (ret)
 		goto err;
 
 	/* set mount */
-	d_mount(mount_point_dentry, sb->s_root);
+	d_mount(dir_dentry, sb->s_root);
 
 	return 0;
 err:
-	dput(mount_point_dentry);
-	kfree(sb);
+	dput(dir_dentry);
 	return ret;
 }
 
@@ -362,7 +487,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 	struct file_system_type *fs;
 	struct dentry *dentry;
 	struct inode *inode;
-	dev_t dev = 0;
+	dev_t dev;
 
 	/* only root can mount */
 	if (!suser())
@@ -396,9 +521,13 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 		/* get device */
 		dev = inode->i_rdev;
 		dput(dentry);
+	} else {
+		dev = get_unnamed_dev();
+		if (!dev)
+			return -EMFILE;
 	}
 
-	return do_mount(fs, dev, dev_name, dir_name, data, flags);
+	return do_mount(dev, dev_name, dir_name, type, flags, data);
 }
 
 /*
@@ -410,15 +539,6 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	struct super_block *sb;
 	int ret;
 
-	/* allocate a super block */
-	sb = (struct super_block *) kmalloc(sizeof(struct super_block));
-	if (!sb)
-		return -ENOMEM;
-
-	/* set device */
-	sb->s_dev = dev;
-	sb->s_flags = MS_RDONLY;
-
 	/* try all file systems */
 	for (fs = file_systems; fs; fs = fs->next) {
 		/* test only dev file systems */
@@ -426,13 +546,11 @@ int do_mount_root(dev_t dev, const char *dev_name)
 			continue;
 
 		/* read super block */
-		sb->s_type = fs;
-		ret = fs->read_super(sb, NULL, 1);
-		if (ret == 0)
+		sb = read_super(dev, fs->name, MS_RDONLY, NULL, 1);
+		if (sb)
 			goto found;
 	}
 
-	kfree(sb);
 	return -EINVAL;
 found:
 	/* set current task */
@@ -477,31 +595,18 @@ static int d_umount(struct super_block *sb)
 /*
  * Unmount a file system.
  */
-static int do_umount(const char *target, int flags)
+static int do_umount(dev_t dev, int flags)
 {
 	struct super_block *sb;
-	struct dentry *dentry;
-	struct inode *inode;
 	int ret;
 
 	/* unused flags */
 	UNUSED(flags);
 
-	/* resolve path */
-	dentry = namei(AT_FDCWD, target, 1);
-	if (IS_ERR(dentry))
-		return PTR_ERR(dentry);
-
-	/* target inode must be a root inode */
-	inode = dentry->d_inode;
-	sb = inode->i_sb;
-	if (!sb || inode != sb->s_root->d_inode) {
-		dput(dentry);
-		return -EINVAL;
-	}
-
-	/* release inode */
-	dput(dentry);
+	/* get super block */
+	sb = get_super(dev);
+	if (!sb || !sb->s_root)
+		return -ENOENT;
 
 	/* shrink dentries cache */
 	shrink_dcache_sb(sb);
@@ -521,7 +626,61 @@ static int do_umount(const char *target, int flags)
 	if (sb->s_op && sb->s_op->put_super)
 		sb->s_op->put_super(sb);
 
+	sb->s_dev = 0;
 	return 0;
+}
+
+/*
+ * Unmount a device.
+ */
+static int umount_dev(dev_t dev, int flags)
+{
+	int ret;
+
+	/* unmount */
+	ret = do_umount(dev, flags);
+	if (ret)
+		return ret;
+
+	/* release unnamed device */
+	put_unnamed_dev(dev);
+
+	return 0;
+}
+
+/*
+ * Umount2 system call.
+ */
+int sys_umount2(const char *target, int flags)
+{
+	struct super_block *sb;
+	struct dentry *dentry;
+	struct inode *inode;
+
+	/* only root can umount */
+	if (!suser())
+		return -EPERM;
+
+	/* resolve path */
+	dentry = namei(AT_FDCWD, target, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
+	/* get inode, superblock and dev */
+	inode = dentry->d_inode;
+	sb = inode->i_sb;
+
+	/* target inode must be a root inode */
+	if (!sb || inode != sb->s_root->d_inode) {
+		dput(dentry);
+		return -EINVAL;
+	}
+
+	/* release dentry */
+	dput(dentry);
+
+	/* unmount device */
+	return umount_dev(sb->s_dev, flags);
 }
 
 /*
@@ -530,16 +689,4 @@ static int do_umount(const char *target, int flags)
 int sys_umount(const char *target)
 {
 	return sys_umount2(target, 0);
-}
-
-/*
- * Umount2 system call.
- */
-int sys_umount2(const char *target, int flags)
-{
-	/* only root can umount */
-	if (!suser())
-		return -EPERM;
-
-	return do_umount(target, flags);
 }
