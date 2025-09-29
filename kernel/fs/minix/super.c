@@ -210,7 +210,7 @@ struct super_operations minix_sops = {
  */
 static struct file_system_type minix_fs = {
 	.name			= "minix",
-	.requires_dev		= 1,
+	.flags			= FS_REQUIRES_DEV,
 	.read_super		= minix_read_super,
 };
 /*

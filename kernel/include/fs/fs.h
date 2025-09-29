@@ -25,6 +25,8 @@
 #define MS_NOEXEC			8
 #define MS_REMOUNT			32
 
+#define FS_REQUIRES_DEV			1
+
 #define RENAME_NOREPLACE		(1 << 0)
 #define RENAME_EXCHANGE			(1 << 1)
 #define RENAME_WHITEOUT			(1 << 2)
@@ -82,7 +84,7 @@ struct buffer_head {
  */
 struct file_system_type {
 	const char *			name;
-	int				requires_dev;
+	int				flags;
 	int				(*read_super)(struct super_block *, void *, int);
 	struct file_system_type *	next;
 };

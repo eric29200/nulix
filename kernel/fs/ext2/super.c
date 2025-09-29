@@ -243,7 +243,7 @@ err:
  */
 static struct file_system_type ext2_fs = {
 	.name			= "ext2",
-	.requires_dev		= 1,
+	.flags			= FS_REQUIRES_DEV,
 	.read_super		= ext2_read_super,
 };
 

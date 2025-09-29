@@ -148,7 +148,7 @@ struct super_operations isofs_sops = {
  */
 static struct file_system_type iso_fs = {
 	.name			= "iso9660",
-	.requires_dev		= 1,
+	.flags			= FS_REQUIRES_DEV,
 	.read_super		= isofs_read_super,
 };
 /*

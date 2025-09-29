@@ -45,7 +45,7 @@ int get_filesystem_list(char *buf, int count)
 		if (len >= count - 80)
 			break;
 
-		len += sprintf(buf + len, "%s\t%s\n", fs->requires_dev ? "" : "nodev", fs->name);
+		len += sprintf(buf + len, "%s\t%s\n", (fs->flags & FS_REQUIRES_DEV) ? "" : "nodev", fs->name);
 	}
 
 	return len;
@@ -378,7 +378,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 		return -ENODEV;
 
 	/* if filesystem requires dev, find it */
-	if (fs->requires_dev) {
+	if (fs->flags & FS_REQUIRES_DEV) {
 		/* find device's inode */
 		dentry = namei(AT_FDCWD, dev_name, 1);
 		if (IS_ERR(dentry))
@@ -422,7 +422,7 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	/* try all file systems */
 	for (fs = file_systems; fs; fs = fs->next) {
 		/* test only dev file systems */
-		if (!fs->requires_dev)
+		if (!(fs->flags & FS_REQUIRES_DEV))
 			continue;
 
 		/* read super block */

@@ -91,7 +91,7 @@ static int tmpfs_read_super(struct super_block *sb, void *data, int silent)
  */
 static struct file_system_type tmp_fs = {
 	.name		= "tmpfs",
-	.requires_dev	= 0,
+	.flags		= 0,
 	.read_super	= tmpfs_read_super,
 };
 

@@ -74,7 +74,7 @@ err:
  */
 static struct file_system_type devpts_fs = {
 	.name		= "devpts",
-	.requires_dev	= 0,
+	.flags		= 0,
 	.read_super	= devpts_read_super,
 };
 
