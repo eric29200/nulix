@@ -241,7 +241,7 @@ err:
 /*
  * Ext2 file system.
  */
-static struct file_system ext2_fs = {
+static struct file_system_type ext2_fs = {
 	.name			= "ext2",
 	.requires_dev		= 1,
 	.read_super		= ext2_read_super,

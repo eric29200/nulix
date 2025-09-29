@@ -72,7 +72,7 @@ err:
 /*
  * Devpts file system.
  */
-static struct file_system devpts_fs = {
+static struct file_system_type devpts_fs = {
 	.name		= "devpts",
 	.requires_dev	= 0,
 	.read_super	= devpts_read_super,

@@ -58,7 +58,7 @@ void proc_statfs(struct super_block *sb, struct statfs64 *buf)
 /*
  * Proc file system.
  */
-static struct file_system proc_fs = {
+static struct file_system_type proc_fs = {
 	.name		= "proc",
 	.requires_dev	= 0,
 	.read_super	= proc_read_super,

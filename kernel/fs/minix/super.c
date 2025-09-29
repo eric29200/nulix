@@ -208,7 +208,7 @@ struct super_operations minix_sops = {
 /*
  * Minix file system.
  */
-static struct file_system minix_fs = {
+static struct file_system_type minix_fs = {
 	.name			= "minix",
 	.requires_dev		= 1,
 	.read_super		= minix_read_super,

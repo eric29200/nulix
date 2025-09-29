@@ -12,63 +12,69 @@
 #include <dev.h>
 
 /* file systems and mounted fs lists */
-static LIST_HEAD(fs_list);
+static struct file_system_type *file_systems = NULL;
 static LIST_HEAD(vfs_mounts_list);
 
 /*
- * Register a file system.
+ * Get a filesystem.
  */
-int register_filesystem(struct file_system *fs)
+static struct file_system_type *get_fs_type(const char *name)
 {
-	if (!fs)
-		return -EINVAL;
-
-	/* add file system */
-	list_add(&fs->list, &fs_list);
-
-	return 0;
-}
-
-/*
- * Get a file system.
- */
-struct file_system *get_filesystem(const char *name)
-{
-	struct file_system *fs;
-	struct list_head *pos;
+	struct file_system_type *fs = file_systems;
 
 	if (!name)
-		return NULL;
+		return fs;
 
-	/* search file system */
-	list_for_each(pos, &fs_list) {
-		fs = list_entry(pos, struct file_system, list);
+	for (fs = file_systems; fs; fs = fs->next)
 		if (strcmp(fs->name, name) == 0)
 			return fs;
-	}
 
 	return NULL;
 }
 
 /*
- * Get file systems list.
+ * Get filesystems list.
  */
 int get_filesystem_list(char *buf, int count)
 {
-	struct file_system *fs;
-	struct list_head *pos;
+	struct file_system_type *fs;
 	int len = 0;
 
-	list_for_each(pos, &fs_list) {
+	for (fs = file_systems; fs; fs = fs->next) {
 		/* check overflow */
 		if (len >= count - 80)
 			break;
 
-		fs = list_entry(pos, struct file_system, list);
 		len += sprintf(buf + len, "%s\t%s\n", fs->requires_dev ? "" : "nodev", fs->name);
 	}
 
 	return len;
+}
+
+/*
+ * Register a file system.
+ */
+int register_filesystem(struct file_system_type *fs)
+{
+	struct file_system_type **tmp;
+
+	/* check filesystem */
+	if (!fs)
+		return -EINVAL;
+
+	/* check filesystem */
+	if (fs->next)
+		return -EBUSY;
+
+	/* find filesystem */
+	for (tmp = &file_systems; *tmp; tmp = &(*tmp)->next)
+                if (strcmp((*tmp)->name, fs->name) == 0)
+                        return -EBUSY;
+
+	/* register filesystem */
+	*tmp = fs;
+
+	return 0;
 }
 
 /*
@@ -289,7 +295,7 @@ static void d_mount(struct dentry *covers, struct dentry *dentry)
 /*
  * Mount a file system.
  */
-static int do_mount(struct file_system *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, uint32_t flags)
+static int do_mount(struct file_system_type *fs, dev_t dev, const char *dev_name, const char *mount_point, void *data, uint32_t flags)
 {
 	struct dentry *mount_point_dentry = NULL;
 	struct super_block *sb;
@@ -353,7 +359,7 @@ err:
  */
 int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, void *data)
 {
-	struct file_system *fs;
+	struct file_system_type *fs;
 	struct dentry *dentry;
 	struct inode *inode;
 	dev_t dev = 0;
@@ -367,7 +373,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 		return do_remount(dir_name, flags);
 
 	/* find file system type */
-	fs = get_filesystem(type);
+	fs = get_fs_type(type);
 	if (!fs)
 		return -ENODEV;
 
@@ -400,9 +406,8 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
  */
 int do_mount_root(dev_t dev, const char *dev_name)
 {
-	struct file_system *fs;
+	struct file_system_type *fs;
 	struct super_block *sb;
-	struct list_head *pos;
 	int ret;
 
 	/* allocate a super block */
@@ -415,9 +420,8 @@ int do_mount_root(dev_t dev, const char *dev_name)
 	sb->s_flags = MS_RDONLY;
 
 	/* try all file systems */
-	list_for_each(pos, &fs_list) {
+	for (fs = file_systems; fs; fs = fs->next) {
 		/* test only dev file systems */
-		fs = list_entry(pos, struct file_system, list);
 		if (!fs->requires_dev)
 			continue;
 

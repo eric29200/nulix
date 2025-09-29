@@ -80,11 +80,11 @@ struct buffer_head {
 /*
  * File system structure.
  */
-struct file_system {
-	char *				name;
+struct file_system_type {
+	const char *			name;
 	int				requires_dev;
 	int				(*read_super)(struct super_block *, void *, int);
-	struct list_head		list;
+	struct file_system_type *	next;
 };
 
 /*
@@ -97,7 +97,7 @@ struct super_block {
 	void *				s_fs_info;
 	uint16_t			s_magic;
 	uint32_t			s_flags;
-	struct file_system *		s_type;
+	struct file_system_type *	s_type;
 	struct dentry *			s_root;
 	struct super_operations *	s_op;
 };
@@ -258,8 +258,7 @@ extern struct file filp_table[NR_FILE];
 extern uint32_t buffermem_pages;
 
 /* super operations */
-int register_filesystem(struct file_system *fs);
-struct file_system *get_filesystem(const char *name);
+int register_filesystem(struct file_system_type *fs);
 int get_filesystem_list(char *buf, int count);
 int get_vfs_mount_list(char *buf, int count);
 
