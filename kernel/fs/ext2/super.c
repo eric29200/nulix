@@ -52,8 +52,6 @@ static void ext2_put_super(struct super_block *sb)
 
 	/* free super block */
 	kfree(sbi);
-
-	sb->s_dev = 0;
 }
 
 /*
@@ -70,11 +68,11 @@ static struct super_operations ext2_sops = {
 /*
  * Read super block.
  */
-static int ext2_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *ext2_read_super(struct super_block *sb, void *data, int silent)
 {
 	uint32_t block, sb_block = 1, offset = 0, logic_sb_block = 1;
-	int ret = -ENOSPC, blocksize;
 	struct ext2_sb_info *sbi;
+	int blocksize;
 	uint32_t i;
 
 	/* unused data */
@@ -83,7 +81,7 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 	/* allocate Ext2 in memory super block */
 	sb->s_fs_info = sbi = (struct ext2_sb_info *) kmalloc(sizeof(struct ext2_sb_info));
 	if (!sbi)
-		return -ENOMEM;
+		return NULL;
 
 	/* set default block size */
 	blocksize = BLOCK_SIZE;
@@ -93,10 +91,8 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 
 	/* read first block = super block */
 	sbi->s_sbh = bread(sb->s_dev, sb_block, sb->s_blocksize);
-	if (!sbi->s_sbh) {
-		ret = -EIO;
+	if (!sbi->s_sbh)
 		goto err_bad_sb;
-	}
 
 	/* set super block */
 	sbi->s_es = (struct ext2_super_block *) sbi->s_sbh->b_data;
@@ -133,10 +129,8 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 
 		/* reread super block */
 		sbi->s_sbh = bread(sb->s_dev, logic_sb_block, sb->s_blocksize);
-		if (!sbi->s_sbh) {
-			ret = -EIO;
+		if (!sbi->s_sbh)
 			goto err_bad_sb;
-		}
 
 		/* set super block */
 		sbi->s_es = (struct ext2_super_block *) (sbi->s_sbh->b_data + offset);
@@ -172,10 +166,8 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 
 	/* allocate group descriptors buffers */
 	sbi->s_group_desc = (struct buffer_head **) kmalloc(sizeof(struct buffer_head *) * sbi->s_gdb_count);
-	if (!sbi->s_group_desc) {
-		ret = -ENOMEM;
+	if (!sbi->s_group_desc)
 		goto err_no_gdb;
-	}
 
 	/* reset group descriptors buffers */
 	for (i = 0; i < sbi->s_gdb_count; i++)
@@ -188,10 +180,8 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 
 		/* read group descriptor */
 		sbi->s_group_desc[i] = bread(sb->s_dev, block, sb->s_blocksize);
-		if (!sbi->s_group_desc[i]) {
-			ret = -EIO;
+		if (!sbi->s_group_desc[i])
 			goto err_read_gdb;
-		}
 	}
 
 	/* get root inode */
@@ -199,7 +189,7 @@ static int ext2_read_super(struct super_block *sb, void *data, int silent)
 	if (!sb->s_root)
 		goto err_root_inode;
 
-	return 0;
+	return sb;
 err_root_inode:
 	if (!silent)
 		printf("[Ext2-fs] Can't get root inode\n");
@@ -235,7 +225,8 @@ err_bad_sb:
 		printf("[Ext2-fs] Can't read super block\n");
 err:
 	kfree(sbi);
-	return ret;
+	sb->s_dev = 0;
+	return NULL;
 }
 
 /*

@@ -7,14 +7,14 @@
 /*
  * Read super block.
  */
-static int isofs_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *isofs_read_super(struct super_block *sb, void *data, int silent)
 {
 	struct iso_directory_record *root_dir;
 	struct iso_primary_descriptor *pri;
 	struct iso_volume_descriptor *vdp;
 	struct isofs_sb_info *sbi;
 	struct buffer_head *sbh;
-	int block, ret = -EINVAL;
+	int block;
 
 	/* unused data */
 	UNUSED(data);
@@ -22,7 +22,7 @@ static int isofs_read_super(struct super_block *sb, void *data, int silent)
 	/* allocate ISOFS super block */
 	sb->s_fs_info = sbi = (struct isofs_sb_info *) kmalloc(sizeof(struct isofs_sb_info));
 	if (!sbi)
-		return -ENOMEM;
+		return NULL;
 
 	/* set default block size */
 	set_blocksize(sb->s_dev, ISOFS_BLOCK_SIZE);
@@ -83,7 +83,7 @@ static int isofs_read_super(struct super_block *sb, void *data, int silent)
 	if (!sb->s_root)
 		goto err_root_inode;
 
-	return 0;
+	return sb;
 err_root_inode:
 	if (!silent)
 		printf("[ISO-fs] Can't get root inode\n");
@@ -100,7 +100,8 @@ err_release_sb:
 	brelse(sbh);
 err:
 	kfree(sbi);
-	return ret;
+	sb->s_dev = 0;
+	return NULL;
 }
 
 /*

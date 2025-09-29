@@ -18,7 +18,7 @@ static void devpts_statfs(struct super_block *sb, struct statfs64 *buf)
  */
 static void devpts_put_super(struct super_block *sb)
 {
-	sb->s_dev = 0;
+	UNUSED(sb);
 }
 
 /*
@@ -35,10 +35,9 @@ static struct super_operations devpts_sops = {
 /*
  * Read super block.
  */
-static int devpts_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *devpts_read_super(struct super_block *sb, void *data, int silent)
 {
 	struct devpts_entry *root_entry;
-	int ret = -EINVAL;
 
 	/* unused data */
 	UNUSED(data);
@@ -57,7 +56,7 @@ static int devpts_read_super(struct super_block *sb, void *data, int silent)
 	if (!sb->s_root)
 		goto err_no_root_inode;
 
-	return 0;
+	return sb;
 err_no_root_inode:
 	if (!silent)
 		printf("[Devpts] Can't get root inode\n");
@@ -66,7 +65,8 @@ err_no_root_entry:
 	if (!silent)
 		printf("[Devpts] Can't get root entry\n");
 err:
-	return ret;
+	sb->s_dev = 0;
+	return NULL;
 }
 
 /*

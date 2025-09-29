@@ -388,7 +388,6 @@ static struct super_block *read_super(dev_t dev, const char *name, int flags, vo
 {
 	struct file_system_type *fs;
 	struct super_block *sb;
-	int ret;
 
 	/* check device */
 	if (!dev)
@@ -415,8 +414,7 @@ static struct super_block *read_super(dev_t dev, const char *name, int flags, vo
 	sb->s_type = fs;
 
 	/* read super block */
-	ret = fs->read_super(sb, data, silent);
-	if (ret) {
+	if (!fs->read_super(sb, data, silent)) {
 		sb->s_dev = 0;
 		return NULL;
 	}

@@ -7,12 +7,12 @@
 /*
  * Read super block.
  */
-static int minix_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *minix_read_super(struct super_block *sb, void *data, int silent)
 {
 	struct minix3_super_block *msb3;
 	struct minix_sb_info *sbi;
-	int i, ret = -EINVAL;
 	uint32_t block;
+	int i;
 
 	/* unused data */
 	UNUSED(data);
@@ -20,7 +20,7 @@ static int minix_read_super(struct super_block *sb, void *data, int silent)
 	/* allocate minix super block */
 	sb->s_fs_info = sbi = (struct minix_sb_info *) kmalloc(sizeof(struct minix_sb_info));
 	if (!sbi)
-		return -ENOMEM;
+		return NULL;
 
 	/* set default block size */
 	set_blocksize(sb->s_dev, BLOCK_SIZE);
@@ -62,10 +62,8 @@ static int minix_read_super(struct super_block *sb, void *data, int silent)
 
 	/* allocate inodes bitmap */
 	sbi->s_imap = (struct buffer_head **) kmalloc(sizeof(struct buffer_head *) * sbi->s_imap_blocks);
-	if (!sbi->s_imap) {
-		ret = -ENOMEM;
+	if (!sbi->s_imap)
 		goto err_no_map;
-	}
 
 	/* reset inodes bitmap */
 	for (i = 0; i < sbi->s_imap_blocks; i++)
@@ -74,18 +72,14 @@ static int minix_read_super(struct super_block *sb, void *data, int silent)
 	/* read inodes bitmap */
 	for (i = 0, block = 2; i < sbi->s_imap_blocks; i++, block++) {
 		sbi->s_imap[i] = bread(sb->s_dev, block, sb->s_blocksize);
-		if (!sbi->s_imap[i]) {
-			ret = -EIO;
+		if (!sbi->s_imap[i])
 			goto err_map;
-		}
 	}
 
 	/* allocate zones bitmap */
 	sbi->s_zmap = (struct buffer_head **) kmalloc(sizeof(struct buffer_head *) * sbi->s_zmap_blocks);
-	if (!sbi->s_zmap) {
-		ret = -ENOMEM;
+	if (!sbi->s_zmap)
 		goto err_no_map;
-	}
 
 	/* reset zones bitmap */
 	for (i = 0; i < sbi->s_zmap_blocks; i++)
@@ -94,20 +88,16 @@ static int minix_read_super(struct super_block *sb, void *data, int silent)
 	/* read zones bitmap */
 	for (i = 0; i < sbi->s_zmap_blocks; i++, block++) {
 		sbi->s_zmap[i] = bread(sb->s_dev, block, sb->s_blocksize);
-		if (!sbi->s_zmap[i]) {
-			ret = -EIO;
+		if (!sbi->s_zmap[i])
 			goto err_map;
-		}
 	}
 
 	/* get root inode */
 	sb->s_root = d_alloc_root(iget(sb, MINIX_ROOT_INODE));
-	if (!sb->s_root) {
-		ret = -EINVAL;
+	if (!sb->s_root)
 		goto err_root_inode;
-	}
 
-	return 0;
+	return sb;
 err_root_inode:
 	if (!silent)
 		printf("[Minix-fs] Can't read root inode\n");
@@ -146,7 +136,8 @@ err_bad_sb:
 		printf("[Minix-fs] Can't read super block\n");
 err:
 	kfree(sbi);
-	return ret;
+	sb->s_dev = 0;
+	return NULL;
 }
 
 /*
@@ -190,8 +181,6 @@ static void minix_put_super(struct super_block *sb)
 
 	/* free super block */
 	kfree(sbi);
-
-	sb->s_dev = 0;
 }
 
 /*
