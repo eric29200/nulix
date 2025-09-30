@@ -87,7 +87,7 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 /*
  * Handle signal of current task.
  */
-int do_signal(struct registers *regs, int orig_eax)
+int do_signal(struct registers *regs)
 {
 	struct sigaction *act;
 	int sig;
@@ -148,8 +148,8 @@ out:
 	}
 
 	/* interrupted system call : redo it */
-	if (orig_eax && (int) regs->eax == -EINTR) {
-		regs->eax = orig_eax;
+	if (regs->orig_eax && (int) regs->eax == -EINTR) {
+		regs->eax = regs->orig_eax;
 		regs->eip -= 2;
 	}
 
@@ -176,7 +176,7 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 		current_task->state = TASK_SLEEPING;
 		schedule();
 
-		if (do_signal(regs, 0))
+		if (do_signal(regs))
 			return -EINTR;
 	}
 }

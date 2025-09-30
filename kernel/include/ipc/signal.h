@@ -131,7 +131,7 @@ static inline void sigdelsetmask(sigset_t *set, unsigned long mask)
 	*set &= ~mask;
 }
 
-int do_signal(struct registers *regs, int orig_eax);
+int do_signal(struct registers *regs);
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
 int sys_rt_sigtimedwait(const sigset_t *sigset, void *info, const struct timespec *uts, size_t sigsetsize);

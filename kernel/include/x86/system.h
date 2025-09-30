@@ -26,6 +26,7 @@ struct registers {
 	uint32_t eflags;
 	uint32_t useresp;
 	uint32_t ss;
+	uint32_t orig_eax;
 } __attribute__((packed));
 
 /*
