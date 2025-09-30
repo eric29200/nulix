@@ -156,7 +156,6 @@ static void kinit()
 	if (init_tty(&tag_fb))
 		panic("Cannot init ttys");
 
-
 	/* init binary formats */
 	printf("[Kernel] Binary formats Init\n");
 	init_binfmt();
