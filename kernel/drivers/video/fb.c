@@ -59,18 +59,10 @@ int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *t
 	if (!fb->buf)
 		return -ENOMEM;
 
-	/* identity map frame buffer */
-	ret = remap_page_range(fb->addr, fb->addr, fb->real_height * fb->pitch, PAGE_SHARED);
-	if (ret)
-		goto err;
-
 	/* clear frame buffer */
 	memsetw(fb->buf, erase_char, fb->width * (fb->height + 1));
 
 	return 0;
-err:
-	kfree(fb->buf);
-	return ret;
 }
 
 /*
@@ -180,16 +172,25 @@ static struct file_operations fb_fops = {
 };
 
 /*
- * Init direct frame buffer.
+ * Init framebuffer.
  */
-int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb)
+int init_framebuffer_device(struct multiboot_tag_framebuffer *tag_fb)
 {
 	int ret;
 
-	/* register device */
+	/* identity map frame buffer */
+	ret = remap_page_range(tag_fb->common.framebuffer_addr,
+		tag_fb->common.framebuffer_addr,
+		tag_fb->common.framebuffer_height * tag_fb->common.framebuffer_pitch,
+		PAGE_SHARED);
+	if (ret)
+		return ret;
+
+	/* register direct framebuffer device */
 	ret = register_chrdev(DEV_FB_MAJOR, "fb", &fb_fops);
 	if (ret)
-		return 0;
+		return ret;
 
+	/* init direct framebuffer */
 	return init_framebuffer(&direct_fb, tag_fb, 0, 1, 0);
 }

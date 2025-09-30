@@ -153,7 +153,7 @@ struct framebuffer {
 };
 
 int init_framebuffer(struct framebuffer *fb, struct multiboot_tag_framebuffer *tag_fb, uint16_t erase_char, int direct, int cursor_on);
-int init_framebuffer_direct(struct multiboot_tag_framebuffer *tag_fb);
+int init_framebuffer_device(struct multiboot_tag_framebuffer *tag_fb);
 
 /* frame buffers */
 extern struct framebuffer_ops fb_text_ops;

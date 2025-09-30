@@ -146,15 +146,16 @@ static void kinit()
 	if (init_loop())
 		printf("[Kernel] Loop devices Init error\n");
 
+	/* init frame buffer */
+	printf("[Kernel] Frame buffer Init\n");
+	if (init_framebuffer_device(&tag_fb))
+		panic("Cannot init frame buffer");
+
 	/* init ttys */
 	printf("[Kernel] Ttys Init\n");
 	if (init_tty(&tag_fb))
 		panic("Cannot init ttys");
 
-	/* init direct frame buffer */
-	printf("[Kernel] Direct frame buffer Init\n");
-	if (init_framebuffer_direct(&tag_fb))
-		panic("Cannot init direct frame buffer");
 
 	/* init binary formats */
 	printf("[Kernel] Binary formats Init\n");
