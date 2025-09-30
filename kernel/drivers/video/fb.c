@@ -161,6 +161,7 @@ static int fb_mmap(struct file *filp, struct vm_area *vma)
 
 	return 0;
 }
+
 /*
  * Framebuffer file operations.
  */
