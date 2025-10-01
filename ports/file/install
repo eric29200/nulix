@@ -1,0 +1,18 @@
+VERSION="5.46"
+SRC_FILENAME="file-"$VERSION".tar.gz"
+URL="https://astron.com/pub/file/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--disable-nls							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
