@@ -19,7 +19,7 @@ static int dupfd(int oldfd, int newfd)
 		return -EINVAL;
 
 	/* find a free slot */
-	for (newfd = 0; newfd < NR_OPEN; newfd++)
+	for (;newfd < NR_OPEN; newfd++)
 		if (current_task->files->filp[newfd] == NULL)
 			break;
 
@@ -76,7 +76,7 @@ int sys_fcntl(int fd, int cmd, unsigned long arg)
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
-		return -EINVAL;
+		return -EBADF;
 
 	switch (cmd) {
 		case F_DUPFD:
