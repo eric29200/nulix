@@ -155,6 +155,8 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 		base = dget(current_task->fs->pwd);
 	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->files->filp[dirfd]) {
 		base = dget(current_task->files->filp[dirfd]->f_dentry);
+	} else {
+		base = NULL;
 	}
 
 	/* no base */
