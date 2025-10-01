@@ -441,7 +441,7 @@ void task_exit_mmap(struct mm_struct *mm)
 			zap_page_range(mm->pgd, vma->vm_start, vma->vm_end - vma->vm_start);
 
 			/* free memory region */
-			list_del(&vma->list);
+			remove_vma(vma);
 			kfree(vma);
 		}
 	}

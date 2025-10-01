@@ -87,13 +87,48 @@ struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_
 
 	return NULL;
 }
+
+/*
+ * Insert a memory region.
+ */
+void insert_vma(struct vm_area *vma)
+{
+	struct file *filp = vma->vm_file;
+	struct vm_area *vma_prev;
+
+	/* add memory region to inode */
+	if (filp)
+		list_add_tail(&vma->list_share, &filp->f_dentry->d_inode->i_mmap);
+
+	/* add it to the list */
+	vma_prev = find_vma_prev(current_task, vma->vm_start);
+	if (vma_prev)
+		list_add(&vma->list, &vma_prev->list);
+	else
+		list_add(&vma->list, &current_task->mm->vm_list);
+}
+
+/*
+ * Remove a memory region.
+ */
+void remove_vma(struct vm_area *vma)
+{
+	struct file *filp = vma->vm_file;
+
+	/* remove memory region from inode */
+	if (filp)
+		list_del(&vma->list_share);
+
+	/* remove it from list */
+	list_del(&vma->list);
+}
   
 /*
  * Move a memory region.
  */
 static uint32_t move_vma(struct vm_area *vma, uint32_t old_address, size_t old_size, uint32_t new_address, size_t new_size)
 {
-	struct vm_area *vma_new, *vma_prev;
+	struct vm_area *vma_new;
 
 	/* create new memory region */
 	vma_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
@@ -112,12 +147,8 @@ static uint32_t move_vma(struct vm_area *vma, uint32_t old_address, size_t old_s
 	/* unmap existing pages */
 	do_munmap(new_address, new_size);
 
-	/* add it to the list */
-	vma_prev = find_vma_prev(current_task, vma_new->vm_start);
-	if (vma_prev)
-		list_add(&vma_new->list, &vma_prev->list);
-	else
-		list_add(&vma_new->list, &current_task->mm->vm_list);
+	/* insert new memory region */
+	insert_vma(vma_new);
 
 	/* unmap old region */
 	do_munmap(old_address, old_size);
@@ -178,7 +209,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
  */
 uint32_t do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int flags, off_t offset)
 {
-	struct vm_area *vma, *vma_prev;
+	struct vm_area *vma;
 	int ret;
 
 	/* check flags */
@@ -238,17 +269,10 @@ uint32_t do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int fla
 		/* update file reference count */
 		vma->vm_file = filp;
 		filp->f_count++;
-
-		/* add memory region to inode */
-		list_add_tail(&vma->list_share, &filp->f_dentry->d_inode->i_mmap);
 	}
 
-	/* add it to the list */
-	vma_prev = find_vma_prev(current_task, vma->vm_start);
-	if (vma_prev)
-		list_add(&vma->list, &vma_prev->list);
-	else
-		list_add(&vma->list, &current_task->mm->vm_list);
+	/* insert memory region */
+	insert_vma(vma);
 
 	return vma->vm_start;
 err:
@@ -271,7 +295,7 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 		if (vma->vm_file)
 			fput(vma->vm_file);
 
-		list_del(&vma->list);
+		remove_vma(vma);
 		kfree(vma);
 		return 0;
 	}
@@ -305,8 +329,8 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 		if (vma_new->vm_ops && vma_new->vm_ops->open)
 			vma_new->vm_ops->open(vma_new);
 
-		/* add new memory region after old one */
-		list_add(&vma_new->list, &vma->list);
+		/* insert new memory region */
+		insert_vma(vma_new);
 
 		/* update old memory region */
 		vma->vm_end = addr;
@@ -497,8 +521,8 @@ static int mprotect_fixup_start(struct vm_area *vma, uint32_t end, uint16_t newf
 	vma->vm_start = end;
 	vma->vm_offset += vma->vm_start - vma_new->vm_start;
 
-	/* add new memory region before old one */
-	list_add_tail(&vma_new->list, &vma->list);
+	/* insert new memory region */
+	insert_vma(vma_new);
 
 	return 0;
 }
@@ -527,8 +551,8 @@ static int mprotect_fixup_end(struct vm_area *vma, uint32_t start, uint16_t newf
 	vma_new->vm_start = start;
 	vma_new->vm_offset += vma_new->vm_start - vma->vm_start;
 
-	/* add new memory region after old one */
-	list_add(&vma_new->list, &vma->list);
+	/* insert new memory region */
+	insert_vma(vma_new);
 
 	return 0;
 }
@@ -578,9 +602,9 @@ static int mprotect_fixup_middle(struct vm_area *vma, uint32_t start, uint32_t e
 		vma->vm_ops->open(right);
 	}
 
-	/* add new memory areas */
-	list_add_tail(&left->list, &vma->list);
-	list_add(&right->list, &vma->list);
+	/* insert new memory regions */
+	insert_vma(left);
+	insert_vma(right);
 
 	return 0;
 }
