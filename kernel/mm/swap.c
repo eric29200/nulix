@@ -18,7 +18,7 @@ static int try_to_swap_out(struct vm_area *vma, uint32_t address, pte_t *pte)
 	if (!VALID_PAGE(page))
 		return 0;
 
-	if (!page->inode)
+	if (!page->inode || PageReserved(page))
 		return 0;
 
 	/* clean page : drop pte */

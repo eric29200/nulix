@@ -85,16 +85,16 @@ out:
 /*
  * Free a page table entry.
  */
-static int pte_free(pte_t *pte)
+static int pte_free(pte_t pte)
 {
 	struct page *page;
 
-	if (pte_none(*pte) || !pte_present(*pte))
+	if (pte_none(pte) || !pte_present(pte))
 		return 0;
 
 	/* get page */
-	page = pte_page(*pte);
-	if (!VALID_PAGE(page))
+	page = pte_page(pte);
+	if (!VALID_PAGE(page) || PageReserved(page))
 		return 0;
 
 	/* free page */
@@ -107,18 +107,7 @@ static int pte_free(pte_t *pte)
  */
 static void forget_pte(pte_t pte)
 {
-	struct page *page;
-
-	if (pte_none(pte))
-		return;
-
-	/* get page */
-	page = pte_page(pte);
-	if (!VALID_PAGE(page))
-		return;
-
-	/* free page */
-	__free_page(page);
+	pte_free(pte);
 }
 
 /*
@@ -126,6 +115,7 @@ static void forget_pte(pte_t pte)
  */
 static void remap_pte_range(pte_t *pte, uint32_t start, size_t size, uint32_t phys_addr, int pgprot)
 {
+	struct page *page;
 	pte_t old_page;
 	uint32_t end;
 
@@ -140,11 +130,12 @@ static void remap_pte_range(pte_t *pte, uint32_t start, size_t size, uint32_t ph
 
 		/* set page table entry */
 		pte_clear(pte);
-		*pte = mk_pte_phys(phys_addr, pgprot);
+		page = &page_array[MAP_NR(__va(phys_addr))];
+		if (!VALID_PAGE(page) || PageReserved(page))
+			*pte = mk_pte_phys(phys_addr, pgprot);
 
 		/* forget old entry */
-		if (!pte_none(old_page))
-			forget_pte(old_page);
+		forget_pte(old_page);
 
 		start += PAGE_SIZE;
 		phys_addr += PAGE_SIZE;
@@ -250,7 +241,7 @@ static size_t zap_pte_range(pmd_t *pmd, uint32_t address, size_t size)
 
 		/* free page table entry */
 		if (!pte_none(*pte)) {
-			freed += pte_free(pte);
+			freed += pte_free(*pte);
 			pte_clear(pte);
 		}
 
@@ -628,7 +619,7 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 
 				/* virtual page */
 				page = pte_page(pte);
-				if (!VALID_PAGE(page)) {
+				if (!VALID_PAGE(page) || PageReserved(page)) {
 					*pte_dst = pte;
 					goto next_pte;
 				}

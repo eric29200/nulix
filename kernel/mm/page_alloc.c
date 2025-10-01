@@ -168,7 +168,7 @@ found:
  */
 void __free_pages(struct page *page, uint32_t order)
 {
-	if (!page)
+	if (!page || PageReserved(page))
 		return;
 
 	page->count--;
@@ -349,6 +349,7 @@ static void __init_zone(int priority)
 		/* page not available */
 		if (!bios_map_address_available(addr)) {
 			page_array[i].count = 1;
+			page_array[i].flags |= (1 << PG_reserved);
 
 			if (first_free_page) {
 				__add_to_free_pages(first_free_page, priority, &page_array[i] - first_free_page);

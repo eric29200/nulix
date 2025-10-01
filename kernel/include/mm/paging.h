@@ -68,7 +68,9 @@ typedef uint32_t pte_t;
 
 #define PG_uptodate			0
 #define PG_lock				1
+#define PG_reserved			2
 
+#define PageReserved(page)		test_bit(&(page)->flags, PG_reserved)
 #define PageUptodate(page)		test_bit(&(page)->flags, PG_uptodate)
 #define ClearPageUptodate(page)		clear_bit(&(page)->flags, PG_uptodate)
 #define SetPageUptodate(page)		set_bit(&(page)->flags, PG_uptodate)
