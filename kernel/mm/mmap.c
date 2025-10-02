@@ -709,10 +709,37 @@ int do_mprotect(uint32_t start, size_t size, int prot)
  */
 void vmtruncate(struct inode *inode, off_t offset)
 {
-	UNUSED(offset);
+	struct list_head *pos, *n;
+	struct vm_area *vma;
+	uint32_t start, end;
+	size_t len, diff;
 
-	if (!list_empty(&inode->i_mmap))
-		printf("vmtruncate() not implemented");
+	/* truncate inode pages */
+	truncate_inode_pages(inode, offset);
+
+	/* unmap pages */
+	list_for_each_safe(pos, n, &inode->i_mmap) {
+		vma = list_entry(pos, struct vm_area, list_share);
+		start = vma->vm_start;
+		end = vma->vm_end;
+		len = end - start;
+
+		/* area fully affected ? */
+		if (vma->vm_offset >= offset) {
+			zap_page_range(vma->vm_mm->pgd, start, len);
+			continue;
+		}
+
+		/* area unaffected ? */
+		diff = offset - vma->vm_offset;
+		if (diff >= len)
+			continue;
+
+		/* area partially affected */
+		start += diff;
+		len = (len - diff) & PAGE_MASK;
+		zap_page_range(vma->vm_mm->pgd, start, len);
+	}
 }
 
 /*
