@@ -1,0 +1,15 @@
+VERSION="2.1.1"
+SRC_FILENAME="tree-"$VERSION".tgz"
+URL="https://oldmanprogrammer.net/tar/tree/"$SRC_FILENAME
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	make -j$NJOBS CC=$CC LD=$LD
+}
+
+function install_port() {
+	make install PREFIX=$SYSROOT"/usr"
+}
