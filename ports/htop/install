@@ -1,0 +1,19 @@
+VERSION="3.3.0"
+SRC_FILENAME="htop-"$VERSION".tar.gz"
+URL="https://github.com/htop-dev/htop/archive/refs/tags/"$VERSION".tar.gz"
+
+function configure_port() {
+	autoreconf -i
+	./configure								\
+		--host=$HOST							\
+		--disable-nls							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
