@@ -219,8 +219,8 @@ int ext2_symlink(struct inode *dir, struct dentry *dentry, const char *target);
 int ext2_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry);
 int ext2_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 
-/* Ext2 file prototypes */
-int ext2_getdents64(struct file *filp, void *dirp, size_t count);
+/* Ext2 read directory prototypes */
+int ext2_readdir(struct file *filp, void *dirp, size_t count);
 
 /*
  * Get Ext2 in memory super block from generic super block.

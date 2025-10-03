@@ -26,7 +26,7 @@ static struct proc_dir_entry root_dir[] = {
 /*
  * Root read dir.
  */
-static int proc_root_getdents64(struct file *filp, void *dirp, size_t count)
+static int proc_root_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct dirent64 *dirent = (struct dirent64 *) dirp;
 	struct list_head *pos;
@@ -120,7 +120,7 @@ static struct dentry *proc_root_lookup(struct inode *dir, struct dentry *dentry)
  * Root file operations.
  */
 struct file_operations proc_root_fops = {
-	.getdents64		= proc_root_getdents64,
+	.readdir		= proc_root_readdir,
 };
 
 /*

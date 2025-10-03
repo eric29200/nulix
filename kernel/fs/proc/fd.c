@@ -5,9 +5,9 @@
 #include <stderr.h>
 
 /*
- * Get directory entries.
+ * Read directory.
  */
-static int proc_fd_getdents64(struct file *filp, void *dirp, size_t count)
+static int proc_fd_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct dirent64 *dirent = (struct dirent64 *) dirp;
 	struct task *task;
@@ -138,7 +138,7 @@ out:
  * Process file descriptors operations.
  */
 struct file_operations proc_fd_fops = {
-	.getdents64		= proc_fd_getdents64,
+	.readdir		= proc_fd_readdir,
 };
 
 /*

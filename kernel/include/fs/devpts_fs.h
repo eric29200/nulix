@@ -52,7 +52,7 @@ int devpts_write_inode(struct inode *inode);
 int devpts_put_inode(struct inode *inode);
 
 /* directory operations */
-int devpts_getdents64(struct file *filp, void *dirp, size_t count);
+int devpts_readdir(struct file *filp, void *dirp, size_t count);
 
 /* name resolution operations */
 struct dentry *devpts_lookup(struct inode *dir, struct dentry *dentry);

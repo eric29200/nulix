@@ -18,7 +18,7 @@ static struct proc_dir_entry net_dir[] = {
 /*
  * Read net dir.
  */
-static int proc_net_getdents64(struct file *filp, void *dirp, size_t count)
+static int proc_net_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct dirent64 *dirent = (struct dirent64 *) dirp;
 	int ret, n;
@@ -72,7 +72,7 @@ found:
  * Net file operations.
  */
 struct file_operations proc_net_fops = {
-	.getdents64		= proc_net_getdents64,
+	.readdir		= proc_net_readdir,
 };
 
 /*

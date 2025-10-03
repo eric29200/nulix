@@ -26,8 +26,8 @@ int tmpfs_put_inode(struct inode *inode);
 void tmpfs_truncate(struct inode *inode);
 int tmpfs_inode_grow_size(struct inode *inode, size_t size);
 
-/* directory operations */
-int tmpfs_getdents64(struct file *filp, void *dirp, size_t count);
+/* read directory operations */
+int tmpfs_readdir(struct file *filp, void *dirp, size_t count);
 
 /* name resolution operations */
 int tmpfs_add_entry(struct inode *dir, const char *name, int name_len, struct inode *inode);

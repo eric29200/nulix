@@ -5,9 +5,9 @@
 #include <stderr.h>
 
 /*
- * Get directory entries system call.
+ * Read directory.
  */
-int isofs_getdents64(struct file *filp, void *dirp, size_t count)
+int isofs_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct isofs_inode_info *isofs_inode = &filp->f_dentry->d_inode->u.iso_i;
 	struct super_block *sb = filp->f_dentry->d_inode->i_sb;

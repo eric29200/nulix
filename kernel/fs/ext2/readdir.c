@@ -2,9 +2,9 @@
 #include <fs/ext2_fs.h>
 
 /*
- * Get directory entries.
+ * Read directory.
  */
-int ext2_getdents64(struct file *filp, void *dirp, size_t count)
+int ext2_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct super_block *sb = filp->f_dentry->d_inode->i_sb;
 	struct inode *inode = filp->f_dentry->d_inode;

@@ -17,7 +17,7 @@ struct file_operations ext2_file_fops = {
  * Ext2 directory operations.
  */
 struct file_operations ext2_dir_fops = {
-	.getdents64	= ext2_getdents64,
+	.readdir	= ext2_readdir,
 };
 
 /*

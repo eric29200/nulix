@@ -3,9 +3,9 @@
 #include <fcntl.h>
 
 /*
- * Get directory entries system call.
+ * Read directory.
  */
-int devpts_getdents64(struct file *filp, void *dirp, size_t count)
+int devpts_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct devpts_entry *de_dir, *de;
 	struct dirent64 *dirent;

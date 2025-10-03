@@ -16,7 +16,7 @@ struct file_operations isofs_file_fops = {
  * ISOFS directory operations.
  */
 struct file_operations isofs_dir_fops = {
-	.getdents64	= isofs_getdents64,
+	.readdir	= isofs_readdir,
 };
 
 /*

@@ -7,7 +7,7 @@
  * Directory operations.
  */
 static struct file_operations devpts_dir_fops = {
-	.getdents64		= devpts_getdents64,
+	.readdir		= devpts_readdir,
 };
 
 /*

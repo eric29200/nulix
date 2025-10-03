@@ -12,7 +12,7 @@
  * Directory operations.
  */
 struct file_operations minix_dir_fops = {
-	.getdents64		= minix_getdents64,
+	.readdir		= minix_readdir,
 };
 
 /*

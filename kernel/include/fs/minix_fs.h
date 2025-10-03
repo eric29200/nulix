@@ -132,7 +132,7 @@ int minix_rmdir(struct inode *dir, struct dentry *dentry);
 int minix_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry);
 int minix_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 
-/* minix file prototypes */
-int minix_getdents64(struct file *filp, void *dirp, size_t count);
+/* minix read directory prototypes */
+int minix_readdir(struct file *filp, void *dirp, size_t count);
 
 #endif

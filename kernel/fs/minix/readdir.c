@@ -5,9 +5,9 @@
 #include <stderr.h>
 
 /*
- * Get directory entries.
+ * Read directory.
  */
-int minix_getdents64(struct file *filp, void *dirp, size_t count)
+int minix_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct minix_sb_info *sbi = minix_sb(filp->f_dentry->d_inode->i_sb);
 	struct super_block *sb = filp->f_dentry->d_inode->i_sb;

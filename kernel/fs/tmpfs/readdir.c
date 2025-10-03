@@ -2,9 +2,9 @@
 #include <stderr.h>
 
 /*
- * Get directory entries system call.
+ * Read directory.
  */
-int tmpfs_getdents64(struct file *filp, void *dirp, size_t count)
+int tmpfs_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct tmpfs_dir_entry de;
 	struct dirent64 *dirent;

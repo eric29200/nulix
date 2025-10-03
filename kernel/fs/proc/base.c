@@ -445,9 +445,9 @@ struct inode_operations proc_base_iops = {
 };
 
 /*
- * Get directory entries.
+ * Read directory.
  */
-static int proc_base_getdents64(struct file *filp, void *dirp, size_t count)
+static int proc_base_readdir(struct file *filp, void *dirp, size_t count)
 {
 	struct dirent64 *dirent;
 	int n, ret;
@@ -514,7 +514,7 @@ static struct dentry *proc_base_lookup(struct inode *dir, struct dentry *dentry)
  * Process file operations.
  */
 struct file_operations proc_base_dir_fops = {
-	.getdents64		= proc_base_getdents64,
+	.readdir		= proc_base_readdir,
 };
 
 /*

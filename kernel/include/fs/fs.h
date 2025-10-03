@@ -251,7 +251,7 @@ struct file_operations {
 	int (*read)(struct file *, char *, size_t, off_t *);
 	int (*write)(struct file *, const char *, size_t, off_t *);
 	int (*llseek)(struct file *, off_t, int);
-	int (*getdents64)(struct file *, void *, size_t);
+	int (*readdir)(struct file *, void *, size_t);
 	int (*poll)(struct file *, struct select_table *);
 	int (*ioctl)(struct inode *inode, struct file *, int, unsigned long);
 	int (*mmap)(struct file *, struct vm_area *);

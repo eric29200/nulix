@@ -111,7 +111,7 @@ int isofs_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_
 struct buffer_head *isofs_bread(struct inode *inode, int block, int create);
 
 /* isofs file operations prototypes */
-int isofs_getdents64(struct file *filp, void *dirp, size_t count);
+int isofs_readdir(struct file *filp, void *dirp, size_t count);
 
 /* isofs utils prototypes */
 int isofs_num711(char *p);
