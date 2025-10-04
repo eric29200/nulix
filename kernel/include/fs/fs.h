@@ -243,6 +243,11 @@ struct inode_operations {
 };
 
 /*
+ * Fill in a directory prototype.
+ */
+typedef int (*filldir_t)(void *, const char *, size_t, off_t, ino_t);
+
+/*
  * File operations.
  */
 struct file_operations {
@@ -251,7 +256,7 @@ struct file_operations {
 	int (*read)(struct file *, char *, size_t, off_t *);
 	int (*write)(struct file *, const char *, size_t, off_t *);
 	int (*llseek)(struct file *, off_t, int);
-	int (*readdir)(struct file *, void *, size_t);
+	int (*readdir)(struct file *, void *, filldir_t);
 	int (*poll)(struct file *, struct select_table *);
 	int (*ioctl)(struct inode *inode, struct file *, int, unsigned long);
 	int (*mmap)(struct file *, struct vm_area *);
@@ -340,9 +345,6 @@ int permission(struct inode *inode, int mask);
 struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathname, int follow_link);
 struct dentry *namei(int dirfd, const char *pathname, int follow_link);
 struct dentry *open_namei(int dirfd, const char *pathname, int flags, mode_t mode);
-
-/* directory operations */
-int filldir(struct dirent64 *dirent, const char *name, size_t name_len, ino_t ino, size_t max_len);
 
 /* character/block devices operations */
 int register_chrdev(int major, const char *name, struct file_operations *fops);

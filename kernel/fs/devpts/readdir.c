@@ -5,13 +5,11 @@
 /*
  * Read directory.
  */
-int devpts_readdir(struct file *filp, void *dirp, size_t count)
+int devpts_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
 	struct devpts_entry *de_dir, *de;
-	struct dirent64 *dirent;
 	struct dentry *dentry;
 	struct list_head *pos;
-	int ret, entries_size;
 	struct inode *inode;
 	size_t i;
 
@@ -30,36 +28,17 @@ int devpts_readdir(struct file *filp, void *dirp, size_t count)
 	if (!S_ISDIR(de_dir->mode))
 		return -EINVAL;
 
-	/* init directory entry */
-	dirent = (struct dirent64 *) dirp;
-	entries_size = 0;
-
 	/* add "." entry */
 	if (filp->f_pos == 0) {
-		/* fill in directory entry */
-		ret = filldir(dirent, ".", 1, inode->i_ino, count);
-		if (ret)
-			return entries_size;
-
-		/* go to next entry */
-		count -= dirent->d_reclen;
-		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
-		filp->f_pos++;
+		if (filldir(dirent, ".", 1, 0, inode->i_ino))
+			return 0;
+		filp->f_pos = 1;
 	}
-
 	/* add ".." entry */
 	if (filp->f_pos == 1) {
-		/* fill in directory entry */
-		ret = filldir(dirent, "..", 2, de_dir->parent ? de_dir->parent->ino : de_dir->ino, count);
-		if (ret)
-			return entries_size;
-
-		/* go to next entry */
-		count -= dirent->d_reclen;
-		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
-		filp->f_pos++;
+		if (filldir(dirent, "..", 2, 1, inode->i_ino))
+			return 0;
+		filp->f_pos = 2;
 	}
 
 	/* walk through all entries */
@@ -72,16 +51,12 @@ int devpts_readdir(struct file *filp, void *dirp, size_t count)
 			continue;
 
 		/* fill in directory entry */
-		ret = filldir(dirent, de->name, de->name_len, de->ino, count);
-		if (ret)
-			return entries_size;
+		if (filldir(dirent, de->name, de->name_len, filp->f_pos, de->ino))
+			return 0;
 
 		/* go to next entry */
 		filp->f_pos++;
-		count -= dirent->d_reclen;
-		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
 	}
 
-	return entries_size;
+	return 0;
 }

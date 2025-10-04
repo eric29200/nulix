@@ -220,7 +220,7 @@ int ext2_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *
 int ext2_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 
 /* Ext2 read directory prototypes */
-int ext2_readdir(struct file *filp, void *dirp, size_t count);
+int ext2_readdir(struct file *filp, void *dirent, filldir_t filldir);
 
 /*
  * Get Ext2 in memory super block from generic super block.

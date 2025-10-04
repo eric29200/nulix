@@ -7,32 +7,28 @@
 /*
  * Read directory.
  */
-int isofs_readdir(struct file *filp, void *dirp, size_t count)
+int isofs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
 	struct isofs_inode_info *isofs_inode = &filp->f_dentry->d_inode->u.iso_i;
 	struct super_block *sb = filp->f_dentry->d_inode->i_sb;
 	char name[ISOFS_MAX_NAME_LEN + 1], de_tmp[4096];
 	struct inode *inode = filp->f_dentry->d_inode;
-	int de_len, entries_size = 0, name_len, ret;
 	uint32_t offset, next_offset, block;
 	struct iso_directory_record *de;
-	struct dirent64 *dirent;
 	struct buffer_head *bh;
+	int de_len, name_len;
 	ino_t ino;
-
-	/* init */
-	dirent = (struct dirent64 *) dirp;
 
 	/* compute position */
 	offset = filp->f_pos & (sb->s_blocksize - 1);
 	block = (isofs_inode->i_first_extent >> sb->s_blocksize_bits) + (filp->f_pos >> sb->s_blocksize_bits);
 	if (!block)
-		return entries_size;
+		return 0;
 
 	/* read first block */
 	bh = bread(inode->i_dev, block, sb->s_blocksize);
 	if (!bh)
-		return entries_size;
+		return 0;
 
 	/* walk through directory */
 	while (filp->f_pos < inode->i_size) {
@@ -45,12 +41,12 @@ int isofs_readdir(struct file *filp, void *dirp, size_t count)
 			offset = 0;
 			block = (isofs_inode->i_first_extent >> sb->s_blocksize_bits) + (filp->f_pos >> sb->s_blocksize_bits);
 			if (!block)
-				return entries_size;
+				return 0;
 
 			/* read next block */
 			bh = bread(inode->i_dev, block, sb->s_blocksize);
 			if (!bh)
-				return entries_size;
+				return 0;
 		}
 
 		/* get directory entry and compute inode */
@@ -70,12 +66,12 @@ int isofs_readdir(struct file *filp, void *dirp, size_t count)
 			offset = 0;
 			block = (isofs_inode->i_first_extent >> sb->s_blocksize_bits) + (filp->f_pos >> sb->s_blocksize_bits);
 			if (!block)
-				return entries_size;
+				return 0;
 
 			/* read next block */
 			bh = bread(inode->i_dev, block, sb->s_blocksize);
 			if (!bh)
-				return entries_size;
+				return 0;
 
 			continue;
 		}
@@ -92,7 +88,7 @@ int isofs_readdir(struct file *filp, void *dirp, size_t count)
 			block = (isofs_inode->i_first_extent >> sb->s_blocksize_bits) + ((filp->f_pos + de_len) >> sb->s_blocksize_bits);
 			bh = bread(inode->i_dev, block, sb->s_blocksize);
 			if (!bh)
-				return entries_size;
+				return 0;
 
 			/* copy 2nd fragment */
 			memcpy(&de_tmp[sb->s_blocksize - offset], bh->b_data, next_offset);
@@ -101,10 +97,9 @@ int isofs_readdir(struct file *filp, void *dirp, size_t count)
 
 		/* fake "." entry */
 		if (de->name_len[0] == 1 && de->name[0] == 0) {
-			ret = filldir(dirent, ".", 1, inode->i_ino, count);
-			if (ret) {
+			if (filldir(dirent, ".", 1, filp->f_pos, inode->i_ino)) {
 				brelse(bh);
-				return entries_size;
+				return 0;
 			}
 
 			goto next;
@@ -112,10 +107,9 @@ int isofs_readdir(struct file *filp, void *dirp, size_t count)
 
 		/* fake ".." entry */
 		if (de->name_len[0] == 1 && de->name[0] == 1) {
-			ret = filldir(dirent, "..", 2, inode->i_ino, count);
-			if (ret) {
+			if (filldir(dirent, "..", 2, filp->f_pos, inode->i_ino)) {
 				brelse(bh);
-				return entries_size;
+				return 0;
 			}
 
 			goto next;
@@ -127,21 +121,14 @@ int isofs_readdir(struct file *filp, void *dirp, size_t count)
 			name_len = isofs_name_translate(de->name, de->name_len[0], name);
 
 		/* fill in directory entry */ 
-		ret = filldir(dirent, name, name_len, ino, count);
-		if (ret) {
+		if (filldir(dirent, name, name_len, filp->f_pos, ino)) {
 			brelse(bh);
-			return entries_size;
+			return 0;
 		}
 
-		/* go to next entry */
 next:
-		count -= dirent->d_reclen;
-		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
-
-		/* update file position */
 		filp->f_pos += de_len;
 	}
 
-	return entries_size;
+	return 0;
 }

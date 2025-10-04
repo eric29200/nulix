@@ -1,22 +1,20 @@
 #include <fs/fs.h>
 #include <fs/ext2_fs.h>
+#include <stdio.h>
 
 /*
  * Read directory.
  */
-int ext2_readdir(struct file *filp, void *dirp, size_t count)
+int ext2_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
 	struct super_block *sb = filp->f_dentry->d_inode->i_sb;
 	struct inode *inode = filp->f_dentry->d_inode;
 	struct buffer_head *bh = NULL;
 	struct ext2_dir_entry *de;
-	struct dirent64 *dirent;
-	int entries_size = 0, ret;
 	uint32_t offset, block;
 
 	/* get start offset */
 	offset = filp->f_pos & (sb->s_blocksize - 1);
-	dirent = (struct dirent64 *) dirp;
 
 	/* read block by block */
 	while (filp->f_pos < inode->i_size) {
@@ -34,32 +32,21 @@ int ext2_readdir(struct file *filp, void *dirp, size_t count)
 			de = (struct ext2_dir_entry *) (bh->b_data + offset);
 			if (de->d_rec_len <= 0) {
 				brelse(bh);
-				return entries_size;
+				return 0;
 			}
 
 			/* skip null entry */
-			if (de->d_inode == 0) {
-				offset += de->d_rec_len;
-				filp->f_pos += de->d_rec_len;
-				continue;
-			}
+			if (de->d_inode == 0)
+				goto next;
 
 			/* fill in directory entry */
-			ret = filldir(dirent, de->d_name, de->d_name_len, de->d_inode, count);
-			if (ret) {
+			if (filldir(dirent, de->d_name, de->d_name_len, filp->f_pos, de->d_inode)) {
 				brelse(bh);
-				return entries_size;
+				return 0;
 			}
 
-			/* update offset */
+next:
 			offset += de->d_rec_len;
-
-			/* go to next entry */
-			count -= dirent->d_reclen;
-			entries_size += dirent->d_reclen;
-			dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
-
-			/* update file position */
 			filp->f_pos += de->d_rec_len;
 		}
 
@@ -68,5 +55,5 @@ int ext2_readdir(struct file *filp, void *dirp, size_t count)
 		brelse(bh);
 	}
 
-	return entries_size;
+	return 0;
 }

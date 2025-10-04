@@ -447,10 +447,8 @@ struct inode_operations proc_base_iops = {
 /*
  * Read directory.
  */
-static int proc_base_readdir(struct file *filp, void *dirp, size_t count)
+static int proc_base_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
-	struct dirent64 *dirent;
-	int n, ret;
 	pid_t pid;
 	size_t i;
 
@@ -458,19 +456,11 @@ static int proc_base_readdir(struct file *filp, void *dirp, size_t count)
 	pid = filp->f_dentry->d_inode->i_ino >> 16;
 
 	/* read root dir entries */
-	for (i = filp->f_pos, n = 0, dirent = (struct dirent64 *) dirp; i < NR_BASE_DIRENTRY; i++, filp->f_pos++) {
-		/* fill in directory entry */ 
-		ret = filldir(dirent, base_dir[i].name, base_dir[i].name_len, (pid << 16) + base_dir[i].ino, count);
-		if (ret)
-			return n;
+	for (i = filp->f_pos; i < NR_BASE_DIRENTRY; i++, filp->f_pos++)
+		if (filldir(dirent, base_dir[i].name, base_dir[i].name_len, filp->f_pos, (pid << 16) + base_dir[i].ino))
+			return 0;
 
-		/* go to next dir entry */
-		count -= dirent->d_reclen;
-		n += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
-	}
-
-	return n;
+	return 0;
 }
 
 /*

@@ -7,50 +7,35 @@
 /*
  * Read directory.
  */
-static int proc_fd_readdir(struct file *filp, void *dirp, size_t count)
+static int proc_fd_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
-	struct dirent64 *dirent = (struct dirent64 *) dirp;
-	struct task *task;
 	size_t name_len, i;
-	int fd, n = 0, ret;
+	struct task *task;
 	char fd_s[16];
 	pid_t pid;
+	int fd;
 
 	/* get pid */
 	pid = filp->f_dentry->d_inode->i_ino >> 16;
 
 	/* add "." entry */
 	if (filp->f_pos == 0) {
-		/* fill in directory entry */ 
-		ret = filldir(dirent, ".", 1, filp->f_dentry->d_inode->i_ino, count);
-		if (ret)
-			return n;
-
-		/* go to next entry */
-		count -= dirent->d_reclen;
-		n += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
+		if (filldir(dirent, ".", 1, filp->f_pos, filp->f_dentry->d_inode->i_ino))
+			return 0;
 		filp->f_pos++;
 	}
 
 	/* add ".." entry */
 	if (filp->f_pos == 1) {
-		/* fill in directory entry */ 
-		ret = filldir(dirent, "..", 2, (filp->f_dentry->d_inode->i_ino & 0xFFFF0000) + PROC_PID_INO, count);
-		if (ret)
-			return n;
-
-		/* go to next entry */
-		count -= dirent->d_reclen;
-		n += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
+		if (filldir(dirent, "..", 2, filp->f_pos, (filp->f_dentry->d_inode->i_ino & 0xFFFF0000) + PROC_PID_INO))
+			return 0;
 		filp->f_pos++;
 	}
 
 	/* get task */
 	task = get_task(pid);
 	if (!task)
-		return n;
+		return 0;
 
 	/* add all files descriptors */
 	for (fd = 0, i = 2; fd < NR_OPEN; fd++) {
@@ -62,23 +47,16 @@ static int proc_fd_readdir(struct file *filp, void *dirp, size_t count)
 		if (filp->f_pos > i++)
 			continue;
 
-
 		/* fill in directory entry */ 
 		name_len = sprintf(fd_s, "%d", fd);
-		ret = filldir(dirent, fd_s, name_len, (pid << 16) + (PROC_PID_FD_INO << 8) + fd, count);
-		if (ret)
-			return n;
-
-		/* go to next dir entry */
-		count -= dirent->d_reclen;
-		n += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
+		if (filldir(dirent, fd_s, name_len, filp->f_pos, (pid << 16) + (PROC_PID_FD_INO << 8) + fd))
+			return 0;
 
 		/* update file position */
 		filp->f_pos++;
 	}
 
-	return n;
+	return 0;
 }
 
 /*

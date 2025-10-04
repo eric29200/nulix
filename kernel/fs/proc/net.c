@@ -18,26 +18,16 @@ static struct proc_dir_entry net_dir[] = {
 /*
  * Read net dir.
  */
-static int proc_net_readdir(struct file *filp, void *dirp, size_t count)
+static int proc_net_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
-	struct dirent64 *dirent = (struct dirent64 *) dirp;
-	int ret, n;
 	size_t i;
 
 	/* read net dir entries */
-	for (i = filp->f_pos, n = 0; i < NR_NET_DIRENTRY; i++, filp->f_pos++) {
-		/* fill in directory entry */ 
-		ret = filldir(dirent, net_dir[i].name, net_dir[i].name_len, net_dir[i].ino, count);
-		if (ret)
-			return n;
+	for (i = filp->f_pos; i < NR_NET_DIRENTRY; i++, filp->f_pos++)
+		if (filldir(dirent, net_dir[i].name, net_dir[i].name_len, filp->f_pos, net_dir[i].ino))
+			return 0;
 
-		/* go to next dir entry */
-		count -= dirent->d_reclen;
-		n += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((void *) dirent + dirent->d_reclen);
-	}
-
-	return n;
+	return 0;
 }
 
 /*

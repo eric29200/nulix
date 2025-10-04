@@ -4,34 +4,26 @@
 /*
  * Read directory.
  */
-int tmpfs_readdir(struct file *filp, void *dirp, size_t count)
+int tmpfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
 	struct tmpfs_dir_entry de;
-	struct dirent64 *dirent;
-	int entries_size, ret;
 
 	/* walk through all entries */
-	for (entries_size = 0, dirent = (struct dirent64 *) dirp;;) {
+	for (;;) {
 		/* read next drectory entry */
 		if (tmpfs_file_read(filp, (char *) &de, sizeof(struct tmpfs_dir_entry), &filp->f_pos) != sizeof(struct tmpfs_dir_entry))
-			return entries_size;
+			return 0;
 
 		/* skip null entries */
 		if (!de.d_inode)
 			continue;
 
 		/* fill in directory entry */
-		ret = filldir(dirent, de.d_name, strlen(de.d_name), de.d_inode, count);
-		if (ret) {
+		if (filldir(dirent, de.d_name, strlen(de.d_name), filp->f_pos, de.d_inode)) {
 			filp->f_pos -= sizeof(struct tmpfs_dir_entry);
-			return entries_size;
+			return 0;
 		}
-
-		/* go to next entry */
-		count -= dirent->d_reclen;
-		entries_size += dirent->d_reclen;
-		dirent = (struct dirent64 *) ((char *) dirent + dirent->d_reclen);
 	}
 
-	return entries_size;
+	return 0;
 }
