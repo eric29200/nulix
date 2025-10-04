@@ -5,26 +5,10 @@
 #include <stderr.h>
 
 /*
- * Read net dir.
- */
-static int proc_net_readdir(struct file *filp, void *dirent, filldir_t filldir)
-{
-	return proc_readdir(filp, dirent, filldir, &proc_root_net);
-}
-
-/*
- * Lookup net dir.
- */
-static struct dentry *proc_net_lookup(struct inode *dir, struct dentry *dentry)
-{
-	return proc_lookup(dir, dentry, &proc_root_net);
-}
-
-/*
  * Net file operations.
  */
 struct file_operations proc_net_fops = {
-	.readdir		= proc_net_readdir,
+	.readdir		= proc_readdir,
 };
 
 /*
@@ -32,7 +16,7 @@ struct file_operations proc_net_fops = {
  */
 struct inode_operations proc_net_iops = {
 	.fops			= &proc_net_fops,
-	.lookup			= proc_net_lookup,
+	.lookup			= proc_lookup,
 };
 
 /*

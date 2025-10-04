@@ -10,15 +10,13 @@
  */
 static struct dentry *proc_self_follow_link(struct inode *inode, struct dentry *base)
 {
-	struct inode *res_inode;
+	char tmp[30];
 
-	/* get target inode */
-	res_inode = iget(inode->i_sb, (current_task->pid << 16) + PROC_PID_INO);
-	if (res_inode)
-		return d_alloc_root(res_inode);
+	/* unused inode */
+	UNUSED(inode);
 
-	dput(base);
-	return ERR_PTR(-ENOENT);
+	sprintf(tmp, "%d", current_task->pid);
+	return lookup_dentry(AT_FDCWD, base, tmp, 1);
 }
 
 /*

@@ -24,6 +24,8 @@
 #define PROC_NET_INO		16
 #define PROC_NET_DEV_INO	17
 
+#define PROC_PID_FD_DIR		0x8000
+
 /*
  * Procfs dir entry.
  */
@@ -31,6 +33,12 @@ struct proc_dir_entry {
 	ino_t				ino;
 	size_t				name_len;
 	char *				name;
+	mode_t				mode;
+	size_t				nlink;
+	uid_t				uid;
+	gid_t				gid;
+	size_t				size;
+	struct inode_operations *	ops;
 	struct proc_dir_entry *		next;
 	struct proc_dir_entry *		parent;
 	struct proc_dir_entry *		subdir;
@@ -42,8 +50,9 @@ void proc_root_init();
 void proc_base_init();
 void proc_net_init();
 int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de);
-int proc_readdir(struct file *filp, void *dirent, filldir_t filldir, struct proc_dir_entry *de);
-struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry, struct proc_dir_entry *de);
+struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de);
+int proc_readdir(struct file *filp, void *dirent, filldir_t filldir);
+struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry);
 
 /* inode operations */
 int proc_read_inode(struct inode *inode);
@@ -53,6 +62,7 @@ void proc_statfs(struct super_block *sb, struct statfs64 *buf);
 
 /* directories entries */
 extern struct proc_dir_entry proc_root;
+extern struct proc_dir_entry proc_pid;
 extern struct proc_dir_entry proc_root_net;
 
 /* inode operations */

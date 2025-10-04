@@ -10,26 +10,33 @@
 /*
  * Base entries.
  */
-static struct proc_dir_entry proc_pid = {
-	PROC_PID_INO, 5, "<pid>", NULL, &proc_root, NULL
+struct proc_dir_entry proc_pid = {
+	PROC_PID_INO, 5, "<pid>", S_IFDIR | S_IRUGO | S_IXUGO, 2, 0, 0, 0,
+	&proc_base_dir_iops, NULL, &proc_root, NULL
 };
 static struct proc_dir_entry proc_pid_stat = {
-	PROC_PID_STAT_INO, 4, "stat", NULL, NULL, NULL
+	PROC_PID_STAT_INO, 4, "stat", S_IFREG | S_IRUGO, 1, 0, 0, 0,
+	&proc_base_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_status = {
-	PROC_PID_STATUS_INO, 6, "status", NULL, NULL, NULL
+	PROC_PID_STATUS_INO, 6, "status", S_IFREG | S_IRUGO, 1, 0, 0, 0,
+	&proc_base_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_statm = {
-	PROC_PID_STATM_INO, 5, "statm", NULL, NULL, NULL
+	PROC_PID_STATM_INO, 5, "statm", S_IFREG | S_IRUGO, 1, 0, 0, 0,
+	&proc_base_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_cmdline = {
-	PROC_PID_CMDLINE_INO, 7, "cmdline", NULL, NULL, NULL
+	PROC_PID_CMDLINE_INO, 7, "cmdline", S_IFREG | S_IRUGO, 1, 0, 0, 0,
+	&proc_base_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_environ = {
-	PROC_PID_ENVIRON_INO, 7, "environ", NULL, NULL, NULL
+	PROC_PID_ENVIRON_INO, 7, "environ", S_IFREG | S_IRUGO, 1, 0, 0, 0,
+	&proc_base_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_fd = {
-	PROC_PID_FD_INO, 2, "fd", NULL, NULL, NULL
+	PROC_PID_FD_INO, 2, "fd", S_IFDIR | S_IRUSR | S_IXUSR, 2, 0, 0, 0,
+	&proc_fd_iops, NULL, NULL, NULL
 };
 
 /*
@@ -454,26 +461,10 @@ struct inode_operations proc_base_iops = {
 };
 
 /*
- * Read base directory.
- */
-static int proc_base_readdir(struct file *filp, void *dirent, filldir_t filldir)
-{
-	return proc_readdir(filp, dirent, filldir, &proc_pid);
-}
-
-/*
- * Lookup base directory.
- */
-static struct dentry *proc_base_lookup(struct inode *dir, struct dentry *dentry)
-{
-	return proc_lookup(dir, dentry, &proc_pid);
-}
-
-/*
  * Process file operations.
  */
 struct file_operations proc_base_dir_fops = {
-	.readdir		= proc_base_readdir,
+	.readdir		= proc_readdir,
 };
 
 /*
@@ -481,7 +472,7 @@ struct file_operations proc_base_dir_fops = {
  */
 struct inode_operations proc_base_dir_iops = {
 	.fops			= &proc_base_dir_fops,
-	.lookup			= proc_base_lookup,
+	.lookup			= proc_lookup,
 };
 
 /*

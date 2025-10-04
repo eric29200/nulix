@@ -13,38 +13,48 @@
  * Root entries.
  */
 struct proc_dir_entry proc_root = {
-	PROC_ROOT_INO, 5, "/proc", NULL, &proc_root, NULL
+	PROC_ROOT_INO, 5, "/proc", S_IFDIR | S_IRUGO | S_IXUGO, 2, 0, 0, 0,
+	&proc_root_iops, NULL, &proc_root, NULL
 };
 static struct proc_dir_entry proc_root_uptime = {
-	PROC_UPTIME_INO, 6, "uptime", NULL, NULL, NULL
+	PROC_UPTIME_INO, 6, "uptime", S_IFREG | S_IRUSR, 1, 0, 0, 0,
+	&proc_array_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_filesystems = {
-	PROC_FILESYSTEMS_INO, 11, "filesystems", NULL, NULL, NULL
+	PROC_FILESYSTEMS_INO, 11, "filesystems", S_IFREG | S_IRUSR, 1, 0, 0, 0,
+	&proc_array_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_mounts = {
-	PROC_MOUNTS_INO, 6, "mounts", NULL, NULL, NULL
+	PROC_MOUNTS_INO, 6, "mounts", S_IFREG | S_IRUSR, 1, 0, 0, 0,
+	&proc_array_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_stat = {
-	PROC_KSTAT_INO, 4, "stat", NULL, NULL, NULL
+	PROC_KSTAT_INO, 4, "stat", S_IFREG | S_IRUSR, 1, 0, 0, 0,
+	&proc_array_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_self = {
-	PROC_SELF_INO, 4, "self", NULL, NULL, NULL
+	PROC_SELF_INO, 4, "self", S_IFLNK | S_IRUGO | S_IWUGO | S_IXUGO, 1, 0, 0, 64,
+	&proc_self_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_meminfo = {
-	PROC_MEMINFO_INO, 7, "meminfo", NULL, NULL, NULL
+	PROC_MEMINFO_INO, 7, "meminfo", S_IFREG | S_IRUSR, 1, 0, 0, 0,
+	&proc_array_iops, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_loadavg = {
-	PROC_LOADAVG_INO, 7, "loadavg", NULL, NULL, NULL
+	PROC_LOADAVG_INO, 7, "loadavg", S_IFREG | S_IRUSR, 1, 0, 0, 0,
+	&proc_array_iops, NULL, NULL, NULL
 };
 struct proc_dir_entry proc_root_net = {
-	PROC_NET_INO, 3, "net", NULL, NULL, NULL
+	PROC_NET_INO, 3, "net", S_IFDIR | S_IRUGO | S_IXUGO, 2, 0, 0, 0,
+	&proc_net_iops, NULL, NULL, NULL
 };
 
 /*
  * Net entries.
  */
 static struct proc_dir_entry proc_net_dev = {
-	PROC_NET_DEV_INO, 3, "dev", NULL, NULL, NULL
+	PROC_NET_DEV_INO, 3, "dev", S_IFREG | S_IRUGO, 1, 0, 0, 0,
+	&proc_net_dev_iops, NULL, NULL, NULL
 };
 
 /*
@@ -58,6 +68,10 @@ int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de)
 	/* add entry to parent */
 	de->next = dir->subdir;
 	dir->subdir = de;
+
+	/* fix nlinks */
+	if (S_ISDIR(de->mode))
+		dir->nlink++;
 
 	return 0;
 }
@@ -82,11 +96,15 @@ void proc_root_init()
 /*
  * Generic procfs read directory.
  */
-int proc_readdir(struct file *filp, void *dirent, filldir_t filldir, struct proc_dir_entry *de)
+int proc_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
+	struct proc_dir_entry *de;
 	ino_t ino = inode->i_ino;
 	size_t i = filp->f_pos;
+
+	/* get proc entry */
+	de = (struct proc_dir_entry *) inode->u.generic_i;
 
 	/* "." entry */
 	if (i == 0) {
@@ -131,11 +149,15 @@ int proc_readdir(struct file *filp, void *dirent, filldir_t filldir, struct proc
 /*
  * Generic procfs read directory.
  */
-struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry, struct proc_dir_entry *de)
+struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry)
 {
 	struct inode *inode = NULL;
+	struct proc_dir_entry *de;
 	int ret = -ENOENT;
 	ino_t ino;
+
+	/* get proc entry */
+	de = (struct proc_dir_entry *) dir->u.generic_i;
 
 	/* find matching entry */
 	if (de) {
@@ -143,7 +165,7 @@ struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry, struct proc
 			if (proc_match(dentry->d_name.name, dentry->d_name.len, de)) {
 				ino = de->ino | (dir->i_ino & ~(0xFFFF));
 				ret = -EINVAL;
-				inode = iget(dir->i_sb, ino);
+				inode = proc_get_inode(dir->i_sb, ino, de);
 				break;
 			}
 		}
@@ -202,7 +224,7 @@ static int proc_root_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 	/* read global entries */
 	if (nr < FIRST_PROCESS_ENTRY) {
-		ret = proc_readdir(filp, dirent, filldir, &proc_root);
+		ret = proc_readdir(filp, dirent, filldir);
 		if (ret <= 0)
 			return ret;
 		filp->f_pos = nr = FIRST_PROCESS_ENTRY;
@@ -243,7 +265,7 @@ static struct dentry *proc_root_lookup(struct inode *dir, struct dentry *dentry)
 	ino_t ino;
 
 	/* find matching entry */
-	if (!proc_lookup(dir, dentry, &proc_root))
+	if (!proc_lookup(dir, dentry))
 		return NULL;
 
 	/* else try to find matching process */
@@ -254,7 +276,7 @@ static struct dentry *proc_root_lookup(struct inode *dir, struct dentry *dentry)
 
 	/* get inode */
 	ino = (task->pid << 16) + PROC_PID_INO;
-	inode = iget(dir->i_sb, ino);
+	inode = proc_get_inode(dir->i_sb, ino, &proc_pid);
 	if (!inode)
 		return ERR_PTR(-EACCES);
 

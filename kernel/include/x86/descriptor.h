@@ -97,9 +97,9 @@ static inline int LDT_zero(struct user_desc *info)
  */
 static inline void fill_ldt(struct desc_struct *desc, struct user_desc *info)
 {
-	desc->limit0		= info->limit & 0x0ffff;
-	desc->base0		= (info->base_addr & 0x0000ffff);
-	desc->base1		= (info->base_addr & 0x00ff0000) >> 16;
+	desc->limit0		= info->limit & 0x0FFFF;
+	desc->base0		= (info->base_addr & 0x0000FFFF);
+	desc->base1		= (info->base_addr & 0x00FF0000) >> 16;
 	desc->type		= (info->read_exec_only ^ 1) << 1;
 	desc->type	       |= info->contents << 2;
 	desc->type	       |= 1;

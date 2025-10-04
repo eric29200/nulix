@@ -53,7 +53,7 @@
 #define PT_PHDR		6
 #define PT_NUM		7
 #define PT_LOPROC	0x70000000
-#define PT_HIPROC	0x7fffffff
+#define PT_HIPROC	0x7FFFFFFF
 
 #define PF_R		0x4
 #define PF_W		0x2

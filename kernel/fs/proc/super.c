@@ -26,6 +26,8 @@ static struct super_operations proc_sops = {
  */
 static struct super_block *proc_read_super(struct super_block *sb, void *data, int silent)
 {
+	struct inode *root_inode;
+
 	/* unused data */
 	UNUSED(data);
 
@@ -34,7 +36,12 @@ static struct super_block *proc_read_super(struct super_block *sb, void *data, i
 	sb->s_op = &proc_sops;
 
 	/* get root inode */
-	sb->s_root = d_alloc_root(iget(sb, PROC_ROOT_INO));
+	root_inode = proc_get_inode(sb, PROC_ROOT_INO, &proc_root);
+	if (!root_inode)
+		goto err_root_inode;
+
+	/* allocate root */
+	sb->s_root = d_alloc_root(root_inode);
 	if (!sb->s_root)
 		goto err_root_inode;
 
@@ -42,6 +49,7 @@ static struct super_block *proc_read_super(struct super_block *sb, void *data, i
 err_root_inode:
 	if (!silent)
 		printf("[Proc-fs] Can't get root inode\n");
+	iput(root_inode);
 	sb->s_dev = 0;
 	return NULL;
 }

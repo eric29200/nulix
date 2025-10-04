@@ -1,132 +1,107 @@
 #include <fs/proc_fs.h>
 #include <proc/sched.h>
 #include <stderr.h>
+#include <stdio.h>
 #include <fcntl.h>
+
+/*
+ * Get a procfs inode.
+ */
+struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de)
+{
+	struct list_head *pos;
+	struct inode *inode;
+	struct task *task;
+
+	/* get inode */
+	inode = iget(sb, ino);
+	if (!inode)
+		return NULL;
+
+	/* set proc dir entry */
+	inode->u.generic_i = (void *) de;
+
+	/* set inode */
+	if (de) {
+		if (de->mode) {
+			inode->i_mode = de->mode;
+			inode->i_uid = de->uid;
+			inode->i_gid = de->gid;
+		}
+		if (de->size)
+			inode->i_size = de->size;
+		if (de->ops)
+			inode->i_op = de->ops;
+		if (de->nlink)
+			inode->i_nlinks = de->nlink;
+	}
+
+	/* fixup the root inode's nlink value */
+	if (inode->i_ino == PROC_ROOT_INO) {
+		list_for_each(pos, &tasks_list) {
+			task = list_entry(pos, struct task, list);
+			if (task && task->pid)
+				inode->i_nlinks++;
+		}
+	}
+
+	return inode;
+}
 
 /*
  * Read an inode.
  */
-int proc_read_inode(struct inode *inode)
+int proc_read_inode(struct inode * inode)
 {
+	struct file *filp;
 	struct task *task;
 	ino_t ino;
 	pid_t pid;
-	int fd;
 
 	/* set inode */
+	inode->i_mtime = inode->i_atime = inode->i_ctime = CURRENT_TIME;
+	inode->i_blocks = 0;
 	inode->i_op = NULL;
 	inode->i_mode = 0;
 	inode->i_uid = 0;
 	inode->i_gid = 0;
 	inode->i_nlinks = 1;
 	inode->i_size = 0;
-	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
-
-	/* get inode number */
 	ino = inode->i_ino;
+
+	/* get pid */
 	pid = ino >> 16;
-
-	/* root directory */
-	if (!pid) {
-		switch (ino) {
-			case PROC_UPTIME_INO:
-				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_array_iops;
-				break;
-			case PROC_FILESYSTEMS_INO:
-				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_array_iops;
-				break;
-			case PROC_MOUNTS_INO:
-				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_array_iops;
-				break;
-			case PROC_SELF_INO:
-				inode->i_mode = S_IFLNK | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-				inode->i_op = &proc_self_iops;
-				break;
-			case PROC_KSTAT_INO:
-				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_array_iops;
-				break;
-			case PROC_MEMINFO_INO:
-				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_array_iops;
-				break;
-			case PROC_LOADAVG_INO:
-				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_array_iops;
-				break;
-			case PROC_NET_INO:
-				inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-				inode->i_nlinks = 2;
-				inode->i_op = &proc_net_iops;
-				break;
-			case PROC_NET_DEV_INO:
-				inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-				inode->i_op = &proc_net_dev_iops;
-				break;
-			default:
-				inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-				inode->i_nlinks = 2;
-				inode->i_op = &proc_root_iops;
-				break;
-		}
-
+	if (!pid)
 		return 0;
-	}
 
-	/* processes directories */
+	/* get task */
+	task = find_task(pid);
+	if (!task)
+		return 0;
+
+	/* pid folder : change uid/gid */
 	ino &= 0x0000FFFF;
-	switch (ino) {
-		case PROC_PID_INO:
-			inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-			inode->i_nlinks = 2;
-			inode->i_op = &proc_base_dir_iops;
-			return 0;
-		case PROC_PID_STAT_INO:
-			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-			inode->i_op = &proc_base_iops;
-			return 0;
-		case PROC_PID_STATUS_INO:
-			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-			inode->i_op = &proc_base_iops;
-			return 0;
-		case PROC_PID_STATM_INO:
-			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-			inode->i_op = &proc_base_iops;
-			return 0;
-		case PROC_PID_CMDLINE_INO:
-			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-			inode->i_op = &proc_base_iops;
-			return 0;
-		case PROC_PID_ENVIRON_INO:
-			inode->i_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
-			inode->i_op = &proc_base_iops;
-			return 0;
-		case PROC_PID_FD_INO:
-			inode->i_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-			inode->i_nlinks = 2;
-			inode->i_op = &proc_fd_iops;
-			return 0;
+	if (ino == PROC_PID_INO) {
+		inode->i_uid = task->euid;
+		inode->i_gid = task->egid;
 	}
 
-	/* processes sub directories */
-	switch (ino >> 8) {
-		case PROC_PID_FD_INO:
-			/* get task */
-			task = find_task(pid);
-			if (task) {
-				/* get file descriptor */
-				fd = ino & 0xFF;
-				if (fd >= 0 && fd < NR_OPEN && task->files->filp[fd]) {
-					inode->i_mode = S_IFLNK | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
-					inode->i_op = &proc_fd_link_iops;
-					return 0;
-				}
-			}
-
+	/* pid/fd folder */
+	if (ino & PROC_PID_FD_DIR) {
+		/* get file */
+		ino &= 0x7FFF;
+		if (ino >= NR_OPEN || !task->files->filp[ino])
 			return 0;
+		filp = task->files->filp[ino];
+
+		/* set inode */
+		inode->i_op = &proc_fd_link_iops;
+		inode->i_size = 64;
+		inode->i_mode = S_IFLNK;
+		if (filp->f_mode & 1)
+			inode->i_mode |= S_IRUSR | S_IXUSR;
+		if (filp->f_mode & 2)
+			inode->i_mode |= S_IWUSR | S_IXUSR;
 	}
 
 	return 0;
