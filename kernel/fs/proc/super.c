@@ -70,5 +70,15 @@ static struct file_system_type proc_fs = {
  */
 int init_proc_fs()
 {
-	return register_filesystem(&proc_fs);
+	int ret;
+
+	/* register filesystem */
+	ret = register_filesystem(&proc_fs);
+	if (ret)
+		return ret;
+
+	/* init entries */
+	proc_root_init();
+
+	return 0;
 }

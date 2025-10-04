@@ -28,19 +28,32 @@
  * Procfs dir entry.
  */
 struct proc_dir_entry {
-	ino_t	ino;
-	size_t	name_len;
-	char *	name;
+	ino_t				ino;
+	size_t				name_len;
+	char *				name;
+	struct proc_dir_entry *		next;
+	struct proc_dir_entry *		parent;
+	struct proc_dir_entry *		subdir;
 };
 
-/* super operations */
+/* procfs operations */
 int init_proc_fs();
+void proc_root_init();
+void proc_base_init();
+void proc_net_init();
+int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de);
+int proc_readdir(struct file *filp, void *dirent, filldir_t filldir, struct proc_dir_entry *de);
+struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry, struct proc_dir_entry *de);
 
 /* inode operations */
 int proc_read_inode(struct inode *inode);
 int proc_write_inode(struct inode *inode);
 int proc_put_inode(struct inode *inode);
 void proc_statfs(struct super_block *sb, struct statfs64 *buf);
+
+/* directories entries */
+extern struct proc_dir_entry proc_root;
+extern struct proc_dir_entry proc_root_net;
 
 /* inode operations */
 extern struct inode_operations proc_root_iops;

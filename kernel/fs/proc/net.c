@@ -4,30 +4,12 @@
 #include <stdio.h>
 #include <stderr.h>
 
-#define NR_NET_DIRENTRY		(sizeof(net_dir) / sizeof(net_dir[0]))
-
-/*
- * Net directory.
- */
-static struct proc_dir_entry net_dir[] = {
-	{ PROC_NET_INO,		1, 	"." },
-	{ PROC_ROOT_INO,	2,	".." },
-	{ PROC_NET_DEV_INO,	3,	"dev" },
-};
-
 /*
  * Read net dir.
  */
 static int proc_net_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
-	size_t i;
-
-	/* read net dir entries */
-	for (i = filp->f_pos; i < NR_NET_DIRENTRY; i++, filp->f_pos++)
-		if (filldir(dirent, net_dir[i].name, net_dir[i].name_len, filp->f_pos, net_dir[i].ino))
-			return 0;
-
-	return 0;
+	return proc_readdir(filp, dirent, filldir, &proc_root_net);
 }
 
 /*
@@ -35,27 +17,7 @@ static int proc_net_readdir(struct file *filp, void *dirent, filldir_t filldir)
  */
 static struct dentry *proc_net_lookup(struct inode *dir, struct dentry *dentry)
 {
-	struct inode *inode = NULL;
-	ino_t ino;
-	size_t i;
-
-	/* find matching entry */
-	for (i = 0; i < NR_NET_DIRENTRY; i++) {
-		if (proc_match(dentry->d_name.name, dentry->d_name.len, &net_dir[i])) {
-			ino = net_dir[i].ino;
-			goto found;
-		}
-	}
-
-	return ERR_PTR(-ENOENT);
-found:
-	/* get inode */
-	inode = iget(dir->i_sb, ino);
-	if (!inode)
-		return ERR_PTR(-EACCES);
-
-	d_add(dentry, inode);
-	return NULL;
+	return proc_lookup(dir, dentry, &proc_root_net);
 }
 
 /*

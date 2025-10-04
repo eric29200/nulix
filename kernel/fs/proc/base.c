@@ -7,20 +7,29 @@
 #include <stdio.h>
 #include <dev.h>
 
-#define NR_BASE_DIRENTRY		(sizeof(base_dir) / sizeof(base_dir[0]))
-
 /*
- * Base process directory.
+ * Base entries.
  */
-static struct proc_dir_entry base_dir[] = {
-	{ PROC_PID_INO,		1,	"." },
-	{ PROC_ROOT_INO,	2,	".." },
-	{ PROC_PID_STAT_INO,	4,	"stat" },
-	{ PROC_PID_STATUS_INO,	6,	"status" },
-	{ PROC_PID_STATM_INO,	5,	"statm" },
-	{ PROC_PID_CMDLINE_INO,	7,	"cmdline" },
-	{ PROC_PID_ENVIRON_INO,	7,	"environ" },
-	{ PROC_PID_FD_INO,	2,	"fd" },
+static struct proc_dir_entry proc_pid = {
+	PROC_PID_INO, 5, "<pid>", NULL, &proc_root, NULL
+};
+static struct proc_dir_entry proc_pid_stat = {
+	PROC_PID_STAT_INO, 4, "stat", NULL, NULL, NULL
+};
+static struct proc_dir_entry proc_pid_status = {
+	PROC_PID_STATUS_INO, 6, "status", NULL, NULL, NULL
+};
+static struct proc_dir_entry proc_pid_statm = {
+	PROC_PID_STATM_INO, 5, "statm", NULL, NULL, NULL
+};
+static struct proc_dir_entry proc_pid_cmdline = {
+	PROC_PID_CMDLINE_INO, 7, "cmdline", NULL, NULL, NULL
+};
+static struct proc_dir_entry proc_pid_environ = {
+	PROC_PID_ENVIRON_INO, 7, "environ", NULL, NULL, NULL
+};
+static struct proc_dir_entry proc_pid_fd = {
+	PROC_PID_FD_INO, 2, "fd", NULL, NULL, NULL
 };
 
 /*
@@ -445,59 +454,19 @@ struct inode_operations proc_base_iops = {
 };
 
 /*
- * Read directory.
+ * Read base directory.
  */
 static int proc_base_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
-	pid_t pid;
-	size_t i;
-
-	/* get pid */
-	pid = filp->f_dentry->d_inode->i_ino >> 16;
-
-	/* read root dir entries */
-	for (i = filp->f_pos; i < NR_BASE_DIRENTRY; i++, filp->f_pos++)
-		if (filldir(dirent, base_dir[i].name, base_dir[i].name_len, filp->f_pos, (pid << 16) + base_dir[i].ino))
-			return 0;
-
-	return 0;
+	return proc_readdir(filp, dirent, filldir, &proc_pid);
 }
 
 /*
- * Lookup for a file.
+ * Lookup base directory.
  */
 static struct dentry *proc_base_lookup(struct inode *dir, struct dentry *dentry)
 {
-	struct inode *inode = NULL;
-	struct proc_dir_entry *de;
-	ino_t ino;
-	size_t i;
-
-	/* find matching entry */
-	for (i = 0, de = NULL; i < NR_BASE_DIRENTRY; i++) {
-		if (proc_match(dentry->d_name.name, dentry->d_name.len, &base_dir[i])) {
-			de = &base_dir[i];
-			break;
-		}
-	}
-
-	/* no such entry */
-	if (!de)
-		return ERR_PTR(-ENOENT);
-
-	/* create a fake inode */
-	if (de->ino == 1)
-		ino = 1;
-	else
-		ino = dir->i_ino - PROC_PID_INO + de->ino;
-
-	/* get inode */
-	inode = iget(dir->i_sb, ino);
-	if (!inode)
-		return ERR_PTR(-EACCES);
-
-	d_add(dentry, inode);
-	return NULL;
+	return proc_lookup(dir, dentry, &proc_pid);
 }
 
 /*
@@ -514,3 +483,16 @@ struct inode_operations proc_base_dir_iops = {
 	.fops			= &proc_base_dir_fops,
 	.lookup			= proc_base_lookup,
 };
+
+/*
+ * Init base entries.
+ */
+void proc_base_init()
+{
+	proc_register(&proc_pid, &proc_pid_stat);
+	proc_register(&proc_pid, &proc_pid_status);
+	proc_register(&proc_pid, &proc_pid_statm);
+	proc_register(&proc_pid, &proc_pid_cmdline);
+	proc_register(&proc_pid, &proc_pid_environ);
+	proc_register(&proc_pid, &proc_pid_fd);
+}
