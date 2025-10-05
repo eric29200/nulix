@@ -10,11 +10,10 @@
  */
 static struct dentry *proc_self_follow_link(struct dentry *dentry, struct dentry *base)
 {
-	struct inode *inode = dentry->d_inode;
 	char tmp[30];
 
-	/* unused inode */
-	UNUSED(inode);
+	/* unused dentry */
+	UNUSED(dentry);
 
 	sprintf(tmp, "%d", current_task->pid);
 	return lookup_dentry(AT_FDCWD, base, tmp, 1);
