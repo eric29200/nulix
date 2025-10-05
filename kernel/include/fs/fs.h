@@ -332,6 +332,7 @@ void shrink_dcache_memory(int priority);
 void shrink_dcache_sb(struct super_block *sb);
 int prune_dcache(int dentries_count, int inodes_count);
 void init_dcache();
+char *d_path(struct dentry *dentry, char *buf, int len, int *error);
 
 /* file operations */
 struct file *fget(int fd);

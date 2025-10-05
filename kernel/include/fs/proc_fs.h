@@ -78,7 +78,7 @@ extern struct inode_operations proc_base_dir_iops;
 extern struct inode_operations proc_base_iops;
 extern struct inode_operations proc_self_iops;
 extern struct inode_operations proc_fd_iops;
-extern struct inode_operations proc_fd_link_iops;
+extern struct inode_operations proc_link_iops;
 extern struct inode_operations proc_net_iops;
 extern struct inode_operations proc_net_dev_iops;
 

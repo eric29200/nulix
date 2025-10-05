@@ -336,7 +336,7 @@ struct dentry *d_lookup(struct dentry *parent, struct qstr *name)
 /*
  * Resolve a dentry full path.
  */
-static char *d_path(struct dentry *dentry, char *buf, int len, int *error)
+char *d_path(struct dentry *dentry, char *buf, int len, int *error)
 {
 	struct dentry *root = current_task->fs->root, *parent;
 	char *end = buf + len;

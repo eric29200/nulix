@@ -95,7 +95,7 @@ int proc_read_inode(struct inode * inode)
 		filp = task->files->filp[ino];
 
 		/* set inode */
-		inode->i_op = &proc_fd_link_iops;
+		inode->i_op = &proc_link_iops;
 		inode->i_size = 64;
 		inode->i_mode = S_IFLNK;
 		if (filp->f_mode & 1)
