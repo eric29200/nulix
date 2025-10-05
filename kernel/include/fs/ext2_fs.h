@@ -205,8 +205,8 @@ void ext2_truncate(struct inode *inode);
 /* Ext2 symlink prototypes */
 struct dentry *ext2_fast_follow_link(struct dentry *dentry, struct dentry *base);
 struct dentry *ext2_page_follow_link(struct dentry *dentry, struct dentry *base);
-ssize_t ext2_fast_readlink(struct inode *inode, char *buf, size_t bufsize);
-ssize_t ext2_page_readlink(struct inode *inode, char *buf, size_t bufsize);
+ssize_t ext2_fast_readlink(struct dentry *dentry, char *buf, size_t bufsize);
+ssize_t ext2_page_readlink(struct dentry *dentry, char *buf, size_t bufsize);
 
 /* Ext2 name resolution prototypes */
 struct dentry *ext2_lookup(struct inode *dir, struct dentry *dentry);

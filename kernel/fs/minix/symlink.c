@@ -29,8 +29,9 @@ struct dentry *minix_follow_link(struct dentry *dentry, struct dentry *base)
 /*
  * Read value of a symbolic link.
  */
-ssize_t minix_readlink(struct inode *inode, char *buf, size_t bufsize)
+ssize_t minix_readlink(struct dentry *dentry, char *buf, size_t bufsize)
 {
+	struct inode *inode = dentry->d_inode;
 	struct super_block *sb = inode->i_sb;
 	struct buffer_head *bh;
 	size_t len;

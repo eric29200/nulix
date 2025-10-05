@@ -226,7 +226,7 @@ struct inode_operations {
 	struct dentry *(*lookup)(struct inode *, struct dentry *);
 	int (*create)(struct inode *, struct dentry *, mode_t);
 	struct dentry *(*follow_link)(struct dentry *, struct dentry *);
-	ssize_t (*readlink)(struct inode *, char *, size_t);
+	ssize_t (*readlink)(struct dentry *, char *, size_t);
 	int (*link)(struct inode *, struct inode *, struct dentry *dentry);
 	int (*unlink)(struct inode *, struct dentry *);
 	int (*symlink)(struct inode *, struct dentry *, const char *);

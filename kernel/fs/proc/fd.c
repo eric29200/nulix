@@ -142,8 +142,9 @@ static struct dentry *proc_fd_follow_link(struct dentry *dentry, struct dentry *
 /*
  * Read fd link.
  */
-static ssize_t proc_fd_readlink(struct inode *inode, char *buf, size_t bufsize)
+static ssize_t proc_fd_readlink(struct dentry *dentry, char *buf, size_t bufsize)
 {
+	struct inode *inode = dentry->d_inode;
 	struct task *task;
 	char tmp[32];
 	size_t len;

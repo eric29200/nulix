@@ -673,7 +673,7 @@ static ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bu
 		goto out;
 
 	/* read link */
-	ret = inode->i_op->readlink(inode, buf, bufsize);
+	ret = inode->i_op->readlink(dentry, buf, bufsize);
 out:
 	dput(dentry);
 	return ret;

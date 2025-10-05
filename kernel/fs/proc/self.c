@@ -22,13 +22,13 @@ static struct dentry *proc_self_follow_link(struct dentry *dentry, struct dentry
 /*
  * Read self link.
  */
-static ssize_t proc_self_readlink(struct inode *inode, char *buf, size_t bufsize)
+static ssize_t proc_self_readlink(struct dentry *dentry, char *buf, size_t bufsize)
 {
 	char tmp[32];
 	size_t len;
 
-	/* unused inode */
-	UNUSED(inode);
+	/* unused dentry */
+	UNUSED(dentry);
 
 	/* set target link */
 	len = sprintf(tmp, "%d", current_task->pid) + 1;
