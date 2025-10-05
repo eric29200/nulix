@@ -203,8 +203,8 @@ int ext2_free_block(struct inode *inode, uint32_t block);
 void ext2_truncate(struct inode *inode);
 
 /* Ext2 symlink prototypes */
-struct dentry *ext2_fast_follow_link(struct inode *inode, struct dentry *base);
-struct dentry *ext2_page_follow_link(struct inode *inode, struct dentry *base);
+struct dentry *ext2_fast_follow_link(struct dentry *dentry, struct dentry *base);
+struct dentry *ext2_page_follow_link(struct dentry *dentry, struct dentry *base);
 ssize_t ext2_fast_readlink(struct inode *inode, char *buf, size_t bufsize);
 ssize_t ext2_page_readlink(struct inode *inode, char *buf, size_t bufsize);
 

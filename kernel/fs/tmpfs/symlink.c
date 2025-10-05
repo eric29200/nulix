@@ -6,8 +6,10 @@
 /*
  * Resolve a symbolic link.
  */
-struct dentry *tmpfs_follow_link(struct inode *inode, struct dentry *base)
+struct dentry *tmpfs_follow_link(struct dentry *dentry, struct dentry *base)
 {
+	struct inode *inode = dentry->d_inode;
+	struct dentry *res;
 	struct page *page;
 	char *kaddr;
 
@@ -22,10 +24,10 @@ struct dentry *tmpfs_follow_link(struct inode *inode, struct dentry *base)
 
 	/* resolve target */
 	kaddr = kmap(page);
-	base = lookup_dentry(AT_FDCWD, base, kaddr, 1);
+	res = lookup_dentry(AT_FDCWD, base, kaddr, 1);
 	kunmap(page);
 
-	return base;
+	return res;
 }
 
 /*

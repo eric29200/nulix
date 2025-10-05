@@ -6,9 +6,11 @@
 /*
  * Resolve a symbolic link.
  */
-struct dentry *minix_follow_link(struct inode *inode, struct dentry *base)
+struct dentry *minix_follow_link(struct dentry *dentry, struct dentry *base)
 {
+	struct inode *inode = dentry->d_inode;
 	struct buffer_head *bh;
+	struct dentry *res;
 
 	/* get first link block */
 	bh = minix_bread(inode, 0, 0);
@@ -18,10 +20,10 @@ struct dentry *minix_follow_link(struct inode *inode, struct dentry *base)
 	}
 
 	/* resolve target */
-	base = lookup_dentry(AT_FDCWD, base, bh->b_data, 1);
+	res = lookup_dentry(AT_FDCWD, base, bh->b_data, 1);
 
 	brelse(bh);
-	return base;
+	return res;
 }
 
 /*

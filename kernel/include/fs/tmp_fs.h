@@ -47,7 +47,7 @@ int tmpfs_file_write(struct file *filp, const char *buf, size_t count, off_t *pp
 int tmpfs_readpage(struct inode *inode, struct page *page);
 
 /* symbolic link operations */
-struct dentry *tmpfs_follow_link(struct inode *inode, struct dentry *base);
+struct dentry *tmpfs_follow_link(struct dentry *dentry, struct dentry *base);
 ssize_t tmpfs_readlink(struct inode *inode, char *buf, size_t bufsize);
 
 #endif

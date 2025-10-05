@@ -7,8 +7,9 @@
 /*
  * Follow a link.
  */
-struct dentry *ext2_fast_follow_link(struct inode *inode, struct dentry *base)
+struct dentry *ext2_fast_follow_link(struct dentry *dentry, struct dentry *base)
 {
+	struct inode *inode = dentry->d_inode;
 	char *target;
 
 	/* get target link */
@@ -47,9 +48,11 @@ ssize_t ext2_fast_readlink(struct inode *inode, char *buf, size_t bufsize)
 /*
  * Resolve a symbolic link.
  */
-struct dentry *ext2_page_follow_link(struct inode *inode, struct dentry *base)
+struct dentry *ext2_page_follow_link(struct dentry *dentry, struct dentry *base)
 {
+	struct inode *inode = dentry->d_inode;
 	struct buffer_head *bh;
+	struct dentry *res;
 
 	/* read first link block */
 	bh = ext2_bread(inode, 0, 0);
@@ -59,10 +62,10 @@ struct dentry *ext2_page_follow_link(struct inode *inode, struct dentry *base)
 	}
 
 	/* resolve target */
-	base = lookup_dentry(AT_FDCWD, base, bh->b_data, 1);
+	res = lookup_dentry(AT_FDCWD, base, bh->b_data, 1);
 
 	brelse(bh);
-	return base;
+	return res;
 }
 
 /*

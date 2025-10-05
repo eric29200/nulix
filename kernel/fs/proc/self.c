@@ -8,8 +8,9 @@
 /*
  * Follow self link.
  */
-static struct dentry *proc_self_follow_link(struct inode *inode, struct dentry *base)
+static struct dentry *proc_self_follow_link(struct dentry *dentry, struct dentry *base)
 {
+	struct inode *inode = dentry->d_inode;
 	char tmp[30];
 
 	/* unused inode */

@@ -115,8 +115,9 @@ struct inode_operations proc_fd_iops = {
 /*
  * Follow fd link.
  */
-static struct dentry *proc_fd_follow_link(struct inode *inode, struct dentry *base)
+static struct dentry *proc_fd_follow_link(struct dentry *dentry, struct dentry *base)
 {
+	struct inode *inode = dentry->d_inode;
 	struct task *task;
 	pid_t pid;
 	int fd;

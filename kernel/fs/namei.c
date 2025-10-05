@@ -41,9 +41,9 @@ static struct dentry *do_follow_link(struct dentry *base, struct dentry *dentry)
 	struct dentry *res;
 
 	if (inode && inode->i_op && inode->i_op->follow_link) {
-		res = inode->i_op->follow_link(inode, base);
-		base = dentry;
-		dentry = res;
+		res = inode->i_op->follow_link(dentry, base);
+		dput(dentry);
+		return res;
 	}
 
 	dput(base);
