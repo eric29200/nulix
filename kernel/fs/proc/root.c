@@ -81,7 +81,10 @@ int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de)
  */
 void proc_root_init()
 {
+	/* init base */
 	proc_base_init();
+
+	/* register root entries */
 	proc_register(&proc_root, &proc_root_uptime);
 	proc_register(&proc_root, &proc_root_filesystems);
 	proc_register(&proc_root, &proc_root_mounts);
@@ -90,6 +93,8 @@ void proc_root_init()
 	proc_register(&proc_root, &proc_root_meminfo);
 	proc_register(&proc_root, &proc_root_loadavg);
 	proc_register(&proc_root, &proc_root_net);
+
+	/* register net entries */
 	proc_register(&proc_root_net, &proc_net_dev);
 }
 
@@ -116,7 +121,7 @@ int proc_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 	/* ".." entry */
 	if (i == 1) {
-		if (filldir(dirent, "..", 2, i, de->parent->ino))
+		if (filldir(dirent, "..", 2, i, de->parent->low_ino))
 			return 0;
 		i++;
 		filp->f_pos++;
@@ -137,7 +142,7 @@ int proc_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 	/* read entries */
 	do {
-		if (filldir(dirent, de->name, de->name_len, filp->f_pos, ino | de->ino))
+		if (filldir(dirent, de->name, de->name_len, filp->f_pos, ino | de->low_ino))
 			return 0;
 		filp->f_pos++;
 		de = de->next;
@@ -163,7 +168,7 @@ struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry)
 	if (de) {
 		for (de = de->subdir; de != NULL; de = de->next) {
 			if (proc_match(dentry->d_name.name, dentry->d_name.len, de)) {
-				ino = de->ino | (dir->i_ino & ~(0xFFFF));
+				ino = de->low_ino | (dir->i_ino & ~(0xFFFF));
 				ret = -EINVAL;
 				inode = proc_get_inode(dir->i_sb, ino, de);
 				break;

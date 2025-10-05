@@ -6,6 +6,7 @@
 
 #define PROC_SUPER_MAGIC	0x9FA0
 
+/* root directory */
 #define PROC_ROOT_INO		1
 #define PROC_UPTIME_INO		2
 #define PROC_FILESYSTEMS_INO	3
@@ -14,23 +15,28 @@
 #define PROC_KSTAT_INO		6
 #define PROC_MEMINFO_INO	7
 #define PROC_LOADAVG_INO	8
-#define PROC_PID_INO		9
-#define PROC_PID_STAT_INO	10
-#define PROC_PID_STATUS_INO	11
-#define PROC_PID_STATM_INO	12
-#define PROC_PID_CMDLINE_INO	13
-#define PROC_PID_ENVIRON_INO	14
-#define PROC_PID_FD_INO		15
-#define PROC_NET_INO		16
-#define PROC_NET_DEV_INO	17
+#define PROC_NET_INO		9
 
+/* /<pid> directories */
+#define PROC_PID_INO		2
+#define PROC_PID_STAT_INO	3
+#define PROC_PID_STATUS_INO	4
+#define PROC_PID_STATM_INO	5
+#define PROC_PID_CMDLINE_INO	6
+#define PROC_PID_ENVIRON_INO	7
+#define PROC_PID_FD_INO		8
+
+/* /<pid>/fd directories */
 #define PROC_PID_FD_DIR		0x8000
+
+/* /net directory */
+#define PROC_NET_DEV_INO	128
 
 /*
  * Procfs dir entry.
  */
 struct proc_dir_entry {
-	ino_t				ino;
+	ino_t				low_ino;
 	size_t				name_len;
 	char *				name;
 	mode_t				mode;
