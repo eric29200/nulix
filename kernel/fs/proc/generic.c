@@ -81,6 +81,24 @@ struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct p
 }
 
 /*
+ * Create a read entry.
+ */
+struct proc_dir_entry *create_proc_read_entry(const char *name, mode_t mode, struct proc_dir_entry *dir, read_proc_t *read_proc)
+{
+	struct proc_dir_entry *de;
+
+	/* create entry */
+	de = create_proc_entry(name, mode, dir);
+	if (!de)
+		return NULL;
+
+	/* set read proc */
+	de->read_proc = read_proc;
+	return de;
+}
+
+
+/*
  * Generic proc file read.
  */
 static int proc_file_read(struct file *filp, char *buf, size_t count, off_t *ppos)

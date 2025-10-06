@@ -18,7 +18,6 @@
 #define PROC_KSTAT_INO		6
 #define PROC_MEMINFO_INO	7
 #define PROC_LOADAVG_INO	8
-#define PROC_NET_INO		9
 
 /* /<pid> directories */
 #define PROC_PID_INO		2
@@ -32,8 +31,8 @@
 /* /<pid>/fd directories */
 #define PROC_PID_FD_DIR		0x8000
 
-/* /net directory */
-#define PROC_NET_DEV_INO	128
+/* read proc prototype */
+typedef	int (read_proc_t)(char *, char **, off_t off, size_t, int *);
 
 /*
  * Procfs dir entry.
@@ -48,7 +47,7 @@ struct proc_dir_entry {
 	gid_t				gid;
 	size_t				size;
 	struct inode_operations *	ops;
-	int				(*read_proc)(char *, char **, off_t, size_t, int *);
+	read_proc_t *			read_proc;
 	struct proc_dir_entry *		next;
 	struct proc_dir_entry *		parent;
 	struct proc_dir_entry *		subdir;
@@ -61,6 +60,7 @@ void proc_base_init();
 void proc_net_init();
 int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de);
 struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct proc_dir_entry *parent);
+struct proc_dir_entry *create_proc_read_entry(const char *name, mode_t mode, struct proc_dir_entry *dir, read_proc_t *read_proc);
 struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de);
 int proc_readdir(struct file *filp, void *dirent, filldir_t filldir);
 struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry);

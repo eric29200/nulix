@@ -2,6 +2,7 @@
 #include <fs/proc_fs.h>
 #include <stdio.h>
 #include <string.h>
+#include <stderr.h>
 #include <fcntl.h>
 
 /*
@@ -43,18 +44,16 @@ static int dev_read_proc(char *page, char **start, off_t off, size_t count, int 
 }
 
 /*
- * Net dev procfs entry.
- */
-static struct proc_dir_entry proc_net_dev = {
-	PROC_NET_DEV_INO, 3, "dev", S_IFREG | S_IRUGO, 1, 0, 0, 0,
-	&proc_file_iops, dev_read_proc, NULL, NULL, NULL
-};
-
-/*
  * Init network devices.
  */
 int init_net_dev()
 {
+	struct proc_dir_entry *de;
+
 	/* register net/dev procfs entry */
-	return proc_net_register(&proc_net_dev);
+	de = create_proc_read_entry("dev", 0, proc_net, dev_read_proc);
+	if (!de)
+		return -EINVAL;
+
+	return 0;
 }
