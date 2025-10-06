@@ -6,6 +6,9 @@
 
 #define PROC_SUPER_MAGIC	0x9FA0
 
+#define PROC_DYNAMIC_FIRST	4096
+#define PROC_NDYNAMIC		4096
+
 /* root directory */
 #define PROC_ROOT_INO		1
 #define PROC_UPTIME_INO		2
@@ -45,6 +48,7 @@ struct proc_dir_entry {
 	gid_t				gid;
 	size_t				size;
 	struct inode_operations *	ops;
+	int				(*get_info)(char *);
 	struct proc_dir_entry *		next;
 	struct proc_dir_entry *		parent;
 	struct proc_dir_entry *		subdir;
@@ -56,6 +60,7 @@ void proc_root_init();
 void proc_base_init();
 void proc_net_init();
 int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de);
+struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct proc_dir_entry *parent);
 struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de);
 int proc_readdir(struct file *filp, void *dirent, filldir_t filldir);
 struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry);
@@ -69,7 +74,7 @@ void proc_statfs(struct super_block *sb, struct statfs64 *buf);
 /* directories entries */
 extern struct proc_dir_entry proc_root;
 extern struct proc_dir_entry proc_pid;
-extern struct proc_dir_entry proc_root_net;
+extern struct proc_dir_entry *proc_net;
 
 /* inode operations */
 extern struct inode_operations proc_root_iops;
@@ -79,8 +84,9 @@ extern struct inode_operations proc_base_iops;
 extern struct inode_operations proc_self_iops;
 extern struct inode_operations proc_fd_iops;
 extern struct inode_operations proc_link_iops;
-extern struct inode_operations proc_net_iops;
-extern struct inode_operations proc_net_dev_iops;
+extern struct inode_operations proc_dir_iops;
+extern struct inode_operations proc_dyna_dir_iops;
+extern struct inode_operations proc_file_iops;
 
 /*
  * Test if a name matches a directory entry.
@@ -88,6 +94,14 @@ extern struct inode_operations proc_net_dev_iops;
 static inline int proc_match(const char *name, size_t len, struct proc_dir_entry *de)
 {
 	return len == de->name_len && strncmp(name, de->name, len) == 0;
+}
+
+/*
+ * Register a net entry.
+ */
+static inline int proc_net_register(struct proc_dir_entry *de)
+{
+	return proc_register(proc_net, de);
 }
 
 #endif

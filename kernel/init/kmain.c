@@ -17,6 +17,7 @@
 #include <drivers/block/loop.h>
 #include <drivers/video/fb.h>
 #include <drivers/net/rtl8139.h>
+#include <net/inet/net.h>
 #include <proc/sched.h>
 #include <proc/binfmt.h>
 #include <sys/syscall.h>
@@ -162,18 +163,23 @@ static void kinit()
 
 	/* register filesystems */
 	printf("[Kernel] Register file systems\n");
-	if (init_minix_fs() != 0)
+	if (init_minix_fs())
 		panic("Cannot register minix file system");
-	if (init_ext2_fs() != 0)
+	if (init_ext2_fs())
 		panic("Cannot register ext2 file system");
-	if (init_proc_fs() != 0)
+	if (init_proc_fs())
 		panic("Cannot register proc file system");
-	if (init_tmp_fs() != 0)
+	if (init_tmp_fs())
 		panic("Cannot register tmp file system");
-	if (init_iso_fs() != 0)
+	if (init_iso_fs())
 		panic("Cannot register iso file system");
-	if (init_devpts_fs() != 0)
+	if (init_devpts_fs())
 		panic("Cannot register devpts file system");
+
+	/* init network devices */
+	printf("[Kernel] Network devices Init\n");
+	if (init_net_dev())
+		panic("Cannot init network devices");
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");

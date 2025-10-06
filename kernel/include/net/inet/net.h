@@ -39,6 +39,7 @@ extern struct net_device net_devices[NR_NET_DEVICES];
 extern int nr_net_devices;
 
 /* network prototypes */
+int init_net_dev();;
 struct net_device *register_net_device(uint32_t io_base, uint16_t type);
 struct net_device *net_device_find(const char *name);
 int net_device_ioctl(int cmd, struct ifreq *ifr);

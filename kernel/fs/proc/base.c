@@ -12,31 +12,31 @@
  */
 struct proc_dir_entry proc_pid = {
 	PROC_PID_INO, 5, "<pid>", S_IFDIR | S_IRUGO | S_IXUGO, 2, 0, 0, 0,
-	&proc_base_dir_iops, NULL, &proc_root, NULL
+	&proc_base_dir_iops, NULL, NULL, &proc_root, NULL
 };
 static struct proc_dir_entry proc_pid_stat = {
 	PROC_PID_STAT_INO, 4, "stat", S_IFREG | S_IRUGO, 1, 0, 0, 0,
-	&proc_base_iops, NULL, NULL, NULL
+	&proc_base_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_status = {
 	PROC_PID_STATUS_INO, 6, "status", S_IFREG | S_IRUGO, 1, 0, 0, 0,
-	&proc_base_iops, NULL, NULL, NULL
+	&proc_base_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_statm = {
 	PROC_PID_STATM_INO, 5, "statm", S_IFREG | S_IRUGO, 1, 0, 0, 0,
-	&proc_base_iops, NULL, NULL, NULL
+	&proc_base_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_cmdline = {
 	PROC_PID_CMDLINE_INO, 7, "cmdline", S_IFREG | S_IRUGO, 1, 0, 0, 0,
-	&proc_base_iops, NULL, NULL, NULL
+	&proc_base_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_environ = {
 	PROC_PID_ENVIRON_INO, 7, "environ", S_IFREG | S_IRUGO, 1, 0, 0, 0,
-	&proc_base_iops, NULL, NULL, NULL
+	&proc_base_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_pid_fd = {
 	PROC_PID_FD_INO, 2, "fd", S_IFDIR | S_IRUSR | S_IXUSR, 2, 0, 0, 0,
-	&proc_fd_iops, NULL, NULL, NULL
+	&proc_fd_iops, NULL, NULL, NULL, NULL
 };
 
 /*

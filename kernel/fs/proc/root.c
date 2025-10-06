@@ -14,54 +14,73 @@
  */
 struct proc_dir_entry proc_root = {
 	PROC_ROOT_INO, 5, "/proc", S_IFDIR | S_IRUGO | S_IXUGO, 2, 0, 0, 0,
-	&proc_root_iops, NULL, &proc_root, NULL
+	&proc_root_iops, NULL, &proc_root, NULL, NULL
 };
 static struct proc_dir_entry proc_root_uptime = {
 	PROC_UPTIME_INO, 6, "uptime", S_IFREG | S_IRUSR, 1, 0, 0, 0,
-	&proc_array_iops, NULL, NULL, NULL
+	&proc_array_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_filesystems = {
 	PROC_FILESYSTEMS_INO, 11, "filesystems", S_IFREG | S_IRUSR, 1, 0, 0, 0,
-	&proc_array_iops, NULL, NULL, NULL
+	&proc_array_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_mounts = {
 	PROC_MOUNTS_INO, 6, "mounts", S_IFREG | S_IRUSR, 1, 0, 0, 0,
-	&proc_array_iops, NULL, NULL, NULL
+	&proc_array_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_stat = {
 	PROC_KSTAT_INO, 4, "stat", S_IFREG | S_IRUSR, 1, 0, 0, 0,
-	&proc_array_iops, NULL, NULL, NULL
+	&proc_array_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_self = {
 	PROC_SELF_INO, 4, "self", S_IFLNK | S_IRUGO | S_IWUGO | S_IXUGO, 1, 0, 0, 64,
-	&proc_self_iops, NULL, NULL, NULL
+	&proc_self_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_meminfo = {
 	PROC_MEMINFO_INO, 7, "meminfo", S_IFREG | S_IRUSR, 1, 0, 0, 0,
-	&proc_array_iops, NULL, NULL, NULL
+	&proc_array_iops, NULL, NULL, NULL, NULL
 };
 static struct proc_dir_entry proc_root_loadavg = {
 	PROC_LOADAVG_INO, 7, "loadavg", S_IFREG | S_IRUSR, 1, 0, 0, 0,
-	&proc_array_iops, NULL, NULL, NULL
+	&proc_array_iops, NULL, NULL, NULL, NULL
 };
-struct proc_dir_entry proc_root_net = {
-	PROC_NET_INO, 3, "net", S_IFDIR | S_IRUGO | S_IXUGO, 2, 0, 0, 0,
-	&proc_net_iops, NULL, NULL, NULL
-};
+struct proc_dir_entry *proc_net;
+
+/* dynamic inodes bitmap */
+static uint8_t proc_alloc_map[PROC_NDYNAMIC / 8] = { 0 };
 
 /*
- * Net entries.
+ * Create a dynamic inode number.
  */
-static struct proc_dir_entry proc_net_dev = {
-	PROC_NET_DEV_INO, 3, "dev", S_IFREG | S_IRUGO, 1, 0, 0, 0,
-	&proc_net_dev_iops, NULL, NULL, NULL
-};
+static int make_inode_number()
+{
+	int i;
+
+	/* find first free inode */
+	i = find_first_zero_bit((uint32_t *) proc_alloc_map, PROC_NDYNAMIC);
+	if (i < 0 || i >= PROC_NDYNAMIC) 
+		return -1;
+
+	/* set inode */
+	set_bit((uint32_t *) proc_alloc_map, i);
+	return PROC_DYNAMIC_FIRST + i;
+}
 
 /*
  * Register a proc filesystem entry.
  */
 int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de)
 {
+	int i;
+
+	/* create an inode number if needed */
+	if (de->low_ino == 0) {
+		i = make_inode_number();
+		if (i < 0)
+			return -EAGAIN;
+		de->low_ino = i;
+	}
+
 	/* set parent */
 	de->parent = dir;
 
@@ -69,9 +88,16 @@ int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de)
 	de->next = dir->subdir;
 	dir->subdir = de;
 
-	/* fix nlinks */
-	if (S_ISDIR(de->mode))
+	/* set default operations */
+	if (S_ISDIR(de->mode)) {
+		if (!de->ops)
+			de->ops = &proc_dir_iops;
 		dir->nlink++;
+	} else if (S_ISLNK(de->mode) && !de->ops) {
+		de->ops = &proc_link_iops;
+	} else if (!de->ops) {
+			de->ops = &proc_file_iops;
+	}
 
 	return 0;
 }
@@ -92,10 +118,7 @@ void proc_root_init()
 	proc_register(&proc_root, &proc_root_self);
 	proc_register(&proc_root, &proc_root_meminfo);
 	proc_register(&proc_root, &proc_root_loadavg);
-	proc_register(&proc_root, &proc_root_net);
-
-	/* register net entries */
-	proc_register(&proc_root_net, &proc_net_dev);
+	proc_net = create_proc_entry("net", S_IFDIR, NULL);
 }
 
 /*
@@ -292,7 +315,7 @@ static struct dentry *proc_root_lookup(struct inode *dir, struct dentry *dentry)
 /*
  * Root file operations.
  */
-struct file_operations proc_root_fops = {
+static struct file_operations proc_root_fops = {
 	.readdir		= proc_root_readdir,
 };
 
@@ -304,3 +327,25 @@ struct inode_operations proc_root_iops = {
 	.lookup			= proc_root_lookup,
 };
 
+/*
+ * Directory file operations.
+ */
+static struct file_operations proc_dir_fops = {
+	.readdir		= proc_readdir,
+};
+
+/*
+ * Directory inode operations.
+ */
+struct inode_operations proc_dir_iops = {
+	.fops			= &proc_dir_fops,
+	.lookup			= proc_lookup,
+};
+
+/*
+ * Dynamic directory inode operations.
+ */
+struct inode_operations proc_dyna_dir_iops = {
+	.fops			= &proc_dir_fops,
+	.lookup			= proc_lookup,
+};
