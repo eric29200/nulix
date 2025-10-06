@@ -86,7 +86,7 @@ void proc_root_init()
 	proc_base_init();
 	proc_misc_init();
 	proc_register(&proc_root, &proc_root_self);
-	proc_net = create_proc_entry("net", S_IFDIR, NULL);
+	proc_net = proc_mkdir("net", 0);
 }
 
 /*

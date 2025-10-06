@@ -56,6 +56,8 @@ void proc_net_init();
 int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de);
 struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct proc_dir_entry *parent);
 struct proc_dir_entry *create_proc_read_entry(const char *name, mode_t mode, struct proc_dir_entry *dir, read_proc_t *read_proc);
+struct proc_dir_entry *proc_mkdir_mode(const char *name, mode_t mode, struct proc_dir_entry *dir);
+struct proc_dir_entry *proc_mkdir(const char *name, struct proc_dir_entry *dir);
 struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de);
 int proc_readdir(struct file *filp, void *dirent, filldir_t filldir);
 struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry);
@@ -73,8 +75,6 @@ extern struct proc_dir_entry *proc_net;
 
 /* inode operations */
 extern struct inode_operations proc_root_iops;
-extern struct inode_operations proc_base_dir_iops;
-extern struct inode_operations proc_base_iops;
 extern struct inode_operations proc_self_iops;
 extern struct inode_operations proc_fd_iops;
 extern struct inode_operations proc_link_iops;
@@ -87,14 +87,6 @@ extern struct inode_operations proc_file_iops;
 static inline int proc_match(const char *name, size_t len, struct proc_dir_entry *de)
 {
 	return len == de->name_len && strncmp(name, de->name, len) == 0;
-}
-
-/*
- * Register a net entry.
- */
-static inline int proc_net_register(struct proc_dir_entry *de)
-{
-	return proc_register(proc_net, de);
 }
 
 #endif

@@ -97,6 +97,30 @@ struct proc_dir_entry *create_proc_read_entry(const char *name, mode_t mode, str
 	return de;
 }
 
+/*
+ * Create a directory entry.
+ */
+struct proc_dir_entry *proc_mkdir_mode(const char *name, mode_t mode, struct proc_dir_entry *dir)
+{
+	struct proc_dir_entry *de;
+
+	/* create entry */
+	de = create_proc_entry(name, S_IFDIR | mode, dir);
+	if (!de)
+		return NULL;
+
+	/* set inode operations */
+	de->ops = &proc_dir_iops;
+	return de;
+}
+
+/*
+ * Create a directory entry.
+ */
+struct proc_dir_entry *proc_mkdir(const char *name, struct proc_dir_entry *dir)
+{
+	return proc_mkdir_mode(name, S_IRUGO | S_IXUGO, dir);
+}
 
 /*
  * Generic proc file read.
