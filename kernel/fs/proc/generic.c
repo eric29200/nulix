@@ -62,7 +62,7 @@ struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct p
 	if (S_ISDIR(mode)) {
 		if ((mode & S_IALLUGO) == 0)
 			mode |= S_IRUGO | S_IXUGO;
-		de->ops = &proc_dyna_dir_iops;
+		de->ops = &proc_dir_iops;
 		de->nlink = 2;
 		de->mode = mode;
 	} else {

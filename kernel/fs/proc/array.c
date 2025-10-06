@@ -12,19 +12,48 @@
 #define LOAD_FRAC(x)		LOAD_INT(((x) & (FIXED_1 - 1)) * 100)
 
 /*
+ * Calculate metrics.
+ */
+static int proc_calc_metrics(char *page, char **start, off_t off, size_t count, int *eof, size_t len)
+{
+	/* end of file ? */
+	if (off + count >= len)
+		*eof = 1;
+
+	/* set start buffer */
+	*start = page + off;
+
+	/* check offset */
+	if (off >= len)
+		return 0;
+
+	/* compute length */
+	len -= off;
+	if (len > count)
+		len = count;
+
+	return len;
+}
+
+/*
  * Read file systems.
  */
-static int proc_filesystems_read(char *page)
+static int filesystems_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
 {
-	return get_filesystem_list(page, PAGE_SIZE);
+	size_t len;
+
+	/* get filesystems list */
+	len = get_filesystem_list(page, PAGE_SIZE);
+	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
 /*
  * Read load average.
  */
-static int proc_loadavg_read(char *page)
+static int loadavg_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
 {
 	int nrun = 0, a, b, c;
+	size_t len;
 
 	/* compute load average */
 	CALC_LOAD(avenrun[0], EXP_1, nrun);
@@ -35,25 +64,28 @@ static int proc_loadavg_read(char *page)
 	c = avenrun[0] + (FIXED_1 / 200);
 
 	/* print load average in buffer */
-	return sprintf(page, "%d.%d %d.%d %d.%d %d/%d %d\n",
+	len = sprintf(page, "%d.%d %d.%d %d.%d %d/%d %d\n",
 		      LOAD_INT(a), LOAD_FRAC(a),
 		      LOAD_INT(b), LOAD_FRAC(b),
 		      LOAD_INT(c), LOAD_FRAC(c),
 		      nrun, nr_tasks, last_pid);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
 /*
  * Read meminfo.
  */
-static int proc_meminfo_read(char *page)
+static int meminfo_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
 {
 	struct sysinfo info;
+	size_t len;
 
 	/* get informations */
 	sys_sysinfo(&info);
 
 	/* print meminfo */
-	return sprintf(page,
+	len = sprintf(page,
 		"MemTotal:  %d kB\n"
 		"MemFree:   %d kB\n"
 		"MemShared: %d kB\n"
@@ -64,111 +96,68 @@ static int proc_meminfo_read(char *page)
 		info.sharedram >> 10,
 		info.bufferram >> 10,
 		page_cache_size << (PAGE_SHIFT - 10));
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
 /*
  * Read file mounts.
  */
-static int proc_mounts_read(char *page)
+static int mounts_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
 {
-	return get_vfs_mount_list(page, PAGE_SIZE);
+	size_t len;
+
+	/* get mounts list */
+	len = get_vfs_mount_list(page, PAGE_SIZE);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
 /*
  * Read stat.
  */
-static int proc_kstat_read(char *page)
+static int kstat_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
 {
+	size_t len;
+
 	/* print boot time */
-	return sprintf(page,	"cpu 0 0 0 0 0 0 0 0 0 0\n"
+	len = sprintf(page,	"cpu 0 0 0 0 0 0 0 0 0 0\n"
 				"intr %u\n"
 				"ctxt %u\n"
 				"btime %llu\n",
 		      kstat.interrupts,
 		      kstat.context_switch,
 		      startup_time);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
 /*
  * Read uptime.
  */
-static int proc_uptime_read(char *page)
+static int uptime_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
 {
 	struct task *init_task;
+	size_t len;
 
 	/* get init task */
 	init_task = list_first_entry(&tasks_list, struct task, list);
 
 	/* print uptime in temporary buffer */
-	return sprintf(page, "%lld.%lld %lld.%lld\n", jiffies / HZ, jiffies % HZ, init_task->utime / HZ, init_task->utime % HZ);
+	len = sprintf(page, "%lld.%lld %lld.%lld\n", jiffies / HZ, jiffies % HZ, init_task->utime / HZ, init_task->utime % HZ);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
 }
 
 /*
- * Read array.
+ * Init misc proc entries.
  */
-static int proc_array_read(struct file *filp, char *buf, size_t count, off_t *ppos)
+void proc_misc_init()
 {
-	char *page;
-	size_t len;
-
-	/* get a free page */
-	page = get_free_page();
-	if (!page)
-		return -ENOMEM;
-
-	/* get informations */
-	switch (filp->f_dentry->d_inode->i_ino) {
-		case PROC_UPTIME_INO:
-			len = proc_uptime_read(page);
-			break;
-		case PROC_FILESYSTEMS_INO:
-			len = proc_filesystems_read(page);
-			break;
-		case PROC_MOUNTS_INO:
-			len = proc_mounts_read(page);
-			break;
-		case PROC_KSTAT_INO:
-			len = proc_kstat_read(page);
-			break;
-		case PROC_MEMINFO_INO:
-			len = proc_meminfo_read(page);
-			break;
-		case PROC_LOADAVG_INO:
-			len = proc_loadavg_read(page);
-			break;
-		default:
-			count = -ENOMEM;
-			goto out;
-	}
-
-	/* file position after end */
-	if (*ppos >= len) {
-		count = 0;
-		goto out;
-	}
-
-	/* update count */
-	if (*ppos + count > len)
-		count = len - *ppos;
-
-	/* copy content to user buffer and update file position */
-	memcpy(buf, page + *ppos, count);
-	*ppos += count;
-out:
-	free_page(page);
-	return count;
+	create_proc_read_entry("uptime", 0, NULL, uptime_read_proc);
+	create_proc_read_entry("filesystems", 0, NULL, filesystems_read_proc);
+	create_proc_read_entry("mounts", 0, NULL, mounts_read_proc);
+	create_proc_read_entry("stat", 0, NULL, kstat_read_proc);
+	create_proc_read_entry("meminfo", 0, NULL, meminfo_read_proc);
+	create_proc_read_entry("loadavg", 0, NULL, loadavg_read_proc);
 }
-
-/*
- * Array file operations.
- */
-struct file_operations proc_array_fops = {
-	.read		= proc_array_read,
-};
-
-/*
- * Array inode operations.
- */
-struct inode_operations proc_array_iops = {
-	.fops		= &proc_array_fops,
-};

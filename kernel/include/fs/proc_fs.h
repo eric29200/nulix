@@ -11,13 +11,7 @@
 
 /* root directory */
 #define PROC_ROOT_INO		1
-#define PROC_UPTIME_INO		2
-#define PROC_FILESYSTEMS_INO	3
-#define PROC_MOUNTS_INO		4
-#define PROC_SELF_INO		5
-#define PROC_KSTAT_INO		6
-#define PROC_MEMINFO_INO	7
-#define PROC_LOADAVG_INO	8
+#define PROC_SELF_INO		2
 
 /* /<pid> directories */
 #define PROC_PID_INO		2
@@ -56,6 +50,7 @@ struct proc_dir_entry {
 /* procfs operations */
 int init_proc_fs();
 void proc_root_init();
+void proc_misc_init();
 void proc_base_init();
 void proc_net_init();
 int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de);
@@ -78,14 +73,12 @@ extern struct proc_dir_entry *proc_net;
 
 /* inode operations */
 extern struct inode_operations proc_root_iops;
-extern struct inode_operations proc_array_iops;
 extern struct inode_operations proc_base_dir_iops;
 extern struct inode_operations proc_base_iops;
 extern struct inode_operations proc_self_iops;
 extern struct inode_operations proc_fd_iops;
 extern struct inode_operations proc_link_iops;
 extern struct inode_operations proc_dir_iops;
-extern struct inode_operations proc_dyna_dir_iops;
 extern struct inode_operations proc_file_iops;
 
 /*
