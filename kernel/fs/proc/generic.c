@@ -86,13 +86,13 @@ struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct p
 static int proc_file_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
+	int eof = 0, len, n, ret = 0;
 	struct proc_dir_entry *de;
-	size_t len;
-	char *page;
+	char *page, *start;
 
 	/* get proc entry */
 	de = (struct proc_dir_entry *) inode->u.generic_i;
-	if (!de->get_info)
+	if (!de->read_proc)
 		return 0;
 
 	/* allocate a page */
@@ -100,25 +100,38 @@ static int proc_file_read(struct file *filp, char *buf, size_t count, off_t *ppo
 	if (!page)
 		return -ENOMEM;
 
-	/* get informations */
-	len = de->get_info(page);
+	while (count > 0 && !eof) {
+		/* limit to page size */
+		len = count >= PAGE_SIZE ? PAGE_SIZE : count;
 
-	/* file position after end */
-	if (*ppos >= len) {
-		count = 0;
-		goto out;
+		/* read proc entry */
+		n = de->read_proc(page, &start, *ppos, len, &eof);
+
+		/* end of file */
+		if (n == 0)
+			break;
+
+		/* handle error */
+		if (n < 0) {
+			if (ret == 0)
+				ret = n;
+			break;
+		}
+
+		/* copy data */
+		memcpy(buf, start, n);
+
+		/* update position */
+		*ppos += n;
+		count -= n;
+		buf += n;
+		ret += n;
 	}
 
-	/* update count */
-	if (*ppos + count > len)
-		count = len - *ppos;
-
-	/* copy content to user buffer and update file position */
-	memcpy(buf, page + *ppos, count);
-	*ppos += count;
-out:
+	/* free page */
 	free_page(page);
-	return count;
+
+	return ret;
 }
 
 /*

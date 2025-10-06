@@ -48,7 +48,7 @@ struct proc_dir_entry {
 	gid_t				gid;
 	size_t				size;
 	struct inode_operations *	ops;
-	int				(*get_info)(char *);
+	int				(*read_proc)(char *, char **, off_t, size_t, int *);
 	struct proc_dir_entry *		next;
 	struct proc_dir_entry *		parent;
 	struct proc_dir_entry *		subdir;
