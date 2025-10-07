@@ -90,8 +90,6 @@ extern struct proc_dir_entry *proc_net;
 
 /* inode operations */
 extern struct inode_operations proc_root_iops;
-extern struct inode_operations proc_self_iops;
-extern struct inode_operations proc_fd_iops;
 extern struct inode_operations proc_link_iops;
 extern struct inode_operations proc_dir_iops;
 extern struct inode_operations proc_file_iops;
