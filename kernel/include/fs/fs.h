@@ -10,6 +10,7 @@
 #include <fs/pipe_i.h>
 #include <fs/tmp_i.h>
 #include <fs/iso_i.h>
+#include <fs/proc_i.h>
 #include <x86/bitops.h>
 #include <net/socket.h>
 #include <proc/wait.h>
@@ -141,6 +142,7 @@ struct inode {
 		struct pipe_inode_info		pipe_i;
 		struct tmpfs_inode_info		tmp_i;
 		struct isofs_inode_info		iso_i;
+		struct proc_inode_info		proc_i;
 		struct socket			socket_i;
 		void *				generic_i;
 	} u;

@@ -19,7 +19,6 @@ struct proc_dir_entry *proc_net;
  */
 void proc_root_init()
 {
-	proc_base_init();
 	proc_misc_init();
 	proc_net = proc_mkdir("net", 0);
 }

@@ -1,6 +1,7 @@
 #include <fs/proc_fs.h>
 #include <fcntl.h>
 #include <stderr.h>
+#include <stdio.h>
 
 /* dynamic inodes bitmap */
 static uint8_t proc_alloc_map[PROC_NDYNAMIC / 8] = { 0 };
@@ -81,10 +82,8 @@ int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de)
 		if (!de->ops)
 			de->ops = &proc_dir_iops;
 		dir->nlink++;
-	} else if (S_ISLNK(de->mode) && !de->ops) {
-		de->ops = &proc_link_iops;
 	} else if (!de->ops) {
-			de->ops = &proc_file_iops;
+		de->ops = &proc_file_iops;
 	}
 
 	return 0;

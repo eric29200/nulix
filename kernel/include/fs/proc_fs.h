@@ -13,16 +13,6 @@
 
 /* root directory */
 #define PROC_ROOT_INO		1
-#define PROC_SELF_INO		2
-
-/* /<pid> directories */
-#define PROC_PID_INO		2
-#define PROC_PID_STAT_INO	3
-#define PROC_PID_STATUS_INO	4
-#define PROC_PID_STATM_INO	5
-#define PROC_PID_CMDLINE_INO	6
-#define PROC_PID_ENVIRON_INO	7
-#define PROC_PID_FD_INO		8
 
 /* /<pid>/fd directories */
 #define PROC_PID_FD_DIR		0x8000
@@ -53,7 +43,6 @@ struct proc_dir_entry {
 int init_proc_fs();
 void proc_root_init();
 void proc_misc_init();
-void proc_base_init();
 void proc_net_init();
 
 /* procfs generic operations */
@@ -76,6 +65,9 @@ int proc_statm_read(struct task *task, char *page);
 int proc_cmdline_read(struct task *task, char *page);
 int proc_environ_read(struct task *task, char *page);
 
+/* procfs link operations */
+int do_proc_readlink(struct dentry *dentry, char *buf, size_t bufsize);
+
 /* inode operations */
 struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de);
 int proc_read_inode(struct inode *inode);
@@ -85,12 +77,10 @@ void proc_statfs(struct super_block *sb, struct statfs64 *buf);
 
 /* directories entries */
 extern struct proc_dir_entry proc_root;
-extern struct proc_dir_entry proc_pid;
 extern struct proc_dir_entry *proc_net;
 
 /* inode operations */
 extern struct inode_operations proc_root_iops;
-extern struct inode_operations proc_link_iops;
 extern struct inode_operations proc_dir_iops;
 extern struct inode_operations proc_file_iops;
 
