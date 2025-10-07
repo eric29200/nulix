@@ -69,6 +69,13 @@ struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry);
 int proc_pid_readdir(struct file *filp, void *dirent, filldir_t filldir);
 struct dentry *proc_pid_lookup(struct inode *dir, struct dentry *dentry);
 
+/* procfs array operations */
+int proc_stat_read(struct task *task, char *page);
+int proc_status_read(struct task *task, char *page);
+int proc_statm_read(struct task *task, char *page);
+int proc_cmdline_read(struct task *task, char *page);
+int proc_environ_read(struct task *task, char *page);
+
 /* inode operations */
 struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de);
 int proc_read_inode(struct inode *inode);
