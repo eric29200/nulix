@@ -22,62 +22,6 @@ static struct proc_dir_entry proc_root_self = {
 };
 struct proc_dir_entry *proc_net;
 
-/* dynamic inodes bitmap */
-static uint8_t proc_alloc_map[PROC_NDYNAMIC / 8] = { 0 };
-
-/*
- * Create a dynamic inode number.
- */
-static int make_inode_number()
-{
-	int i;
-
-	/* find first free inode */
-	i = find_first_zero_bit((uint32_t *) proc_alloc_map, PROC_NDYNAMIC);
-	if (i < 0 || i >= PROC_NDYNAMIC) 
-		return -1;
-
-	/* set inode */
-	set_bit((uint32_t *) proc_alloc_map, i);
-	return PROC_DYNAMIC_FIRST + i;
-}
-
-/*
- * Register a proc filesystem entry.
- */
-int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de)
-{
-	int i;
-
-	/* create an inode number if needed */
-	if (de->low_ino == 0) {
-		i = make_inode_number();
-		if (i < 0)
-			return -EAGAIN;
-		de->low_ino = i;
-	}
-
-	/* set parent */
-	de->parent = dir;
-
-	/* add entry to parent */
-	de->next = dir->subdir;
-	dir->subdir = de;
-
-	/* set default operations */
-	if (S_ISDIR(de->mode)) {
-		if (!de->ops)
-			de->ops = &proc_dir_iops;
-		dir->nlink++;
-	} else if (S_ISLNK(de->mode) && !de->ops) {
-		de->ops = &proc_link_iops;
-	} else if (!de->ops) {
-			de->ops = &proc_file_iops;
-	}
-
-	return 0;
-}
-
 /*
  * Init root entries.
  */
@@ -87,93 +31,6 @@ void proc_root_init()
 	proc_misc_init();
 	proc_register(&proc_root, &proc_root_self);
 	proc_net = proc_mkdir("net", 0);
-}
-
-/*
- * Generic procfs read directory.
- */
-int proc_readdir(struct file *filp, void *dirent, filldir_t filldir)
-{
-	struct inode *inode = filp->f_dentry->d_inode;
-	struct proc_dir_entry *de;
-	ino_t ino = inode->i_ino;
-	size_t i = filp->f_pos;
-
-	/* get proc entry */
-	de = (struct proc_dir_entry *) inode->u.generic_i;
-
-	/* "." entry */
-	if (i == 0) {
-		if (filldir(dirent, ".", 1, i, inode->i_ino))
-			return 0;
-		i++;
-		filp->f_pos++;
-	}
-
-	/* ".." entry */
-	if (i == 1) {
-		if (filldir(dirent, "..", 2, i, de->parent->low_ino))
-			return 0;
-		i++;
-		filp->f_pos++;
-	}
-
-	/* skip first entries */
-	ino &= ~0xFFFF;
-	de = de->subdir;
-	i -= 2;
-	for (;;) {
-		if (!de)
-			return 1;
-		if (!i)
-			break;
-		de = de->next;
-		i--;
-	}
-
-	/* read entries */
-	do {
-		if (filldir(dirent, de->name, de->name_len, filp->f_pos, ino | de->low_ino))
-			return 0;
-		filp->f_pos++;
-		de = de->next;
-	} while (de);
-
-	return 0;
-}
-
-/*
- * Generic procfs read directory.
- */
-struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry)
-{
-	struct inode *inode = NULL;
-	struct proc_dir_entry *de;
-	int ret = -ENOENT;
-	ino_t ino;
-
-	/* get proc entry */
-	de = (struct proc_dir_entry *) dir->u.generic_i;
-
-	/* find matching entry */
-	if (de) {
-		for (de = de->subdir; de != NULL; de = de->next) {
-			if (proc_match(dentry->d_name.name, dentry->d_name.len, de)) {
-				ino = de->low_ino | (dir->i_ino & ~(0xFFFF));
-				ret = -EINVAL;
-				inode = proc_get_inode(dir->i_sb, ino, de);
-				break;
-			}
-		}
-	}
-
-	/* found inode */
-	if (inode) {
-		d_add(dentry, inode);
-		return NULL;
-	}
-
-	return ERR_PTR(ret);
 }
 
 /*
@@ -293,19 +150,4 @@ static struct file_operations proc_root_fops = {
 struct inode_operations proc_root_iops = {
 	.fops			= &proc_root_fops,
 	.lookup			= proc_root_lookup,
-};
-
-/*
- * Directory file operations.
- */
-static struct file_operations proc_dir_fops = {
-	.readdir		= proc_readdir,
-};
-
-/*
- * Directory inode operations.
- */
-struct inode_operations proc_dir_iops = {
-	.fops			= &proc_dir_fops,
-	.lookup			= proc_lookup,
 };
