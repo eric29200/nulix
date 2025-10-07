@@ -545,7 +545,7 @@ struct dentry *proc_pid_lookup(struct inode *dir, struct dentry *dentry)
 		return ERR_PTR(-ENOENT);
 
 	/* set inode */
-	inode->i_mode = S_IFDIR|S_IRUGO|S_IXUGO;
+	inode->i_mode = S_IFDIR | S_IRUGO | S_IXUGO;
 	inode->i_op = &proc_base_iops;
 	inode->i_nlinks = 3;
 	d_add(dentry, inode);
