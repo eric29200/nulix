@@ -306,7 +306,6 @@ struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry)
 	struct inode *inode = NULL;
 	struct proc_dir_entry *de;
 	int ret = -ENOENT;
-	ino_t ino;
 
 	/* get proc entry */
 	de = (struct proc_dir_entry *) dir->u.generic_i;
@@ -315,9 +314,8 @@ struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry)
 	if (de) {
 		for (de = de->subdir; de != NULL; de = de->next) {
 			if (proc_match(dentry->d_name.name, dentry->d_name.len, de)) {
-				ino = de->low_ino | (dir->i_ino & ~(0xFFFF));
 				ret = -EINVAL;
-				inode = proc_get_inode(dir->i_sb, ino, de);
+				inode = proc_get_inode(dir->i_sb, de->low_ino, de);
 				break;
 			}
 		}
