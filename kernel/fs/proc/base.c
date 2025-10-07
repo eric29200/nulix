@@ -16,7 +16,7 @@
 #define PROC_PID_ENVIRON		7
 #define PROC_PID_FD			8
 
-#define fake_ino(pid,ino)		(((pid) << 16) | (ino))
+#define fake_ino(pid, ino)		(((pid) << 16) | (ino))
 
 /*
  * Entry in <pid> directory.
