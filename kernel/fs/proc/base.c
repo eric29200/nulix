@@ -72,6 +72,36 @@ static struct inode *proc_pid_make_inode(struct super_block *sb, struct task *ta
 }
 
 /*
+ * Always delete pid dentries.
+ */
+static int pid_delete_dentry(struct dentry *dentry)
+{
+	UNUSED(dentry);
+	return 1;
+}
+
+/*
+ * File descriptor dentry operations.
+ */
+static struct dentry_operations pid_fd_dentry_operations = {
+	.d_delete =	pid_delete_dentry,
+};
+
+/*
+ * Pid dentry operations.
+ */
+static struct dentry_operations pid_dentry_operations = {
+	.d_delete =	pid_delete_dentry,
+};
+
+/*
+ * Base dentry operations.
+ */
+static struct dentry_operations pid_base_dentry_operations = {
+	.d_delete =	pid_delete_dentry,
+};
+
+/*
  * Follow a file descriptor link.
  */
 static struct dentry *proc_fd_follow_link(struct dentry *dentry, struct dentry *base)
@@ -197,6 +227,7 @@ static struct dentry *proc_fd_lookup(struct inode *dir, struct dentry *dentry)
 	if (filp->f_mode & 2)
 		inode->i_mode |= S_IWUSR | S_IXUSR;
 
+	dentry->d_op = &pid_fd_dentry_operations;
 	d_add(dentry, inode);
 	return NULL;
 }
@@ -370,6 +401,7 @@ static struct dentry *proc_base_lookup(struct inode *dir, struct dentry *dentry)
 			return ERR_PTR(-EINVAL);
 	}
 
+	dentry->d_op = &pid_dentry_operations;
 	d_add(dentry, inode);
 	return NULL;
 }
@@ -548,6 +580,8 @@ struct dentry *proc_pid_lookup(struct inode *dir, struct dentry *dentry)
 	inode->i_mode = S_IFDIR | S_IRUGO | S_IXUGO;
 	inode->i_op = &proc_base_iops;
 	inode->i_nlinks = 3;
+
+	dentry->d_op = &pid_base_dentry_operations;
 	d_add(dentry, inode);
 	return NULL;
 }

@@ -299,6 +299,22 @@ int proc_readdir(struct file *filp, void *dirent, filldir_t filldir)
 }
 
 /*
+ * Always delete dentry.
+ */
+static int proc_delete_dentry(struct dentry *dentry)
+{
+	UNUSED(dentry);
+	return 1;
+}
+
+/*
+ * Dentry operations.
+ */
+static struct dentry_operations proc_dentry_operations = {
+	.d_delete	= proc_delete_dentry,
+};
+
+/*
  * Generic procfs read directory.
  */
 struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry)
@@ -323,6 +339,7 @@ struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry)
 
 	/* found inode */
 	if (inode) {
+		dentry->d_op = &proc_dentry_operations;
 		d_add(dentry, inode);
 		return NULL;
 	}

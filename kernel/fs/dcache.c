@@ -89,6 +89,15 @@ struct dentry *dget(struct dentry *dentry)
 }
 
 /*
+ * Drop a dentry = unhash.
+ */
+static void d_drop(struct dentry *dentry)
+{
+	list_del(&dentry->d_hash);
+	INIT_LIST_HEAD(&dentry->d_hash);
+}
+
+/*
  * Release a dentry.
  */
 void dput(struct dentry *dentry)
@@ -106,6 +115,10 @@ repeat:
 	/* still used */
 	if (dentry->d_count)
 		return;
+
+	/* specific delete */
+	if (dentry->d_op && dentry->d_op->d_delete && dentry->d_op->d_delete(dentry))
+		d_drop(dentry);
 
 	/* remove dentry from unused list */
 	if (!list_empty(&dentry->d_lru)) {
@@ -167,6 +180,7 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	dentry->d_name.name = str;
 	dentry->d_name.len = name->len;
 	dentry->d_name.hash = name->hash;
+	dentry->d_op = NULL;
 	INIT_LIST_HEAD(&dentry->d_hash);
 	INIT_LIST_HEAD(&dentry->d_alias);
 	INIT_LIST_HEAD(&dentry->d_lru);
@@ -231,15 +245,6 @@ void d_add(struct dentry *dentry, struct inode *inode)
 	struct dentry *parent = dentry->d_parent;
 	list_add(&dentry->d_hash, d_hash(parent, dentry->d_name.hash));
 	d_instantiate(dentry, inode);
-}
-
-/*
- * Drop a dentry = unhash.
- */
-static void d_drop(struct dentry *dentry)
-{
-	list_del(&dentry->d_hash);
-	INIT_LIST_HEAD(&dentry->d_hash);
 }
 
 /*

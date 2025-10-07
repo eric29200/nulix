@@ -149,6 +149,13 @@ struct inode {
 };
 
 /*
+ * Dentry operations.
+ */
+struct dentry_operations {
+	int (*d_delete)(struct dentry *);
+};
+
+/*
  * String.
  */
 struct qstr {
@@ -170,6 +177,7 @@ struct dentry {
 	struct list_head		d_alias;
 	struct list_head		d_lru;
 	struct super_block *		d_sb;
+	struct dentry_operations *	d_op;
 	struct qstr			d_name;
 	char				d_iname[DNAME_INLINE_LEN];
 };
