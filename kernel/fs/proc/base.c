@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <dev.h>
 
+#define PROC_MAXPIDS			20
+#define PROC_NUMBUF			10
+
 /*
  * Process states.
  */
@@ -474,6 +477,96 @@ static struct proc_dir_entry proc_pid_fd = {
 	PROC_PID_FD_INO, 2, "fd", S_IFDIR | S_IRUSR | S_IXUSR, 2, 0, 0, 0,
 	&proc_fd_iops, NULL, NULL, NULL, NULL
 };
+
+
+/*
+ * Get pids list.
+ */
+static int get_pid_list(int index, ino_t *pids)
+{
+	struct list_head *pos;
+	struct task *task;
+	int nr_pids = 0;
+
+	//index -= FIRST_PROCESS_ENTRY;
+
+	list_for_each(pos, &tasks_list) {
+		/* skip init task */
+		task = list_entry(pos, struct task, list);
+		if (!task || !task->pid)
+			continue;
+
+		/* skip first tasks */
+		if (--index >= 0)
+			continue;
+
+		/* add task */
+		pids[nr_pids++] = task->pid;
+		if (nr_pids >= PROC_MAXPIDS)
+			break;
+	}
+
+	return nr_pids;
+}
+
+/*
+ * Read pids entries.
+ */
+int proc_pid_readdir(struct file *filp, void *dirent, filldir_t filldir)
+{
+	size_t nr_pids, nr = filp->f_pos - FIRST_PROCESS_ENTRY, i, j;
+	ino_t pid_array[PROC_MAXPIDS];
+	char buf[PROC_NUMBUF];
+	pid_t pid;
+	ino_t ino;
+
+	/* get pids list */
+	nr_pids = get_pid_list(nr, pid_array);
+
+	/* add pids entries */
+	for (i = 0; i < nr_pids; i++) {
+		pid = pid_array[i];
+		ino = (pid << 16) + PROC_PID_INO;
+		j = PROC_NUMBUF;
+
+		do {
+			buf[--j] = '0' + (pid % 10);
+		} while (pid /= 10);
+
+		if (filldir(dirent, buf + j, PROC_NUMBUF - j, filp->f_pos, ino) < 0)
+			break;
+
+		filp->f_pos++;
+	}
+
+	return 0;
+}
+
+/*
+ * Lookup a pid entry.
+ */
+struct dentry *proc_pid_lookup(struct inode *dir, struct dentry *dentry)
+{
+	struct inode *inode = NULL;
+	struct task *task;
+	pid_t pid;
+	ino_t ino;
+
+	/* else try to find matching process */
+	pid = atoi(dentry->d_name.name);
+	task = find_task(pid);
+	if (!pid || !task)
+		return ERR_PTR(-ENOENT);
+
+	/* get inode */
+	ino = (task->pid << 16) + PROC_PID_INO;
+	inode = proc_get_inode(dir->i_sb, ino, &proc_pid);
+	if (!inode)
+		return ERR_PTR(-EACCES);
+
+	d_add(dentry, inode);
+	return NULL;
+}
 
 /*
  * Init base entries.

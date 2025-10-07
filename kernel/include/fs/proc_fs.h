@@ -6,6 +6,8 @@
 
 #define PROC_SUPER_MAGIC	0x9FA0
 
+#define FIRST_PROCESS_ENTRY	256
+
 #define PROC_DYNAMIC_FIRST	4096
 #define PROC_NDYNAMIC		4096
 
@@ -47,22 +49,28 @@ struct proc_dir_entry {
 	struct proc_dir_entry *		subdir;
 };
 
-/* procfs operations */
+/* procfs init operations */
 int init_proc_fs();
 void proc_root_init();
 void proc_misc_init();
 void proc_base_init();
 void proc_net_init();
+
+/* procfs generic operations */
 int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de);
 struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode, struct proc_dir_entry *parent);
 struct proc_dir_entry *create_proc_read_entry(const char *name, mode_t mode, struct proc_dir_entry *dir, read_proc_t *read_proc);
 struct proc_dir_entry *proc_mkdir_mode(const char *name, mode_t mode, struct proc_dir_entry *dir);
 struct proc_dir_entry *proc_mkdir(const char *name, struct proc_dir_entry *dir);
-struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de);
 int proc_readdir(struct file *filp, void *dirent, filldir_t filldir);
 struct dentry *proc_lookup(struct inode *dir, struct dentry *dentry);
 
+/* procfs pid operations */
+int proc_pid_readdir(struct file *filp, void *dirent, filldir_t filldir);
+struct dentry *proc_pid_lookup(struct inode *dir, struct dentry *dentry);
+
 /* inode operations */
+struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_entry *de);
 int proc_read_inode(struct inode *inode);
 int proc_write_inode(struct inode *inode);
 int proc_put_inode(struct inode *inode);

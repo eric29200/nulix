@@ -5,10 +5,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 
-#define FIRST_PROCESS_ENTRY		256
-#define PROC_MAXPIDS			20
-#define PROC_NUMBUF			10
-
 /*
  * Root entries.
  */
@@ -34,45 +30,11 @@ void proc_root_init()
 }
 
 /*
- * Get pids list.
- */
-static int get_pid_list(int index, ino_t *pids)
-{
-	struct list_head *pos;
-	struct task *task;
-	int nr_pids = 0;
-
-	index -= FIRST_PROCESS_ENTRY;
-
-	list_for_each(pos, &tasks_list) {
-		/* skip init task */
-		task = list_entry(pos, struct task, list);
-		if (!task || !task->pid)
-			continue;
-
-		/* skip first tasks */
-		if (--index >= 0)
-			continue;
-
-		/* add task */
-		pids[nr_pids++] = task->pid;
-		if (nr_pids >= PROC_MAXPIDS)
-			break;
-	}
-
-	return nr_pids;
-}
-
-/*
  * Root read dir.
  */
 static int proc_root_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
-	size_t nr = filp->f_pos, nr_pids, i, j;
-	ino_t pid_array[PROC_MAXPIDS];
-	char buf[PROC_NUMBUF];
-	pid_t pid;
-	ino_t ino;
+	size_t nr = filp->f_pos;
 	int ret;
 
 	/* read global entries */
@@ -83,28 +45,9 @@ static int proc_root_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		filp->f_pos = nr = FIRST_PROCESS_ENTRY;
 	}
 
-	/* get pids list */
-	nr_pids = get_pid_list(nr, pid_array);
+	/* read pid entries */
+	return proc_pid_readdir(filp, dirent, filldir);
 
-	/* add pids entries */
-	for (i = 0; i < nr_pids; i++) {
-		pid = pid_array[i];
-		ino = (pid << 16) + PROC_PID_INO;
-		j = PROC_NUMBUF;
-
-		do {
-			j--;
-			buf[j] = '0' + (pid % 10);
-			pid /= 10;
-		} while (pid);
-
-		if (filldir(dirent, buf+j, PROC_NUMBUF-j, filp->f_pos, ino) < 0)
-			break;
-
-		filp->f_pos++;
-	}
-
-	return 0;
 }
 
 /*
@@ -112,29 +55,12 @@ static int proc_root_readdir(struct file *filp, void *dirent, filldir_t filldir)
  */
 static struct dentry *proc_root_lookup(struct inode *dir, struct dentry *dentry)
 {
-	struct inode *inode = NULL;
-	struct task *task;
-	pid_t pid;
-	ino_t ino;
-
 	/* find matching entry */
 	if (!proc_lookup(dir, dentry))
 		return NULL;
 
-	/* else try to find matching process */
-	pid = atoi(dentry->d_name.name);
-	task = find_task(pid);
-	if (!pid || !task)
-		return ERR_PTR(-ENOENT);
-
-	/* get inode */
-	ino = (task->pid << 16) + PROC_PID_INO;
-	inode = proc_get_inode(dir->i_sb, ino, &proc_pid);
-	if (!inode)
-		return ERR_PTR(-EACCES);
-
-	d_add(dentry, inode);
-	return NULL;
+	/* find matching <pid> entry */
+	return proc_pid_lookup(dir, dentry);
 }
 
 /*
