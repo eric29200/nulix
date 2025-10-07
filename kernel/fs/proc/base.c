@@ -488,7 +488,8 @@ static int get_pid_list(int index, ino_t *pids)
 	struct task *task;
 	int nr_pids = 0;
 
-	//index -= FIRST_PROCESS_ENTRY;
+	/* self entry */
+	index--;
 
 	list_for_each(pos, &tasks_list) {
 		/* skip init task */
@@ -519,6 +520,14 @@ int proc_pid_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	char buf[PROC_NUMBUF];
 	pid_t pid;
 	ino_t ino;
+
+	/* add "self" entry */
+	if (!nr) {
+		if (filldir(dirent, "self", 4, filp->f_pos, PROC_SELF_INO) < 0)
+			return 0;
+		filp->f_pos++;
+		nr++;
+	}
 
 	/* get pids list */
 	nr_pids = get_pid_list(nr, pid_array);
@@ -551,6 +560,17 @@ struct dentry *proc_pid_lookup(struct inode *dir, struct dentry *dentry)
 	struct task *task;
 	pid_t pid;
 	ino_t ino;
+
+	/* "self" entry */
+	if (dentry->d_name.len == 4 && memcmp(dentry->d_name.name, "self", 4) == 0) {
+		inode = proc_get_inode(dir->i_sb, PROC_SELF_INO, NULL);
+		if (!inode)
+			return ERR_PTR(-EACCES);
+		inode->i_mode = S_IFLNK | S_IRWXUGO;
+		inode->i_op = &proc_self_iops;
+		d_add(dentry, inode);
+		return NULL;
+	}
 
 	/* else try to find matching process */
 	pid = atoi(dentry->d_name.name);

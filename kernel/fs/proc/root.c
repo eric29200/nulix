@@ -12,10 +12,6 @@ struct proc_dir_entry proc_root = {
 	PROC_ROOT_INO, 5, "/proc", S_IFDIR | S_IRUGO | S_IXUGO, 2, 0, 0, 0,
 	&proc_root_iops, NULL, &proc_root, NULL, NULL
 };
-static struct proc_dir_entry proc_root_self = {
-	PROC_SELF_INO, 4, "self", S_IFLNK | S_IRUGO | S_IWUGO | S_IXUGO, 1, 0, 0, 64,
-	&proc_self_iops, NULL, NULL, NULL, NULL
-};
 struct proc_dir_entry *proc_net;
 
 /*
@@ -25,7 +21,6 @@ void proc_root_init()
 {
 	proc_base_init();
 	proc_misc_init();
-	proc_register(&proc_root, &proc_root_self);
 	proc_net = proc_mkdir("net", 0);
 }
 
