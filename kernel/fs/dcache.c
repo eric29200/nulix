@@ -128,6 +128,7 @@ repeat:
 
 	/* free dentry and release parent */
 	if (list_empty(&dentry->d_hash)) {
+		list_del(&dentry->d_child);
 		dentry_iput(dentry);
 		parent = dentry->d_parent;
 		d_free(dentry);
@@ -184,11 +185,15 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	INIT_LIST_HEAD(&dentry->d_hash);
 	INIT_LIST_HEAD(&dentry->d_alias);
 	INIT_LIST_HEAD(&dentry->d_lru);
+	INIT_LIST_HEAD(&dentry->d_subdirs);
 
 	/* set parent */
 	if (parent) {
 		dentry->d_parent = dget(parent);
 		dentry->d_sb = parent->d_sb;
+		list_add(&dentry->d_child, &parent->d_subdirs);
+	} else {
+		INIT_LIST_HEAD(&dentry->d_child);
 	}
 
 	return dentry;
@@ -303,11 +308,18 @@ void d_move(struct dentry *dentry, struct dentry *target)
 	list_del(&target->d_hash);
 	INIT_LIST_HEAD(&target->d_hash);
 
+	list_del(&dentry->d_child);
+	list_del(&target->d_child);
+
 	/* switch the parents and the names */
 	switch_names(dentry, target);
 	do_switch(dentry->d_parent, target->d_parent);
 	do_switch(dentry->d_name.len, target->d_name.len);
 	do_switch(dentry->d_name.hash, target->d_name.hash);
+
+	/* add them back to the new parents */
+	list_add(&target->d_child, &target->d_parent->d_subdirs);
+	list_add(&dentry->d_child, &dentry->d_parent->d_subdirs);
 }
 
 /*
@@ -427,6 +439,7 @@ static int prune_one_dentry(struct dentry *dentry)
 
 	/* prune dentry */
 	list_del(&dentry->d_hash);
+	list_del(&dentry->d_child);
 	ret = dentry_iput(dentry);
 	parent = dentry->d_parent;
 	d_free(dentry);

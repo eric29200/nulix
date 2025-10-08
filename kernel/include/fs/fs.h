@@ -176,6 +176,8 @@ struct dentry {
 	struct list_head		d_hash;
 	struct list_head		d_alias;
 	struct list_head		d_lru;
+	struct list_head		d_child;
+	struct list_head		d_subdirs;
 	struct super_block *		d_sb;
 	struct dentry_operations *	d_op;
 	struct qstr			d_name;
