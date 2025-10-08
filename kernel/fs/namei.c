@@ -82,7 +82,17 @@ static struct dentry *reserved_lookup(struct dentry *parent, struct qstr *name)
  */
 static struct dentry *cached_lookup(struct dentry *parent, struct qstr *name)
 {
-	return d_lookup(parent, name);
+	struct dentry *res = d_lookup(parent, name);
+
+	/* revalidate dentry */
+	if (res && res->d_op && res->d_op->d_revalidate) {
+		if (!res->d_op->d_revalidate(res) && !d_invalidate(res)) {
+			dput(res);
+			res = NULL;
+		}
+	}
+
+	return res;
 }
 
 /*
@@ -95,8 +105,12 @@ static struct dentry *real_lookup(struct dentry *parent, struct qstr *name)
 
 	/* check cache first */
 	res = d_lookup(parent, name);
-	if (res)
+	if (res) {
+		/* revalidate dentry */
+		if (res->d_op && res->d_op->d_revalidate)
+			res->d_op->d_revalidate(res);
 		return res;
+	}
 
 	/* allocate a new dentry */
 	dentry = d_alloc(parent, name);
@@ -735,7 +749,7 @@ static int do_rename(int olddirfd, const char *oldpath, int newdirfd, const char
 	ret = permission(old_dir, MAY_WRITE | MAY_EXEC);
 	if (ret)
 		goto out_release_new;
-	ret = permission(new_dir,MAY_WRITE | MAY_EXEC);
+	ret = permission(new_dir, MAY_WRITE | MAY_EXEC);
 	if (ret)
 		goto out_release_new;
 

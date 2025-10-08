@@ -153,6 +153,7 @@ struct inode {
  */
 struct dentry_operations {
 	int (*d_delete)(struct dentry *);
+	int (*d_revalidate)(struct dentry *);
 };
 
 /*
@@ -335,6 +336,7 @@ void dput(struct dentry *dentry);
 struct dentry *d_alloc(struct dentry *parent, const struct qstr *name);
 struct dentry *d_alloc_root(struct inode *root_inode);
 void d_drop(struct dentry *dentry);
+int d_invalidate(struct dentry *dentry);
 void d_free(struct dentry *dentry);
 void d_instantiate(struct dentry *dentry, struct inode *inode);
 void d_add(struct dentry *dentry, struct inode *inode);

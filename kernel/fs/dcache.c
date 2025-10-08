@@ -2,6 +2,7 @@
 #include <proc/sched.h>
 #include <stdio.h>
 #include <stderr.h>
+#include <fcntl.h>
 
 #define D_HASHBITS     		10
 #define D_HASHSIZE     		(1UL << D_HASHBITS)
@@ -427,6 +428,28 @@ int sys_getcwd(char *buf, size_t size)
 	buf = d_path(pwd, buf, size, &ret);
 
 	return ret;
+}
+
+/*
+ * Try to invalidate a dentry.
+ */
+int d_invalidate(struct dentry *dentry)
+{
+	/* dentry already dropped */
+	if (list_empty(&dentry->d_hash))
+		return 0;
+
+	/* get rid of unused child entries */
+	if (!list_empty(&dentry->d_subdirs))
+		shrink_dcache_parent(dentry);
+
+	/* still used */
+	if (dentry->d_count > 1 && dentry->d_inode && S_ISDIR(dentry->d_inode->i_mode))
+		return -EBUSY;
+
+	/* invalidate/drop dentry */
+	d_drop(dentry);
+	return 0;
 }
 
 /*

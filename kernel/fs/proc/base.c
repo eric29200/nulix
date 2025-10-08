@@ -72,6 +72,27 @@ static struct inode *proc_pid_make_inode(struct super_block *sb, struct task *ta
 }
 
 /*
+ * Revalidate a file descriptor dentry.
+ */
+static int pid_fd_revalidate(struct dentry *dentry)
+{
+	UNUSED(dentry);
+	return 0;
+}
+
+/*
+ * Revalidate a base dentry.
+ */
+static int pid_base_revalidate(struct dentry *dentry)
+{
+	if (dentry->d_inode->u.proc_i.task->pid)
+		return 1;
+
+	d_drop(dentry);
+	return 0;
+}
+
+/*
  * Always delete pid dentries.
  */
 static int pid_delete_dentry(struct dentry *dentry)
@@ -84,21 +105,23 @@ static int pid_delete_dentry(struct dentry *dentry)
  * File descriptor dentry operations.
  */
 static struct dentry_operations pid_fd_dentry_operations = {
-	.d_delete =	pid_delete_dentry,
+	.d_revalidate		= pid_fd_revalidate,
+	.d_delete 		= pid_delete_dentry,
 };
 
 /*
  * Pid dentry operations.
  */
 static struct dentry_operations pid_dentry_operations = {
-	.d_delete =	pid_delete_dentry,
+	.d_delete 		= pid_delete_dentry,
 };
 
 /*
  * Base dentry operations.
  */
 static struct dentry_operations pid_base_dentry_operations = {
-	.d_delete =	pid_delete_dentry,
+	.d_revalidate		= pid_base_revalidate,
+	.d_delete		= pid_delete_dentry,
 };
 
 /*
