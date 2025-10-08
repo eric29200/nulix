@@ -572,6 +572,13 @@ static int do_rmdir(int dirfd, const char *pathname)
 	if (!dir->i_op || !dir->i_op->rmdir)
 		goto out;
 
+	/* shrink dcache */
+	if (dentry->d_count != 2)
+		shrink_dcache_parent(dentry);
+
+	if (dentry->d_count == 2)
+		d_drop(dentry);
+
 	/* remove directory */
 	ret = dir->i_op->rmdir(dir, dentry);
 out:

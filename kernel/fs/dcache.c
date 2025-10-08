@@ -91,7 +91,7 @@ struct dentry *dget(struct dentry *dentry)
 /*
  * Drop a dentry = unhash.
  */
-static void d_drop(struct dentry *dentry)
+void d_drop(struct dentry *dentry)
 {
 	list_del(&dentry->d_hash);
 	INIT_LIST_HEAD(&dentry->d_hash);
@@ -490,7 +490,7 @@ int prune_dcache(int dentries_count, int inodes_count)
 /*
  * Shrink dentries for a super block.
  */
-void shrink_dcache_sb(struct super_block * sb)
+void shrink_dcache_sb(struct super_block *sb)
 {
 	struct list_head *pos, *n;
 	struct dentry *dentry;
@@ -521,6 +521,61 @@ void shrink_dcache_memory(int priority)
 
 	/* prune dentries */
 	prune_dcache(count, -1);
+}
+
+/*
+ * Remove unused children of a parent dentry.
+ */
+static int select_parent(struct dentry *parent)
+{
+	struct dentry *this_parent = parent, *dentry;
+	struct list_head *next, *tmp;
+	int found = 0;
+
+repeat:
+	next = this_parent->d_subdirs.next;
+resume:
+	while (next != &this_parent->d_subdirs) {
+		tmp = next;
+		dentry = list_entry(tmp, struct dentry, d_child);
+		next = tmp->next;
+		if (!dentry->d_count) {
+			list_del(&dentry->d_lru);
+			list_add(&dentry->d_lru, dentry_unused.prev);
+			found++;
+		}
+
+		/* descend a level if the d_subdirs list is non-empty */
+		if (!list_empty(&dentry->d_subdirs)) {
+			this_parent = dentry;
+			goto repeat;
+		}
+	}
+
+	/* all done at this level ... ascend and resume the search */
+	if (this_parent != parent) {
+		next = this_parent->d_child.next; 
+		this_parent = this_parent->d_parent;
+		goto resume;
+	}
+
+	return found;
+}
+
+/*
+ * Prune the dcache to remove unused children of the parent dentry.
+ */
+void shrink_dcache_parent(struct dentry *parent)
+{
+	int found;
+
+	for (;;) {
+		found = select_parent(parent);
+		if (!found)
+			break;
+
+		prune_dcache(found, -1);
+	}
 }
 
 /*
