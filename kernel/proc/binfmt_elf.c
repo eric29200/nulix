@@ -517,7 +517,8 @@ static int elf_load_binary(struct binprm *bprm)
 	current_task->thread.regs.useresp = sp;
 out:
 	sys_close(fd);
-	dput(interp_dentry);
+	if (interp_dentry && !IS_ERR(interp_dentry))
+		dput(interp_dentry);
 	kfree(elf_interpreter);
 	kfree(first_ph);
 	return ret;
