@@ -504,7 +504,7 @@ static int elf_load_binary(struct binprm *bprm)
 
 	/* update task sections  */
 	current_task->mm->start_brk = elf_brk;
-	current_task->mm->end_brk = elf_brk + PAGE_SIZE;
+	current_task->mm->end_brk = elf_brk;
 	current_task->mm->start_code = start_code;
 	current_task->mm->end_code = end_code;
 	current_task->mm->end_data = end_data;
