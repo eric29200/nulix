@@ -167,6 +167,8 @@ static const void *syscalls[] = {
 	[__NR_getpgrp]			= sys_getpgrp,
 	[__NR_umount]			= sys_umount,
 	[__NR_fdatasync]		= sys_fdatasync,
+	[__NR_stat]			= sys_stat,
+	[__NR_fstat]			= sys_fstat,
 };
 
 /*

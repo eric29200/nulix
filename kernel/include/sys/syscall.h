@@ -65,6 +65,8 @@
 #define __NR_socketcall			102
 #define __NR_syslog			103
 #define __NR_setitimer			104
+#define __NR_stat			106
+#define __NR_fstat			108
 #define __NR_wait4			114
 #define __NR_sysinfo			116
 #define __NR_fsync			118

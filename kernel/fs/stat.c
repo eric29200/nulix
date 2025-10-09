@@ -33,6 +33,31 @@ static int do_stat64(struct inode *inode, struct stat64 *statbuf)
 }
 
 /*
+ * Stat system call.
+ */
+static int do_stat(struct inode *inode, struct old_stat *statbuf)
+{
+	/* memzero statbuf */
+	memset(statbuf, 0, sizeof(struct old_stat));
+
+	/* fill in statbuf */
+	statbuf->st_dev = inode->i_dev;
+	statbuf->st_ino = inode->i_ino;
+	statbuf->st_mode = inode->i_mode;
+	statbuf->st_nlink = inode->i_nlinks;
+	statbuf->st_uid = inode->i_uid;
+	statbuf->st_gid = inode->i_gid;
+	statbuf->st_rdev = inode->i_rdev;
+	statbuf->st_size = inode->i_size;
+	statbuf->st_atime = inode->i_atime;
+	statbuf->st_mtime = inode->i_mtime;
+	statbuf->st_ctime = inode->i_ctime;
+	statbuf->st_ino = inode->i_ino;
+
+	return 0;
+}
+
+/*
  * Stat64 system call.
  */
 int sys_stat64(const char *pathname, struct stat64 *statbuf)
@@ -172,4 +197,57 @@ int sys_statx(int dirfd, const char *pathname, int flags, unsigned int mask, str
 
 	dput(dentry);
 	return 0;
+}
+
+/*
+ * Stat system call.
+ */
+int sys_stat(const char *pathname, struct old_stat *statbuf)
+{
+	struct dentry *dentry;
+	int ret;
+
+	/* resolve path */
+	dentry = namei(AT_FDCWD, pathname, 1);
+	if (IS_ERR(dentry))
+		return PTR_ERR(dentry);
+
+	/* do stat */
+	ret = do_stat(dentry->d_inode, statbuf);
+
+	dput(dentry);
+	return ret;
+}
+
+/*
+ * Fstat system call.
+ */
+int sys_fstat(int fd, struct old_stat *statbuf)
+{
+	struct dentry *dentry;
+	struct inode *inode;
+	struct file *filp;
+	int ret;
+
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
+		return -EINVAL;
+
+	/* get dentry */
+	ret = -ENOENT;
+	dentry = filp->f_dentry;
+	if (!dentry)
+		goto out;
+
+	/* get inode */
+	inode = dentry->d_inode;
+	if (!inode)
+		goto out;
+
+	/* do stat */
+	ret = do_stat(inode, statbuf);
+out:
+	fput(filp);
+	return ret;
 }
