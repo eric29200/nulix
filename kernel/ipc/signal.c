@@ -111,6 +111,10 @@ int do_signal(struct registers *regs)
 
 	/* default signal handler */
 	if (act->sa_handler == SIG_DFL) {
+		/* init task gets no signals it doesn't want */
+		if (current_task->pid == 1)
+			goto out;
+
 		switch (sig) {
 			/* ignore those signals */
 			case SIGCONT:
