@@ -11,5 +11,6 @@ function build_port() {
 }
 
 function install_port() {
+	mkdir -p $SYSROOT"/sbin"
 	make install DESTDIR=$SYSROOT
 }

@@ -9,10 +9,10 @@ si3::sysinit:/bin/mount -a
 rcS:12345:wait:/etc/init.d/rcS
 
 # Virtual consoles
-1:2345:respawn:/usr/sbin/getty 38400 tty1
-2:2345:respawn:/usr/sbin/getty 38400 tty2
-3:2345:respawn:/usr/sbin/getty 38400 tty3
-4:2345:respawn:/usr/sbin/getty 38400 tty4
+1:2345:respawn:/sbin/mingetty --noclear tty1
+2:2345:respawn:/sbin/mingetty tty2
+3:2345:respawn:/sbin/mingetty tty3
+4:2345:respawn:/sbin/mingetty tty4
 
 # Stuff to do for the 3-finger salute
 #ca::ctrlaltdel:/sbin/reboot
