@@ -14,10 +14,12 @@ void tmpfs_truncate(struct inode *inode)
 		page = list_entry(pos, struct page, list);
 
 		/* full/partial page free */
-		if (offset >= inode->i_size)
+		if (offset >= inode->i_size) {
+			list_del(&page->list);
 			__free_page(page);
-		else if (offset + PAGE_SIZE > inode->i_size)
+		} else if (offset + PAGE_SIZE > inode->i_size) {
 			clear_user_highpage_partial(page, inode->i_size - offset);
+		}
 
 		/* update offset */
 		offset += PAGE_SIZE;

@@ -194,6 +194,7 @@ err:
 	/* free all pages */
 	list_for_each_safe(pos, n, &pages_list) {
 		page = list_entry(pos, struct page, list);
+		list_del(&page->list);
 		__free_page(page);
 	}
 
