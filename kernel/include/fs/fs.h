@@ -454,6 +454,7 @@ int sys_sync();
 int sys_fsync(int fd);
 int sys_fdatasync(int fd);
 ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count);
+int sys_vhangup();
 
 /*
  * Compute block size in bits from block in size in byte.

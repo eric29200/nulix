@@ -399,3 +399,11 @@ out:
 	dput(dentry);
 	return ret;
 }
+
+/*
+ * Hangup a tty.
+ */
+int sys_vhangup()
+{
+	return 0;
+}

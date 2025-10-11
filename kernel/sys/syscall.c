@@ -169,6 +169,7 @@ static const void *syscalls[] = {
 	[__NR_fdatasync]		= sys_fdatasync,
 	[__NR_stat]			= sys_stat,
 	[__NR_fstat]			= sys_fstat,
+	[__NR_vhangup]			= sys_vhangup,
 };
 
 /*
