@@ -1,0 +1,15 @@
+VERSION="1.08"
+SRC_FILENAME="mingetty_"$VERSION".orig.tar.gz"
+URL="http://deb.debian.org/debian/pool/main/m/mingetty/mingetty_1.08.orig.tar.gz"
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	make -j$NJOBS CC=$CC
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
