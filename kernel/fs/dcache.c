@@ -418,14 +418,33 @@ char *d_path(struct dentry *dentry, char *buf, int len, int *error)
 int sys_getcwd(char *buf, size_t size)
 {
 	struct dentry *pwd = current_task->fs->pwd;
+	char *cwd, *page;
+	size_t len;
 	int ret;
 
 	/* current directory unlinked ? */
 	if (pwd->d_parent != pwd && list_empty(&pwd->d_hash))
 		return -ENOENT;
 
+	/* get a free page */
+	page = get_free_page();
+	if (!page)
+		return -ENOMEM;
+
 	/* resolve current working directory */
-	buf = d_path(pwd, buf, size, &ret);
+	cwd = d_path(pwd, page, PAGE_SIZE, &ret);
+
+	/* copy result */
+	if (!ret) {
+		len = PAGE_SIZE + page - cwd;
+		if (len <= size) {
+			ret = len;
+			memcpy(buf, cwd, len);
+		}
+	}
+
+	/* free page */
+	free_page(page);
 
 	return ret;
 }
