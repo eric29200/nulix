@@ -12,9 +12,12 @@
 #define PROC_PID_STAT			3
 #define PROC_PID_STATUS			4
 #define PROC_PID_STATM			5
-#define PROC_PID_CMDLINE		6
-#define PROC_PID_ENVIRON		7
-#define PROC_PID_FD			8
+#define PROC_PID_ROOT			6
+#define PROC_PID_CWD			7
+#define PROC_PID_EXE			8
+#define PROC_PID_CMDLINE		9
+#define PROC_PID_ENVIRON		10
+#define PROC_PID_FD			11
 
 #define fake_ino(pid, ino)		(((pid) << 16) | (ino))
 
@@ -35,6 +38,9 @@ static struct pid_entry pid_base_entries[] = {
 	{ PROC_PID_STAT,	4,	"stat",		S_IFREG | S_IRUGO		},
 	{ PROC_PID_STATUS,	6,	"status",	S_IFREG | S_IRUGO		},
 	{ PROC_PID_STATM,	5,	"statm",	S_IFREG | S_IRUGO		},
+	{ PROC_PID_ROOT,	4,	"root",		S_IFLNK | S_IRWXUGO		},
+	{ PROC_PID_CWD,		3,	"cwd",		S_IFLNK | S_IRWXUGO		},
+	{ PROC_PID_EXE,		3,	"exe",		S_IFLNK | S_IRWXUGO		},
 	{ PROC_PID_CMDLINE,	7,	"cmdline",	S_IFREG | S_IRUGO		},
 	{ PROC_PID_ENVIRON,	7,	"environ",	S_IFREG | S_IRUGO		},
 	{ PROC_PID_FD,		2,	"fd",		S_IFDIR | S_IRUSR | S_IXUSR	},
@@ -271,6 +277,111 @@ static struct inode_operations proc_fd_iops = {
 };
 
 /*
+ * Get root directory dentry.
+ */
+static int proc_root_link(struct task *task, struct dentry **dentry)
+{
+	struct fs_struct *fs = task->fs;
+
+	if (!fs)
+		return -ENOENT;
+
+	*dentry = dget(fs->root);
+	return 0;
+}
+
+/*
+ * Get current working directory dentry.
+ */
+static int proc_cwd_link(struct task *task, struct dentry **dentry)
+{
+	struct fs_struct *fs = task->fs;
+
+	if (!fs)
+		return -ENOENT;
+
+	*dentry = dget(fs->pwd);
+	return 0;
+}
+
+/*
+ * Get current executable dentry.
+ */
+static int proc_exe_link(struct task *task, struct dentry **dentry)
+{
+	struct list_head *pos;
+	struct vm_area *vma;
+	 
+	/* find first executable memory region */
+	list_for_each(pos, &task->mm->vm_list) {
+		vma = list_entry(pos, struct vm_area, list);
+		if ((vma->vm_flags & VM_EXEC) && vma->vm_file)
+			goto out;
+	}
+
+	return -ENOENT;
+out:
+	*dentry = dget(vma->vm_file->f_dentry);
+	return 0;
+}
+
+/*
+ * Read a link.
+ */
+static ssize_t proc_base_readlink(struct dentry *dentry, char *buf, size_t bufsize)
+{
+	struct inode *inode = dentry->d_inode;
+	struct task *task = inode->u.proc_i.task;
+	struct dentry *res;
+	int ret;
+
+	/* get link */
+	ret = inode->u.proc_i.proc_get_link(task, &res);
+	if (ret)
+		return ret;
+
+	/* read link */
+	ret = do_proc_readlink(res, buf, bufsize);
+	dput(res);
+
+	return ret;
+}
+
+/*
+ * Follow a link.
+ */
+static struct dentry *proc_base_follow_link(struct dentry *dentry, struct dentry *base)
+{
+	struct inode *inode = dentry->d_inode;
+	struct task *task = inode->u.proc_i.task;
+	struct dentry *res;
+	int ret;
+
+	/* release base */
+	dput(base);
+
+	/* check permissions */
+	ret = permission(inode, MAY_EXEC);
+	if (ret)
+		return ERR_PTR(ret);
+
+	/* get link */
+	ret = inode->u.proc_i.proc_get_link(task, &res);
+	if (ret)
+		return ERR_PTR(ret);
+
+	return res;
+}
+
+/*
+ * Base link inode operations.
+ */
+static struct inode_operations proc_base_link_iops = {
+	.readlink		= proc_base_readlink,
+	.follow_link		= proc_base_follow_link,
+};
+
+/*
  * Read base.
  */
 static int proc_base_read(struct file *filp, char *buf, size_t count, off_t *ppos)
@@ -405,6 +516,18 @@ static struct dentry *proc_pid_base_lookup(struct inode *dir, struct dentry *den
 		case PROC_PID_STATM:
 			inode->i_op = &proc_base_file_iops;
 			inode->u.proc_i.proc_read = proc_statm_read;
+			break;
+		case PROC_PID_ROOT:
+			inode->i_op = &proc_base_link_iops;
+			inode->u.proc_i.proc_get_link = proc_root_link;
+			break;
+		case PROC_PID_CWD:
+			inode->i_op = &proc_base_link_iops;
+			inode->u.proc_i.proc_get_link = proc_cwd_link;
+			break;
+		case PROC_PID_EXE:
+			inode->i_op = &proc_base_link_iops;
+			inode->u.proc_i.proc_get_link = proc_exe_link;
 			break;
 		case PROC_PID_CMDLINE:
 			inode->i_op = &proc_base_file_iops;
