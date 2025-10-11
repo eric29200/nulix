@@ -1,0 +1,17 @@
+VERSION="0.5.13"
+SRC_FILENAME="dash-"$VERSION".tar.gz"
+URL="http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.13.tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
