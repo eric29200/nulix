@@ -668,6 +668,22 @@ static void console_restore(struct vc *vc)
 	vc->vc_charset_g1 = vc->s_vc_charset_g1;
 	set_translate(vc, vc->vc_charset == 0 ? vc->vc_charset_g0 : vc->vc_charset_g1);
 }
+  
+/*
+ * Reset console.
+ */
+static void console_reset(struct vc *vc)
+{
+	vc->vc_def_color = TEXT_COLOR(TEXT_BLACK, TEXT_LIGHT_GREY);
+	vc->vc_color = vc->vc_def_color;
+	vc->vc_intensity = 1;
+	vc->vc_reverse = 0;
+	vc->vc_erase_char = ' ' | (vc->vc_def_color << 8);
+	vc->vc_deccm = 1;
+	vc->vc_attr = vc->vc_color;
+	set_translate(vc, LAT1_MAP);
+	reset_vc(vc);
+}
 
 /*
  * Handle control characters.
@@ -724,6 +740,9 @@ static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 					break;
 				case '8':
 				 	console_restore(vc);
+					break;
+				case 'c':
+					console_reset(vc);
 					break;
 				default:
 					printf("console : unknown escape sequence %c\n", c);
