@@ -53,11 +53,10 @@ sudo rm -f tmp/bin/objcopy tmp/bin/ranlib tmp/bin/nm tmp/bin/readelf tmp/bin/str
 # create links
 mkdir -p tmp/bin
 sudo ln -s /proc/mounts tmp/etc/mtab
-sudo ln -s /usr/sbin/init tmp/sbin/init
-sudo ln -s /usr/sbin/getty tmp/sbin/getty
 sudo ln -s /usr/bin/sh tmp/bin/sh
 sudo ln -s /usr/bin/bash tmp/bin/bash
 sudo ln -s /usr/bin/mount tmp/bin/mount
+sudo ln -s /usr/bin/umount tmp/bin/umount
 sudo ln -s /usr/X11 tmp/usr/X11R6
 
 # create devices
