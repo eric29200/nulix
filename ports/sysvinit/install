@@ -1,0 +1,15 @@
+VERSION="3.14"
+SRC_FILENAME="sysvinit-"$VERSION".tar.xz"
+URL="https://fossies.org/linux/misc/sysvinit-3.14.tar.xz"
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}

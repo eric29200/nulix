@@ -1,14 +1,26 @@
-::sysinit:/bin/mount -t proc proc /proc
-::sysinit:/usr/sbin/fsck.ext2 /dev/root
-::sysinit:/bin/mount -o remount,rw /
-::sysinit:/bin/mount -a
-::sysinit:/etc/init.d/rcS
+# default runlevel
+id:3:initdefault:
 
-#console::respawn:/sbin/getty -L console 0 vt100
-tty1::respawn:/sbin/getty 38400 tty1
-tty2::respawn:/sbin/getty 38400 tty2
-tty3::respawn:/sbin/getty 38400 tty3
-tty4::respawn:/sbin/getty 38400 tty4
+si0::sysinit:/bin/mount -t proc proc /proc
+si1::sysinit:/usr/sbin/fsck.ext2 /dev/root
+si2::sysinit:/bin/mount -o remount,rw /
+si3::sysinit:/bin/mount -a
 
-::shutdown:/etc/init.d/rcK
-::shutdown:/bin/umount -a -r
+rcS:12345:wait:/etc/init.d/rcS
+
+# Virtual consoles
+1:2345:respawn:/usr/sbin/getty 38400 tty1
+2:2345:respawn:/usr/sbin/getty 38400 tty2
+3:2345:respawn:/usr/sbin/getty 38400 tty3
+4:2345:respawn:/usr/sbin/getty 38400 tty4
+
+# Stuff to do for the 3-finger salute
+#ca::ctrlaltdel:/sbin/reboot
+
+# Stuff to do before rebooting
+shd0:06:wait:/etc/init.d/rcK
+shd2:06:wait:/bin/umount -a -r
+
+# The usual halt or reboot actions
+hlt0:0:wait:/sbin/halt -dhp
+reb0:6:wait:/sbin/reboot
