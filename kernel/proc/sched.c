@@ -563,12 +563,17 @@ int sys_setpgid(pid_t pid, pid_t pgid)
  */
 int sys_setuid(uid_t uid)
 {
+	uid_t old_euid = current_task->euid;
+
 	if (suser())
 		current_task->uid = current_task->euid = current_task->suid = current_task->fsuid = uid;
 	else if (uid == current_task->uid || uid == current_task->suid)
 		current_task->euid = current_task->fsuid = uid;
 	else
 		return -EPERM;
+
+	if (current_task->euid != old_euid)
+		current_task->dumpable = 0;
 
 	return 0;
 }
@@ -578,12 +583,17 @@ int sys_setuid(uid_t uid)
  */
 int sys_setgid(gid_t gid)
 {
+	gid_t old_egid = current_task->egid;
+
 	if (suser())
 		current_task->gid = current_task->egid = current_task->sgid = current_task->fsgid = gid;
 	else if (gid == current_task->gid || gid == current_task->sgid)
 		current_task->egid = current_task->fsgid = gid;
 	else
 		return -EPERM;
+
+	if (current_task->egid != old_egid)
+		current_task->dumpable = 0;
 
 	return 0;
 }
@@ -615,6 +625,8 @@ int sys_setsid()
  */
 int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
 {
+	gid_t old_egid = current_task->egid;
+
 	/* check permissions */
 	if (!suser()) {
 		if ((rgid != (gid_t) -1) && (rgid != current_task->gid) && (rgid != current_task->egid) && (rgid != current_task->sgid))
@@ -634,6 +646,9 @@ int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
 	if (sgid != (gid_t) -1)
 		current_task->sgid = sgid;
 
+	if (current_task->egid != old_egid)
+		current_task->dumpable = 0;
+
 	return 0;
 }
 
@@ -642,6 +657,8 @@ int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
  */
 int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
+	uid_t old_euid = current_task->euid;
+
 	/* check permissions */
 	if (!suser()) {
 		if ((ruid != (uid_t) -1) && (ruid != current_task->uid) && (ruid != current_task->euid) && (ruid != current_task->suid))
@@ -660,6 +677,9 @@ int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 	current_task->fsuid = current_task->euid;
 	if (suid != (uid_t) -1)
 		current_task->suid = suid;
+
+	if (current_task->euid != old_euid)
+		current_task->dumpable = 0;
 
 	return 0;
 }

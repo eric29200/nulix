@@ -160,12 +160,15 @@ int prepare_binprm(struct binprm *bprm)
 	}
 
 	/* check permissions */
-	if (bprm->priv_change && (
-		IS_NOSUID(inode)
-		|| current_task->fs->count > 1
-		|| current_task->sig->count > 1
-		|| current_task->files->count > 1))
-		return -EPERM;
+	if (bprm->priv_change) {
+		current_task->dumpable = 0;
+
+		if (IS_NOSUID(inode)
+			|| current_task->fs->count > 1
+			|| current_task->sig->count > 1
+			|| current_task->files->count > 1)
+			return -EPERM;
+	}
 
 	/* read header */
 	memset(bprm->buf, 0, sizeof(bprm->buf));
@@ -175,7 +178,7 @@ int prepare_binprm(struct binprm *bprm)
 /*
  * Clear current executable (clear memory, signals and files).
  */
-int flush_old_exec()
+int flush_old_exec(struct binprm *bprm)
 {
 	struct signal_struct *sig_new = NULL, *sig_old;
 	struct mm_struct *mm_new;
@@ -242,6 +245,18 @@ int flush_old_exec()
 		}
 	}
 
+	/* dumpable ? */
+	bprm->dumpable = 0;
+	if (current_task->euid == current_task->uid && current_task->egid == current_task->gid)
+		bprm->dumpable = !bprm->priv_change;
+	else
+		current_task->dumpable = 0;
+
+	if (bprm->e_uid != current_task->euid || bprm->e_gid != current_task->egid || permission(bprm->dentry->d_inode, MAY_READ)) {
+		bprm->dumpable = 0;
+		current_task->dumpable = 0;
+	}
+
 	return 0;
 err_mm:
 	if (sig_new)
@@ -262,6 +277,11 @@ void compute_creds(struct binprm *bprm)
 	current_task->sgid = bprm->e_gid;
 	current_task->egid = bprm->e_gid;
 	current_task->fsgid = bprm->e_gid;
+
+	if (current_task->euid != current_task->uid || current_task->egid != current_task->gid) {
+		bprm->dumpable = 0;
+		current_task->dumpable = 0;
+	}
 }
 
 /*
@@ -298,9 +318,9 @@ int search_binary_handler(struct binprm *bprm)
 int sys_execve(const char *path, char *const argv[], char *const envp[])
 {
 	struct dentry *dentry;
+	int ret, was_dumpable;
 	struct binprm bprm;
 	size_t i;
-	int ret;
 
 	/* resolve path */
 	dentry = open_namei(AT_FDCWD, path, 0, 0);
@@ -311,6 +331,8 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	memset(&bprm, 0, sizeof(struct binprm));
 	bprm.filename = path;
 	bprm.dentry = dentry;
+	was_dumpable = current_task->dumpable;
+	current_task->dumpable = 0;
 
 	/* prepare binary program */
 	ret = prepare_binprm(&bprm);
@@ -340,13 +362,17 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	ret = search_binary_handler(&bprm);
 
 	/* handle success */
-	if (ret >= 0)
+	if (ret >= 0) {
+		current_task->dumpable = bprm.dumpable;
+		printf("%d\n", current_task->dumpable);
 		return ret;
+	}
 out:
 	/* on error, clean binary program */
 	if (bprm.dentry)
 		dput(bprm.dentry);
 	kfree(bprm.buf_args);
+	current_task->dumpable = was_dumpable;
 	return ret;
 }
 

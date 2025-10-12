@@ -328,7 +328,7 @@ static int elf_load_binary(struct binprm *bprm)
 	}
 
 	/* clear current executable */
-	ret = flush_old_exec();
+	ret = flush_old_exec(bprm);
 	if (ret)
 		goto out;
 
