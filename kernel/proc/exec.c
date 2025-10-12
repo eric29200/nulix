@@ -364,7 +364,6 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	/* handle success */
 	if (ret >= 0) {
 		current_task->dumpable = bprm.dumpable;
-		printf("%d\n", current_task->dumpable);
 		return ret;
 	}
 out:
