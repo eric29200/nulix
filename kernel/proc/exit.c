@@ -5,7 +5,7 @@
 /*
  * Exit a task.
  */
-void sys_exit(int status)
+void do_exit(int error_code)
 {
 	struct list_head *pos;
 	struct task *child;
@@ -26,7 +26,7 @@ void sys_exit(int status)
 
 	/* mark task terminated and reschedule */
 	current_task->state = TASK_ZOMBIE;
-	current_task->exit_code = status;
+	current_task->exit_code = error_code;
 
 	/* notify parent */
 	task_signal(current_task->parent->pid, SIGCHLD);
@@ -129,6 +129,14 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 	}
+}
+
+/*
+ * Exit system call.
+ */
+void sys_exit(int status)
+{
+	return do_exit((status & 0xFF) << 8);
 }
 
 /*

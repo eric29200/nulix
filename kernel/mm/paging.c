@@ -484,7 +484,7 @@ void page_fault_handler(struct registers *regs)
 
 	/* page fault on task end : kill current task */
 	if (fault_addr == TASK_RETURN_ADDRESS) {
-		sys_exit(0);
+		do_exit(0);
 		return;
 	}
 
@@ -529,7 +529,7 @@ bad_area:
 
 	/* user mode : exit process */
 	if (user)
-		sys_exit(1);
+		do_exit(SIGKILL);
 
 	/* otherwise panic */
 	panic("");

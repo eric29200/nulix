@@ -77,6 +77,6 @@ void isr_handler(struct registers *regs)
 		       current_task->pid,
 		       regs->eip);
 
-		sys_exit(1);
+		do_exit(SIGSEGV);
 	}
 }

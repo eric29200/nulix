@@ -189,6 +189,7 @@ pid_t sys_fork();
 pid_t sys_vfork();
 int sys_clone(uint32_t flags, uint32_t newsp);
 int sys_execve(const char *path, char *const argv[], char *const envp[]);
+void do_exit(int error_code);
 void sys_exit(int status);
 void sys_exit_group(int status);
 pid_t sys_waitpid(pid_t pid, int *wstatus, int options);

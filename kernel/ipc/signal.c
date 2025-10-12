@@ -130,7 +130,7 @@ int do_signal(struct registers *regs)
 				schedule();
 				goto out;
 			default:
-				sys_exit(sig);
+				do_exit(sig);
 				goto out;
 		}
 	}
