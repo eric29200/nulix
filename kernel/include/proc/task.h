@@ -162,6 +162,9 @@ struct binprm {
 	int				argv_len;
 	int				envc;
 	int				envp_len;
+	uid_t				e_uid;
+	gid_t				e_gid;
+	int				priv_change;
 	int				sh_bang;
 };
 
@@ -182,6 +185,8 @@ int task_in_group(struct task *task, gid_t gid);
 int search_binary_handler(struct binprm *bprm);
 void copy_strings(struct binprm *bprm, int argc, char **argv);
 int prepare_binprm(struct binprm *bprm);
+int flush_old_exec();
+void compute_creds(struct binprm *bprm);
 int open_dentry(struct dentry *dentry, mode_t mode);
 int read_exec(struct dentry *dentry, off_t offset, char *addr, size_t count);
 

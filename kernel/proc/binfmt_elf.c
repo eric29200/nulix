@@ -243,85 +243,6 @@ out:
 }
 
 /*
- * Clear current executable (clear memory, signals and files).
- */
-static int clear_old_exec()
-{
-	struct signal_struct *sig_new = NULL, *sig_old;
-	struct mm_struct *mm_new;
-	int fd, i, ret;
-
-	/* make sig private */
-	sig_old = current_task->sig;
-	if (current_task->sig->count > 1) {
-		/* allocate a private sig */
-		sig_new = (struct signal_struct *) kmalloc(sizeof(struct signal_struct));
-		if (!sig_new) {
-			ret = -ENOMEM;
-			goto err_sig;
-		}
-
-		/* copy actions */
-		sig_new->count = 1;
-		memcpy(sig_new->action, current_task->sig->action, sizeof(sig_new->action));
-		current_task->sig = sig_new;
-	}
-
-
-	/* clear all memory regions */
-	if (current_task->mm->count == 1) {
-		task_release_mmap(current_task);
-		task_exit_mmap(current_task->mm);
-	} else {
-		/* duplicate mm struct */
-		mm_new = task_dup_mm(current_task->mm);
-		if (!mm_new) {
-			ret = -ENOMEM;
-			goto err_mm;
-		}
-
-		/* decrement old mm count and set new mm struct */
-		current_task->mm->count--;
-		current_task->mm = mm_new;
-
-		/* switch to new page directory */
-		switch_pgd(current_task->mm->pgd);
-
-		/* release mapping */
-		task_release_mmap(current_task);
-	}
-
-	/* release old signals */
-	if (current_task->sig != sig_old)
-		sig_old->count--;
-
-	/* clear signal handlers */
-	for (i = 0; i < NSIGS; i++) {
-		if (current_task->sig->action[i].sa_handler != SIG_IGN)
-			current_task->sig->action[i].sa_handler = SIG_DFL;
-
-		current_task->sig->action[i].sa_flags = 0;
-		sigemptyset(&current_task->sig->action[i].sa_mask);
-	}
-
-	/* close files marked close on exec */
-	for (fd = 0; fd < NR_OPEN; fd++) {
-		if (FD_ISSET(fd, &current_task->files->close_on_exec)) {
-			sys_close(fd);
-			FD_CLR(fd, &current_task->files->close_on_exec);
-		}
-	}
-
-	return 0;
-err_mm:
-	if (sig_new)
-		kfree(sig_new);
-err_sig:
-	current_task->sig = sig_old;
-	return ret;
-}
-
-/*
  * Load an ELF file in memory.
  */
 static int elf_load_binary(struct binprm *bprm)
@@ -407,7 +328,7 @@ static int elf_load_binary(struct binprm *bprm)
 	}
 
 	/* clear current executable */
-	ret = clear_old_exec();
+	ret = flush_old_exec();
 	if (ret)
 		goto out;
 
@@ -498,6 +419,9 @@ static int elf_load_binary(struct binprm *bprm)
 
 	/* setup BSS and BRK sections */
 	set_brk(elf_bss, elf_brk);
+
+	/* compute credentials */
+	compute_creds(bprm);
 
 	/* create ELF tables */
 	sp = elf_create_tables(bprm, &elf_header, load_addr, load_bias, interp_load_addr);
