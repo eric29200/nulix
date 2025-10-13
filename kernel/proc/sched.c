@@ -363,10 +363,10 @@ struct task *get_task(pid_t pid)
 /*
  * Send a signal to a task.
  */
-static void __task_signal(struct task *task, int sig)
+void __task_signal(struct task *task, int sig)
 {
 	/* just check permission */
-	if (sig == 0)
+	if (sig == 0 || !task)
 		return;
 
 	/* add to pending signals */
