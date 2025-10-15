@@ -1,5 +1,6 @@
 #include <proc/sched.h>
 #include <proc/binfmt.h>
+#include <proc/ptrace.h>
 #include <proc/elf.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -164,6 +165,7 @@ int prepare_binprm(struct binprm *bprm)
 		current_task->dumpable = 0;
 
 		if (IS_NOSUID(inode)
+			|| (current_task->ptrace & PT_PTRACED)
 			|| current_task->fs->count > 1
 			|| current_task->sig->count > 1
 			|| current_task->files->count > 1)

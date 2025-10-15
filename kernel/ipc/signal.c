@@ -1,5 +1,6 @@
 #include <ipc/signal.h>
 #include <proc/sched.h>
+#include <proc/ptrace.h>
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -104,6 +105,32 @@ int do_signal(struct registers *regs)
 	/* remove signal from current task */
 	sigdelset(&current_task->sigpend, sig);
 	act = &current_task->sig->action[sig - 1];
+
+	/* traced process */
+	if ((current_task->ptrace & PT_PTRACED) && sig != SIGKILL) {
+			/* let the debugger run */
+			current_task->exit_code = sig;
+			current_task->state = TASK_STOPPED;
+			__task_signal(current_task->parent, SIGCHLD);
+			wake_up(&current_task->parent->wait_child_exit);
+			schedule();
+
+			/* did the debugger cancel the sig ? */
+			sig = current_task->exit_code;
+			if (!sig)
+				goto out;
+			current_task->exit_code = 0;
+
+			/* ingore SIGSTOP */
+			if (sig == SIGSTOP)
+				goto out;
+
+			/* if the (new) signal is now blocked, requeue it */
+			if (sigismember(&current_task->sigmask, sig)) {
+				__task_signal(current_task, sig);
+				goto out;
+			}
+		}
 
 	/* ignore signal handler */
 	if (act->sa_handler == SIG_IGN)

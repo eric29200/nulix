@@ -1,6 +1,7 @@
 #include <proc/elf.h>
 #include <proc/sched.h>
 #include <proc/binfmt.h>
+#include <proc/ptrace.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
 #include <sys/syscall.h>
@@ -439,6 +440,10 @@ static int elf_load_binary(struct binprm *bprm)
 	/* setup task entry and stack pointer */
 	current_task->thread.regs.eip = elf_entry;
 	current_task->thread.regs.useresp = sp;
+
+	/* trace process */
+	if (current_task->ptrace & PT_PTRACED)
+		__task_signal(current_task, SIGTRAP);
 out:
 	sys_close(fd);
 	if (interp_dentry && !IS_ERR(interp_dentry))

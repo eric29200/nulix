@@ -149,7 +149,7 @@ void do_timer_interrupt()
 /*
  * Wake a process = make it runnable.
  */
-static void wake_up_process(struct task *task)
+void wake_up_process(struct task *task)
 {
 	task->state = TASK_RUNNING;
 	need_resched = 1;

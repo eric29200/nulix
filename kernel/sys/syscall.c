@@ -1,5 +1,6 @@
 #include <sys/syscall.h>
 #include <proc/sched.h>
+#include <proc/ptrace.h>
 #include <fs/fs.h>
 #include <net/socket.h>
 #include <sys/sys.h>
@@ -170,6 +171,7 @@ static const void *syscalls[] = {
 	[__NR_stat]			= sys_stat,
 	[__NR_fstat]			= sys_fstat,
 	[__NR_vhangup]			= sys_vhangup,
+	[__NR_ptrace]			= sys_ptrace,
 };
 
 /*
@@ -179,11 +181,18 @@ static void syscall_handler(struct registers *regs)
 {
 	int ret, syscall_nr = regs->eax;
 
+	/* save system call number */
+	regs->orig_eax = syscall_nr;
+
 	/* system call not handled */
 	if (syscall_nr >= SYSCALLS_NUM || syscalls[syscall_nr] == NULL) {
 		printf("Unknown system call : %d (process %d @ 0x%x)\n", syscall_nr, current_task->pid, regs->eip);
 		return;
 	}
+
+	/* trace system call */
+	if (current_task->ptrace & PT_TRACESYS)
+		syscall_trace();
 
 	/* save current registers */
 	memcpy(&current_task->thread.regs, regs, sizeof(struct registers));
@@ -198,11 +207,8 @@ static void syscall_handler(struct registers *regs)
 	regs->eax = ret;
 
 	/* handle pending signals */
-	if (!sigisemptyset(&current_task->sigpend)) {
-		regs->orig_eax = syscall_nr;
+	if (!sigisemptyset(&current_task->sigpend))
 		do_signal(regs);
-		regs->orig_eax = 0;
-	}
 }
 
 /*

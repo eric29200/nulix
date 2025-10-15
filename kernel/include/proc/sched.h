@@ -57,6 +57,7 @@ void do_timer_interrupt();
 void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait);
 void remove_wait_queue(struct wait_queue *wait);
 
+void wake_up_process(struct task *task);
 void select_wait(struct wait_queue **wait_address, struct select_table *st);
 void sleep_on(struct wait_queue **wq);
 void wake_up(struct wait_queue **wq);

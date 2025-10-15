@@ -1,4 +1,5 @@
 #include <proc/sched.h>
+#include <proc/ptrace.h>
 #include <drivers/char/tty.h>
 #include <stderr.h>
 
@@ -39,6 +40,9 @@ void do_exit(int error_code)
 			child->parent = init_task;
 			if (child->state == TASK_ZOMBIE)
 				wake_up(&init_task->wait_child_exit);
+
+			/* reset ptrace */
+			child->ptrace &= ~(PT_PTRACED | PT_TRACESYS);
 		}
 	}
 

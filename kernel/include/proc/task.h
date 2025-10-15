@@ -111,6 +111,7 @@ struct task {
 	size_t				ngroups;			/* number of groups */
 	gid_t				groups[NGROUPS];		/* groups */
 	int				dumpable;			/* dumpable ? */
+	uint32_t			ptrace;				/* ptrace flags */
 	struct tty *			tty;				/* attached tty */
 	time_t				utime;				/* amount of time (in jiffies) that this process has been scheduled in user mode */
 	time_t				stime;				/* amount of time (in jiffies) that this process has been scheduled in kernel mode */

@@ -73,6 +73,10 @@ static int task_copy_flags(struct task *task, struct task *parent, uint32_t clon
 	/* set new flags */
 	task->flags = new_flags;
 
+	/* don'y clone ptrace */
+	if (!(clone_flags & CLONE_PTRACE))
+		task->ptrace = 0;
+
 	return 0;
 }
 
@@ -528,6 +532,7 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	task->sgid = parent ? parent->sgid : 0;
 	task->fsgid = parent ? parent->fsgid : 0;
 	task->tty = parent ? parent->tty : 0;
+	task->ptrace = parent ? parent->ptrace : 0;
 	task->start_time = jiffies;
 	task->vfork_sem = NULL;
 	INIT_LIST_HEAD(&task->list);

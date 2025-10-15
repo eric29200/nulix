@@ -26,6 +26,7 @@
 #define __NR_umount			22
 #define __NR_setuid			23
 #define __NR_getuid			24
+#define __NR_ptrace			26
 #define __NR_alarm			27
 #define __NR_pause			29
 #define __NR_access			33
