@@ -2,6 +2,7 @@
 #include <proc/binfmt.h>
 #include <proc/ptrace.h>
 #include <proc/elf.h>
+#include <x86/ldt.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -241,13 +242,14 @@ static void flush_old_files()
 		}
 	}
 }
- 
+
 /*
  * Flush memory regions.
  */
 static int exec_mmap()
 {
 	struct mm_struct *mm_new;
+	int ret;
 
 	/* clear all memory regions */
 	if (current_task->mm->count == 1) {
@@ -256,10 +258,21 @@ static int exec_mmap()
 		return 0;
 	}
 
-	/* duplicate mm struct */
-	mm_new = task_dup_mm(current_task->mm);
+	/* allocate a new mm struct */
+	mm_new = task_alloc_mm();
 	if (!mm_new)
 		return -ENOMEM;
+
+	/* copy segments */
+	ret = clone_ldt(current_task->mm, mm_new);
+	if (ret)
+		goto err;
+
+	/* create a new page directory */
+	ret = -ENOMEM;
+	mm_new->pgd = create_page_directory();
+	if (!mm_new->pgd)
+		goto err;
 
 	/* decrement old mm count and set new mm struct */
 	current_task->mm->count--;
@@ -272,6 +285,11 @@ static int exec_mmap()
 	task_release_mmap(current_task);
 
 	return 0;
+err:
+	if (mm_new->ldt)
+		kfree(mm_new->ldt);
+	kfree(mm_new);
+	return ret;
 }
 
 /*

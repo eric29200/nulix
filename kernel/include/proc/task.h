@@ -176,6 +176,7 @@ struct task *create_init_task(struct task *parent);
 int do_fork(uint32_t clone_flags, uint32_t user_sp);
 void destroy_task(struct task *task);
 struct task *get_task(pid_t pid);
+struct mm_struct *task_alloc_mm();
 struct mm_struct *task_dup_mm(struct mm_struct *mm);
 void task_exit_signals(struct task *task);
 void task_exit_fs(struct task *task);

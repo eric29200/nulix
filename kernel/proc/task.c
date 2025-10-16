@@ -147,14 +147,11 @@ static int task_copy_rlim(struct task *task, struct task *parent)
 }
 
 /*
- * Duplicate a memory structure.
+ * Allocate a memory structure.
  */
-struct mm_struct *task_dup_mm(struct mm_struct *mm)
+struct mm_struct *task_alloc_mm()
 {
-	struct vm_area *vma_parent, *vma_child;
 	struct mm_struct *mm_new;
-	struct list_head *pos;
-	int ret;
 
 	/* allocate memory structure */
 	mm_new = (struct mm_struct *) kmalloc(sizeof(struct mm_struct));
@@ -166,63 +163,85 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	mm_new->count = 1;
 	INIT_LIST_HEAD(&mm_new->vm_list);
 
+	return mm_new;
+}
+
+/*
+ * Duplicate a memory structure.
+ */
+struct mm_struct *task_dup_mm(struct mm_struct *mm)
+{
+	struct vm_area *vma_parent, *vma_child;
+	struct mm_struct *mm_new;
+	struct list_head *pos;
+	int ret;
+
+	/* allocate memory structure */
+	mm_new = task_alloc_mm();
+	if (!mm_new)
+		return NULL;
+
+	/* first task = use kernel pgd */
+	if (!mm) {
+		mm_new->pgd = pgd_kernel;
+		return mm_new;
+	}
+
 	/* clone page directory */
-	mm_new->pgd = mm ? create_page_directory() : pgd_kernel;
+	mm_new->pgd = create_page_directory();
 	if (!mm_new->pgd)
 		goto err;
 
 	/* clone LDT */
-	if (mm && mm->ldt_size) {
+	if (mm->ldt_size) {
 		ret = clone_ldt(mm, mm_new);
 		if (ret)
 			goto err;
 	}
 
 	/* copy code/data/brk start/end */
-	mm_new->start_code = mm ? mm->start_code : 0;
-	mm_new->end_code = mm ? mm->end_code : 0;
-	mm_new->start_data = mm ? mm->start_data : 0;
-	mm_new->end_data = mm ? mm->end_data : 0;
-	mm_new->start_brk = mm ? mm->start_brk : 0;
-	mm_new->end_brk = mm ? mm->end_brk : 0;
-	mm_new->arg_start = mm ? mm->arg_end : 0;
-	mm_new->arg_start = mm ? mm->arg_end : 0;
-	mm_new->env_start = mm ? mm->env_start : 0;
-	mm_new->env_end = mm ? mm->env_end : 0;
+	mm_new->start_code = mm->start_code;
+	mm_new->end_code = mm->end_code;
+	mm_new->start_data = mm->start_data;
+	mm_new->end_data = mm->end_data;
+	mm_new->start_brk = mm->start_brk;
+	mm_new->end_brk = mm->end_brk;
+	mm_new->arg_start = mm->arg_end;
+	mm_new->arg_start = mm->arg_end;
+	mm_new->env_start = mm->env_start;
+	mm_new->env_end = mm->env_end;
 
 	/* copy virtual memory areas */
-	if (mm) {
-		list_for_each(pos, &mm->vm_list) {
-			vma_parent = list_entry(pos, struct vm_area, list);
-			vma_child = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-			if (!vma_child)
-				goto err;
+	list_for_each(pos, &mm->vm_list) {
+		vma_parent = list_entry(pos, struct vm_area, list);
+		vma_child = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+		if (!vma_child)
+			goto err;
 
-			/* copy memory area */
-			memset(vma_child, 0, sizeof(struct vm_area));
-			vma_child->vm_start = vma_parent->vm_start;
-			vma_child->vm_end = vma_parent->vm_end;
-			vma_child->vm_flags = vma_parent->vm_flags;
-			vma_child->vm_page_prot = vma_parent->vm_page_prot;
-			vma_child->vm_offset = vma_parent->vm_offset;
-			vma_child->vm_file = vma_parent->vm_file;
-			if (vma_child->vm_file)
-				vma_child->vm_file->f_count++;
-			vma_child->vm_ops = vma_parent->vm_ops;
-			vma_child->vm_mm = mm_new;
-			list_add_tail(&vma_child->list, &mm_new->vm_list);
+		/* copy memory area */
+		memset(vma_child, 0, sizeof(struct vm_area));
+		vma_child->vm_start = vma_parent->vm_start;
+		vma_child->vm_end = vma_parent->vm_end;
+		vma_child->vm_flags = vma_parent->vm_flags;
+		vma_child->vm_page_prot = vma_parent->vm_page_prot;
+		vma_child->vm_offset = vma_parent->vm_offset;
+		vma_child->vm_file = vma_parent->vm_file;
+		if (vma_child->vm_file)
+			vma_child->vm_file->f_count++;
+		vma_child->vm_ops = vma_parent->vm_ops;
+		vma_child->vm_mm = mm_new;
+		list_add_tail(&vma_child->list, &mm_new->vm_list);
 
-			/* copy pages */
-			copy_page_range(mm->pgd, mm_new->pgd, vma_child);
+		/* copy pages */
+		copy_page_range(mm->pgd, mm_new->pgd, vma_child);
 
-			/* open region */
-			if (vma_child->vm_ops && vma_child->vm_ops->open)
-				vma_child->vm_ops->open(vma_child);
-		}
-
-		/* flush tlb */
-		flush_tlb(current_task->mm->pgd);
+		/* open region */
+		if (vma_child->vm_ops && vma_child->vm_ops->open)
+			vma_child->vm_ops->open(vma_child);
 	}
+
+	/* flush tlb */
+	flush_tlb(current_task->mm->pgd);
 
 	return mm_new;
 err:
@@ -232,6 +251,7 @@ err:
 	kfree(mm_new);
 	return NULL;
 }
+
 /*
  * Copy memory areas.
  */
