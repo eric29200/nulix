@@ -178,59 +178,46 @@ int prepare_binprm(struct binprm *bprm)
 }
 
 /*
- * Clear current executable (clear memory, signals and files).
+ * Make signals private.
  */
-int flush_old_exec(struct binprm *bprm)
+static int make_private_signals()
 {
-	struct signal_struct *sig_new = NULL, *sig_old;
-	struct mm_struct *mm_new;
-	int fd, i, ret;
+	struct signal_struct *sig_new;
 
-	/* make sig private */
-	sig_old = current_task->sig;
-	if (current_task->sig->count > 1) {
-		/* allocate a private sig */
-		sig_new = (struct signal_struct *) kmalloc(sizeof(struct signal_struct));
-		if (!sig_new) {
-			ret = -ENOMEM;
-			goto err_sig;
-		}
+	if (current_task->sig->count <= 1)
+		return 0;
 
-		/* copy actions */
-		sig_new->count = 1;
-		memcpy(sig_new->action, current_task->sig->action, sizeof(sig_new->action));
-		current_task->sig = sig_new;
-	}
+	/* allocate a private sig */
+	sig_new = (struct signal_struct *) kmalloc(sizeof(struct signal_struct));
+	if (!sig_new)
+		return -ENOMEM;
 
+	/* copy actions */
+	sig_new->count = 1;
+	memcpy(sig_new->action, current_task->sig->action, sizeof(sig_new->action));
+	current_task->sig = sig_new;
 
-	/* clear all memory regions */
-	if (current_task->mm->count == 1) {
-		task_release_mmap(current_task);
-		task_exit_mmap(current_task->mm);
-	} else {
-		/* duplicate mm struct */
-		mm_new = task_dup_mm(current_task->mm);
-		if (!mm_new) {
-			ret = -ENOMEM;
-			goto err_mm;
-		}
+	return 0;
+}
 
-		/* decrement old mm count and set new mm struct */
-		current_task->mm->count--;
-		current_task->mm = mm_new;
+/*
+ * Release old signals.
+ */
+static void release_old_signals(struct signal_struct *sig_old)
+{
+	if (current_task->sig == sig_old)
+		return;
 
-		/* switch to new page directory */
-		switch_pgd(current_task->mm->pgd);
+	sig_old->count--;
+}
+ 
+/*
+ * Flust signal handlers.
+ */
+static void flush_signal_handlers()
+{
+	int i;
 
-		/* release mapping */
-		task_release_mmap(current_task);
-	}
-
-	/* release old signals */
-	if (current_task->sig != sig_old)
-		sig_old->count--;
-
-	/* clear signal handlers */
 	for (i = 0; i < NSIGS; i++) {
 		if (current_task->sig->action[i].sa_handler != SIG_IGN)
 			current_task->sig->action[i].sa_handler = SIG_DFL;
@@ -238,14 +225,75 @@ int flush_old_exec(struct binprm *bprm)
 		current_task->sig->action[i].sa_flags = 0;
 		sigemptyset(&current_task->sig->action[i].sa_mask);
 	}
+}
 
-	/* close files marked close on exec */
+/*
+ * Flush old files.
+ */
+static void flush_old_files()
+{
+	int fd;
+
 	for (fd = 0; fd < NR_OPEN; fd++) {
 		if (FD_ISSET(fd, &current_task->files->close_on_exec)) {
 			sys_close(fd);
 			FD_CLR(fd, &current_task->files->close_on_exec);
 		}
 	}
+}
+ 
+/*
+ * Flush memory regions.
+ */
+static int exec_mmap()
+{
+	struct mm_struct *mm_new;
+
+	/* clear all memory regions */
+	if (current_task->mm->count == 1) {
+		task_release_mmap(current_task);
+		task_exit_mmap(current_task->mm);
+		return 0;
+	}
+
+	/* duplicate mm struct */
+	mm_new = task_dup_mm(current_task->mm);
+	if (!mm_new)
+		return -ENOMEM;
+
+	/* decrement old mm count and set new mm struct */
+	current_task->mm->count--;
+	current_task->mm = mm_new;
+
+	/* switch to new page directory */
+	switch_pgd(current_task->mm->pgd);
+
+	/* release mapping */
+	task_release_mmap(current_task);
+
+	return 0;
+}
+
+/*
+ * Clear current executable (clear memory, signals and files).
+ */
+int flush_old_exec(struct binprm *bprm)
+{
+	struct signal_struct *sig_old = current_task->sig;
+	int ret;
+
+	/* make sig private */
+	ret = make_private_signals();
+	if (ret)
+		goto err_sig;
+
+	/* clear all memory regions */
+	ret = exec_mmap();
+	if (ret)
+		goto err_mm;
+
+	/* release old signals */
+	release_old_signals(sig_old);
 
 	/* dumpable ? */
 	bprm->dumpable = 0;
@@ -259,10 +307,14 @@ int flush_old_exec(struct binprm *bprm)
 		current_task->dumpable = 0;
 	}
 
+	/* flush signal handlers and files */
+	flush_signal_handlers();
+	flush_old_files();
+
 	return 0;
 err_mm:
-	if (sig_new)
-		kfree(sig_new);
+	if (current_task->sig != sig_old)
+		kfree(current_task->sig);
 err_sig:
 	current_task->sig = sig_old;
 	return ret;
