@@ -74,6 +74,19 @@ static void set_brk(uint32_t start, uint32_t end)
 	/* map sections */
 	do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_PRIVATE, 0);
 }
+ 
+/*
+ * Memzero fractionnal page of bss section.
+ */
+static void padzero(uint32_t elf_bss)
+{
+	size_t nbyte = ELF_PAGEOFFSET(elf_bss);
+
+	if (nbyte) {
+		nbyte = PAGE_SIZE - nbyte;
+		memset((void *) elf_bss, 0, nbyte);
+	}
+}
 
 /*
  * Create ELF tables and setup stack.
@@ -227,7 +240,7 @@ static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentr
 	}
 
 	/* memzero fractionnal page of bss section */
-	memset((void *) elf_bss, 0, PAGE_ALIGN_UP(elf_bss) - elf_bss);
+	padzero(elf_bss);
 
 	/* fill out BSS section */
 	elf_bss = ELF_PAGESTART(elf_bss + PAGE_SIZE - 1);
@@ -415,11 +428,9 @@ static int elf_load_binary(struct binprm *bprm)
 			goto out;
 	}
 
-	/* memzero fractionnal page of bss section */
-	memset((void *) elf_bss, 0, PAGE_ALIGN_UP(elf_bss) - elf_bss);
-
 	/* setup BSS and BRK sections */
 	set_brk(elf_bss, elf_brk);
+	padzero(elf_bss);
 
 	/* compute credentials */
 	compute_creds(bprm);
