@@ -1,0 +1,23 @@
+VERSION="1.2.3"
+SRC_FILENAME="musl-obstack-"$VERSION".tar.gz"
+URL="https://github.com/void-linux/musl-obstack/archive/refs/tags/v"$VERSION".tar.gz"
+
+function configure_port() {
+	autoreconf -i
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+
+	# fix libtool and pkgconfig
+	SYSROOT_ESC=$(echo $SYSROOT | sed 's/\//\\\//g')
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/musl-obstack.pc"
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/libobstack.la"
+}
