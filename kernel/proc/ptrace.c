@@ -134,6 +134,43 @@ static int ptrace_traceme()
 }
 
 /*
+ * Attach a process.
+ */
+static int ptrace_attach(struct task *child, long request)
+{
+	/* can't attach current task */
+	if (child == current_task)
+		return -EPERM;
+
+	/* check permissions */
+	if (!child->dumpable
+		|| current_task->uid != child->euid
+		|| current_task->uid != child->suid
+		|| current_task->uid != child->uid
+		|| current_task->gid != child->egid
+		|| current_task->gid != child->sgid
+		|| current_task->gid != child->gid)
+		return -EPERM;
+
+	/* same process can't be attached many times */
+	if (child->ptrace & PT_PTRACED)
+		return -EPERM;
+
+	/* mark process traced */
+	child->ptrace |= PT_PTRACED;
+
+	/* adopt child */
+	if (child->parent != current_task)
+		child->parent = current_task;
+
+	/* stop child */
+	if (request != PTRACE_SEIZE)
+		__task_signal(child, SIGSTOP);
+
+	return 0;
+}
+
+/*
  * Ptrace system call.
  */
 int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
@@ -153,6 +190,10 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 	/* init process can't be traced */
 	if (pid == 1)
 		return -EPERM;
+
+	/* attach a process */
+	if (request == PTRACE_ATTACH || request == PTRACE_SEIZE)
+		return ptrace_attach(child, request);
 
 	/* check process */
 	if (!(child->ptrace & PT_PTRACED))
