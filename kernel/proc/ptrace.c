@@ -171,6 +171,20 @@ static int ptrace_attach(struct task *child, long request)
 }
 
 /*
+ * Set options.
+ */
+static int ptrace_setoptions(struct task *child, uint32_t data)
+{
+	if (data & ~(unsigned long) PTRACE_O_MASK)
+		return -EINVAL;
+
+	child->ptrace &= ~(PTRACE_O_MASK << PT_OPT_FLAG_SHIFT);
+	child->ptrace |= (data << PT_OPT_FLAG_SHIFT);
+
+	return 0;
+}
+
+/*
  * Ptrace system call.
  */
 int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
@@ -252,6 +266,8 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 			child->exit_code = data;
 			wake_up_process(child);
 			break;
+		case PTRACE_SETOPTIONS:
+			return ptrace_setoptions(child, data);
 		default:
 			printf("ptrace: unknown request 0x%x\n", request);
 			return -EIO;
