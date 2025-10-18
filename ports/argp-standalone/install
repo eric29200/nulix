@@ -1,0 +1,22 @@
+VERSION="1.4.1"
+SRC_FILENAME="argp-standalone-"$VERSION".tar.gz"
+URL="https://github.com/ericonr/argp-standalone/archive/refs/tags/"$VERSION".tar.gz"
+
+function configure_port() {
+	autoreconf -i
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+
+	# fix libtool and pkgconfig
+	cp libargp.a $SYSROOT"/usr/lib/"
+	cp argp.h $SYSROOT"/usr/include/"
+}
