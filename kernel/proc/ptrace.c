@@ -185,6 +185,18 @@ static int ptrace_setoptions(struct task *child, uint32_t data)
 }
 
 /*
+ * Get last signal informations.
+ */
+static int ptrace_getsiginfo(struct task *child, siginfo_t *info)
+{
+	if (!child->last_siginfo)
+		return -ESRCH;
+
+	memcpy(info, child->last_siginfo, sizeof(siginfo_t));
+	return 0;
+}
+
+/*
  * Ptrace system call.
  */
 int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
@@ -266,6 +278,8 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 			child->exit_code = data;
 			wake_up_process(child);
 			break;
+		case PTRACE_GETSIGINFO:
+			return ptrace_getsiginfo(child, (siginfo_t *) data);
 		case PTRACE_SETOPTIONS:
 			return ptrace_setoptions(child, data);
 		default:
