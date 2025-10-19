@@ -172,8 +172,7 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 
 	/* set new sigmask */
 	current_task->saved_sigmask = current_task->sigmask;
-	sigdelsetmask(newset, ~BLOCKABLE);
-	current_task->sigmask = *newset;
+	current_task->sigmask = *newset & BLOCKABLE;
 
 	/* wait for signal */
 	regs->eax = -EINTR;
