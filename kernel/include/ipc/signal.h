@@ -194,7 +194,6 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
 int sys_rt_sigtimedwait(const sigset_t *sigset, void *info, const struct timespec *uts, size_t sigsetsize);
 int sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
 int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
-int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
 int sys_sigreturn();
 int sys_kill(pid_t pid, int sig);
 int sys_tkill(pid_t pid, int sig);

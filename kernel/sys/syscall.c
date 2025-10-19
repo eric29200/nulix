@@ -42,7 +42,6 @@ static const void *syscalls[] = {
 	[__NR_sigaction]		= sys_sigaction,
 	[__NR_rt_sigaction]		= sys_sigaction,
 	[__NR_kill]			= sys_kill,
-	[__NR_sigprocmask]		= sys_sigprocmask,
 	[__NR_rt_sigprocmask]	 	= sys_rt_sigprocmask,
 	[__NR_sigreturn]		= sys_sigreturn,
 	[__NR_getuid]			= sys_getuid,

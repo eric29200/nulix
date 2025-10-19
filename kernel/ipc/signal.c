@@ -10,32 +10,6 @@
 extern void return_user_mode(struct registers *regs);
 
 /*
- * Change blocked signals.
- */
-static int do_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
-{
-	/* save current sigset */
-	if (oldset)
-		*oldset = current_task->sigmask;
-
-	if (!set)
-		return 0;
-
-	/* update sigmask */
-	if (how == SIG_BLOCK)
-		current_task->sigmask |= *set;
-	else if (how == SIG_UNBLOCK)
-		current_task->sigmask &= ~*set;
-	else if (how == SIG_SETMASK)
-		current_task->sigmask = *set;
-	else
-		return -EINVAL;
-
-	return 0;
-}
-
-
-/*
  * Signal return trampoline (this code is executed in user mode).
  */
 static int sigreturn()
@@ -255,15 +229,25 @@ int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *old
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize)
 {
 	UNUSED(sigsetsize);
-	return do_sigprocmask(how, set, oldset);
-}
 
-/*
- * Change blocked signals system call.
- */
-int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
-{
-	return do_sigprocmask(how, set, oldset);
+	/* save current sigset */
+	if (oldset)
+		*oldset = current_task->sigmask;
+
+	if (!set)
+		return 0;
+
+	/* update sigmask */
+	if (how == SIG_BLOCK)
+		current_task->sigmask |= *set;
+	else if (how == SIG_UNBLOCK)
+		current_task->sigmask &= ~*set;
+	else if (how == SIG_SETMASK)
+		current_task->sigmask = *set;
+	else
+		return -EINVAL;
+
+	return 0;
 }
 
 /*
