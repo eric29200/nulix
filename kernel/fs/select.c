@@ -293,12 +293,12 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 	/* handle sigmask */
 	if (sigmask) {
 		/* save current sigmask */
-		current_sigmask = current_task->sigmask;
+		current_sigmask = current_task->blocked;
 
 		/* set new sigmask (do not mask SIGKILL and SIGSTOP) */
-		current_task->sigmask = *sigmask;
-		sigdelset(&current_task->sigmask, SIGKILL);
-		sigdelset(&current_task->sigmask, SIGSTOP);
+		current_task->blocked = *sigmask;
+		sigdelset(&current_task->blocked, SIGKILL);
+		sigdelset(&current_task->blocked, SIGSTOP);
 	}
 
 	/* convert timespec to kernel timeval */
@@ -312,7 +312,7 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 	if (ret == -EINTR && sigmask)
 		current_task->saved_sigmask = current_sigmask;
 	else if (sigmask)
-		current_task->sigmask = current_sigmask;
+		current_task->blocked = current_sigmask;
 
 	return ret;
 }

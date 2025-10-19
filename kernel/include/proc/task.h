@@ -123,7 +123,7 @@ struct task {
 	struct task *		 	parent;				/* parent process */
 	time_t				timeout;			/* timeout (used by sleep) */
 	sigset_t			sigpend;			/* pending signals */
-	sigset_t			sigmask;			/* signals mask */
+	sigset_t			blocked;			/* blocked signals */
 	sigset_t			saved_sigmask;			/* saved signals mask */
 	char				in_syscall;			/* process in system call */
 	struct rlimit			rlim[RLIM_NLIMITS];		/* resource limits */

@@ -36,7 +36,7 @@
  */
 static inline int signal_pending(struct task *task)
 {
-	return task->sigpend & ~(task->sigmask);
+	return task->sigpend & ~(task->blocked);
 }
 
 extern unsigned long avenrun[];				/* Load averages */

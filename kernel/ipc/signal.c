@@ -47,7 +47,7 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 
 	/* restore sigmask */
 	if (current_task->saved_sigmask) {
-		current_task->sigmask = current_task->saved_sigmask;
+		current_task->blocked = current_task->saved_sigmask;
 		current_task->saved_sigmask = 0;
 	}
 
@@ -69,7 +69,7 @@ int do_signal(struct registers *regs)
 
 	/* get first unblocked signal */
 	for (sig = 0; sig < NSIGS; sig++)
-		if (sigismember(&current_task->sigpend, sig) && !sigismember(&current_task->sigmask, sig))
+		if (sigismember(&current_task->sigpend, sig) && !sigismember(&current_task->blocked, sig))
 			break;
 
 	/* no signal */
@@ -100,7 +100,7 @@ int do_signal(struct registers *regs)
 				goto out;
 
 			/* if the (new) signal is now blocked, requeue it */
-			if (sigismember(&current_task->sigmask, sig)) {
+			if (sigismember(&current_task->blocked, sig)) {
 				__task_signal(current_task, sig);
 				goto out;
 			}
@@ -141,7 +141,7 @@ int do_signal(struct registers *regs)
 out:
 	/* restore sigmask */
 	if (current_task->saved_sigmask) {
-		current_task->sigmask = current_task->saved_sigmask;
+		current_task->blocked = current_task->saved_sigmask;
 		current_task->saved_sigmask = 0;
 	}
 
@@ -171,8 +171,8 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 	UNUSED(sigsetsize);
 
 	/* set new sigmask */
-	current_task->saved_sigmask = current_task->sigmask;
-	current_task->sigmask = *newset & BLOCKABLE;
+	current_task->saved_sigmask = current_task->blocked;
+	current_task->blocked = *newset & BLOCKABLE;
 
 	/* wait for signal */
 	regs->eax = -EINTR;
@@ -231,18 +231,18 @@ int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t si
 
 	/* save current sigset */
 	if (oldset)
-		*oldset = current_task->sigmask;
+		*oldset = current_task->blocked;
 
 	if (!set)
 		return 0;
 
 	/* update sigmask */
 	if (how == SIG_BLOCK)
-		current_task->sigmask |= *set;
+		current_task->blocked |= *set;
 	else if (how == SIG_UNBLOCK)
-		current_task->sigmask &= ~*set;
+		current_task->blocked &= ~*set;
 	else if (how == SIG_SETMASK)
-		current_task->sigmask = *set;
+		current_task->blocked = *set;
 	else
 		return -EINVAL;
 

@@ -106,7 +106,7 @@ static int task_copy_signals(struct task *task, struct task *parent, uint32_t cl
 
 	/* init signals */
 	sigemptyset(&task->sigpend);
-	sigemptyset(&task->sigmask);
+	sigemptyset(&task->blocked);
 	sigemptyset(&task->saved_sigmask);
 
 	/* copy signals */
