@@ -122,7 +122,7 @@ struct task {
 	int			 	exit_code;			/* exit code */
 	struct task *		 	parent;				/* parent process */
 	time_t				timeout;			/* timeout (used by sleep) */
-	sigset_t			sigpend;			/* pending signals */
+	sigset_t			signal;				/* pending signals */
 	sigset_t			blocked;			/* blocked signals */
 	sigset_t			saved_sigmask;			/* saved signals mask */
 	char				in_syscall;			/* process in system call */

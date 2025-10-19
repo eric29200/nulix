@@ -69,7 +69,7 @@ int do_signal(struct registers *regs)
 
 	/* get first unblocked signal */
 	for (sig = 0; sig < NSIGS; sig++)
-		if (sigismember(&current_task->sigpend, sig) && !sigismember(&current_task->blocked, sig))
+		if (sigismember(&current_task->signal, sig) && !sigismember(&current_task->blocked, sig))
 			break;
 
 	/* no signal */
@@ -77,7 +77,7 @@ int do_signal(struct registers *regs)
 		goto out;
 
 	/* remove signal from current task */
-	sigdelset(&current_task->sigpend, sig);
+	sigdelset(&current_task->signal, sig);
 	act = &current_task->sig->action[sig - 1];
 
 	/* traced process */
@@ -195,7 +195,7 @@ int sys_rt_sigpending(sigset_t *set, size_t sigsetsize)
 	if (!set)
 		return -EINVAL;
 
-	*set = current_task->sigpend;
+	*set = current_task->signal;
 
 	return 0;
 }

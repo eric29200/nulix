@@ -370,7 +370,7 @@ void __task_signal(struct task *task, int sig)
 		return;
 
 	/* add to pending signals */
-	sigaddset(&task->sigpend, sig);
+	sigaddset(&task->signal, sig);
 
 	/* wake up process if sleeping */
 	if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)

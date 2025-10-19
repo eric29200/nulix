@@ -206,7 +206,7 @@ static void syscall_handler(struct registers *regs)
 	regs->eax = ret;
 
 	/* handle pending signals */
-	if (!sigisemptyset(&current_task->sigpend))
+	if (!sigisemptyset(&current_task->signal))
 		do_signal(regs);
 }
 
