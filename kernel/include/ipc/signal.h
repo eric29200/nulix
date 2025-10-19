@@ -117,8 +117,9 @@ typedef struct {
  */
 struct sigaction {
 	sighandler_t	sa_handler;
-	int		sa_flags;
 	sigset_t	sa_mask;
+	int		sa_flags;
+	void		(*sa_restorer)(void);
 };
 
 /*
