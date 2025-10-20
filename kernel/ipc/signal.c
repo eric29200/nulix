@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <stderr.h>
 
-#define BLOCKABLE		(~(sigmask(SIGKILL) | sigmask(SIGSTOP)))
-
 extern void return_user_mode(struct registers *regs);
 
 /*
@@ -46,9 +44,9 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 	regs->eip = (uint32_t) act->sa_handler;
 
 	/* restore sigmask */
-	if (current_task->saved_sigmask) {
+	if (!sigisemptyset(&current_task->saved_sigmask)) {
 		current_task->blocked = current_task->saved_sigmask;
-		current_task->saved_sigmask = 0;
+		sigemptyset(&current_task->saved_sigmask);
 	}
 
 	/* signal in system call : return to user mode */
@@ -68,12 +66,12 @@ int do_signal(struct registers *regs)
 	int sig;
 
 	/* get first unblocked signal */
-	for (sig = 0; sig < NSIGS; sig++)
+	for (sig = 1; sig < _NSIG; sig++)
 		if (sigismember(&current_task->signal, sig) && !sigismember(&current_task->blocked, sig))
 			break;
 
 	/* no signal */
-	if (sig == NSIGS)
+	if (sig == _NSIG)
 		goto out;
 
 	/* remove signal from current task */
@@ -140,9 +138,9 @@ int do_signal(struct registers *regs)
 	return 1;
 out:
 	/* restore sigmask */
-	if (current_task->saved_sigmask) {
+	if (!sigisemptyset(&current_task->saved_sigmask)) {
 		current_task->blocked = current_task->saved_sigmask;
-		current_task->saved_sigmask = 0;
+		sigemptyset(&current_task->saved_sigmask);
 	}
 
 	/* signal in system call : return to user mode */
@@ -168,11 +166,14 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 {
 	struct registers *regs = (struct registers *) &newset;
 
-	UNUSED(sigsetsize);
+	/* check sigset size */
+	if (sigsetsize != sizeof(sigset_t))
+		return -EINVAL;
 
 	/* set new sigmask */
 	current_task->saved_sigmask = current_task->blocked;
-	current_task->blocked = *newset & BLOCKABLE;
+	current_task->blocked = *newset;
+	sigdelsetmask(&current_task->blocked, sigmask(SIGKILL) | sigmask(SIGSTOP));
 
 	/* wait for signal */
 	regs->eax = -EINTR;
@@ -190,7 +191,9 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
  */
 int sys_rt_sigpending(sigset_t *set, size_t sigsetsize)
 {
-	UNUSED(sigsetsize);
+	/* check sigset size */
+	if (sigsetsize != sizeof(sigset_t))
+		return -EINVAL;
 
 	if (!set)
 		return -EINVAL;
@@ -203,9 +206,9 @@ int sys_rt_sigpending(sigset_t *set, size_t sigsetsize)
 /*
  * Sigaction system call (= change action taken by a process on receipt of a specific signal).
  */
-int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
+int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 {
-	if (signum <= 0 || signum > NSIGS)
+	if (signum < 1 || signum > _NSIG)
 		return -EINVAL;
 
 	/* SIGSTOP and SIGKILL actions can't be redefined */
@@ -227,7 +230,9 @@ int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *old
  */
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize)
 {
-	UNUSED(sigsetsize);
+	/* check sigset size */
+	if (sigsetsize != sizeof(sigset_t))
+		return -EINVAL;
 
 	/* save current sigset */
 	if (oldset)
@@ -238,9 +243,9 @@ int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t si
 
 	/* update sigmask */
 	if (how == SIG_BLOCK)
-		current_task->blocked |= *set;
+	 	sigorsets(&current_task->blocked, set);
 	else if (how == SIG_UNBLOCK)
-		current_task->blocked &= ~*set;
+	 	signandsets(&current_task->blocked, set);
 	else if (how == SIG_SETMASK)
 		current_task->blocked = *set;
 	else
@@ -267,7 +272,7 @@ int sys_sigreturn()
 int sys_kill(pid_t pid, int sig)
 {
 	/* check signal number (0 is ok : means check permission but do not send signal) */
-	if (sig < 0 || sig >= NSIGS)
+	if (sig < 0 || sig >= _NSIG)
 		return -EINVAL;
 
 	/* send signal to process identified by pid */

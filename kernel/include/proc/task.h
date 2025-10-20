@@ -84,7 +84,7 @@ struct fs_struct {
  */
 struct signal_struct {
 	int				count;				/* reference counter */
-	struct sigaction		action[NSIGS];			/* signal handlers */
+	struct sigaction		action[_NSIG];			/* signal handlers */
 };
 
 /*

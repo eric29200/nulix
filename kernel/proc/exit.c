@@ -127,7 +127,7 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 		sleep_on(&current_task->wait_child_exit);
 
 		/* remove SIGCHLD */
-		current_task->signal &= ~(1 << SIGCHLD);
+		sigdelset(&current_task->signal, SIGCHLD);
 
 		/* process interruption */
 		if (signal_pending(current_task))

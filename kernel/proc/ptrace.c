@@ -256,7 +256,7 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 			break;
 		case PTRACE_SYSCALL:
 			/* check signal */
-			if (data > NSIGS)
+			if (data > _NSIG)
 				return -EIO;
 
 			/* trace system calls */
@@ -268,7 +268,7 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 			break;
 		case PTRACE_CONT:
 			/* check signal */
-			if (data > NSIGS)
+			if (data > _NSIG)
 				return -EIO;
 
 			/* don't trace system calls */

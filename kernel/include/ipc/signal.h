@@ -6,7 +6,11 @@
 #include <time.h>
 #include <x86/system.h>
 
-#define NSIGS		(SIGUNUSED + 1)
+#define _NSIG		64
+#define _NSIG_BPW	32
+#define _NSIG_WORDS	(_NSIG / _NSIG_BPW)
+
+#define NSIG		32
 
 #define SIGHUP		1
 #define SIGINT		2
@@ -40,8 +44,7 @@
 #define SIGIO		29
 #define SIGPOLL		29
 #define SIGPWR		30
-#define SIGSYS		31
-#define SIGUNUSED	SIGSYS
+#define SIGUNUSED	31
 
 #define SIG_BLOCK	 0
 #define SIG_UNBLOCK	 1
@@ -56,9 +59,16 @@
 typedef void (*sighandler_t)(int);
 
 /*
+ * Old signal set.
+ */
+typedef unsigned long old_sigset_t;
+
+/*
  * Signal set.
  */
-typedef unsigned long sigset_t;
+typedef struct {
+	unsigned long	sig[_NSIG_WORDS];
+} sigset_t;
 
 /*
  * Signal value.
@@ -132,7 +142,16 @@ struct sigaction {
  */
 static inline int sigisemptyset(sigset_t *set)
 {
-	return (int) *set == 0;
+	switch (_NSIG_WORDS) {
+		case 1:
+			return set->sig[0] == 0;
+		case 2:
+			return (set->sig[1] | set->sig[0]) == 0;
+		case 4:
+			return (set->sig[3] | set->sig[2] | set->sig[1] | set->sig[0]) == 0;
+		default:
+			return 0;
+	}
 }
 
 /*
@@ -146,44 +165,40 @@ static inline void sigemptyset(sigset_t *set)
 /*
  * Check if sig is a member of sigset.
  */
-static inline int sigismember(const sigset_t *set, int sig)
+static inline int sigismember(const sigset_t *set, int _sig)
 {
-	unsigned int s = sig - 1;
+	unsigned long sig = _sig - 1;
 
-	if (s >= NSIGS - 1)
-		return 0;
-
-	return 1 & (*set >> sig);
+	if (_NSIG_WORDS == 1)
+		return (set->sig[0] >> sig) & 1;
+	else
+		return (set->sig[sig / _NSIG_BPW] >> (sig % _NSIG_BPW)) & 1;
 }
 
 /*
  * Add a signal to a signal set.
  */
-static inline int sigaddset(sigset_t *set, int sig)
+static inline void sigaddset(sigset_t *set, int _sig)
 {
-	unsigned int s = sig - 1;
+	unsigned long sig = _sig - 1;
 
-	if (s >= NSIGS - 1)
-		return -1;
-
-	*set |= (1 << sig);
-
-	return 0;
+	if (_NSIG_WORDS == 1)
+		set->sig[0] |= 1UL << sig;
+	else
+		set->sig[sig / _NSIG_BPW] |= 1UL << (sig % _NSIG_BPW);
 }
 
 /*
  * Delete a signal from a signal set.
  */
-static inline int sigdelset(sigset_t *set, int sig)
+static inline void sigdelset(sigset_t *set, int _sig)
 {
-	unsigned int s = sig - 1;
+	unsigned long sig = _sig - 1;
 
-	if (s >= NSIGS - 1)
-		return -1;
-
-	*set &= ~(1 << sig);
-
-	return 0;
+	if (_NSIG_WORDS == 1)
+		set->sig[0] &= ~(1UL << sig);
+	else
+		set->sig[sig / _NSIG_BPW] &= ~(1UL << (sig % _NSIG_BPW));
 }
 
 /*
@@ -191,7 +206,55 @@ static inline int sigdelset(sigset_t *set, int sig)
  */
 static inline void sigdelsetmask(sigset_t *set, unsigned long mask)
 {
-	*set &= ~mask;
+	set->sig[0] &= ~mask;
+}
+
+/*
+ * Or 2 signal sets.
+ */
+static inline void sigorsets(sigset_t *res, const sigset_t *oth)
+{
+	switch (_NSIG_WORDS) {
+		case 1:
+			res->sig[0] |= oth->sig[0];
+			break;
+		case 2:
+			res->sig[0] |= oth->sig[0];
+			res->sig[1] |= oth->sig[1];
+			break;
+		case 4:
+			res->sig[0] |= oth->sig[0];
+			res->sig[1] |= oth->sig[1];
+			res->sig[3] |= oth->sig[3];
+			res->sig[2] |= oth->sig[2];
+			break;
+		default:
+			break;
+	}
+}
+
+/*
+ * Negative and 2 signal sets.
+ */
+static inline void signandsets(sigset_t *res, const sigset_t *oth)
+{
+	switch (_NSIG_WORDS) {
+		case 1:
+			res->sig[0] &= ~oth->sig[0];
+			break;
+		case 2:
+			res->sig[0] &= ~oth->sig[0];
+			res->sig[1] &= ~oth->sig[1];
+			break;
+		case 4:
+			res->sig[0] &= ~oth->sig[0];
+			res->sig[1] &= ~oth->sig[1];
+			res->sig[3] &= ~oth->sig[3];
+			res->sig[2] &= ~oth->sig[2];
+			break;
+		default:
+			break;
+	}
 }
 
 int do_signal(struct registers *regs);
@@ -199,7 +262,7 @@ int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t si
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
 int sys_rt_sigtimedwait(const sigset_t *sigset, void *info, const struct timespec *uts, size_t sigsetsize);
 int sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
-int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
+int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 int sys_sigreturn();
 int sys_kill(pid_t pid, int sig);
 int sys_tkill(pid_t pid, int sig);

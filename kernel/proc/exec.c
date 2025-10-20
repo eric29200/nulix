@@ -219,7 +219,7 @@ static void flush_signal_handlers()
 {
 	int i;
 
-	for (i = 0; i < NSIGS; i++) {
+	for (i = 0; i < _NSIG; i++) {
 		if (current_task->sig->action[i].sa_handler != SIG_IGN)
 			current_task->sig->action[i].sa_handler = SIG_DFL;
 
