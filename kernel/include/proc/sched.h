@@ -36,7 +36,30 @@
  */
 static inline int signal_pending(struct task *task)
 {
-	return task->signal.sig[0] & ~(task->blocked.sig[0]);
+	unsigned long ready = 0;
+	int i;
+
+	switch (_NSIG_WORDS) {
+		case 1:
+			ready |= task->signal.sig[0] & ~task->blocked.sig[0];
+			break;
+		case 2:
+			ready |= task->signal.sig[1] & ~task->blocked.sig[1];
+			ready |= task->signal.sig[0] & ~task->blocked.sig[0];
+			break;
+		case 4:
+			ready |= task->signal.sig[3] & ~task->blocked.sig[3];
+			ready |= task->signal.sig[2] & ~task->blocked.sig[2];
+			ready |= task->signal.sig[1] & ~task->blocked.sig[1];
+			ready |= task->signal.sig[0] & ~task->blocked.sig[0];
+			break;
+		default:
+			for (i = 0; i < _NSIG_WORDS; i++)
+				ready |= task->signal.sig[i] & ~task->blocked.sig[i];
+			break;
+	}
+
+	return ready != 0;
 }
 
 extern unsigned long avenrun[];				/* Load averages */
