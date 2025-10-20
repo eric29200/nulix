@@ -338,11 +338,49 @@ int sys_tkill(pid_t pid, int sig)
 /*
  * Wait for a signal.
  */
-int sys_rt_sigtimedwait(const sigset_t *usigset, void *info, const struct timespec *uts, size_t sigsetsize)
+int sys_rt_sigtimedwait(const sigset_t *usigset, void *uinfo, const struct old_timespec *uts, size_t sigsetsize)
 {
-	UNUSED(usigset);
-	UNUSED(info);
-	UNUSED(uts);
-	UNUSED(sigsetsize);
-	return 0;
+	time_t timeout = MAX_SCHEDULE_TIMEOUT;
+	sigset_t these, old_blocked;
+	siginfo_t info;
+	int sig;
+
+	/* check sigset size */
+	if (sigsetsize != sizeof(sigset_t))
+		return -EINVAL;
+
+	/* get signal set */
+	these = *usigset;
+	sigdelsetmask(&these, sigmask(SIGKILL) | sigmask(SIGSTOP));
+	signotset(&these);
+
+	/* find signal */
+	sig = dequeue_signal(&these, &info);
+	if (!sig) {
+		old_blocked = current_task->blocked;
+		sigandsets(&current_task->blocked, &these);
+
+		/* prepare timeout */
+		if (uts)
+			timeout = old_timespec_to_jiffies(uts) + (uts->tv_sec || uts->tv_nsec);
+
+		/* goto sleep */
+		current_task->state = TASK_SLEEPING;
+		current_task->timeout = jiffies + timeout;
+		schedule();
+
+		/* check signals */
+		sig = dequeue_signal(&these, &info);
+		current_task->blocked = old_blocked;
+	}
+
+	/* no signal */
+	if (!sig)
+		return timeout > jiffies ? -EINTR : -EAGAIN;
+
+	/* copy signal informations */
+	if (uinfo)
+		memcpy(uinfo, &info, sizeof(siginfo_t));
+
+	return sig;
 }

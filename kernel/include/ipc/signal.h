@@ -210,6 +210,30 @@ static inline void sigdelsetmask(sigset_t *set, unsigned long mask)
 }
 
 /*
+ * Negate a signal set.
+ */
+static inline void signotset(sigset_t *set)
+{
+	switch (_NSIG_WORDS) {
+		case 1:
+			set->sig[0] = ~set->sig[0];
+			break;
+		case 2:
+			set->sig[0] = ~set->sig[0];
+			set->sig[1] = ~set->sig[1];
+			break;
+		case 4:
+			set->sig[0] = ~set->sig[0];
+			set->sig[1] = ~set->sig[1];
+			set->sig[3] = ~set->sig[3];
+			set->sig[2] = ~set->sig[2];
+			break;
+		default:
+			break;
+	}
+}
+
+/*
  * Or 2 signal sets.
  */
 static inline void sigorsets(sigset_t *res, const sigset_t *oth)
@@ -227,6 +251,30 @@ static inline void sigorsets(sigset_t *res, const sigset_t *oth)
 			res->sig[1] |= oth->sig[1];
 			res->sig[3] |= oth->sig[3];
 			res->sig[2] |= oth->sig[2];
+			break;
+		default:
+			break;
+	}
+}
+
+/*
+ * And 2 signal sets.
+ */
+static inline void sigandsets(sigset_t *res, const sigset_t *oth)
+{
+	switch (_NSIG_WORDS) {
+		case 1:
+			res->sig[0] &= oth->sig[0];
+			break;
+		case 2:
+			res->sig[0] &= oth->sig[0];
+			res->sig[1] &= oth->sig[1];
+			break;
+		case 4:
+			res->sig[0] &= oth->sig[0];
+			res->sig[1] &= oth->sig[1];
+			res->sig[3] &= oth->sig[3];
+			res->sig[2] &= oth->sig[2];
 			break;
 		default:
 			break;
@@ -260,7 +308,7 @@ static inline void signandsets(sigset_t *res, const sigset_t *oth)
 int do_signal(struct registers *regs);
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
-int sys_rt_sigtimedwait(const sigset_t *sigset, void *info, const struct timespec *uts, size_t sigsetsize);
+int sys_rt_sigtimedwait(const sigset_t *sigset, void *info, const struct old_timespec *uts, size_t sigsetsize);
 int sys_rt_sigpending(sigset_t *set, size_t sigsetsize);
 int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 int sys_sigreturn();
