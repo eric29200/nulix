@@ -11,6 +11,7 @@
 #include <fs/tmp_i.h>
 #include <fs/iso_i.h>
 #include <fs/proc_i.h>
+#include <ipc/signal.h>
 #include <x86/bitops.h>
 #include <net/socket.h>
 #include <proc/wait.h>

@@ -20,7 +20,6 @@ typedef uint64_t dev_t;
 typedef uint32_t ino_t;
 typedef unsigned uid_t;
 typedef unsigned gid_t;
-typedef int sigset_t;
 typedef int clockid_t;
 
 typedef unsigned char cc_t;

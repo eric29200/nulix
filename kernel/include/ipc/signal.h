@@ -56,6 +56,11 @@
 typedef void (*sighandler_t)(int);
 
 /*
+ * Signal set.
+ */
+typedef unsigned long sigset_t;
+
+/*
  * Signal value.
  */
 union sigval {
