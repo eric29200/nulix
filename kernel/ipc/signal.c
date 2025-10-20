@@ -58,24 +58,56 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 }
 
 /*
+ * Dequeue a signal.
+ */
+static int dequeue_signal(sigset_t *mask, siginfo_t *info)
+{
+	unsigned long i, x, *s, *m;
+	int sig = 0;
+
+	/* find first signal */
+	s = current_task->signal.sig;
+	m = mask->sig;
+	for (i = 0; i < _NSIG_WORDS; i++, s++, m++) {
+		x = *s & ~*m;
+		if (x != 0) {
+			sig = ffz(~x) + i * _NSIG_BPW + 1;
+			break;
+		}
+	}
+
+	/* no signal */
+	if (!sig)
+		return 0;
+
+	/* set informations */
+	info->si_signo = sig;
+	info->si_errno = 0;
+	info->si_code = 0;
+	info->__si_fields.__si_common.__first.__piduid.si_pid = 0;
+	info->__si_fields.__si_common.__first.__piduid.si_uid = 0;
+
+	/* remove signal */
+	sigdelset(&current_task->signal, sig);
+
+	return sig;
+}
+
+/*
  * Handle signal of current task.
  */
 int do_signal(struct registers *regs)
 {
 	struct sigaction *act;
+	siginfo_t info;
 	int sig;
 
 	/* get first unblocked signal */
-	for (sig = 1; sig < _NSIG; sig++)
-		if (sigismember(&current_task->signal, sig) && !sigismember(&current_task->blocked, sig))
-			break;
-
-	/* no signal */
-	if (sig == _NSIG)
+	sig = dequeue_signal(&current_task->blocked, &info);
+	if (!sig)
 		goto out;
 
-	/* remove signal from current task */
-	sigdelset(&current_task->signal, sig);
+	/* get signal action */
 	act = &current_task->sig->action[sig - 1];
 
 	/* traced process */

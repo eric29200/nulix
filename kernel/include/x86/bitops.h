@@ -55,4 +55,15 @@ static inline uint32_t find_first_zero_bit(uint32_t *addr, size_t limit)
 	return -1;
 }
 
+/*
+ * Find first zero bit in a word.
+ */
+static inline uint32_t ffz(uint32_t word)
+{
+	asm("bsf %1,%0"
+		: "=r" (word)
+		: "r" (~word));
+	return word;
+}
+
 #endif
