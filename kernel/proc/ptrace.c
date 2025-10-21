@@ -165,7 +165,7 @@ static int ptrace_attach(struct task *child, long request)
 
 	/* stop child */
 	if (request != PTRACE_SEIZE)
-		__task_signal(child, SIGSTOP);
+		send_sig(child, SIGSTOP);
 
 	return 0;
 }
@@ -302,13 +302,13 @@ void syscall_trace()
 	/* stop task and notify parent */
 	current_task->exit_code = SIGTRAP;
 	current_task->state = TASK_STOPPED;
-	__task_signal(current_task->parent, SIGCHLD);
+	send_sig(current_task->parent, SIGCHLD);
 	wake_up(&current_task->parent->wait_child_exit);
 	schedule();
 
 	/* continue */
 	if (current_task->exit_code) {
-		__task_signal(current_task, current_task->exit_code);
+		send_sig(current_task, current_task->exit_code);
 		current_task->exit_code = 0;
 	}
 }

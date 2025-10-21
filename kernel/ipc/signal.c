@@ -1,11 +1,30 @@
-#include <ipc/signal.h>
 #include <proc/sched.h>
+#include <ipc/signal.h>
 #include <proc/ptrace.h>
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <stderr.h>
 
 extern void return_user_mode(struct registers *regs);
+
+/*
+ * Send a signal to a task.
+ */
+int send_sig(struct task *task, int sig)
+{
+	/* just check permission */
+	if (sig == 0 || !task)
+		return -EPERM;
+
+	/* add to pending signals */
+	sigaddset(&task->signal, sig);
+
+	/* wake up process if sleeping */
+	if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)
+		wake_up_process(task);
+
+	return 0;
+}
 
 /*
  * Signal return trampoline (this code is executed in user mode).
@@ -115,7 +134,7 @@ int do_signal(struct registers *regs)
 			/* let the debugger run */
 			current_task->exit_code = sig;
 			current_task->state = TASK_STOPPED;
-			__task_signal(current_task->parent, SIGCHLD);
+			send_sig(current_task->parent, SIGCHLD);
 			wake_up(&current_task->parent->wait_child_exit);
 			schedule();
 
@@ -131,7 +150,7 @@ int do_signal(struct registers *regs)
 
 			/* if the (new) signal is now blocked, requeue it */
 			if (sigismember(&current_task->blocked, sig)) {
-				__task_signal(current_task, sig);
+				send_sig(current_task, sig);
 				goto out;
 			}
 		}
@@ -156,7 +175,7 @@ int do_signal(struct registers *regs)
 			case SIGTSTP:
 				current_task->state = TASK_STOPPED;
 				current_task->exit_code = sig;
-				__task_signal(current_task->parent, SIGCHLD);
+				send_sig(current_task->parent, SIGCHLD);
 				wake_up(&current_task->parent->wait_child_exit);
 				schedule();
 				goto out;

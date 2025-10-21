@@ -30,7 +30,7 @@ void do_exit(int error_code)
 	current_task->exit_code = error_code;
 
 	/* notify parent */
-	__task_signal(current_task->parent, SIGCHLD);
+	send_sig(current_task->parent, SIGCHLD);
 	wake_up(&current_task->parent->wait_child_exit);
 
 	/* give children to init */

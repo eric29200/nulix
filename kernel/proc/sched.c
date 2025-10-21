@@ -363,23 +363,6 @@ struct task *get_task(pid_t pid)
 /*
  * Send a signal to a task.
  */
-void __task_signal(struct task *task, int sig)
-{
-	/* just check permission */
-	if (sig == 0 || !task)
-		return;
-
-	/* add to pending signals */
-	sigaddset(&task->signal, sig);
-
-	/* wake up process if sleeping */
-	if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)
-		wake_up_process(task);
-}
-
-/*
- * Send a signal to a task.
- */
 int task_signal(pid_t pid, int sig)
 {
 	struct task *task;
@@ -390,7 +373,7 @@ int task_signal(pid_t pid, int sig)
 		return -ESRCH;
 
 	/* send signal */
-	__task_signal(task, sig);
+	send_sig(task, sig);
 
 	return 0;
 }
@@ -407,7 +390,7 @@ int task_signal_group(pid_t pgrp, int sig)
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);
 		if (task->pgrp == pgrp) {
-			__task_signal(task, sig);
+			send_sig(task, sig);
 			ret = 0;
 		}
 	}
@@ -426,7 +409,7 @@ int task_signal_all(int sig)
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);
 		if (task->pid > 1)
-			__task_signal(task, sig);
+			send_sig(task, sig);
 	}
 
 	return 0;

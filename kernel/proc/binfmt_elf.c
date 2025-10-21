@@ -454,7 +454,7 @@ static int elf_load_binary(struct binprm *bprm)
 
 	/* trace process */
 	if (current_task->ptrace & PT_PTRACED)
-		__task_signal(current_task, SIGTRAP);
+		send_sig(current_task, SIGTRAP);
 out:
 	sys_close(fd);
 	if (interp_dentry && !IS_ERR(interp_dentry))

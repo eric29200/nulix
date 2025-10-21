@@ -305,6 +305,8 @@ static inline void signandsets(sigset_t *res, const sigset_t *oth)
 	}
 }
 
+int send_sig(struct task *task, int sig);
+
 int do_signal(struct registers *regs);
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize);
