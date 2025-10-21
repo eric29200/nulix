@@ -27,6 +27,74 @@ int send_sig(struct task *task, int sig)
 }
 
 /*
+ * Send a signal to a task.
+ */
+int kill_proc(pid_t pid, int sig)
+{
+	struct task *task;
+
+	/* get task */
+	task = get_task(pid);
+	if (!task)
+		return -ESRCH;
+
+	/* send signal */
+	return send_sig(task, sig);
+}
+
+/*
+ * Send a signal to all tasks in a group.
+ */
+int kill_pg(pid_t pgrp, int sig)
+{
+	int ret = -ESRCH, err, found = 0;
+	struct list_head *pos;
+	struct task *task;
+
+	/* check group */
+	if (pgrp <= 0)
+		return -EINVAL;
+
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+		if (task->pgrp == pgrp) {
+			err = send_sig(task, sig);
+			if (err)
+				ret = err;
+			else
+				found++;
+		}
+	}
+
+	if (found)
+		ret = 0;
+
+	return ret;
+}
+
+/*
+ * Send a signal to all tasks (except init process).
+ */
+static int kill_all(int sig)
+{
+	int err, ret = 0, count = 0;
+	struct list_head *pos;
+	struct task *task;
+
+	list_for_each(pos, &tasks_list) {
+		task = list_entry(pos, struct task, list);
+		if (task->pid > 1 && task != current_task) {
+			err = send_sig(task, sig);
+			count++;
+			if (err != -EPERM)
+				ret = err;
+		}
+	}
+
+	return count ? ret : -ESRCH;
+}
+
+/*
  * Signal return trampoline (this code is executed in user mode).
  */
 static int sigreturn()
@@ -326,20 +394,20 @@ int sys_kill(pid_t pid, int sig)
 	if (sig < 0 || sig >= _NSIG)
 		return -EINVAL;
 
-	/* send signal to process identified by pid */
-	if (pid > 0)
-		return task_signal(pid, sig);
-
 	/* send signal to all processes in the group of current task */
 	if (pid == 0)
-		return task_signal_group(current_task->pgrp, sig);
+		return kill_pg(current_task->pgrp, sig);
 
 	/* send signal to all processes (except init) */
 	if (pid == -1)
-		task_signal_all(sig);
+		kill_all(sig);
 
 	/* signal to all processes in the group -pid */
-	return task_signal_group(-pid, sig);
+	if (pid < 0)
+		return kill_pg(-pid, sig);
+
+	/* send signal to process identified by pid */
+	return kill_proc(pid, sig);
 }
 
 /*

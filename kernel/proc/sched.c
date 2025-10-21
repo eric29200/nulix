@@ -361,61 +361,6 @@ struct task *get_task(pid_t pid)
 }
 
 /*
- * Send a signal to a task.
- */
-int task_signal(pid_t pid, int sig)
-{
-	struct task *task;
-
-	/* get task */
-	task = get_task(pid);
-	if (!task)
-		return -ESRCH;
-
-	/* send signal */
-	send_sig(task, sig);
-
-	return 0;
-}
-
-/*
- * Send a signal to all tasks in a group.
- */
-int task_signal_group(pid_t pgrp, int sig)
-{
-	struct list_head *pos;
-	struct task *task;
-	int ret = -ESRCH;
-
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
-		if (task->pgrp == pgrp) {
-			send_sig(task, sig);
-			ret = 0;
-		}
-	}
-
-	return ret;
-}
-
-/*
- * Send a signal to all tasks (except init process).
- */
-int task_signal_all(int sig)
-{
-	struct list_head *pos;
-	struct task *task;
-
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
-		if (task->pid > 1)
-			send_sig(task, sig);
-	}
-
-	return 0;
-}
-
-/*
  * Get pid system call.
  */
 pid_t sys_getpid()

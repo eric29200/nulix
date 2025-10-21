@@ -127,7 +127,7 @@ static int do_getitimer(int which, struct itimerval *value)
  */
 static void itimer_handler(void *arg)
 {
-	task_signal(*((pid_t *) arg), SIGALRM);
+	kill_proc(*((pid_t *) arg), SIGALRM);
 }
 
 /*

@@ -87,10 +87,6 @@ void select_wait(struct wait_queue **wait_address, struct select_table *st);
 void sleep_on(struct wait_queue **wq);
 void wake_up(struct wait_queue **wq);
 
-int task_signal(pid_t pid, int sig);
-int task_signal_group(pid_t pgrp, int sig);
-int task_signal_all(int sig);
-
 pid_t sys_getpid();
 pid_t sys_getppid();
 pid_t sys_getpgid(pid_t pid);

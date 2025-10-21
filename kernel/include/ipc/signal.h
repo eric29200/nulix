@@ -305,6 +305,8 @@ static inline void signandsets(sigset_t *res, const sigset_t *oth)
 	}
 }
 
+int kill_proc(pid_t pid, int sig);
+int kill_pg(pid_t pgrp, int sig);
 int send_sig(struct task *task, int sig);
 
 int do_signal(struct registers *regs);
