@@ -46,6 +46,8 @@
 #define SIGPWR		30
 #define SIGUNUSED	31
 
+#define SIGRTMIN	32
+
 #define SIG_BLOCK	 0
 #define SIG_UNBLOCK	 1
 #define SIG_SETMASK	 2
@@ -131,10 +133,26 @@ typedef struct {
  * Signal action structure.
  */
 struct sigaction {
-	sighandler_t	sa_handler;
-	sigset_t	sa_mask;
-	int		sa_flags;
-	void		(*sa_restorer)(void);
+	sighandler_t		sa_handler;
+	sigset_t		sa_mask;
+	int			sa_flags;
+	void			(*sa_restorer)(void);
+};
+
+/*
+ * Signals queue.
+ */
+struct sigqueue {
+	struct list_head	list;
+	siginfo_t		info;
+};
+
+/*
+ * Pending signals.
+ */
+struct sigpending {
+	struct list_head	list;
+	sigset_t		signal;
 };
 
 /*
@@ -304,6 +322,9 @@ static inline void signandsets(sigset_t *res, const sigset_t *oth)
 			break;
 	}
 }
+
+void init_sigpending(struct sigpending *pending);
+void flush_signals(struct task *task);
 
 int kill_proc(pid_t pid, int sig);
 int kill_pg(pid_t pgrp, int sig);

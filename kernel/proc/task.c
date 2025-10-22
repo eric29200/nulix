@@ -105,9 +105,9 @@ static int task_copy_signals(struct task *task, struct task *parent, uint32_t cl
 	task->sig->count = 1;
 
 	/* init signals */
-	sigemptyset(&task->signal);
 	sigemptyset(&task->blocked);
 	sigemptyset(&task->saved_sigmask);
+	init_sigpending(&task->pending);
 
 	/* copy signals */
 	if (parent)
@@ -387,6 +387,10 @@ void task_exit_signals(struct task *task)
 {
 	struct signal_struct *sig = task->sig;
 
+	/* flush signals */
+	flush_signals(task);
+
+	/* free signals */
 	if (sig) {
 		task->sig = NULL;
 

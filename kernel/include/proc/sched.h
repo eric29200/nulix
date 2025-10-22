@@ -38,26 +38,27 @@
  */
 static inline int signal_pending(struct task *task)
 {
+	sigset_t *pending = &task->pending.signal;
 	unsigned long ready = 0;
 	int i;
 
 	switch (_NSIG_WORDS) {
 		case 1:
-			ready |= task->signal.sig[0] & ~task->blocked.sig[0];
+			ready |= pending->sig[0] & ~task->blocked.sig[0];
 			break;
 		case 2:
-			ready |= task->signal.sig[1] & ~task->blocked.sig[1];
-			ready |= task->signal.sig[0] & ~task->blocked.sig[0];
+			ready |= pending->sig[1] & ~task->blocked.sig[1];
+			ready |= pending->sig[0] & ~task->blocked.sig[0];
 			break;
 		case 4:
-			ready |= task->signal.sig[3] & ~task->blocked.sig[3];
-			ready |= task->signal.sig[2] & ~task->blocked.sig[2];
-			ready |= task->signal.sig[1] & ~task->blocked.sig[1];
-			ready |= task->signal.sig[0] & ~task->blocked.sig[0];
+			ready |= pending->sig[3] & ~task->blocked.sig[3];
+			ready |= pending->sig[2] & ~task->blocked.sig[2];
+			ready |= pending->sig[1] & ~task->blocked.sig[1];
+			ready |= pending->sig[0] & ~task->blocked.sig[0];
 			break;
 		default:
 			for (i = 0; i < _NSIG_WORDS; i++)
-				ready |= task->signal.sig[i] & ~task->blocked.sig[i];
+				ready |= pending->sig[i] & ~task->blocked.sig[i];
 			break;
 	}
 

@@ -5,25 +5,118 @@
 #include <stdio.h>
 #include <stderr.h>
 
+#define MAX_QUEUED_SIGNALS	1024
+
 extern void return_user_mode(struct registers *regs);
+
+/* global variables */
+static size_t nr_queued_signals = 0;
+
+/*
+ * Initialize pending signals.
+ */
+void init_sigpending(struct sigpending *pending)
+{
+	sigemptyset(&pending->signal);
+	INIT_LIST_HEAD(&pending->list);
+}
+
+/*
+ * Flush signals.
+ */
+void flush_signals(struct task *task)
+{
+	struct sigpending *queue = &task->pending;
+	struct sigqueue *q;
+
+	/* reset sigset */
+	sigemptyset(&queue->signal);
+
+	/* clear queue */
+	while (!list_empty(&queue->list)) {
+		q = list_entry(queue->list.next, struct sigqueue, list);
+		list_del(&q->list);
+		kfree(q);
+	}
+}
+
+/*
+ * Send a signal.
+ */
+static int send_signal(struct sigpending *pending, int sig, siginfo_t *info)
+{
+	struct sigqueue *q = NULL;
+
+	/* allocate a new signal */
+	if (nr_queued_signals < MAX_QUEUED_SIGNALS)
+		q = (struct sigqueue *) kmalloc(sizeof(struct sigqueue));
+
+	/* queue signal */
+	if (q) {
+		nr_queued_signals++;
+		list_add_tail(&q->list, &pending->list);
+		if (info) {
+			memcpy(&q->info, info, sizeof(siginfo_t));
+		} else {
+			info->si_signo = sig;
+			info->si_errno = 0;
+			info->si_code = 0;
+			info->__si_fields.__si_common.__first.__piduid.si_pid = 0;
+			info->__si_fields.__si_common.__first.__piduid.si_uid = 0;
+		}
+	}
+
+	/* add to pending signals */
+	sigaddset(&pending->signal, sig);
+
+	return 0;
+}
+
+/*
+ * Deliver a signal.
+ */
+static int deliver_signal(struct task *task, int sig, siginfo_t *info)
+{
+	int ret;
+
+	/* send signal */
+	ret = send_signal(&task->pending, sig, info);
+	if (ret)
+		return ret;
+
+	/* wake up process if sleeping */
+	if (!sigismember(&task->blocked, sig))
+		if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)
+			wake_up_process(task);
+
+	return 0;
+}
+
+/*
+ * Send a signal to a task.
+ */
+int send_sig_info(struct task *task, int sig, siginfo_t *info)
+{
+	/* check signal */
+	if (sig < 0 || sig > _NSIG)
+		return -EINVAL;
+	if (!sig || !task->sig)
+		return 0;
+
+	/* queue only one non RT signal */
+	if (sig < SIGRTMIN && sigismember(&task->pending.signal, sig))
+		return 0;
+
+	/* deliver signal */
+	return deliver_signal(task, sig, info);
+}
 
 /*
  * Send a signal to a task.
  */
 int send_sig(struct task *task, int sig)
 {
-	/* just check permission */
-	if (sig == 0 || !task)
-		return -EPERM;
-
-	/* add to pending signals */
-	sigaddset(&task->signal, sig);
-
-	/* wake up process if sleeping */
-	if (task->state == TASK_SLEEPING || task->state == TASK_STOPPED)
-		wake_up_process(task);
-
-	return 0;
+	return send_sig_info(task, sig, NULL);
 }
 
 /*
@@ -145,15 +238,15 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 }
 
 /*
- * Dequeue a signal.
+ * Get next signal.
  */
-static int dequeue_signal(sigset_t *mask, siginfo_t *info)
+static int next_signal(struct task *task, sigset_t *mask)
 {
 	unsigned long i, x, *s, *m;
 	int sig = 0;
 
 	/* find first signal */
-	s = current_task->signal.sig;
+	s = task->pending.signal.sig;
 	m = mask->sig;
 	for (i = 0; i < _NSIG_WORDS; i++, s++, m++) {
 		x = *s & ~*m;
@@ -163,19 +256,68 @@ static int dequeue_signal(sigset_t *mask, siginfo_t *info)
 		}
 	}
 
-	/* no signal */
-	if (!sig)
+	return sig;
+}
+
+/*
+ * Collect a signal.
+ */
+static int collect_signal(int sig, struct sigpending *list, siginfo_t *info)
+{
+	struct sigqueue *q, *first = NULL;
+	struct list_head *pos;
+
+	/* check pending list */
+	if (!sigismember(&list->signal, sig))
 		return 0;
 
-	/* set informations */
+	/* find signal in list */
+	list_for_each(pos, &list->list) {
+		q = list_entry(pos, struct sigqueue, list);
+		if (q->info.si_signo == sig) {
+			if (first)
+				goto still_pending;
+			first = q;
+		}
+	}
+
+	/* delete signal from pending list */
+	sigdelset(&list->signal, sig);
+
+	/* collect signal */
+	if (first) {
+still_pending:
+		list_del(&first->list);
+		memcpy(info, &q->info, sizeof(siginfo_t));
+		kfree(first);
+		nr_queued_signals--;
+		return 1;
+	}
+
+	/* signal not in the list */
 	info->si_signo = sig;
 	info->si_errno = 0;
 	info->si_code = 0;
 	info->__si_fields.__si_common.__first.__piduid.si_pid = 0;
 	info->__si_fields.__si_common.__first.__piduid.si_uid = 0;
+	return 1;
+}
 
-	/* remove signal */
-	sigdelset(&current_task->signal, sig);
+/*
+ * Dequeue a signal.
+ */
+static int dequeue_signal(sigset_t *mask, siginfo_t *info)
+{
+	int sig;
+
+	/* get next signal */
+	sig = next_signal(current_task, mask);
+	if (!sig)
+		return 0;
+
+	/* collect signal */
+	if (!collect_signal(sig, &current_task->pending, info))
+		sig = 0;
 
 	return sig;
 }
@@ -317,7 +459,9 @@ int sys_rt_sigpending(sigset_t *set, size_t sigsetsize)
 	if (!set)
 		return -EINVAL;
 
-	*set = current_task->signal;
+	/* get pending signals */
+	*set = current_task->pending.signal;
+	sigandsets(set, &current_task->blocked);
 
 	return 0;
 }

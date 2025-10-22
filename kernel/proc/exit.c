@@ -123,15 +123,12 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 		if (options & WNOHANG)
 			return 0;
 
-		/* else wait for child */
-		sleep_on(&current_task->wait_child_exit);
-
-		/* remove SIGCHLD */
-		sigdelset(&current_task->signal, SIGCHLD);
-
 		/* process interruption */
 		if (signal_pending(current_task))
 			return -ERESTARTSYS;
+
+		/* else wait for child */
+		sleep_on(&current_task->wait_child_exit);
 	}
 }
 
