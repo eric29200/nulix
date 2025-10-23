@@ -386,6 +386,51 @@ void notify_parent(struct task *task, int sig)
 }
 
 /*
+ * Handle a traced signal.
+ */
+static int ptrace_signal(int sig, siginfo_t *info)
+{
+	/* process not traced */
+	if (!(current_task->ptrace & PT_PTRACED))
+		return sig;
+
+	/* let the debugger run */
+	current_task->exit_code = sig;
+	current_task->state = TASK_STOPPED;
+	current_task->last_siginfo = info;
+	notify_parent(current_task, SIGCHLD);
+	schedule();
+	current_task->last_siginfo = NULL;
+
+	/* did the debugger cancel the sig ? */
+	sig = current_task->exit_code;
+	if (!sig)
+		return sig;
+	current_task->exit_code = 0;
+
+	/* ingore SIGSTOP */
+	if (sig == SIGSTOP)
+		return 0;
+
+	/* update signal information */
+	if (sig != info->si_signo) {
+		info->si_signo = sig;
+		info->si_errno = 0;
+		info->si_code = SI_USER;
+		info->__si_fields.__si_common.__first.__piduid.si_pid = current_task->parent->pid;
+		info->__si_fields.__si_common.__first.__piduid.si_uid = current_task->parent->uid;
+	}
+
+	/* if the (new) signal is now blocked, requeue it */
+	if (sigismember(&current_task->blocked, sig)) {
+		send_sig_info(current_task, sig, info);
+		return 0;
+	}
+
+	return sig;
+}
+
+/*
  * Handle signal of current task.
  */
 int do_signal(struct registers *regs)
@@ -403,38 +448,11 @@ int do_signal(struct registers *regs)
 	act = &current_task->sig->action[sig - 1];
 
 	/* traced process */
-	if ((current_task->ptrace & PT_PTRACED) && sig != SIGKILL) {
-			/* let the debugger run */
-			current_task->exit_code = sig;
-			current_task->state = TASK_STOPPED;
-			notify_parent(current_task, SIGCHLD);
-			schedule();
-
-			/* did the debugger cancel the sig ? */
-			sig = current_task->exit_code;
-			if (!sig)
-				goto out;
-			current_task->exit_code = 0;
-
-			/* ingore SIGSTOP */
-			if (sig == SIGSTOP)
-				goto out;
-
-			/* update signal information */
-			if (sig != info.si_signo) {
-				info.si_signo = sig;
-				info.si_errno = 0;
-				info.si_code = SI_USER;
-				info.__si_fields.__si_common.__first.__piduid.si_pid = current_task->parent->pid;
-				info.__si_fields.__si_common.__first.__piduid.si_uid = current_task->parent->uid;
-			}
-
-			/* if the (new) signal is now blocked, requeue it */
-			if (sigismember(&current_task->blocked, sig)) {
-				send_sig_info(current_task, sig, &info);
-				goto out;
-			}
-		}
+	if (sig != SIGKILL) {
+		sig = ptrace_signal(sig, &info);
+		if (!sig)
+			goto out;
+	}
 
 	/* ignore signal handler */
 	if (act->sa_handler == SIG_IGN)
