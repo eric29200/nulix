@@ -97,8 +97,8 @@ static int ptm_close(struct tty *tty)
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);
 		if (task->tty == tty->link) {
-			send_sig(task, SIGHUP);
-			send_sig(task, SIGCONT);
+			send_sig(task, SIGHUP, 1);
+			send_sig(task, SIGCONT, 1);
 		}
 	}
 

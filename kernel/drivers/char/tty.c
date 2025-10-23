@@ -267,17 +267,17 @@ void tty_do_cook(struct tty *tty)
 		/* handle signals */
 		if (L_ISIG(tty)) {
 			if (c == tty->termios.c_cc[VINTR]) {
-				kill_pg(tty->pgrp, SIGINT);
+				kill_pg(tty->pgrp, SIGINT, 1);
 				continue;
 			}
 
 			if (c == tty->termios.c_cc[VQUIT]) {
-				kill_pg(tty->pgrp, SIGQUIT);
+				kill_pg(tty->pgrp, SIGQUIT, 1);
 				continue;
 			}
 
 			if (c == tty->termios.c_cc[VSUSP]) {
-				kill_pg(tty->pgrp, SIGSTOP);
+				kill_pg(tty->pgrp, SIGSTOP, 1);
 				continue;
 			}
 		}
@@ -405,8 +405,8 @@ void disassociate_ctty()
 
 	/* send SIGHUP/SIGCONT to fg process group */
 	if (tty->pgrp > 0) {
-		kill_pg(tty->pgrp, SIGHUP);
-		kill_pg(tty->pgrp, SIGCONT);
+		kill_pg(tty->pgrp, SIGHUP, 1);
+		kill_pg(tty->pgrp, SIGCONT, 1);
 	}
 
 	/* clear tty */

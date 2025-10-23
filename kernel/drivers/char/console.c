@@ -97,7 +97,7 @@ static void console_complete_change(int n)
 	/* if new console is in process mode, acquire it */
 	if (vc_new->vt_mode.mode == VT_PROCESS) {
 		/* send acquire signal */
-		if (kill_proc(vc_new->vt_pid, vc_new->vt_mode.acqsig) != 0)
+		if (kill_proc(vc_new->vt_pid, vc_new->vt_mode.acqsig, 1) != 0)
 			reset_vc(vc_new);
 	}
 
@@ -136,7 +136,7 @@ void console_change(int n)
 	/* in process mode, handshake realase/acquire */
 	if (vc->vt_mode.mode == VT_PROCESS) {
 		/* send release signal */
-		if (kill_proc(vc->vt_pid, vc->vt_mode.relsig) == 0) {
+		if (kill_proc(vc->vt_pid, vc->vt_mode.relsig, 1) == 0) {
 			vc->vt_newvt = n;
 			return;
 		}

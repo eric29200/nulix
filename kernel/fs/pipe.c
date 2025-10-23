@@ -110,7 +110,7 @@ static int pipe_write(struct file *filp, const char *buf, size_t count, off_t *p
 
 	/* no readers */
 	if (!PIPE_READERS(inode)) {
-		send_sig(current_task, SIGPIPE);
+		send_sig(current_task, SIGPIPE, 0);
 		return -ESPIPE;
 	}
 
@@ -119,7 +119,7 @@ static int pipe_write(struct file *filp, const char *buf, size_t count, off_t *p
 		while (!PIPE_EMPTY(inode)) {
 			/* no readers */
 			if (!PIPE_READERS(inode)) {
-				send_sig(current_task, SIGPIPE);
+				send_sig(current_task, SIGPIPE, 0);
 				ret = -EPIPE;
 				goto out;
 			}

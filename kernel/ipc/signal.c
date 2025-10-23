@@ -125,9 +125,9 @@ int send_sig_info(struct task *task, int sig, siginfo_t *info)
 /*
  * Send a signal to a task.
  */
-int send_sig(struct task *task, int sig)
+int send_sig(struct task *task, int sig, int priv)
 {
-	return send_sig_info(task, sig, NULL);
+	return send_sig_info(task, sig, (void *) (priv != 0));
 }
 
 /*
@@ -149,9 +149,9 @@ int kill_proc_info(pid_t pid, int sig, siginfo_t *info)
 /*
  * Send a signal to a task.
  */
-int kill_proc(pid_t pid, int sig)
+int kill_proc(pid_t pid, int sig, int priv)
 {
-	return kill_proc_info(pid, sig, 0);
+	return kill_proc_info(pid, sig, (void *) (priv != 0));
 }
 
 /*
@@ -187,9 +187,9 @@ int kill_pg_info(pid_t pgrp, int sig, siginfo_t *info)
 /*
  * Send a signal to all tasks in a group.
  */
-int kill_pg(pid_t pgrp, int sig)
+int kill_pg(pid_t pgrp, int sig, int priv)
 {
-	return kill_pg_info(pgrp, sig, 0);
+	return kill_pg_info(pgrp, sig, (void *) (priv != 0));
 }
 
 /*
@@ -214,7 +214,7 @@ static int kill_something_info(pid_t pid, int sig, siginfo_t *info)
 		list_for_each(pos, &tasks_list) {
 			task = list_entry(pos, struct task, list);
 			if (task->pid > 1 && task != current_task) {
-				err = send_sig(task, sig);
+				err = send_sig_info(task, sig, info);
 				count++;
 				if (err != -EPERM)
 					ret = err;
@@ -420,9 +420,18 @@ int do_signal(struct registers *regs)
 			if (sig == SIGSTOP)
 				goto out;
 
+			/* update signal information */
+			if (sig != info.si_signo) {
+				info.si_signo = sig;
+				info.si_errno = 0;
+				info.si_code = SI_USER;
+				info.__si_fields.__si_common.__first.__piduid.si_pid = current_task->parent->pid;
+				info.__si_fields.__si_common.__first.__piduid.si_uid = current_task->parent->uid;
+			}
+
 			/* if the (new) signal is now blocked, requeue it */
 			if (sigismember(&current_task->blocked, sig)) {
-				send_sig(current_task, sig);
+				send_sig_info(current_task, sig, &info);
 				goto out;
 			}
 		}

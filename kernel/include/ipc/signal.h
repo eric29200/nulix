@@ -331,10 +331,10 @@ void flush_signals(struct task *task);
 
 void notify_parent(struct task *task, int sig);
 int kill_proc_info(pid_t pid, int sig, siginfo_t *info);
-int kill_proc(pid_t pid, int sig);
+int kill_proc(pid_t pid, int sig, int priv);
 int kill_pg_info(pid_t pgrp, int sig, siginfo_t *info);
-int kill_pg(pid_t pgrp, int sig);
-int send_sig(struct task *task, int sig);
+int kill_pg(pid_t pgrp, int sig, int priv);
+int send_sig(struct task *task, int sig, int priv);
 
 int do_signal(struct registers *regs);
 int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t sigsetsize);
