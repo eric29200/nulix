@@ -55,14 +55,25 @@ static int send_signal(struct sigpending *pending, int sig, siginfo_t *info)
 	if (q) {
 		nr_queued_signals++;
 		list_add_tail(&q->list, &pending->list);
-		if (info) {
-			memcpy(&q->info, info, sizeof(siginfo_t));
-		} else {
-			info->si_signo = sig;
-			info->si_errno = 0;
-			info->si_code = 0;
-			info->__si_fields.__si_common.__first.__piduid.si_pid = 0;
-			info->__si_fields.__si_common.__first.__piduid.si_uid = 0;
+
+		switch ((uint32_t) info) {
+			case 0:
+				info->si_signo = sig;
+				info->si_errno = 0;
+				info->si_code = SI_USER;
+				info->__si_fields.__si_common.__first.__piduid.si_pid = current_task->pid;
+				info->__si_fields.__si_common.__first.__piduid.si_uid = current_task->uid;
+				break;
+			case 1:
+				info->si_signo = sig;
+				info->si_errno = 0;
+				info->si_code = SI_KERNEL;
+				info->__si_fields.__si_common.__first.__piduid.si_pid = 0;
+				info->__si_fields.__si_common.__first.__piduid.si_uid = 0;
+				break;
+			default:
+				memcpy(&q->info, info, sizeof(siginfo_t));
+				break;
 		}
 	}
 
@@ -122,7 +133,7 @@ int send_sig(struct task *task, int sig)
 /*
  * Send a signal to a task.
  */
-int kill_proc(pid_t pid, int sig)
+int kill_proc_info(pid_t pid, int sig, siginfo_t *info)
 {
 	struct task *task;
 
@@ -132,13 +143,21 @@ int kill_proc(pid_t pid, int sig)
 		return -ESRCH;
 
 	/* send signal */
-	return send_sig(task, sig);
+	return send_sig_info(task, sig, info);
+}
+
+/*
+ * Send a signal to a task.
+ */
+int kill_proc(pid_t pid, int sig)
+{
+	return kill_proc_info(pid, sig, 0);
 }
 
 /*
  * Send a signal to all tasks in a group.
  */
-int kill_pg(pid_t pgrp, int sig)
+int kill_pg_info(pid_t pgrp, int sig, siginfo_t *info)
 {
 	int ret = -ESRCH, err, found = 0;
 	struct list_head *pos;
@@ -151,7 +170,7 @@ int kill_pg(pid_t pgrp, int sig)
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);
 		if (task->pgrp == pgrp) {
-			err = send_sig(task, sig);
+			err = send_sig_info(task, sig, info);
 			if (err)
 				ret = err;
 			else
@@ -166,25 +185,51 @@ int kill_pg(pid_t pgrp, int sig)
 }
 
 /*
- * Send a signal to all tasks (except init process).
+ * Send a signal to all tasks in a group.
  */
-static int kill_all(int sig)
+int kill_pg(pid_t pgrp, int sig)
+{
+	return kill_pg_info(pgrp, sig, 0);
+}
+
+/*
+ * Kill something.
+ */
+static int kill_something_info(pid_t pid, int sig, siginfo_t *info)
 {
 	int err, ret = 0, count = 0;
 	struct list_head *pos;
 	struct task *task;
 
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
-		if (task->pid > 1 && task != current_task) {
-			err = send_sig(task, sig);
-			count++;
-			if (err != -EPERM)
-				ret = err;
+	/* check signal number (0 is ok : means check permission but do not send signal) */
+	if (sig < 0 || sig >= _NSIG)
+		return -EINVAL;
+
+	/* send signal to all processes in the group of current task */
+	if (pid == 0)
+		return kill_pg_info(current_task->pgrp, sig, info);
+
+	/* send signal to all processes (except init) */
+	if (pid == -1) {
+		list_for_each(pos, &tasks_list) {
+			task = list_entry(pos, struct task, list);
+			if (task->pid > 1 && task != current_task) {
+				err = send_sig(task, sig);
+				count++;
+				if (err != -EPERM)
+					ret = err;
+			}
 		}
+
+		return count ? ret : -ESRCH;
 	}
 
-	return count ? ret : -ESRCH;
+	/* signal to all processes in the group -pid */
+	if (pid < 0)
+		return kill_pg_info(-pid, sig, info);
+
+	/* send signal to process identified by pid */
+	return kill_proc_info(pid, sig, info);
 }
 
 /*
@@ -550,24 +595,18 @@ int sys_sigreturn()
  */
 int sys_kill(pid_t pid, int sig)
 {
-	/* check signal number (0 is ok : means check permission but do not send signal) */
-	if (sig < 0 || sig >= _NSIG)
-		return -EINVAL;
+	siginfo_t info;
 
-	/* send signal to all processes in the group of current task */
-	if (pid == 0)
-		return kill_pg(current_task->pgrp, sig);
+	/* set signal information */
+	memset(&info, 0, sizeof(siginfo_t));
+	info.si_signo = sig;
+	info.si_errno = 0;
+	info.si_code = SI_USER;
+	info.__si_fields.__si_common.__first.__piduid.si_pid = current_task->pid;
+	info.__si_fields.__si_common.__first.__piduid.si_uid = current_task->uid;
 
-	/* send signal to all processes (except init) */
-	if (pid == -1)
-		kill_all(sig);
-
-	/* signal to all processes in the group -pid */
-	if (pid < 0)
-		return kill_pg(-pid, sig);
-
-	/* send signal to process identified by pid */
-	return kill_proc(pid, sig);
+	/* send signal */
+	return kill_something_info(pid, sig, &info);
 }
 
 /*

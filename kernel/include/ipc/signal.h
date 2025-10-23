@@ -330,7 +330,9 @@ void init_sigpending(struct sigpending *pending);
 void flush_signals(struct task *task);
 
 void notify_parent(struct task *task, int sig);
+int kill_proc_info(pid_t pid, int sig, siginfo_t *info);
 int kill_proc(pid_t pid, int sig);
+int kill_pg_info(pid_t pgrp, int sig, siginfo_t *info);
 int kill_pg(pid_t pgrp, int sig);
 int send_sig(struct task *task, int sig);
 
