@@ -323,6 +323,24 @@ static int dequeue_signal(sigset_t *mask, siginfo_t *info)
 }
 
 /*
+ * Notify parent process.
+ */
+void notify_parent(struct task *task, int sig)
+{
+	siginfo_t info;
+
+	/* set signal information */
+	info.si_signo = sig;
+	info.si_errno = 0;
+	info.si_code = SI_KERNEL;
+	info.__si_fields.__si_common.__first.__piduid.si_pid = task->pid;
+	  
+	/* send signal */
+	send_sig_info(current_task->parent, sig, &info);
+	wake_up(&current_task->parent->wait_child_exit);
+}
+
+/*
  * Handle signal of current task.
  */
 int do_signal(struct registers *regs)
@@ -344,8 +362,7 @@ int do_signal(struct registers *regs)
 			/* let the debugger run */
 			current_task->exit_code = sig;
 			current_task->state = TASK_STOPPED;
-			send_sig(current_task->parent, SIGCHLD);
-			wake_up(&current_task->parent->wait_child_exit);
+			notify_parent(current_task, SIGCHLD);
 			schedule();
 
 			/* did the debugger cancel the sig ? */
@@ -385,8 +402,7 @@ int do_signal(struct registers *regs)
 			case SIGTSTP:
 				current_task->state = TASK_STOPPED;
 				current_task->exit_code = sig;
-				send_sig(current_task->parent, SIGCHLD);
-				wake_up(&current_task->parent->wait_child_exit);
+				notify_parent(current_task, SIGCHLD);
 				schedule();
 				goto out;
 			default:

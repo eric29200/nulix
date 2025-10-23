@@ -30,8 +30,7 @@ void do_exit(int error_code)
 	current_task->exit_code = error_code;
 
 	/* notify parent */
-	send_sig(current_task->parent, SIGCHLD);
-	wake_up(&current_task->parent->wait_child_exit);
+	notify_parent(current_task, SIGCHLD);
 
 	/* give children to init */
 	list_for_each(pos, &tasks_list) {

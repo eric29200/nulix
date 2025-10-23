@@ -302,8 +302,7 @@ void syscall_trace()
 	/* stop task and notify parent */
 	current_task->exit_code = SIGTRAP;
 	current_task->state = TASK_STOPPED;
-	send_sig(current_task->parent, SIGCHLD);
-	wake_up(&current_task->parent->wait_child_exit);
+	notify_parent(current_task, SIGCHLD);
 	schedule();
 
 	/* continue */

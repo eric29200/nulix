@@ -52,6 +52,9 @@
 #define SIG_UNBLOCK	 1
 #define SIG_SETMASK	 2
 
+#define SI_USER		0x00
+#define SI_KERNEL	0x80
+
 #define SIG_DFL		((sighandler_t) 0)	/* default signal handler */
 #define SIG_IGN		((sighandler_t) 1)	/* ignore signal handler */
 #define SIG_ERR		((sighandler_t) -1)	/* error signal handler */
@@ -326,6 +329,7 @@ static inline void signandsets(sigset_t *res, const sigset_t *oth)
 void init_sigpending(struct sigpending *pending);
 void flush_signals(struct task *task);
 
+void notify_parent(struct task *task, int sig);
 int kill_proc(pid_t pid, int sig);
 int kill_pg(pid_t pgrp, int sig);
 int send_sig(struct task *task, int sig);
