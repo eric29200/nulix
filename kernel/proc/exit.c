@@ -11,13 +11,8 @@ void do_exit(int error_code)
 	struct list_head *pos;
 	struct task *child;
 
-	/* delete signal timer */
-	if (current_task->sig_tm.list.next)
-		timer_event_del(&current_task->sig_tm);
-
-	/* delete timeout timer */
-	if (current_task->timeout_tm.list.next)
-		timer_event_del(&current_task->timeout_tm);
+	/* delete timer */
+	del_timer(&current_task->real_timer);
 
 	/* free resources */
 	task_exit_signals(current_task);

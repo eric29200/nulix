@@ -101,6 +101,20 @@ static inline void old_timeval_to_kernel_timeval(const struct old_timeval *otv, 
 }
 
 /*
+ * Convert old time value to jiffies.
+ */
+static inline time_t old_timeval_to_jiffies(const struct old_timeval *otv)
+{
+	time_t usec = otv->tv_usec;
+
+	/* convert micro seconds to jiffies */
+	usec += 1000000L / HZ - 1;
+	usec /= 1000000L / HZ;
+
+	return otv->tv_sec * HZ + usec;
+}
+
+/*
  * Convert kernel time value to jiffies.
  */
 static inline time_t kernel_timeval_to_jiffies(const struct kernel_timeval *tv)

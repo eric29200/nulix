@@ -144,8 +144,8 @@ static void net_handler_timer(void *arg)
 	}
 
 	/* wait for incoming packets = reschedule timer */
-	timer_event_init(&net_dev->timer, net_handler_timer, net_dev, jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS));
-	timer_event_add(&net_dev->timer);
+	init_timer(&net_dev->timer, net_handler_timer, net_dev, jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS));
+	add_timer(&net_dev->timer);
 
 	/* enable interrupts */
 	irq_restore(flags);
@@ -184,10 +184,9 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 	/* set name */
 	memcpy(net_dev->name, tmp, len + 1);
 
-	/* create kernel thread to handle receive packets */
 	/* create kernel timer to handle receive packets */
-	timer_event_init(&net_dev->timer, net_handler_timer, net_dev, jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS));
-	timer_event_add(&net_dev->timer);
+	init_timer(&net_dev->timer, net_handler_timer, net_dev, jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS));
+	add_timer(&net_dev->timer);
 
 	/* update number of net devices */
 	nr_net_devices++;

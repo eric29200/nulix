@@ -7,39 +7,41 @@
 static LIST_HEAD(timers_list);
 
 /*
- * Init a timer event.
+ * Init a timer.
  */
-void timer_event_init(struct timer_event *tm, void (*func)(void *), void *data, time_t expires)
+void init_timer(struct timer_event *timer, void (*func)(void *), void *data, time_t expires)
 {
-	INIT_LIST_HEAD(&tm->list);
-	tm->expires = expires;
-	tm->func = func;
-	tm->data = data;
+	INIT_LIST_HEAD(&timer->list);
+	timer->expires = expires;
+	timer->func = func;
+	timer->data = data;
 }
 
 /*
- * Add a timer event.
+ * Add a timer.
  */
-void timer_event_add(struct timer_event *tm)
+void add_timer(struct timer_event *timer)
 {
-	list_add(&tm->list, &timers_list);
+	list_add(&timer->list, &timers_list);
 }
 
 /*
- * Delete a timer event.
+ * Delete a timer.
  */
-void timer_event_del(struct timer_event *tm)
+void del_timer(struct timer_event *timer)
 {
-	list_del(&tm->list);
+	if (timer_pending(timer))
+		list_del(&timer->list);
 }
 
 /*
- * Modify a timer event.
+ * Modify a timer.
  */
-void timer_event_mod(struct timer_event *tm, time_t expires)
+void mod_timer(struct timer_event *timer, time_t expires)
 {
-	tm->expires = expires;
-	timer_event_add(tm);
+	del_timer(timer);
+	timer->expires = expires;
+	add_timer(timer);
 }
 
 /*
@@ -48,15 +50,15 @@ void timer_event_mod(struct timer_event *tm, time_t expires)
 void update_timers()
 {
 	struct list_head *pos, *n;
-	struct timer_event *tm;
+	struct timer_event *timer;
 
 	list_for_each_safe(pos, n, &timers_list) {
-		tm = list_entry(pos, struct timer_event, list);
+		timer = list_entry(pos, struct timer_event, list);
 
 		/* timer expires : run and remove it */
-		if (tm->expires <= jiffies) {
-			timer_event_del(tm);
-			tm->func(tm->data);
+		if (timer->expires <= jiffies) {
+			del_timer(timer);
+			timer->func(timer->data);
 		}
 	}
 }
@@ -66,26 +68,23 @@ void update_timers()
  */
 int sys_nanosleep(const struct old_timespec *req, struct old_timespec *rem)
 {
-	time_t timeout;
+	time_t expire;
 
 	/* check request */
 	if (req->tv_nsec < 0 || req->tv_sec < 0)
 		return -EINVAL;
 
 	/* compute delay in jiffies */
-	timeout = old_timespec_to_jiffies(req) + (req->tv_sec || req->tv_nsec) + jiffies;
+	expire = old_timespec_to_jiffies(req) + (req->tv_sec || req->tv_nsec);
 
-	/* set current state sleeping and set timeout */
+	/* sleep */
 	current_task->state = TASK_SLEEPING;
-	current_task->timeout = timeout;
-
-	/* reschedule */
-	schedule();
+	expire = schedule_timeout(expire);
 
 	/* task interrupted before timer end */
-	if (timeout > jiffies) {
+	if (expire) {
 		if (rem)
-			jiffies_to_old_timespec(timeout - jiffies - (timeout > jiffies + 1), rem);
+			jiffies_to_old_timespec(expire, rem);
 
 		return -EINTR;
 	}
@@ -107,8 +106,8 @@ static int do_getitimer(int which, struct itimerval *value)
 	}
 
 	/* get current timer */
-	if (current_task->sig_tm.list.next) {
-		val = current_task->sig_tm.expires - jiffies;
+	if (current_task->real_timer.list.next) {
+		val = current_task->real_timer.expires - jiffies;
 		if ((long ) val <= 0)
 			val = 1;
 	}
@@ -156,13 +155,12 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
 	expires_ms += (new_value->it_value_usec / 1000);
 
 	/* delete timer */
-	if (current_task->sig_tm.list.next)
-		timer_event_del(&current_task->sig_tm);
+	del_timer(&current_task->real_timer);
 
 	/* set timer */
 	if (new_value->it_value_sec || new_value->it_value_usec) {
-		timer_event_init(&current_task->sig_tm, itimer_handler, &current_task->pid, jiffies + ms_to_jiffies(expires_ms));
-		timer_event_add(&current_task->sig_tm);
+		init_timer(&current_task->real_timer, itimer_handler, &current_task->pid, jiffies + ms_to_jiffies(expires_ms));
+		add_timer(&current_task->real_timer);
 	}
 
 	return 0;

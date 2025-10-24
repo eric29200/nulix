@@ -162,7 +162,6 @@ static void process_timeout(void *arg)
 {
 	struct task *task = (struct task *) arg;
 
-	task->timeout = 0;
 	wake_up_process(task);
 }
 
@@ -179,6 +178,42 @@ static int goodness(struct task *task, struct task *prev)
 
 	return weight;
 }
+
+/*
+ * Timeout.
+ */
+time_t schedule_timeout(time_t timeout)
+{
+	struct timer_event timer;
+	time_t expire;
+
+	/* check timeout */
+	switch (timeout) {
+		case MAX_SCHEDULE_TIMEOUT:
+			schedule();
+			goto out;
+		default:
+			if (timeout < 0) {
+				printf("schedule_timeout: negative timeout value\n");
+				goto out;
+			}
+			break;
+	}
+
+	/* set timer */
+	expire = jiffies + timeout;
+	init_timer(&timer, process_timeout, current_task, expire);
+
+	/* schedule */
+	add_timer(&timer);
+	schedule();
+	del_timer(&timer);
+
+	/* return remaining timeout */
+	timeout = expire - jiffies;
+out:
+	return timeout < 0 ? 0 : timeout;
+}
   
 /*
  * Schedule function (interruptions must be disabled and will be reenabled on function return).
@@ -192,18 +227,6 @@ void schedule()
 	/* save current task */
 	prev = current_task;
 	need_resched = 0;
-
-	/* previous task sleeping on a timeout : create a timer */
-	if (prev->state == TASK_SLEEPING && prev->timeout) {
-		/* delete previous timer */
-		if (prev->timeout_tm.list.next)
-			timer_event_del(&current_task->timeout_tm);
-
-		/* create new timer */
-		timer_event_init(&prev->timeout_tm, process_timeout, prev, prev->timeout);
-		timer_event_add(&prev->timeout_tm);
-		prev->timeout = 0;
-	}
 
 	/* choose next task */
 	next = kinit_task;

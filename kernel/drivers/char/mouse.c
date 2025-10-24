@@ -4,6 +4,7 @@
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <fs/fs.h>
+#include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
 #include <dev.h>
@@ -69,9 +70,7 @@ static int mouse_poll_status()
 			inb(MOUSE_PORT);
 
 		current_task->state = TASK_SLEEPING;
-		current_task->timeout = jiffies + (5 * HZ + 99) / 100;
-		schedule();
-
+		schedule_timeout((5 * HZ + 99) / 100);
 		retries++;
 	}
 	return retries != MAX_RETRIES;

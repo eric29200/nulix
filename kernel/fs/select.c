@@ -2,6 +2,7 @@
 #include <proc/sched.h>
 #include <ipc/signal.h>
 #include <mm/mm.h>
+#include <stdio.h>
 #include <stderr.h>
 #include <time.h>
 
@@ -74,12 +75,6 @@ static int do_poll(struct pollfd *fds, size_t ndfs, int timeout)
 	wait_table.entry = entry;
 	wait = &wait_table;
 
-	/* set time out */
-	if (timeout > 0)
-		current_task->timeout = jiffies + ms_to_jiffies(timeout);
-	else
-		current_task->timeout = 0;
-
 	for (;;) {
 		/* poll each file */
 		for (i = 0; i < ndfs; i++)
@@ -91,16 +86,13 @@ static int do_poll(struct pollfd *fds, size_t ndfs, int timeout)
 			count = -EINTR;
 
 		/* events catched or timeout : break */
-		if (count || !timeout || (timeout > 0 && jiffies >= current_task->timeout))
+		if (count || !timeout)
 			break;
 
 		/* no events sleep */
 		current_task->state = TASK_SLEEPING;
-		schedule();
+		timeout = schedule_timeout(timeout);
 	}
-
-	/* reset timeout */
-	current_task->timeout = 0;
 
 	/* free wait table */
 	free_wait(&wait_table);
@@ -112,8 +104,17 @@ static int do_poll(struct pollfd *fds, size_t ndfs, int timeout)
 /*
  * Poll system call.
  */
-int sys_poll(struct pollfd *fds, size_t nfds, int timeout)
+int sys_poll(struct pollfd *fds, size_t nfds, int utimeout)
 {
+	time_t timeout = 0;
+
+	/* get time out */
+	if (utimeout > 0)
+		timeout = ms_to_jiffies(utimeout);
+	else if (utimeout < 0)
+		timeout = MAX_SCHEDULE_TIMEOUT;
+
+	/* poll */
 	return do_poll(fds, nfds, timeout);
 }
 
@@ -139,7 +140,7 @@ static int __select_check(int fd, uint16_t mask, struct select_table *wait)
 /*
  * Select system call.
  */
-static int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct kernel_timeval *timeout)
+static int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, time_t *timeout)
 {
 	fd_set_t res_readfds, res_writefds, res_exceptfds;
 	struct select_table wait_table, *wait;
@@ -202,12 +203,6 @@ end_check:
 	memset(&res_writefds, 0, sizeof(fd_set_t));
 	memset(&res_exceptfds, 0, sizeof(fd_set_t));
 
-	/* set time out */
-	if (timeout && (timeout->tv_sec > 0 || timeout->tv_nsec > 0))
-		current_task->timeout = jiffies + kernel_timeval_to_jiffies(timeout);
-	else
-		current_task->timeout = 0;
-
 	/* loop until events occured */
 	for (;;) {
 		for (i = 0; i < nfds; i++) {
@@ -238,16 +233,13 @@ end_check:
 			break;
 
 		/* timeout : break */
-		if ((timeout->tv_sec == 0 && timeout->tv_nsec == 0) || (timeout && jiffies >= current_task->timeout))
+		if (!*timeout)
 			break;
 
 		/* no events sleep */
 		current_task->state = TASK_SLEEPING;
-		schedule();
+		*timeout = schedule_timeout(*timeout);
 	}
-
-	/* reset timeout */
-	current_task->timeout = 0;
 
 	/* copy results */
 	if (readfds)
@@ -271,22 +263,34 @@ end_check:
 /*
  * Select system call.
  */
-int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *timeout)
+int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *tvp)
 {
-	struct kernel_timeval tv;
+	time_t timeout = MAX_SCHEDULE_TIMEOUT;
+	int ret;
 
-	if (timeout)
-		old_timeval_to_kernel_timeval(timeout, &tv);
+	/* get timeout */
+	if (tvp)
+		timeout = old_timeval_to_jiffies(tvp);
 
-	return do_select(nfds, readfds, writefds, exceptfds, timeout ? &tv : NULL);
+	/* select */
+	ret = do_select(nfds, readfds, writefds, exceptfds, &timeout);
+
+	/* update timeout */
+	if (tvp) {
+		tvp->tv_sec = timeout / HZ;
+		tvp->tv_usec = timeout % HZ;
+		tvp->tv_usec *= (1000000 / HZ);
+	}
+
+	return ret;
 }
 
 /*
  * Pselect6 system call.
  */
-int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *timeout, sigset_t *sigmask)
+int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *tvp, sigset_t *sigmask)
 {
-	struct kernel_timeval tv;
+	time_t timeout = MAX_SCHEDULE_TIMEOUT;
 	sigset_t current_sigmask;
 	int ret;
 
@@ -301,12 +305,19 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 		sigdelset(&current_task->blocked, SIGSTOP);
 	}
 
-	/* convert timespec to kernel timeval */
-	if (timeout)
-		old_timeval_to_kernel_timeval(timeout, &tv);
+	/* get timeout */
+	if (tvp)
+		timeout = old_timeval_to_jiffies(tvp);
 
 	/* select */
-	ret = do_select(nfds, readfds, writefds, exceptfds, timeout ? &tv : NULL);
+	ret = do_select(nfds, readfds, writefds, exceptfds, &timeout);
+
+	/* update timeout */
+	if (tvp) {
+		tvp->tv_sec = timeout / HZ;
+		tvp->tv_usec = timeout % HZ;
+		tvp->tv_usec *= (1000000 / HZ);
+	}
 
 	/* restore sigmask and delete masked pending signals */
 	if (ret == -EINTR && sigmask)

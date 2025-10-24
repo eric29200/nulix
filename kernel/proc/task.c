@@ -560,7 +560,7 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	task->start_time = jiffies;
 	task->vfork_sem = NULL;
 	INIT_LIST_HEAD(&task->list);
-	INIT_LIST_HEAD(&task->sig_tm.list);
+	INIT_LIST_HEAD(&task->real_timer.list);
 
 	/* copy task name and TLS */
 	if (parent)

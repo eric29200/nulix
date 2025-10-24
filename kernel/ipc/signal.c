@@ -679,8 +679,7 @@ int sys_rt_sigtimedwait(const sigset_t *usigset, void *uinfo, const struct old_t
 
 		/* goto sleep */
 		current_task->state = TASK_SLEEPING;
-		current_task->timeout = jiffies + timeout;
-		schedule();
+		timeout = schedule_timeout(timeout);
 
 		/* check signals */
 		sig = dequeue_signal(&these, &info);
@@ -689,7 +688,7 @@ int sys_rt_sigtimedwait(const sigset_t *usigset, void *uinfo, const struct old_t
 
 	/* no signal */
 	if (!sig)
-		return timeout > jiffies ? -EINTR : -EAGAIN;
+		return timeout ? -EINTR : -EAGAIN;
 
 	/* copy signal informations */
 	if (uinfo)

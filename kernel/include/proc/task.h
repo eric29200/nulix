@@ -121,15 +121,13 @@ struct task {
 	time_t				start_time;			/* time process started after system boot */
 	int			 	exit_code;			/* exit code */
 	struct task *		 	parent;				/* parent process */
-	time_t				timeout;			/* timeout (used by sleep) */
 	struct sigpending		pending;			/* pending signals */
 	sigset_t			blocked;			/* blocked signals */
 	sigset_t			saved_sigmask;			/* saved signals mask */
 	char				in_syscall;			/* process in system call */
 	struct rlimit			rlim[RLIM_NLIMITS];		/* resource limits */
 	struct registers		signal_regs;			/* saved registers at signal entry */
-	struct timer_event		timeout_tm;			/* timeout timer */
-	struct timer_event		sig_tm;				/* signal timer */
+	struct timer_event		real_timer;			/* timer */
 	struct wait_queue *		wait_child_exit;		/* wait queue for child exit */
 	struct thread_struct		thread;				/* thread stuff */
 	struct fs_struct *		fs;				/* file system stuff */

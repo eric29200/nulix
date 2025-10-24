@@ -57,8 +57,8 @@ static void update_cursor_timer(void *arg)
 	fb->ops->update_cursor(fb);
 
 	/* reschedule timer */
-	timer_event_init(&cursor_timer, update_cursor_timer, NULL, jiffies + ms_to_jiffies(FB_CURSOR_TIMER_MS));
-	timer_event_add(&cursor_timer);
+	init_timer(&cursor_timer, update_cursor_timer, NULL, jiffies + ms_to_jiffies(FB_CURSOR_TIMER_MS));
+	add_timer(&cursor_timer);
 }
 
 /*
@@ -1281,8 +1281,8 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 	console_table[fg_console].fb.active = 1;
 
 	/* set cursor timer */
-	timer_event_init(&cursor_timer, update_cursor_timer, NULL, jiffies + ms_to_jiffies(FB_CURSOR_TIMER_MS));
-	timer_event_add(&cursor_timer);
+	init_timer(&cursor_timer, update_cursor_timer, NULL, jiffies + ms_to_jiffies(FB_CURSOR_TIMER_MS));
+	add_timer(&cursor_timer);
 
 	return 0;
 err:
