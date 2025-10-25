@@ -329,11 +329,11 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 		if (vma_new->vm_ops && vma_new->vm_ops->open)
 			vma_new->vm_ops->open(vma_new);
 
-		/* insert new memory region */
-		insert_vma(vma_new);
-
 		/* update old memory region */
 		vma->vm_end = addr;
+
+		/* insert new memory region */
+		insert_vma(vma_new);
 	}
 
 	return 0;
