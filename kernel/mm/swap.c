@@ -140,11 +140,8 @@ static int swap_out_process(struct task *task)
 
 	/* find memory region to swap */
 	vma = find_vma(task, address);
-	if (!vma) {
-		vma = find_vma_next(task, address);
-		if (!vma)
-			goto out;
-	}
+	if (!vma)
+		goto out;
 
 	if (address < vma->vm_start)
 		address = vma->vm_start;

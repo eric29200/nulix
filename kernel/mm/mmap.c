@@ -14,7 +14,7 @@ uint32_t protection_map[16] = {
 };
 
 /*
- * Find a memory region.
+ * Find a memory region = return first VMA which satisfies addr < vm_end.
  */
 struct vm_area *find_vma(struct task *task, uint32_t addr)
 {
@@ -23,8 +23,6 @@ struct vm_area *find_vma(struct task *task, uint32_t addr)
 
 	list_for_each(pos, &task->mm->vm_list) {
 		vma = list_entry(pos, struct vm_area, list);
-		if (addr < vma->vm_start)
-			break;
 		if (addr < vma->vm_end)
 			return vma;
 	}
@@ -51,22 +49,6 @@ struct vm_area *find_vma_prev(struct task *task, uint32_t addr)
 	return vma_prev;
 }
 
-/*
- * Find next memory region.
- */
-struct vm_area *find_vma_next(struct task *task, uint32_t addr)
-{
-	struct list_head *pos;
-	struct vm_area *vma;
-
-	list_for_each(pos, &task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
-		if (addr < vma->vm_start)
-			return vma;
-	}
-
-	return NULL;
-}
 /*
  * Find first vm intersecting start <-> end.
  */
@@ -669,7 +651,7 @@ int do_mprotect(uint32_t start, size_t size, int prot)
 
 	/* find first memory region */
 	vma = find_vma(current_task, start);
-	if (!vma)
+	if (!vma || vma->vm_start > start)
 		return -EFAULT;
 
 	/* change memory regions */

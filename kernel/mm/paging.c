@@ -497,12 +497,15 @@ void page_fault_handler(struct registers *regs)
 
 	/* get memory region */
 	vma = find_vma(current_task, fault_addr);
-	if (vma)
+	if (!vma)
+		goto bad_area;
+
+	/* good area */
+	if (vma->vm_start <= fault_addr)
 		goto good_area;
 
 	/* maybe stack needs to be grown ? */
-	vma = find_vma_next(current_task, fault_addr);
-	if (vma && (vma->vm_flags & VM_GROWSDOWN))
+	if (vma->vm_flags & VM_GROWSDOWN)
 		goto expand_stack;
 
 	/* else bad page fault */
