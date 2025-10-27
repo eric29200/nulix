@@ -19,12 +19,13 @@ static struct pty pty_table[NR_PTYS];
 static ssize_t pty_write(struct tty *tty)
 {
 	ssize_t count = 0;
-	uint8_t c;
+	int c;
 
 	/* get characters from write queue */
 	for (;;) {
 		/* get next character */
-		if (tty_queue_getc(&tty->write_queue, &c, 1))
+		c = tty_queue_getc(&tty->write_queue);
+		if (c < 0)
 			break;
 
 		/* write to linked tty */

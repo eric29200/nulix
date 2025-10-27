@@ -55,7 +55,6 @@
 struct tty_queue {
 	size_t			head;
 	size_t			tail;
-	size_t			size;
 	uint8_t			buf[TTY_BUF_SIZE];
 	struct wait_queue *	wait;
 };
@@ -91,10 +90,12 @@ struct tty {
 };
 
 /* tty queue functions */
-#define tty_queue_full(queue)		((queue)->size >= TTY_BUF_SIZE)
-#define tty_queue_empty(queue)		((queue)->size == 0)
-#define tty_queue_left(queue)		(TTY_BUF_SIZE - (queue)->size)
+#define tty_queue_left(queue)		(((queue)->tail - (queue)->head - 1) & (TTY_BUF_SIZE - 1))
+#define tty_queue_full(queue)		(!tty_queue_left(queue))
+#define tty_queue_empty(queue)		((queue)->head == (queue)->tail)
 
+int tty_queue_getc(struct tty_queue *queue);
+int tty_queue_putc(struct tty_queue *queue, uint8_t c);
 
 /* tty functions */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
@@ -110,71 +111,5 @@ int ptmx_open(struct file *filp);
 /* global ttys */
 extern struct tty tty_table[NR_TTYS];
 extern int fg_console;
-
-/*
- * Get next character from a tty queue.
- */
-static inline int tty_queue_getc(struct tty_queue *queue, uint8_t *c, int nonblock)
-{
-	/* buffer empty */
-	while (queue->size == 0) {
-		/* non blocking : return */
-		if (nonblock)
-			return -EAGAIN;
-
-		/* signal received */
-		if (signal_pending(current_task))
-			return -EINTR;
-
-		/* wait for data */
-		sleep_on(&queue->wait);
-	}
-
-	/* read from tty queue */
-	*c = queue->buf[queue->tail++];
-	queue->size--;
-
-	/* update position */
-	if (queue->tail == TTY_BUF_SIZE)
-		queue->tail = 0;
-
-	return 0;
-}
-
-/*
- * Put a character in a tty queue (does not block = if buffer is full, it fails).
- */
-static inline int tty_queue_putc(struct tty_queue *queue, uint8_t c)
-{
-	if (tty_queue_full(queue))
-		return -EAGAIN;
-
-	/* write to tty queue */
-	queue->buf[queue->head++] = c;
-	queue->size++;
-
-	/* update position */
-	if (queue->head == TTY_BUF_SIZE)
-		queue->head = 0;
-
-	/* wake up eventual readers */
-	wake_up(&queue->wait);
-
-	return 0;
-}
-
-/*
- * Flush a tty queue.
- */
-static inline void tty_queue_flush(struct tty_queue *queue)
-{
-	/* flush buffer */
-	queue->size = 0;
-	queue->head = 0;
-	queue->tail = 0;
-
-	/* wake up eventual readers/writers */
-	wake_up(&queue->wait);
-}
 
 #endif

@@ -22,6 +22,59 @@
 struct tty tty_table[NR_TTYS];
 
 /*
+ * Check if there is some data to read.
+ */
+static int tty_input_available(struct tty *tty)
+{
+	if (L_CANON(tty))
+		return tty->canon_data > 0;
+
+	return !tty_queue_empty(&tty->cooked_queue);
+}
+
+/*
+ * Get next character from a tty queue.
+ */
+int tty_queue_getc(struct tty_queue *queue)
+{
+	int c;
+
+	/* buffer empty */
+	if (queue->tail == queue->head)
+		return -EAGAIN;
+
+	/* read character */
+	c = queue->buf[queue->tail];
+
+	/* update queue */
+	queue->tail = (queue->tail + 1) & (TTY_BUF_SIZE - 1);
+
+	return c;
+}
+
+/*
+ * Put a character in a tty queue.
+ */
+int tty_queue_putc(struct tty_queue *queue, uint8_t c)
+{
+	size_t head = (queue->head + 1) & (TTY_BUF_SIZE-1);
+
+	/* queue full */
+	if (head == queue->tail)
+		return -EAGAIN;
+
+	/* put character */
+	queue->buf[queue->head] = c;
+	queue->head = head;
+
+	/* wake up eventual readers */
+	wake_up(&queue->wait);
+
+	return 0;
+}
+
+
+/*
  * Lookup for a tty.
  */
 static struct tty *tty_lookup(dev_t dev)
@@ -140,8 +193,7 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 {
 	size_t count = 0;
 	struct tty *tty;
-	uint8_t c;
-	int ret;
+	int ret = 0, c;
 
 	/* unused offset */
 	UNUSED(ppos);
@@ -153,10 +205,28 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 
 	/* read all characters */
 	while (count < n) {
+		/* no character available */
+		if (!tty_input_available(tty)) {
+			/* non blocking : return */
+			if (filp->f_flags & O_NONBLOCK) {
+				ret = -EAGAIN;
+				break;
+			}
+
+			/* signal received */
+			if (signal_pending(current_task)) {
+				ret = -EINTR;
+				break;
+			}
+
+			/* wait for data */
+			sleep_on(&tty->cooked_queue.wait);
+		}
+
 		/* read next character */
-		ret = tty_queue_getc(&tty->cooked_queue, &c, filp->f_flags & O_NONBLOCK);
-		if (ret)
-			return ret;
+		c = tty_queue_getc(&tty->cooked_queue);
+		if (c < 0)
+			break;
 
 		/* add char to buffer */
 		((uint8_t *) buf)[count++] = c;
@@ -172,7 +242,7 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 			break;
 	}
 
-	return count;
+	return count ? (int) count : ret;
 }
 
 /*
@@ -236,11 +306,12 @@ static void out_char(struct tty *tty, uint8_t c)
  */
 void tty_do_cook(struct tty *tty)
 {
-	uint8_t c;
+	int c;
 
 	for (;;) {
 		/* get next input character */
-		if (tty_queue_getc(&tty->read_queue, &c, 1))
+		c = tty_queue_getc(&tty->read_queue);
+		if (c < 0)
 			break;
 
 		/* convert to ascii */
@@ -369,12 +440,14 @@ static int tiocsctty(struct tty *tty)
  */
 static void tty_flush_input(struct tty *tty)
 {
-	tty_queue_flush(&tty->read_queue);
-	tty_queue_flush(&tty->cooked_queue);
+	tty->read_queue.head = tty->read_queue.tail = 0;
+	tty->cooked_queue.head = tty->cooked_queue.tail = 0;
 	tty->canon_data = 0;
 
-	if (tty->link)
-		tty_queue_flush(&tty->link->write_queue);
+	if (tty->link) {
+		tty->link->write_queue.head = tty->link->write_queue.tail = 0;
+		wake_up(&tty->link->write_queue.wait);
+	}
 }
 
 /*
@@ -382,11 +455,12 @@ static void tty_flush_input(struct tty *tty)
  */
 static void tty_flush_output(struct tty *tty)
 {
-	tty_queue_flush(&tty->write_queue);
+	tty->write_queue.head = tty->write_queue.tail = 0;
+	wake_up(&tty->write_queue.wait);
 
 	if (tty->link) {
-		tty_queue_flush(&tty->link->read_queue);
-		tty_queue_flush(&tty->link->cooked_queue);
+		tty->link->read_queue.head = tty->read_queue.tail = 0;
+		tty->link->cooked_queue.head = tty->cooked_queue.tail = 0;
 		tty->canon_data = 0;
 	}
 }
@@ -506,17 +580,6 @@ int tty_ioctl(struct inode *inode, struct file *filp, int request, unsigned long
 	}
 
 	return 0;
-}
-
-/*
- * Check if there is some data to read.
- */
-static int tty_input_available(struct tty *tty)
-{
-	if (L_CANON(tty))
-		return tty->canon_data > 0;
-
-	return tty->cooked_queue.size > 0;
 }
 
 /*

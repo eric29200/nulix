@@ -959,7 +959,7 @@ static ssize_t console_write(struct tty *tty)
 	ssize_t count = 0;
 	struct vc *vc;
 	uint16_t tc;
-	uint8_t c;
+	int c;
 
 	/* get console */
 	vc = tty->driver_data;
@@ -971,7 +971,8 @@ static ssize_t console_write(struct tty *tty)
 	/* get characters from write queue */
 	for (;;) {
 		/* get next character */
-		if (tty_queue_getc(&tty->write_queue, &c, 1))
+		c = tty_queue_getc(&tty->write_queue);
+		if (c < 0)
 			break;
 		count++;
 
