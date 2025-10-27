@@ -128,47 +128,6 @@ static inline int ring_buffer_putc(struct ring_buffer *rb, uint8_t c)
 }
 
 /*
- * Write to a ring buffer.
- */
-static inline size_t ring_buffer_write(struct ring_buffer *rb, const uint8_t *buf, size_t n, int nonblock)
-{
-	size_t i;
-
-	for (i = 0; i < n; i++) {
-		/* buffer full : sleep */
-		while (rb->size == rb->capacity) {
-			/* return data */
-			if (i)
-				return i;
-
-			/* non blocking : return */
-			if (nonblock)
-				return -EAGAIN;
-
-			/* signal received */
-			if (signal_pending(current_task))
-				return -EINTR;
-
-			/* wait for data */
-			sleep_on(&rb->wait);
-		}
-
-		/* write to ring buffer */
-		rb->buffer[rb->head++] = buf[i];
-		rb->size++;
-
-		/* update position */
-		if (rb->head == rb->capacity)
-			rb->head = 0;
-
-		/* wake up eventual readers */
-		wake_up(&rb->wait);
-	}
-
-	return i;
-}
-
-/*
  * Flush a ring buffer.
  */
 static inline void ring_buffer_flush(struct ring_buffer *rb)
