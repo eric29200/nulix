@@ -295,7 +295,7 @@ int paste_selection(struct tty *tty)
 
 	/* write buffer to tty */
 	for (i = 0; i < sel_buf_len; i++) {
-		ring_buffer_putc(&tty->read_queue, sel_buf[i]);
+		tty_queue_putc(&tty->read_queue, sel_buf[i]);
 		tty_do_cook(tty);
 	}
 

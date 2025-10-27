@@ -154,7 +154,7 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 	/* read all characters */
 	while (count < n) {
 		/* read next character */
-		ret = ring_buffer_getc(&tty->cooked_queue, &c, filp->f_flags & O_NONBLOCK);
+		ret = tty_queue_getc(&tty->cooked_queue, &c, filp->f_flags & O_NONBLOCK);
 		if (ret)
 			return ret;
 
@@ -168,7 +168,7 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 		}
 
 		/* no more characters : break */
-		if (!L_CANON(tty) && ring_buffer_empty(&tty->cooked_queue))
+		if (!L_CANON(tty) && tty_queue_empty(&tty->cooked_queue))
 			break;
 	}
 
@@ -183,7 +183,7 @@ static int opost(struct tty *tty, uint8_t c)
 	int space;
 
 	/* write queue is full */
-	space = ring_buffer_left(&tty->write_queue);
+	space = tty_queue_left(&tty->write_queue);
 	if (!space)
 		return -EINVAL;
 
@@ -195,7 +195,7 @@ static int opost(struct tty *tty, uint8_t c)
 					if (space < 2)
 						return -EINVAL;
 
-					ring_buffer_putc(&tty->write_queue, '\r');
+					tty_queue_putc(&tty->write_queue, '\r');
 				}
 				break;
 			case '\r':
@@ -212,7 +212,7 @@ static int opost(struct tty *tty, uint8_t c)
 	}
 
 	/* post character */
-	ring_buffer_putc(&tty->write_queue, c);
+	tty_queue_putc(&tty->write_queue, c);
 	return 0;
 }
 
@@ -240,7 +240,7 @@ void tty_do_cook(struct tty *tty)
 
 	for (;;) {
 		/* get next input character */
-		if (ring_buffer_getc(&tty->read_queue, &c, 1))
+		if (tty_queue_getc(&tty->read_queue, &c, 1))
 			break;
 
 		/* convert to ascii */
@@ -283,11 +283,11 @@ void tty_do_cook(struct tty *tty)
 		}
 
 		/* echo = put character on write queue */
-		if (L_ECHO(tty) && !ring_buffer_full(&tty->write_queue))
+		if (L_ECHO(tty) && !tty_queue_full(&tty->write_queue))
 			out_char(tty, c);
 
 		/* put character in cooked queue */
-		ring_buffer_putc(&tty->cooked_queue, c);
+		tty_queue_putc(&tty->cooked_queue, c);
 
 		/* update canon data */
 		if (L_CANON(tty) && c == '\n')
@@ -324,7 +324,7 @@ static int tty_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
 		opost(tty, buf[i]);
 
 		/* write to tty */
-		if (ring_buffer_full(&tty->write_queue) || i == n - 1)
+		if (tty_queue_full(&tty->write_queue) || i == n - 1)
 			tty->driver->write(tty);
 	}
 
@@ -369,12 +369,12 @@ static int tiocsctty(struct tty *tty)
  */
 static void tty_flush_input(struct tty *tty)
 {
-	ring_buffer_flush(&tty->read_queue);
-	ring_buffer_flush(&tty->cooked_queue);
+	tty_queue_flush(&tty->read_queue);
+	tty_queue_flush(&tty->cooked_queue);
 	tty->canon_data = 0;
 
 	if (tty->link)
-		ring_buffer_flush(&tty->link->write_queue);
+		tty_queue_flush(&tty->link->write_queue);
 }
 
 /*
@@ -382,11 +382,11 @@ static void tty_flush_input(struct tty *tty)
  */
 static void tty_flush_output(struct tty *tty)
 {
-	ring_buffer_flush(&tty->write_queue);
+	tty_queue_flush(&tty->write_queue);
 
 	if (tty->link) {
-		ring_buffer_flush(&tty->link->read_queue);
-		ring_buffer_flush(&tty->link->cooked_queue);
+		tty_queue_flush(&tty->link->read_queue);
+		tty_queue_flush(&tty->link->cooked_queue);
 		tty->canon_data = 0;
 	}
 }
@@ -537,7 +537,7 @@ static int tty_poll(struct file *filp, struct select_table *wait)
 		mask |= POLLIN;
 
 	/* check if there is some characters to write */
-	if (!ring_buffer_full(&tty->write_queue))
+	if (!tty_queue_full(&tty->write_queue))
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */
@@ -549,43 +549,14 @@ static int tty_poll(struct file *filp, struct select_table *wait)
 /*
  * Init a tty.
  */
-int tty_init_dev(struct tty *tty, dev_t device, struct tty_driver *driver)
+void tty_init_dev(struct tty *tty, dev_t device, struct tty_driver *driver)
 {
-	int ret;
-
 	memset(tty, 0, sizeof(struct tty));
 	tty->driver = driver;
 	tty->device = device;
 
-	/* init read queue */
-	ret = ring_buffer_init(&tty->read_queue, TTY_BUF_SIZE);
-	if (ret)
-		return ret;
-
-	/* init write queue */
-	ret = ring_buffer_init(&tty->write_queue, TTY_BUF_SIZE);
-	if (ret)
-		return ret;
-
-	/* init cooked queue */
-	ret = ring_buffer_init(&tty->cooked_queue, TTY_BUF_SIZE);
-	if (ret)
-		return ret;
-
 	/* init termios */
 	tty->termios = driver->termios;
-
-	return 0;
-}
-
-/*
- * Destroy a tty.
- */
-void tty_destroy(struct tty *tty)
-{
-	ring_buffer_destroy(&tty->read_queue);
-	ring_buffer_destroy(&tty->write_queue);
-	ring_buffer_destroy(&tty->cooked_queue);
 }
 
 /*

@@ -613,7 +613,7 @@ static void console_gotoxy(struct vc *vc, uint32_t x, uint32_t y)
 static void console_respond_string(struct tty *tty, char *p)
 {
 	while (*p) {
-		ring_buffer_putc(&tty->read_queue, *p);
+		tty_queue_putc(&tty->read_queue, *p);
 		p++;
 	}
 }
@@ -971,7 +971,7 @@ static ssize_t console_write(struct tty *tty)
 	/* get characters from write queue */
 	for (;;) {
 		/* get next character */
-		if (ring_buffer_getc(&tty->write_queue, &c, 1))
+		if (tty_queue_getc(&tty->write_queue, &c, 1))
 			break;
 		count++;
 
@@ -1245,9 +1245,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		vc = &console_table[i];
 
 		/* init tty device */
-		ret = tty_init_dev(tty, mkdev(DEV_TTY_MAJOR, i + 1), &console_driver);
-		if (ret)
-			goto err;
+		tty_init_dev(tty, mkdev(DEV_TTY_MAJOR, i + 1), &console_driver);
 
 		/* init console attributes */
 		vc->vc_num = i;
@@ -1264,7 +1262,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		/* init frame buffer */
 		ret = init_framebuffer(&vc->fb, tag_fb, vc->vc_erase_char, 0, vc->vc_deccm);
 		if (ret)
-			goto err;
+			return ret;
 
 		/* set winsize */
 		tty->winsize.ws_row = vc->fb.height;
@@ -1285,10 +1283,4 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 	add_timer(&cursor_timer);
 
 	return 0;
-err:
-	/* destroy consoles */
-	for (i = 0; i < NR_CONSOLES; i++)
-		tty_destroy(&tty_table[i]);
-
-	return ret;
 }

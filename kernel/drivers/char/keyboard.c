@@ -77,7 +77,7 @@ const int NR_TYPES = ARRAY_SIZE(max_vals);
  */
 static void putc(uint8_t c)
 {
-	ring_buffer_putc(&tty->read_queue, c);
+	tty_queue_putc(&tty->read_queue, c);
 }
 
 /*

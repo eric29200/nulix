@@ -24,11 +24,11 @@ static ssize_t pty_write(struct tty *tty)
 	/* get characters from write queue */
 	for (;;) {
 		/* get next character */
-		if (ring_buffer_getc(&tty->write_queue, &c, 1))
+		if (tty_queue_getc(&tty->write_queue, &c, 1))
 			break;
 
 		/* write to linked tty */
-		if (ring_buffer_putc(&tty->link->read_queue, c))
+		if (tty_queue_putc(&tty->link->read_queue, c))
 			break;
 
 		count++;
@@ -135,16 +135,12 @@ int ptmx_open(struct file *filp)
 	/* create slave pty */
 	pts = &tty_table[NR_CONSOLES + i];
 	memset(pts, 0, sizeof(struct tty));
-	ret = tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i + 1), &pts_driver);
-	if (ret)
-		goto err;
+	tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i + 1), &pts_driver);
 
 	/* create master pty */
 	ptm = &tty_table[NR_CONSOLES + NR_PTYS + i];
 	memset(ptm, 0, sizeof(struct tty));
-	ret = tty_init_dev(ptm, DEV_PTMX, &ptm_driver);
-	if (ret)
-		goto err;
+	tty_init_dev(ptm, DEV_PTMX, &ptm_driver);
 
 	/* reset master termios */
 	memset(&ptm->termios, 0, sizeof(struct termios));

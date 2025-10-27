@@ -5,8 +5,8 @@
 #include <drivers/char/pty.h>
 #include <drivers/char/termios.h>
 #include <drivers/video/fb.h>
-#include <lib/ring_buffer.h>
-#include <proc/wait.h>
+#include <proc/sched.h>
+#include <stderr.h>
 
 #define NR_TTYS			(NR_CONSOLES + NR_PTYS * 2)
 
@@ -50,6 +50,17 @@
 #define O_LCUC(tty)		_O_FLAG((tty),OLCUC)
 
 /*
+ * Tty queue structure.
+ */
+struct tty_queue {
+	size_t			head;
+	size_t			tail;
+	size_t			size;
+	uint8_t			buf[TTY_BUF_SIZE];
+	struct wait_queue *	wait;
+};
+
+/*
  * TTY driver.
  */
 struct tty_driver {
@@ -67,9 +78,9 @@ struct tty {
 	int			count;							/* reference count */
 	pid_t			session;						/* session id */
 	pid_t			pgrp;							/* process group id */
-	struct ring_buffer	read_queue;						/* read queue */
-	struct ring_buffer	write_queue;						/* write queue */
-	struct ring_buffer	cooked_queue;						/* cooked queue */
+	struct tty_queue	read_queue;						/* read queue */
+	struct tty_queue	write_queue;						/* write queue */
+	struct tty_queue	cooked_queue;						/* cooked queue */
 	int			canon_data;						/* canon data */
 	struct winsize		winsize;						/* window size */
 	struct termios		termios;						/* terminal i/o */
@@ -79,10 +90,15 @@ struct tty {
 	void *			driver_data;						/* tty driver data */
 };
 
+/* tty queue functions */
+#define tty_queue_full(queue)		((queue)->size >= TTY_BUF_SIZE)
+#define tty_queue_empty(queue)		((queue)->size == 0)
+#define tty_queue_left(queue)		(TTY_BUF_SIZE - (queue)->size)
+
+
 /* tty functions */
 int init_tty(struct multiboot_tag_framebuffer *tag_fb);
-int tty_init_dev(struct tty *tty, dev_t device, struct tty_driver *driver);
-void tty_destroy(struct tty *tty);
+void tty_init_dev(struct tty *tty, dev_t device, struct tty_driver *driver);
 void tty_do_cook(struct tty *tty);
 void tty_change(int n);
 void tty_complete_change(int n);
@@ -94,5 +110,71 @@ int ptmx_open(struct file *filp);
 /* global ttys */
 extern struct tty tty_table[NR_TTYS];
 extern int fg_console;
+
+/*
+ * Get next character from a tty queue.
+ */
+static inline int tty_queue_getc(struct tty_queue *queue, uint8_t *c, int nonblock)
+{
+	/* buffer empty */
+	while (queue->size == 0) {
+		/* non blocking : return */
+		if (nonblock)
+			return -EAGAIN;
+
+		/* signal received */
+		if (signal_pending(current_task))
+			return -EINTR;
+
+		/* wait for data */
+		sleep_on(&queue->wait);
+	}
+
+	/* read from tty queue */
+	*c = queue->buf[queue->tail++];
+	queue->size--;
+
+	/* update position */
+	if (queue->tail == TTY_BUF_SIZE)
+		queue->tail = 0;
+
+	return 0;
+}
+
+/*
+ * Put a character in a tty queue (does not block = if buffer is full, it fails).
+ */
+static inline int tty_queue_putc(struct tty_queue *queue, uint8_t c)
+{
+	if (tty_queue_full(queue))
+		return -EAGAIN;
+
+	/* write to tty queue */
+	queue->buf[queue->head++] = c;
+	queue->size++;
+
+	/* update position */
+	if (queue->head == TTY_BUF_SIZE)
+		queue->head = 0;
+
+	/* wake up eventual readers */
+	wake_up(&queue->wait);
+
+	return 0;
+}
+
+/*
+ * Flush a tty queue.
+ */
+static inline void tty_queue_flush(struct tty_queue *queue)
+{
+	/* flush buffer */
+	queue->size = 0;
+	queue->head = 0;
+	queue->tail = 0;
+
+	/* wake up eventual readers/writers */
+	wake_up(&queue->wait);
+}
 
 #endif
