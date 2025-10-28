@@ -288,7 +288,7 @@ int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *except
 /*
  * Pselect6 system call.
  */
-int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *tvp, sigset_t *sigmask)
+int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timespec *tvp, sigset_t *sigmask)
 {
 	time_t timeout = MAX_SCHEDULE_TIMEOUT;
 	sigset_t current_sigmask;
@@ -307,7 +307,7 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 
 	/* get timeout */
 	if (tvp)
-		timeout = old_timeval_to_jiffies(tvp);
+		timeout = old_timespec_to_jiffies(tvp);
 
 	/* select */
 	ret = do_select(nfds, readfds, writefds, exceptfds, &timeout);
@@ -315,8 +315,8 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 	/* update timeout */
 	if (tvp) {
 		tvp->tv_sec = timeout / HZ;
-		tvp->tv_usec = timeout % HZ;
-		tvp->tv_usec *= (1000000 / HZ);
+		tvp->tv_nsec = timeout % HZ;
+		tvp->tv_nsec *= (1000000000 / HZ);
 	}
 
 	/* restore sigmask and delete masked pending signals */
