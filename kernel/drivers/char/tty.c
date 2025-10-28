@@ -67,9 +67,6 @@ int tty_queue_putc(struct tty_queue *queue, uint8_t c)
 	queue->buf[queue->head] = c;
 	queue->head = head;
 
-	/* wake up eventual readers */
-	wake_up(&queue->wait);
-
 	return 0;
 }
 
@@ -220,7 +217,7 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 			}
 
 			/* wait for data */
-			sleep_on(&tty->cooked_queue.wait);
+			sleep_on(&tty->wait);
 		}
 
 		/* read next character */
@@ -427,7 +424,7 @@ static int tty_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
 		}
 
 		/* wait for data */
-		sleep_on(&tty->cooked_queue.wait);
+		sleep_on(&tty->wait);
 	}
 
 	return i ? (int) i : ret;
@@ -477,7 +474,7 @@ static void tty_flush_input(struct tty *tty)
 
 	if (tty->link) {
 		tty->link->write_queue.head = tty->link->write_queue.tail = 0;
-		wake_up(&tty->link->write_queue.wait);
+		wake_up(&tty->link->wait);
 	}
 }
 
@@ -487,7 +484,7 @@ static void tty_flush_input(struct tty *tty)
 static void tty_flush_output(struct tty *tty)
 {
 	tty->write_queue.head = tty->write_queue.tail = 0;
-	wake_up(&tty->write_queue.wait);
+	wake_up(&tty->wait);
 
 	if (tty->link) {
 		tty->link->read_queue.head = tty->read_queue.tail = 0;

@@ -56,7 +56,6 @@ struct tty_queue {
 	size_t			head;
 	size_t			tail;
 	uint8_t			buf[TTY_BUF_SIZE];
-	struct wait_queue *	wait;
 };
 
 /*
