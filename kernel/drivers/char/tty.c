@@ -287,17 +287,15 @@ static int opost(struct tty *tty, uint8_t c)
 }
 
 /*
- * Output/Echo a character.
+ * Echo a character.
  */
-static void out_char(struct tty *tty, uint8_t c)
+static void echo_char(struct tty *tty, uint8_t c)
 {
 	if (ISCNTRL(c) && !ISSPACE(c) && L_ECHOCTL(tty)) {
 		opost(tty, '^');
 		opost(tty, c + 64);
-		tty->driver->write(tty);
 	} else {
 		opost(tty, c);
-		tty->driver->write(tty);
 	}
 }
 
@@ -309,6 +307,10 @@ void tty_do_cook(struct tty *tty)
 	int c;
 
 	for (;;) {
+		/* check space */
+		if (tty_queue_full(&tty->cooked_queue))
+			break;
+
 		/* get next input character */
 		c = tty_queue_getc(&tty->read_queue);
 		if (c < 0)
@@ -355,7 +357,7 @@ void tty_do_cook(struct tty *tty)
 
 		/* echo = put character on write queue */
 		if (L_ECHO(tty) && !tty_queue_full(&tty->write_queue))
-			out_char(tty, c);
+			echo_char(tty, c);
 
 		/* put character in cooked queue */
 		tty_queue_putc(&tty->cooked_queue, c);
@@ -365,8 +367,13 @@ void tty_do_cook(struct tty *tty)
 			tty->canon_data++;
 	}
 
+	/* flush write queue */
+	if (!tty_queue_empty(&tty->write_queue))
+		tty->driver->write(tty);
+
 	/* wake up eventual process */
-	wake_up(&tty->wait);
+	if (L_CANON(tty) ? tty->canon_data : !tty_queue_empty(&tty->cooked_queue))
+		wake_up(&tty->wait);
 }
 
 /*
