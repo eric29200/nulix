@@ -375,7 +375,8 @@ void tty_do_cook(struct tty *tty)
 static int tty_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
 {
 	struct tty *tty;
-	size_t i;
+	size_t i = 0;
+	int ret = 0;
 
 	/* unused offset */
 	UNUSED(ppos);
@@ -389,17 +390,40 @@ static int tty_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
 	if (!tty->driver->write)
 		return -EINVAL;
 
-	/* pos characters */
-	for (i = 0; i < n; i++) {
-		/* put next character */
-		opost(tty, buf[i]);
+	for (;;) {
+		/* post characters */
+		for (; i < n; i++)
+			if (opost(tty, buf[i]) < 0)
+				break;
 
-		/* write to tty */
-		if (tty_queue_full(&tty->write_queue) || i == n - 1)
-			tty->driver->write(tty);
+		/* flush write queue */
+		tty->driver->write(tty);
+
+		/* all characters written */
+		if (i >= n - 1)
+			break;
+
+		/* all characters flushed : continue */
+		if (tty_queue_empty(&tty->write_queue))
+			continue;
+
+		/* non blocking : return */
+		if (filp->f_flags & O_NONBLOCK) {
+			ret = -EAGAIN;
+			break;
+		}
+
+		/* signal received */
+		if (signal_pending(current_task)) {
+			ret = -EINTR;
+			break;
+		}
+
+		/* wait for data */
+		sleep_on(&tty->cooked_queue.wait);
 	}
 
-	return n;
+	return i ? (int) i : ret;
 }
 
 /*
