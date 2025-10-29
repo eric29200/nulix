@@ -11,6 +11,8 @@
 #define PIPE_WAIT(inode)		((inode)->u.pipe_i.i_wait)
 #define PIPE_READERS(inode)		((inode)->u.pipe_i.i_readers)
 #define PIPE_WRITERS(inode)		((inode)->u.pipe_i.i_writers)
+#define PIPE_RD_OPENERS(inode)		((inode)->u.pipe_i.i_rd_openers)
+#define PIPE_WR_OPENERS(inode)		((inode)->u.pipe_i.i_wr_openers)
 
 #define PIPE_SIZE(inode)		(PIPE_LEN(inode))
 #define PIPE_EMPTY(inode)		(PIPE_SIZE(inode) == 0)
@@ -29,6 +31,8 @@ struct pipe_inode_info {
 	int			i_len;
 	size_t			i_readers;
 	size_t			i_writers;
+	size_t			i_rd_openers;
+	size_t			i_wr_openers;
 	struct wait_queue *	i_wait;
 };
 

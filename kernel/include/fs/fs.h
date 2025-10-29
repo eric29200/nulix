@@ -377,6 +377,13 @@ int blkdev_open(struct inode *inode, struct file *filp);
 extern struct inode_operations chrdev_iops;
 extern struct inode_operations blkdev_iops;
 
+/* fifo operations */
+extern struct file_operations read_fifo_fops;
+extern struct file_operations write_fifo_fops;
+extern struct file_operations rdwr_fifo_fops;
+extern struct file_operations connecting_fifo_fops;
+void init_fifo(struct inode *inode);
+
 /* filemap operations */
 int generic_file_mmap(struct file *filp, struct vm_area *vma);
 

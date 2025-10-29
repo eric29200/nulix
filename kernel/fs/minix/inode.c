@@ -115,6 +115,8 @@ int minix_read_inode(struct inode *inode)
 	} else if (S_ISBLK(inode->i_mode)) {
 		inode->i_rdev = inode->u.minix_i.i_zone[0];
 		inode->i_op = &blkdev_iops;
+	} else if (S_ISFIFO(inode->i_mode)) {
+		init_fifo(inode);
 	} else {
 		inode->i_op = &minix_file_iops;
 	}

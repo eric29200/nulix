@@ -96,6 +96,8 @@ struct inode *tmpfs_new_inode(struct super_block *sb, mode_t mode, dev_t dev)
 		inode->i_op = &chrdev_iops;
 	else if (S_ISBLK(inode->i_mode))
 		inode->i_op = &blkdev_iops;
+	else if (S_ISFIFO(inode->i_mode))
+		init_fifo(inode);
 	else
 		inode->i_op = &tmpfs_file_iops;
 

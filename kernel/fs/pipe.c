@@ -91,6 +91,22 @@ static int pipe_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 }
 
 /*
+ * Read from a connecting fifo.
+ */
+static int connect_read(struct file *filp, char *buf, size_t count, off_t *ppos)
+{
+	struct inode *inode = filp->f_dentry->d_inode;
+
+	/* empty fifo */
+	if (PIPE_EMPTY(inode) && !PIPE_WRITERS(inode))
+		return 0;
+
+	/* read from fifo */
+	filp->f_op = &read_fifo_fops;
+	return pipe_read(filp, buf, count, ppos);
+}
+
+/*
  * Write to a pipe.
  */
 static int pipe_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
@@ -178,6 +194,40 @@ out:
 }
 
 /*
+ * Open a read pipe.
+ */
+static int pipe_read_open(struct inode *inode, struct file *filp)
+{
+	UNUSED(filp);
+	PIPE_READERS(inode)++;
+	return 0;
+}
+
+/*
+ * Open a write pipe.
+ */
+static int pipe_write_open(struct inode *inode, struct file *filp)
+{
+	UNUSED(filp);
+	PIPE_WRITERS(inode)++;
+	return 0;
+}
+
+/*
+ * Open a read/write pipe.
+ */
+static int pipe_rdwr_open(struct inode *inode, struct file *filp)
+{
+	if (filp->f_mode & FMODE_READ)
+		PIPE_READERS(inode)++;
+
+	if (filp->f_mode & FMODE_WRITE)
+		PIPE_WRITERS(inode)++;
+
+	return 0;
+}
+
+/*
  * Close a read pipe.
  */
 static int pipe_read_release(struct inode *inode, struct file *filp)
@@ -210,30 +260,99 @@ static int pipe_write_release(struct inode *inode, struct file *filp)
 }
 
 /*
+ * Close a read/write pipe.
+ */
+static int pipe_rdwr_release(struct inode *inode, struct file *filp)
+{
+	if (filp->f_mode & FMODE_READ)
+		PIPE_READERS(inode)--;
+
+	if (filp->f_mode & FMODE_WRITE)
+		PIPE_WRITERS(inode)--;
+
+	return 0;
+}
+
+/*
  * Poll a pipe.
  */
 static int pipe_poll(struct file *filp, struct select_table *wait)
 {
-	int mask;
+	struct inode *inode = filp->f_dentry->d_inode;
+	int mask = POLLIN;
 
-	/* reader or writer */
-	if (PIPE_EMPTY(filp->f_dentry->d_inode))
+	/* add wait queue to select table */
+	select_wait(&PIPE_WAIT(inode), wait);
+
+	if (PIPE_EMPTY(inode))
 		mask = POLLOUT;
-	else
-		mask = POLLIN;
+	if (!PIPE_WRITERS(inode))
+		mask |= POLLHUP;
+	if (!PIPE_READERS(inode))
+		mask |= POLLERR;
+
+	return mask;
+}
+
+/*
+ * Poll a fifo.
+ */
+static int fifo_poll(struct file *filp, struct select_table *wait)
+{
+	struct inode *inode = filp->f_dentry->d_inode;
+	int mask = POLLIN;
+
+	/* add wait queue to select table */
+	select_wait(&PIPE_WAIT(inode), wait);
+
+	if (PIPE_EMPTY(inode))
+		mask = POLLOUT;
+	if (!PIPE_READERS(inode))
+		mask |= POLLERR;
+
+	return mask;
+}
+
+/*
+ * Poll a connecting fifo.
+ */
+static int connect_poll(struct file *filp, struct select_table *wait)
+{
+	struct inode *inode = filp->f_dentry->d_inode;
 
 	/* add wait queue to select table */
 	select_wait(&PIPE_WAIT(filp->f_dentry->d_inode), wait);
 
-	return mask;
+	if (!PIPE_EMPTY(inode)) {
+		filp->f_op = &read_fifo_fops;
+		return POLLIN;
+	}
+
+	if (PIPE_WRITERS(inode))
+		filp->f_op = &read_fifo_fops;
+
+	return POLLOUT;
+}
+
+/*
+ * Seek a pipe.
+ */
+static int pipe_llseek(struct file *filp, off_t offset, int whence)
+{
+	UNUSED(filp);
+	UNUSED(offset);
+	UNUSED(whence);
+	return -ESPIPE;
 }
 
 /*
  * Read pipe operations.
  */
 static struct file_operations read_pipe_fops = {
-	.read		= pipe_read,
+	.llseek		= pipe_llseek,
+	.open		= pipe_read_open,
 	.release	= pipe_read_release,
+	.read		= pipe_read,
 	.poll		= pipe_poll,
 };
 
@@ -241,9 +360,56 @@ static struct file_operations read_pipe_fops = {
  * Write pipe operations.
  */
 static struct file_operations write_pipe_fops = {
-	.write		= pipe_write,
+	.llseek		= pipe_llseek,
+	.open		= pipe_write_open,
 	.release	= pipe_write_release,
+	.write		= pipe_write,
 	.poll		= pipe_poll,
+};
+
+/*
+ * Connecting fifo operations.
+ */
+struct file_operations connecting_fifo_fops = {
+	.llseek		= pipe_llseek,
+	.open		= pipe_read_open,
+	.release	= pipe_read_release,
+	.read		= connect_read,
+	.poll		= connect_poll,
+};
+
+/*
+ * Read fifo operations.
+ */
+struct file_operations read_fifo_fops = {
+	.llseek		= pipe_llseek,
+	.open		= pipe_read_open,
+	.release	= pipe_read_release,
+	.read		= pipe_read,
+	.poll		= fifo_poll,
+};
+
+/*
+ * Write fifo operations.
+ */
+struct file_operations write_fifo_fops = {
+	.llseek		= pipe_llseek,
+	.open		= pipe_write_open,
+	.release	= pipe_write_release,
+	.write		= pipe_write,
+	.poll		= fifo_poll,
+};
+
+/*
+ * Read/write fifo operations.
+ */
+struct file_operations rdwr_fifo_fops = {
+	.llseek		= pipe_llseek,
+	.open		= pipe_rdwr_open,
+	.release	= pipe_rdwr_release,
+	.read		= pipe_read,
+	.write		= pipe_write,
+	.poll		= fifo_poll,
 };
 
 /*
@@ -277,6 +443,8 @@ static struct inode *get_pipe_inode()
 	PIPE_LEN(inode) = 0;
 	PIPE_READERS(inode) = 1;
 	PIPE_WRITERS(inode) = 1;
+	PIPE_RD_OPENERS(inode) = 0;
+	PIPE_WR_OPENERS(inode) = 0;
 
 	return inode;
 }

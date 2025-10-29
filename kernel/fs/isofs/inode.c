@@ -113,6 +113,8 @@ int isofs_read_inode(struct inode *inode)
 		inode->i_op = &isofs_file_iops;
 	else if (S_ISDIR(inode->i_mode))
 		inode->i_op = &isofs_dir_iops;
+	else if (S_ISFIFO(inode->i_mode))
+		init_fifo(inode);
 	else
 		err = -EINVAL;
 

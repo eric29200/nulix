@@ -147,6 +147,8 @@ int ext2_read_inode(struct inode *inode)
 	} else if (S_ISBLK(inode->i_mode)) {
 		inode->i_rdev = raw_inode->i_block[0];
 		inode->i_op = &blkdev_iops;
+	} else if (S_ISFIFO(inode->i_mode)) {
+		init_fifo(inode);
 	} else {
 		inode->i_op = &ext2_file_iops;
 	}
