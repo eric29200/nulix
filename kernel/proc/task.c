@@ -468,6 +468,10 @@ void task_exit_mmap(struct mm_struct *mm)
 			/* unmap pages */
 			zap_page_range(mm->pgd, vma->vm_start, vma->vm_end - vma->vm_start);
 
+			/* release file */
+			if (vma->vm_file)
+				fput(vma->vm_file);
+
 			/* free memory region */
 			remove_vma(vma);
 			kfree(vma);
