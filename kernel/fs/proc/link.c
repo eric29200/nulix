@@ -41,6 +41,5 @@ int do_proc_readlink(struct dentry *dentry, char *buf, size_t bufsize)
 	/* copy result */
 	memcpy(buf, path, len);
 
-	dput(dentry);
 	return len;
 }
