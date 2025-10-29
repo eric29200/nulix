@@ -284,6 +284,25 @@ static int opost(struct tty *tty, uint8_t c)
 }
 
 /*
+ * Erase a character.
+ */
+static void eraser(struct tty *tty)
+{
+	if (tty->cooked_queue.head == tty->canon_head)
+		return;
+
+	/* remove last character from cooked queue */
+	tty->cooked_queue.head = (tty->cooked_queue.head - 1) & (TTY_BUF_SIZE - 1);
+
+	/* remove last character from screen */
+	if (L_ECHO(tty)) {
+		opost(tty, '\b');
+		opost(tty, ' ');
+		opost(tty, '\b');
+	}
+}
+
+/*
  * Echo a character.
  */
 static void echo_char(struct tty *tty, uint8_t c)
@@ -334,6 +353,12 @@ void tty_do_cook(struct tty *tty)
 			c = '\r';
 		}
 
+		/* erase a character */
+		if (L_CANON(tty) && c == tty->termios.c_cc[VERASE]) {
+			eraser(tty);
+			continue;
+		}
+
 		/* handle signals */
 		if (L_ISIG(tty)) {
 			if (c == tty->termios.c_cc[VINTR]) {
@@ -360,8 +385,10 @@ void tty_do_cook(struct tty *tty)
 		tty_queue_putc(&tty->cooked_queue, c);
 
 		/* update canon data */
-		if (L_CANON(tty) && c == '\n')
+		if (L_CANON(tty) && c == '\n') {
+			tty->canon_head = tty->cooked_queue.head;
 			tty->canon_data++;
+		}
 	}
 
 	/* flush write queue */
@@ -470,7 +497,7 @@ static void tty_flush_input(struct tty *tty)
 {
 	tty->read_queue.head = tty->read_queue.tail = 0;
 	tty->cooked_queue.head = tty->cooked_queue.tail = 0;
-	tty->canon_data = 0;
+	tty->canon_data = tty->canon_head = 0;
 
 	if (tty->link) {
 		tty->link->write_queue.head = tty->link->write_queue.tail = 0;
@@ -489,7 +516,7 @@ static void tty_flush_output(struct tty *tty)
 	if (tty->link) {
 		tty->link->read_queue.head = tty->read_queue.tail = 0;
 		tty->link->cooked_queue.head = tty->cooked_queue.tail = 0;
-		tty->canon_data = 0;
+		tty->link->canon_data = tty->link->canon_head = 0;
 	}
 }
 
@@ -546,7 +573,7 @@ int tty_ioctl(struct inode *inode, struct file *filp, int request, unsigned long
 		case TCSETSW:
 		case TCSETSF:
 			memcpy(&tty->termios, (struct termios *) arg, sizeof(struct termios));
-			tty->canon_data = 0;
+			tty->canon_data = tty->canon_head = 0;
 			break;
 		case TIOCGWINSZ:
 			memcpy((struct winsize *) arg, &tty->winsize, sizeof(struct winsize));

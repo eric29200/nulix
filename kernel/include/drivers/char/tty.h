@@ -80,6 +80,7 @@ struct tty {
 	struct tty_queue	write_queue;						/* write queue */
 	struct tty_queue	cooked_queue;						/* cooked queue */
 	int			canon_data;						/* canon data */
+	size_t			canon_head;						/* canon head */
 	struct winsize		winsize;						/* window size */
 	struct termios		termios;						/* terminal i/o */
 	struct wait_queue *	wait;							/* wait queue */
