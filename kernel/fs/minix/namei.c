@@ -629,6 +629,18 @@ int minix_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev
 	inode->i_gid = current_task->fsgid;
 	inode->i_mode = mode;
 	inode->i_rdev = dev;
+
+	/* set inode operations */
+	if (S_ISREG(inode->i_mode))
+		inode->i_op = &minix_file_iops;
+	else if (S_ISCHR(inode->i_mode))
+		inode->i_op = &chrdev_iops;
+	else if (S_ISBLK(inode->i_mode))
+		inode->i_op = &blkdev_iops;
+	else if (S_ISFIFO(inode->i_mode))
+		init_fifo(inode);
+
+	/* mark indde dirty */
 	mark_inode_dirty(inode);
 
 	/* add new entry to dir */
