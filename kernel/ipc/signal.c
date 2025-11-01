@@ -439,53 +439,55 @@ int do_signal(struct registers *regs)
 	siginfo_t info;
 	int sig;
 
-	/* get first unblocked signal */
-	sig = dequeue_signal(&current_task->blocked, &info);
-	if (!sig)
-		goto out;
-
-	/* get signal action */
-	act = &current_task->sig->action[sig - 1];
-
-	/* traced process */
-	if (sig != SIGKILL) {
-		sig = ptrace_signal(sig, &info);
+	for (;;) {
+		/* get first unblocked signal */
+		sig = dequeue_signal(&current_task->blocked, &info);
 		if (!sig)
-			goto out;
-	}
+			break;
 
-	/* ignore signal handler */
-	if (act->sa_handler == SIG_IGN)
-		goto out;
+		/* get signal action */
+		act = &current_task->sig->action[sig - 1];
 
-	/* default signal handler */
-	if (act->sa_handler == SIG_DFL) {
-		/* init task gets no signals it doesn't want */
-		if (current_task->pid == 1)
-			goto out;
-
-		switch (sig) {
-			/* ignore those signals */
-			case SIGCONT:
-			case SIGCHLD:
-			case SIGWINCH:
-				goto out;
-			case SIGSTOP:
-			case SIGTSTP:
-				current_task->state = TASK_STOPPED;
-				current_task->exit_code = sig;
-				notify_parent(current_task, SIGCHLD);
-				schedule();
-				goto out;
-			default:
-				do_exit(sig);
-				goto out;
+		/* traced process */
+		if (sig != SIGKILL) {
+			sig = ptrace_signal(sig, &info);
+			if (!sig)
+				continue;
 		}
+
+		/* ignore signal handler */
+		if (act->sa_handler == SIG_IGN)
+			continue;
+
+		/* default signal handler */
+		if (act->sa_handler == SIG_DFL) {
+			/* init task gets no signals it doesn't want */
+			if (current_task->pid == 1)
+				continue;
+
+			switch (sig) {
+				/* ignore those signals */
+				case SIGCONT:
+				case SIGCHLD:
+				case SIGWINCH:
+					continue;
+				case SIGSTOP:
+				case SIGTSTP:
+					current_task->state = TASK_STOPPED;
+					current_task->exit_code = sig;
+					notify_parent(current_task, SIGCHLD);
+					schedule();
+					continue;
+				default:
+					do_exit(sig);
+					break;
+			}
+		}
+
+		handle_signal(regs, sig, act);
+		return 1;
 	}
 
-	handle_signal(regs, sig, act);
-	return 1;
-out:
 	/* restore sigmask */
 	if (!sigisemptyset(&current_task->saved_sigmask)) {
 		current_task->blocked = current_task->saved_sigmask;
