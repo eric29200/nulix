@@ -258,6 +258,7 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 
 	/* save interrupt registers, to restore it at the end of signal */
 	memcpy(&current_task->signal_regs, regs, sizeof(struct registers));
+	current_task->sig->in_sig = 1;
 
 	/* prepare a stack for signal handler */
 	esp = (uint32_t *) regs->useresp;
@@ -614,6 +615,7 @@ int sys_sigreturn()
 {
 	/* restore saved registers before signal handler */
 	memcpy(&current_task->thread.regs, &current_task->signal_regs, sizeof(struct registers));
+	current_task->sig->in_sig = 0;
 
 	/* return value of syscall interrupted by signal */
 	return current_task->signal_regs.eax;
