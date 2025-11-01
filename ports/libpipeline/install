@@ -1,0 +1,22 @@
+VERSION="1.5.8"
+SRC_FILENAME="libpipeline-"$VERSION".tar.gz"
+URL="https://download-mirror.savannah.gnu.org/releases/libpipeline/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--prefix="/usr"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+
+	# fix libtool and pkgconfig
+	SYSROOT_ESC=$(echo $SYSROOT | sed 's/\//\\\//g')
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/pkgconfig/libpipeline.pc"
+	sed -i "s/\/usr/$SYSROOT_ESC\/usr/" $SYSROOT"/usr/lib/libpipeline.la"
+}
