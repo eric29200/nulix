@@ -689,7 +689,7 @@ static ssize_t do_readlink(int dirfd, const char *pathname, char *buf, size_t bu
 	inode = dentry->d_inode;
 
 	/* readlink not implemented */
-	ret = -EPERM;
+	ret = -EINVAL;
 	if (!inode->i_op || !inode->i_op->readlink)
 		goto out;
 
