@@ -372,6 +372,7 @@ int register_blkdev(int major, const char *name, struct file_operations *fops);
 int unregister_chrdev(int major, const char *name);
 int unregister_blkdev(int major, const char *name);
 int blkdev_open(struct inode *inode, struct file *filp);
+size_t get_device_list(char *page);
 
 /* character/block devices inode operations */
 extern struct inode_operations chrdev_iops;

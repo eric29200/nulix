@@ -25,6 +25,26 @@ static struct device blkdevs[MAX_BLKDEV] = {
 };
 
 /*
+ * Get device list.
+ */
+size_t get_device_list(char *page)
+{
+	size_t len = 0, i;
+
+	len = sprintf(page, "Character devices:\n");
+	for (i = 0; i < MAX_CHRDEV ; i++)
+		if (chrdevs[i].fops)
+			len += sprintf(page + len, "%d %s\n", i, chrdevs[i].name);
+
+	len += sprintf(page + len, "\nBlock devices:\n");
+	for (i = 0; i < MAX_BLKDEV ; i++)
+		if (blkdevs[i].fops)
+			len += sprintf(page + len, "%d %s\n", i, blkdevs[i].name);
+
+	return len;
+}
+
+/*
  * Register a character device.
  */
 int register_chrdev(int major, const char *name, struct file_operations *fops)

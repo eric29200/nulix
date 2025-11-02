@@ -164,6 +164,19 @@ static int kcmdline_read_proc(char *page, char **start, off_t off, size_t count,
 }
 
 /*
+ * Read devices.
+ */
+static int devices_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
+{
+	size_t len;
+
+	/* get device list */
+	len = get_device_list(page);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
+}
+
+/*
  * Init misc proc entries.
  */
 void proc_misc_init()
@@ -175,4 +188,5 @@ void proc_misc_init()
 	create_proc_read_entry("meminfo", 0, NULL, meminfo_read_proc);
 	create_proc_read_entry("loadavg", 0, NULL, loadavg_read_proc);
 	create_proc_read_entry("cmdline", 0, NULL, kcmdline_read_proc);
+	create_proc_read_entry("devices", 0, NULL, devices_read_proc);
 }
