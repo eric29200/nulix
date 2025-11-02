@@ -388,7 +388,7 @@ void init_fifo(struct inode *inode);
 int generic_file_mmap(struct file *filp, struct vm_area *vma);
 
 /* generic operations */
-int do_mount_root(dev_t dev, const char *dev_name);
+int do_mount_root(dev_t dev, const char *dev_name, int flags);
 int close_fp(struct file *filp);
 int do_truncate(struct inode *inode, off_t length);
 

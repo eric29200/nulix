@@ -79,6 +79,8 @@ sudo mknod tmp/dev/mouse c 13 0
 sudo mknod tmp/dev/fb0 c 29 0
 sudo mknod tmp/dev/hda b 3 0
 sudo mknod tmp/dev/hda1 b 3 1
+sudo mknod tmp/dev/hdb b 3 16
+sudo mknod tmp/dev/hdb1 b 3 17
 sudo mknod tmp/dev/hdc b 3 32
 sudo mknod tmp/dev/loop0 b 7 0
 sudo mknod tmp/dev/loop1 b 7 1

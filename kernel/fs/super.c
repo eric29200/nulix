@@ -531,7 +531,7 @@ int sys_mount(char *dev_name, char *dir_name, char *type, unsigned long flags, v
 /*
  * Mount root file system.
  */
-int do_mount_root(dev_t dev, const char *dev_name)
+int do_mount_root(dev_t dev, const char *dev_name, int flags)
 {
 	struct file_system_type *fs;
 	struct super_block *sb;
@@ -544,7 +544,7 @@ int do_mount_root(dev_t dev, const char *dev_name)
 			continue;
 
 		/* read super block */
-		sb = read_super(dev, fs->name, MS_RDONLY, NULL, 1);
+		sb = read_super(dev, fs->name, flags, NULL, 1);
 		if (sb)
 			goto found;
 	}

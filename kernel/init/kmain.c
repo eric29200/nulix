@@ -33,13 +33,21 @@
 #include <fcntl.h>
 #include <dev.h>
 
-#define ROOT_DEV		(mkdev(DEV_ATA_MAJOR, 1))
-#define ROOT_DEV_NAME		"/dev/hda1"
+#define COMMAND_LINE_SIZE	512
+#define ROOT_DEV_NAME_SIZE	32
+
+/* root device */
+static dev_t root_dev;
+static char root_dev_name[ROOT_DEV_NAME_SIZE] = { 0 };
+static int root_mountflags = MS_RDONLY;
 
 extern uint32_t loader;
 extern uint32_t kernel_stack;
 extern uint32_t kernel_start;
 extern uint32_t kernel_end;
+
+/* command line */
+char saved_command_line[COMMAND_LINE_SIZE] = { 0 };
 
 /* grub framebuffer */
 static struct multiboot_tag_framebuffer tag_fb;
@@ -50,10 +58,87 @@ static uint8_t default_ip_netmask[] = { 255, 255, 255, 0 };
 static uint8_t default_ip_route[] = { 10, 0, 2, 2 };
 
 /*
+ * Devices names.
+ */
+struct dev_name {
+	const char *	name;
+	dev_t		num;
+};
+
+static struct dev_name devices[] = {
+	{ "hda",	0x0300 },
+	{ "hdb",	0x0310 },
+	{ "hdc",	0x0320 },
+	{ "hdd",	0x0330 },
+	{ NULL,		0x0000 },
+};
+
+/*
+ * Parse root device.
+ */
+void parse_root_dev(char *line)
+{
+	struct dev_name *dev = devices;
+	size_t len;
+
+	/* must be a device path */
+	if (strncmp(line, "/dev/", 5))
+		return;
+
+	/* save root device name */
+	strncpy(root_dev_name, line, ROOT_DEV_NAME_SIZE - 1);
+	line += 5;
+
+	/* find device */
+	for (dev = devices; dev->name; dev++) {
+		len = strlen(dev->name);
+		if (strncmp(line, dev->name, len) == 0) {
+			line += len;
+			root_dev = dev->num + (*line - '0');
+			return;
+		}
+	}
+}
+
+/*
+ * Parse command line.
+ */
+static void parse_command_line(char *line)
+{
+	char *next;
+
+	for (next = line; next; line = next) {
+		/* end option */
+		next = strchr(line, ' ');
+		if (next)
+			*next++ = 0;
+
+		/* root device option */
+		if (strncmp(line, "root=", 5) == 0) {
+			parse_root_dev(line + 5);
+			continue;
+		}
+
+		/* read only option */
+		if (strcmp(line, "ro") == 0) {
+			root_mountflags |= MS_RDONLY;
+			continue;
+		}
+
+		/* read write option */
+		if (strcmp(line, "rw") == 0) {
+			root_mountflags &= ~MS_RDONLY;
+			continue;
+		}
+	}
+}
+
+/*
  * Parse multiboot header.
  */
 static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_upper)
 {
+	char command_line[COMMAND_LINE_SIZE] = { 0 };
 	struct multiboot_tag *tag;
 
 	/* check magic number */
@@ -68,9 +153,13 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 	for (tag = (struct multiboot_tag *) (mbi_addr + 8);
 			 tag->type != MULTIBOOT_TAG_TYPE_END;
 			 tag = (struct multiboot_tag *) ((multiboot_uint8_t *) tag + ((tag->size + 7) & ~7))) {
+
 		switch (tag->type) {
 			case MULTIBOOT_TAG_TYPE_CMDLINE:
-				printf("Command line = %s\n", ((struct multiboot_tag_string *) tag)->string);
+				strncpy(saved_command_line, ((struct multiboot_tag_string *) tag)->string, COMMAND_LINE_SIZE - 1);
+				strncpy(command_line, ((struct multiboot_tag_string *) tag)->string, COMMAND_LINE_SIZE - 1);
+				printf("Command line = %s\n", saved_command_line);
+				parse_command_line(command_line);
 				break;
 			case MULTIBOOT_TAG_TYPE_BOOT_LOADER_NAME:
 				printf("Boot loader name = %s\n", ((struct multiboot_tag_string *) tag)->string);
@@ -183,7 +272,7 @@ static void kinit()
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
-	if (do_mount_root(ROOT_DEV, ROOT_DEV_NAME) != 0)
+	if (do_mount_root(root_dev, root_dev_name, root_mountflags) != 0)
 		panic("Cannot mount root file system");
 
 	/* spawn init process */
