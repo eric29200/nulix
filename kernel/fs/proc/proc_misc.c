@@ -150,6 +150,20 @@ static int uptime_read_proc(char *page, char **start, off_t off, size_t count, i
 }
 
 /*
+ * Read kernel command line.
+ */
+static int kcmdline_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
+{
+	extern char saved_command_line[];
+	size_t len;
+
+	/* print command line in temporary buffer */
+	len = sprintf(page, "%s\n", saved_command_line);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
+}
+
+/*
  * Init misc proc entries.
  */
 void proc_misc_init()
@@ -160,4 +174,5 @@ void proc_misc_init()
 	create_proc_read_entry("stat", 0, NULL, kstat_read_proc);
 	create_proc_read_entry("meminfo", 0, NULL, meminfo_read_proc);
 	create_proc_read_entry("loadavg", 0, NULL, loadavg_read_proc);
+	create_proc_read_entry("cmdline", 0, NULL, kcmdline_read_proc);
 }
