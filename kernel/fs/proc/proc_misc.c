@@ -144,7 +144,7 @@ static int uptime_read_proc(char *page, char **start, off_t off, size_t count, i
 	init_task = list_first_entry(&tasks_list, struct task, list);
 
 	/* print uptime in temporary buffer */
-	len = sprintf(page, "%lld.%lld %lld.%lld\n", jiffies / HZ, jiffies % HZ, init_task->utime / HZ, init_task->utime % HZ);
+	len = sprintf(page, "%ld.%ld %ld.%ld\n", jiffies / HZ, jiffies % HZ, init_task->utime / HZ, init_task->utime % HZ);
 
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }

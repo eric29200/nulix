@@ -46,10 +46,10 @@ int proc_stat_read(struct task *task, char *page)
 				"%d "							/* tty */
 				"0 0 "							/* tpgid, flags */
 				"0 0 0 0 "						/* minflt, cminflt, majflt, cmajflt */
-				"%lld %lld %lld %lld "					/* utime, stime, cutime, cstime */
+				"%ld %ld %ld %ld "					/* utime, stime, cutime, cstime */
 				"0 0 "							/* priority, nice */
 				"0 0 "							/* num_threads, itrealvalue */
-				"%lld "							/* starttime */
+				"%ld "							/* starttime */
 				"%d %d 0 \n",						/* vsize, rss, rsslim */
 				task->pid, task->name,
 				proc_states[task->state - 1], task->parent ? task->parent->pid : task->pid,
