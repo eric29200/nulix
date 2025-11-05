@@ -1,25 +1,26 @@
 #include <x86/segment.h>
 
-.extern isr_handler
+.extern exception_handler
+.extern irq_handler
 
-/* macro to create an isr function with no error code */
-.macro ISR num
-    .globl isr\num
-    isr\num:
+/* macro to create an exception function with no error code */
+.macro EXCEPTION num
+    .globl exception\num
+    exception\num:
         cli
         push $0
         push $\num
-        jmp isr_common
+        jmp exception_common
 .endm
 
 
-/* nasm macro to create a isr function with error code */
-.macro ISR_ERR num
-    .globl isr\num
-    isr\num:
+/* nasm macro to create a exception function with error code */
+.macro EXCEPTION_ERR num
+    .globl exception\num
+    exception\num:
         cli
         push $\num
-        jmp isr_common
+        jmp exception_common
 .endm
 
 /* nasm macro to create a irq function with 2 parameters (interrupt and irq numbers) */
@@ -29,20 +30,22 @@
 		cli
 		push $0
 		push $\ir
-		jmp isr_common
+		jmp irq_common
 .endm
 
-/* generate isrs */
-ISR 0 ; ISR 1 ; ISR 2 ; ISR 3 ; ISR 4 ; ISR 5 ; ISR 6 ; ISR 7 ; ISR_ERR 8 ; ISR 9 ; ISR_ERR 10 ; ISR_ERR 11 ; ISR_ERR 12
-ISR_ERR 13 ; ISR_ERR 14 ; ISR 15 ; ISR 16 ; ISR 17 ; ISR 18 ; ISR 19 ; ISR 20 ; ISR 21 ; ISR 22 ; ISR 23 ; ISR 24 ; ISR 25
-ISR 26 ; ISR 27 ; ISR 28 ; ISR 29 ; ISR 30 ; ISR 31 ; ISR 128
+/* generate exceptions */
+EXCEPTION 0 ; EXCEPTION 1 ; EXCEPTION 2 ; EXCEPTION 3 ; EXCEPTION 4 ; EXCEPTION 5 ; EXCEPTION 6 ;
+EXCEPTION 7 ; EXCEPTION_ERR 8 ; EXCEPTION 9 ; EXCEPTION_ERR 10 ; EXCEPTION_ERR 11 ; EXCEPTION_ERR 12 ;
+EXCEPTION_ERR 13 ; EXCEPTION_ERR 14 ; EXCEPTION 15 ; EXCEPTION 16 ; EXCEPTION 17 ; EXCEPTION 18 ;
+EXCEPTION 19 ; EXCEPTION 20 ; EXCEPTION 21 ; EXCEPTION 22 ; EXCEPTION 23 ; EXCEPTION 24 ; EXCEPTION 25 ;
+EXCEPTION 26 ; EXCEPTION 27 ; EXCEPTION 28 ; EXCEPTION 29 ; EXCEPTION 30 ; EXCEPTION 31 ; EXCEPTION 128
 
 /* generate irqs */
 IRQ 0, 32 ; IRQ 1, 33 ; IRQ 2, 34 ; IRQ 3, 35 ; IRQ 4, 36 ; IRQ 5, 37 ; IRQ 6, 38 ; IRQ 7, 39 ; IRQ 8, 40 ; IRQ 9, 41
 IRQ 10, 42 ; IRQ 11, 43 ; IRQ 12, 44 ; IRQ 13, 45 ; IRQ 14, 46 ; IRQ 15, 47
 
-/* common isr handler */
-isr_common:
+/* common exception handler */
+exception_common:
 	pusha				/* save registers */
 	push %ds
 	push %es
@@ -56,7 +59,33 @@ isr_common:
 	mov %ax, %gs
 
 	push %esp			/* push a pointer to this frame */
-	call isr_handler		/* call C generic isr */
+	call exception_handler		/* call C handler */
+	add $4, %esp
+
+	pop %gs				/* restore registers */
+	pop %fs
+	pop %es
+	pop %ds
+	popa
+	add $8, %esp
+	iret
+
+/* common irq handler */
+irq_common:
+	pusha				/* save registers */
+	push %ds
+	push %es
+	push %fs
+	push %gs
+
+	mov $KERNEL_DSEG, %ax		/* load kernel data segment descriptor */
+	mov %ax, %ds
+	mov %ax, %es
+	mov %ax, %fs
+	mov %ax, %gs
+
+	push %esp			/* push a pointer to this frame */
+	call irq_handler		/* call C handler */
 	add $4, %esp
 
 	pop %gs				/* restore registers */

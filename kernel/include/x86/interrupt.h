@@ -28,8 +28,9 @@
 #define irq_save(x)		do { __save_flags(x); irq_disable(); } while (0);
 #define irq_restore(x)		__restore_flags(x);
 
-/* common ISR and IRQ handlers */
-void isr_handler(struct registers *regs);
+/* exception and irq handler */
+void exception_handler(struct registers *regs);
+void irq_handler(struct registers *regs);
 
 /* IRQ handler registration */
 typedef void (*isr_t)(struct registers *);

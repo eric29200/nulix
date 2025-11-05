@@ -50,33 +50,44 @@ void unregister_interrupt_handler(uint8_t n)
 }
 
 /*
- * Interrupt service routine handler.
+ * Exception handler.
  */
-void isr_handler(struct registers *regs)
+void exception_handler(struct registers *regs)
 {
 	/* update kernel statistics */
 	kstat.interrupts++;
 
-	/* IRQ : send ack to pic */
-	if (regs->int_no >= 32) {
-		/* send reset signal to slave PIC (if irq > 7) */
-		if (regs->int_no >= 40)
-			outb(0xA0, 0x20);
-
-		/* send reset signal to master PIC */
-		outb(0x20, 0x20);
-	}
-
-	/* handle interrupt or print a message */
-	if (interrupt_handlers[regs->int_no] != 0) {
+	/* handle exception */
+	if (interrupt_handlers[regs->int_no]) {
 		interrupt_handlers[regs->int_no](regs);
-	} else {
-		printf("[Interrupt] code=%d, message=%s (process %d @ 0x%x)\n",
-		       regs->int_no,
-		       regs->int_no < 20 ? exception_messages[regs->int_no]: "",
-		       current_task->pid,
-		       regs->eip);
-
-		do_exit(SIGSEGV);
+		return;
 	}
+
+	/* print exception and exit */
+	printf("[Interrupt] code=%d, message=%s (process %d @ 0x%x)\n",
+		regs->int_no,
+		regs->int_no < 20 ? exception_messages[regs->int_no]: "",
+		current_task->pid,
+		regs->eip);
+	do_exit(SIGSEGV);
+}
+
+/*
+ * IRQ handler.
+ */
+void irq_handler(struct registers *regs)
+{
+	/* update kernel statistics */
+	kstat.interrupts++;
+
+	/* send reset signal to slave PIC (if irq > 7) */
+	if (regs->int_no >= 40)
+		outb(0xA0, 0x20);
+
+	/* send reset signal to master PIC */
+	outb(0x20, 0x20);
+
+	/* handle interrupt */
+	if (interrupt_handlers[regs->int_no])
+		interrupt_handlers[regs->int_no](regs);
 }
