@@ -181,7 +181,7 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	rtl8139_net_dev->irq = pci_read_field(pci_dev->address, PCI_INTERRUPT_LINE);
 
 	/* register interrupt handler */
-	register_interrupt_handler(rtl8139_net_dev->irq, rtl8139_irq_handler);
+	request_irq(rtl8139_net_dev->irq, rtl8139_irq_handler);
 
 	return 0;
 }

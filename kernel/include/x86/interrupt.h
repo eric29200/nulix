@@ -16,9 +16,8 @@ void exception_handler(struct registers *regs);
 void irq_handler(struct registers *regs);
 
 /* IRQ handler registration */
-typedef void (*isr_t)(struct registers *);
-void register_exception_handler(uint32_t n, isr_t handler);
-void register_interrupt_handler(uint32_t n, isr_t handler);
-void unregister_interrupt_handler(uint32_t n);
+void register_exception_handler(uint32_t n, void *handler);
+void request_irq(uint32_t irq, void *handler);
+void free_irq(uint32_t irq);
 
 #endif
