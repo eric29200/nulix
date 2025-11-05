@@ -30,6 +30,7 @@
 #define VT_RELDISP		0x5605
 #define VT_ACTIVATE		0x5606
 #define VT_WAITACTIVE		0x5607
+#define KDSIGACCEPT		0x4B4E
 
 #define	VT_AUTO			0x00	/* auto vt switching */
 #define	VT_PROCESS		0x01	/* process controls switching */

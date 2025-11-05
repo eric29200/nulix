@@ -232,11 +232,16 @@ static void fn_incr_console()
 {
 }
 
+pid_t spawnpid;
+int spawnsig;
+
 /*
  * Spawn console function.
  */
 static void fn_spawn_console()
 {
+	if (spawnpid && kill_proc(spawnpid, spawnsig, 1))
+		spawnpid = 0;
 }
 
 /*

@@ -1168,6 +1168,14 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 			vc->vt_pid = current_task->pid;
 			vc->vt_newvt = -1;
 			return 0;
+		case KDSIGACCEPT:
+			extern pid_t spawnpid;
+			extern int spawnsig;
+			if (arg < 1 || arg > _NSIG || arg == SIGKILL)
+				return -EINVAL;
+			spawnpid = current_task->pid;
+			spawnsig = arg;
+			return 0;
 		case VT_ACTIVATE:
 			if (arg == 0 || arg > NR_CONSOLES)
 				return -ENXIO;
