@@ -28,17 +28,17 @@ static int skip_atoi(const char **s)
 /*
  * Do division.
  */
-static inline int do_div(long *n, int base)
+static inline int do_div(long long *n, int base)
 {
-	int res = ((unsigned long) *n) % (unsigned) base;
-	*n = ((unsigned long) *n) / (unsigned) base;
+	int res = ((unsigned long long) *n) % (unsigned) base;
+	*n = ((unsigned long long) *n) / (unsigned) base;
 	return res;
 }
 
 /*
  * Print a number.
  */
-static char *number(char *str, long num, int base, int size, int precision, int type)
+static char *number(char *str, long long num, int base, int size, int precision, int type)
 {
 	const char *digits = "0123456789abcdefghijklmnopqrstuvwxyz";
 	char c, sign = 0, tmp[66];
@@ -138,8 +138,8 @@ static char *number(char *str, long num, int base, int size, int precision, int 
 int vsnprintf(char *buf, int n, const char *fmt, va_list args)
 {
 	int len, i, base, flags, field_width, precision, qualifier;
+	unsigned long long num;
 	const char *s;
-	uint32_t num;
 	char *str;
 
 	for (str = buf; *fmt && (n == -1 || str - buf < n); fmt++) {
@@ -203,8 +203,12 @@ repeat:
 		/* get the conversion qualifier */
 		qualifier = -1;
 		if (*fmt == 'h' || *fmt == 'l' || *fmt == 'L') {
-			qualifier = *fmt;
-			fmt++;
+			qualifier = *fmt++;
+
+			if (qualifier == 'l' && *fmt == 'l') {
+				qualifier = 'L';
+				fmt++;
+			}
 		}
 
 		/* default base */
@@ -276,16 +280,20 @@ repeat:
 		}
 
 		/* get number */
-		if (qualifier == 'l') {
+		if (qualifier == 'L') {
+			num = va_arg(args, long long);
+		} else if (qualifier == 'l') {
 			num = va_arg(args, unsigned long);
+			if (flags & SIGN)
+				num = (long) num;
 		} else if (qualifier == 'h') {
 			num = (unsigned short) va_arg(args, int);
 			if (flags & SIGN)
 				num = (short) num;
-		} else if (flags & SIGN) {
-			num = va_arg(args, int);
 		} else {
 			num = va_arg(args, unsigned int);
+			if (flags & SIGN)
+				num = (int) num;
 		}
 
 		/* print number */
