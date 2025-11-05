@@ -50,6 +50,7 @@ struct sock {
 	size_t				sndbuf;
 	size_t				wmem_alloc;
 	struct ucred 			peercred;
+	int				proc;
 	union {
 		struct unix_opt		af_unix;
 		struct inet_opt		af_inet;

@@ -189,6 +189,16 @@ struct dentry {
 };
 
 /*
+ * File owner.
+ */
+struct fown {
+	pid_t				pid;
+	uid_t				uid;
+	uid_t				euid;
+	int				signum;
+};
+
+/*
  * Opened file.
  */
 struct file {
@@ -197,6 +207,7 @@ struct file {
 	off_t				f_pos;
 	int				f_count;
 	struct dentry *			f_dentry;
+	struct fown			f_owner;
 	void *				f_private;
 	struct file_operations *	f_op;
 };

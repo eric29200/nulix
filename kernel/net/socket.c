@@ -268,6 +268,31 @@ static int sock_write(struct file *filp, const char *buf, size_t len, off_t *ppo
 }
 
 /*
+ * Socket fcntl.
+ */
+int sock_fcntl(struct file *filp, int cmd, unsigned long arg)
+{
+	struct socket *sock;
+
+	/* get socket */
+	sock = &filp->f_dentry->d_inode->u.socket_i;
+	if (!sock)
+		return -EINVAL;
+
+	switch (cmd) {
+		case F_SETOWN:
+			if (current_task->pgrp != (pid_t) -arg && current_task->pid != (pid_t) arg)
+				return -EPERM;
+			sock->sk->proc = arg;
+			return 0;
+		case F_GETOWN:
+			return sock->sk->proc;
+		default:
+			return -EINVAL;
+	}
+}
+
+/*
  * Socket file operations.
  */
 struct file_operations socket_fops = {

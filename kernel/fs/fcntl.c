@@ -102,6 +102,16 @@ int sys_fcntl(int fd, int cmd, unsigned long arg)
 		case F_SETFL:
 			filp->f_flags = arg;
 			break;
+		case F_GETOWN:
+			ret = filp->f_owner.pid;
+			break;
+		case F_SETOWN:
+			filp->f_owner.pid = arg;
+			filp->f_owner.uid = current_task->uid;
+			filp->f_owner.euid = current_task->euid;
+			if (S_ISSOCK(filp->f_dentry->d_inode->i_mode))
+				ret = sock_fcntl(filp, F_SETOWN, arg);
+			break;
 		default:
 			printf("unknown fcntl command %d\n", cmd);
 			break;
