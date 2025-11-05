@@ -335,21 +335,9 @@ static int connect_poll(struct file *filp, struct select_table *wait)
 }
 
 /*
- * Seek a pipe.
- */
-static int pipe_llseek(struct file *filp, off_t offset, int whence)
-{
-	UNUSED(filp);
-	UNUSED(offset);
-	UNUSED(whence);
-	return -ESPIPE;
-}
-
-/*
  * Read pipe operations.
  */
 static struct file_operations read_pipe_fops = {
-	.llseek		= pipe_llseek,
 	.open		= pipe_read_open,
 	.release	= pipe_read_release,
 	.read		= pipe_read,
@@ -360,7 +348,6 @@ static struct file_operations read_pipe_fops = {
  * Write pipe operations.
  */
 static struct file_operations write_pipe_fops = {
-	.llseek		= pipe_llseek,
 	.open		= pipe_write_open,
 	.release	= pipe_write_release,
 	.write		= pipe_write,
@@ -371,7 +358,6 @@ static struct file_operations write_pipe_fops = {
  * Connecting fifo operations.
  */
 struct file_operations connecting_fifo_fops = {
-	.llseek		= pipe_llseek,
 	.open		= pipe_read_open,
 	.release	= pipe_read_release,
 	.read		= connect_read,
@@ -382,7 +368,6 @@ struct file_operations connecting_fifo_fops = {
  * Read fifo operations.
  */
 struct file_operations read_fifo_fops = {
-	.llseek		= pipe_llseek,
 	.open		= pipe_read_open,
 	.release	= pipe_read_release,
 	.read		= pipe_read,
@@ -393,7 +378,6 @@ struct file_operations read_fifo_fops = {
  * Write fifo operations.
  */
 struct file_operations write_fifo_fops = {
-	.llseek		= pipe_llseek,
 	.open		= pipe_write_open,
 	.release	= pipe_write_release,
 	.write		= pipe_write,
@@ -404,7 +388,6 @@ struct file_operations write_fifo_fops = {
  * Read/write fifo operations.
  */
 struct file_operations rdwr_fifo_fops = {
-	.llseek		= pipe_llseek,
 	.open		= pipe_rdwr_open,
 	.release	= pipe_rdwr_release,
 	.read		= pipe_read,
