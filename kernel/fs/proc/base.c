@@ -17,7 +17,11 @@
 #define PROC_PID_EXE			8
 #define PROC_PID_CMDLINE		9
 #define PROC_PID_ENVIRON		10
-#define PROC_PID_FD			11
+#define PROC_PID_MAPS			11
+#define PROC_PID_FD			12
+
+#define MAPS_LINE_SHIFT			12
+#define MAPS_LINE_LENGTH		(1 << MAPS_LINE_SHIFT)
 
 #define fake_ino(pid, ino)		(((pid) << 16) | (ino))
 
@@ -43,6 +47,7 @@ static struct pid_entry pid_base_entries[] = {
 	{ PROC_PID_EXE,		3,	"exe",		S_IFLNK | S_IRWXUGO		},
 	{ PROC_PID_CMDLINE,	7,	"cmdline",	S_IFREG | S_IRUGO		},
 	{ PROC_PID_ENVIRON,	7,	"environ",	S_IFREG | S_IRUGO		},
+	{ PROC_PID_MAPS,	4,	"maps",		S_IFREG | S_IRUGO		},
 	{ PROC_PID_FD,		2,	"fd",		S_IFDIR | S_IRUSR | S_IXUSR	},
 	{ 0,			0,	NULL,		0				},
 };
@@ -418,17 +423,149 @@ out:
 }
 
 /*
- * Base file inode operations.
+ * Base file operations.
  */
 static struct file_operations proc_base_file_fops = {
 	.read			= proc_base_read,
 };
 
 /*
- * Base file inode operations.
+ * Base inode operations.
  */
 static struct inode_operations proc_base_file_iops = {
 	.fops			= &proc_base_file_fops,
+};
+
+/*
+ * Read /<pid>/maps
+ */
+static ssize_t proc_base_maps_read(struct file *filp, char *buf, size_t count, off_t *ppos)
+{
+	struct inode *inode = filp->f_dentry->d_inode;
+	char *page, *line, perms[5], *destptr = buf;
+	struct task *task = inode->u.proc_i.task;
+	ssize_t column, i = 0, len;
+	size_t j, maxlen = 60;
+	struct list_head *pos;
+	struct vm_area *vma;
+	off_t lineno;
+	dev_t dev;
+	ino_t ino;
+	int err;
+
+	if (!task->mm || count == 0)
+		return 0;
+
+	/* get a page */
+	page = get_free_page();
+	if (!page)
+		return -ENOMEM;
+
+	/* decode file position */
+	lineno = *ppos >> MAPS_LINE_SHIFT;
+	column = *ppos & (MAPS_LINE_LENGTH - 1);
+
+	/* for each memory area */
+	list_for_each(pos, &task->mm->vm_list) {
+		/* skip first areas */
+		if (i++ < lineno)
+			continue;
+
+		/* get memory area */
+		vma = list_entry(pos, struct vm_area, list);
+
+		/* get permissions */
+		perms[0] = vma->vm_flags & VM_READ ? 'r' : '-';
+		perms[1] = vma->vm_flags & VM_WRITE ? 'w' : '-';
+		perms[2] = vma->vm_flags & VM_EXEC ? 'x' : '-';
+		perms[3] = vma->vm_flags & VM_SHARED ? 's' : 'p';
+		perms[4] = 0;
+
+		/* get device and inode number */
+		if (vma->vm_file) {
+			dev = vma->vm_file->f_dentry->d_inode->i_dev;
+			ino = vma->vm_file->f_dentry->d_inode->i_ino;
+			line = d_path(vma->vm_file->f_dentry, page, PAGE_SIZE, &err);
+			page[PAGE_SIZE - 1] = '\n';
+			line -= maxlen;
+			if (line < page)
+				line = page;
+		} else {
+			dev = 0;
+			ino = 0;
+			line = page;
+		}
+
+		/* print memory area */
+		len = sprintf(line, "%08lx-%08lx %s %016llx %02x:%02x %lu",
+			vma->vm_start,
+			vma->vm_end, perms,
+			vma->vm_offset,
+			(int) major(dev), 
+			(int) minor(dev),
+			ino);
+
+		/* print path */
+		if (vma->vm_file) {
+			for (j = len; j < maxlen; j++)
+				line[j] = ' ';
+			len = page + PAGE_SIZE - line;
+		} else {
+			line[len++] = '\n';
+		}
+
+		/* skip memory area */
+		if (column >= len) {
+			column = 0;
+			lineno++;
+			continue;
+		}
+
+		/* limit */
+		j = len - column;
+		if (j > count)
+			j = count;
+
+		/* copy to user buffer */
+		memcpy(destptr, line + column, j);
+
+		/* update sizes */
+		destptr += j;
+		count -= j;
+		column += j;
+
+		/* next time : line at column 0 */
+		if (column >= len) {
+			column = 0;
+			lineno++;
+		}
+
+		/* done */
+		if (!count)
+			break;
+	}
+
+	/* encode file position */
+	*ppos = (lineno << MAPS_LINE_SHIFT) + column;
+
+	/* free page */
+	free_page(page);
+
+	return destptr - buf;
+}
+
+/*
+ * Base maps file operations.
+ */
+static struct file_operations proc_base_maps_fops = {
+	.read			= proc_base_maps_read,
+};
+
+/*
+ * Base maps inode operations.
+ */
+static struct inode_operations proc_base_maps_iops = {
+	.fops			= &proc_base_maps_fops,
 };
 
 /*
@@ -536,6 +673,9 @@ static struct dentry *proc_pid_base_lookup(struct inode *dir, struct dentry *den
 		case PROC_PID_ENVIRON:
 			inode->i_op = &proc_base_file_iops;
 			inode->u.proc_i.proc_read = proc_environ_read;
+			break;
+		case PROC_PID_MAPS:
+		 	inode->i_op = &proc_base_maps_iops;
 			break;
 		case PROC_PID_FD:
 			inode->i_nlinks = 2;
