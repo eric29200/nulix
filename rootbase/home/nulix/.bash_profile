@@ -5,6 +5,10 @@ export PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
 export XLOCALEDIR="/usr/X11/share/X11/locale"
 export LANG=C
 
+manread() {
+    man "$1" | less;
+}
+
 alias ls='ls --color'
 alias l='ls'
 alias ll='ls -l'
@@ -14,3 +18,4 @@ alias hist='history'
 alias h='history'
 alias grep='grep --colour'
 alias vi='vim'
+alias man='manread'
