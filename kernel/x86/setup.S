@@ -23,13 +23,13 @@
         jmp exception_common
 .endm
 
-/* nasm macro to create a irq function with 2 parameters (interrupt and irq numbers) */
-.macro IRQ num ir
+/* nasm macro to create a irq function */
+.macro IRQ num
 	.globl irq\num
 	irq\num:
 		cli
-		push $0
-		push $\ir
+        	push $0
+		push $\num
 		jmp irq_common
 .endm
 
@@ -41,8 +41,8 @@ EXCEPTION 19 ; EXCEPTION 20 ; EXCEPTION 21 ; EXCEPTION 22 ; EXCEPTION 23 ; EXCEP
 EXCEPTION 26 ; EXCEPTION 27 ; EXCEPTION 28 ; EXCEPTION 29 ; EXCEPTION 30 ; EXCEPTION 31 ; EXCEPTION 128
 
 /* generate irqs */
-IRQ 0, 32 ; IRQ 1, 33 ; IRQ 2, 34 ; IRQ 3, 35 ; IRQ 4, 36 ; IRQ 5, 37 ; IRQ 6, 38 ; IRQ 7, 39 ; IRQ 8, 40 ; IRQ 9, 41
-IRQ 10, 42 ; IRQ 11, 43 ; IRQ 12, 44 ; IRQ 13, 45 ; IRQ 14, 46 ; IRQ 15, 47
+IRQ 0 ; IRQ 1 ; IRQ 2 ; IRQ 3 ; IRQ 4 ; IRQ 5 ; IRQ 6 ; IRQ 7 ; IRQ 8 ; IRQ 9
+IRQ 10 ; IRQ 11 ; IRQ 12 ; IRQ 13 ; IRQ 14 ; IRQ 15
 
 /* common exception handler */
 exception_common:

@@ -214,6 +214,5 @@ static void syscall_handler(struct registers *regs)
  */
 void init_syscall()
 {
-	/* register syscall interrupt handler */
-	register_interrupt_handler(0x80, syscall_handler);
+	register_exception_handler(0x80, syscall_handler);
 }

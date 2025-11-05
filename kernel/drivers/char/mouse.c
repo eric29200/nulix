@@ -10,7 +10,7 @@
 #include <dev.h>
 
 #define MOUSE_BUF_SIZE		2048
-#define MOUSE_IRQ		44
+#define MOUSE_IRQ		12
 #define MOUSE_PORT		0x60
 #define MOUSE_STATUS		0x64
 #define MOUSE_COMMAND		0x64

@@ -784,7 +784,7 @@ int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end)
 	pkmap_page_table = pte_offset(pmd, addr);
 
 	/* register page fault handler */
-	register_interrupt_handler(14, page_fault_handler);
+	register_exception_handler(14, page_fault_handler);
 
 	/* move kernel's pgd to high memory and enable paging */
 	pgd_kernel = __va(pgd_kernel);

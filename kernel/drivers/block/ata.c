@@ -280,8 +280,8 @@ int init_ata()
 	int ret, i, j;
 
 	/* register interrupt handlers */
-	register_interrupt_handler(IRQ14, ata_irq_handler);
-	register_interrupt_handler(IRQ15, ata_irq_handler);
+	register_interrupt_handler(14, ata_irq_handler);
+	register_interrupt_handler(15, ata_irq_handler);
 
 	/* register ata device */
 	ret = register_blkdev(DEV_ATA_MAJOR, "ata", &ata_fops);

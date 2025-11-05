@@ -160,5 +160,5 @@ void init_pit()
 	outb(0x40, (divisor >> 8) & 0xFF);
 
 	/* register irq */
-	register_interrupt_handler(IRQ0, &pit_handler);
+	register_interrupt_handler(0, &pit_handler);
 }
