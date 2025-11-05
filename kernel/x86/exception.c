@@ -5,8 +5,6 @@
 #include <kernel_stat.h>
 #include <stdio.h>
 
-#define NR_EXCEPTIONS		129
-
 /*
  * x86 cpu exceptions messages
  */
@@ -49,9 +47,6 @@ void register_exception_handler(uint32_t n, void *handler)
  */
 void exception_handler(struct registers *regs)
 {
-	/* update kernel statistics */
-	kstat.interrupts++;
-
 	/* handle exception */
 	if (exception_handlers[regs->int_no]) {
 		exception_handlers[regs->int_no](regs);

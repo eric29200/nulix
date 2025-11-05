@@ -3,28 +3,57 @@
 #include <sys/syscall.h>
 #include <proc/sched.h>
 #include <kernel_stat.h>
+#include <stderr.h>
 #include <stdio.h>
 
-#define NR_IRQS			224
-
-/* irq handlers */
-typedef void (*handler_t)(struct registers *);
-static handler_t irq_handlers[NR_IRQS] = { 0 };
+/* IRQ descriptors */
+static irq_desc_t irq_desc[NR_IRQS] = { NULL, };
 
 /*
  * Request an IRQ.
  */
-void request_irq(uint32_t n, void *handler)
+int request_irq(uint32_t irq, void *handler)
 {
-	irq_handlers[n] = handler;
+	struct irq_action *action;
+
+	/* check irq */
+	if (irq >= NR_IRQS)
+		return -EINVAL;
+
+	/* check handler */
+	if (!handler)
+		return -EINVAL;
+
+	/* handler already installed */
+	if (irq_desc[irq].action)
+		return -EBUSY;
+
+	/* allocate a new irq action */
+	action = (struct irq_action *) kmalloc(sizeof(struct irq_action));
+	if (!action)
+		return -ENOMEM;
+
+	/* set action */
+	action->handler = handler;
+
+	/* install IRQ */
+	irq_desc[irq].action = action;
+
+	return 0;
 }
 
 /*
  * Free an IRQ.
  */
-void free_irq(uint32_t n)
+void free_irq(uint32_t irq)
 {
-	irq_handlers[n] = NULL;
+	/* check irq */
+	if (irq >= NR_IRQS || !irq_desc[irq].action)
+		return;
+
+	/* free irq */
+	kfree(irq_desc[irq].action);
+	irq_desc[irq].action = NULL;
 }
 
 /*
@@ -32,17 +61,19 @@ void free_irq(uint32_t n)
  */
 void irq_handler(struct registers *regs)
 {
+	int irq = regs->int_no;
+
 	/* update kernel statistics */
-	kstat.interrupts++;
+	kstat.irqs[irq]++;
 
 	/* send reset signal to slave PIC (if irq > 7) */
-	if (regs->int_no > 7)
+	if (irq > 7)
 		outb(0xA0, 0x20);
 
 	/* send reset signal to master PIC */
 	outb(0x20, 0x20);
 
 	/* handle interrupt */
-	if (irq_handlers[regs->int_no])
-		irq_handlers[regs->int_no](regs);
+	if (irq_desc[irq].action)
+		irq_desc[irq].action->handler(regs);
 }

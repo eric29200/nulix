@@ -118,14 +118,19 @@ static int mounts_read_proc(char *page, char **start, off_t off, size_t count, i
  */
 static int kstat_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
 {
-	size_t len;
+	uint32_t intr = 0;
+	size_t len, i;
+
+	/* compute number of interrupts */
+	for (i = 0; i < NR_IRQS; i++)
+		intr += kstat.irqs[i];
 
 	/* print boot time */
 	len = sprintf(page,	"cpu 0 0 0 0 0 0 0 0 0 0\n"
 				"intr %u\n"
 				"ctxt %u\n"
 				"btime %llu\n",
-		      kstat.interrupts,
+		      intr,
 		      kstat.context_switch,
 		      startup_time);
 
