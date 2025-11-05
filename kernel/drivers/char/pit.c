@@ -160,5 +160,5 @@ void init_pit()
 	outb(0x40, (divisor >> 8) & 0xFF);
 
 	/* register irq */
-	request_irq(0, &pit_handler);
+	request_irq(0, &pit_handler, "timer");
 }

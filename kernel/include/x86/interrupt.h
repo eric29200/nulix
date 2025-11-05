@@ -20,6 +20,7 @@
  */
 struct irq_action {
 	void 			(*handler)(struct registers *);
+	const char *		name;
 };
 
 /*
@@ -35,7 +36,8 @@ void irq_handler(struct registers *regs);
 
 /* IRQ handler registration */
 void register_exception_handler(uint32_t n, void *handler);
-int request_irq(uint32_t irq, void *handler);
+int request_irq(uint32_t irq, void *handler, const char *devname);
 void free_irq(uint32_t irq);
+size_t get_irq_list(char *page);
 
 #endif

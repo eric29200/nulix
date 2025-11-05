@@ -1,4 +1,5 @@
 #include <x86/interrupt.h>
+#include <kernel_stat.h>
 #include <x86/io.h>
 #include <sys/syscall.h>
 #include <proc/sched.h>
@@ -12,7 +13,7 @@ static irq_desc_t irq_desc[NR_IRQS] = { NULL, };
 /*
  * Request an IRQ.
  */
-int request_irq(uint32_t irq, void *handler)
+int request_irq(uint32_t irq, void *handler, const char *devname)
 {
 	struct irq_action *action;
 
@@ -35,6 +36,7 @@ int request_irq(uint32_t irq, void *handler)
 
 	/* set action */
 	action->handler = handler;
+	action->name = devname;
 
 	/* install IRQ */
 	irq_desc[irq].action = action;
@@ -76,4 +78,30 @@ void irq_handler(struct registers *regs)
 	/* handle interrupt */
 	if (irq_desc[irq].action)
 		irq_desc[irq].action->handler(regs);
+}
+
+/*
+ * Get IRQ list.
+ */
+size_t get_irq_list(char *page)
+{
+	struct irq_action *action;
+	char *ptr = page;
+	size_t i;
+
+	/* print header */
+	ptr += sprintf(ptr, "           CPU0       \n");
+
+	/* for each irq */
+	for (i = 0 ; i < NR_IRQS ; i++) {
+		/* get action */
+		action = irq_desc[i].action;
+		if (!action) 
+			continue;
+
+		/* print irq */
+		ptr += sprintf(ptr, "%3d: %10u   %s\n", i, kstat.irqs[i], action->name);
+	}
+
+	return ptr - page;
 }

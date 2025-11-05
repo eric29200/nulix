@@ -182,6 +182,19 @@ static int devices_read_proc(char *page, char **start, off_t off, size_t count, 
 }
 
 /*
+ * Read interrupts.
+ */
+static int interrupts_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
+{
+	size_t len;
+
+	/* get irq list */
+	len = get_irq_list(page);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
+}
+
+/*
  * Init misc proc entries.
  */
 void proc_misc_init()
@@ -194,4 +207,5 @@ void proc_misc_init()
 	create_proc_read_entry("loadavg", 0, NULL, loadavg_read_proc);
 	create_proc_read_entry("cmdline", 0, NULL, kcmdline_read_proc);
 	create_proc_read_entry("devices", 0, NULL, devices_read_proc);
+	create_proc_read_entry("interrupts", 0, NULL, interrupts_read_proc);
 }

@@ -179,7 +179,7 @@ static int mouse_open(struct inode *inode, struct file *filp)
 	mouse_ready = 0;
 
 	/* register interrupt */
-	request_irq(MOUSE_IRQ, mouse_interrupt_handler);
+	request_irq(MOUSE_IRQ, mouse_interrupt_handler, "mouse");
 
 	/* enable mouse */
 	mouse_poll_status();

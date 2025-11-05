@@ -577,5 +577,5 @@ void init_keyboard()
 		kbd_table[i] = kbd0;
 
 	/* register interrupt handler */
-	request_irq(1, keyboard_handler);
+	request_irq(1, keyboard_handler, "keyboard");
 }
