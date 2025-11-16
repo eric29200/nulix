@@ -35,7 +35,6 @@ static struct socket *sock_alloc()
 	memset(sock, 0, sizeof(struct socket));
 	sock->state = SS_UNCONNECTED;
 	sock->inode = inode;
-	sock->file = NULL;
 
 	return sock;
 }
@@ -55,6 +54,10 @@ void sock_init_data(struct socket *sock)
  */
 static void sock_release(struct socket *sock)
 {
+	/* set state */
+	if (sock->state != SS_UNCONNECTED)
+		sock->state = SS_DISCONNECTING;
+
 	/* release socket */
 	if (sock->ops && sock->ops->release)
 		sock->ops->release(sock);
@@ -99,6 +102,7 @@ static int get_fd(struct inode *inode)
 	filp->f_count = 1;
 	filp->f_dentry = dentry;
 	filp->f_op = &socket_fops;
+	inode->i_count++;
 
 	return fd;
 }
@@ -306,12 +310,11 @@ struct file_operations socket_fops = {
 /*
  * Create a socket.
  */
-int sys_socket(int domain, int type, int protocol)
+static int sock_create(int domain, int type, int protocol, struct socket **res)
 {
-
 	struct prot_ops *sock_ops;
 	struct socket *sock;
-	int ret, fd;
+	int ret;
 
 	/* choose protocol operations */
 	switch (domain) {
@@ -322,13 +325,17 @@ int sys_socket(int domain, int type, int protocol)
 			sock_ops = &unix_ops;
 			break;
 		default:
-			return -EINVAL;
+			return -EAFNOSUPPORT;
 	}
+
+	/* check type */
+	if ((type != SOCK_STREAM && type != SOCK_DGRAM && type != SOCK_RAW) || protocol < 0)
+		return -EINVAL;
 
 	/* allocate a socket */
 	sock = sock_alloc();
 	if (!sock)
-		return -EMFILE;
+		return -ENFILE;
 
 	/* set socket */
 	sock->state = SS_UNCONNECTED;
@@ -337,17 +344,34 @@ int sys_socket(int domain, int type, int protocol)
 	sock->ops = sock_ops;
 
 	/* create not implemented */
-	if (!sock->ops || !sock->ops->create) {
-		sock_release(sock);
-		return -EINVAL;
-	}
+	ret = -EINVAL;
+	if (!sock->ops || !sock->ops->create)
+		goto err;
 
 	/* create socket */
 	ret = sock->ops->create(sock, protocol);
-	if (ret) {
-		sock_release(sock);
+	if (ret)
+		goto err;
+
+	*res = sock;
+	return 0;
+err:
+	sock_release(sock);
+	return ret;
+}
+
+/*
+ * Create a socket.
+ */
+int sys_socket(int domain, int type, int protocol)
+{
+	struct socket *sock;
+	int ret, fd;
+
+	/* create socket */
+	ret = sock_create(domain, type, protocol, &sock);
+	if (ret)
 		return ret;
-	}
 
 	/* get a file slot */
 	fd = get_fd(sock->inode);
