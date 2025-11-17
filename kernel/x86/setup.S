@@ -3,98 +3,130 @@
 .extern exception_handler
 .extern irq_handler
 
+#define SAVE_ALL				\
+	pusha					;\
+	push %ds				;\
+	push %es				;\
+	push %fs				;\
+	push %gs
+
+#define RESTORE_ALL				\
+	pop %gs					;\
+	pop %fs					;\
+	pop %es					;\
+	pop %ds					;\
+	popa
+
+#define LOAD_KERNEL_DSEG			\
+	mov $KERNEL_DSEG, %ax			;\
+	mov %ax, %ds				;\
+	mov %ax, %es				;\
+	mov %ax, %fs				;\
+	mov %ax, %gs
+
 /* macro to create an exception function with no error code */
-.macro EXCEPTION num
-    .globl exception\num
-    exception\num:
-        cli
-        push $0
-        push $\num
-        jmp exception_common
+.macro BUILD_EXCEPTION num
+	.globl exception\num
+	exception\num:
+		cli
+		push $0
+		push $\num
+		SAVE_ALL
+		LOAD_KERNEL_DSEG
+		push %esp			/* push a pointer to this frame */
+		call exception_handler		/* call C handler */
+		add $4, %esp
+		RESTORE_ALL
+		add $8, %esp
+		iret
 .endm
 
 
-/* nasm macro to create a exception function with error code */
-.macro EXCEPTION_ERR num
-    .globl exception\num
-    exception\num:
-        cli
-        push $\num
-        jmp exception_common
+/* macro to create a exception function with error code */
+.macro BUILD_EXCEPTION_ERR num
+	.globl exception\num
+	exception\num:
+		cli
+		push $\num
+		SAVE_ALL
+		LOAD_KERNEL_DSEG
+		push %esp			/* push a pointer to this frame */
+		call exception_handler		/* call C handler */
+		add $4, %esp
+		RESTORE_ALL
+		add $8, %esp
+		iret
 .endm
 
-/* nasm macro to create a irq function */
-.macro IRQ num
+/* macro to create a irq function */
+.macro BUILD_IRQ num
 	.globl irq\num
 	irq\num:
 		cli
-        	push $0
+		push $0
 		push $\num
-		jmp irq_common
+		SAVE_ALL
+		LOAD_KERNEL_DSEG
+		push %esp			/* push a pointer to this frame */
+		call irq_handler		/* call C handler */
+		add $4, %esp
+		RESTORE_ALL
+		add $8, %esp
+		iret
 .endm
 
-/* generate exceptions */
-EXCEPTION 0 ; EXCEPTION 1 ; EXCEPTION 2 ; EXCEPTION 3 ; EXCEPTION 4 ; EXCEPTION 5 ; EXCEPTION 6 ;
-EXCEPTION 7 ; EXCEPTION_ERR 8 ; EXCEPTION 9 ; EXCEPTION_ERR 10 ; EXCEPTION_ERR 11 ; EXCEPTION_ERR 12 ;
-EXCEPTION_ERR 13 ; EXCEPTION_ERR 14 ; EXCEPTION 15 ; EXCEPTION 16 ; EXCEPTION 17 ; EXCEPTION 18 ;
-EXCEPTION 19 ; EXCEPTION 20 ; EXCEPTION 21 ; EXCEPTION 22 ; EXCEPTION 23 ; EXCEPTION 24 ; EXCEPTION 25 ;
-EXCEPTION 26 ; EXCEPTION 27 ; EXCEPTION 28 ; EXCEPTION 29 ; EXCEPTION 30 ; EXCEPTION 31 ; EXCEPTION 128
+/* build exceptions */
+BUILD_EXCEPTION 0
+BUILD_EXCEPTION 1
+BUILD_EXCEPTION 2
+BUILD_EXCEPTION 3
+BUILD_EXCEPTION 4
+BUILD_EXCEPTION 5
+BUILD_EXCEPTION 6
+BUILD_EXCEPTION 7
+BUILD_EXCEPTION_ERR 8
+BUILD_EXCEPTION 9
+BUILD_EXCEPTION_ERR 10
+BUILD_EXCEPTION_ERR 11
+BUILD_EXCEPTION_ERR 12
+BUILD_EXCEPTION_ERR 13
+BUILD_EXCEPTION_ERR 14
+BUILD_EXCEPTION 15
+BUILD_EXCEPTION 16
+BUILD_EXCEPTION 17
+BUILD_EXCEPTION 18
+BUILD_EXCEPTION 19
+BUILD_EXCEPTION 20
+BUILD_EXCEPTION 21
+BUILD_EXCEPTION 22
+BUILD_EXCEPTION 23
+BUILD_EXCEPTION 24
+BUILD_EXCEPTION 25
+BUILD_EXCEPTION 26
+BUILD_EXCEPTION 27
+BUILD_EXCEPTION 28
+BUILD_EXCEPTION 29
+BUILD_EXCEPTION 30
+BUILD_EXCEPTION 31
+BUILD_EXCEPTION 128
 
-/* generate irqs */
-IRQ 0 ; IRQ 1 ; IRQ 2 ; IRQ 3 ; IRQ 4 ; IRQ 5 ; IRQ 6 ; IRQ 7 ; IRQ 8 ; IRQ 9
-IRQ 10 ; IRQ 11 ; IRQ 12 ; IRQ 13 ; IRQ 14 ; IRQ 15
-
-/* common exception handler */
-exception_common:
-	pusha				/* save registers */
-	push %ds
-	push %es
-	push %fs
-	push %gs
-
-	mov $KERNEL_DSEG, %ax		/* load kernel data segment descriptor */
-	mov %ax, %ds
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
-
-	push %esp			/* push a pointer to this frame */
-	call exception_handler		/* call C handler */
-	add $4, %esp
-
-	pop %gs				/* restore registers */
-	pop %fs
-	pop %es
-	pop %ds
-	popa
-	add $8, %esp
-	iret
-
-/* common irq handler */
-irq_common:
-	pusha				/* save registers */
-	push %ds
-	push %es
-	push %fs
-	push %gs
-
-	mov $KERNEL_DSEG, %ax		/* load kernel data segment descriptor */
-	mov %ax, %ds
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
-
-	push %esp			/* push a pointer to this frame */
-	call irq_handler		/* call C handler */
-	add $4, %esp
-
-	pop %gs				/* restore registers */
-	pop %fs
-	pop %es
-	pop %ds
-	popa
-	add $8, %esp
-	iret
+/* buid irqs */
+BUILD_IRQ 0
+BUILD_IRQ 1
+BUILD_IRQ 2
+BUILD_IRQ 3
+BUILD_IRQ 4
+BUILD_IRQ 5
+BUILD_IRQ 6
+BUILD_IRQ 7
+BUILD_IRQ 8
+BUILD_IRQ 9
+BUILD_IRQ 10
+BUILD_IRQ 11
+BUILD_IRQ 12
+BUILD_IRQ 13
+BUILD_IRQ 14
+BUILD_IRQ 15
 
 .global gdt_flush
 gdt_flush:
