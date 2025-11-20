@@ -6,7 +6,7 @@
 #include <proc/sched.h>
 #include <proc/elf.h>
 #include <mm/paging.h>
-#include <ipc/semaphore.h>
+#include <lib/semaphore.h>
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <string.h>
