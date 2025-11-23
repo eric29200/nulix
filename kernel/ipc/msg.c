@@ -419,12 +419,12 @@ static int msgctl_rmid(int msqid)
 /*
  * Get status of a message queue.
  */
-static int msgctl_stat(int msqid, int cmd, struct msqid_ds *p)
+static int msgctl_stat(int msqid, int cmd, struct msqid_ds *out)
 {
 	struct msg_queue *msq;
 
 	/* clear output */
-	memset(p, 0, sizeof(*p));
+	memset(out, 0, sizeof(struct msqid_ds));
 
 	/* get message queue */
 	msq = (struct msg_queue *) ipc_get(&msg_ids, msqid);
@@ -436,15 +436,15 @@ static int msgctl_stat(int msqid, int cmd, struct msqid_ds *p)
 		return -EIDRM;
 
 	/* get status */
-	kernel_to_ipc_perm(&msq->q_perm, &p->msg_perm);
-	p->msg_stime = msq->q_stime;
-	p->msg_rtime = msq->q_rtime;
-	p->msg_ctime = msq->q_ctime;
-	p->msg_cbytes = msq->q_cbytes;
-	p->msg_qnum = msq->q_qnum;
-	p->msg_qbytes = msq->q_qbytes;
-	p->msg_lspid = msq->q_lspid;
-	p->msg_lrpid = msq->q_lrpid;
+	kernel_to_ipc_perm(&msq->q_perm, &out->msg_perm);
+	out->msg_stime = msq->q_stime;
+	out->msg_rtime = msq->q_rtime;
+	out->msg_ctime = msq->q_ctime;
+	out->msg_cbytes = msq->q_cbytes;
+	out->msg_qnum = msq->q_qnum;
+	out->msg_qbytes = msq->q_qbytes;
+	out->msg_lspid = msq->q_lspid;
+	out->msg_lrpid = msq->q_lrpid;
 
 	return cmd == IPC_STAT ? 0 : msg_buildid(msqid, msq->q_perm.seq);
 }
@@ -481,10 +481,6 @@ static int msgctl_info(int cmd, struct msginfo *p)
  */
 int sys_msgctl(int msqid, int cmd, void *buf)
 {
-	struct msqid_ds msqid_info;
-	struct msginfo msginfo;
-	int ret;
-
 	/* check parameters */
 	if (msqid < 0 || cmd < 0)
 		return -EINVAL;
@@ -496,24 +492,10 @@ int sys_msgctl(int msqid, int cmd, void *buf)
 	switch (cmd) {
 		case IPC_INFO:
 		case MSG_INFO:
-			/* get message queue informations */
-			ret = msgctl_info(cmd, &msginfo);
-			if (ret < 0)
-				return ret;
-
-			/* copy to user space */
-			memcpy(buf, &msginfo, sizeof(struct msginfo));
-			return ret;
+			return msgctl_info(cmd, (struct msginfo *) buf);
 		case IPC_STAT:
 		case MSG_STAT:
-			/* stat message queue */
-			ret = msgctl_stat(msqid, cmd, &msqid_info);
-			if (ret < 0)
-				return ret;
-
-			/* copy to user space */
-			memcpy(buf, &msqid_info, sizeof(struct msqid_ds));
-			return ret;
+		 	return msgctl_stat(msqid, cmd, (struct msqid_ds *) buf);
 		case IPC_RMID:
 			return msgctl_rmid(msqid);
 		default:
