@@ -417,6 +417,39 @@ static int msgctl_rmid(int msqid)
 }
 
 /*
+ * Set message queue.
+ */
+static int msgctl_set(int msqid, struct msqid_ds *setbuf)
+{
+	struct msg_queue *msq;
+
+	/* get message queue */
+	msq = (struct msg_queue *) ipc_get(&msg_ids, msqid);
+	if (!msq)
+		return -EINVAL;
+
+	/* check message id */
+	if (msg_checkid(msq, msqid))
+		return -EIDRM;
+
+	/* check permissions */
+	if (current_task->euid != msq->q_perm.cuid &&  current_task->euid != msq->q_perm.uid)
+	    return -EPERM;
+
+	/* set message queue */
+	msq->q_qbytes = setbuf->msg_qbytes;
+	msq->q_perm.uid = setbuf->msg_perm.uid;
+	msq->q_perm.gid = setbuf->msg_perm.gid;
+	msq->q_perm.mode = (msq->q_perm.mode & ~S_IRWXUGO) | (S_IRWXUGO & setbuf->msg_perm.mode);
+	msq->q_ctime = CURRENT_TIME;
+
+	/* wake up processes */
+	wake_up(&msq->q_wait);
+
+	return 0;
+}
+
+/*
  * Get status of a message queue.
  */
 static int msgctl_stat(int msqid, int cmd, struct msqid_ds *out)
@@ -496,6 +529,8 @@ int sys_msgctl(int msqid, int cmd, void *buf)
 		case IPC_STAT:
 		case MSG_STAT:
 		 	return msgctl_stat(msqid, cmd, (struct msqid_ds *) buf);
+		case IPC_SET:
+			return msgctl_set(msqid, (struct msqid_ds *) buf);
 		case IPC_RMID:
 			return msgctl_rmid(msqid);
 		default:
