@@ -419,7 +419,7 @@ static int msgctl_rmid(int msqid)
 /*
  * Get status of a message queue.
  */
-static int msgctl_stat(int msqid, int cmd, struct msqid64_ds *p)
+static int msgctl_stat(int msqid, int cmd, struct msqid_ds *p)
 {
 	struct msg_queue *msq;
 
@@ -481,7 +481,7 @@ static int msgctl_info(int cmd, struct msginfo *p)
  */
 int sys_msgctl(int msqid, int cmd, void *buf)
 {
-	struct msqid64_ds msqid64;
+	struct msqid_ds msqid_info;
 	struct msginfo msginfo;
 	int ret;
 
@@ -507,12 +507,12 @@ int sys_msgctl(int msqid, int cmd, void *buf)
 		case IPC_STAT:
 		case MSG_STAT:
 			/* stat message queue */
-			ret = msgctl_stat(msqid, cmd, &msqid64);
+			ret = msgctl_stat(msqid, cmd, &msqid_info);
 			if (ret < 0)
 				return ret;
 
 			/* copy to user space */
-			memcpy(buf, &msqid64, sizeof(struct msqid64_ds));
+			memcpy(buf, &msqid_info, sizeof(struct msqid_ds));
 			return ret;
 		case IPC_RMID:
 			return msgctl_rmid(msqid);

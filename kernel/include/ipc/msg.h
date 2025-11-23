@@ -33,18 +33,17 @@ struct msgbuf {
 /*
  * Message queue data structure.
  */
-struct msqid64_ds {
+struct msqid_ds {
 	struct ipc_perm		msg_perm;
 	time_t			msg_stime;	/* last msgsnd time */
 	time_t			msg_rtime;	/* last msgrcv time */
 	time_t			msg_ctime;	/* last change time */
-	uint64_t		msg_cbytes;	/* current number of bytes on queue */
-	uint64_t		msg_qnum;	/* number of messages in queue */
-	uint64_t		msg_qbytes;	/* max number of bytes on queue */
+	uint32_t		msg_cbytes;	/* current number of bytes on queue */
+	uint32_t		msg_qnum;	/* number of messages in queue */
+	uint32_t		msg_qbytes;	/* max number of bytes on queue */
 	pid_t			msg_lspid;	/* pid of last msgsnd */
 	pid_t			msg_lrpid;	/* last receive pid */
-	uint64_t		__unused4;
-	uint64_t		__unused5;
+	uint8_t			__unused[28];
 };
 
 /*
