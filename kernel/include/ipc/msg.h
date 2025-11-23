@@ -34,7 +34,7 @@ struct msgbuf {
  * Message queue data structure.
  */
 struct msqid64_ds {
-	struct ipc64_perm	msg_perm;
+	struct ipc_perm		msg_perm;
 	time_t			msg_stime;	/* last msgsnd time */
 	time_t			msg_rtime;	/* last msgrcv time */
 	time_t			msg_ctime;	/* last change time */

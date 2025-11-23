@@ -39,18 +39,16 @@
 /*
  * IPC permissions.
  */
-struct ipc64_perm {
+struct ipc_perm {
 	key_t			key;
 	uid_t			uid;
 	gid_t			gid;
 	uid_t			cuid;
 	gid_t			cgid;
 	mode_t			mode;
-	unsigned char		__pad1[4 - sizeof(mode_t)];
-	unsigned short		seq;
-	unsigned short		__pad2;
-	uint64_t		__unused1;
-	uint64_t		__unused2;
+	int			seq;
+	long			__pad1;
+	long			__pad2;
 };
 
 /*
@@ -94,7 +92,7 @@ struct ipc_kludge {
 };
 
 void init_ipc();
-void kernel_to_ipc64_perm(struct kern_ipc_perm *in, struct ipc64_perm *out);
+void kernel_to_ipc_perm(struct kern_ipc_perm *in, struct ipc_perm *out);
 int ipc_parse_version(int *cmd);
 int ipc_buildid(struct ipc_ids *ids, int id, int seq);
 int ipc_addid(struct ipc_ids *ids, struct kern_ipc_perm *new, int size);

@@ -436,7 +436,7 @@ static int msgctl_stat(int msqid, int cmd, struct msqid64_ds *p)
 		return -EIDRM;
 
 	/* get status */
-	kernel_to_ipc64_perm(&msq->q_perm, &p->msg_perm);
+	kernel_to_ipc_perm(&msq->q_perm, &p->msg_perm);
 	p->msg_stime = msq->q_stime;
 	p->msg_rtime = msq->q_rtime;
 	p->msg_ctime = msq->q_ctime;

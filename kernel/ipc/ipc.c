@@ -7,7 +7,7 @@
 /*
  * Convert IPC permissions.
  */
-void kernel_to_ipc64_perm(struct kern_ipc_perm *in, struct ipc64_perm *out)
+void kernel_to_ipc_perm(struct kern_ipc_perm *in, struct ipc_perm *out)
 {
 	out->key = in->key;
 	out->uid = in->uid;
