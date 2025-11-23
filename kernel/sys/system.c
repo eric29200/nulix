@@ -9,7 +9,7 @@
 #include <resource.h>
 #include <reboot.h>
 #include <prctl.h>
- 
+
 #define UTS_SYSNAME		"nulix"
 #define UTS_NODENAME		"nulix"
 #define UTS_RELEASE		"2.4.0"

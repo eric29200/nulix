@@ -96,7 +96,7 @@ size_t get_irq_list(char *page)
 	for (i = 0 ; i < NR_IRQS ; i++) {
 		/* get action */
 		action = irq_desc[i].action;
-		if (!action) 
+		if (!action)
 			continue;
 
 		/* print irq */

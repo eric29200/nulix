@@ -380,7 +380,7 @@ void notify_parent(struct task *task, int sig)
 	info.si_errno = 0;
 	info.si_code = SI_KERNEL;
 	info.__si_fields.__si_common.__first.__piduid.si_pid = task->pid;
-	  
+
 	/* send signal */
 	send_sig_info(current_task->parent, sig, &info);
 	wake_up(&current_task->parent->wait_child_exit);

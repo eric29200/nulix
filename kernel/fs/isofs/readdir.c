@@ -120,7 +120,7 @@ int isofs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		if (!name_len)
 			name_len = isofs_name_translate(de->name, de->name_len[0], name);
 
-		/* fill in directory entry */ 
+		/* fill in directory entry */
 		if (filldir(dirent, name, name_len, filp->f_pos, ino)) {
 			brelse(bh);
 			return 0;

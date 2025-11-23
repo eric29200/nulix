@@ -275,7 +275,7 @@ static void switch_names(struct dentry *dentry, struct dentry *target)
 {
 	char *old_name, *new_name;
 
-	memcpy(dentry->d_iname, target->d_iname, DNAME_INLINE_LEN); 
+	memcpy(dentry->d_iname, target->d_iname, DNAME_INLINE_LEN);
 
 	/* get old name */
 	old_name = target->d_name.name;
@@ -596,7 +596,7 @@ resume:
 
 	/* all done at this level ... ascend and resume the search */
 	if (this_parent != parent) {
-		next = this_parent->d_child.next; 
+		next = this_parent->d_child.next;
 		this_parent = this_parent->d_parent;
 		goto resume;
 	}

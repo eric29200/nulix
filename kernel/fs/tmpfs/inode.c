@@ -82,7 +82,7 @@ struct inode *tmpfs_new_inode(struct super_block *sb, mode_t mode, dev_t dev)
 	inode->i_rdev = dev;
 	INIT_LIST_HEAD(&inode->u.tmp_i.i_pages);
 	inode->u.tmp_i.i_shmid = -1;
-	 
+
 	/* set number of links */
 	if (S_ISDIR(mode))
 		inode->i_nlinks = 2;

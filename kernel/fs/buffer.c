@@ -805,7 +805,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 		/* page up to date = block up to date */
 		if (PageUptodate(page)) {
 			mark_buffer_uptodate(bh, 1);
-			continue; 
+			continue;
 		}
 
 		/* read block */

@@ -211,7 +211,7 @@ static void release_old_signals(struct signal_struct *sig_old)
 
 	sig_old->count--;
 }
- 
+
 /*
  * Flust signal handlers.
  */

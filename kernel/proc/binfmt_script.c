@@ -17,7 +17,7 @@ static int script_load_binary(struct binprm *bprm)
 	int ret;
 
 	/* check first characters */
-	if (bprm->buf[0] != '#' || bprm->buf[1] != '!' || bprm->sh_bang) 
+	if (bprm->buf[0] != '#' || bprm->buf[1] != '!' || bprm->sh_bang)
 		return -ENOEXEC;
 
 	/* release dentry */
@@ -42,7 +42,7 @@ static int script_load_binary(struct binprm *bprm)
 
 	/* right trim */
 	for (s = bprm->buf + 2; *s == ' ' || *s == '\t'; s++);
-	if (!s || *s == 0) 
+	if (!s || *s == 0)
 		return -ENOEXEC;
 
 	/* get interpreter path/name */

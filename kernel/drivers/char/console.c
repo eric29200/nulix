@@ -37,7 +37,7 @@ static uint8_t ansi_color_table[] = {
 	11,	/* yellow */
 	15	/* white */
 };
- 
+
 /* cursor timer */
 static struct timer_event cursor_timer;
 
@@ -668,7 +668,7 @@ static void console_restore(struct vc *vc)
 	vc->vc_charset_g1 = vc->s_vc_charset_g1;
 	set_translate(vc, vc->vc_charset == 0 ? vc->vc_charset_g0 : vc->vc_charset_g1);
 }
-  
+
 /*
  * Reset console.
  */

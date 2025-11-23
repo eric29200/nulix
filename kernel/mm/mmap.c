@@ -104,7 +104,7 @@ void remove_vma(struct vm_area *vma)
 	/* remove it from list */
 	list_del(&vma->list);
 }
-  
+
 /*
  * Move a memory region.
  */

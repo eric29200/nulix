@@ -217,7 +217,7 @@ static int proc_fd_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		if (filp->f_pos > i++)
 			continue;
 
-		/* fill in directory entry */ 
+		/* fill in directory entry */
 		ino = fake_ino(task->pid, PROC_PID_FD_DIR + fd);
 		name_len = sprintf(fd_s, "%d", fd);
 		if (filldir(dirent, fd_s, name_len, filp->f_pos, ino))
@@ -316,7 +316,7 @@ static int proc_exe_link(struct task *task, struct dentry **dentry)
 {
 	struct list_head *pos;
 	struct vm_area *vma;
-	 
+
 	/* find first executable memory region */
 	list_for_each(pos, &task->mm->vm_list) {
 		vma = list_entry(pos, struct vm_area, list);
@@ -501,7 +501,7 @@ static ssize_t proc_base_maps_read(struct file *filp, char *buf, size_t count, o
 			vma->vm_start,
 			vma->vm_end, perms,
 			vma->vm_offset,
-			(int) major(dev), 
+			(int) major(dev),
 			(int) minor(dev),
 			ino);
 

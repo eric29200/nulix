@@ -8,7 +8,7 @@
  */
 static int ata_cd_wait(struct ata_device *device)
 {
-	uint8_t status; 
+	uint8_t status;
 
 	for (;;) {
 		status = inb(device->io_base + ATA_REG_STATUS);

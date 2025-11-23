@@ -404,7 +404,7 @@ extern struct kbd kbd_table[NR_CONSOLES];
 extern uint16_t *key_maps[MAX_NR_KEYMAPS];
 extern uint16_t plain_map[NR_KEYS];
 extern uint8_t *func_table[MAX_NR_FUNCS];
-extern uint8_t e0_keys[128]; 
+extern uint8_t e0_keys[128];
 extern int shift_state;
 
 void init_keyboard();

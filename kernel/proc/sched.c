@@ -214,7 +214,7 @@ time_t schedule_timeout(time_t timeout)
 out:
 	return timeout < 0 ? 0 : timeout;
 }
-  
+
 /*
  * Schedule function (interruptions must be disabled and will be reenabled on function return).
  */

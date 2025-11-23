@@ -47,7 +47,7 @@ static int make_inode_number()
 
 	/* find first free inode */
 	i = find_first_zero_bit((uint32_t *) proc_alloc_map, PROC_NDYNAMIC);
-	if (i < 0 || i >= PROC_NDYNAMIC) 
+	if (i < 0 || i >= PROC_NDYNAMIC)
 		return -1;
 
 	/* set inode */

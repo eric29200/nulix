@@ -52,13 +52,13 @@ struct msqid64_ds {
  */
 struct msginfo {
 	int			msgpool;
-	int			msgmap; 
-	int			msgmax; 
-	int			msgmnb; 
-	int			msgmni; 
-	int			msgssz; 
-	int			msgtql; 
-	unsigned short		msgseg; 
+	int			msgmap;
+	int			msgmax;
+	int			msgmnb;
+	int			msgmni;
+	int			msgssz;
+	int			msgtql;
+	unsigned short		msgseg;
 };
 
 void init_msg();

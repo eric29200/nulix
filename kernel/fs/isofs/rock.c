@@ -218,9 +218,9 @@ repeat:
 		if (rr->len == 0)
 			goto out;
 		sig = (chr[0] << 8) + chr[1];
-		chr += rr->len; 
+		chr += rr->len;
 		len -= rr->len;
-      
+
 		/* handle command */
 		switch(sig) {
 			case SIG('R', 'R'):
@@ -247,13 +247,13 @@ repeat:
 				break;
 			case SIG('T', 'F'):
 				cnt = 0;
-				if (rr->u.TF.flags & TF_CREATE) 
+				if (rr->u.TF.flags & TF_CREATE)
 					inode->i_ctime = isofs_date(rr->u.TF.times[cnt++].time);
-				if (rr->u.TF.flags & TF_MODIFY) 
+				if (rr->u.TF.flags & TF_MODIFY)
 					inode->i_mtime = isofs_date(rr->u.TF.times[cnt++].time);
-				if (rr->u.TF.flags & TF_ACCESS) 
+				if (rr->u.TF.flags & TF_ACCESS)
 					inode->i_atime = isofs_date(rr->u.TF.times[cnt++].time);
-				if (rr->u.TF.flags & TF_ATTRIBUTES) 
+				if (rr->u.TF.flags & TF_ATTRIBUTES)
 					inode->i_ctime = isofs_date(rr->u.TF.times[cnt++].time);
 				break;
 			case SIG('S', 'L'):
@@ -303,7 +303,7 @@ repeat:
 		if (rr->len == 0)
 			goto out;
 		sig = (chr[0] << 8) + chr[1];
-		chr += rr->len; 
+		chr += rr->len;
 		len -= rr->len;
 
 		/* handle command */

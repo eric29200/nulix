@@ -74,7 +74,7 @@ static void set_brk(uint32_t start, uint32_t end)
 	/* map sections */
 	do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_PRIVATE, 0);
 }
- 
+
 /*
  * Memzero fractionnal page of bss section.
  */

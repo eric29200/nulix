@@ -3,7 +3,7 @@
 #include <proc/sched.h>
 #include <stderr.h>
 #include <stdio.h>
-  
+
 /*
  * Allocate a send buffer.
  */
