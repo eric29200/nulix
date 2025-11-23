@@ -367,7 +367,7 @@ int tmpfs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 
 	/* add entry to parent dir */
 	ret = tmpfs_add_entry(dir, dentry->d_name.name, dentry->d_name.len, inode);
-	if (ret) 
+	if (ret)
 		goto err;
 
 	/* update directory links and mark it dirty */

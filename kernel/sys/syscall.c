@@ -3,6 +3,7 @@
 #include <proc/ptrace.h>
 #include <fs/fs.h>
 #include <net/socket.h>
+#include <ipc/ipc.h>
 #include <sys/sys.h>
 #include <x86/tls.h>
 #include <x86/ldt.h>
@@ -170,6 +171,7 @@ static const void *syscalls[] = {
 	[__NR_fstat]			= sys_fstat,
 	[__NR_vhangup]			= sys_vhangup,
 	[__NR_ptrace]			= sys_ptrace,
+	[__NR_ipc]			= sys_ipc,
 };
 
 /*

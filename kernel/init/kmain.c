@@ -18,6 +18,7 @@
 #include <drivers/video/fb.h>
 #include <drivers/net/rtl8139.h>
 #include <net/inet/net.h>
+#include <ipc/ipc.h>
 #include <proc/sched.h>
 #include <proc/binfmt.h>
 #include <sys/syscall.h>
@@ -329,6 +330,10 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	/* init block buffers */
 	printf("[Kernel] Block buffers init\n");
 	init_buffer();
+
+	/* init IPC resources */
+	printf("[Kernel] IPC resources init\n");
+	init_ipc();
 
 	/* init PIT */
 	printf("[Kernel] PIT Init\n");

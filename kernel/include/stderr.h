@@ -37,6 +37,8 @@
 #define ERANGE		34	/* Math result not representable */
 #define ENOSYS		35	/* Not implemented */
 #define ENAMETOOLONG	36	/* File name too long */
+#define	ENOMSG		42	/* No message of desired type */
+#define	EIDRM		43	/* Identifier removed */
 #define	ENOSR		63	/* Out of streams resources */
 #define	ENOTSOCK	88	/* Socket operation on non-socket */
 #define	EOPNOTSUPP	95	/* Operation not supported on transport endpoint */

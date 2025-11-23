@@ -21,6 +21,7 @@ typedef uint32_t ino_t;
 typedef unsigned uid_t;
 typedef unsigned gid_t;
 typedef int clockid_t;
+typedef int key_t;
 
 typedef unsigned char cc_t;
 typedef unsigned long tcflag_t;
@@ -37,6 +38,7 @@ typedef struct {
 	uint32_t fds_bits[FDSET_SIZE / (8 * sizeof(uint32_t))];
 } fd_set_t;
 
+#define USHRT_MAX				0xFFFF
 #define INT_MAX					((int) (~0U >> 1))
 #define UINT_MAX				(~0U)
 #define LONG_MAX				((long) (~0UL >> 1))
