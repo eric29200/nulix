@@ -6,7 +6,7 @@
 
 #define msg_buildid(id, seq)		ipc_buildid(&msg_ids, id, seq)
 #define msg_checkid(msq, msgid)		ipc_checkid(&msg_ids, &msq->q_perm, msgid)
-#define msg_rmid(id)			((struct msg_queue*) ipc_rmid(&msg_ids, id))
+#define msg_rmid(id)			((struct msg_queue *) ipc_rmid(&msg_ids, id))
 
 #define SEARCH_ANY			1
 #define SEARCH_EQUAL			2

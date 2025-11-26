@@ -1,5 +1,6 @@
 #include <ipc/ipc.h>
 #include <ipc/msg.h>
+#include <ipc/sem.h>
 #include <proc/sched.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -135,6 +136,7 @@ struct kern_ipc_perm *ipc_rmid(struct ipc_ids *ids, int id)
 			if (lid == -1)
 				break;
 		} while (ids->entries[lid].p);
+
 		ids->max_id = lid;
 	}
 
@@ -276,6 +278,12 @@ int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fift
 			}
 		case MSGCTL:
 			return sys_msgctl(first, second, ptr);
+		case SEMGET:
+			return sys_semget(first, second, third);
+		case SEMOP:
+			return sys_semop(first, (struct sembuf *) ptr, second);
+		case SEMCTL:
+			return sys_semctl(first, second, third, ptr);
 		default:
 			printf("IPC system call %d not implemented\n", call);
 			return -ENOSYS;
@@ -287,5 +295,6 @@ int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fift
  */
 void init_ipc()
 {
-	return init_msg();
+	init_msg();
+	init_sem();
 }

@@ -15,6 +15,7 @@ void do_exit(int error_code)
 	del_timer(&current_task->real_timer);
 
 	/* free resources */
+	sem_exit();
 	task_exit_signals(current_task);
 	task_exit_files(current_task);
 	task_exit_fs(current_task);

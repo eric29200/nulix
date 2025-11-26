@@ -6,6 +6,7 @@
 #include <mm/mmap.h>
 #include <fs/fs.h>
 #include <ipc/signal.h>
+#include <ipc/sem.h>
 #include <lib/list.h>
 #include <x86/tls.h>
 #include <x86/segment.h>
@@ -136,6 +137,7 @@ struct task {
 	struct mm_struct *		mm;				/* memory regions */
 	struct signal_struct *		sig;				/* signals */
 	struct semaphore *		vfork_sem;			/* vfork semaphore */
+	struct sem_undo *		semun;				/* IPC semaphore undo requests */
 	struct list_head		list;				/* next process */
 };
 
