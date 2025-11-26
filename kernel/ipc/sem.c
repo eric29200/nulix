@@ -14,8 +14,6 @@
 struct sem {
 	int			semval;		/* current value */
 	pid_t			sempid;		/* pid of last operation */
-	size_t			semncnt;        /* num procs awaiting increase in semval */
-  	size_t			semzcnt;        /* num procs awaiting semval = 0 */
 };
 
 /*
@@ -26,8 +24,7 @@ struct sem_array {
 	time_t			sem_otime;	/* last semop time */
 	time_t			sem_ctime;	/* last change time */
 	struct sem *		sem_base;	/* ptr to first semaphore in array */
-	struct wait_queue *	sem_eventn;	/* processes waiting for increase in semval */
-	struct wait_queue *	sem_eventz;	/* processes waiting for semval = 0 */
+	struct wait_queue *	sem_wait;	/* processes waiting for semval */
 	struct sem_undo	*	undo;		/* undo requests on this array */
 	size_t			sem_nsems;	/* number of semaphores in array */
 };
@@ -95,10 +92,8 @@ static void sem_freeary(int id)
 	        un->semadj = 0;
 
 	/* wake up processes */
-	if (sma->sem_eventz)
-		wake_up(&sma->sem_eventz);
-	if (sma->sem_eventn)
-		wake_up(&sma->sem_eventn);
+	if (sma->sem_wait)
+		wake_up(&sma->sem_wait);
 
 	/* update global stats */
 	used_sems -= sma->sem_nsems;
@@ -152,19 +147,15 @@ found:
 				sem->semval += un->semadj;
 				sem->sempid = current_task->pid;
 				sma->sem_otime = CURRENT_TIME;
-				if (un->semadj > 0)
-					wake_up(&sma->sem_eventn);
-				if (!sem->semval)
-					wake_up(&sma->sem_eventz);
+				if (sma->sem_wait)
+					wake_up(&sma->sem_wait);
 				break;
 			}
 
 			if (signal_pending(current_task))
 				break;
 
-			sem->semncnt++;
-			sleep_on(&sma->sem_eventn);
-			sem->semncnt--;
+			sleep_on(&sma->sem_wait);
 		}
 next:
 		kfree(u);
@@ -223,7 +214,7 @@ int sys_semget(key_t key, int nsems, int semflg)
  */
 int sys_semop(int semid, struct sembuf *sops, size_t nsops)
 {
-	int undos = 0, alter = 0, semncnt = 0, semzcnt = 0;
+	int undos = 0, alter = 0;
 	struct sem_array *sma;
 	struct sem_undo *un;
 	struct sembuf *sop;
@@ -252,11 +243,8 @@ int sys_semop(int semid, struct sembuf *sops, size_t nsops)
 			return -EFBIG;
 		if (sop->sem_flg & SEM_UNDO)
 			undos++;
-		if (sop->sem_op) {
+		if (sop->sem_op)
 			alter++;
-			if (sop->sem_op > 0)
-				semncnt++;
-		}
 	}
 
 	/* check permissions */
@@ -321,9 +309,7 @@ slept:
 				return -EAGAIN;
 			if (signal_pending(current_task))
 				return -EINTR;
-			curr->semzcnt++;
-			sleep_on(&sma->sem_eventz);
-			curr->semzcnt--;
+			sleep_on(&sma->sem_wait);
 			goto slept;
 		}
 
@@ -333,9 +319,7 @@ slept:
 				return -EAGAIN;
 			if (signal_pending(current_task))
 				return -EINTR;
-			curr->semncnt++;
-			sleep_on(&sma->sem_eventn);
-			curr->semncnt--;
+			sleep_on(&sma->sem_wait);
 			goto slept;
 		}
 	}
@@ -350,8 +334,6 @@ slept:
 
 		/* do operation */
 		curr->semval += sop->sem_op;
-		if (curr->semval)
-			semzcnt++;
 
 		/* undo operation */
 		if (sop->sem_flg & SEM_UNDO) {
@@ -375,10 +357,8 @@ slept:
 	sma->sem_otime = CURRENT_TIME;
 
 	/* wake up processes */
-       	if (semncnt)
-		wake_up(&sma->sem_eventn);
-	if (semzcnt)
-		wake_up(&sma->sem_eventz);
+       	if (sma->sem_wait)
+		wake_up(&sma->sem_wait);
 
 	return 0;
 }
@@ -427,8 +407,8 @@ static int semctl_main(int semid, int cmd, union semun arg)
 				un->semadj = 0;
 
 			/* wake up processes */
-			wake_up(&sma->sem_eventn);
-			wake_up(&sma->sem_eventz);
+			if (sma->sem_wait)
+				wake_up(&sma->sem_wait);
 
 			/* update change time */
 			sma->sem_ctime = CURRENT_TIME;
