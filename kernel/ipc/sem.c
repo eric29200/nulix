@@ -108,61 +108,54 @@ static void sem_freeary(int id)
 void sem_exit(void)
 {
 	struct sem_undo *u, *un = NULL, **up, **unp;
-	struct sem *sem = NULL;
 	struct sem_array *sma;
+	struct sem *sem;
+	size_t i;
 
 	/* for each undo request */
-	for (up = &current_task->semun; (u = *up); *up = u->proc_next) {
+	for (up = &current_task->semundo; (u = *up); *up = u->proc_next, kfree(u)) {
+		if (u->semid == -1)
+			continue;
+
 		/* get semaphores array */
 		sma = (struct sem_array *) ipc_get(&sem_ids, u->semid);
 		if (!sma)
-			goto next;
+			continue;
 
 		/* check semaphores array */
 		if (sem_checkid(sma, u->semid))
-			goto next;
+			continue;
 
-		/* find undo structure */
+		/* remove u from the sma->undo list */
 		for (unp = &sma->undo; (un = *unp); unp = &un->id_next)
 			if (u == un)
 				goto found;
 
 		printf("sem_exit: undo list error id=%d\n", u->semid);
-		break;
+		continue;
 found:
 		*unp = un->id_next;
-		if (!un->semadj)
-			goto next;
 
-		for (;;) {
-			/* recheck semaphores array */
-			if (sem_checkid(sma, u->semid))
-				break;
+		/* perform adjustments registered in u */
+		for (i = 0; i < sma->sem_nsems; i++) {
+			sem = &sma->sem_base[i];
 
-			/* get semaphore */
-			sem = &sma->sem_base[un->sem_num];
-
-			/* undo */
-			if (sem->semval + un->semadj >= 0) {
-				sem->semval += un->semadj;
-				sem->sempid = current_task->pid;
-				sma->sem_otime = CURRENT_TIME;
-				if (sma->sem_wait)
-					wake_up(&sma->sem_wait);
-				break;
-			}
-
-			if (signal_pending(current_task))
-				break;
-
-			sleep_on(&sma->sem_wait);
+			sem->sempid = current_task->pid;
+			sem->semval += u->semadj[i];
+			if (sem->semval < 0)
+				sem->semval = 0;
 		}
-next:
-		kfree(u);
+
+		/* update operation time */
+		sma->sem_otime = CURRENT_TIME;
+
+		/* wake up sleepers */
+		if (sma->sem_wait)
+			wake_up(&sma->sem_wait);
 	}
 
 	/* reset undo */
-	current_task->semun = NULL;
+	current_task->semundo = NULL;
 }
 
 /*
@@ -210,15 +203,127 @@ int sys_semget(key_t key, int nsems, int semflg)
 }
 
 /*
+ * Free an undo requests structure.
+ */
+static struct sem_undo *sem_freeundos(struct sem_undo *un)
+{
+	struct sem_undo *u, **up;
+
+	for (up = &current_task->semundo; (u = *up) ;up = &u->proc_next) {
+		if (un != u)
+			continue;
+
+		/* remove request */
+		un = u->proc_next;
+		*up = un;
+
+		/* free request */
+		kfree(u);
+		return un;
+	}
+
+	printf("freeundos: undo list error id=%d\n", un->semid);
+	return un->proc_next;
+}
+
+/*
+ * Allocate an undo requests structure.
+ */
+static int sem_allocundos(struct sem_array *sma, struct sem_undo **unp, int semid)
+{
+	struct sem_undo *un;
+	size_t size;
+
+	/* allocate undo requests structure */
+	size = sizeof(struct sem_undo) + sizeof(short) * sma->sem_nsems;
+	un = (struct sem_undo *) kmalloc(size);
+	if (!un)
+		return -ENOMEM;
+
+	/* set undo requests structure */
+	memset(un, 0, size);
+	un->semadj = (short *) &un[1];
+	un->semid = semid;
+	un->proc_next = current_task->semundo;
+	current_task->semundo = un;
+	un->id_next = sma->undo;
+	sma->undo = un;
+	*unp = un;
+
+	return 0;
+}
+
+/*
+ * Try to execute operations.
+ */
+static int try_atomic_semop(struct sem_array *sma, struct sembuf *sops, size_t nsops, struct sem_undo *un, pid_t pid, int do_undo)
+{
+	struct sembuf *sop;
+	struct sem *curr;
+	int res, undo;
+
+	/* for each operation */
+	for (sop = sops; sop < sops + nsops; sop++) {
+		/* get semaphore */
+		curr = sma->sem_base + sop->sem_num;
+
+		/* compute result */
+		res = curr->semval + sop->sem_op;
+
+		/* check if operation would block */
+		if ((!sop->sem_op && curr->semval) || res < 0)
+			goto would_block;
+
+		/* exceeding the undo range is an error */
+		if (sop->sem_flg & SEM_UNDO) {
+			undo = un->semadj[sop->sem_num] - sop->sem_op;
+			if (undo < (-SEMAEM - 1) || undo > SEMAEM)
+				goto out_of_range;
+		}
+
+		/* ok : set semaphore */
+		curr->semval = res;
+	}
+
+	/* undo ? */
+	if (do_undo) {
+		res = 0;
+		goto undo;
+	}
+
+	/* update adjust values */
+	sop--;
+	for (; sop >= sops; sop--) {
+		sma->sem_base[sop->sem_num].sempid = pid;
+		if (sop->sem_flg & SEM_UNDO)
+			un->semadj[sop->sem_num] -= sop->sem_op;
+	}
+
+	/* update operation time */
+	sma->sem_otime = CURRENT_TIME;
+	return 0;
+out_of_range:
+	res = -ERANGE;
+	goto undo;
+would_block:
+	res = sop->sem_flg & IPC_NOWAIT ? -EAGAIN : 1;
+undo:
+	sop--;
+	for (; sop >= sops; sop--)
+		sma->sem_base[sop->sem_num].semval -= sop->sem_op;
+	return res;
+}
+
+/*
  * Semaphore operation.
  */
 int sys_semop(int semid, struct sembuf *sops, size_t nsops)
 {
+	struct sem_undo *un = NULL;
 	int undos = 0, alter = 0;
 	struct sem_array *sma;
-	struct sem_undo *un;
 	struct sembuf *sop;
-	struct sem *curr;
+	int ret;
 
 	/* check parameters */
 	if (nsops < 1 || semid < 0)
@@ -251,111 +356,55 @@ int sys_semop(int semid, struct sembuf *sops, size_t nsops)
 	if (ipcperms(&sma->sem_perm, alter ? S_IWUGO : S_IRUGO))
 		return -EACCES;
 
-	/*  ensure every sop with undo gets an undo structure */
+	/* make sure we have an undo structure for this process and this semaphore set */
 	if (undos) {
-		for (sop = sops; sop < sops + nsops; sop++) {
-			if (!(sop->sem_flg & SEM_UNDO))
-				continue;
+		un = current_task->semundo;
+		while (un) {
+			if (un->semid == semid)
+				break;
+			if (un->semid == -1)
+				un = sem_freeundos(un);
+			else
+				un = un->proc_next;
+		}
 
-			/* try to find undo structure */
-			for (un = current_task->semun; un; un = un->proc_next)
-				if (un->semid == semid &&  un->sem_num == sop->sem_num)
-					break;
-
-			/* undo structure already allocated */
-			if (un)
-				continue;
-
-			/* allocate a new undo structure */
-			un = (struct sem_undo *) kmalloc(sizeof(struct sem_undo));
-			if (!un)
-				return -ENOMEM;
-
-			/* set undo structure */
-			un->semid = semid;
-			un->semadj = 0;
-			un->sem_num = sop->sem_num;
-
-			/* add it to current process */
-			un->proc_next = current_task->semun;
-			current_task->semun = un;
-			un->id_next = sma->undo;
-			sma->undo = un;
+		if (!un) {
+			ret = sem_allocundos(sma, &un, semid);
+			if (ret)
+				return ret;
 		}
 	}
 
-slept:
-	/* get semaphores array */
-	sma = (struct sem_array *) ipc_get(&sem_ids, semid);
-	if (!sma)
-		return -EIDRM;
+	/* try to execute operations */
+	ret = try_atomic_semop(sma, sops, nsops, un, current_task->pid, 0);
+	if (ret <= 0)
+		goto update;
 
-	/* check semaphores array id */
-	if (sem_checkid(sma, semid))
-		return -EIDRM;
+	/* we need to wait */
+	for (;;) {
+		/* handle signal */
+		if (signal_pending(current_task))
+			return -EINTR;
 
-	/* check operations = out of range or sleep if needed */
-	for (sop = sops; sop < sops + nsops; sop++) {
-		/* get semaphore */
-		curr = &sma->sem_base[sop->sem_num];
+		/* sleep on semaphore */
+		sleep_on(&sma->sem_wait);
 
-		/* out of range operation */
-		if (sop->sem_op + curr->semval > SEMVMX)
-			return -ERANGE;
+		/* get semaphores array */
+		sma = (struct sem_array *) ipc_get(&sem_ids, semid);
+		if (!sma)
+			return -EIDRM;
 
-		/* wait for zero value ? */
-		if (!sop->sem_op && curr->semval) {
-			if (sop->sem_flg & IPC_NOWAIT)
-				return -EAGAIN;
-			if (signal_pending(current_task))
-				return -EINTR;
-			sleep_on(&sma->sem_wait);
-			goto slept;
-		}
+		/* check semaphores array id */
+		if (sem_checkid(sma, semid))
+			return -EIDRM;
 
-		/* wait for increasing ? */
-		if (sop->sem_op + curr->semval < 0) {
-			if (sop->sem_flg & IPC_NOWAIT)
-				return -EAGAIN;
-			if (signal_pending(current_task))
-				return -EINTR;
-			sleep_on(&sma->sem_wait);
-			goto slept;
-		}
+		/* try to execute operations */
+		ret = try_atomic_semop(sma, sops, nsops, un, current_task->pid, 0);
+		if (ret <= 0)
+			break;
 	}
 
-	/* do operations */
-	for (sop = sops; sop < sops + nsops; sop++) {
-		/* get semaphore */
-		curr = &sma->sem_base[sop->sem_num];
-
-		/* update last pid operation */
-		curr->sempid = current_task->pid;
-
-		/* do operation */
-		curr->semval += sop->sem_op;
-
-		/* undo operation */
-		if (sop->sem_flg & SEM_UNDO) {
-			/* find undo structure */
-			for (un = current_task->semun; un; un = un->proc_next)
-				if (un->semid == semid &&  un->sem_num == sop->sem_num)
-					break;
-
-			/* error : no undo structure */
-			if (!un) {
-				printf("sys_semop: no undo for operation\n");
-				continue;
-			}
-
-			/* adjust undo structure */
-			un->semadj -= sop->sem_op;
-		}
-	}
-
-	/* update operation time */
-	sma->sem_otime = CURRENT_TIME;
-
+update:
 	/* wake up processes */
        	if (sma->sem_wait)
 		wake_up(&sma->sem_wait);

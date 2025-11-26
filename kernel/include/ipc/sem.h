@@ -37,8 +37,7 @@ struct sem_undo {
 	struct sem_undo *	proc_next;		/* next entry on this process */
 	struct sem_undo *	id_next;		/* next entry on this semaphore set */
 	int			semid;			/* semaphore set identifier */
-	short			semadj; 		/* semval adjusted by exit */
-	size_t			sem_num; 		/* semaphore index in array semid */
+	short *			semadj;			/* array of adjustments, one per semaphore */
 };
 
 /*

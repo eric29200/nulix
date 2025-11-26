@@ -137,7 +137,7 @@ struct task {
 	struct mm_struct *		mm;				/* memory regions */
 	struct signal_struct *		sig;				/* signals */
 	struct semaphore *		vfork_sem;			/* vfork semaphore */
-	struct sem_undo *		semun;				/* IPC semaphore undo requests */
+	struct sem_undo *		semundo;			/* IPC semaphore undo requests */
 	struct list_head		list;				/* next process */
 };
 
