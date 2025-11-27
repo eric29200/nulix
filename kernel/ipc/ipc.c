@@ -1,6 +1,7 @@
 #include <ipc/ipc.h>
 #include <ipc/msg.h>
 #include <ipc/sem.h>
+#include <ipc/shm.h>
 #include <proc/sched.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -254,8 +255,9 @@ int ipc_findkey(struct ipc_ids *ids, key_t key)
  */
 int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fifth)
 {
-	int version = call >> 16;
+	int version = call >> 16, ret;
 	struct ipc_kludge *tmp;
+	uint32_t addr_ret;
 
 	/* get call */
 	call &= 0xFFFF;
@@ -284,6 +286,19 @@ int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fift
 			return sys_semop(first, (struct sembuf *) ptr, second);
 		case SEMCTL:
 			return sys_semctl(first, second, third, ptr);
+		case SHMGET:
+			return sys_shmget(first, second, third);
+		case SHMAT:
+			ret = sys_shmat(first, ptr, second, &addr_ret);
+			if (ret)
+				return ret;
+
+			*((uint32_t *) third) = addr_ret;
+			return 0;
+		case SHMDT:
+			return sys_shmdt((char *) ptr);
+		case SHMCTL:
+			return sys_shmctl(first, second, (struct shmid_ds *) ptr);
 		default:
 			printf("IPC system call %d not implemented\n", call);
 			return -ENOSYS;
@@ -297,4 +312,5 @@ void init_ipc()
 {
 	init_msg();
 	init_sem();
+	init_shm();
 }
