@@ -2,6 +2,7 @@
 #include <x86/idt.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
+#include <x86/cpu.h>
 #include <mm/mm.h>
 #include <grub/multiboot2.h>
 #include <drivers/char/mem.h>
@@ -306,6 +307,10 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 
 	/* print grub informations */
 	printf("[Kernel] Loading at linear address = 0x%x\n", loader);
+
+	/* init cpu */
+	printf("[Kernel] CPU Init\n");
+	init_cpu();
 
 	/* init gdt */
 	printf("[Kernel] Global Descriptor Table Init\n");

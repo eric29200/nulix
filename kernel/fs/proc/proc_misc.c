@@ -3,6 +3,7 @@
 #include <proc/sched.h>
 #include <sys/sys.h>
 #include <sys/syscall.h>
+#include <x86/cpu.h>
 #include <kernel_stat.h>
 #include <string.h>
 #include <stderr.h>
@@ -195,6 +196,19 @@ static int interrupts_read_proc(char *page, char **start, off_t off, size_t coun
 }
 
 /*
+ * Read cpu info.
+ */
+static int cpuinfo_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
+{
+	size_t len;
+
+	/* get cpu informations */
+	len = get_cpuinfo(page);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
+}
+
+/*
  * Init misc proc entries.
  */
 void proc_misc_init()
@@ -208,4 +222,5 @@ void proc_misc_init()
 	create_proc_read_entry("cmdline", 0, NULL, kcmdline_read_proc);
 	create_proc_read_entry("devices", 0, NULL, devices_read_proc);
 	create_proc_read_entry("interrupts", 0, NULL, interrupts_read_proc);
+	create_proc_read_entry("cpuinfo", 0, NULL, cpuinfo_read_proc);
 }

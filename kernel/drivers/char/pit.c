@@ -18,6 +18,7 @@ volatile time_t jiffies = 0;
 struct kernel_timeval xtimes = { 0, 0 };
 
 /* Time Stamp Counter variables */
+uint32_t cpu_khz;
 static uint32_t tsc_quotient;
 static uint32_t last_tsc_low;
 
@@ -139,7 +140,7 @@ void update_times()
  */
 void init_pit()
 {
-	uint32_t cpu_khz, divisor, eax, edx;
+	uint32_t divisor, eax, edx;
 
 	/* get CPU frequency */
 	tsc_quotient = calibrate_tsc();
