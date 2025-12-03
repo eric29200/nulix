@@ -1229,14 +1229,6 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 static struct tty_driver console_driver = {
 	.write		= console_write,
 	.ioctl		= console_ioctl,
-	.termios 	= (struct termios) {
-				.c_iflag	= ICRNL | IXON,
-				.c_oflag	= OPOST | ONLCR,
-				.c_cflag	= B38400 | CS8 | CREAD | HUPCL,
-				.c_lflag	= ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN,
-				.c_line		= 0,
-				.c_cc		= INIT_C_CC,
-			},
 };
 
 /*
@@ -1247,6 +1239,14 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 	struct tty *tty;
 	struct vc *vc;
 	int i, ret;
+
+	/* init termios */
+	memset(&console_driver.termios, 0, sizeof(struct termios));
+	console_driver.termios.c_iflag = ICRNL | IXON;
+	console_driver.termios.c_oflag = OPOST | ONLCR;
+	console_driver.termios.c_cflag = B38400 | CS8 | CREAD | HUPCL;
+	console_driver.termios.c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN;
+	memcpy(&console_driver.termios.c_cc, INIT_C_CC, NCCS);
 
 	/* init consoles */
 	for (i = 0; i < NR_CONSOLES; i++) {

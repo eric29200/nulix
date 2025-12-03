@@ -287,7 +287,7 @@ static void do_spec(uint8_t value, char up_flag)
 	if (value >= ARRAY_SIZE(spec_fn_table))
 		return;
 
-	spec_fn_table[value](tty);
+	spec_fn_table[value]();
 }
 
 /*

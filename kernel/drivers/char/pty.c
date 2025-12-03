@@ -45,14 +45,6 @@ static ssize_t pty_write(struct tty *tty)
  */
 static struct tty_driver pts_driver = {
 	.write		= pty_write,
-	.termios 	= (struct termios) {
-				.c_iflag	= ICRNL | IXON,
-				.c_oflag	= OPOST | ONLCR,
-				.c_cflag	= B38400 | CS8 | CREAD | HUPCL,
-				.c_lflag	= ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN,
-				.c_line		= 0,
-				.c_cc		= INIT_C_CC,
-			},
 };
 
 /*
@@ -184,6 +176,14 @@ err:
 int init_pty(struct file_operations *fops)
 {
 	int i;
+
+	/* init termios */
+	memset(&pts_driver.termios, 0, sizeof(struct termios));
+	pts_driver.termios.c_iflag = ICRNL | IXON;
+	pts_driver.termios.c_oflag = OPOST | ONLCR;
+	pts_driver.termios.c_cflag = B38400 | CS8 | CREAD | HUPCL;
+	pts_driver.termios.c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE | IEXTEN;
+	memcpy(&pts_driver.termios.c_cc, INIT_C_CC, NCCS);
 
 	/* set pty table */
 	for (i = 0; i < NR_PTYS; i++) {
