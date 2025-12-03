@@ -100,7 +100,7 @@ extern struct vc console_table[NR_CONSOLES];
 extern uint16_t console_translations[][256];
 extern struct wait_queue *vt_activate_wq;
 
-int init_console();
+int init_console(struct multiboot_tag_framebuffer *tag_fb);
 void console_change(int n);
 
 #endif
