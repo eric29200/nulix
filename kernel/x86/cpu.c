@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define NR_CPUS			1
+#define NR_CPUS			32
 
 #define X86_VENDOR_INTEL	0
 #define X86_VENDOR_AMD		2
@@ -23,7 +23,9 @@ struct cpuinfo_x86 {
 };
 
 /* CPUs */
+static struct cpuinfo_x86 boot_cpu_data = { 0 };
 static struct cpuinfo_x86 cpu_data[NR_CPUS];
+static uint32_t cpu_online_map = 0;
 
 /* CPU frequency (defined in drivers/char/pit.c)*/
 extern uint32_t cpu_khz;
@@ -143,12 +145,16 @@ size_t get_cpuinfo(char *page)
 		"pat", "pse36", "pn", "clflush", "20", "dts", "acpi", "mmx",
 		"fxsr", "sse", "sse2", "ss", "28", "tm", "ia64", "31"
 	};
-	struct cpuinfo_x86 *c = cpu_data;
+	struct cpuinfo_x86 *c;
 	char *p = page;
 	int n, i;
 
 	/* for each cpu */
-	for (n = 0; n < NR_CPUS; n++, c++) {
+	for (n = 0, c = cpu_data; n < NR_CPUS; n++, c++) {
+		/* skip offline CPU */
+		if (!(cpu_online_map & ( 1 <<n)))
+			continue;
+
 		/* print processor informations */
 		p += sprintf(p,
 			"processor\t: %d\n"
@@ -188,31 +194,52 @@ size_t get_cpuinfo(char *page)
 }
 
 /*
+ * Init boot CPU.
+ */
+static void init_boot_cpu()
+{
+	struct cpuinfo_x86 *c = &boot_cpu_data;
+	int eax, ebx, ecx, edx;
+
+	/* get vendor */
+	cpuid(0, &eax, &ebx, &ecx, &edx);
+	memcpy(c->x86_vendor_id, &ebx, 4);
+	memcpy(c->x86_vendor_id + 4, &edx, 4);
+	memcpy(c->x86_vendor_id + 8, &ecx, 4);
+
+	/* get model and family */
+	cpuid(1, &eax, &ebx, &ecx, &edx);
+	c->x86_model = (eax >> 4) & 0x0F;
+	c->x86 = (eax >> 8) & 0x0F;
+	c->x86_mask = eax & 0x0F;
+	c->x86_capability = edx;
+}
+
+/*
  * Init CPU.
  */
 void init_cpu()
 {
-	struct cpuinfo_x86 *c = cpu_data;
-	int eax, ebx, ecx, edx, n;
+	struct cpuinfo_x86 *c;
+	size_t n;
+
+	/* init boot cpu */
+	init_boot_cpu();
+
+	/* only one CPU */
+	cpu_online_map |= (1 << 0);
 
 	/* for each CPU */
-	for (n = 0; n < NR_CPUS; n++, c++) {
-		/* clear CPU informations */
-		memset(c, 0, sizeof(struct cpuinfo_x86));
+	for (n = 0, c = cpu_data; n < NR_CPUS; n++, c++) {
+		/* skip offline CPU */
+		if (!(cpu_online_map & ( 1 <<n)))
+			continue;
+
+		/* set CPU */
+		*c = boot_cpu_data;
 
 		/* get vendor */
-		cpuid(0, &eax, &ebx, &ecx, &edx);
-		memcpy(c->x86_vendor_id, &ebx, 4);
-		memcpy(c->x86_vendor_id + 4, &edx, 4);
-		memcpy(c->x86_vendor_id + 8, &ecx, 4);
 		get_cpu_vendor(c);
-
-		/* get model and family */
-		cpuid(1, &eax, &ebx, &ecx, &edx);
-		c->x86_model = (eax >> 4) & 0x0F;
-		c->x86 = (eax >> 8) & 0x0F;
-		c->x86_mask = eax & 0x0F;
-		c->x86_capability = edx;
 
 		/* init specific vendor */
 		switch (c->x86_vendor) {
