@@ -66,6 +66,45 @@ static struct super_operations ext2_sops = {
 };
 
 /*
+ * Check group descriptors.
+ */
+static int ext2_check_descriptors(struct super_block *sb)
+{
+	struct ext2_sb_info *sbi = ext2_sb(sb);
+	struct ext2_group_desc *gdp;
+	uint32_t block, i, j;
+
+	/* get first data block */
+	block = sbi->s_es->s_first_data_block;
+
+	/* for each group descriptor */
+	for (i = 0, j = 0; i < sbi->s_groups_count; i++, gdp++, block += sbi->s_blocks_per_group) {
+		if ((i % sbi->s_desc_per_block) == 0)
+			gdp = (struct ext2_group_desc *) sbi->s_group_desc[j++]->b_data;
+
+		/* check block bitmap */
+		if (gdp->bg_block_bitmap < block || gdp->bg_block_bitmap >= block + sbi->s_blocks_per_group) {
+			printf("[Ext2-fs] Block bitmap for group %d not in group (block %lu)\n", i, gdp->bg_block_bitmap);
+			return 0;
+		}
+
+		/* check inode bitmap */
+		if (gdp->bg_inode_bitmap < block || gdp->bg_inode_bitmap >= block + sbi->s_blocks_per_group) {
+			printf("[Ext2-fs] Inode bitmap for group %d" " not in group (block %lu)\n", i, gdp->bg_inode_bitmap);
+			return 0;
+		}
+
+		/* check inode table */
+		if (gdp->bg_inode_table < block || gdp->bg_inode_table + sbi->s_itb_per_group >= block + sbi->s_blocks_per_group) {
+			printf("[Ext2-fs] Inode table for group %d not in group (block %lu)\n", i, gdp->bg_inode_table);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+/*
  * Read super block.
  */
 static struct super_block *ext2_read_super(struct super_block *sb, void *data, int silent)
@@ -184,6 +223,10 @@ static struct super_block *ext2_read_super(struct super_block *sb, void *data, i
 			goto err_read_gdb;
 	}
 
+	/* check group descriptors */
+	if (!ext2_check_descriptors(sb))
+		goto err_check_desc;
+
 	/* get root inode */
 	sb->s_root = d_alloc_root(iget(sb, EXT2_ROOT_INO));
 	if (!sb->s_root)
@@ -193,6 +236,8 @@ static struct super_block *ext2_read_super(struct super_block *sb, void *data, i
 err_root_inode:
 	if (!silent)
 		printf("[Ext2-fs] Can't get root inode\n");
+	goto err_release_gdb;
+err_check_desc:
 	goto err_release_gdb;
 err_read_gdb:
 	if (!silent)
