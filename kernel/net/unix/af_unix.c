@@ -9,6 +9,8 @@
 #include <fcntl.h>
 #include <uio.h>
 
+#define unix_peer(sk)		((sk)->pair)
+
 /* UNIX sockets */
 static LIST_HEAD(unix_sockets);
 
@@ -99,17 +101,17 @@ static unix_socket_t *unix_find_other(struct sockaddr_un *sunaddr, size_t addrle
  */
 static int unix_release(struct socket *sock)
 {
-	unix_socket_t *sk, *other;
+	unix_socket_t *sk, *sk_pair;
 
 	/* get UNIX socket */
 	sk = sock->sk;
 	if (!sk)
 		return 0;
 
-	/* shutdown other */
-	other = sk->protinfo.af_unix.other;
-	if (other && sock->type == SOCK_STREAM)
-		other->shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
+	/* shutdown pair */
+	sk_pair = unix_peer(sk);
+	if (sk_pair && sock->type == SOCK_STREAM)
+		sk_pair->shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
 
 	/* release inode */
 	if (sk->protinfo.af_unix.dentry) {
@@ -274,7 +276,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 		if (!other)
 			return ret;
 	} else {
-		other = sk->protinfo.af_unix.other;
+		other = unix_peer(sk);
 		if (!other)
 			return -ENOTCONN;
 	}
@@ -422,13 +424,13 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 
 			/* set new socket */
 			sock_new->state = SS_CONNECTED;
-			sk_new->protinfo.af_unix.other = other;
+			unix_peer(sk_new) = other;
 			sk_new->peercred.uid = sk->peercred.uid;
 
 			/* set other socket connected and wake up eventual clients connecting */
 			other->sock->state = SS_CONNECTED;
-			other->protinfo.af_unix.other = sk_new;
-			wake_up(&sk_new->protinfo.af_unix.other->sock->wait);
+			unix_peer(other) = sk_new;
+			wake_up(&unix_peer(sk_new)->sock->wait);
 
 			return 0;
 		}
@@ -466,7 +468,7 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 
 	/* datagramm socket : just connect */
 	if (sock->type == SOCK_DGRAM) {
-		sk->protinfo.af_unix.other = other;
+		unix_peer(sk) = other;
 		sock->state = SS_CONNECTED;
 		return 0;
 	}
@@ -484,7 +486,7 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 	wake_up(&other->sock->wait);
 
 	/* set socket */
-	sk->protinfo.af_unix.other = other;
+	unix_peer(sk) = other;
 	sock->state = SS_CONNECTING;
 
 	/* wait for an accept */
@@ -516,7 +518,7 @@ static int unix_shutdown(struct socket *sock, int how)
 		return -EINVAL;
 
 	/* get other socket */
-	other = sk->protinfo.af_unix.other;
+	other = unix_peer(sk);
 
  	/* shutdown send */
 	if (how & SEND_SHUTDOWN) {
@@ -536,32 +538,9 @@ static int unix_shutdown(struct socket *sock, int how)
 }
 
 /*
- * Get peer name system call.
+ * Get name.
  */
-static int unix_getpeername(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
-{
-	unix_socket_t *sk, *other;
-
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
-
-	/* copy destination address */
-	other = sk->protinfo.af_unix.other;
-	if (other) {
-		memset(addr, 0, sizeof(struct sockaddr));
-		memcpy(addr, &other->protinfo.af_unix.sunaddr, other->protinfo.af_unix.sunaddr_len);
-		*addrlen = other->protinfo.af_unix.sunaddr_len;
-	}
-
-	return 0;
-}
-
-/*
- * Get sock name system call.
- */
-static int unix_getsockname(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
+static int unix_getname(struct socket *sock, struct sockaddr *addr, size_t *addrlen, int peer)
 {
 	unix_socket_t *sk;
 
@@ -570,10 +549,17 @@ static int unix_getsockname(struct socket *sock, struct sockaddr *addr, size_t *
 	if (!sk)
 		return -EINVAL;
 
+	/* get peer name ? */
+	if (peer) {
+		if (!unix_peer(sk))
+			return -ENOTCONN;
+		sk = unix_peer(sk);
+	}
+
 	/* copy destination address */
 	memset(addr, 0, sizeof(struct sockaddr));
-	memcpy(addr, &sk->protinfo.af_unix.sunaddr, sk->protinfo.af_unix.sunaddr_len);
 	*addrlen = sk->protinfo.af_unix.sunaddr_len;
+	memcpy(addr, &sk->protinfo.af_unix.sunaddr, *addrlen);
 
 	return 0;
 }
@@ -606,8 +592,7 @@ static struct proto_ops unix_stream_ops = {
 	.accept		= unix_accept,
 	.connect	= unix_connect,
 	.shutdown	= unix_shutdown,
-	.getpeername	= unix_getpeername,
-	.getsockname	= unix_getsockname,
+	.getname	= unix_getname,
 	.getsockopt	= sock_no_getsockopt,
 	.setsockopt	= sock_no_setsockopt,
 };
@@ -627,8 +612,7 @@ static struct proto_ops unix_dgram_ops = {
 	.accept		= sock_no_accept,
 	.connect	= unix_connect,
 	.shutdown	= unix_shutdown,
-	.getpeername	= unix_getpeername,
-	.getsockname	= unix_getsockname,
+	.getname	= unix_getname,
 	.getsockopt	= sock_no_getsockopt,
 	.setsockopt	= sock_no_setsockopt,
 };
@@ -649,13 +633,12 @@ static struct sock *unix_create1(struct socket *sock)
 	sk->sock = sock;
 	sk->rcvbuf = SK_RMEM_MAX;
 	sk->sndbuf = SK_WMEM_MAX;
-	sk->protinfo.af_unix.other = NULL;
+	unix_peer(sk) = NULL;
 	INIT_LIST_HEAD(&sk->skb_list);
 	sock->sk = sk;
 
 	/* init data */
 	sock_init_data(sock, sk);
-	sk->protinfo.af_unix.other = NULL;
 
 	/* insert in sockets list */
 	list_add_tail(&sk->list, &unix_sockets);

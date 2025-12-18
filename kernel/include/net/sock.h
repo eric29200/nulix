@@ -22,7 +22,6 @@ struct unix_opt {
 	struct sockaddr_un		sunaddr;
 	size_t				sunaddr_len;
 	struct dentry *			dentry;
-	struct sock *			other;
 };
 
 /*
@@ -40,6 +39,7 @@ struct sock {
 	size_t				wmem_alloc;
 	struct ucred 			peercred;
 	int				proc;
+	struct sock *			pair;
 	union {
 		struct unix_opt		af_unix;
 	} protinfo;
