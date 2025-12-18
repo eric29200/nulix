@@ -112,7 +112,7 @@ typedef enum {
 struct socket {
 	socket_state_t		state;
 	uint32_t		flags;
-	struct prot_ops *	ops;
+	struct proto_ops *	ops;
 	struct inode *		inode;
 	struct sock *		sk;
 	struct file *		file;
@@ -131,7 +131,7 @@ struct net_proto_family {
 /*
  * Protocol operations.
  */
-struct prot_ops {
+struct proto_ops {
 	int (*dup)(struct socket *, struct socket *);
 	int (*release)(struct socket *);
 	int (*poll)(struct socket *, struct select_table *);
@@ -158,6 +158,10 @@ int sock_register(struct net_proto_family *ops);
 void sock_init_data(struct socket *sock, struct sock *sk);
 int sock_fcntl(struct file *filp, int cmd, unsigned long arg);
 int sock_no_dup(struct socket *sock, struct socket *sock_new);
+int sock_no_listen(struct socket *sock);
+int sock_no_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr);
+int sock_no_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen);
+int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen);
 
 /* socket system calls */
 int sys_socket(int domain, int type, int protocol);

@@ -57,12 +57,58 @@ struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonbloc
 }
 
 /*
- * Duplicate a socket.
+ * No duplication.
  */
 int sock_no_dup(struct socket *sock, struct socket *sock_new)
 {
 	struct sock *sk = sock->sk;
 	return net_families[sk->family]->create(sock_new, sk->protocol);
+}
+
+/*
+ * No listen.
+ */
+int sock_no_listen(struct socket *sock)
+{
+	UNUSED(sock);
+	return -EOPNOTSUPP;
+}
+
+/*
+ * No accept.
+ */
+int sock_no_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
+{
+	UNUSED(sock);
+	UNUSED(sock_new);
+	UNUSED(addr);
+	return -EOPNOTSUPP;
+}
+
+/*
+ * Not get socket options.
+ */
+int sock_no_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen)
+{
+	UNUSED(sock);
+	UNUSED(level);
+	UNUSED(optname);
+	UNUSED(optval);
+	UNUSED(optlen);
+	return -EOPNOTSUPP;
+}
+
+/*
+ * Not set socket options.
+ */
+int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen)
+{
+	UNUSED(sock);
+	UNUSED(level);
+	UNUSED(optname);
+	UNUSED(optval);
+	UNUSED(optlen);
+	return -EOPNOTSUPP;
 }
 
 /*

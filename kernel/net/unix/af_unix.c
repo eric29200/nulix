@@ -565,38 +565,6 @@ static int unix_getsockname(struct socket *sock, struct sockaddr *addr, size_t *
 }
 
 /*
- * Get socket options system call.
- */
-static int unix_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen)
-{
-	UNUSED(sock);
-	UNUSED(level);
-	UNUSED(optname);
-	UNUSED(optval);
-	UNUSED(optlen);
-
-	printf("unix_getsockopt(%d) undefined\n", optname);
-
-	return 0;
-}
-
-/*
- * Set socket options system call.
- */
-static int unix_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen)
-{
-	UNUSED(sock);
-	UNUSED(level);
-	UNUSED(optname);
-	UNUSED(optval);
-	UNUSED(optlen);
-
-	printf("unix_setsockopt(%d) undefined\n", optname);
-
-	return 0;
-}
-
-/*
  * Ioctl on a UNIX socket.
  */
 static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
@@ -612,7 +580,7 @@ static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
 /*
  * UNIX stream operations.
  */
-static struct prot_ops unix_stream_ops = {
+static struct proto_ops unix_stream_ops = {
 	.dup		= sock_no_dup,
 	.release	= unix_release,
 	.poll		= unix_poll,
@@ -626,14 +594,14 @@ static struct prot_ops unix_stream_ops = {
 	.shutdown	= unix_shutdown,
 	.getpeername	= unix_getpeername,
 	.getsockname	= unix_getsockname,
-	.getsockopt	= unix_getsockopt,
-	.setsockopt	= unix_setsockopt,
+	.getsockopt	= sock_no_getsockopt,
+	.setsockopt	= sock_no_setsockopt,
 };
 
 /*
  * UNIX datagram operations.
  */
-static struct prot_ops unix_dgram_ops = {
+static struct proto_ops unix_dgram_ops = {
 	.dup		= sock_no_dup,
 	.release	= unix_release,
 	.poll		= unix_poll,
@@ -641,14 +609,14 @@ static struct prot_ops unix_dgram_ops = {
 	.recvmsg	= unix_recvmsg,
 	.sendmsg	= unix_sendmsg,
 	.bind		= unix_bind,
-	.listen		= unix_listen,
-	.accept		= unix_accept,
+	.listen		= sock_no_listen,
+	.accept		= sock_no_accept,
 	.connect	= unix_connect,
 	.shutdown	= unix_shutdown,
 	.getpeername	= unix_getpeername,
 	.getsockname	= unix_getsockname,
-	.getsockopt	= unix_getsockopt,
-	.setsockopt	= unix_setsockopt,
+	.getsockopt	= sock_no_getsockopt,
+	.setsockopt	= sock_no_setsockopt,
 };
 
 /*
