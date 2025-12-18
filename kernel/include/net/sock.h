@@ -3,7 +3,6 @@
 
 #include <lib/list.h>
 #include <net/socket.h>
-#include <net/inet/in.h>
 #include <net/unix/un.h>
 #include <net/sk_buff.h>
 
@@ -27,18 +26,6 @@ struct unix_opt {
 };
 
 /*
- * Inet socket.
- */
-struct inet_opt {
-	struct net_device *		dev;
-	struct sockaddr_in		src_sin;
-	struct sockaddr_in		dst_sin;
-	uint32_t			seq_no;
-	uint32_t			ack_no;
-	struct proto *			prot;
-};
-
-/*
  * Internal socket.
  */
 struct sock {
@@ -53,7 +40,6 @@ struct sock {
 	int				proc;
 	union {
 		struct unix_opt		af_unix;
-		struct inet_opt		af_inet;
 	} protinfo;
 	struct list_head		list;
 	struct list_head		skb_list;

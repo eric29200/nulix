@@ -318,9 +318,6 @@ static int sock_create(int domain, int type, int protocol, struct socket **res)
 
 	/* choose protocol operations */
 	switch (domain) {
-		case AF_INET:
-			sock_ops = &inet_ops;
-			break;
 		case AF_UNIX:
 			sock_ops = &unix_ops;
 			break;

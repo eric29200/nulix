@@ -17,8 +17,6 @@
 #include <drivers/block/ata.h>
 #include <drivers/block/loop.h>
 #include <drivers/video/fb.h>
-#include <drivers/net/rtl8139.h>
-#include <net/inet/net.h>
 #include <ipc/ipc.h>
 #include <proc/sched.h>
 #include <proc/binfmt.h>
@@ -53,11 +51,6 @@ char saved_command_line[COMMAND_LINE_SIZE] = { 0 };
 
 /* grub framebuffer */
 static struct multiboot_tag_framebuffer tag_fb;
-
-/* static IP address */
-static uint8_t default_ip_address[] = { 10, 0, 2, 15 };
-static uint8_t default_ip_netmask[] = { 255, 255, 255, 0 };
-static uint8_t default_ip_route[] = { 10, 0, 2, 2 };
 
 /*
  * Devices names.
@@ -219,11 +212,6 @@ static void kinit()
 	if (init_mouse())
 		printf("[Kernel] Mouse Init error\n");
 
-	/* init realtek 8139 device */
-	printf("[Kernel] Realtek 8139 card Init\n");
-	if (init_rtl8139(default_ip_address, default_ip_netmask, default_ip_route) != 0)
-		printf("[Kernel] Realtek 8139 card Init error\n");
-
 	/* init block devices */
 	printf("[Kernel] Bock devices Init\n");
 	init_blk_dev();
@@ -266,11 +254,6 @@ static void kinit()
 		panic("Cannot register iso file system");
 	if (init_devpts_fs())
 		panic("Cannot register devpts file system");
-
-	/* init network devices */
-	printf("[Kernel] Network devices Init\n");
-	if (init_net_dev())
-		panic("Cannot init network devices");
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
