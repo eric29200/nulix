@@ -338,7 +338,6 @@ static int sock_create(int domain, int type, int protocol, struct socket **res)
 		return -ENFILE;
 
 	/* set socket */
-	sock->state = SS_UNCONNECTED;
 	sock->family = domain;
 	sock->type = type;
 	sock->ops = sock_ops;
