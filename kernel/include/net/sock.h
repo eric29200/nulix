@@ -22,7 +22,7 @@ struct ucred {
 struct unix_opt {
 	struct sockaddr_un		sunaddr;
 	size_t				sunaddr_len;
-	struct inode *			inode;
+	struct dentry *			dentry;
 	struct sock *			other;
 };
 

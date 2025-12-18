@@ -22,7 +22,7 @@ static unix_socket_t *unix_find_socket_by_inode(struct inode *inode)
 
 	list_for_each(pos, &unix_sockets) {
 		sk = list_entry(pos, unix_socket_t, list);
-		if (sk && sk->protinfo.af_unix.inode == inode)
+		if (sk && sk->protinfo.af_unix.dentry && sk->protinfo.af_unix.dentry->d_inode == inode)
 			return sk;
 	}
 
@@ -52,7 +52,6 @@ static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size
 static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_socket_t **res)
 {
 	struct dentry *dentry;
-	struct inode *inode;
 	int ret = 0;
 
 	/* reset result socket */
@@ -69,18 +68,13 @@ static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_soc
 		if (IS_ERR(dentry))
 			return PTR_ERR(dentry);
 
-		/* get inode */
-		inode = dentry->d_inode;
-		inode->i_count++;
-		dput(dentry);
-
 		/* find UNIX socket */
-		*res = unix_find_socket_by_inode(inode);
+		*res = unix_find_socket_by_inode(dentry->d_inode);
 		if (!*res)
 			ret = -ECONNREFUSED;
 
-		/* release inode */
-		iput(inode);
+		/* release dentry */
+		dput(dentry);
 	}
 
 	return ret;
@@ -154,8 +148,10 @@ static int unix_release(struct socket *sock)
 		other->shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
 
 	/* release inode */
-	if (sk->protinfo.af_unix.inode)
-		iput(sk->protinfo.af_unix.inode);
+	if (sk->protinfo.af_unix.dentry) {
+		dput(sk->protinfo.af_unix.dentry);
+		sk->protinfo.af_unix.dentry = NULL;
+	}
 
 	/* release UNIX socket */
 	list_del(&sk->list);
@@ -374,7 +370,7 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 		return -EINVAL;
 
 	/* socket already bound */
-	if (sk->protinfo.af_unix.sunaddr_len || sk->protinfo.af_unix.inode)
+	if (sk->protinfo.af_unix.sunaddr_len || sk->protinfo.af_unix.dentry)
 		return -EBUSY;
 
 	/* abstract socket */
@@ -393,10 +389,8 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 		if (IS_ERR(dentry))
 			return PTR_ERR(dentry);
 
-		/* get inode */
-		sk->protinfo.af_unix.inode = dentry->d_inode;
-		sk->protinfo.af_unix.inode->i_count++;
-		dput(dentry);
+		/* set dentry */
+		sk->protinfo.af_unix.dentry = dentry;
 	}
 
 	/* set socket address */
