@@ -41,6 +41,7 @@
 #define	EIDRM		43	/* Identifier removed */
 #define	ENOSR		63	/* Out of streams resources */
 #define	ENOTSOCK	88	/* Socket operation on non-socket */
+#define	EMSGSIZE	90	/* Message too long */
 #define	EPROTOTYPE	91	/* Protocol wrong type for socket */
 #define	EPROTONOSUPPORT	93	/* Protocol not supported */
 #define	ESOCKTNOSUPPORT	94	/* Socket type not supported */

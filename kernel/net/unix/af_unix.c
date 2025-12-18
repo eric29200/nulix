@@ -171,7 +171,8 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 		return -EINVAL;
 
 	/* compute size */
-	for (i = 0, size = 0; i < msg->msg_iovlen; i++)
+	size = 0;
+	for (i = 0; i < msg->msg_iovlen; i++)
 		size += msg->msg_iov[i].iov_len;
 
 	/* for each iov */
@@ -253,17 +254,63 @@ out:
 /*
  * Send a message.
  */
-static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonblock, int flags)
+static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
 {
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	unix_socket_t *sk, *other;
-	size_t size, sent, len, i;
 	struct sk_buff *skb;
 	int ret;
 
-	/* unused flags */
-	UNUSED(flags);
-	UNUSED(nonblock);
+	/* get UNIX socket */
+	sk = sock->sk;
+	if (!sk)
+		return -EINVAL;
+
+	/* can't send more than send buffer size */
+	if (len > sk->sndbuf)
+		return -EMSGSIZE;
+
+	/* find other socket */
+	if (sunaddr) {
+		other = unix_find_other(sunaddr, msg->msg_namelen, sk->type, &ret);
+		if (!other)
+			return ret;
+	} else {
+		other = unix_peer(sk);
+		if (!other)
+			return -ENOTCONN;
+	}
+
+	/* allocate a socket buffer */
+	skb = sock_alloc_send_skb(sock, len, msg->msg_flags & MSG_DONTWAIT, &ret);
+	if (!skb)
+		return ret;
+
+	/* set socket */
+	skb->sock = sock;
+
+	/* copy message */
+	memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
+
+	/* queue message to other socket */
+	list_add_tail(&skb->list, &other->skb_list);
+
+	/* wake up eventual readers */
+	wake_up(&other->sock->wait);
+
+	return len;
+}
+
+/*
+ * Send a message.
+ */
+static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
+{
+	struct sockaddr_un *sunaddr = msg->msg_name;
+	unix_socket_t *sk, *other;
+	struct sk_buff *skb;
+	size_t size, sent;
+	int ret;
 
 	/* get UNIX socket */
 	sk = sock->sk;
@@ -281,19 +328,14 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 			return -ENOTCONN;
 	}
 
-	/* compute data length */
-	size = 0;
-	for (i = 0; i < msg->msg_iovlen; i++)
-		size += msg->msg_iov[i].iov_len;
-
-	for (sent = 0; sent < size;) {
+	for (sent = 0; sent < len;) {
 		/* compute length */
-		len = size - sent;
-		if (len > sk->sndbuf)
-			len = sk->sndbuf;
+		size = len - sent;
+		if (size > sk->sndbuf)
+			size = sk->sndbuf;
 
 		/* allocate a socket buffer */
-		skb = sock_alloc_send_skb(sock, len, nonblock, &ret);
+		skb = sock_alloc_send_skb(sock, size, msg->msg_flags & MSG_DONTWAIT, &ret);
 		if (!skb)
 			return sent ? (int) sent : ret;
 
@@ -301,7 +343,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 		skb->sock = sock;
 
 		/* copy message */
-		memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
+		memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size);
 
 		/* queue message to other socket */
 		list_add_tail(&skb->list, &other->skb_list);
@@ -310,7 +352,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 		wake_up(&other->sock->wait);
 
 		/* update sent */
-		sent += len;
+		sent += size;
 	}
 
 	return sent;
@@ -586,7 +628,7 @@ static struct proto_ops unix_stream_ops = {
 	.poll		= unix_poll,
 	.ioctl		= unix_ioctl,
 	.recvmsg	= unix_recvmsg,
-	.sendmsg	= unix_sendmsg,
+	.sendmsg	= unix_stream_sendmsg,
 	.bind		= unix_bind,
 	.listen		= unix_listen,
 	.accept		= unix_accept,
@@ -606,7 +648,7 @@ static struct proto_ops unix_dgram_ops = {
 	.poll		= unix_poll,
 	.ioctl		= unix_ioctl,
 	.recvmsg	= unix_recvmsg,
-	.sendmsg	= unix_sendmsg,
+	.sendmsg	= unix_dgram_sendmsg,
 	.bind		= unix_bind,
 	.listen		= sock_no_listen,
 	.accept		= sock_no_accept,

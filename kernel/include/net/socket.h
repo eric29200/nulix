@@ -22,6 +22,7 @@
 /* flags for send/recv */
 #define MSG_OOB			1
 #define MSG_PEEK		2
+#define MSG_DONTWAIT		0x40
 
 /* flags for shutdown */
 #define RCV_SHUTDOWN		1
@@ -137,7 +138,7 @@ struct proto_ops {
 	int (*poll)(struct socket *, struct select_table *);
 	int (*ioctl)(struct socket *, int, unsigned long);
 	int (*recvmsg)(struct socket *, struct msghdr *, int, int);
-	int (*sendmsg)(struct socket *, const struct msghdr *, int, int);
+	int (*sendmsg)(struct socket *, const struct msghdr *, size_t);
 	int (*bind)(struct socket *, const struct sockaddr *, size_t);
 	int (*listen)(struct socket *);
 	int (*accept)(struct socket *, struct socket *, struct sockaddr *);

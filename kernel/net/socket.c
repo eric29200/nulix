@@ -275,10 +275,11 @@ static int sock_write(struct file *filp, const char *buf, size_t len, off_t *ppo
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
+	msg.msg_flags = filp->f_flags & O_NONBLOCK ? MSG_DONTWAIT : 0;
 	iov.iov_base = (char *) buf;
 	iov.iov_len = len;
 
-	return sock->ops->sendmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
+	return sock->ops->sendmsg(sock, &msg, len);
 }
 
 /*
@@ -551,6 +552,10 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	iovec.iov_base = (void *) buf;
 	iovec.iov_len = len;
 
+	/* fix flags */
+	if (sock->file->f_flags & O_NONBLOCK)
+		flags |= MSG_DONTWAIT;
+
 	/* build message */
 	msg.msg_name = (void *) dest_addr;
 	msg.msg_namelen = sizeof(struct sockaddr);
@@ -558,10 +563,10 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	msg.msg_iovlen = 1;
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
-	msg.msg_flags = 0;
+	msg.msg_flags = flags;
 
 	/* send message */
-	ret = sock->ops->sendmsg(sock, &msg, sock->file->f_flags & O_NONBLOCK, flags);
+	ret = sock->ops->sendmsg(sock, &msg, len);
 out:
 	sockfd_put(sock);
 	return ret;
@@ -572,7 +577,9 @@ out:
  */
 int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 {
+	struct msghdr msg_sys;
 	struct socket *sock;
+	size_t len, i;
 	int ret;
 
 	/* find socket */
@@ -585,7 +592,19 @@ int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 	if (!sock->ops || !sock->ops->sendmsg)
 		goto out;
 
-	ret = sock->ops->sendmsg(sock, msg, sock->file->f_flags & O_NONBLOCK, flags);
+	/* compute data length */
+	len = 0;
+	for (i = 0; i < msg->msg_iovlen; i++)
+		len += msg->msg_iov[i].iov_len;
+
+	/* fix flags */
+	memcpy(&msg_sys, msg, sizeof(struct msghdr));
+	msg_sys.msg_flags = flags;
+	if (sock->file->f_flags & O_NONBLOCK)
+		msg_sys.msg_flags |= MSG_DONTWAIT;
+
+	/* send message */
+	ret = sock->ops->sendmsg(sock, &msg_sys, len);
 out:
 	sockfd_put(sock);
 	return ret;
