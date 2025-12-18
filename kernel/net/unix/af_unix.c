@@ -32,14 +32,17 @@ static unix_socket_t *unix_find_socket_by_inode(struct inode *inode)
 /*
  * Find a UNIX socket.
  */
-static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen)
+static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen, int type)
 {
 	struct list_head *pos;
 	unix_socket_t *sk;
 
 	list_for_each(pos, &unix_sockets) {
 		sk = list_entry(pos, unix_socket_t, list);
-		if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0)
+		if (sk
+			&& sk->protinfo.af_unix.sunaddr_len == addrlen
+			&& sk->type == type
+			&& memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0)
 			return sk;
 	}
 
@@ -49,35 +52,46 @@ static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size
 /*
  * Find other UNIX socket.
  */
-static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_socket_t **res)
+static unix_socket_t *unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, int type, int *error)
 {
 	struct dentry *dentry;
-	int ret = 0;
+	unix_socket_t *res;
 
-	/* reset result socket */
-	*res = NULL;
-
-	/* abstract socket */
-	if (!sunaddr->sun_path[0]) {
-		*res = unix_find_socket_by_name(sunaddr, addrlen);
-		if (!*res)
-			ret = -ECONNREFUSED;
-	} else {
+	if (sunaddr->sun_path[0]) {
 		/* resolve socket path */
 		dentry = open_namei(AT_FDCWD, sunaddr->sun_path, S_IFSOCK, 0);
-		if (IS_ERR(dentry))
-			return PTR_ERR(dentry);
+		if (IS_ERR(dentry)) {
+			*error = PTR_ERR(dentry);
+			return NULL;
+		}
 
 		/* find UNIX socket */
-		*res = unix_find_socket_by_inode(dentry->d_inode);
-		if (!*res)
-			ret = -ECONNREFUSED;
+		res = unix_find_socket_by_inode(dentry->d_inode);
+		if (res && res->type == type)
+			update_atime(dentry->d_inode);
 
 		/* release dentry */
 		dput(dentry);
+
+		/* handle error */
+		if (res && res->type != type) {
+			*error = -EPROTOTYPE;
+			return NULL;
+		}
+	} else {
+		res = unix_find_socket_by_name(sunaddr, addrlen, type);
+		if (res) {
+			dentry = res->protinfo.af_unix.dentry;
+			if (dentry)
+				update_atime(dentry->d_inode);
+		}
 	}
 
-	return ret;
+	/* handle error */
+	if (!res)
+		*error = -ECONNREFUSED;
+
+	return res;
 }
 
 /*
@@ -256,8 +270,8 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 
 	/* find other socket */
 	if (sunaddr) {
-		ret = unix_find_other(sunaddr, msg->msg_namelen, &other);
-		if (ret)
+		other = unix_find_other(sunaddr, msg->msg_namelen, sk->type, &ret);
+		if (!other)
 			return ret;
 	} else {
 		other = sk->protinfo.af_unix.other;
@@ -326,7 +340,7 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 	/* abstract socket */
 	if (!sunaddr->sun_path[0]) {
 		/* check if socket already exists */
-		if (unix_find_socket_by_name(sunaddr, addrlen) != NULL)
+		if (unix_find_socket_by_name(sunaddr, addrlen, sk->type) != NULL)
 			return -EADDRINUSE;
 	} else {
 		/* create socket file */
@@ -446,8 +460,8 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 		return -EINVAL;
 
 	/* find other unix socket */
-	ret = unix_find_other(sunaddr, addrlen, &other);
-	if (ret)
+	other = unix_find_other(sunaddr, addrlen, sock->type, &ret);
+	if (!other)
 		return ret;
 
 	/* datagramm socket : just connect */

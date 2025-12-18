@@ -30,6 +30,7 @@ struct unix_opt {
  */
 struct sock {
 	uint16_t			family;
+	uint16_t			type;
 	uint16_t			protocol;
 	struct socket *			sock;
 	off_t				msg_position;

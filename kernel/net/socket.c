@@ -51,6 +51,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 	INIT_LIST_HEAD(&sk->skb_list);
 	sk->rcvbuf = SK_RMEM_MAX;
 	sk->sndbuf = SK_WMEM_MAX;
+	sk->type = sock->type;
 	sk->sock = sock;
 	sock->sk = sk;
 	sk->peercred.pid = 0;
