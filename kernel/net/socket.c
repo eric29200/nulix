@@ -2,11 +2,15 @@
 #include <net/sock.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
+#include <net/unix/af_unix.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <string.h>
 #include <fcntl.h>
 #include <uio.h>
+
+/* protocol families */
+struct net_proto_family *net_families[NPROTO] = { 0 };
 
 /* socket file operations */
 struct file_operations socket_fops;
@@ -25,7 +29,7 @@ static struct socket *sock_alloc()
 		return NULL;
 
 	/* set inode */
-	inode->i_mode = S_IFSOCK;
+	inode->i_mode = S_IFSOCK | S_IRWXUGO;
 	inode->i_sock = 1;
 	inode->i_uid = current_task->fsuid;
 	inode->i_gid = current_task->fsgid;
@@ -42,11 +46,16 @@ static struct socket *sock_alloc()
 /*
  * Init socket data.
  */
-void sock_init_data(struct socket *sock)
+void sock_init_data(struct socket *sock, struct sock *sk)
 {
-	sock->sk->peercred.pid = 0;
-	sock->sk->peercred.uid = -1;
-	sock->sk->peercred.gid = -1;
+	INIT_LIST_HEAD(&sk->skb_list);
+	sk->rcvbuf = SK_RMEM_MAX;
+	sk->sndbuf = SK_WMEM_MAX;
+	sk->sock = sock;
+	sock->sk = sk;
+	sk->peercred.pid = 0;
+	sk->peercred.uid = -1;
+	sk->peercred.gid = -1;
 }
 
 /*
@@ -312,18 +321,12 @@ struct file_operations socket_fops = {
  */
 static int sock_create(int domain, int type, int protocol, struct socket **res)
 {
-	struct prot_ops *sock_ops;
 	struct socket *sock;
 	int ret;
 
-	/* choose protocol operations */
-	switch (domain) {
-		case AF_UNIX:
-			sock_ops = &unix_ops;
-			break;
-		default:
-			return -EAFNOSUPPORT;
-	}
+	/* check domain */
+	if (domain < 0 || domain >= NPROTO || !net_families[domain])
+		return -EAFNOSUPPORT;
 
 	/* check type */
 	if ((type != SOCK_STREAM && type != SOCK_DGRAM && type != SOCK_RAW) || protocol < 0)
@@ -335,25 +338,17 @@ static int sock_create(int domain, int type, int protocol, struct socket **res)
 		return -ENFILE;
 
 	/* set socket */
-	sock->family = domain;
 	sock->type = type;
-	sock->ops = sock_ops;
-
-	/* create not implemented */
-	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->create)
-		goto err;
 
 	/* create socket */
-	ret = sock->ops->create(sock, protocol);
-	if (ret)
-		goto err;
+	ret = net_families[domain]->create(sock, protocol);
+	if (ret) {
+		sock_release(sock);
+		return ret;
+	}
 
 	*res = sock;
 	return 0;
-err:
-	sock_release(sock);
-	return ret;
 }
 
 /*
@@ -917,4 +912,25 @@ int sys_socketcall(int call, unsigned long *args)
 	}
 
 	return ret;
+}
+
+/*
+ * Register a protocol family.
+ */
+int sock_register(struct net_proto_family *ops)
+{
+	/* check family */
+	if (ops->family >= NPROTO)
+		return -ENOBUFS;
+
+	net_families[ops->family] = ops;
+	return 0;
+}
+
+/*
+ * Init protocols.
+ */
+void init_proto()
+{
+	unix_proto_init();
 }

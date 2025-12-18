@@ -29,6 +29,7 @@ struct unix_opt {
  * Internal socket.
  */
 struct sock {
+	uint16_t			family;
 	uint16_t			protocol;
 	struct socket *			sock;
 	off_t				msg_position;
@@ -57,12 +58,7 @@ struct proto {
 	int (*accept)(struct sock *, struct sock *);
 };
 
-/* inet protocols */
-extern struct proto udp_proto;
-extern struct proto tcp_proto;
-extern struct proto raw_proto;
-extern struct proto icmp_proto;
-
+struct sock *sk_alloc(int family, int zero_it);
 struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonblock, int *err);
 
 #endif

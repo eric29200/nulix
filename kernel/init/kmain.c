@@ -240,6 +240,10 @@ static void kinit()
 	printf("[Kernel] Binary formats Init\n");
 	init_binfmt();
 
+	/* init sockets */
+	printf("[Kernel] Sockets Init\n");
+	init_proto();
+
 	/* register filesystems */
 	printf("[Kernel] Register file systems\n");
 	if (init_minix_fs())

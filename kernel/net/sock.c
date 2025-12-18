@@ -55,3 +55,34 @@ struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonbloc
 
 	return skb;
 }
+
+/*
+ * Duplicate a socket.
+ */
+int sock_no_dup(struct socket *sock, struct socket *sock_new)
+{
+	struct sock *sk = sock->sk;
+	return net_families[sk->family]->create(sock_new, sk->protocol);
+}
+
+/*
+ * Allocate a socket.
+ */
+struct sock *sk_alloc(int family, int zero_it)
+{
+	struct sock *sk;
+
+	/* allocate socket */
+	sk = (struct sock *) kmalloc(sizeof(struct sock));
+	if (!sk)
+		return NULL;
+
+	/* zero it */
+	if (zero_it)
+		memset(sk, 0, sizeof(struct sock));
+
+	/* set family */
+	sk->family = family;
+
+	return sk;
+}

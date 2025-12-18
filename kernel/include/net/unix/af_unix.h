@@ -5,4 +5,6 @@
 
 typedef struct sock unix_socket_t;
 
+void unix_proto_init();
+
 #endif

@@ -41,9 +41,12 @@
 #define	EIDRM		43	/* Identifier removed */
 #define	ENOSR		63	/* Out of streams resources */
 #define	ENOTSOCK	88	/* Socket operation on non-socket */
+#define	EPROTONOSUPPORT	93	/* Protocol not supported */
+#define	ESOCKTNOSUPPORT	94	/* Socket type not supported */
 #define	EOPNOTSUPP	95	/* Operation not supported on transport endpoint */
 #define	EAFNOSUPPORT	97	/* Address family not supported by protocol */
 #define	EADDRINUSE	98	/* Address already in use */
+#define	ENOBUFS		105	/* No buffer space available */
 #define ENOTCONN	107	/* Transport endpoint is not connected */
 #define ECONNREFUSED	111	/* Connection refused */
 #define ERESTARTSYS	512	/* Restart system call */
