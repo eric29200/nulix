@@ -50,7 +50,7 @@ void flush_tlb(pgd_t *pgd)
 /*
  * Allocate a new page directory entry.
  */
-static inline pmd_t *pmd_alloc(pgd_t *pgd, uint32_t address)
+pmd_t *pmd_alloc(pgd_t *pgd, uint32_t address)
 {
 	UNUSED(address);
 	return (pmd_t *) pgd;
@@ -59,7 +59,7 @@ static inline pmd_t *pmd_alloc(pgd_t *pgd, uint32_t address)
 /*
  * Allocate a new page table entry.
  */
-static pte_t *pte_alloc(pmd_t *pmd, uint32_t address)
+pte_t *pte_alloc(pmd_t *pmd, uint32_t address)
 {
 	uint32_t offset = address = (address >> (PAGE_SHIFT - 2)) & 4 * (PTRS_PER_PTE - 1);
 	pte_t *pte;

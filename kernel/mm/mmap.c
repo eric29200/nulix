@@ -106,28 +106,150 @@ void remove_vma(struct vm_area *vma)
 }
 
 /*
+ * Get one page table entry.
+ */
+static pte_t *get_one_pte(struct mm_struct *mm, uint32_t address)
+{
+	pgd_t *pgd;
+	pmd_t *pmd;
+	pte_t *pte;
+
+	/* get pgd */
+	pgd = pgd_offset(mm->pgd, address);
+
+	/* get pmd */
+	pmd = pmd_offset(pgd);
+	if (pmd_none(*pmd))
+		return NULL;
+
+	/* get pte */
+	pte = pte_offset(pmd, address);
+	if (pte_none(*pte))
+		return NULL;
+
+	return pte;
+}
+
+/*
+ * Allocate one page table entry.
+ */
+static pte_t *alloc_one_pte(struct mm_struct *mm, uint32_t address)
+{
+	pgd_t *pgd;
+	pmd_t *pmd;
+
+	/* get pgd */
+	pgd = pgd_offset(mm->pgd, address);
+
+	/* get pmd */
+	pmd = pmd_alloc(pgd, address);
+	if (!pmd)
+		return NULL;
+
+	/* allocate page table entry */
+	return pte_alloc(pmd, address);
+}
+
+/*
+ * Copy one page table entry.
+ */
+static int copy_one_pte(pte_t *src, pte_t *dst)
+{
+	int err = 0;
+	pte_t pte;
+
+	/* check src */
+	if (pte_none(*src))
+		return 0;
+
+	/* get pte src and clear it */
+	pte = *src;
+	pte_clear(src);
+
+	/* no dst : restore it */
+	if (!dst) {
+		dst = src;
+		err = 1;
+	}
+
+	/* set dst */
+	*dst = pte;
+
+	return err;
+}
+
+/*
+ * Move one page.
+ */
+static int move_one_page(struct mm_struct *mm, uint32_t old_address, uint32_t new_address)
+{
+	pte_t *src, *dst;
+
+	/* get old pte */
+	src = get_one_pte(mm, old_address);
+	if (!src)
+		return 0;
+
+	/* allocate new pte */
+	dst = alloc_one_pte(mm, new_address);
+
+	/* copy pte */
+	return copy_one_pte(src, dst);
+}
+
+/*
+ * Move page tables.
+ */
+static int move_page_tables(struct mm_struct *mm, uint32_t new_address, uint32_t old_address, size_t len)
+{
+	uint32_t offset = len;
+
+	/* move page one by one */
+	while (offset) {
+		offset -= PAGE_SIZE;
+		if (move_one_page(mm, old_address + offset, new_address + offset))
+			goto err;
+	}
+
+	flush_tlb(mm->pgd);
+	return 0;
+err:
+	/* move pages back */
+	while ((offset += PAGE_SIZE) < len)
+		move_one_page(mm, new_address + offset, old_address + offset);
+	zap_page_range(mm->pgd, new_address, len);
+	return -ENOMEM;
+}
+
+/*
  * Move a memory region.
  */
 static uint32_t move_vma(struct vm_area *vma, uint32_t old_address, size_t old_size, uint32_t new_address, size_t new_size)
 {
 	struct vm_area *vma_new;
+	int ret;
 
 	/* create new memory region */
 	vma_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 	if (!vma_new)
 		return -ENOMEM;
 
+	/* move page tables */
+	ret = move_page_tables(current_task->mm, new_address, old_address, old_size);
+	if (ret) {
+		kfree(vma_new);
+		return ret;
+	}
+
 	/* set new memory region */
 	*vma_new = *vma;
 	vma_new->vm_start = new_address;
 	vma_new->vm_end = new_address + new_size;
+	vma_new->vm_offset = vma->vm_offset + (old_address - vma->vm_start);
 	if (vma_new->vm_file)
 		vma_new->vm_file->f_count++;
 	if (vma_new->vm_file && vma_new->vm_ops && vma_new->vm_ops->open)
 		vma_new->vm_ops->open(vma_new);
-
-	/* unmap existing pages */
-	do_munmap(new_address, new_size);
 
 	/* insert new memory region */
 	insert_vma(vma_new);

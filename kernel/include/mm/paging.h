@@ -164,6 +164,8 @@ void free_pgd(pgd_t *pgd);
 void flush_tlb_page(pgd_t *pgd, uint32_t address);
 void flush_tlb(pgd_t *pgd);
 void wait_on_page(struct page *page);
+pmd_t *pmd_alloc(pgd_t *pgd, uint32_t address);
+pte_t *pte_alloc(pmd_t *pmd, uint32_t address);
 
 /* page allocation */
 int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end);
