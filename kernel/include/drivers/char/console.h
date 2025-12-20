@@ -75,6 +75,7 @@ struct vc {
 	uint8_t			vc_reverse;						/* reverse mode */
 	uint16_t		vc_erase_char;						/* erase character */
 	uint8_t			vc_deccm:1;						/* cursor visible */
+	uint8_t			vc_decim:1;						/* insert mode */
 	uint8_t			vc_charset;						/* charset (g0 or g1) */
 	uint16_t *		vc_translate;						/* translation table */
 	uint8_t			vc_charset_g0;						/* g0 charset */

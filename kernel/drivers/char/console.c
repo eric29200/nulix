@@ -496,17 +496,26 @@ static void console_set_mode(struct vc *vc, int on_off)
 	size_t i;
 
 	for (i = 0; i <= vc->vc_npars; i++) {
-		switch (vc->vc_pars[i]) {
-			case 25:				/* cursor visible */
-				vc->vc_deccm = on_off;
-				if (vc->fb.active)
-					vc->fb.ops->show_cursor(&vc->fb, on_off);
-				break;
-			case 2004:				/* bracket mode = ignore */
-				break;
-			default:
-				printf("console : unknown mode : %d\n", vc->vc_pars[i]);
-				break;
+		if (vc->vc_ques) {
+			switch (vc->vc_pars[i]) {
+				case 25:				/* cursor visible */
+					vc->vc_deccm = on_off;
+					if (vc->fb.active)
+						vc->fb.ops->show_cursor(&vc->fb, on_off);
+					break;
+				default:
+					printf("console : unknown mode : %d\n", vc->vc_pars[i]);
+					break;
+			}
+		} else {
+			switch (vc->vc_pars[i]) {
+				case 4:					/* insert mode */
+					vc->vc_decim = on_off;
+					break;
+				default:
+					printf("console : unknown mode : %d\n", vc->vc_pars[i]);
+					break;
+			}
 		}
 	}
 }
@@ -680,6 +689,7 @@ static void console_reset(struct vc *vc)
 	vc->vc_reverse = 0;
 	vc->vc_erase_char = ' ' | (vc->vc_def_color << 8);
 	vc->vc_deccm = 1;
+	vc->vc_decim = 0;
 	vc->vc_attr = vc->vc_color;
 	set_translate(vc, LAT1_MAP);
 	reset_vc(vc);
@@ -979,6 +989,10 @@ static ssize_t console_write(struct tty *tty)
 		/* translate character */
 		tc = vc->vc_translate[c];
 
+		/* insert mode */
+		if (vc->vc_decim)
+			insert_char(vc);
+
 		/* just put new character */
 		if (vc->vc_state == TTY_STATE_NORMAL && tc >= 32) {
 			console_putc(vc, tc);
@@ -1264,6 +1278,7 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 		vc->vc_reverse = 0;
 		vc->vc_erase_char = ' ' | (vc->vc_def_color << 8);
 		vc->vc_deccm = 1;
+		vc->vc_decim = 0;
 		vc->vc_attr = vc->vc_color;
 		set_translate(vc, LAT1_MAP);
 		reset_vc(vc);
