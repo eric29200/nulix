@@ -62,7 +62,7 @@ static void rtl8139_receive_packet()
 			memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header), rx_header->size);
 
 			/* handle socket buffer */
-			net_handle(rtl8139_net_dev, skb);
+			net_handle(skb);
 		}
 
 		/* update received buffer pointer */

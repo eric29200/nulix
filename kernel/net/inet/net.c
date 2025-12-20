@@ -101,57 +101,6 @@ void skb_handle(struct sk_buff *skb)
 }
 
 /*
- * Network handler timer.
- */
-static void net_handler_timer(void *arg)
-{
-	struct net_device *net_dev = (struct net_device *) arg;
-	struct list_head *pos1, *n1, *pos2, *n2;
-	struct sk_buff *skb;
-	uint32_t flags;
-	int ret;
-
-	/* disable interrupts */
-	irq_save(flags);
-
-	/* handle incoming packets */
-	list_for_each_safe(pos1, n1, &net_dev->skb_input_list) {
-		/* get packet */
-		skb = list_entry(pos1, struct sk_buff, list);
-		list_del(&skb->list);
-
-		/* handle packet */
-		skb_handle(skb);
-
-		/* free packet */
-		skb_free(skb);
-	}
-
-	/* handle outcoming packets */
-	list_for_each_safe(pos2, n2, &net_dev->skb_output_list) {
-		/* get packet */
-		skb = list_entry(pos2, struct sk_buff, list);
-
-		/* rebuild ethernet header */
-		ret = ethernet_rebuild_header(net_dev, skb);
-
-		/* send packet and remove it from list */
-		if (ret == 0) {
-			list_del(&skb->list);
-			net_dev->send_packet(skb);
-			skb_free(skb);
-		}
-	}
-
-	/* wait for incoming packets = reschedule timer */
-	init_timer(&net_dev->timer, net_handler_timer, net_dev, jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS));
-	add_timer(&net_dev->timer);
-
-	/* enable interrupts */
-	irq_restore(flags);
-}
-
-/*
  * Register a network device.
  */
 struct net_device *register_net_device(uint32_t io_base, uint16_t type)
@@ -169,7 +118,6 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 	net_dev->type = type;
 	net_dev->index = nr_net_devices;
 	net_dev->io_base = io_base;
-	net_dev->wait = NULL;
 	INIT_LIST_HEAD(&net_dev->skb_input_list);
 	INIT_LIST_HEAD(&net_dev->skb_output_list);
 
@@ -183,10 +131,6 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 
 	/* set name */
 	memcpy(net_dev->name, tmp, len + 1);
-
-	/* create kernel timer to handle receive packets */
-	init_timer(&net_dev->timer, net_handler_timer, net_dev, jiffies + ms_to_jiffies(NET_HANDLE_FREQ_MS));
-	add_timer(&net_dev->timer);
 
 	/* update number of net devices */
 	nr_net_devices++;
@@ -294,31 +238,29 @@ int net_device_ifconf(struct ifconf *ifc)
 }
 
 /*
- * Handle network packet (put it in device queue).
+ * Handle network packet.
  */
-void net_handle(struct net_device *net_dev, struct sk_buff *skb)
+void net_handle(struct sk_buff *skb)
 {
 	if (!skb)
 		return;
 
-	/* put socket buffer in net device list */
-	list_add_tail(&skb->list, &net_dev->skb_input_list);
-
-	/* wake up handler */
-	wake_up(&net_dev->wait);
+	/* handle packet */
+	list_del(&skb->list);
+	skb_handle(skb);
+	skb_free(skb);
 }
 
 /*
- * Transmit a network packet (put it in device queue).
+ * Transmit a network packet.
  */
 void net_transmit(struct net_device *net_dev, struct sk_buff *skb)
 {
 	if (!skb)
 		return;
 
-	/* put socket buffer in net device list */
-	list_add_tail(&skb->list, &net_dev->skb_output_list);
-
-	/* wake up handler */
-	wake_up(&net_dev->wait);
+	/* send and free packet */
+	list_del(&skb->list);
+	net_dev->send_packet(skb);
+	skb_free(skb);
 }
