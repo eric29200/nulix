@@ -598,8 +598,8 @@ static int proc_pid_base_readdir(struct file *filp, void *dirent, filldir_t fill
 {
 	struct dentry *dentry = filp->f_dentry;
 	struct inode *inode = dentry->d_inode;
+	size_t i = filp->f_pos, nr_entries;
 	struct pid_entry *entry;
-	size_t i = filp->f_pos;
 	pid_t pid;
 
 	/* get task */
@@ -625,9 +625,11 @@ static int proc_pid_base_readdir(struct file *filp, void *dirent, filldir_t fill
 
 	/* add entries */
 	i -= 2;
-	if (i >= sizeof(pid_base_entries) / sizeof(pid_base_entries[0]))
+	nr_entries = sizeof(pid_base_entries) / sizeof(pid_base_entries[0]);
+	if (i >= nr_entries)
 		return 1;
-	for (entry = &pid_base_entries[i]; entry->name; entry++) {
+	for (; i < nr_entries; i++) {
+		entry = &pid_base_entries[i];
 		if (filldir(dirent, entry->name, entry->len, filp->f_pos, fake_ino(pid, entry->type)) < 0)
 			return 0;
 		filp->f_pos++;
@@ -643,10 +645,16 @@ static struct dentry *proc_pid_base_lookup(struct inode *dir, struct dentry *den
 {
 	struct task *task = dir->u.proc_i.task;
 	struct pid_entry *entry;
+	size_t nr_entries, i;
 	struct inode *inode;
+	
+	/* compute number of entries */
+	nr_entries = sizeof(pid_base_entries) / sizeof(pid_base_entries[0]);
 
 	/* find entry */
-	for (entry = pid_base_entries; entry->name; entry++) {
+	for (i = 0; i < nr_entries; i++) {
+		entry = &pid_base_entries[i];
+
 		if (entry->len != dentry->d_name.len)
 			continue;
 		if (!memcmp(dentry->d_name.name, entry->name, entry->len))
@@ -654,7 +662,7 @@ static struct dentry *proc_pid_base_lookup(struct inode *dir, struct dentry *den
 	}
 
 	/* no matching entry */
-	if (!entry->name)
+	if (i >= nr_entries)
 		return ERR_PTR(-ENOENT);
 
 	/* make an inode */
