@@ -29,27 +29,50 @@
  * Entry in <pid> directory.
  */
 struct pid_entry {
-	int		type;
-	size_t		len;
-	char *		name;
-	mode_t		mode;
+	int				type;
+	char *				name;
+	size_t				len;
+	mode_t				mode;
+	struct inode_operations *	i_op;
+	union proc_op			op;
 };
+
+#define NOD(TYPE, NAME, MODE, IOP, OP) {		\
+	.type = TYPE,					\
+	.name = (NAME),					\
+	.len  = sizeof(NAME) - 1,			\
+	.mode = MODE,					\
+	.i_op = IOP,					\
+	.op   = OP,					\
+}
+
+#define REG(type, NAME, MODE, IOP)		NOD(type, NAME, (S_IFREG | (MODE)), &IOP, {})
+#define INF(type, NAME, MODE, read)		NOD(type, NAME, (S_IFREG | (MODE)), &proc_base_file_iops, { .proc_read = read })
+#define LNK(type, NAME, get_link)		NOD(type, NAME, (S_IFLNK | S_IRWXUGO), &proc_base_link_iops, { .proc_get_link = get_link })
+#define DIR(type, NAME, MODE, IOP)		NOD(type, NAME, (S_IFDIR | (MODE)), &IOP, {})
+
+static struct inode_operations proc_base_file_iops;
+static struct inode_operations proc_base_maps_iops;
+static struct inode_operations proc_base_link_iops;
+static struct inode_operations proc_fd_iops;
+static int proc_root_link(struct task *task, struct dentry **dentry);
+static int proc_cwd_link(struct task *task, struct dentry **dentry);
+static int proc_exe_link(struct task *task, struct dentry **dentry);
 
 /*
  * <pid> entries.
  */
 static struct pid_entry pid_base_entries[] = {
-	{ PROC_PID_STAT,	4,	"stat",		S_IFREG | S_IRUGO		},
-	{ PROC_PID_STATUS,	6,	"status",	S_IFREG | S_IRUGO		},
-	{ PROC_PID_STATM,	5,	"statm",	S_IFREG | S_IRUGO		},
-	{ PROC_PID_ROOT,	4,	"root",		S_IFLNK | S_IRWXUGO		},
-	{ PROC_PID_CWD,		3,	"cwd",		S_IFLNK | S_IRWXUGO		},
-	{ PROC_PID_EXE,		3,	"exe",		S_IFLNK | S_IRWXUGO		},
-	{ PROC_PID_CMDLINE,	7,	"cmdline",	S_IFREG | S_IRUGO		},
-	{ PROC_PID_ENVIRON,	7,	"environ",	S_IFREG | S_IRUGO		},
-	{ PROC_PID_MAPS,	4,	"maps",		S_IFREG | S_IRUGO		},
-	{ PROC_PID_FD,		2,	"fd",		S_IFDIR | S_IRUSR | S_IXUSR	},
-	{ 0,			0,	NULL,		0				},
+	INF(PROC_PID_STAT,	"stat",		S_IRUGO,		proc_stat_read		),
+	INF(PROC_PID_STATUS,	"status",	S_IRUGO,		proc_status_read	),
+	INF(PROC_PID_STATM,	"statm",	S_IRUGO,		proc_statm_read		),
+	INF(PROC_PID_CMDLINE,	"cmdline",	S_IRUGO,		proc_cmdline_read	),
+	INF(PROC_PID_ENVIRON,	"environ",	S_IRUGO,		proc_environ_read	),
+	REG(PROC_PID_MAPS,	"maps",		S_IRUGO,		proc_base_maps_iops	),
+	LNK(PROC_PID_ROOT,	"root",		proc_root_link					),
+	LNK(PROC_PID_CWD,	"cwd",		proc_cwd_link					),
+	LNK(PROC_PID_EXE,	"exe",		proc_exe_link					),
+	DIR(PROC_PID_FD,	"fd",		S_IRUSR | S_IXUSR,	proc_fd_iops		),
 };
 
 /*
@@ -341,7 +364,7 @@ static ssize_t proc_base_readlink(struct dentry *dentry, char *buf, size_t bufsi
 	int ret;
 
 	/* get link */
-	ret = inode->u.proc_i.proc_get_link(task, &res);
+	ret = inode->u.proc_i.op.proc_get_link(task, &res);
 	if (ret)
 		return ret;
 
@@ -371,7 +394,7 @@ static struct dentry *proc_base_follow_link(struct dentry *dentry, struct dentry
 		return ERR_PTR(ret);
 
 	/* get link */
-	ret = inode->u.proc_i.proc_get_link(task, &res);
+	ret = inode->u.proc_i.op.proc_get_link(task, &res);
 	if (ret)
 		return ERR_PTR(ret);
 
@@ -402,7 +425,7 @@ static int proc_base_read(struct file *filp, char *buf, size_t count, off_t *ppo
 		return -ENOMEM;
 
 	/* read informations */
-	len = inode->u.proc_i.proc_read(task, page);
+	len = inode->u.proc_i.op.proc_read(task, page);
 
 	/* file position after end */
 	if (*ppos >= len) {
@@ -641,51 +664,10 @@ static struct dentry *proc_pid_base_lookup(struct inode *dir, struct dentry *den
 
 	/* set inode */
 	inode->i_mode = entry->mode;
-	switch(entry->type) {
-		case PROC_PID_STAT:
-			inode->i_op = &proc_base_file_iops;
-			inode->u.proc_i.proc_read = proc_stat_read;
-			break;
-		case PROC_PID_STATUS:
-			inode->i_op = &proc_base_file_iops;
-			inode->u.proc_i.proc_read = proc_status_read;
-			break;
-		case PROC_PID_STATM:
-			inode->i_op = &proc_base_file_iops;
-			inode->u.proc_i.proc_read = proc_statm_read;
-			break;
-		case PROC_PID_ROOT:
-			inode->i_op = &proc_base_link_iops;
-			inode->u.proc_i.proc_get_link = proc_root_link;
-			break;
-		case PROC_PID_CWD:
-			inode->i_op = &proc_base_link_iops;
-			inode->u.proc_i.proc_get_link = proc_cwd_link;
-			break;
-		case PROC_PID_EXE:
-			inode->i_op = &proc_base_link_iops;
-			inode->u.proc_i.proc_get_link = proc_exe_link;
-			break;
-		case PROC_PID_CMDLINE:
-			inode->i_op = &proc_base_file_iops;
-			inode->u.proc_i.proc_read = proc_cmdline_read;
-			break;
-		case PROC_PID_ENVIRON:
-			inode->i_op = &proc_base_file_iops;
-			inode->u.proc_i.proc_read = proc_environ_read;
-			break;
-		case PROC_PID_MAPS:
-		 	inode->i_op = &proc_base_maps_iops;
-			break;
-		case PROC_PID_FD:
-			inode->i_nlinks = 2;
-			inode->i_op = &proc_fd_iops;
-			break;
-		default:
-			printf("procfs: unknown type (%d)\n", entry->type);
-			iput(inode);
-			return ERR_PTR(-EINVAL);
-	}
+	inode->i_op = entry->i_op;
+	inode->u.proc_i.op = entry->op;
+	if (S_ISDIR(inode->i_mode))
+		inode->i_nlinks = 2;
 
 	dentry->d_op = &pid_dentry_operations;
 	d_add(dentry, inode);
