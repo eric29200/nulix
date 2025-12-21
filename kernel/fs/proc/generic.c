@@ -3,6 +3,10 @@
 #include <stderr.h>
 #include <stdio.h>
 
+#define PROC_DYNAMIC_FIRST	0xF0000000U
+#define PROC_NDYNAMIC		4096
+
+
 /* dynamic inodes bitmap */
 static uint8_t proc_alloc_map[PROC_NDYNAMIC / 8] = { 0 };
 
@@ -41,14 +45,14 @@ static int xlate_proc_name(const char *name, struct proc_dir_entry **ret, const 
 /*
  * Create a dynamic inode number.
  */
-static int make_inode_number()
+static ino_t make_inode_number()
 {
 	int i;
 
 	/* find first free inode */
 	i = find_first_zero_bit((uint32_t *) proc_alloc_map, PROC_NDYNAMIC);
 	if (i < 0 || i >= PROC_NDYNAMIC)
-		return -1;
+		return 0;
 
 	/* set inode */
 	set_bit((uint32_t *) proc_alloc_map, i);
@@ -60,14 +64,14 @@ static int make_inode_number()
  */
 int proc_register(struct proc_dir_entry *dir, struct proc_dir_entry *de)
 {
-	int i;
+	ino_t ino;
 
 	/* create an inode number if needed */
 	if (de->low_ino == 0) {
-		i = make_inode_number();
-		if (i < 0)
+		ino = make_inode_number();
+		if (!ino)
 			return -EAGAIN;
-		de->low_ino = i;
+		de->low_ino = ino;
 	}
 
 	/* set parent */

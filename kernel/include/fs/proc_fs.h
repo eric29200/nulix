@@ -8,9 +8,6 @@
 
 #define FIRST_PROCESS_ENTRY	256
 
-#define PROC_DYNAMIC_FIRST	4096
-#define PROC_NDYNAMIC		4096
-
 /* root directory */
 #define PROC_ROOT_INO		1
 
