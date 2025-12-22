@@ -16,8 +16,8 @@ union proc_op {
  * Proc in memory inode.
  */
 struct proc_inode_info {
-	struct task *		task;
-	struct file *		filp;
+	pid_t			pid;
+	int			fd;
 	union proc_op		op;
 };
 

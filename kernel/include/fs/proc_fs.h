@@ -11,9 +11,6 @@
 /* root directory */
 #define PROC_ROOT_INO		1
 
-/* /<pid>/fd directories */
-#define PROC_PID_FD_DIR		0x8000
-
 /* read proc prototype */
 typedef	int (read_proc_t)(char *, char **, off_t off, size_t, int *);
 

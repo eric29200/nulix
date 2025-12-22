@@ -48,6 +48,17 @@ uint32_t end_name_hash(uint32_t hash)
 }
 
 /*
+ * Compute full hash.
+ */
+uint32_t full_name_hash(const char *name, size_t len)
+{
+	uint32_t hash = init_name_hash();
+	while (len--)
+		hash = partial_name_hash(*name++, hash);
+	return end_name_hash(hash);
+}
+
+/*
  * Compute hash.
  */
 static struct list_head *d_hash(struct dentry * parent, uint32_t hash)
@@ -349,6 +360,39 @@ struct dentry *d_lookup(struct dentry *parent, struct qstr *name)
 	}
 
 	return NULL;
+}
+
+/*
+ * Lookup in cache.
+ */
+struct dentry *d_hash_and_lookup(struct dentry *dir, struct qstr *name)
+{
+	/* hash */
+	name->hash = full_name_hash(name->name, name->len);
+
+	/* lookup */
+	return d_lookup(dir, name);
+}
+
+/*
+ * Find an inode number.
+ */
+ino_t find_inode_number(struct dentry *dir, struct qstr *name)
+{
+	struct dentry *dentry;
+	ino_t ino = 0;
+
+	/* lookup dentry */
+	dentry = d_hash_and_lookup(dir, name);
+	if (!dentry)
+		return 0;
+
+	/* get inode number */
+	if (dentry->d_inode)
+		ino = dentry->d_inode->i_ino;
+
+	dput(dentry);
+	return ino;
 }
 
 /*
