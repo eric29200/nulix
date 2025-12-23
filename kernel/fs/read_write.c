@@ -7,38 +7,6 @@
 #include <string.h>
 
 /*
- * Read system call.
- */
-static ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos)
-{
-	/* no data to read */
-	if (!count)
-		return 0;
-
-	/* read not implemented */
-	if (!filp->f_op || !filp->f_op->read)
-		return -EPERM;
-
-	return filp->f_op->read(filp, buf, count, ppos);
-}
-
-/*
- * Write system call.
- */
-static ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
-{
-	/* no data to write */
-	if (!count)
-		return 0;
-
-	/* write not implemented */
-	if (!filp->f_op || !filp->f_op->write)
-		return -EPERM;
-
-	return filp->f_op->write(filp, buf, count, ppos);
-}
-
-/*
  * Generic lseek.
  */
 static off_t generic_file_llseek(struct file *filp, off_t offset, int whence)
@@ -139,22 +107,73 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
 /*
  * Read system call.
  */
+static ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos)
+{
+	ssize_t ret;
+
+	/* no data to read */
+	if (!count)
+		return 0;
+
+	/* read not implemented */
+	if (!filp->f_op || !filp->f_op->read)
+		return -EPERM;
+
+	/* read */
+	ret = filp->f_op->read(filp, buf, count, ppos);
+
+	/* update io accounting */
+	if (ret > 0)
+		current_task->ioac.rchar += ret;
+
+	return ret;
+}
+
+/*
+ * Write system call.
+ */
+static ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
+{
+	ssize_t ret;
+
+	/* no data to write */
+	if (!count)
+		return 0;
+
+	/* write not implemented */
+	if (!filp->f_op || !filp->f_op->write)
+		return -EPERM;
+
+	/* write */
+	ret = filp->f_op->write(filp, buf, count, ppos);
+
+	/* update io accounting */
+	if (ret > 0)
+		current_task->ioac.wchar += ret;
+
+	return ret;
+}
+
+/*
+ * Read system call.
+ */
 int sys_read(int fd, char *buf, int count)
 {
 	struct file *filp;
-	int ret;
+	int ret = -EBADF;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
-		return -EBADF;
+		goto out;
 
 	/* do read */
 	ret = do_read(filp, buf, count, &filp->f_pos);
 
 	/* release file */
 	fput(filp);
-
+out:
+	current_task->ioac.syscr++;
 	return ret;
 }
 
@@ -164,19 +183,20 @@ int sys_read(int fd, char *buf, int count)
 int sys_write(int fd, const char *buf, int count)
 {
 	struct file *filp;
-	int ret;
+	int ret = -EBADF;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
-		return -EBADF;
+		goto out;
 
 	/* do write */
 	ret = do_write(filp, buf, count, &filp->f_pos);
 
 	/* release file */
 	fput(filp);
-
+out:
+	current_task->ioac.syscw++;
 	return ret;
 }
 
@@ -185,16 +205,17 @@ int sys_write(int fd, const char *buf, int count)
  */
 ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 {
-	ssize_t ret = 0, n;
+	ssize_t ret = -EBADF, n;
 	struct file *filp;
 	int i;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
-		return -EBADF;
+		goto out;
 
 	/* read into each buffer */
+	ret = 0;
 	for (i = 0; i < iovcnt; i++, iov++) {
 		/* read into buffer */
 		n = do_read(filp, iov->iov_base, iov->iov_len, &filp->f_pos);
@@ -211,7 +232,8 @@ ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 
 	/* release file */
 	fput(filp);
-
+out:
+	current_task->ioac.syscr++;
 	return ret;
 }
 
@@ -220,16 +242,17 @@ ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
  */
 ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 {
-	ssize_t ret = 0, n;
+	ssize_t ret = -EBADF, n;
 	struct file *filp;
 	int i;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
-		return -EBADF;
+		goto out;
 
 	/* write each buffer */
+	ret = 0;
 	for (i = 0; i < iovcnt; i++, iov++) {
 		/* write into buffer */
 		n = do_write(filp, iov->iov_base, iov->iov_len, &filp->f_pos);
@@ -246,7 +269,8 @@ ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 
 	/* release file */
 	fput(filp);
-
+out:
+	current_task->ioac.syscw++;
 	return ret;
 }
 
@@ -256,19 +280,20 @@ ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 int sys_pread64(int fd, void *buf, size_t count, off_t offset)
 {
 	struct file *filp;
-	int ret;
+	int ret = EBADF;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
-		return -EBADF;
+		goto out;
 
 	/* do pread */
 	ret = do_read(filp, buf, count, &offset);
 
 	/* release file */
 	fput(filp);
-
+out:
+	current_task->ioac.syscr++;
 	return ret;
 }
 
@@ -330,6 +355,10 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 
 	/* free page */
 	free_page(buf);
+
+	/* update io accounting */
+	current_task->ioac.syscr++;
+	current_task->ioac.syscw++;
 
 	return n < 0 ? n : tot;
 }

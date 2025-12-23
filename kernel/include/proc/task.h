@@ -90,6 +90,19 @@ struct signal_struct {
 };
 
 /*
+ * I/O accounting.
+ */
+struct task_io_accounting {
+	uint64_t			rchar;				/* bytes read */
+	uint64_t			wchar;				/* bytes written */
+	uint64_t			syscr;				/* number of read syscalls */
+	uint64_t			syscw;				/* number of write syscalls */
+	uint64_t			read_bytes;			/* number of bytes read from storage */
+	uint64_t			write_bytes;			/* number of bytes written to storage */
+	uint64_t			cancelled_write_bytes;		/* "negative" IO */
+};
+
+/*
  * Kernel task structure.
  */
 struct task {
@@ -127,6 +140,7 @@ struct task {
 	sigset_t			blocked;			/* blocked signals */
 	sigset_t			saved_sigmask;			/* saved signals mask */
 	char				in_syscall;			/* process in system call */
+	struct task_io_accounting	ioac;				/* i/o accounting */
 	struct rlimit			rlim[RLIM_NLIMITS];		/* resource limits */
 	struct registers		signal_regs;			/* saved registers at signal entry */
 	struct timer_event		real_timer;			/* timer */

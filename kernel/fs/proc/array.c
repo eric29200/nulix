@@ -345,3 +345,27 @@ int proc_environ_read(struct task *task, char *page)
 
 	return p - page;
 }
+
+/*
+ * Read process io.
+ */
+int proc_io_read(struct task *task, char *page)
+{
+	struct task_io_accounting acct = task->ioac;
+
+	return sprintf(page,
+			"rchar: %llu\n"
+			"wchar: %llu\n"
+			"syscr: %llu\n"
+			"syscw: %llu\n"
+			"read_bytes: %llu\n"
+			"write_bytes: %llu\n"
+			"cancelled_write_bytes: %llu\n",
+			acct.rchar,
+			acct.wchar,
+			acct.syscr,
+			acct.syscw,
+			acct.read_bytes,
+			acct.write_bytes,
+			acct.cancelled_write_bytes);
+}

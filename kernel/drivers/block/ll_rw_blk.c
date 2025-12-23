@@ -1,4 +1,5 @@
 #include <drivers/block/blk_dev.h>
+#include <proc/sched.h>
 #include <stderr.h>
 #include <stdio.h>
 
@@ -125,6 +126,12 @@ static void make_request(int rw, struct buffer_head *bh)
 	struct blk_dev *bdev;
 	uint32_t sector;
 	size_t count;
+
+	/* update i/o accounting */
+	if (rw == READ)
+		current_task->ioac.read_bytes += bh->b_size;
+	else if (rw == WRITE)
+		current_task->ioac.write_bytes += bh->b_size;
 
 	/* lock buffer */
 	lock_buffer(bh);

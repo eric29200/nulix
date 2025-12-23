@@ -69,6 +69,7 @@ static struct pid_entry pid_base_entries[] = {
 	INF("statm",	S_IRUGO,		proc_statm_read		),
 	INF("cmdline",	S_IRUGO,		proc_cmdline_read	),
 	INF("environ",	S_IRUGO,		proc_environ_read	),
+	INF("io",	S_IRUGO,		proc_io_read	),
 	REG("maps",	S_IRUGO,		proc_base_maps_iops	),
 	LNK("root",				proc_root_link		),
 	LNK("cwd",				proc_cwd_link		),
