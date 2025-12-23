@@ -48,6 +48,7 @@ static struct inode_operations proc_base_file_iops;
 static struct inode_operations proc_base_link_iops;
 static struct inode_operations proc_base_maps_iops;
 static struct inode_operations proc_fd_iops;
+static struct inode_operations proc_task_iops;
 static int proc_root_link(struct task *task, struct dentry **dentry);
 static int proc_cwd_link(struct task *task, struct dentry **dentry);
 static int proc_exe_link(struct task *task, struct dentry **dentry);
@@ -73,6 +74,7 @@ static struct pid_entry pid_base_entries[] = {
 	LNK("cwd",				proc_cwd_link		),
 	LNK("exe",				proc_exe_link		),
 	DIR("fd",	S_IRUSR | S_IXUSR,	proc_fd_iops		),
+	DIR("task",	S_IRUGO | S_IXUGO,	proc_task_iops		),
 };
 
 /*
@@ -1008,6 +1010,79 @@ static int proc_pid_fill_cache(struct file *filp, void *dirent, filldir_t filldi
 	return proc_fill_cache(filp, dirent, filldir, name, len, proc_pid_instantiate, task, NULL);
 }
 
+/*
+ * Read task directory.
+ */
+static int proc_task_readdir(struct file *filp, void *dirent, filldir_t filldir)
+{
+	struct dentry *dentry = filp->f_dentry;
+	struct inode *inode = dentry->d_inode;
+	struct task *task;
+
+	/* get task */
+	task = get_proc_task(inode);
+	if (!task)
+		return -ENOENT;
+
+	/* add "." entry */
+	if (filp->f_pos == 0) {
+		if (filldir(dirent, ".", 1, filp->f_pos, inode->i_ino))
+			return 0;
+		filp->f_pos++;
+	}
+
+	/* add ".." entry */
+	if (filp->f_pos == 1) {
+		if (filldir(dirent, "..", 2, filp->f_pos, dentry->d_parent->d_inode->i_ino))
+			return 0;
+		filp->f_pos++;
+	}
+
+	/* add tid entry */
+	if (filp->f_pos == 2) {
+		if (proc_pid_fill_cache(filp, dirent, filldir, task) < 0)
+			return 0;
+		filp->f_pos++;
+	}
+
+	return 0;
+}
+
+/*
+ * Lookup task directory.
+ */
+static struct dentry *proc_task_lookup(struct inode *dir, struct dentry *dentry)
+{
+	struct task *task;
+	pid_t pid;
+
+	/* get task */
+	task = get_proc_task(dir);
+	if (!task)
+		return ERR_PTR(-ENOENT);
+
+	/* parse tid */
+	pid = atoi(dentry->d_name.name);
+	if (pid != task->pid)
+		return ERR_PTR(-ENOENT);
+
+	return proc_pid_instantiate(dir, dentry, task, NULL);
+}
+
+/*
+ * Task operations.
+ */
+static struct file_operations proc_task_fops = {
+	.readdir		= proc_task_readdir,
+};
+
+/*
+ * Task inode operations.
+ */
+static struct inode_operations proc_task_iops = {
+	.fops			= &proc_task_fops,
+	.lookup			= proc_task_lookup,
+};
 /*
  * Read pids entries.
  */

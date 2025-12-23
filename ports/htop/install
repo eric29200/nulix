@@ -1,4 +1,4 @@
-VERSION="3.4.1"
+VERSION="3.3.0"
 SRC_FILENAME="htop-"$VERSION".tar.gz"
 URL="https://github.com/htop-dev/htop/archive/refs/tags/"$VERSION".tar.gz"
 
