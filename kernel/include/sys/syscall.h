@@ -163,7 +163,6 @@
 #define __NR_recvfrom			371
 #define __NR_recvmsg			372
 #define __NR_shutdown			373
-#define __NR_copy_file_range		377
 #define __NR_statx			383
 #define __NR_clock_gettime64		403
 #define __NR_faccessat2			439

@@ -125,7 +125,6 @@ static const void *syscalls[] = {
 	[__NR_pselect6]			= sys_pselect6,
 	[__NR_fchmodat]			= sys_fchmodat,
 	[__NR_fchownat]			= sys_fchownat,
-	[__NR_copy_file_range]		= sys_copy_file_range,
 	[__NR_stat64]			= sys_stat64,
 	[__NR_lstat64]			= sys_lstat64,
 	[__NR_fstat64]			= sys_fstat64,

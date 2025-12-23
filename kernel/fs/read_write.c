@@ -273,21 +273,6 @@ int sys_pread64(int fd, void *buf, size_t count, off_t offset)
 }
 
 /*
- * Copy file range system call.
- */
-int sys_copy_file_range(int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, unsigned int flags)
-{
-	printf("copy_file_range() unimplemented\n");
-	UNUSED(fd_in);
-	UNUSED(off_in);
-	UNUSED(fd_out);
-	UNUSED(off_out);
-	UNUSED(len);
-	UNUSED(flags);
-	return 0;
-}
-
-/*
  * Send file system call.
  */
 ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)

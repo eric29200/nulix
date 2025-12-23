@@ -459,7 +459,6 @@ int sys_write(int fd, const char *buf, int count);
 ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt);
 ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt);
 int sys_pread64(int fd, void *buf, size_t count, off_t offset);
-int sys_copy_file_range(int fd_in, off_t *off_in, int fd_out, off_t *off_out, size_t len, unsigned int flags);
 int sys_getdents64(int fd, void *dirp, size_t count);
 int sys_poll(struct pollfd *fds, size_t nfds, int timeout);
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *timeout);
