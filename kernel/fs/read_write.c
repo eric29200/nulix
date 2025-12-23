@@ -137,23 +137,6 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
 }
 
 /*
- * Pread system call.
- */
-static int do_pread64(struct file *filp, void *buf, size_t count, off_t offset)
-{
-	/* no data to read */
-	if (!count)
-		return 0;
-
-	/* read not implemented */
-	if (!filp->f_op || !filp->f_op->read)
-		return -EPERM;
-
-	/* read data */
-	return filp->f_op->read(filp, buf, count, &offset);
-}
-
-/*
  * Read system call.
  */
 int sys_read(int fd, char *buf, int count)
@@ -281,7 +264,7 @@ int sys_pread64(int fd, void *buf, size_t count, off_t offset)
 		return -EBADF;
 
 	/* do pread */
-	ret = do_pread64(filp, buf, count, offset);
+	ret = do_read(filp, buf, count, &offset);
 
 	/* release file */
 	fput(filp);
