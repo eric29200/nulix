@@ -316,7 +316,22 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 /*
  * Print a formatted string in a string.
  */
-int sprintf(char * buf, const char *fmt, ...)
+int snprintf(char *buf, size_t size, const char *fmt, ...)
+{
+	va_list args;
+	int i;
+
+	va_start(args, fmt);
+	i = vsnprintf(buf, size, fmt, args);
+	va_end(args);
+
+	return i;
+}
+
+/*
+ * Print a formatted string in a string.
+ */
+int sprintf(char *buf, const char *fmt, ...)
 {
 	va_list args;
 	int i;

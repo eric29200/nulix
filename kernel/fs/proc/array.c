@@ -66,7 +66,7 @@ int proc_stat_read(struct task *task, char *page)
  */
 static char *task_name(struct task *task, char *buf)
 {
-	return buf + sprintf(buf, 	"Name:\t%s\n", task->name);
+	return buf + sprintf(buf, "Name:\t%s\n", task->name);
 }
 
 /*
@@ -277,7 +277,7 @@ int proc_statm_read(struct task *task, char *page)
 			text += pages;
 	}
 
-	return sprintf(page, "%d %d %d %d 0 %d 0\n", size, resident, share, text, size - share);
+	return snprintf(page, PAGE_SIZE, "%d %d %d %d 0 %d 0\n", size, resident, share, text, size - share);
 }
 
 /*
@@ -353,7 +353,8 @@ int proc_io_read(struct task *task, char *page)
 {
 	struct task_io_accounting acct = task->ioac;
 
-	return sprintf(page,
+	return snprintf(page,
+			PAGE_SIZE,
 			"rchar: %llu\n"
 			"wchar: %llu\n"
 			"syscr: %llu\n"
@@ -375,5 +376,5 @@ int proc_io_read(struct task *task, char *page)
  */
 int proc_comm_read(struct task *task, char *page)
 {
-	return sprintf(page, "%s\n", task->name);
+	return snprintf(page, PAGE_SIZE, "%s\n", task->name);
 }
