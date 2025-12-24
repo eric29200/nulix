@@ -369,3 +369,11 @@ int proc_io_read(struct task *task, char *page)
 			acct.write_bytes,
 			acct.cancelled_write_bytes);
 }
+
+/*
+ * Read process name.
+ */
+int proc_comm_read(struct task *task, char *page)
+{
+	return sprintf(page, "%s\n", task->name);
+}

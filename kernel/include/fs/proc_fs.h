@@ -59,6 +59,7 @@ int proc_statm_read(struct task *task, char *page);
 int proc_cmdline_read(struct task *task, char *page);
 int proc_environ_read(struct task *task, char *page);
 int proc_io_read(struct task *task, char *page);
+int proc_comm_read(struct task *task, char *page);
 
 /* procfs link operations */
 int do_proc_readlink(struct dentry *dentry, char *buf, size_t bufsize);
