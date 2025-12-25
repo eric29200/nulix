@@ -15,7 +15,8 @@
 	pop %fs					;\
 	pop %es					;\
 	pop %ds					;\
-	popa
+	popa					;\
+	add $8, %esp
 
 #define LOAD_KERNEL_DSEG			\
 	mov $KERNEL_DSEG, %ax			;\
@@ -24,109 +25,100 @@
 	mov %ax, %fs				;\
 	mov %ax, %gs
 
-/* macro to create an exception function with no error code */
-.macro BUILD_EXCEPTION num
-	.globl exception\num
-	exception\num:
-		cli
-		push $0
-		push $\num
-		SAVE_ALL
-		LOAD_KERNEL_DSEG
-		push %esp			/* push a pointer to this frame */
-		call exception_handler		/* call C handler */
-		add $4, %esp
-		RESTORE_ALL
-		add $8, %esp
-		iret
-.endm
+#define EXCEPTION				\
+	push %esp				;\
+	call exception_handler			;\
+	add $4, %esp
 
+#define IRQ					\
+	push %esp				;\
+	call irq_handler			;\
+	add $4, %esp
 
-/* macro to create a exception function with error code */
-.macro BUILD_EXCEPTION_ERR num
-	.globl exception\num
-	exception\num:
-		cli
-		push $\num
-		SAVE_ALL
-		LOAD_KERNEL_DSEG
-		push %esp			/* push a pointer to this frame */
-		call exception_handler		/* call C handler */
-		add $4, %esp
-		RESTORE_ALL
-		add $8, %esp
-		iret
-.endm
+#define BUILD_EXCEPTION(num, name)		\
+.globl name; name:				;\
+	cli					;\
+	push $0					;\
+	push $num				;\
+	SAVE_ALL				;\
+	LOAD_KERNEL_DSEG			;\
+	EXCEPTION				;\
+	RESTORE_ALL				;\
+	iret
 
-/* macro to create a irq function */
-.macro BUILD_IRQ num
-	.globl irq\num
-	irq\num:
-		cli
-		push $0
-		push $\num
-		SAVE_ALL
-		LOAD_KERNEL_DSEG
-		push %esp			/* push a pointer to this frame */
-		call irq_handler		/* call C handler */
-		add $4, %esp
-		RESTORE_ALL
-		add $8, %esp
-		iret
-.endm
+#define BUILD_EXCEPTION_ERR(num, name)		\
+.globl name; name:				;\
+	cli					;\
+	push $num				;\
+	SAVE_ALL				;\
+	LOAD_KERNEL_DSEG			;\
+	EXCEPTION				;\
+	RESTORE_ALL				;\
+	iret
+
+#define BUILD_IRQ(num, name)			\
+.globl name; name:				;\
+	cli					;\
+	push $0					;\
+	push $num				;\
+	SAVE_ALL				;\
+	LOAD_KERNEL_DSEG			;\
+	IRQ					;\
+	RESTORE_ALL				;\
+	iret
 
 /* build exceptions */
-BUILD_EXCEPTION 0
-BUILD_EXCEPTION 1
-BUILD_EXCEPTION 2
-BUILD_EXCEPTION 3
-BUILD_EXCEPTION 4
-BUILD_EXCEPTION 5
-BUILD_EXCEPTION 6
-BUILD_EXCEPTION 7
-BUILD_EXCEPTION_ERR 8
-BUILD_EXCEPTION 9
-BUILD_EXCEPTION_ERR 10
-BUILD_EXCEPTION_ERR 11
-BUILD_EXCEPTION_ERR 12
-BUILD_EXCEPTION_ERR 13
-BUILD_EXCEPTION_ERR 14
-BUILD_EXCEPTION 15
-BUILD_EXCEPTION 16
-BUILD_EXCEPTION 17
-BUILD_EXCEPTION 18
-BUILD_EXCEPTION 19
-BUILD_EXCEPTION 20
-BUILD_EXCEPTION 21
-BUILD_EXCEPTION 22
-BUILD_EXCEPTION 23
-BUILD_EXCEPTION 24
-BUILD_EXCEPTION 25
-BUILD_EXCEPTION 26
-BUILD_EXCEPTION 27
-BUILD_EXCEPTION 28
-BUILD_EXCEPTION 29
-BUILD_EXCEPTION 30
-BUILD_EXCEPTION 31
-BUILD_EXCEPTION 128
+BUILD_EXCEPTION(0, exception0)
+BUILD_EXCEPTION(1, exception1)
+BUILD_EXCEPTION(2, exception2)
+BUILD_EXCEPTION(3, exception3)
+BUILD_EXCEPTION(4, exception4)
+BUILD_EXCEPTION(5, exception5)
+BUILD_EXCEPTION(6, exception6)
+BUILD_EXCEPTION(7, exception7)
+BUILD_EXCEPTION_ERR(8, exception8)
+BUILD_EXCEPTION(9, exception9)
+BUILD_EXCEPTION_ERR(10, exception10)
+BUILD_EXCEPTION_ERR(11, exception11)
+BUILD_EXCEPTION_ERR(12, exception12)
+BUILD_EXCEPTION_ERR(13, exception13)
+BUILD_EXCEPTION_ERR(14, exception14)
+BUILD_EXCEPTION(15, exception15)
+BUILD_EXCEPTION(16, exception16)
+BUILD_EXCEPTION(17, exception17)
+BUILD_EXCEPTION(18, exception18)
+BUILD_EXCEPTION(19, exception19)
+BUILD_EXCEPTION(20, exception20)
+BUILD_EXCEPTION(21, exception21)
+BUILD_EXCEPTION(22, exception22)
+BUILD_EXCEPTION(23, exception23)
+BUILD_EXCEPTION(24, exception24)
+BUILD_EXCEPTION(25, exception25)
+BUILD_EXCEPTION(26, exception26)
+BUILD_EXCEPTION(27, exception27)
+BUILD_EXCEPTION(28, exception28)
+BUILD_EXCEPTION(29, exception29)
+BUILD_EXCEPTION(30, exception30)
+BUILD_EXCEPTION(31, exception31)
+BUILD_EXCEPTION(128, exception128)
 
 /* buid irqs */
-BUILD_IRQ 0
-BUILD_IRQ 1
-BUILD_IRQ 2
-BUILD_IRQ 3
-BUILD_IRQ 4
-BUILD_IRQ 5
-BUILD_IRQ 6
-BUILD_IRQ 7
-BUILD_IRQ 8
-BUILD_IRQ 9
-BUILD_IRQ 10
-BUILD_IRQ 11
-BUILD_IRQ 12
-BUILD_IRQ 13
-BUILD_IRQ 14
-BUILD_IRQ 15
+BUILD_IRQ(0, irq0)
+BUILD_IRQ(1, irq1)
+BUILD_IRQ(2, irq2)
+BUILD_IRQ(3, irq3)
+BUILD_IRQ(4, irq4)
+BUILD_IRQ(5, irq5)
+BUILD_IRQ(6, irq6)
+BUILD_IRQ(7, irq7)
+BUILD_IRQ(8, irq8)
+BUILD_IRQ(9, irq9)
+BUILD_IRQ(10, irq10)
+BUILD_IRQ(11, irq11)
+BUILD_IRQ(12, irq12)
+BUILD_IRQ(13, irq13)
+BUILD_IRQ(14, irq14)
+BUILD_IRQ(15, irq15)
 
 .global gdt_flush
 gdt_flush:
