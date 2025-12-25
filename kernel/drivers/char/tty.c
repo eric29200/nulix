@@ -403,14 +403,19 @@ void tty_do_cook(struct tty *tty)
 /*
  * Write to TTY.
  */
-static int tty_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
+static int tty_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 {
 	struct tty *tty;
 	size_t i = 0;
 	int ret = 0;
 
-	/* unused offset */
-	UNUSED(ppos);
+	/* check position */
+	if (ppos != &filp->f_pos)
+		return -ESPIPE;
+
+	/* check count */
+	if (!count)
+		return 0;
 
 	/* get tty */
 	tty = filp->f_private;
@@ -423,7 +428,7 @@ static int tty_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
 
 	for (;;) {
 		/* post characters */
-		for (; i < n; i++)
+		for (; i < count; i++)
 			if (opost(tty, buf[i]) < 0)
 				break;
 
@@ -431,7 +436,7 @@ static int tty_write(struct file *filp, const char *buf, size_t n, off_t *ppos)
 		tty->driver->write(tty);
 
 		/* all characters written */
-		if (i >= n - 1)
+		if (i >= count - 1)
 			break;
 
 		/* all characters flushed : continue */

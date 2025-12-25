@@ -272,6 +272,30 @@ static int sock_write(struct file *filp, const char *buf, size_t len, off_t *ppo
 }
 
 /*
+ * Read/write vectors.
+ */
+int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int iovcnt)
+{
+	struct socket *sock;
+	struct msghdr msg;
+
+	/* get socket */
+	sock = &filp->f_dentry->d_inode->u.socket_i;
+	if (!sock)
+		return -EINVAL;
+
+	/* build message */
+	memset(&msg, 0, sizeof(struct msghdr));
+	msg.msg_iov = (struct iovec *) iov;
+	msg.msg_iovlen = iovcnt;
+
+	/* write or read */
+	if (type == WRITE)
+		return sock->ops->sendmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
+	return sock->ops->recvmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
+}
+
+/*
  * Socket fcntl.
  */
 int sock_fcntl(struct file *filp, int cmd, unsigned long arg)

@@ -155,6 +155,82 @@ static ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t 
 }
 
 /*
+ * Read/write vectors.
+ */
+static ssize_t do_readv_writev(int type, struct file *filp, const struct iovec *iovec, size_t iovcnt)
+{
+	typedef ssize_t (*io_fn_t)(struct file *, char *, size_t, off_t *);
+	struct inode *inode = filp->f_dentry->d_inode;
+	struct iovec iovstack[UIO_FASTIOV];
+	struct iovec *iov = iovstack;
+	ssize_t len, nr;
+	void * base;
+	io_fn_t fn;
+	int ret;
+
+
+	/* check count */
+	if (!iovcnt)
+		return 0;
+	if (iovcnt > UIO_MAXIOV)
+		return -EINVAL;
+
+	/* allocate kernel vectors if needed */
+	if (iovcnt > UIO_FASTIOV) {
+		iov = kmalloc(sizeof(struct iovec) * iovcnt);
+		if (!iov)
+			return -ENOMEM;
+	}
+
+	/* copy vectors from user space */
+	memcpy(iov, iovec, sizeof(struct iovec) * iovcnt);
+
+	/* socket read/write */
+	if (inode->i_sock) {
+		ret = sock_readv_writev(type, filp, iov, iovcnt);
+		goto out;
+	}
+
+	/* check file operations */
+	ret = -EINVAL;
+	if (!filp->f_op)
+		goto out;
+
+	/* get file operations (read or write) */
+	fn = filp->f_op->read;
+	if (type == WRITE)
+		fn = (io_fn_t) filp->f_op->write;
+
+	/* read/write */
+	ret = 0;
+	for (iovec = iov; iovcnt > 0; iovec++, iovcnt--) {
+		/* get vector */
+		base = iovec->iov_base;
+		len = iovec->iov_len;
+
+		/* read/write */
+		nr = fn(filp, base, len, &filp->f_pos);
+		if (nr < 0) {
+			if (!ret)
+				ret = nr;
+			break;
+		}
+
+		/* update numbers of characters read/written */
+		ret += nr;
+
+		/* partial read/write : exit */
+		if (nr != len)
+			break;
+	}
+
+out:
+	if (iov != iovstack)
+		kfree(iov);
+	return ret;
+}
+
+/*
  * Read system call.
  */
 int sys_read(int fd, char *buf, int count)
@@ -205,34 +281,23 @@ out:
  */
 ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 {
-	ssize_t ret = -EBADF, n;
+	ssize_t ret = -EBADF;
 	struct file *filp;
-	int i;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		goto out;
 
-	/* read into each buffer */
-	ret = 0;
-	for (i = 0; i < iovcnt; i++, iov++) {
-		/* read into buffer */
-		n = do_read(filp, iov->iov_base, iov->iov_len, &filp->f_pos);
-		if (n < 0) {
-			ret = n;
-			break;
-		}
-
-		/* check end of file */
-		ret += n;
-		if (n != (ssize_t) iov->iov_len)
-			break;
-	}
+	/* read */
+	if (filp->f_op && filp->f_op->read && (filp->f_mode & FMODE_READ))
+		ret = do_readv_writev(READ, filp, iov, iovcnt);
 
 	/* release file */
 	fput(filp);
 out:
+	if (ret > 0)
+		current_task->ioac.rchar += ret;
 	current_task->ioac.syscr++;
 	return ret;
 }
@@ -242,34 +307,23 @@ out:
  */
 ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 {
-	ssize_t ret = -EBADF, n;
+	ssize_t ret = -EBADF;
 	struct file *filp;
-	int i;
 
 	/* get file */
 	filp = fget(fd);
 	if (!filp)
 		goto out;
 
-	/* write each buffer */
-	ret = 0;
-	for (i = 0; i < iovcnt; i++, iov++) {
-		/* write into buffer */
-		n = do_write(filp, iov->iov_base, iov->iov_len, &filp->f_pos);
-		if (n < 0) {
-			ret = n;
-			break;
-		}
-
-		/* check end of file */
-		ret += n;
-		if (n != (ssize_t) iov->iov_len)
-			break;
-	}
+	/* write */
+	if (filp->f_op && filp->f_op->write && (filp->f_mode & FMODE_WRITE))
+		ret = do_readv_writev(WRITE, filp, iov, iovcnt);
 
 	/* release file */
 	fput(filp);
 out:
+	if (ret > 0)
+		current_task->ioac.wchar += ret;
 	current_task->ioac.syscw++;
 	return ret;
 }

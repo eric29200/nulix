@@ -3,6 +3,9 @@
 
 #include <stddef.h>
 
+#define UIO_FASTIOV	8
+#define UIO_MAXIOV	1024
+
 /*
  * I/O vectors structure.
  */

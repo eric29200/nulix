@@ -147,6 +147,7 @@ extern struct prot_ops unix_ops;
 /* generic functions */
 void sock_init_data(struct socket *sock);
 int sock_fcntl(struct file *filp, int cmd, unsigned long arg);
+int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int iovcnt);
 
 /* socket system calls */
 int sys_socket(int domain, int type, int protocol);
