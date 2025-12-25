@@ -80,6 +80,24 @@ static struct pid_entry pid_base_entries[] = {
 };
 
 /*
+ * <pid>/task/<tid> entries.
+ */
+static struct pid_entry tid_base_entries[] = {
+	INF("stat",	S_IRUGO,		proc_stat_read		),
+	INF("status",	S_IRUGO,		proc_status_read	),
+	INF("statm",	S_IRUGO,		proc_statm_read		),
+	INF("cmdline",	S_IRUGO,		proc_cmdline_read	),
+	INF("environ",	S_IRUGO,		proc_environ_read	),
+	INF("io",	S_IRUGO,		proc_io_read		),
+	INF("comm",	S_IRUGO,		proc_comm_read		),
+	REG("maps",	S_IRUGO,		proc_base_maps_iops	),
+	LNK("root",				proc_root_link		),
+	LNK("cwd",				proc_cwd_link		),
+	LNK("exe",				proc_exe_link		),
+	DIR("fd",	S_IRUSR | S_IXUSR,	proc_fd_iops		),
+};
+
+/*
  * Get task of a pid inode.
  */
 static struct task *get_proc_task(struct inode *inode)
@@ -1013,6 +1031,75 @@ static int proc_pid_fill_cache(struct file *filp, void *dirent, filldir_t filldi
 }
 
 /*
+ * Read <tid> directory.
+ */
+static int proc_tid_base_readdir(struct file *filp, void *dirent, filldir_t filldir)
+{
+	return proc_pident_readdir(filp, dirent, filldir, tid_base_entries, ARRAY_SIZE(tid_base_entries));
+}
+
+/*
+ * Lookup <tid> directory.
+ */
+static struct dentry *proc_tid_base_lookup(struct inode *dir, struct dentry *dentry)
+{
+	return proc_pident_lookup(dir, dentry, tid_base_entries, ARRAY_SIZE(tid_base_entries));
+}
+
+/*
+ * Base <tid> file operations.
+ */
+static struct file_operations proc_tid_base_dir_fops = {
+	.readdir		= proc_tid_base_readdir,
+};
+
+/*
+ * Base <tid> inode operations.
+ */
+static struct inode_operations proc_tid_base_dir_iops = {
+	.fops			= &proc_tid_base_dir_fops,
+	.lookup			= proc_tid_base_lookup,
+};
+
+/*
+ * Instantiate a tid inode.
+ */
+static struct dentry *proc_tid_instantiate(struct inode *dir, struct dentry *dentry, struct task *task, const void *ptr)
+{
+	struct inode *inode;
+
+	/* unused variable */
+	UNUSED(ptr);
+
+	/* make inode */
+	inode = proc_pid_make_inode(dir->i_sb, task);
+	if (!inode)
+		return ERR_PTR(-ENOENT);
+
+	/* set inode */
+	inode->i_mode = S_IFDIR | S_IRUGO | S_IXUGO;
+	inode->i_op = &proc_tid_base_dir_iops;
+	inode->i_nlinks = 2 + pid_entry_count_dirs(tid_base_entries, ARRAY_SIZE(tid_base_entries));
+
+	/* set dentry */
+	dentry->d_op = &pid_dentry_operations;
+	d_add(dentry, inode);
+
+	return pid_revalidate(dentry) ? NULL : ERR_PTR(-ENOENT);
+}
+
+/*
+ * Fill a tid entry.
+ */
+static int proc_tid_fill_cache(struct file *filp, void *dirent, filldir_t filldir, struct task *task)
+{
+	char name[PROC_NUMBUF];
+	size_t len = sprintf(name, "%d", task->pid);
+
+	return proc_fill_cache(filp, dirent, filldir, name, len, proc_tid_instantiate, task, NULL);
+}
+
+/*
  * Read task directory.
  */
 static int proc_task_readdir(struct file *filp, void *dirent, filldir_t filldir)
@@ -1042,7 +1129,7 @@ static int proc_task_readdir(struct file *filp, void *dirent, filldir_t filldir)
 
 	/* add tid entry */
 	if (filp->f_pos == 2) {
-		if (proc_pid_fill_cache(filp, dirent, filldir, task) < 0)
+		if (proc_tid_fill_cache(filp, dirent, filldir, task) < 0)
 			return 0;
 		filp->f_pos++;
 	}
@@ -1068,7 +1155,7 @@ static struct dentry *proc_task_lookup(struct inode *dir, struct dentry *dentry)
 	if (pid != task->pid)
 		return ERR_PTR(-ENOENT);
 
-	return proc_pid_instantiate(dir, dentry, task, NULL);
+	return proc_tid_instantiate(dir, dentry, task, NULL);
 }
 
 /*
