@@ -23,6 +23,8 @@
 #define HASH_BITS			12
 #define HASH_SIZE			(1 << HASH_BITS)
 
+#define BDFLUSH_INTERVAL_MS		5000
+
 /* global buffer table */
 static int nr_buffers = 0;
 static int nr_buffer_heads = 0;
@@ -866,6 +868,26 @@ int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, 
 
 	return 0;
 }
+
+/*
+ * Synchronize data on disk.
+ */
+int bdflush(void *arg)
+{
+	UNUSED(arg);
+
+	for (;;) {
+		/* synchronize all buffers and inodes */
+		sync_dev(0);
+
+		/* go to sleep */
+		current_task->state = TASK_SLEEPING;
+		schedule_timeout(ms_to_jiffies(BDFLUSH_INTERVAL_MS));
+	}
+
+	return 0;
+}
+
 
 /*
  * Init buffers.

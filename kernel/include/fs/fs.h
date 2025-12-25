@@ -315,6 +315,7 @@ struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize);
 struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize);
 void brelse(struct buffer_head *bh);
 void sync_dev(dev_t dev);
+int bdflush(void *arg);
 void init_buffer();
 struct buffer_head *getblk(dev_t dev, uint32_t block, size_t blocksize);
 void free_async_buffers(struct buffer_head *bh);

@@ -189,6 +189,7 @@ struct binprm {
 
 struct task *create_kinit_task(void (*kinit_func)());
 struct task *create_init_task(struct task *parent);
+int kernel_thread(int (*func)(void *), void *arg, uint32_t flags);
 int do_fork(uint32_t clone_flags, uint32_t user_sp);
 void destroy_task(struct task *task);
 struct task *get_task(pid_t pid);

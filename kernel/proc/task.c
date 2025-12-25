@@ -608,6 +608,33 @@ err_stack:
 }
 
 /*
+ * Create a kernel thread.
+ */
+int kernel_thread(int (*func)(void *), void *arg, uint32_t flags)
+{
+	long ret, d0;
+
+	__asm__ __volatile__(
+		"movl %%esp,%%esi		\n\t"
+		"int $0x80			\n\t"		/* Linux/i386 system call */
+		"cmpl %%esp,%%esi		\n\t"		/* child or parent? */
+		"je 1f				\n\t"		/* parent - jump */
+		"movl %4,%%eax			\n\t"
+		"pushl %%eax			\n\t"
+		"call *%5			\n\t"		/* call func */
+		"movl %3,%0			\n\t"		/* exit */
+		"int $0x80			\n"
+		"1:				\t"
+		:"=&a" (ret), "=&S" (d0)
+		:"0" (__NR_clone), "i" (__NR_exit),
+		 "r" (arg), "r" (func),
+		 "b" (flags | CLONE_VM)
+		: "memory");
+
+	return ret;
+}
+
+/*
  * Fork a task.
  */
 int do_fork(uint32_t clone_flags, uint32_t user_sp)
