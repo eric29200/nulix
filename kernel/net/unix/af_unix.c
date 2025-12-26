@@ -15,6 +15,8 @@
 /* UNIX sockets */
 static LIST_HEAD(unix_sockets);
 
+static int unix_create(struct socket *sock, int protocol);
+
 /*
  * Find a UNIX socket.
  */
@@ -81,41 +83,6 @@ static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_soc
 	}
 
 	return ret;
-}
-
-/*
- * Create a socket.
- */
-static int unix_create(struct socket *sock, int protocol)
-{
-	unix_socket_t *sk;
-
-	/* check protocol */
-	if (protocol != 0)
-		return -EINVAL;
-
-	/* allocate UNIX socket */
-	sk = (unix_socket_t *) kmalloc(sizeof(unix_socket_t));
-	if (!sk)
-		return -ENOMEM;
-
-	/* set UNIX socket */
-	memset(sk, 0, sizeof(unix_socket_t));
-	sk->protocol = protocol;
-	sk->sock = sock;
-	sk->rcvbuf = SK_RMEM_MAX;
-	sk->sndbuf = SK_WMEM_MAX;
-	unix_peer(sk) = NULL;
-	INIT_LIST_HEAD(&sk->skb_list);
-	sock->sk = sk;
-
-	/* init data */
-	sock_init_data(sock);
-
-	/* insert in sockets list */
-	list_add_tail(&sk->list, &unix_sockets);
-
-	return 0;
 }
 
 /*
@@ -652,8 +619,7 @@ static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
 /*
  * UNIX operations.
  */
-struct prot_ops unix_ops = {
-	.create		= unix_create,
+static struct proto_ops unix_ops = {
 	.dup		= unix_dup,
 	.release	= unix_release,
 	.poll		= unix_poll,
@@ -670,3 +636,55 @@ struct prot_ops unix_ops = {
 	.getsockopt	= unix_getsockopt,
 	.setsockopt	= unix_setsockopt,
 };
+
+/*
+ * Create a socket.
+ */
+static int unix_create(struct socket *sock, int protocol)
+{
+	unix_socket_t *sk;
+
+	/* check protocol */
+	if (protocol != 0)
+		return -EINVAL;
+
+	/* allocate UNIX socket */
+	sk = (unix_socket_t *) kmalloc(sizeof(unix_socket_t));
+	if (!sk)
+		return -ENOMEM;
+
+	/* set UNIX socket */
+	memset(sk, 0, sizeof(unix_socket_t));
+	sk->protocol = protocol;
+	sk->sock = sock;
+	sk->rcvbuf = SK_RMEM_MAX;
+	sk->sndbuf = SK_WMEM_MAX;
+	unix_peer(sk) = NULL;
+	INIT_LIST_HEAD(&sk->skb_list);
+	sock->sk = sk;
+	sock->ops = &unix_ops;
+
+	/* init data */
+	sock_init_data(sock);
+
+	/* insert in sockets list */
+	list_add_tail(&sk->list, &unix_sockets);
+
+	return 0;
+}
+
+/*
+ * UNIX protocol.
+ */
+static struct net_proto_family unix_family_ops = {
+	.family		= PF_UNIX,
+	.create		= unix_create,
+};
+
+/*
+ * Init UNIX protocol.
+ */
+void unix_proto_init()
+{
+	sock_register(&unix_family_ops);
+}

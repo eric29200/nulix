@@ -339,6 +339,10 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	printf("[Kernel] Block buffers init\n");
 	init_buffer();
 
+	/* init network protocols */
+	printf("[Kernel] Init network protocols\n");
+	init_proto();
+
 	/* init IPC resources */
 	printf("[Kernel] IPC resources init\n");
 	init_ipc();

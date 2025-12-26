@@ -4,6 +4,8 @@
 #include <proc/wait.h>
 #include <stddef.h>
 
+#define NPROTO			32
+
 /* addresses families */
 #define AF_UNIX		 	1
 #define AF_INET			2
@@ -112,7 +114,7 @@ struct socket {
 	uint16_t		family;
 	uint16_t		type;
 	socket_state_t		state;
-	struct prot_ops *	ops;
+	struct proto_ops *	ops;
 	struct wait_queue *	wait;
 	struct inode *		inode;
 	struct file *		file;
@@ -122,8 +124,7 @@ struct socket {
 /*
  * Protocol operations.
  */
-struct prot_ops {
-	int (*create)(struct socket *, int);
+struct proto_ops {
 	int (*dup)(struct socket *, struct socket *);
 	int (*release)(struct socket *);
 	int (*poll)(struct socket *, struct select_table *);
@@ -141,11 +142,21 @@ struct prot_ops {
 	int (*setsockopt)(struct socket *, int, int, void *, size_t);
 };
 
-/* protocole operations */
-extern struct prot_ops inet_ops;
-extern struct prot_ops unix_ops;
+/*
+ * Protocol family.
+ */
+struct net_proto_family {
+	int			family;
+	int			(*create)(struct socket *sock, int protocol);
+};
+
+/* protocols init */
+void unix_proto_init();
+void inet_proto_init();
 
 /* generic functions */
+void init_proto();
+int sock_register(struct net_proto_family *ops);
 void sock_init_data(struct socket *sock);
 int sock_fcntl(struct file *filp, int cmd, unsigned long arg);
 int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int iovcnt, size_t len);

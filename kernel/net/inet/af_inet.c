@@ -13,8 +13,9 @@
 
 /* inet sockets */
 static LIST_HEAD(inet_sockets);
-
 static uint16_t dyn_port = 0;
+
+static int inet_create(struct socket *sock, int protocol);
 
 /*
  * Deliver a packet to sockets.
@@ -54,73 +55,6 @@ static uint16_t get_next_free_port()
 	/* else get next free port */
 	dyn_port++;
 	return dyn_port;
-}
-
-/*
- * Create a socket.
- */
-static int inet_create(struct socket *sock, int protocol)
-{
-	struct proto *prot = NULL;
-	struct sock *sk;
-
-	/* choose socket type */
-	switch (sock->type) {
-		case SOCK_STREAM:
-			switch (protocol) {
-				case 0:
-				case IP_PROTO_TCP:
-					protocol = IP_PROTO_TCP;
-					prot = &tcp_proto;
-					break;
-				default:
-					return -EINVAL;
-			}
-
-			break;
-		case SOCK_DGRAM:
-			switch (protocol) {
-				case 0:
-				case IP_PROTO_UDP:
-					protocol = IP_PROTO_UDP;
-					prot = &udp_proto;
-					break;
-				case IP_PROTO_ICMP:
-					prot = &icmp_proto;
-					break;
-				default:
-					return -EINVAL;
-			}
-
-			break;
-		case SOCK_RAW:
-			prot = &raw_proto;
-			break;
-		default:
-			return -EINVAL;
-	}
-
-	/* allocate inet socket */
-	sk = kmalloc(sizeof(struct sock));
-	if (!sk)
-		return -ENOMEM;
-
-	/* set socket */
-	memset(sk, 0, sizeof(struct sock));
-	sk->protinfo.af_inet.dev = rtl8139_get_net_device();
-	sk->protocol = protocol;
-	sk->sock = sock;
-	sk->protinfo.af_inet.prot = prot;
-	INIT_LIST_HEAD(&sk->skb_list);
-	sock->sk = sk;
-
-	/* init data */
-	sock_init_data(sock);
-
-	/* insert in sockets list */
-	list_add_tail(&sk->list, &inet_sockets);
-
-	return 0;
 }
 
 /*
@@ -489,8 +423,7 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 /*
  * Inet operations.
  */
-struct prot_ops inet_ops = {
-	.create		= inet_create,
+struct proto_ops inet_ops = {
 	.dup		= inet_dup,
 	.release	= inet_release,
 	.poll		= inet_poll,
@@ -507,3 +440,87 @@ struct prot_ops inet_ops = {
 	.getsockopt	= inet_getsockopt,
 	.setsockopt	= inet_setsockopt,
 };
+
+/*
+ * Create a socket.
+ */
+static int inet_create(struct socket *sock, int protocol)
+{
+	struct proto *prot = NULL;
+	struct sock *sk;
+
+	/* choose socket type */
+	switch (sock->type) {
+		case SOCK_STREAM:
+			switch (protocol) {
+				case 0:
+				case IP_PROTO_TCP:
+					protocol = IP_PROTO_TCP;
+					prot = &tcp_proto;
+					break;
+				default:
+					return -EINVAL;
+			}
+
+			break;
+		case SOCK_DGRAM:
+			switch (protocol) {
+				case 0:
+				case IP_PROTO_UDP:
+					protocol = IP_PROTO_UDP;
+					prot = &udp_proto;
+					break;
+				case IP_PROTO_ICMP:
+					prot = &icmp_proto;
+					break;
+				default:
+					return -EINVAL;
+			}
+
+			break;
+		case SOCK_RAW:
+			prot = &raw_proto;
+			break;
+		default:
+			return -EINVAL;
+	}
+
+	/* allocate inet socket */
+	sk = kmalloc(sizeof(struct sock));
+	if (!sk)
+		return -ENOMEM;
+
+	/* set socket */
+	memset(sk, 0, sizeof(struct sock));
+	sk->protinfo.af_inet.dev = rtl8139_get_net_device();
+	sk->protocol = protocol;
+	sk->sock = sock;
+	sk->protinfo.af_inet.prot = prot;
+	INIT_LIST_HEAD(&sk->skb_list);
+	sock->sk = sk;
+	sock->ops = &inet_ops;
+
+	/* init data */
+	sock_init_data(sock);
+
+	/* insert in sockets list */
+	list_add_tail(&sk->list, &inet_sockets);
+
+	return 0;
+}
+
+/*
+ * UNIX protocol.
+ */
+static struct net_proto_family inet_family_ops = {
+	.family		= PF_INET,
+	.create		= inet_create,
+};
+
+/*
+ * Init inet protocol.
+ */
+void inet_proto_init()
+{
+	sock_register(&inet_family_ops);
+}

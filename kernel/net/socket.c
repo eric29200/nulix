@@ -8,7 +8,8 @@
 #include <fcntl.h>
 #include <uio.h>
 
-/* socket file operations */
+/* global variables */
+static struct net_proto_family *net_families[NPROTO];
 struct file_operations socket_fops;
 
 /*
@@ -337,23 +338,14 @@ struct file_operations socket_fops = {
 /*
  * Create a socket.
  */
-static int sock_create(int domain, int type, int protocol, struct socket **res)
+static int sock_create(int family, int type, int protocol, struct socket **res)
 {
-	struct prot_ops *sock_ops;
 	struct socket *sock;
 	int ret;
 
-	/* choose protocol operations */
-	switch (domain) {
-		case AF_INET:
-			sock_ops = &inet_ops;
-			break;
-		case AF_UNIX:
-			sock_ops = &unix_ops;
-			break;
-		default:
-			return -EAFNOSUPPORT;
-	}
+	/* check protocol */
+	if (family < 0 || family >= NPROTO || !net_families[family])
+		return -EAFNOSUPPORT;
 
 	/* check type */
 	if ((type != SOCK_STREAM && type != SOCK_DGRAM && type != SOCK_RAW) || protocol < 0)
@@ -365,25 +357,18 @@ static int sock_create(int domain, int type, int protocol, struct socket **res)
 		return -ENFILE;
 
 	/* set socket */
-	sock->family = domain;
+	sock->family = family;
 	sock->type = type;
-	sock->ops = sock_ops;
-
-	/* create not implemented */
-	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->create)
-		goto err;
 
 	/* create socket */
-	ret = sock->ops->create(sock, protocol);
-	if (ret)
-		goto err;
+	ret = net_families[family]->create(sock, protocol);
+	if (ret) {
+		sock_release(sock);
+		return ret;
+	}
 
 	*res = sock;
 	return 0;
-err:
-	sock_release(sock);
-	return ret;
 }
 
 /*
@@ -1021,4 +1006,28 @@ int sys_socketcall(int call, unsigned long *args)
 	}
 
 	return ret;
+}
+
+/*
+ * Register a procotol family.
+ */
+int sock_register(struct net_proto_family *ops)
+{
+	/* check faimily */
+	if (ops->family >= NPROTO) {
+		printf("sock_register: protocol %d >= NPROTO(%d)\n", ops->family, NPROTO);
+		return -ENOBUFS;
+	}
+
+	net_families[ops->family] = ops;
+	return 0;
+}
+
+/*
+ * Init protocols.
+ */
+void init_proto()
+{
+	unix_proto_init();
+	inet_proto_init();
 }
