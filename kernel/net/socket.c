@@ -603,6 +603,9 @@ out:
  */
 int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 {
+	struct iovec iovstack[UIO_FASTIOV];
+	struct iovec *iov = iovstack;
+	struct msghdr msg_sys;
 	struct socket *sock;
 	int ret;
 
@@ -616,7 +619,29 @@ int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 	if (!sock->ops || !sock->ops->sendmsg)
 		goto out;
 
-	ret = sock->ops->sendmsg(sock, msg, sock->file->f_flags & O_NONBLOCK, flags);
+	/* copy message to kernel space */
+	memcpy(&msg_sys, msg, sizeof(struct msghdr));
+	ret = -EINVAL;
+	if (msg_sys.msg_iovlen > UIO_MAXIOV)
+		goto out;
+
+	/* allocate vectors if needed */
+	ret = -ENOMEM;
+	if (msg_sys.msg_iovlen > UIO_FASTIOV) {
+		iov = (struct iovec *) kmalloc(msg_sys.msg_iovlen * sizeof(struct iovec));
+		if (!iov)
+			goto out;
+	}
+
+	/* copy vectors from user to kernel space */
+	memcpy(iov, msg_sys.msg_iov, sizeof(struct iovec) * msg_sys.msg_iovlen);
+
+	/* send message */
+	ret = sock->ops->sendmsg(sock, &msg_sys, sock->file->f_flags & O_NONBLOCK, flags);
+
+	/* free vectors */
+	if (iov != iovstack)
+		kfree(iov);
 out:
 	sockfd_put(sock);
 	return ret;
@@ -677,6 +702,9 @@ out:
  */
 int sys_recvmsg(int sockfd, struct msghdr *msg, int flags)
 {
+	struct iovec iovstack[UIO_FASTIOV];
+	struct iovec *iov = iovstack;
+	struct msghdr msg_sys;
 	struct socket *sock;
 	int ret;
 
@@ -685,12 +713,34 @@ int sys_recvmsg(int sockfd, struct msghdr *msg, int flags)
 	if (!sock)
 		return ret;
 
-	/* receive message not implemented */
+	/* send message not implemented */
 	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->recvmsg)
+	if (!sock->ops || !sock->ops->sendmsg)
 		goto out;
 
-	ret = sock->ops->recvmsg(sock, msg, sock->file->f_flags & O_NONBLOCK, flags);
+	/* copy message to kernel space */
+	memcpy(&msg_sys, msg, sizeof(struct msghdr));
+	ret = -EINVAL;
+	if (msg_sys.msg_iovlen > UIO_MAXIOV)
+		goto out;
+
+	/* allocate vectors if needed */
+	ret = -ENOMEM;
+	if (msg_sys.msg_iovlen > UIO_FASTIOV) {
+		iov = (struct iovec *) kmalloc(msg_sys.msg_iovlen * sizeof(struct iovec));
+		if (!iov)
+			goto out;
+	}
+
+	/* copy vectors from user to kernel space */
+	memcpy(iov, msg_sys.msg_iov, sizeof(struct iovec) * msg_sys.msg_iovlen);
+
+	/* receive message */
+	ret = sock->ops->recvmsg(sock, &msg_sys, sock->file->f_flags & O_NONBLOCK, flags);
+
+	/* free vectors */
+	if (iov != iovstack)
+		kfree(iov);
 out:
 	sockfd_put(sock);
 	return ret;

@@ -164,7 +164,7 @@ static ssize_t do_readv_writev(int type, struct file *filp, const struct iovec *
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
 	ssize_t len, nr;
-	void * base;
+	void *base;
 	io_fn_t fn;
 	int ret;
 
