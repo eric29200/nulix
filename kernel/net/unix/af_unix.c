@@ -9,6 +9,9 @@
 #include <fcntl.h>
 #include <uio.h>
 
+#define unix_peer(sk)		((sk)->pair)
+
+
 /* UNIX sockets */
 static LIST_HEAD(unix_sockets);
 
@@ -102,7 +105,7 @@ static int unix_create(struct socket *sock, int protocol)
 	sk->sock = sock;
 	sk->rcvbuf = SK_RMEM_MAX;
 	sk->sndbuf = SK_WMEM_MAX;
-	sk->protinfo.af_unix.other = NULL;
+	unix_peer(sk) = NULL;
 	INIT_LIST_HEAD(&sk->skb_list);
 	sock->sk = sk;
 
@@ -143,7 +146,7 @@ static int unix_release(struct socket *sock)
 		return 0;
 
 	/* shutdown other */
-	other = sk->protinfo.af_unix.other;
+	other = unix_peer(sk);
 	if (other && sock->type == SOCK_STREAM)
 		other->shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
 
@@ -310,7 +313,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 		if (ret)
 			return ret;
 	} else {
-		other = sk->protinfo.af_unix.other;
+		other = unix_peer(sk);
 		if (!other)
 			return -ENOTCONN;
 	}
@@ -458,13 +461,13 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 
 			/* set new socket */
 			sock_new->state = SS_CONNECTED;
-			sk_new->protinfo.af_unix.other = other;
+			unix_peer(sk_new) = other;
 			sk_new->peercred.uid = sk->peercred.uid;
 
 			/* set other socket connected and wake up eventual clients connecting */
 			other->sock->state = SS_CONNECTED;
-			other->protinfo.af_unix.other = sk_new;
-			wake_up(&sk_new->protinfo.af_unix.other->sock->wait);
+			unix_peer(other) = sk_new;
+			wake_up(&unix_peer(sk_new)->sock->wait);
 
 			return 0;
 		}
@@ -502,7 +505,7 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 
 	/* datagramm socket : just connect */
 	if (sock->type == SOCK_DGRAM) {
-		sk->protinfo.af_unix.other = other;
+		unix_peer(sk) = other;
 		sock->state = SS_CONNECTED;
 		return 0;
 	}
@@ -520,7 +523,7 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 	wake_up(&other->sock->wait);
 
 	/* set socket */
-	sk->protinfo.af_unix.other = other;
+	unix_peer(sk) = other;
 	sock->state = SS_CONNECTING;
 
 	/* wait for an accept */
@@ -552,7 +555,7 @@ static int unix_shutdown(struct socket *sock, int how)
 		return -EINVAL;
 
 	/* get other socket */
-	other = sk->protinfo.af_unix.other;
+	other = unix_peer(sk);
 
  	/* shutdown send */
 	if (how & SEND_SHUTDOWN) {
@@ -584,7 +587,7 @@ static int unix_getpeername(struct socket *sock, struct sockaddr *addr, size_t *
 		return -EINVAL;
 
 	/* copy destination address */
-	other = sk->protinfo.af_unix.other;
+	other = unix_peer(sk);
 	if (other) {
 		memset(addr, 0, sizeof(struct sockaddr));
 		memcpy(addr, &other->protinfo.af_unix.sunaddr, other->protinfo.af_unix.sunaddr_len);
