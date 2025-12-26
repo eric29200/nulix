@@ -193,9 +193,9 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 /*
  * Receive a message.
  */
-static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, int flags)
+static int unix_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 {
-	size_t ct = msg->msg_iovlen, copied = 0, size, done, len, num, i;
+	size_t ct = msg->msg_iovlen, copied = 0, done, len, num;
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	struct iovec *iov = msg->msg_iov;
 	unix_socket_t *sk, *from;
@@ -207,10 +207,6 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 	if (!sk)
 		return -EINVAL;
 
-	/* compute size */
-	for (i = 0, size = 0; i < msg->msg_iovlen; i++)
-		size += msg->msg_iov[i].iov_len;
-
 	/* for each iov */
 	while (ct--) {
 		done = 0;
@@ -221,7 +217,7 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 		/* try to fill buffer */
 		while (done < len) {
 			/* done */
-			if (copied == size || (copied && (flags & MSG_PEEK)))
+			if (copied == size || (copied && (msg->msg_flags & MSG_PEEK)))
 				goto out;
 
 			/* no message */
@@ -235,7 +231,7 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 					goto out;
 
 				/* non blocking */
-				if (nonblock)
+				if (msg->msg_flags & MSG_DONTWAIT)
 					return -EAGAIN;
 
 				/* signal received : restart system call */
@@ -267,7 +263,7 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, int nonblock, i
 			buf += num;
 
 			/* release socket buffer */
-			if (!(flags & MSG_PEEK)) {
+			if (!(msg->msg_flags & MSG_PEEK)) {
 				skb_pull(skb, num);
 
 				/* free empty socket buffer */
@@ -290,17 +286,13 @@ out:
 /*
  * Send a message.
  */
-static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonblock, int flags)
+static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, size_t size)
 {
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	unix_socket_t *sk, *other;
-	size_t size, sent, len, i;
 	struct sk_buff *skb;
+	size_t sent, len;
 	int ret;
-
-	/* unused flags */
-	UNUSED(flags);
-	UNUSED(nonblock);
 
 	/* get UNIX socket */
 	sk = sock->sk;
@@ -318,11 +310,6 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 			return -ENOTCONN;
 	}
 
-	/* compute data length */
-	size = 0;
-	for (i = 0; i < msg->msg_iovlen; i++)
-		size += msg->msg_iov[i].iov_len;
-
 	for (sent = 0; sent < size;) {
 		/* compute length */
 		len = size - sent;
@@ -330,7 +317,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, int nonbl
 			len = sk->sndbuf;
 
 		/* allocate a socket buffer */
-		skb = sock_alloc_send_skb(sock, len, nonblock, &ret);
+		skb = sock_alloc_send_skb(sock, len, msg->msg_flags & MSG_DONTWAIT, &ret);
 		if (!skb)
 			return sent ? (int) sent : ret;
 

@@ -295,12 +295,15 @@ out:
 /*
  * Receive a TCP message.
  */
-static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int flags)
+static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 {
 	size_t len, n, i, count = 0;
 	struct sockaddr_in *sin;
 	struct sk_buff *skb;
 	void *buf;
+
+	/* unused size */
+	UNUSED(size);
 
 	/* sleep until we receive a packet */
 	for (;;) {
@@ -321,7 +324,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int fl
 			return 0;
 
 		/* non blocking */
-		if (nonblock)
+		if (msg->msg_flags & MSG_DONTWAIT)
 			return -EAGAIN;
 
 		/* sleep */
@@ -359,7 +362,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int fl
 	}
 
 	/* remove and free socket buffer or remember position packet */
-	if (!(flags & MSG_PEEK)) {
+	if (!(msg->msg_flags & MSG_PEEK)) {
 		if (len <= 0) {
 			list_del(&skb->list);
 			skb_free(skb);
@@ -375,14 +378,14 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int fl
 /*
  * Send a TCP message.
  */
-static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, int flags)
+static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 {
 	struct sk_buff *skb;
 	size_t i;
 	int len;
 
-	/* unused flags */
-	UNUSED(flags);
+	/* unused size */
+	UNUSED(size);
 
 	/* sleep until connected */
 	for (;;) {
@@ -399,7 +402,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, 
 			break;
 
 		/* non blocking */
-		if (nonblock)
+		if (msg->msg_flags & MSG_DONTWAIT)
 			return -EAGAIN;
 
 		/* sleep */

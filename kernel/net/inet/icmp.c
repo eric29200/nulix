@@ -89,7 +89,7 @@ static int icmp_handle(struct sock *sk, struct sk_buff *skb)
 /*
  * Send an ICMP message.
  */
-static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, int flags)
+static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 {
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff *skb;
@@ -97,9 +97,8 @@ static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock,
 	size_t len, i;
 	void *buf;
 
-	/* unused flags */
-	UNUSED(flags);
-	UNUSED(nonblock);
+	/* unused size */
+	UNUSED(size);
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
@@ -143,7 +142,7 @@ static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock,
 /*
  * Receive an ICMP message.
  */
-static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int flags)
+static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 {
 	size_t len, n, count = 0;
 	struct sockaddr_in *sin;
@@ -151,8 +150,8 @@ static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int f
 	void *buf;
 	size_t i;
 
-	/* unused flags */
-	UNUSED(flags);
+	/* unused size */
+	UNUSED(size);
 
 	/* sleep until we receive a packet */
 	for (;;) {
@@ -165,7 +164,7 @@ static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int f
 			break;
 
 		/* non blocking */
-		if (nonblock)
+		if (msg->msg_flags & MSG_DONTWAIT)
 			return -EAGAIN;
 
 		/* sleep */
@@ -203,7 +202,7 @@ static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int f
 	}
 
 	/* remove and free socket buffer or remember position packet */
-	if (!(flags & MSG_PEEK)) {
+	if (!(msg->msg_flags & MSG_PEEK)) {
 		if (len <= 0) {
 			list_del(&skb->list);
 			skb_free(skb);

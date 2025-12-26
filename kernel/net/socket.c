@@ -233,10 +233,11 @@ static int sock_read(struct file *filp, char *buf, size_t len, off_t *ppos)
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
+	msg.msg_flags = filp->f_flags & O_NONBLOCK ? MSG_DONTWAIT : 0;
 	iov.iov_base = buf;
 	iov.iov_len = len;
 
-	return sock->ops->recvmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
+	return sock->ops->recvmsg(sock, &msg, len);
 }
 
 /*
@@ -265,16 +266,17 @@ static int sock_write(struct file *filp, const char *buf, size_t len, off_t *ppo
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
+	msg.msg_flags = filp->f_flags & O_NONBLOCK ? MSG_DONTWAIT : 0;
 	iov.iov_base = (char *) buf;
 	iov.iov_len = len;
 
-	return sock->ops->sendmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
+	return sock->ops->sendmsg(sock, &msg, len);
 }
 
 /*
  * Read/write vectors.
  */
-int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int iovcnt)
+int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int iovcnt, size_t len)
 {
 	struct socket *sock;
 	struct msghdr msg;
@@ -288,11 +290,12 @@ int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int 
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_iov = (struct iovec *) iov;
 	msg.msg_iovlen = iovcnt;
+	msg.msg_flags = filp->f_flags & O_NONBLOCK ? MSG_DONTWAIT : 0;
 
 	/* write or read */
 	if (type == WRITE)
-		return sock->ops->sendmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
-	return sock->ops->recvmsg(sock, &msg, filp->f_flags & O_NONBLOCK, 0);
+		return sock->ops->sendmsg(sock, &msg, len);
+	return sock->ops->recvmsg(sock, &msg, len);
 }
 
 /*
@@ -589,10 +592,12 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	msg.msg_iovlen = 1;
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
-	msg.msg_flags = 0;
+	msg.msg_flags = flags;
+	if (sock->file->f_flags & O_NONBLOCK)
+		msg.msg_flags |= MSG_DONTWAIT;
 
 	/* send message */
-	ret = sock->ops->sendmsg(sock, &msg, sock->file->f_flags & O_NONBLOCK, flags);
+	ret = sock->ops->sendmsg(sock, &msg, len);
 out:
 	sockfd_put(sock);
 	return ret;
@@ -605,6 +610,7 @@ int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 {
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
+	size_t total_len = 0, i;
 	struct msghdr msg_sys;
 	struct socket *sock;
 	int ret;
@@ -636,8 +642,17 @@ int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 	/* copy vectors from user to kernel space */
 	memcpy(iov, msg_sys.msg_iov, sizeof(struct iovec) * msg_sys.msg_iovlen);
 
+	/* compute total length */
+	for (i = 0; i < msg_sys.msg_iovlen; i++)
+		total_len += msg_sys.msg_iov[i].iov_len;
+
+	/* set flags */
+	msg_sys.msg_flags = flags;
+	if (sock->file->f_flags & O_NONBLOCK)
+		msg_sys.msg_flags |= MSG_DONTWAIT;
+
 	/* send message */
-	ret = sock->ops->sendmsg(sock, &msg_sys, sock->file->f_flags & O_NONBLOCK, flags);
+	ret = sock->ops->sendmsg(sock, &msg_sys, total_len);
 
 	/* free vectors */
 	if (iov != iovstack)
@@ -689,9 +704,11 @@ int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sock
 	msg.msg_iovlen = 1;
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
-	msg.msg_flags = 0;
+	msg.msg_flags = flags;
+	if (sock->file->f_flags & O_NONBLOCK)
+		msg.msg_flags |= MSG_DONTWAIT;
 
-	ret = sock->ops->recvmsg(sock, &msg, sock->file->f_flags & O_NONBLOCK, flags);
+	ret = sock->ops->recvmsg(sock, &msg, len);
 out:
 	sockfd_put(sock);
 	return ret;
@@ -704,6 +721,7 @@ int sys_recvmsg(int sockfd, struct msghdr *msg, int flags)
 {
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
+	size_t total_len = 0, i;
 	struct msghdr msg_sys;
 	struct socket *sock;
 	int ret;
@@ -735,8 +753,17 @@ int sys_recvmsg(int sockfd, struct msghdr *msg, int flags)
 	/* copy vectors from user to kernel space */
 	memcpy(iov, msg_sys.msg_iov, sizeof(struct iovec) * msg_sys.msg_iovlen);
 
+	/* compute total length */
+	for (i = 0; i < msg_sys.msg_iovlen; i++)
+		total_len += msg_sys.msg_iov[i].iov_len;
+
+	/* set flags */
+	msg_sys.msg_flags = flags;
+	if (sock->file->f_flags & O_NONBLOCK)
+		msg_sys.msg_flags |= MSG_DONTWAIT;
+
 	/* receive message */
-	ret = sock->ops->recvmsg(sock, &msg_sys, sock->file->f_flags & O_NONBLOCK, flags);
+	ret = sock->ops->recvmsg(sock, &msg_sys, total_len);
 
 	/* free vectors */
 	if (iov != iovstack)

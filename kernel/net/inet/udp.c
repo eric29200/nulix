@@ -58,29 +58,20 @@ static int udp_handle(struct sock *sk, struct sk_buff *skb)
 /*
  * Send an UDP message.
  */
-static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, int flags)
+static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 {
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff *skb;
 	uint8_t dest_ip[4];
-	size_t len, i;
 	void *buf;
-
-	/* unused flags */
-	UNUSED(flags);
-	UNUSED(nonblock);
+	size_t i;
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
 	inet_ntoi(dest_addr_in->sin_addr, dest_ip);
 
-	/* compute data length */
-	len = 0;
-	for (i = 0; i < msg->msg_iovlen; i++)
-		len += msg->msg_iov[i].iov_len;
-
 	/* allocate a socket buffer */
-	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct udp_header) + len);
+	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct udp_header) + size);
 	if (!skb)
 		return -ENOMEM;
 
@@ -90,15 +81,15 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, 
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + sizeof(struct udp_header) + len, 0,
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + sizeof(struct udp_header) + size, 0,
 			IPV4_DEFAULT_TTL, IP_PROTO_UDP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* build udp header */
 	skb->h.udp_header = (struct udp_header *) skb_put(skb, sizeof(struct udp_header));
-	udp_build_header(skb->h.udp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(dest_addr_in->sin_port), sizeof(struct udp_header) + len);
+	udp_build_header(skb->h.udp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(dest_addr_in->sin_port), sizeof(struct udp_header) + size);
 
 	/* copy message */
-	buf = skb_put(skb, len);
+	buf = skb_put(skb, size);
 	for (i = 0; i < msg->msg_iovlen; i++) {
 		memcpy(buf, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
 		buf += msg->msg_iov[i].iov_len;
@@ -107,18 +98,21 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, int nonblock, 
 	/* transmit message */
 	net_transmit(sk->protinfo.af_inet.dev, skb);
 
-	return len;
+	return size;
 }
 
 /*
  * Receive an UDP message.
  */
-static int udp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int flags)
+static int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 {
 	size_t len, n, i, count = 0;
 	struct sockaddr_in *sin;
 	struct sk_buff *skb;
 	void *buf;
+
+	/* unused size */
+	UNUSED(size);
 
 	/* sleep until we receive a packet */
 	for (;;) {
@@ -131,7 +125,7 @@ static int udp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int fl
 			break;
 
 		/* non blocking */
-		if (nonblock)
+		if (msg->msg_flags & MSG_DONTWAIT)
 			return -EAGAIN;
 
 		/* sleep */
@@ -169,7 +163,7 @@ static int udp_recvmsg(struct sock *sk, struct msghdr *msg, int nonblock, int fl
 	}
 
 	/* remove and free socket buffer or remember position packet */
-	if (!(flags & MSG_PEEK)) {
+	if (!(msg->msg_flags & MSG_PEEK)) {
 		if (len <= 0) {
 			list_del(&skb->list);
 			skb_free(skb);

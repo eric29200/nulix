@@ -65,8 +65,8 @@ struct sock {
 struct proto {
 	int (*handle)(struct sock *, struct sk_buff *);
 	int (*close)(struct sock *);
-	int (*recvmsg)(struct sock *, struct msghdr *, int, int);
-	int (*sendmsg)(struct sock *, const struct msghdr *, int, int);
+	int (*recvmsg)(struct sock *, struct msghdr *, size_t);
+	int (*sendmsg)(struct sock *, const struct msghdr *, size_t);
 	int (*connect)(struct sock *);
 	int (*accept)(struct sock *, struct sock *);
 };

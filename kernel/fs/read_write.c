@@ -163,6 +163,7 @@ static ssize_t do_readv_writev(int type, struct file *filp, const struct iovec *
 	struct inode *inode = filp->f_dentry->d_inode;
 	struct iovec iovstack[UIO_FASTIOV];
 	struct iovec *iov = iovstack;
+	size_t total_len = 0, i;
 	ssize_t len, nr;
 	void *base;
 	io_fn_t fn;
@@ -187,7 +188,9 @@ static ssize_t do_readv_writev(int type, struct file *filp, const struct iovec *
 
 	/* socket read/write */
 	if (inode->i_sock) {
-		ret = sock_readv_writev(type, filp, iov, iovcnt);
+		for (i = 0; i < iovcnt; i++)
+			total_len += iovec[i].iov_len;
+		ret = sock_readv_writev(type, filp, iov, iovcnt, total_len);
 		goto out;
 	}
 

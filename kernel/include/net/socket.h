@@ -20,6 +20,7 @@
 /* flags for send/recv */
 #define MSG_OOB			1
 #define MSG_PEEK		2
+#define MSG_DONTWAIT		0x40
 
 /* flags for shutdown */
 #define RCV_SHUTDOWN		1
@@ -127,8 +128,8 @@ struct prot_ops {
 	int (*release)(struct socket *);
 	int (*poll)(struct socket *, struct select_table *);
 	int (*ioctl)(struct socket *, int, unsigned long);
-	int (*recvmsg)(struct socket *, struct msghdr *, int, int);
-	int (*sendmsg)(struct socket *, const struct msghdr *, int, int);
+	int (*recvmsg)(struct socket *, struct msghdr *, size_t);
+	int (*sendmsg)(struct socket *, const struct msghdr *, size_t);
 	int (*bind)(struct socket *, const struct sockaddr *, size_t);
 	int (*listen)(struct socket *);
 	int (*accept)(struct socket *, struct socket *, struct sockaddr *);
@@ -147,7 +148,7 @@ extern struct prot_ops unix_ops;
 /* generic functions */
 void sock_init_data(struct socket *sock);
 int sock_fcntl(struct file *filp, int cmd, unsigned long arg);
-int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int iovcnt);
+int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int iovcnt, size_t len);
 
 /* socket system calls */
 int sys_socket(int domain, int type, int protocol);
