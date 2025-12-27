@@ -30,6 +30,7 @@ struct sk_buff {
 	uint8_t *			data;
 	uint8_t *			tail;
 	uint8_t *			end;
+	char				cb[48];
 	struct socket *			sock;
 	struct list_head		list;
 };

@@ -19,7 +19,7 @@ struct sock *sk_alloc(int family, int zero_it)
 		return NULL;
 
 	/* zero it */
-	if (zero_it) 
+	if (zero_it)
 		memset(sk, 0, sizeof(struct sock));
 
 	/* set family */

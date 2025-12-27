@@ -363,7 +363,6 @@ static int unix_listen(struct socket *sock)
 static int unix_stream_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
 {
 	unix_socket_t *sk, *sk_new, *other;
-	struct list_head *pos;
 	struct sk_buff *skb;
 
 	/* socket must be listening */
@@ -377,44 +376,51 @@ static int unix_stream_accept(struct socket *sock, struct socket *sock_new, stru
 		return -EINVAL;
 
 	for (;;) {
-		/* signal received : restart system call */
-		if (signal_pending(current_task))
-			return -ERESTARTSYS;
+		/* wait for a message */
+		if (list_empty(&sk->skb_list)) {
+			/* disconnected : break */
+			if (sock->state == SS_DISCONNECTING)
+				return 0;
 
-		/* for each received packet */
-		list_for_each(pos, &sk->skb_list) {
-			/* get socket buffer */
-			skb = list_entry(pos, struct sk_buff, list);
+			/* signal received : restart system call */
+			if (signal_pending(current_task))
+				return -ERESTARTSYS;
 
-			/* get destination */
-			other = skb->sock->sk;
-
-			/* set destination address */
-			memcpy(addr, &other->protinfo.af_unix.sunaddr, sizeof(struct sockaddr_un));
-
-			/* free socket buffer */
-			list_del(&skb->list);
-			skb_free(skb);
-
-			/* set new socket */
-			sock_new->state = SS_CONNECTED;
-			unix_peer(sk_new) = other;
-			sk_new->peercred.uid = sk->peercred.uid;
-
-			/* set other socket connected and wake up eventual clients connecting */
-			other->sock->state = SS_CONNECTED;
-			unix_peer(other) = sk_new;
-			wake_up(&unix_peer(sk_new)->sock->wait);
-
-			return 0;
+			/* sleep */
+			sleep_on(&sock->wait);
+			continue;
 		}
 
-		/* disconnected : break */
-		if (sock->state == SS_DISCONNECTING)
-			return 0;
+		/* ignore non SYN messages */
+		skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
+		if (!(UNIXCB(skb).attr & MSG_SYN)) {
+			if (skb->sock)
+				wake_up(&skb->sock->wait);
+			skb_free(skb);
+			continue;
+		}
 
-		/* sleep */
-		sleep_on(&sock->wait);
+		/* get destination */
+		other = skb->sock->sk;
+
+		/* set destination address */
+		memcpy(addr, &other->protinfo.af_unix.sunaddr, sizeof(struct sockaddr_un));
+
+		/* free socket buffer */
+		list_del(&skb->list);
+		skb_free(skb);
+
+		/* set new socket */
+		sock_new->state = SS_CONNECTED;
+		unix_peer(sk_new) = other;
+		sk_new->peercred.uid = sk->peercred.uid;
+
+		/* set other socket connected and wake up eventual clients connecting */
+		other->sock->state = SS_CONNECTED;
+		unix_peer(other) = sk_new;
+		wake_up(&unix_peer(sk_new)->sock->wait);
+
+		break;
 	}
 
 	return 0;
@@ -466,10 +472,11 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 	if (ret)
 		return ret;
 
-	/* create an empty packet */
+	/* create a SYN message */
 	skb = skb_alloc(0);
 	if (!skb)
 		return -ENOMEM;
+	UNIXCB(skb).attr = MSG_SYN;
 
 	/* queue empty packet */
 	skb->sock = sock;
@@ -634,7 +641,7 @@ static struct proto_ops unix_stream_ops = {
 static struct sock *unix_create1(struct socket *sock, int protocol)
 {
 	struct sock *sk;
-	
+
 	/* allocate UNIX socket */
 	sk = sk_alloc(PF_UNIX, 1);
 	if (!sk)
