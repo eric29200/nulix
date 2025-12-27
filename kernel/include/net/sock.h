@@ -41,6 +41,8 @@ struct inet_opt {
  * Internal socket.
  */
 struct sock {
+	uint16_t			family;
+	uint16_t			type;
 	uint16_t			protocol;
 	struct socket *			sock;
 	off_t				msg_position;
@@ -77,6 +79,13 @@ extern struct proto tcp_proto;
 extern struct proto raw_proto;
 extern struct proto icmp_proto;
 
+struct sock *sk_alloc(int family, int zero_it);
+void sock_init_data(struct socket *sock, struct sock *sk);
+int sock_no_dup(struct socket *newsock, struct socket *oldsock);
+int sock_no_listen(struct socket *sock);
+int sock_no_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr);
+int sock_no_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen);
+int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen);
 struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonblock, int *err);
 
 #endif

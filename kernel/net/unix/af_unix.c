@@ -15,8 +15,6 @@
 /* UNIX sockets */
 static LIST_HEAD(unix_sockets);
 
-static int unix_create(struct socket *sock, int protocol);
-
 /*
  * Find a UNIX socket.
  */
@@ -83,21 +81,6 @@ static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_soc
 	}
 
 	return ret;
-}
-
-/*
- * Duplicate a socket.
- */
-static int unix_dup(struct socket *sock, struct socket *sock_new)
-{
-	unix_socket_t *sk;
-
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
-
-	return unix_create(sock_new, sk->protocol);
 }
 
 /*
@@ -572,38 +555,6 @@ static int unix_getsockname(struct socket *sock, struct sockaddr *addr, size_t *
 }
 
 /*
- * Get socket options system call.
- */
-static int unix_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen)
-{
-	UNUSED(sock);
-	UNUSED(level);
-	UNUSED(optname);
-	UNUSED(optval);
-	UNUSED(optlen);
-
-	printf("unix_getsockopt(%d) undefined\n", optname);
-
-	return 0;
-}
-
-/*
- * Set socket options system call.
- */
-static int unix_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen)
-{
-	UNUSED(sock);
-	UNUSED(level);
-	UNUSED(optname);
-	UNUSED(optval);
-	UNUSED(optlen);
-
-	printf("unix_setsockopt(%d) undefined\n", optname);
-
-	return 0;
-}
-
-/*
  * Ioctl on a UNIX socket.
  */
 static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
@@ -617,10 +568,31 @@ static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
 }
 
 /*
- * UNIX operations.
+ * UNIX datagram operations.
  */
-static struct proto_ops unix_ops = {
-	.dup		= unix_dup,
+static struct proto_ops unix_dgram_ops = {
+	.dup		= sock_no_dup,
+	.release	= unix_release,
+	.poll		= unix_poll,
+	.ioctl		= unix_ioctl,
+	.recvmsg	= unix_recvmsg,
+	.sendmsg	= unix_sendmsg,
+	.bind		= unix_bind,
+	.listen		= sock_no_listen,
+	.accept		= sock_no_accept,
+	.connect	= unix_connect,
+	.shutdown	= unix_shutdown,
+	.getpeername	= unix_getpeername,
+	.getsockname	= unix_getsockname,
+	.getsockopt	= sock_no_getsockopt,
+	.setsockopt	= sock_no_setsockopt,
+};
+
+/*
+ * UNIX stream operations.
+ */
+static struct proto_ops unix_stream_ops = {
+	.dup		= sock_no_dup,
 	.release	= unix_release,
 	.poll		= unix_poll,
 	.ioctl		= unix_ioctl,
@@ -633,44 +605,58 @@ static struct proto_ops unix_ops = {
 	.shutdown	= unix_shutdown,
 	.getpeername	= unix_getpeername,
 	.getsockname	= unix_getsockname,
-	.getsockopt	= unix_getsockopt,
-	.setsockopt	= unix_setsockopt,
+	.getsockopt	= sock_no_getsockopt,
+	.setsockopt	= sock_no_setsockopt,
 };
+
+/*
+ * Create a socket.
+ */
+static struct sock *unix_create1(struct socket *sock, int protocol)
+{
+	struct sock *sk;
+	
+	/* allocate UNIX socket */
+	sk = sk_alloc(PF_UNIX, 1);
+	if (!sk)
+		return NULL;
+
+	/* set socket */
+	sk->protocol = protocol;
+	sock_init_data(sock, sk);
+
+	/* insert in sockets list */
+	list_add_tail(&sk->list, &unix_sockets);
+
+	return sk;
+}
 
 /*
  * Create a socket.
  */
 static int unix_create(struct socket *sock, int protocol)
 {
-	unix_socket_t *sk;
-
 	/* check protocol */
-	if (protocol != 0)
-		return -EINVAL;
+	if (protocol && protocol != PF_UNIX)
+		return -EPROTONOSUPPORT;
 
-	/* allocate UNIX socket */
-	sk = (unix_socket_t *) kmalloc(sizeof(unix_socket_t));
-	if (!sk)
-		return -ENOMEM;
+	/* set operations */
+	switch (sock->type) {
+		case SOCK_STREAM:
+			sock->ops = &unix_stream_ops;
+			break;
+		case SOCK_RAW:
+			sock->type = SOCK_DGRAM;
+			sock->ops = &unix_dgram_ops;
+			break;
+		case SOCK_DGRAM:
+			sock->ops = &unix_dgram_ops;
+			break;
+		default:
+			return -ESOCKTNOSUPPORT;
+	}
 
-	/* set UNIX socket */
-	memset(sk, 0, sizeof(unix_socket_t));
-	sk->protocol = protocol;
-	sk->sock = sock;
-	sk->rcvbuf = SK_RMEM_MAX;
-	sk->sndbuf = SK_WMEM_MAX;
-	unix_peer(sk) = NULL;
-	INIT_LIST_HEAD(&sk->skb_list);
-	sock->sk = sk;
-	sock->ops = &unix_ops;
-
-	/* init data */
-	sock_init_data(sock);
-
-	/* insert in sockets list */
-	list_add_tail(&sk->list, &unix_sockets);
-
-	return 0;
+	return unix_create1(sock, protocol) ? 0 : -ENOMEM;
 }
 
 /*

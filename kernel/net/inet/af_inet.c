@@ -60,7 +60,7 @@ static uint16_t get_next_free_port()
 /*
  * Duplicate a socket.
  */
-static int inet_dup(struct socket *sock, struct socket *sock_new)
+static int inet_dup(struct socket *sock_new, struct socket *sock)
 {
 	struct sock *sk;
 
@@ -494,14 +494,11 @@ static int inet_create(struct socket *sock, int protocol)
 	memset(sk, 0, sizeof(struct sock));
 	sk->protinfo.af_inet.dev = rtl8139_get_net_device();
 	sk->protocol = protocol;
-	sk->sock = sock;
 	sk->protinfo.af_inet.prot = prot;
-	INIT_LIST_HEAD(&sk->skb_list);
-	sock->sk = sk;
 	sock->ops = &inet_ops;
 
 	/* init data */
-	sock_init_data(sock);
+	sock_init_data(sock, sk);
 
 	/* insert in sockets list */
 	list_add_tail(&sk->list, &inet_sockets);

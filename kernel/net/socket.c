@@ -9,7 +9,7 @@
 #include <uio.h>
 
 /* global variables */
-static struct net_proto_family *net_families[NPROTO];
+struct net_proto_family *net_families[NPROTO];
 struct file_operations socket_fops;
 
 /*
@@ -38,16 +38,6 @@ static struct socket *sock_alloc()
 	sock->inode = inode;
 
 	return sock;
-}
-
-/*
- * Init socket data.
- */
-void sock_init_data(struct socket *sock)
-{
-	sock->sk->peercred.pid = 0;
-	sock->sk->peercred.uid = -1;
-	sock->sk->peercred.gid = -1;
 }
 
 /*
@@ -498,7 +488,7 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	/* duplicate socket */
 	new_sock->type = sock->type;
 	new_sock->ops = sock->ops;
-	ret = sock->ops->dup(sock, new_sock);
+	ret = sock->ops->dup(new_sock, sock);
 	if (ret < 0) {
 		sock_release(new_sock);
 		sockfd_put(sock);
