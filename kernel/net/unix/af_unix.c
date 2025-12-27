@@ -360,7 +360,7 @@ static int unix_listen(struct socket *sock)
 /*
  * Accept system call.
  */
-static int unix_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
+static int unix_stream_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
 {
 	unix_socket_t *sk, *sk_new, *other;
 	struct list_head *pos;
@@ -421,9 +421,35 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, struct sock
 }
 
 /*
- * Connect system call.
+ * Datagram connect.
  */
-static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+{
+	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
+	unix_socket_t *sk, *other;
+	int ret;
+
+	/* get UNIX socket */
+	sk = sock->sk;
+	if (!sk)
+		return -EINVAL;
+
+	/* find other unix socket */
+	ret = unix_find_other(sunaddr, addrlen, &other);
+	if (ret)
+		return ret;
+
+	/* connect */
+	unix_peer(sk) = other;
+	sock->state = SS_CONNECTED;
+
+	return 0;
+}
+
+/*
+ * Stream connect.
+ */
+static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	unix_socket_t *sk, *other;
@@ -439,13 +465,6 @@ static int unix_connect(struct socket *sock, const struct sockaddr *addr, size_t
 	ret = unix_find_other(sunaddr, addrlen, &other);
 	if (ret)
 		return ret;
-
-	/* datagramm socket : just connect */
-	if (sock->type == SOCK_DGRAM) {
-		unix_peer(sk) = other;
-		sock->state = SS_CONNECTED;
-		return 0;
-	}
 
 	/* create an empty packet */
 	skb = skb_alloc(0);
@@ -580,7 +599,7 @@ static struct proto_ops unix_dgram_ops = {
 	.bind		= unix_bind,
 	.listen		= sock_no_listen,
 	.accept		= sock_no_accept,
-	.connect	= unix_connect,
+	.connect	= unix_dgram_connect,
 	.shutdown	= unix_shutdown,
 	.getpeername	= unix_getpeername,
 	.getsockname	= unix_getsockname,
@@ -600,8 +619,8 @@ static struct proto_ops unix_stream_ops = {
 	.sendmsg	= unix_sendmsg,
 	.bind		= unix_bind,
 	.listen		= unix_listen,
-	.accept		= unix_accept,
-	.connect	= unix_connect,
+	.accept		= unix_stream_accept,
+	.connect	= unix_stream_connect,
 	.shutdown	= unix_shutdown,
 	.getpeername	= unix_getpeername,
 	.getsockname	= unix_getsockname,
