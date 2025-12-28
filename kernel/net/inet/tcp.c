@@ -458,12 +458,15 @@ static int tcp_connect(struct sock *sk)
  */
 static struct sk_buff *tcp_find_established(struct sock *sk)
 {
-	struct list_head *pos;
 	struct sk_buff *skb;
 
-	list_for_each(pos, &sk->receive_queue.list) {
-		skb = list_entry(pos, struct sk_buff, list);
+	/* peek first message */
+	skb = skb_peek(&sk->receive_queue);
+	if (!skb)
+		return NULL;
 
+	/* find a SYN message */
+	do {
 		/* get IP header */
 		skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
 
@@ -473,7 +476,9 @@ static struct sk_buff *tcp_find_established(struct sock *sk)
 		/* SYN message */
 		if (!skb->h.tcp_header->syn)
 			return skb;
-	}
+
+		skb = skb->next;
+	} while (skb != (struct sk_buff *) &sk->receive_queue);
 
 	return NULL;
 }

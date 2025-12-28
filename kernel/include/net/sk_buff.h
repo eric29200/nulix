@@ -13,6 +13,9 @@
  * Socket buffer.
  */
 struct sk_buff {
+	struct sk_buff *		next;
+	struct sk_buff *		prev;
+	struct sk_buff_head *		list;
 	struct net_device *		dev;
 	struct ethernet_header *	eth_header;
 	struct {
@@ -32,14 +35,15 @@ struct sk_buff {
 	uint8_t *			end;
 	char				cb[48];
 	struct socket *			sock;
-	struct list_head		list;
 };
 
 /*
  * Socket buffer queue.
  */
 struct sk_buff_head {
-	struct list_head		list;
+	struct sk_buff *		next;
+	struct sk_buff *		prev;
+	size_t				len;
 };
 
 /*
@@ -47,16 +51,9 @@ struct sk_buff_head {
  */
 static inline void skb_queue_head_init(struct sk_buff_head *list)
 {
-	INIT_LIST_HEAD(&list->list);
-}
-
-/*
- * Reserve some space in a socket buffer.
- */
-static inline void skb_reserve(struct sk_buff *skb, size_t len)
-{
-	skb->data += len;
-	skb->tail += len;
+	list->prev = (struct sk_buff *) list;
+	list->next = (struct sk_buff *) list;
+	list->len = 0;
 }
 
 /*
@@ -64,7 +61,18 @@ static inline void skb_reserve(struct sk_buff *skb, size_t len)
  */
 static inline int skb_queue_empty(struct sk_buff_head *list)
 {
-	return list_empty(&list->list);
+	return list->next == (struct sk_buff *) list;
+}
+
+/*
+ * Peek next socket buffer.
+ */
+static inline struct sk_buff *skb_peek(struct sk_buff_head *list_)
+{
+	struct sk_buff *list = ((struct sk_buff *) list_)->next;
+	if (list == (struct sk_buff *) list_)
+		list = NULL;
+	return list;
 }
 
 /*
@@ -72,12 +80,21 @@ static inline int skb_queue_empty(struct sk_buff_head *list)
  */
 static inline struct sk_buff *skb_dequeue(struct sk_buff_head *list)
 {
-	struct sk_buff *res = NULL;
+	struct sk_buff *next, *prev, *res;
 
-	if (!skb_queue_empty(list)) {
-		res = list_first_entry(&list->list, struct sk_buff, list);
-		list_del(&res->list);
-	}
+	prev = (struct sk_buff *) list;
+	next = prev->next;
+	if (next == prev)
+		return NULL;
+
+	list->len--;
+	res = next;
+	next = next->next;
+	next->prev = prev;
+	prev->next = next;
+	res->next = NULL;
+	res->prev = NULL;
+	res->list = NULL;
 
 	return res;
 }
@@ -87,7 +104,17 @@ static inline struct sk_buff *skb_dequeue(struct sk_buff_head *list)
  */
 static inline void skb_unlink(struct sk_buff *skb)
 {
-	list_del(&skb->list);
+	struct sk_buff *next, *prev;
+
+	if (skb->list) {
+		skb->list->len--;
+		next = skb->next;
+		prev = skb->prev;
+		skb->next = NULL;
+		skb->prev = NULL;
+		next->prev = prev;
+		prev->next = next;
+	}
 }
 
 /*
@@ -95,7 +122,16 @@ static inline void skb_unlink(struct sk_buff *skb)
  */
 static inline void skb_queue_tail(struct sk_buff_head *list, struct sk_buff *newsk)
 {
-	list_add_tail(&newsk->list, &list->list);
+	struct sk_buff *prev, *next;
+
+	list->len++;
+	newsk->list = list;
+	next = (struct sk_buff *)list;
+	prev = next->prev;
+	newsk->next = next;
+	newsk->prev = prev;
+	next->prev = newsk;
+	prev->next = newsk;
 }
 
 /*
@@ -103,7 +139,25 @@ static inline void skb_queue_tail(struct sk_buff_head *list, struct sk_buff *new
  */
 static inline void skb_queue_head(struct sk_buff_head *list, struct sk_buff *newsk)
 {
-	list_add(&newsk->list, &list->list);
+	struct sk_buff *prev, *next;
+
+	list->len++;
+	newsk->list = list;
+	prev = (struct sk_buff *)list;
+	next = prev->next;
+	newsk->next = next;
+	newsk->prev = prev;
+	next->prev = newsk;
+	prev->next = newsk;
+}
+
+/*
+ * Reserve some space in a socket buffer.
+ */
+static inline void skb_reserve(struct sk_buff *skb, size_t len)
+{
+	skb->data += len;
+	skb->tail += len;
 }
 
 /*
