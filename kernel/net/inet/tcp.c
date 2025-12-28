@@ -4,6 +4,7 @@
 #include <net/inet/ethernet.h>
 #include <proc/sched.h>
 #include <stderr.h>
+#include <stdio.h>
 #include <math.h>
 #include <uio.h>
 
@@ -249,7 +250,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 
 			/* add buffer to socket */
 			if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin)
-				list_add_tail(&skb_new->list, &sk->skb_list);
+				skb_queue_tail(&sk->receive_queue, skb_new);
 
 			break;
 		case SS_CONNECTING:
@@ -273,7 +274,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 						return -ENOMEM;
 
 					/* add buffer to socket */
-					list_add_tail(&skb_new->list, &sk->skb_list);
+					skb_queue_tail(&sk->receive_queue, skb_new);
 				}
 
 				/* FIN message : close socket */
@@ -316,7 +317,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 			return -ERESTARTSYS;
 
 		/* message received : break */
-		if (!list_empty(&sk->skb_list))
+		if (!skb_queue_empty(&sk->receive_queue))
 			break;
 
 		/* disconnected : break */
@@ -332,7 +333,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
+	skb = skb_dequeue(&sk->receive_queue);
 
 	/* get IP header */
 	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
@@ -361,16 +362,19 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 		sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
 	}
 
-	/* remove and free socket buffer or remember position packet */
+	/* free message or requeue it */
 	if (!(msg->msg_flags & MSG_PEEK)) {
-		if (len <= 0) {
-			list_del(&skb->list);
-			skb_free(skb);
-			sk->msg_position = 0;
-		} else {
+		if (len > 0) {
 			sk->msg_position += count;
+			skb_queue_head(&sk->receive_queue, skb);
+		} else {
+			sk->msg_position = 0;
+			skb_free(skb);
 		}
+	} else {
+		skb_queue_head(&sk->receive_queue, skb);
 	}
+
 
 	return count;
 }
@@ -450,70 +454,82 @@ static int tcp_connect(struct sock *sk)
 }
 
 /*
+ * Find a SYN message.
+ */
+static struct sk_buff *tcp_find_established(struct sock *sk)
+{
+	struct list_head *pos;
+	struct sk_buff *skb;
+
+	list_for_each(pos, &sk->receive_queue.list) {
+		skb = list_entry(pos, struct sk_buff, list);
+
+		/* get IP header */
+		skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
+
+		/* get TCP header */
+		skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
+
+		/* SYN message */
+		if (!skb->h.tcp_header->syn)
+			return skb;
+	}
+
+	return NULL;
+}
+
+/*
  * Accept a TCP connection.
  */
 static int tcp_accept(struct sock *sk, struct sock *sk_new)
 {
-	struct list_head *pos, *n;
 	struct sk_buff *skb;
 
 	for (;;) {
-		/* signal received : restart system call */
-		if (signal_pending(current_task))
-			return -ERESTARTSYS;
+		/* wait for a SYN message */
+		skb = tcp_find_established(sk);
+		if (!skb) {
+			/* signal received : restart system call */
+			if (signal_pending(current_task))
+				return -ERESTARTSYS;
 
-		/* for each received packet */
-		list_for_each(pos, &sk->skb_list) {
-			/* get socket buffer */
-			skb = list_entry(pos, struct sk_buff, list);
+			/* disconnected : break */
+			if (sk->sock->state == SS_DISCONNECTING)
+				return 0;
 
-			/* get IP header */
-			skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
-
-			/* get TCP header */
-			skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
-
-			/* not a SYN message : go to next packet */
-			if (!skb->h.tcp_header->syn)
-				continue;
-
-			/* set new socket */
-			sk_new->sock->state = SS_CONNECTED;
-			memcpy(&sk_new->protinfo.af_inet.src_sin, &sk->protinfo.af_inet.src_sin, sizeof(struct sockaddr));
-			sk_new->protinfo.af_inet.dst_sin.sin_family = AF_INET;
-			sk_new->protinfo.af_inet.dst_sin.sin_port = skb->h.tcp_header->src_port;
-			sk_new->protinfo.af_inet.dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
-			sk_new->protinfo.af_inet.seq_no = ntohl(1);
-			sk_new->protinfo.af_inet.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
-
-			/* free socket buffer */
-			list_del(&skb->list);
-			skb_free(skb);
-
-			/* move buffers to new socket */
-			list_for_each_safe(pos, n, &sk->skb_list) {
-				/* decode socket buffer */
-				skb = list_entry(pos, struct sk_buff, list);
-				skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
-				skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
-
-				/* move socket buffer */
-				if (sk_new->protinfo.af_inet.dst_sin.sin_port == skb->h.tcp_header->src_port
-				    && sk_new->protinfo.af_inet.dst_sin.sin_addr == inet_iton(skb->nh.ip_header->src_addr)) {
-					list_del(&skb->list);
-					list_add_tail(&skb->list, &sk_new->skb_list);
-				}
-			}
-
-			return 0;
+			/* sleep */
+			sleep_on(&sk->sock->wait);
+			continue;
 		}
 
-		/* disconnected : break */
-		if (sk->sock->state == SS_DISCONNECTING)
-			return 0;
+		/* set new socket */
+		sk_new->sock->state = SS_CONNECTED;
+		memcpy(&sk_new->protinfo.af_inet.src_sin, &sk->protinfo.af_inet.src_sin, sizeof(struct sockaddr));
+		sk_new->protinfo.af_inet.dst_sin.sin_family = AF_INET;
+		sk_new->protinfo.af_inet.dst_sin.sin_port = skb->h.tcp_header->src_port;
+		sk_new->protinfo.af_inet.dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+		sk_new->protinfo.af_inet.seq_no = ntohl(1);
+		sk_new->protinfo.af_inet.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
 
-		/* sleep */
-		sleep_on(&sk->sock->wait);
+		/* free socket buffer */
+		skb_unlink(skb);
+		skb_free(skb);
+
+		/* move buffers to new socket */
+		while ((skb = skb_dequeue(&sk->receive_queue)) != NULL) {
+			/* decode socket buffer */
+			skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
+			skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
+
+			/* move socket buffer */
+			if (sk_new->protinfo.af_inet.dst_sin.sin_port == skb->h.tcp_header->src_port
+				&& sk_new->protinfo.af_inet.dst_sin.sin_addr == inet_iton(skb->nh.ip_header->src_addr))
+				skb_queue_tail(&sk_new->receive_queue, skb);
+			else
+				skb_free(skb);
+		}
+
+		return 0;
 	}
 
 	return 0;

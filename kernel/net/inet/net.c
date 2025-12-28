@@ -118,8 +118,6 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 	net_dev->type = type;
 	net_dev->index = nr_net_devices;
 	net_dev->io_base = io_base;
-	INIT_LIST_HEAD(&net_dev->skb_input_list);
-	INIT_LIST_HEAD(&net_dev->skb_output_list);
 
 	/* set name */
 	len = sprintf(tmp, "eth%d", nr_net_devices);
@@ -246,7 +244,6 @@ void net_handle(struct sk_buff *skb)
 		return;
 
 	/* handle packet */
-	list_del(&skb->list);
 	skb_handle(skb);
 	skb_free(skb);
 }
@@ -260,7 +257,6 @@ void net_transmit(struct net_device *net_dev, struct sk_buff *skb)
 		return;
 
 	/* send and free packet */
-	list_del(&skb->list);
 	net_dev->send_packet(skb);
 	skb_free(skb);
 }

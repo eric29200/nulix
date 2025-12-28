@@ -33,7 +33,7 @@ struct sock *sk_alloc(int family, int zero_it)
  */
 void sock_init_data(struct socket *sock, struct sock *sk)
 {
-	INIT_LIST_HEAD(&sk->skb_list);
+	skb_queue_head_init(&sk->receive_queue);
 	sk->rcvbuf = SK_RMEM_MAX;
 	sk->sndbuf = SK_WMEM_MAX;
 	sk->sock = sock;

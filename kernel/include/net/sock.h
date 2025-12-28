@@ -58,7 +58,7 @@ struct sock {
 		struct inet_opt		af_inet;
 	} protinfo;
 	struct list_head		list;
-	struct list_head		skb_list;
+	struct sk_buff_head		receive_queue;
 };
 
 /*

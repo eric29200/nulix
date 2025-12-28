@@ -36,12 +36,74 @@ struct sk_buff {
 };
 
 /*
+ * Socket buffer queue.
+ */
+struct sk_buff_head {
+	struct list_head		list;
+};
+
+/*
+ * Init a socket buffer queue.
+ */
+static inline void skb_queue_head_init(struct sk_buff_head *list)
+{
+	INIT_LIST_HEAD(&list->list);
+}
+
+/*
  * Reserve some space in a socket buffer.
  */
 static inline void skb_reserve(struct sk_buff *skb, size_t len)
 {
 	skb->data += len;
 	skb->tail += len;
+}
+
+/*
+ * Is a socket buffer queue empty ?
+ */
+static inline int skb_queue_empty(struct sk_buff_head *list)
+{
+	return list_empty(&list->list);
+}
+
+/*
+ * Dequeue next socket buffer.
+ */
+static inline struct sk_buff *skb_dequeue(struct sk_buff_head *list)
+{
+	struct sk_buff *res = NULL;
+
+	if (!skb_queue_empty(list)) {
+		res = list_first_entry(&list->list, struct sk_buff, list);
+		list_del(&res->list);
+	}
+
+	return res;
+}
+
+/*
+ * Unlink a socket buffer.
+ */
+static inline void skb_unlink(struct sk_buff *skb)
+{
+	list_del(&skb->list);
+}
+
+/*
+ * Insert a socket buffer at the end of a queue.
+ */
+static inline void skb_queue_tail(struct sk_buff_head *list, struct sk_buff *newsk)
+{
+	list_add_tail(&newsk->list, &list->list);
+}
+
+/*
+ * Insert a socket buffer at the beginning of a queue.
+ */
+static inline void skb_queue_head(struct sk_buff_head *list, struct sk_buff *newsk)
+{
+	list_add(&newsk->list, &list->list);
 }
 
 /*

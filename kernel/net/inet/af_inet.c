@@ -77,7 +77,6 @@ static int inet_dup(struct socket *sock_new, struct socket *sock)
  */
 static int inet_release(struct socket *sock)
 {
-	struct list_head *pos, *n;
 	struct sk_buff *skb;
 	struct sock *sk;
 
@@ -87,11 +86,8 @@ static int inet_release(struct socket *sock)
 		return 0;
 
 	/* free all remaining buffers */
-	list_for_each_safe(pos, n, &sk->skb_list) {
-		skb = list_entry(pos, struct sk_buff, list);
-		list_del(&skb->list);
+	while ((skb = skb_dequeue(&sk->receive_queue)) != NULL)
 		skb_free(skb);
-	}
 
 	/* protocol close */
 	if (sk->protinfo.af_inet.prot->close)
@@ -122,7 +118,7 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
 		return mask;
 
 	/* check if there is a message in the queue */
-	if (sk->sock->state == SS_DISCONNECTING || !list_empty(&sk->skb_list))
+	if (sk->sock->state == SS_DISCONNECTING || !skb_queue_empty(&sk->receive_queue))
 		mask |= POLLIN;
 
 	/* check if socket can write */

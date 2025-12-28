@@ -4,6 +4,7 @@
 #include <net/inet/ip.h>
 #include <proc/sched.h>
 #include <uio.h>
+#include <stdio.h>
 #include <stderr.h>
 
 /*
@@ -23,7 +24,7 @@ static int raw_handle(struct sock *sk, struct sk_buff *skb)
 		return -ENOMEM;
 
 	/* push skb in socket queue */
-	list_add_tail(&skb_new->list, &sk->skb_list);
+	skb_queue_tail(&sk->receive_queue, skb_new);
 
 	return 0;
 }
@@ -48,7 +49,7 @@ static int raw_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 			return -ERESTARTSYS;
 
 		/* message received : break */
-		if (!list_empty(&sk->skb_list))
+		if (!skb_queue_empty(&sk->receive_queue))
 			break;
 
 		/* non blocking */
@@ -60,7 +61,7 @@ static int raw_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	}
 
 	/* get first message */
-	skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
+	skb = skb_dequeue(&sk->receive_queue);
 
 	/* get IP header */
 	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
@@ -86,15 +87,17 @@ static int raw_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 		sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
 	}
 
-	/* remove and free socket buffer or remember position packet */
+	/* free message or requeue it */
 	if (!(msg->msg_flags & MSG_PEEK)) {
-		if (len <= 0) {
-			list_del(&skb->list);
-			skb_free(skb);
-			sk->msg_position = 0;
-		} else {
+		if (len > 0) {
 			sk->msg_position += count;
+			skb_queue_head(&sk->receive_queue, skb);
+		} else {
+			sk->msg_position = 0;
+			skb_free(skb);
 		}
+	} else {
+		skb_queue_head(&sk->receive_queue, skb);
 	}
 
 	return count;

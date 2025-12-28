@@ -27,8 +27,6 @@ struct net_device {
 	uint16_t		type;
 	uint16_t		flags;
 	struct timer_event	timer;
-	struct list_head	skb_input_list;
-	struct list_head	skb_output_list;
 	void			(*send_packet)(struct sk_buff *);
 };
 

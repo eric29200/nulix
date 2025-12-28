@@ -127,7 +127,7 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 		return -EINVAL;
 
 	/* check if there is a message in the queue */
-	if (!list_empty(&sk->skb_list) || sk->shutdown & RCV_SHUTDOWN)
+	if (!skb_queue_empty(&sk->receive_queue) || sk->shutdown & RCV_SHUTDOWN)
 		mask |= POLLIN;
 
 	/* check if socket can write */
@@ -170,8 +170,9 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 			if (copied == size || (copied && (msg->msg_flags & MSG_PEEK)))
 				goto out;
 
-			/* no message */
-			if (list_empty(&sk->skb_list)) {
+			/* wait for a message */
+			skb = skb_dequeue(&sk->receive_queue);
+			if (!skb) {
 				/* socket is down */
 				if (sk->shutdown & RCV_SHUTDOWN)
 					goto out;
@@ -193,9 +194,6 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 				continue;
 			}
 
-			/* get message */
-			skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
-
 			/* set address just once */
 			if (sunaddr && skb->sock && skb->sock->sk) {
 				from = skb->sock->sk;
@@ -212,15 +210,20 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 			done += num;
 			buf += num;
 
-			/* release socket buffer */
+			/* free message or requeue it */
 			if (!(msg->msg_flags & MSG_PEEK)) {
 				skb_pull(skb, num);
 
-				/* free empty socket buffer */
-				if (skb->len <= 0) {
-					list_del(&skb->list);
-					skb_free(skb);
+				/* partial read */
+				if (skb->len > 0) {
+					skb_queue_head(&sk->receive_queue, skb);
+					break;
 				}
+
+				/* free socket buffer */
+				skb_free(skb);
+			} else {
+				skb_queue_head(&sk->receive_queue, skb);
 			}
 
 			/* datagramm socket : return */
@@ -278,7 +281,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, size_t si
 		memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
 
 		/* queue message to other socket */
-		list_add_tail(&skb->list, &other->skb_list);
+		skb_queue_tail(&other->receive_queue, skb);
 
 		/* wake up eventual readers */
 		wake_up(&other->sock->wait);
@@ -377,7 +380,8 @@ static int unix_stream_accept(struct socket *sock, struct socket *sock_new, stru
 
 	for (;;) {
 		/* wait for a message */
-		if (list_empty(&sk->skb_list)) {
+		skb = skb_dequeue(&sk->receive_queue);
+		if (!skb) {
 			/* disconnected : break */
 			if (sock->state == SS_DISCONNECTING)
 				return 0;
@@ -392,7 +396,6 @@ static int unix_stream_accept(struct socket *sock, struct socket *sock_new, stru
 		}
 
 		/* ignore non SYN messages */
-		skb = list_first_entry(&sk->skb_list, struct sk_buff, list);
 		if (!(UNIXCB(skb).attr & MSG_SYN)) {
 			if (skb->sock)
 				wake_up(&skb->sock->wait);
@@ -407,7 +410,6 @@ static int unix_stream_accept(struct socket *sock, struct socket *sock_new, stru
 		memcpy(addr, &other->protinfo.af_unix.sunaddr, sizeof(struct sockaddr_un));
 
 		/* free socket buffer */
-		list_del(&skb->list);
 		skb_free(skb);
 
 		/* set new socket */
@@ -480,7 +482,7 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 
 	/* queue empty packet */
 	skb->sock = sock;
-	list_add_tail(&skb->list, &other->skb_list);
+	skb_queue_tail(&other->receive_queue, skb);
 
 	/* wake up eventual reader */
 	wake_up(&other->sock->wait);
