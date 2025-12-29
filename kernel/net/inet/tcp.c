@@ -222,7 +222,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 		return -EINVAL;
 
 	/* check source */
-	if ((sk->sock->state == SS_CONNECTED || sk->sock->state == SS_CONNECTING)
+	if ((sk->socket->state == SS_CONNECTED || sk->socket->state == SS_CONNECTING)
 	    && sk->protinfo.af_inet.dst_sin.sin_port != skb->h.tcp_header->src_port)
 		return -EINVAL;
 
@@ -241,7 +241,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 		tcp_reply_ack(sk, skb, ack_flags);
 
 	/* handle TCP packet */
-	switch (sk->sock->state) {
+	switch (sk->socket->state) {
 		case SS_LISTENING:
 			/* clone socket buffer */
 			skb_new = skb_clone(skb);
@@ -256,13 +256,13 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 		case SS_CONNECTING:
 			/* find SYN | ACK message */
 			if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
-				sk->sock->state = SS_CONNECTED;
+				sk->socket->state = SS_CONNECTED;
 				goto out;
 			}
 
 			/* else reset TCP connection and release socket */
 			tcp_reset(sk, skb->h.tcp_header->ack_seq);
-			sk->sock->state = SS_DEAD;
+			sk->socket->state = SS_DEAD;
 
 			break;
 		case SS_CONNECTED:
@@ -279,7 +279,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 
 				/* FIN message : close socket */
 				if (skb->h.tcp_header->fin)
-					sk->sock->state = SS_DISCONNECTING;
+					sk->socket->state = SS_DISCONNECTING;
 
 			break;
 		default:
@@ -288,7 +288,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 
 out:
 	/* wake up eventual processes */
-	wake_up(&sk->sock->wait);
+	wake_up(&sk->socket->wait);
 
 	return 0;
 }
@@ -309,7 +309,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	/* sleep until we receive a packet */
 	for (;;) {
 		/* dead socket */
-		if (sk->sock->state == SS_DEAD)
+		if (sk->socket->state == SS_DEAD)
 			return -ENOTCONN;
 
 		/* signal received : restart system call */
@@ -321,7 +321,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 			break;
 
 		/* disconnected : break */
-		if (sk->sock->state == SS_DISCONNECTING)
+		if (sk->socket->state == SS_DISCONNECTING)
 			return 0;
 
 		/* non blocking */
@@ -329,7 +329,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 			return -EAGAIN;
 
 		/* sleep */
-		sleep_on(&sk->sock->wait);
+		sleep_on(&sk->socket->wait);
 	}
 
 	/* get first message */
@@ -394,7 +394,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	/* sleep until connected */
 	for (;;) {
 		/* dead socket */
-		if (sk->sock->state == SS_DEAD)
+		if (sk->socket->state == SS_DEAD)
 			return -ENOTCONN;
 
 		/* signal received : restart system call */
@@ -402,7 +402,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 			return -ERESTARTSYS;
 
 		/* connected : break */
-		if (sk->sock->state == SS_CONNECTED)
+		if (sk->socket->state == SS_CONNECTED)
 			break;
 
 		/* non blocking */
@@ -410,7 +410,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 			return -EAGAIN;
 
 		/* sleep */
-		sleep_on(&sk->sock->wait);
+		sleep_on(&sk->socket->wait);
 	}
 
 	for (i = 0, len = 0; i < msg->msg_iovlen; i++) {
@@ -448,7 +448,7 @@ static int tcp_connect(struct sock *sk)
 	net_transmit(sk->protinfo.af_inet.dev, skb);
 
 	/* set socket state */
-	sk->sock->state = SS_CONNECTING;
+	sk->socket->state = SS_CONNECTING;
 
 	return 0;
 }
@@ -499,16 +499,16 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new)
 				return -ERESTARTSYS;
 
 			/* disconnected : break */
-			if (sk->sock->state == SS_DISCONNECTING)
+			if (sk->socket->state == SS_DISCONNECTING)
 				return 0;
 
 			/* sleep */
-			sleep_on(&sk->sock->wait);
+			sleep_on(&sk->socket->wait);
 			continue;
 		}
 
 		/* set new socket */
-		sk_new->sock->state = SS_CONNECTED;
+		sk_new->socket->state = SS_CONNECTED;
 		memcpy(&sk_new->protinfo.af_inet.src_sin, &sk->protinfo.af_inet.src_sin, sizeof(struct sockaddr));
 		sk_new->protinfo.af_inet.dst_sin.sin_family = AF_INET;
 		sk_new->protinfo.af_inet.dst_sin.sin_port = skb->h.tcp_header->src_port;
@@ -548,8 +548,8 @@ static int tcp_close(struct sock *sk)
 	struct sk_buff *skb;
 
 	/* socket no connected : no need to send FIN message */
-	if (sk->sock->state != SS_CONNECTED) {
-		sk->sock->state = SS_DISCONNECTING;
+	if (sk->socket->state != SS_CONNECTED) {
+		sk->socket->state = SS_DISCONNECTING;
 		goto wait_for_ack;
 	}
 
@@ -560,13 +560,13 @@ static int tcp_close(struct sock *sk)
 
 	/* wait for ACK message */
 wait_for_ack:
-	while (sk->sock->state != SS_DISCONNECTING) {
+	while (sk->socket->state != SS_DISCONNECTING) {
 		/* signal received : restart system call */
 		if (signal_pending(current_task))
 			return -ERESTARTSYS;
 
 		/* sleep */
-		sleep_on(&sk->sock->wait);
+		sleep_on(&sk->socket->wait);
 	}
 
 	return 0;

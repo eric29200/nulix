@@ -36,7 +36,7 @@ void net_deliver_skb(struct sk_buff *skb)
 
 			/* wake up waiting processes */
 			if (ret == 0)
-				wake_up(&sk->sock->wait);
+				wake_up(&sk->socket->wait);
 		}
 	}
 }
@@ -114,15 +114,15 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
 		return -EINVAL;
 
 	/* connecting = waiting for TCP syn/ack */
-	if (sk->sock->state == SS_CONNECTING)
+	if (sk->socket->state == SS_CONNECTING)
 		return mask;
 
 	/* check if there is a message in the queue */
-	if (sk->sock->state == SS_DISCONNECTING || !skb_queue_empty(&sk->receive_queue))
+	if (sk->socket->state == SS_DISCONNECTING || !skb_queue_empty(&sk->receive_queue))
 		mask |= POLLIN;
 
 	/* check if socket can write */
-	if (sk->sock->state != SS_DISCONNECTING && sk->sock->state != SS_DEAD)
+	if (sk->socket->state != SS_DISCONNECTING && sk->socket->state != SS_DEAD)
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */

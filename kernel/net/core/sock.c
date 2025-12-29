@@ -36,7 +36,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 	skb_queue_head_init(&sk->receive_queue);
 	sk->rcvbuf = SK_RMEM_MAX;
 	sk->sndbuf = SK_WMEM_MAX;
-	sk->sock = sock;
+	sk->socket = sock;
 
 	if (sock) {
 		sk->type = sock->type;

@@ -131,7 +131,7 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 		mask |= POLLIN;
 
 	/* check if socket can write */
-	if ((sk->sock->state != SS_DEAD && sk->wmem_alloc < sk->sndbuf) || sk->shutdown & SEND_SHUTDOWN)
+	if ((sk->socket->state != SS_DEAD && sk->wmem_alloc < sk->sndbuf) || sk->shutdown & SEND_SHUTDOWN)
 		mask |= POLLOUT;
 
 	/* add wait queue to select table */
@@ -233,7 +233,7 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 					return -ERESTARTSYS;
 
 				/* wait for a message */
-				sleep_on(&sk->sock->wait);
+				sleep_on(&sk->socket->wait);
 				continue;
 			}
 
@@ -320,7 +320,7 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, size_t si
 		skb_queue_tail(&other->receive_queue, skb);
 
 		/* wake up eventual readers */
-		wake_up(&other->sock->wait);
+		wake_up(&other->socket->wait);
 
 		/* update sent */
 		sent += len;
@@ -454,9 +454,9 @@ static int unix_stream_accept(struct socket *sock, struct socket *sock_new, stru
 		sk_new->peercred.uid = sk->peercred.uid;
 
 		/* set other socket connected and wake up eventual clients connecting */
-		other->sock->state = SS_CONNECTED;
+		other->socket->state = SS_CONNECTED;
 		unix_peer(other) = sk_new;
-		wake_up(&unix_peer(sk_new)->sock->wait);
+		wake_up(&unix_peer(sk_new)->socket->wait);
 
 		break;
 	}
@@ -521,7 +521,7 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 	skb_queue_tail(&other->receive_queue, skb);
 
 	/* wake up eventual reader */
-	wake_up(&other->sock->wait);
+	wake_up(&other->socket->wait);
 
 	/* set socket */
 	unix_peer(sk) = other;

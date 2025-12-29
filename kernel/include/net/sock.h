@@ -44,7 +44,7 @@ struct sock {
 	uint16_t			family;
 	uint16_t			type;
 	uint16_t			protocol;
-	struct socket *			sock;
+	struct socket *			socket;
 	off_t				msg_position;
 	uint16_t			shutdown;
 	size_t				rcvbuf;
