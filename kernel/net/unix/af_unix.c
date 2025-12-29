@@ -143,7 +143,50 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 /*
  * Receive a message.
  */
-static int unix_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
+static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
+{
+	/*size_t ct = msg->msg_iovlen, copied = 0, done, len, num;
+	struct iovec *iov = msg->msg_iov;
+	unix_socket_t *sk, *from;
+	uint8_t *buf;*/
+	struct sockaddr_un *sunaddr = msg->msg_name;
+	struct sk_buff *skb;
+	unix_socket_t *sk;
+	int err;
+
+	/* get UNIX socket */
+	sk = sock->sk;
+	if (!sk)
+		return -EINVAL;
+
+	/* receive a packet */
+	skb = skb_recv_datagram(sk, msg->msg_flags, msg->msg_flags & MSG_DONTWAIT, &err);
+	if (!skb)
+		return err;
+
+	/* set address */
+	if (sunaddr && skb->sock && skb->sock->sk)
+		memcpy(sunaddr, &skb->sock->sk->protinfo.af_unix.sunaddr, skb->sock->sk->protinfo.af_unix.sunaddr_len);
+
+	/* check size */
+	if (size > skb->len)
+		size = skb->len;
+	else if (size < skb->len)
+		msg->msg_flags |= MSG_TRUNC;
+
+	/* copy data */
+	skb_copy_datagram_iovec(skb, 0, msg->msg_iov, size);
+
+	/* free packet */
+	skb_free(skb);
+
+	return size;
+}
+
+/*
+ * Receive a stream message.
+ */
+static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 {
 	size_t ct = msg->msg_iovlen, copied = 0, done, len, num;
 	struct sockaddr_un *sunaddr = msg->msg_name;
@@ -225,10 +268,6 @@ static int unix_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 			} else {
 				skb_queue_head(&sk->receive_queue, skb);
 			}
-
-			/* datagramm socket : return */
-			if (sock->type == SOCK_DGRAM)
-				goto out;
 		}
 	}
 
@@ -603,7 +642,7 @@ static struct proto_ops unix_dgram_ops = {
 	.release	= unix_release,
 	.poll		= unix_poll,
 	.ioctl		= unix_ioctl,
-	.recvmsg	= unix_recvmsg,
+	.recvmsg	= unix_dgram_recvmsg,
 	.sendmsg	= unix_sendmsg,
 	.bind		= unix_bind,
 	.listen		= sock_no_listen,
@@ -624,7 +663,7 @@ static struct proto_ops unix_stream_ops = {
 	.release	= unix_release,
 	.poll		= unix_poll,
 	.ioctl		= unix_ioctl,
-	.recvmsg	= unix_recvmsg,
+	.recvmsg	= unix_stream_recvmsg,
 	.sendmsg	= unix_sendmsg,
 	.bind		= unix_bind,
 	.listen		= unix_listen,

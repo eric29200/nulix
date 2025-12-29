@@ -145,35 +145,16 @@ static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
  */
 static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 {
-	size_t len, n, count = 0;
 	struct sockaddr_in *sin;
 	struct sk_buff *skb;
+	size_t copied;
 	void *buf;
-	size_t i;
+	int err;
 
-	/* unused size */
-	UNUSED(size);
-
-	/* sleep until we receive a packet */
-	for (;;) {
-		/* signal received : restart system call */
-		if (signal_pending(current_task))
-			return -ERESTARTSYS;
-
-		/* message received : break */
-		if (!skb_queue_empty(&sk->receive_queue))
-			break;
-
-		/* non blocking */
-		if (msg->msg_flags & MSG_DONTWAIT)
-			return -EAGAIN;
-
-		/* sleep */
-		sleep_on(&sk->sock->wait);
-	}
-
-	/* get first message */
-	skb = skb_dequeue(&sk->receive_queue);
+	/* receive a packet */
+	skb = skb_recv_datagram(sk, msg->msg_flags, msg->msg_flags & MSG_DONTWAIT, &err);
+	if (!skb)
+ 		return err;
 
 	/* get IP header */
 	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
@@ -183,16 +164,14 @@ static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 
 	/* get message */
 	buf = skb->h.icmp_header + sk->msg_position;
-	len = (void *) skb->end - buf;
+	copied = (void *) skb->end - buf;
+	if (size < copied) {
+		copied = size;
+		msg->msg_flags |= MSG_TRUNC;
+	}
 
 	/* copy message */
-	for (i = 0; i < msg->msg_iovlen; i++) {
-		n = len > msg->msg_iov[i].iov_len ? msg->msg_iov[i].iov_len : len;
-		memcpy(msg->msg_iov[i].iov_base, buf, n);
-		count += n;
-		len -= n;
-		buf += n;
-	}
+	memcpy_toiovec(msg->msg_iov, buf, copied);
 
 	/* set source address */
 	sin = (struct sockaddr_in *) msg->msg_name;
@@ -202,20 +181,10 @@ static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 		sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
 	}
 
-	/* free message or requeue it */
-	if (!(msg->msg_flags & MSG_PEEK)) {
-		if (len > 0) {
-			sk->msg_position += count;
-			skb_queue_head(&sk->receive_queue, skb);
-		} else {
-			sk->msg_position = 0;
-			skb_free(skb);
-		}
-	} else {
-		skb_queue_head(&sk->receive_queue, skb);
-	}
+	/* free message */
+	skb_free(skb);
 
-	return count;
+	return copied;
 }
 
 /*

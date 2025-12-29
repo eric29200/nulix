@@ -22,6 +22,7 @@
 /* flags for send/recv */
 #define MSG_OOB			1
 #define MSG_PEEK		2
+#define MSG_TRUNC		0x20
 #define MSG_DONTWAIT		0x40
 #define MSG_SYN			0x400
 
