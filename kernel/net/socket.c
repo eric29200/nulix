@@ -787,10 +787,10 @@ int sys_getpeername(int sockfd, struct sockaddr *addr, size_t *addrlen)
 
 	/* getpeername not implemented */
 	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->getpeername)
+	if (!sock->ops || !sock->ops->getname)
 		goto out;
 
-	ret = sock->ops->getpeername(sock, addr, addrlen);
+	ret = sock->ops->getname(sock, addr, addrlen, 1);
 out:
 	sockfd_put(sock);
 	return ret;
@@ -811,10 +811,10 @@ int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen)
 
 	/* getsockname not implemented */
 	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->getsockname)
+	if (!sock->ops || !sock->ops->getname)
 		goto out;
 
-	ret = sock->ops->getsockname(sock, addr, addrlen);
+	ret = sock->ops->getname(sock, addr, addrlen, 0);
 out:
 	sockfd_put(sock);
 	return ret;

@@ -303,11 +303,11 @@ static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t
 }
 
 /*
- * Get peer name system call.
+ * Get socket name.
  */
-static int inet_getpeername(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
+static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addrlen, int peer)
 {
-	struct sockaddr_in *sin;
+	struct sockaddr_in *sin = (struct sockaddr_in *) addr;
 	struct sock *sk;
 
 	/* get inet socket */
@@ -317,35 +317,16 @@ static int inet_getpeername(struct socket *sock, struct sockaddr *addr, size_t *
 
 	/* copy destination address */
 	memset(addr, 0, sizeof(struct sockaddr));
-	sin = (struct sockaddr_in *) addr;
 	sin->sin_family = AF_INET;
-	sin->sin_port = sk->protinfo.af_inet.dst_sin.sin_port;
-	sin->sin_addr = sk->protinfo.af_inet.dst_sin.sin_addr;
 	*addrlen = sizeof(struct sockaddr_in);
 
-	return 0;
-}
-
-/*
- * Get sock name system call.
- */
-static int inet_getsockname(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
-{
-	struct sockaddr_in *sin;
-	struct sock *sk;
-
-	/* get inet socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
-
-	/* copy destination address */
-	memset(addr, 0, sizeof(struct sockaddr));
-	sin = (struct sockaddr_in *) addr;
-	sin->sin_family = AF_INET;
-	sin->sin_port = sk->protinfo.af_inet.src_sin.sin_port;
-	sin->sin_addr = sk->protinfo.af_inet.src_sin.sin_addr;
-	*addrlen = sizeof(struct sockaddr_in);
+	if (peer) {
+		sin->sin_port = sk->protinfo.af_inet.dst_sin.sin_port;
+		sin->sin_addr = sk->protinfo.af_inet.dst_sin.sin_addr;
+	} else {
+		sin->sin_port = sk->protinfo.af_inet.src_sin.sin_port;
+		sin->sin_addr = sk->protinfo.af_inet.src_sin.sin_addr;
+	}
 
 	return 0;
 }
@@ -431,8 +412,7 @@ struct proto_ops inet_ops = {
 	.accept		= inet_accept,
 	.connect	= inet_connect,
 	.shutdown	= inet_shutdown,
-	.getpeername	= inet_getpeername,
-	.getsockname	= inet_getsockname,
+	.getname	= inet_getname,
 	.getsockopt	= inet_getsockopt,
 	.setsockopt	= inet_setsockopt,
 };

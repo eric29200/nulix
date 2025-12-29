@@ -576,41 +576,20 @@ static int unix_shutdown(struct socket *sock, int how)
 }
 
 /*
- * Get peer name system call.
+ * Get socket name.
  */
-static int unix_getpeername(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
+static int unix_getname(struct socket *sock, struct sockaddr *addr, size_t *addrlen, int peer)
 {
-	unix_socket_t *sk, *other;
+	struct sock *sk = sock->sk;
 
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
-
-	/* copy destination address */
-	other = unix_peer(sk);
-	if (other) {
-		memset(addr, 0, sizeof(struct sockaddr));
-		memcpy(addr, &other->protinfo.af_unix.sunaddr, other->protinfo.af_unix.sunaddr_len);
-		*addrlen = other->protinfo.af_unix.sunaddr_len;
+	/* get peer name ? */
+	if (peer) {
+		if (!unix_peer(sk))
+			return -ENOTCONN;
+		sk = unix_peer(sk);
 	}
 
-	return 0;
-}
-
-/*
- * Get sock name system call.
- */
-static int unix_getsockname(struct socket *sock, struct sockaddr *addr, size_t *addrlen)
-{
-	unix_socket_t *sk;
-
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
-
-	/* copy destination address */
+	/* get name */
 	memset(addr, 0, sizeof(struct sockaddr));
 	memcpy(addr, &sk->protinfo.af_unix.sunaddr, sk->protinfo.af_unix.sunaddr_len);
 	*addrlen = sk->protinfo.af_unix.sunaddr_len;
@@ -646,8 +625,7 @@ static struct proto_ops unix_dgram_ops = {
 	.accept		= sock_no_accept,
 	.connect	= unix_dgram_connect,
 	.shutdown	= unix_shutdown,
-	.getpeername	= unix_getpeername,
-	.getsockname	= unix_getsockname,
+	.getname	= unix_getname,
 	.getsockopt	= sock_no_getsockopt,
 	.setsockopt	= sock_no_setsockopt,
 };
@@ -667,8 +645,7 @@ static struct proto_ops unix_stream_ops = {
 	.accept		= unix_stream_accept,
 	.connect	= unix_stream_connect,
 	.shutdown	= unix_shutdown,
-	.getpeername	= unix_getpeername,
-	.getsockname	= unix_getsockname,
+	.getname	= unix_getname,
 	.getsockopt	= sock_no_getsockopt,
 	.setsockopt	= sock_no_setsockopt,
 };
