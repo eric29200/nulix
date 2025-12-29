@@ -40,7 +40,10 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 
 	if (sock) {
 		sk->type = sock->type;
+		sk->sleep = &sock->wait;
 		sock->sk = sk;
+	} else {
+		sk->sleep = NULL;
 	}
 
 	sock->sk->peercred.pid = 0;
@@ -107,7 +110,7 @@ int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval
 /*
  * Allocate a send buffer.
  */
-struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonblock, int *err)
+struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, int *err)
 {
 	struct sk_buff *skb;
 
@@ -117,13 +120,13 @@ struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonbloc
 	/* wait for space */
 	for (;;) {
 		/* socket shutdown */
-		if (sock->sk->shutdown & SEND_SHUTDOWN) {
+		if (sk->shutdown & SEND_SHUTDOWN) {
 			*err = -EPIPE;
 			return NULL;
 		}
 
 		/* check space */
-		if (sock->sk->wmem_alloc < sock->sk->sndbuf)
+		if (sk->wmem_alloc < sk->sndbuf)
 			break;
 
 		/* non blocking */
@@ -139,7 +142,7 @@ struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonbloc
 		}
 
 		/* wait */
-		sleep_on(&sock->wait);
+		sleep_on(sk->sleep);
 	}
 
 	/* allocate a socket buffer */
@@ -150,8 +153,8 @@ struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonbloc
 	}
 
 	/* set socket */
-	skb->sock = sock;
-	skb->sock->sk->wmem_alloc += len;
+	skb->sk = sk;
+	sk->wmem_alloc += len;
 
 	return skb;
 }

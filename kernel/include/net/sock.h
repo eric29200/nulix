@@ -53,6 +53,7 @@ struct sock {
 	struct ucred 			peercred;
 	int				proc;
 	struct sock *			pair;
+	struct wait_queue **		sleep;
 	union {
 		struct unix_opt		af_unix;
 		struct inet_opt		af_inet;
@@ -87,7 +88,7 @@ int sock_no_accept(struct socket *sock, struct socket *sock_new, struct sockaddr
 int sock_no_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen);
 int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen);
 
-struct sk_buff *sock_alloc_send_skb(struct socket *sock, size_t len, int nonblock, int *err);
+struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, int *err);
 struct sk_buff *skb_recv_datagram(struct sock *sk, int flags, int noblock, int *err);
 void skb_copy_datagram_iovec(struct sk_buff *skb, int offset, struct iovec *to, size_t size);
 

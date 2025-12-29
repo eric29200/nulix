@@ -165,8 +165,8 @@ static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t si
 		return err;
 
 	/* set address */
-	if (sunaddr && skb->sock && skb->sock->sk)
-		memcpy(sunaddr, &skb->sock->sk->protinfo.af_unix.sunaddr, skb->sock->sk->protinfo.af_unix.sunaddr_len);
+	if (sunaddr && skb->sk)
+		memcpy(sunaddr, &skb->sk->protinfo.af_unix.sunaddr, skb->sk->protinfo.af_unix.sunaddr_len);
 
 	/* check size */
 	if (size > skb->len)
@@ -238,8 +238,8 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 			}
 
 			/* set address just once */
-			if (sunaddr && skb->sock && skb->sock->sk) {
-				from = skb->sock->sk;
+			if (sunaddr && skb->sk) {
+				from = skb->sk;
 				memcpy(sunaddr, &from->protinfo.af_unix.sunaddr, from->protinfo.af_unix.sunaddr_len);
 				sunaddr = NULL;
 			}
@@ -309,12 +309,9 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, size_t si
 			len = sk->sndbuf;
 
 		/* allocate a socket buffer */
-		skb = sock_alloc_send_skb(sock, len, msg->msg_flags & MSG_DONTWAIT, &ret);
+		skb = sock_alloc_send_skb(sk, len, msg->msg_flags & MSG_DONTWAIT, &ret);
 		if (!skb)
 			return sent ? (int) sent : ret;
-
-		/* set socket */
-		skb->sock = sock;
 
 		/* copy message */
 		memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
@@ -436,14 +433,14 @@ static int unix_stream_accept(struct socket *sock, struct socket *sock_new, stru
 
 		/* ignore non SYN messages */
 		if (!(UNIXCB(skb).attr & MSG_SYN)) {
-			if (skb->sock)
-				wake_up(&skb->sock->wait);
+			if (skb->sk)
+				wake_up(skb->sk->sleep);
 			skb_free(skb);
 			continue;
 		}
 
 		/* get destination */
-		other = skb->sock->sk;
+		other = skb->sk;
 
 		/* set destination address */
 		memcpy(addr, &other->protinfo.af_unix.sunaddr, sizeof(struct sockaddr_un));
@@ -520,7 +517,7 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 	UNIXCB(skb).attr = MSG_SYN;
 
 	/* queue empty packet */
-	skb->sock = sock;
+	skb->sk = sk;
 	skb_queue_tail(&other->receive_queue, skb);
 
 	/* wake up eventual reader */

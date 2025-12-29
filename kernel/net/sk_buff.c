@@ -56,14 +56,14 @@ struct sk_buff *skb_clone(struct sk_buff *skb)
 void skb_free(struct sk_buff *skb)
 {
 	/* decrease allocated memory */
-	if (skb->sock && skb->sock->sk && skb->sock->sk->wmem_alloc > 0) {
-		if (skb->sock->sk->wmem_alloc > skb->size)
-			skb->sock->sk->wmem_alloc -= skb->size;
+	if (skb->sk && skb->sk->wmem_alloc > 0) {
+		if (skb->sk->wmem_alloc > skb->size)
+			skb->sk->wmem_alloc -= skb->size;
 		else
-			skb->sock->sk->wmem_alloc = 0;
+			skb->sk->wmem_alloc = 0;
 
 		/* wake up writers */
-		wake_up(&skb->sock->wait);
+		wake_up(skb->sk->sleep);
 	}
 
 	/* free socket buffer */

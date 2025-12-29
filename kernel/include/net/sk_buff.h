@@ -16,6 +16,7 @@ struct sk_buff {
 	struct sk_buff *		next;
 	struct sk_buff *		prev;
 	struct sk_buff_head *		list;
+	struct sock *			sk;
 	struct net_device *		dev;
 	struct ethernet_header *	eth_header;
 	struct {
@@ -36,7 +37,6 @@ struct sk_buff {
 	uint8_t *			tail;
 	uint8_t *			end;
 	char				cb[48];
-	struct socket *			sock;
 };
 
 /*
