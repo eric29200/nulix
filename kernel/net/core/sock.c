@@ -73,11 +73,11 @@ int sock_no_listen(struct socket *sock)
 /*
  * No accept.
  */
-int sock_no_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
+int sock_no_accept(struct socket *sock, struct socket *sock_new, int flags)
 {
 	UNUSED(sock);
 	UNUSED(sock_new);
-	UNUSED(addr);
+	UNUSED(flags);
 	return -EOPNOTSUPP;
 }
 

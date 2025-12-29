@@ -135,7 +135,7 @@ struct proto_ops {
 	int (*sendmsg)(struct socket *, const struct msghdr *, size_t);
 	int (*bind)(struct socket *, const struct sockaddr *, size_t);
 	int (*listen)(struct socket *);
-	int (*accept)(struct socket *, struct socket *, struct sockaddr *);
+	int (*accept)(struct socket *, struct socket *, int);
 	int (*connect)(struct socket *, const struct sockaddr *, size_t);
 	int (*shutdown)(struct socket *, int);
 	int (*getname)(struct socket *, struct sockaddr *, size_t *, int);

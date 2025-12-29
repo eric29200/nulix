@@ -3,6 +3,7 @@
 #include <net/inet/net.h>
 #include <net/inet/ethernet.h>
 #include <proc/sched.h>
+#include <fcntl.h>
 #include <stderr.h>
 #include <stdio.h>
 #include <math.h>
@@ -486,7 +487,7 @@ static struct sk_buff *tcp_find_established(struct sock *sk)
 /*
  * Accept a TCP connection.
  */
-static int tcp_accept(struct sock *sk, struct sock *sk_new)
+static int tcp_accept(struct sock *sk, struct sock *sk_new, int flags)
 {
 	struct sk_buff *skb;
 
@@ -494,6 +495,10 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new)
 		/* wait for a SYN message */
 		skb = tcp_find_established(sk);
 		if (!skb) {
+			/* non blocking */
+			if (flags & O_NONBLOCK)
+				return -EAGAIN;
+
 			/* signal received : restart system call */
 			if (signal_pending(current_task))
 				return -ERESTARTSYS;

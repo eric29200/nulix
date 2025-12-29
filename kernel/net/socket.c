@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <uio.h>
 
+#define MAX_SOCK_ADDR		128
+
 /* global variables */
 struct net_proto_family *net_families[NPROTO];
 struct file_operations socket_fops;
@@ -468,7 +470,9 @@ out:
 int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 {
 	struct socket *sock, *new_sock;
-	int fd, ret;
+	char address[MAX_SOCK_ADDR];
+	size_t len;
+	int ret;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -476,53 +480,57 @@ int sys_accept(int sockfd, struct sockaddr *addr, size_t *addrlen)
 	/* find socket */
 	sock = sockfd_lookup(sockfd, &ret);
 	if (!sock)
-		return ret;
+		goto out;
 
+restart:
 	/* allocate a new socket */
+	ret = -EMFILE;
 	new_sock = sock_alloc();
-	if (!new_sock) {
-		sockfd_put(sock);
-		return -ENOSR;
-	}
+	if (!new_sock)
+		goto out_put;
 
 	/* duplicate socket */
 	new_sock->type = sock->type;
 	new_sock->ops = sock->ops;
 	ret = sock->ops->dup(new_sock, sock);
-	if (ret < 0) {
-		sock_release(new_sock);
-		sockfd_put(sock);
-		return ret;
-	}
+	if (ret < 0)
+		goto out_release;
 
 	/* accept not implemented */
-	if (!new_sock->ops || !new_sock->ops->accept) {
-		sock_release(new_sock);
-		sockfd_put(sock);
-		return -EINVAL;
-	}
+	ret = -EINVAL;
+	if (!new_sock->ops || !new_sock->ops->accept)
+		goto out_release;
 
 	/* call accept protocol */
-	ret = new_sock->ops->accept(sock, new_sock, addr);
-	if (ret < 0) {
-		sock_release(new_sock);
-		sockfd_put(sock);
-		return ret;
-	}
+	ret = new_sock->ops->accept(sock, new_sock, sock->file->f_flags);
+	if (ret < 0)
+		goto out_release;
 
 	/* get a file slot */
-	fd = get_fd(new_sock->inode);
-	if (fd < 0) {
-		sock_release(new_sock);
-		sockfd_put(sock);
-		return -EINVAL;
-	}
+	ret = get_fd(new_sock->inode);
+	if (ret < 0)
+		goto out_release;
 
 	/* set socket file */
-	new_sock->file = current_task->files->filp[fd];
+	new_sock->file = current_task->files->filp[ret];
 
+	/* get address */
+	if (addr) {
+		if (new_sock->ops->getname(new_sock, (struct sockaddr *) address, &len, 1) < 0) {
+			sys_close(ret);
+			goto restart;
+		}
+
+		memcpy(addr, address, len < *addrlen ? len : *addrlen);
+		*addrlen = len;
+	}
+out_put:
 	sockfd_put(sock);
-	return fd;
+out:
+	return ret;
+out_release:
+	sock_release(sock);
+	goto out_put;
 }
 
 /*

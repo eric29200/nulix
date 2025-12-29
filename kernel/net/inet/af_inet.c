@@ -230,7 +230,7 @@ static int inet_listen(struct socket *sock)
 /*
  * Accept system call.
  */
-static int inet_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr)
+static int inet_accept(struct socket *sock, struct socket *sock_new, int flags)
 {
 	struct sock *sk, *sk_new;
 	int ret;
@@ -250,13 +250,9 @@ static int inet_accept(struct socket *sock, struct socket *sock_new, struct sock
 		return -EINVAL;
 
 	/* accept */
-	ret = sk_new->protinfo.af_inet.prot->accept(sk, sk_new);
+	ret = sk_new->protinfo.af_inet.prot->accept(sk, sk_new, flags);
 	if (ret)
 		return ret;
-
-	/* set accepted address */
-	if (addr)
-		memcpy(addr, &sk_new->protinfo.af_inet.dst_sin, sizeof(struct sockaddr_in));
 
 	return 0;
 }

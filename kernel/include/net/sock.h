@@ -71,7 +71,7 @@ struct proto {
 	int (*recvmsg)(struct sock *, struct msghdr *, size_t);
 	int (*sendmsg)(struct sock *, const struct msghdr *, size_t);
 	int (*connect)(struct sock *);
-	int (*accept)(struct sock *, struct sock *);
+	int (*accept)(struct sock *, struct sock *, int);
 };
 
 /* inet protocols */
@@ -84,7 +84,7 @@ struct sock *sk_alloc(int family, int zero_it);
 void sock_init_data(struct socket *sock, struct sock *sk);
 int sock_no_dup(struct socket *newsock, struct socket *oldsock);
 int sock_no_listen(struct socket *sock);
-int sock_no_accept(struct socket *sock, struct socket *sock_new, struct sockaddr *addr);
+int sock_no_accept(struct socket *sock, struct socket *sock_new, int flags);
 int sock_no_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen);
 int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen);
 
