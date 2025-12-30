@@ -10,7 +10,9 @@
 #include <fcntl.h>
 #include <uio.h>
 
-#define unix_peer(sk)		((sk)->pair)
+#define unix_peer(sk)			((sk)->pair)
+#define unix_our_peer(sk, osk)		(unix_peer(osk) == sk)
+#define unix_may_send(sk, osk)		(unix_peer(osk) == NULL || unix_our_peer(sk, osk))
 
 
 /* UNIX sockets */
@@ -283,54 +285,139 @@ out:
 }
 
 /*
- * Send a message.
+ * Send a datagram message.
  */
-static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, size_t size)
+static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
 {
 	struct sockaddr_un *sunaddr = msg->msg_name;
-	unix_socket_t *sk, *other;
+	struct sock *sk = sock->sk;
+	unix_socket_t *other;
 	struct sk_buff *skb;
-	size_t sent, len;
 	int ret;
 
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
+	/* check flags */
+	if (msg->msg_flags & MSG_OOB)
+		return -EOPNOTSUPP;
+	if (msg->msg_flags & ~(MSG_DONTWAIT | MSG_NOSIGNAL))
 		return -EINVAL;
 
-	/* find other socket */
-	if (sunaddr) {
-		other = unix_find_other(sunaddr, msg->msg_namelen, sk->type, &ret);
-		if (!other)
-			return ret;
-	} else {
-		other = unix_peer(sk);
-		if (!other)
-			return -ENOTCONN;
+	/* check connection */
+	if (!msg->msg_namelen && !unix_peer(sk))
+		return -ENOTCONN;
+
+	/* check message size */
+	if (len > sk->sndbuf)
+		return -EMSGSIZE;
+
+	/* allocate a socket buffer */
+	skb = sock_alloc_send_skb(sk, len, msg->msg_flags & MSG_DONTWAIT, &ret);
+	if (!skb)
+		return ret;
+
+	/* copy data to socket buffer */
+	UNIXCB(skb).attr = msg->msg_flags;
+	skb->h.raw = skb->data;
+	memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
+
+	/* get peer socket */
+	other = unix_peer(sk);
+	if (other && other->dead) {
+		unix_peer(sk) = NULL;
+		other = NULL;
+		ret = -ECONNRESET;
+		if (!sunaddr)
+			goto err;
 	}
 
-	for (sent = 0; sent < size;) {
-		/* compute length */
-		len = size - sent;
-		if (len > sk->sndbuf)
-			len = sk->sndbuf;
+	/* if not connected, find other socket */
+	if (!other) {
+		ret = -ECONNRESET;
+		if (!sunaddr)
+			goto err;
+
+		other = unix_find_other(sunaddr, msg->msg_namelen, sk->type, &ret);
+		if (!other)
+			goto err;
+
+		ret = -EINVAL;
+		if (!unix_may_send(sk, other))
+			goto err;
+	}
+
+	/* queue message in other socket */
+	skb_queue_tail(&other->receive_queue, skb);
+	other->data_ready(other, len);
+
+	return len;
+err:
+	skb_free(skb);
+	return ret;
+}
+
+/*
+ * Send a stream message.
+ */
+static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
+{
+	struct sock *sk = sock->sk;
+	size_t sent = 0, size;
+	unix_socket_t *other;
+	struct sk_buff *skb;
+	int ret;
+
+	/* check connection and flags */
+	if (sock->flags & SO_ACCEPTCON)
+		return -EINVAL;
+	if (msg->msg_flags & MSG_OOB)
+		return -EOPNOTSUPP;
+	if (msg->msg_flags & ~(MSG_DONTWAIT | MSG_NOSIGNAL))
+		return -EINVAL;
+
+	/* check connection */
+	if (msg->msg_namelen)
+		return -EOPNOTSUPP;
+	if (!unix_peer(sk))
+		return -ENOTCONN;
+
+	/* socket is down */
+	if (sk->shutdown & SEND_SHUTDOWN) {
+		if (!(msg->msg_flags & MSG_NOSIGNAL))
+			send_sig(current_task, SIGPIPE, 0);
+		return -EPIPE;
+	}
+
+	while (sent < len) {
+		/* keep two messages in the pipe so it schedules better */
+		size = len - sent;
+		if (size > sk->sndbuf / 2 - 16)
+			size = sk->sndbuf / 2 - 16;
 
 		/* allocate a socket buffer */
-		skb = sock_alloc_send_skb(sk, len, msg->msg_flags & MSG_DONTWAIT, &ret);
+		skb = sock_alloc_send_skb(sk, size, msg->msg_flags & MSG_DONTWAIT, &ret);
 		if (!skb)
 			return sent ? (int) sent : ret;
 
-		/* copy message */
-		memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
+		/* copy data to socket buffer */
+		if (skb_tailroom(skb) < (int) size)
+			size = skb_tailroom(skb);
+		UNIXCB(skb).attr = msg->msg_flags;
+		memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size);
 
-		/* queue message to other socket */
+		/* chec if peer socket is down */
+		other = unix_peer(sk);
+		if (other->dead || (sk->shutdown & SEND_SHUTDOWN)) {
+			skb_free(skb);
+			if (sent)
+				return sent;
+			if (!(msg->msg_flags & MSG_NOSIGNAL))
+				send_sig(current_task, SIGPIPE, 0);
+			return -EPIPE;
+		}
+
+		/* queue message in other socket */
 		skb_queue_tail(&other->receive_queue, skb);
-
-		/* wake up eventual readers */
-		wake_up(&other->socket->wait);
-
-		/* update sent */
-		sent += len;
+		other->data_ready(other, size);
+		sent += size;
 	}
 
 	return sent;
@@ -561,30 +648,34 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 /*
  * Shutdown system call.
  */
-static int unix_shutdown(struct socket *sock, int how)
+static int unix_shutdown(struct socket *sock, int mode)
 {
-	unix_socket_t *sk, *other;
+	struct sock *sk = sock->sk;
+	unix_socket_t *other;
+	int peer_mode = 0;
 
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
+	/* fix mode */
+	mode = (mode + 1) & (RCV_SHUTDOWN | SEND_SHUTDOWN);
+	if (mode)
+		return 0;
 
-	/* get other socket */
+	/* shutdown socket */
+	sk->shutdown |= mode;
+	sk->state_change(sk);
+
+	/* shutdown peer socket */
 	other = unix_peer(sk);
+	if (other && sk->type == SOCK_STREAM && unix_our_peer(sk, other)) {
+		if (mode & RCV_SHUTDOWN)
+			peer_mode |= SEND_SHUTDOWN;
+		if (mode & SEND_SHUTDOWN)
+			peer_mode |= RCV_SHUTDOWN;
+		other->shutdown |= peer_mode;
 
- 	/* shutdown send */
-	if (how & SEND_SHUTDOWN) {
-		sk->shutdown |= SEND_SHUTDOWN;
-		if (other)
-			other->shutdown |= RCV_SHUTDOWN;
-	}
-
-	/* shutdown receive */
-	if (how & RCV_SHUTDOWN) {
-		sk->shutdown |= RCV_SHUTDOWN;
-		if (other)
-			other->shutdown |= SEND_SHUTDOWN;
+		if (peer_mode & RCV_SHUTDOWN)
+			other->data_ready(other, 0);
+		else
+			other->state_change(other);
 	}
 
 	return 0;
@@ -634,7 +725,7 @@ static struct proto_ops unix_dgram_ops = {
 	.poll		= unix_poll,
 	.ioctl		= unix_ioctl,
 	.recvmsg	= unix_dgram_recvmsg,
-	.sendmsg	= unix_sendmsg,
+	.sendmsg	= unix_dgram_sendmsg,
 	.bind		= unix_bind,
 	.listen		= sock_no_listen,
 	.accept		= sock_no_accept,
@@ -654,7 +745,7 @@ static struct proto_ops unix_stream_ops = {
 	.poll		= unix_poll,
 	.ioctl		= unix_ioctl,
 	.recvmsg	= unix_stream_recvmsg,
-	.sendmsg	= unix_sendmsg,
+	.sendmsg	= unix_stream_sendmsg,
 	.bind		= unix_bind,
 	.listen		= unix_listen,
 	.accept		= unix_accept,

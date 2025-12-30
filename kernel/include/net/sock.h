@@ -46,6 +46,7 @@ struct sock {
 	uint16_t			protocol;
 	struct socket *			socket;
 	uint8_t				state;
+	uint8_t				dead;
 	off_t				msg_position;
 	uint16_t			shutdown;
 	size_t				rcvbuf;
@@ -61,6 +62,8 @@ struct sock {
 	} protinfo;
 	struct list_head		list;
 	struct sk_buff_head		receive_queue;
+	void				(*state_change)(struct sock *);
+	void				(*data_ready)(struct sock *, size_t);
 };
 
 /*

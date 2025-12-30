@@ -193,6 +193,14 @@ static inline uint8_t *skb_pull(struct sk_buff *skb, size_t len)
 	return skb->data;
 }
 
+/*
+ * Get tail room.
+ */
+static inline int skb_tailroom(struct sk_buff *skb)
+{
+	return skb->end - skb->tail;
+}
+
 struct sk_buff *skb_alloc(size_t size);
 struct sk_buff *skb_clone(struct sk_buff *skb);
 void skb_free(struct sk_buff *skb);

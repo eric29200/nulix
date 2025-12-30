@@ -27,7 +27,7 @@ struct sk_buff *skb_recv_datagram(struct sock *sk, int flags, int noblock, int *
 			goto no_packet;
 
 		/* wait for a message */
-		sleep_on(&sk->socket->wait);
+		sleep_on(sk->sleep);
 	}
 
 	/* peek or dequeue packet */

@@ -25,6 +25,7 @@
 #define MSG_TRUNC		0x20
 #define MSG_DONTWAIT		0x40
 #define MSG_SYN			0x400
+#define MSG_NOSIGNAL		0x4000
 
 /* flags for shutdown */
 #define RCV_SHUTDOWN		1

@@ -30,6 +30,26 @@ struct sock *sk_alloc(int family, int zero_it)
 }
 
 /*
+ * Default socket wake up.
+ */
+void sock_def_wakeup(struct sock *sk)
+{
+	if (!sk->dead)
+		wake_up(sk->sleep);
+}
+
+/*
+ * Default socket wake up.
+ */
+void sock_def_readable(struct sock *sk, size_t len)
+{
+	UNUSED(len);
+
+	if (!sk->dead)
+		wake_up(sk->sleep);
+}
+
+/*
  * Init socket data.
  */
 void sock_init_data(struct socket *sock, struct sock *sk)
@@ -48,6 +68,11 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 		sk->sleep = NULL;
 	}
 
+	/* default callbacks */
+	sk->state_change = sock_def_wakeup;
+	sk->data_ready = sock_def_readable;
+
+	/* init creds */
 	sock->sk->peercred.pid = 0;
 	sock->sk->peercred.uid = -1;
 	sock->sk->peercred.gid = -1;
