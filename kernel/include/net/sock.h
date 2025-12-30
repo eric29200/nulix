@@ -47,6 +47,7 @@ struct sock {
 	struct socket *			socket;
 	uint8_t				state;
 	uint8_t				dead;
+	int				err;
 	off_t				msg_position;
 	uint16_t			shutdown;
 	size_t				rcvbuf;
@@ -89,6 +90,7 @@ extern struct proto icmp_proto;
 
 struct sock *sk_alloc(int family, int zero_it);
 void sk_free(struct sock *sk);
+int sock_error(struct sock *sk);
 void sock_init_data(struct socket *sock, struct sock *sk);
 int sock_no_dup(struct socket *newsock, struct socket *oldsock);
 int sock_no_listen(struct socket *sock);

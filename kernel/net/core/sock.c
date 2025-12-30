@@ -8,6 +8,16 @@
 extern struct net_proto_family *net_families[NPROTO];
 
 /*
+ * Get socket error.
+ */
+int sock_error(struct sock *sk)
+{
+	int err = sk->err;
+	sk->err = 0;
+	return -err;
+}
+
+/*
  * Allocate a socket.
  */
 struct sock *sk_alloc(int family, int zero_it)
@@ -157,6 +167,11 @@ struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, i
 
 	/* wait for space */
 	for (;;) {
+		/* socket error */
+		*err = sock_error(sk);
+		if (*err)
+			return NULL;
+
 		/* socket shutdown */
 		if (sk->shutdown & SEND_SHUTDOWN) {
 			*err = -EPIPE;

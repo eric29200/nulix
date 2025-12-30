@@ -10,8 +10,18 @@ struct sk_buff *skb_recv_datagram(struct sock *sk, int flags, int noblock, int *
 	struct sk_buff *skb;
 	int ret = 0;
 
+	/* socket error */
+	ret = sock_error(sk);
+	if (ret)
+		goto no_packet;
+
 	/* wait for a packet */
 	while (skb_queue_empty(&sk->receive_queue)) {
+		/* socket error */
+		ret = sock_error(sk);
+		if (ret)
+			goto no_packet;
+
 		/* socket is down */
 		if (sk->shutdown & RCV_SHUTDOWN)
 			goto no_packet;

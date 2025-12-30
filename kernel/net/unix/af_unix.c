@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <uio.h>
 
+#define MIN_WRITE_SPACE			2048
 #define UNIX_DELETE_DELAY		(HZ)
 
 #define unix_peer(sk)			((sk)->pair)
@@ -304,13 +305,23 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 	if (!sk)
 		return -EINVAL;
 
-	/* check if there is a message in the queue */
-	if (!skb_queue_empty(&sk->receive_queue) || sk->shutdown & RCV_SHUTDOWN)
-		mask |= POLLIN;
+	/* exceptional events ? */
+	if (sk->err)
+		mask |= POLLERR;
+	if (sk->shutdown & RCV_SHUTDOWN)
+		mask |= POLLHUP;
 
-	/* check if socket can write */
-	if ((sk->socket->state != SS_DEAD && sk->wmem_alloc < sk->sndbuf) || sk->shutdown & SEND_SHUTDOWN)
-		mask |= POLLOUT;
+	/* readable ? */
+	if (!skb_queue_empty(&sk->receive_queue))
+		mask |= POLLIN | POLLRDNORM;
+
+	/* connection-based need to check for termination and startup */
+	if (sk->type == SOCK_STREAM && sk->state == TCP_CLOSE)
+		mask |= POLLHUP;
+
+	/* writable ? */
+	if (sk->sndbuf - sk->wmem_alloc >= MIN_WRITE_SPACE)
+		mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 
 	/* add wait queue to select table */
 	select_wait(&sock->wait, wait);
@@ -391,6 +402,10 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 			/* done */
 			if (copied >= target)
 				break;
+
+			/* socket error */
+			if (sk->err)
+				return sock_error(sk);
 
 			/* socket is down */
 			if (sk->shutdown & RCV_SHUTDOWN)
