@@ -1,5 +1,6 @@
 #include <net/sock.h>
 #include <net/sk_buff.h>
+#include <net/inet/tcp.h>
 #include <proc/sched.h>
 #include <stderr.h>
 #include <stdio.h>
@@ -37,6 +38,7 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 	sk->rcvbuf = SK_RMEM_MAX;
 	sk->sndbuf = SK_WMEM_MAX;
 	sk->socket = sock;
+	sk->state = TCP_CLOSE;
 
 	if (sock) {
 		sk->type = sock->type;

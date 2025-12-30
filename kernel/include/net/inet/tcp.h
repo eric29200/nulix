@@ -6,6 +6,9 @@
 #include <net/inet/net.h>
 #include <stddef.h>
 
+#define TCP_CLOSE		7
+#define TCP_LISTEN		10
+
 #define TCPCB_FLAG_FIN		0x01
 #define TCPCB_FLAG_SYN		0x02
 #define TCPCB_FLAG_RST		0x04

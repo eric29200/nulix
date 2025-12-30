@@ -1,4 +1,5 @@
 #include <net/unix/af_unix.h>
+#include <net/inet/tcp.h>
 #include <net/sk_buff.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
@@ -155,10 +156,6 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
  */
 static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 {
-	/*size_t ct = msg->msg_iovlen, copied = 0, done, len, num;
-	struct iovec *iov = msg->msg_iov;
-	unix_socket_t *sk, *from;
-	uint8_t *buf;*/
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	struct sk_buff *skb;
 	unix_socket_t *sk;
@@ -395,13 +392,24 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
  */
 static int unix_listen(struct socket *sock)
 {
-	/* set socket state */
-	sock->state = SS_LISTENING;
+	struct sock *sk = sock->sk;
 
-	/* set credentials */
-	sock->sk->peercred.pid = current_task->pid;
-	sock->sk->peercred.uid = current_task->euid;
-	sock->sk->peercred.gid = current_task->egid;
+	/* check socket */
+	if (sock->state != SS_UNCONNECTED)
+		return -EINVAL;
+	if (sock->type != SOCK_STREAM)
+		return -EOPNOTSUPP;
+	if (!sk->protinfo.af_unix.sunaddr_len)
+		return -EINVAL;
+
+	/* set */
+	sk->state = TCP_LISTEN;
+	sock->flags |= SO_ACCEPTCON;
+
+	/* set creds */
+	sk->peercred.pid = current_task->pid;
+	sk->peercred.uid = current_task->euid;
+	sk->peercred.gid = current_task->egid;
 
 	return 0;
 }
@@ -411,17 +419,17 @@ static int unix_listen(struct socket *sock)
  */
 static int unix_accept(struct socket *sock, struct socket *sock_new, int flags)
 {
-	unix_socket_t *sk, *sk_new, *other;
+	unix_socket_t *sk = sock->sk, *sk_new = sock_new->sk, *other;
 	struct sk_buff *skb;
 
 	/* socket must be listening */
-	if (sock->type != SOCK_STREAM || sock->state != SS_LISTENING)
+	if (sock->state != SS_UNCONNECTED)
 		return -EINVAL;
-
-	/* get UNIX sockets */
-	sk = sock->sk;
-	sk_new = sock_new->sk;
-	if (!sk || !sk_new)
+	if (!(sock->flags & SO_ACCEPTCON))
+		return -EINVAL;
+	if (sock->type != SOCK_STREAM)
+		return -EOPNOTSUPP;
+	if (sk->state != TCP_LISTEN)
 		return -EINVAL;
 
 	for (;;) {
@@ -493,7 +501,6 @@ static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 
 	/* connect */
 	unix_peer(sk) = other;
-	sock->state = SS_CONNECTED;
 
 	return 0;
 }

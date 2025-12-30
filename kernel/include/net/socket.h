@@ -55,6 +55,7 @@
 #define SO_SNDLOWAT		19
 #define SO_RCVTIMEO		20
 #define SO_SNDTIMEO		21
+#define SO_ACCEPTCON		(1 << 16)
 
 /* system calls */
 #define SYS_SOCKET		1
@@ -116,6 +117,7 @@ struct socket {
 	uint16_t		family;
 	uint16_t		type;
 	socket_state_t		state;
+	uint32_t		flags;
 	struct proto_ops *	ops;
 	struct wait_queue *	wait;
 	struct inode *		inode;
