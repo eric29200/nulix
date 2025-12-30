@@ -21,8 +21,7 @@ struct ucred {
  * UNIX socket.
  */
 struct unix_opt {
-	struct sockaddr_un		sunaddr;
-	size_t				sunaddr_len;
+	struct unix_address	*	addr;
 	struct dentry *			dentry;
 };
 
@@ -67,6 +66,7 @@ struct sock {
 	struct timer_event		timer;
 	void				(*state_change)(struct sock *);
 	void				(*data_ready)(struct sock *, size_t);
+	void				(*destruct)(struct sock *);
 };
 
 /*
@@ -88,6 +88,7 @@ extern struct proto raw_proto;
 extern struct proto icmp_proto;
 
 struct sock *sk_alloc(int family, int zero_it);
+void sk_free(struct sock *sk);
 void sock_init_data(struct socket *sock, struct sock *sk);
 int sock_no_dup(struct socket *newsock, struct socket *oldsock);
 int sock_no_listen(struct socket *sock);

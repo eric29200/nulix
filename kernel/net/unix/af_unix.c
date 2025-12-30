@@ -47,16 +47,65 @@ static int unix_locked(unix_socket_t *sk)
 }
 
 /*
+ * Release a unix address.
+ */
+static void unix_release_addr(struct unix_address *addr)
+{
+	if (!addr)
+		return;
+
+	addr->refcnt--;
+	if (!addr->refcnt)
+		kfree(addr);
+}
+
+/*
+ * Destroy unix address.
+ */
+static void unix_destruct_addr(struct sock *sk)
+{
+	unix_release_addr(sk->protinfo.af_unix.addr);
+}
+
+/*
+ * check unix socket name.
+ */
+static int unix_mkname(struct sockaddr_un *sunaddr, size_t len)
+{
+	/* check size */
+	if (len <= sizeof(short) || len > sizeof(struct sockaddr_un))
+		return -EINVAL;
+
+	/* check protocol */
+	if (!sunaddr || sunaddr->sun_family != AF_UNIX)
+		return -EINVAL;
+
+	/* limit name to maximum size */
+	if (sunaddr->sun_path[0]) {
+		if (len > sizeof(*sunaddr))
+			len = sizeof(*sunaddr);
+		((char *) sunaddr)[len] = 0;
+		len = strlen(sunaddr->sun_path) + 1 + sizeof(short);
+		return len;
+	}
+
+	return len;
+}
+
+/*
  * Find a UNIX socket.
  */
 static unix_socket_t *unix_find_socket_by_inode(struct inode *inode)
 {
 	struct list_head *pos;
+	struct dentry *dentry;
 	unix_socket_t *sk;
 
 	list_for_each(pos, &unix_sockets) {
 		sk = list_entry(pos, unix_socket_t, list);
-		if (sk && sk->protinfo.af_unix.dentry && sk->protinfo.af_unix.dentry->d_inode == inode) {
+		dentry = sk->protinfo.af_unix.dentry;
+
+		if (dentry && dentry->d_inode == inode) {
 			unix_lock(sk);
 			return sk;
 		}
@@ -68,14 +117,15 @@ static unix_socket_t *unix_find_socket_by_inode(struct inode *inode)
 /*
  * Find a UNIX socket.
  */
-static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen)
+static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size_t addrlen, int type)
 {
 	struct list_head *pos;
 	unix_socket_t *sk;
 
 	list_for_each(pos, &unix_sockets) {
 		sk = list_entry(pos, unix_socket_t, list);
-		if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0) {
+
+		if (sk->protinfo.af_unix.addr->len == addrlen && memcmp(&sk->protinfo.af_unix.addr->name, sunaddr, addrlen) == 0 && sk->type == type) {
 			unix_lock(sk);
 			return sk;
 		}
@@ -94,7 +144,7 @@ static unix_socket_t *unix_find_other(struct sockaddr_un *sunaddr, size_t addrle
 
 	/* abstract socket */
 	if (!sunaddr->sun_path[0]) {
-		res = unix_find_socket_by_name(sunaddr, addrlen);
+		res = unix_find_socket_by_name(sunaddr, addrlen, type);
 		if (!res) {
 			dentry = res->protinfo.af_unix.dentry;
 			if (dentry)
@@ -169,7 +219,7 @@ static void unix_destroy_timer(void *arg)
 
 	/* try to destroy socket */
 	if (!unix_locked(sk) && sk->wmem_alloc == 0) {
-		kfree(sk);
+		sk_free(sk);
 		return;
 	}
 
@@ -212,7 +262,7 @@ static void unix_destroy_socket(unix_socket_t *sk)
 
 	/* free unix socket (or delay it) */
 	if (!unix_locked(sk) && sk->wmem_alloc == 0) {
-		kfree(sk);
+		sk_free(sk);
 	} else {
 		sk->state = TCP_CLOSE;
 		sk->dead = 1;
@@ -273,7 +323,6 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
  */
 static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 {
-	struct sockaddr_un *sunaddr = msg->msg_name;
 	struct sk_buff *skb;
 	unix_socket_t *sk;
 	int err;
@@ -289,8 +338,14 @@ static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t si
 		return err;
 
 	/* set address */
-	if (sunaddr && skb->sk)
-		memcpy(sunaddr, &skb->sk->protinfo.af_unix.sunaddr, skb->sk->protinfo.af_unix.sunaddr_len);
+	if (msg->msg_name) {
+		msg->msg_namelen = sizeof(short);
+
+		if (skb->sk->protinfo.af_unix.addr) {
+			msg->msg_namelen = skb->sk->protinfo.af_unix.addr->len;
+			memcpy(msg->msg_name, skb->sk->protinfo.af_unix.addr->name, skb->sk->protinfo.af_unix.addr->len);
+		}
+	}
 
 	/* check size */
 	if (size > skb->len)
@@ -312,90 +367,84 @@ static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t si
  */
 static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
 {
-	size_t ct = msg->msg_iovlen, copied = 0, done, len, num;
+	int noblock = msg->msg_flags & MSG_DONTWAIT;
 	struct sockaddr_un *sunaddr = msg->msg_name;
-	struct iovec *iov = msg->msg_iov;
-	unix_socket_t *sk, *from;
+	size_t target = 1, chunk, copied = 0;
+	struct sock *sk = sock->sk;
 	struct sk_buff *skb;
-	uint8_t *buf;
 
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
+	/* check flags */
+	if (sock->flags & SO_ACCEPTCON)
 		return -EINVAL;
+	if (msg->msg_flags & MSG_OOB)
+		return -EOPNOTSUPP;
+	if (msg->msg_flags & MSG_WAITALL)
+		target = size;
 
-	/* for each iov */
-	while (ct--) {
-		done = 0;
-		buf = iov->iov_base;
-		len = iov->iov_len;
-		iov++;
+	/* reset address */
+	msg->msg_namelen = 0;
 
-		/* try to fill buffer */
-		while (done < len) {
+	do {
+		/* get next message or wait */
+		skb = skb_dequeue(&sk->receive_queue);
+		if (!skb) {
 			/* done */
-			if (copied == size || (copied && (msg->msg_flags & MSG_PEEK)))
-				goto out;
+			if (copied >= target)
+				break;
+
+			/* socket is down */
+			if (sk->shutdown & RCV_SHUTDOWN)
+				break;
+
+			/* non blocking */
+			if (noblock)
+				return -EAGAIN;
 
 			/* wait for a message */
-			skb = skb_dequeue(&sk->receive_queue);
-			if (!skb) {
-				/* socket is down */
-				if (sk->shutdown & RCV_SHUTDOWN)
-					goto out;
+			sleep_on(&sk->socket->wait);
 
-				/* return partial data */
-				if (copied)
-					goto out;
+			/* handle signal */
+			if (signal_pending(current_task))
+				return -ERESTARTSYS;
 
-				/* non blocking */
-				if (msg->msg_flags & MSG_DONTWAIT)
-					return -EAGAIN;
-
-				/* signal received : restart system call */
-				if (signal_pending(current_task))
-					return -ERESTARTSYS;
-
-				/* wait for a message */
-				sleep_on(&sk->socket->wait);
-				continue;
-			}
-
-			/* set address just once */
-			if (sunaddr && skb->sk) {
-				from = skb->sk;
-				memcpy(sunaddr, &from->protinfo.af_unix.sunaddr, from->protinfo.af_unix.sunaddr_len);
-				sunaddr = NULL;
-			}
-
-			/* copy message */
-			num = skb->len <= len - done ? skb->len : len - done;
-			memcpy(buf, skb->data, num);
-
-			/* update sizes */
-			copied += num;
-			done += num;
-			buf += num;
-
-			/* free message or requeue it */
-			if (!(msg->msg_flags & MSG_PEEK)) {
-				skb_pull(skb, num);
-
-				/* partial read */
-				if (skb->len > 0) {
-					skb_queue_head(&sk->receive_queue, skb);
-					break;
-				}
-
-				/* free socket buffer */
-				skb_free(skb);
-			} else {
-				skb_queue_head(&sk->receive_queue, skb);
-			}
+			continue;
 		}
-	}
 
-out:
+		/* copy address just once */
+		if (sunaddr) {
+			msg->msg_namelen = sizeof(short);
+
+			if (skb->sk->protinfo.af_unix.addr) {
+				msg->msg_namelen=skb->sk->protinfo.af_unix.addr->len;
+				memcpy(sunaddr, skb->sk->protinfo.af_unix.addr->name, skb->sk->protinfo.af_unix.addr->len);
+			}
+
+			sunaddr = NULL;
+		}
+
+		/* copy data */
+		chunk = skb->len <= size ? skb->len : size;
+		memcpy_toiovec(msg->msg_iov, skb->data, chunk);
+		copied += chunk;
+		size -= chunk;
+
+		/* free message or requeue it */
+		if (!(msg->msg_flags & MSG_PEEK)) {
+			skb_pull(skb, chunk);
+
+			/* partial read */
+			if (skb->len > 0) {
+				skb_queue_head(&sk->receive_queue, skb);
+				break;
+			}
+
+			/* free socket buffer */
+			skb_free(skb);
+		} else {
+			skb_queue_head(&sk->receive_queue, skb);
+		}
+	} while (size);
+
 	return copied;
 }
 
@@ -408,7 +457,7 @@ static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, siz
 	struct sock *sk = sock->sk;
 	unix_socket_t *other;
 	struct sk_buff *skb;
-	int ret;
+	int ret, namelen;
 
 	/* check flags */
 	if (msg->msg_flags & MSG_OOB)
@@ -416,9 +465,16 @@ static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, siz
 	if (msg->msg_flags & ~(MSG_DONTWAIT | MSG_NOSIGNAL))
 		return -EINVAL;
 
-	/* check connection */
-	if (!msg->msg_namelen && !unix_peer(sk))
-		return -ENOTCONN;
+	/* get destination */
+	if (msg->msg_namelen) {
+		namelen = unix_mkname(sunaddr, msg->msg_namelen);
+		if (namelen < 0)
+			return namelen;
+	} else {
+		sunaddr = NULL;
+		if (!unix_peer(sk))
+			return -ENOTCONN;
+	}
 
 	/* check message size */
 	if (len > sk->sndbuf)
@@ -451,7 +507,7 @@ static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, siz
 		if (!sunaddr)
 			goto err;
 
-		other = unix_find_other(sunaddr, msg->msg_namelen, sk->type, &ret);
+		other = unix_find_other(sunaddr, namelen, sk->type, &ret);
 		if (!other)
 			goto err;
 
@@ -496,10 +552,14 @@ static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, si
 		return -EINVAL;
 
 	/* check connection */
-	if (msg->msg_namelen)
-		return -EOPNOTSUPP;
-	if (!unix_peer(sk))
+	if (msg->msg_namelen) {
+		if (sk->state == TCP_ESTABLISHED)
+			return -EISCONN;
+		else
+			return -EOPNOTSUPP;
+	} else if (!unix_peer(sk)) {
 		return -ENOTCONN;
+	}
 
 	/* socket is down */
 	if (sk->shutdown & SEND_SHUTDOWN) {
@@ -546,49 +606,110 @@ static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, si
 }
 
 /*
+ * Auto bind a socket.
+ */
+static int unix_autobind(struct socket *sock)
+{
+	static uint32_t ordernum = 1;
+	struct sock *sk = sock->sk;
+	struct unix_address *addr;
+	unix_socket_t *osk;
+
+	/* allocate unix address */
+	addr = kmalloc(sizeof(struct unix_address) + sizeof(short) + 16);
+	if (!addr)
+		return -ENOMEM;
+
+	/* already bound */
+	if (sk->protinfo.af_unix.addr || sk->protinfo.af_unix.dentry) {
+		kfree(addr);
+		return -EINVAL;
+	}
+
+	/* init address */
+	memset(addr, 0, sizeof(struct unix_address) + sizeof(short) + 16);
+	addr->name->sun_family = AF_UNIX;
+	addr->refcnt = 1;
+
+	/* try to find a free name */
+	for (;;) {
+		addr->len = sprintf(addr->name->sun_path + 1, "%08x", ordernum) + 1 + sizeof(short);
+		ordernum++;
+
+		/* check if socket name already exist */
+		osk = unix_find_socket_by_name(addr->name, addr->len, sock->type);
+		if (!osk)
+			break;
+
+		/* retry */
+		unix_unlock(osk);
+	}
+
+	/* set address */
+	sk->protinfo.af_unix.addr = addr;
+
+	return 0;
+}
+
+/*
  * Bind system call (attach an address to a socket).
  */
-static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+static int unix_bind(struct socket *sock, const struct sockaddr *uaddr, size_t addrlen)
 {
-	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
-	unix_socket_t *sk, *osk;
+	struct sockaddr_un *sunaddr = (struct sockaddr_un *) uaddr;
+	struct sock *sk = sock->sk;
+	struct unix_address *addr;
 	struct dentry *dentry;
+	unix_socket_t *osk;
+	int alen, ret;
 
-	/* check address length */
-	if (addrlen < UN_PATH_OFFSET || addrlen > sizeof(struct sockaddr_un))
+	/* already bound */
+	if (sk->protinfo.af_unix.addr || sk->protinfo.af_unix.dentry || sunaddr->sun_family != AF_UNIX)
 		return -EINVAL;
 
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
+	/* no name : auto bind */
+	if (addrlen == sizeof(short))
+		return unix_autobind(sock);
 
-	/* socket already bound */
-	if (sk->protinfo.af_unix.sunaddr_len || sk->protinfo.af_unix.dentry)
-		return -EBUSY;
+	/* make unix name */
+	alen = unix_mkname(sunaddr, addrlen);
+	if (alen < 0)
+		return alen;
+
+	/* allocate unix address */
+	addr = kmalloc(sizeof(struct unix_address) + alen);
+	if (!addr)
+		return -ENOMEM;
+
+	memcpy(addr->name, sunaddr, alen);
+	addr->len = alen;
+	addr->refcnt = 1;
 
 	/* abstract socket */
 	if (!sunaddr->sun_path[0]) {
-		/* check if socket already exists */
-		osk = unix_find_socket_by_name(sunaddr, addrlen);
+		osk = unix_find_socket_by_name(sunaddr, alen, sk->type);
 		if (osk) {
 			unix_unlock(osk);
+			kfree(addr);
 			return -EADDRINUSE;
 		}
-	} else {
-		/* create socket file */
-		dentry = do_mknod(AT_FDCWD, sunaddr->sun_path, S_IFSOCK | S_IRWXUGO, 0);
-		if (IS_ERR(dentry))
-			return PTR_ERR(dentry);
 
-		/* set dentry */
-		sk->protinfo.af_unix.dentry = dentry;
+		sk->protinfo.af_unix.addr = addr;
+		return 0;
 	}
 
-	/* set socket address */
-	memcpy(&sk->protinfo.af_unix.sunaddr, addr, addrlen);
-	sk->protinfo.af_unix.sunaddr.sun_path[addrlen - UN_PATH_OFFSET] = 0;
-	sk->protinfo.af_unix.sunaddr_len = addrlen;
+	/* make socket node */
+	sk->protinfo.af_unix.addr = addr;
+	dentry = do_mknod(AT_FDCWD, sunaddr->sun_path, S_IFSOCK | sock->inode->i_mode, 0);
+	if (IS_ERR(dentry)) {
+		ret = PTR_ERR(dentry);
+		unix_release_addr(addr);
+		sk->protinfo.af_unix.addr = NULL;
+		return ret == -EEXIST ? -EADDRINUSE : ret;
+	}
+
+	/* set dentry */
+	sk->protinfo.af_unix.dentry = dentry;
 
 	return 0;
 }
@@ -605,7 +726,7 @@ static int unix_listen(struct socket *sock)
 		return -EINVAL;
 	if (sock->type != SOCK_STREAM)
 		return -EOPNOTSUPP;
-	if (!sk->protinfo.af_unix.sunaddr_len)
+	if (!sk->protinfo.af_unix.addr)
 		return -EINVAL;
 
 	/* set */
@@ -692,15 +813,20 @@ static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	unix_socket_t *sk, *other;
-	int ret;
+	int ret, alen;
 
 	/* get UNIX socket */
 	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
+	/* make destination address */
+	alen = unix_mkname(sunaddr, addrlen);
+	if (alen < 0)
+		return alen;
+
 	/* find other unix socket */
-	other = unix_find_other(sunaddr, addrlen, sk->type, &ret);
+	other = unix_find_other(sunaddr, alen, sk->type, &ret);
 	if (!other)
 		return ret;
 
@@ -731,10 +857,15 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 	struct sock *sk = sock->sk, *sk_new;
 	struct sk_buff *skb = NULL;
 	unix_socket_t *other;
-	int ret;
+	int ret, alen;
+
+	/* make destination address */
+	alen = unix_mkname(sunaddr, addrlen);
+	if (alen < 0)
+		return alen;
 
 	/* find listening sock */
-	other = unix_find_other(sunaddr, addrlen, sk->type, &ret);
+	other = unix_find_other(sunaddr, alen, sk->type, &ret);
 	if (!other)
 		return -ECONNREFUSED;
 
@@ -773,6 +904,8 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 
 	/* set up connecting socket */
 	sock->state = SS_CONNECTED;
+	if (!sk->protinfo.af_unix.addr)
+		unix_autobind(sock);
 	unix_peer(sk) = sk_new;
 	unix_lock(sk);
 	sk->state = TCP_ESTABLISHED;
@@ -788,9 +921,9 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 	sk_new->peercred.gid = current_task->egid;
 
 	/* copy address information from listening to new sock*/
-	if (other->protinfo.af_unix.sunaddr_len) {
-		sk_new->protinfo.af_unix.sunaddr_len = other->protinfo.af_unix.sunaddr_len;
-		memcpy(&sk_new->protinfo.af_unix.sunaddr, &other->protinfo.af_unix.sunaddr, other->protinfo.af_unix.sunaddr_len);
+	if (other->protinfo.af_unix.addr) {
+		other->protinfo.af_unix.addr->refcnt += 1;
+		sk_new->protinfo.af_unix.addr = other->protinfo.af_unix.addr;
 	}
 
 	/* update dentry reference count */
@@ -853,6 +986,7 @@ static int unix_shutdown(struct socket *sock, int mode)
  */
 static int unix_getname(struct socket *sock, struct sockaddr *addr, size_t *addrlen, int peer)
 {
+	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	struct sock *sk = sock->sk;
 
 	/* get peer name ? */
@@ -862,10 +996,17 @@ static int unix_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 		sk = unix_peer(sk);
 	}
 
+	/* not bound */
+	if (!sk->protinfo.af_unix.addr) {
+		sunaddr->sun_family = AF_UNIX;
+		sunaddr->sun_path[0] = 0;
+		*addrlen = sizeof(short);
+		return 0;
+	}
+
 	/* get name */
-	memset(addr, 0, sizeof(struct sockaddr));
-	memcpy(addr, &sk->protinfo.af_unix.sunaddr, sk->protinfo.af_unix.sunaddr_len);
-	*addrlen = sk->protinfo.af_unix.sunaddr_len;
+	*addrlen = sk->protinfo.af_unix.addr->len;
+	memcpy(sunaddr, sk->protinfo.af_unix.addr->name, *addrlen);
 
 	return 0;
 }
@@ -938,6 +1079,8 @@ static struct sock *unix_create1(struct socket *sock, int protocol)
 	/* set socket */
 	sk->protocol = protocol;
 	sock_init_data(sock, sk);
+	sk->destruct = unix_destruct_addr;
+	sk->protinfo.af_unix.dentry=NULL;
 
 	/* insert in sockets list */
 	list_add_tail(&sk->list, &unix_sockets);

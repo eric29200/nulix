@@ -24,6 +24,7 @@
 #define MSG_PEEK		2
 #define MSG_TRUNC		0x20
 #define MSG_DONTWAIT		0x40
+#define MSG_WAITALL		0x100
 #define MSG_SYN			0x400
 #define MSG_NOSIGNAL		0x4000
 

@@ -30,6 +30,17 @@ struct sock *sk_alloc(int family, int zero_it)
 }
 
 /*
+ * Free a socket.
+ */
+void sk_free(struct sock *sk)
+{
+	if (sk->destruct)
+		sk->destruct(sk);
+
+	kfree(sk);
+}
+
+/*
  * Default socket wake up.
  */
 void sock_def_wakeup(struct sock *sk)
