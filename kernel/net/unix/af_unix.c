@@ -14,6 +14,7 @@
 #define unix_our_peer(sk, osk)		(unix_peer(osk) == sk)
 #define unix_may_send(sk, osk)		(unix_peer(osk) == NULL || unix_our_peer(sk, osk))
 
+static struct sock *unix_create1(struct socket *sock, int protocol);
 static void unix_destroy_socket(unix_socket_t *sk);
 
 /* UNIX sockets */
@@ -550,10 +551,11 @@ static int unix_listen(struct socket *sock)
  */
 static int unix_accept(struct socket *sock, struct socket *sock_new, int flags)
 {
-	unix_socket_t *sk = sock->sk, *sk_new = sock_new->sk, *other;
+	unix_socket_t *sk = sock->sk, *sk_new = sock_new->sk;
 	struct sk_buff *skb;
+	unix_socket_t *tsk;
 
-	/* socket must be listening */
+	/* check socket state */
 	if (sock->state != SS_UNCONNECTED)
 		return -EINVAL;
 	if (!(sock->flags & SO_ACCEPTCON))
@@ -564,49 +566,47 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, int flags)
 		return -EINVAL;
 
 	for (;;) {
-		/* wait for a message */
+		/* get next message */
 		skb = skb_dequeue(&sk->receive_queue);
 		if (!skb) {
 			/* non blocking */
 			if (flags & O_NONBLOCK)
 				return -EAGAIN;
 
-			/* disconnected : break */
-			if (sock->state == SS_DISCONNECTING)
-				return 0;
+			/* wait for a message */
+			sleep_on(sk->sleep);
 
-			/* signal received : restart system call */
+			/* handle pending signal */
 			if (signal_pending(current_task))
 				return -ERESTARTSYS;
 
-			/* sleep */
-			sleep_on(&sock->wait);
 			continue;
 		}
 
 		/* ignore non SYN messages */
 		if (!(UNIXCB(skb).attr & MSG_SYN)) {
-			if (skb->sk)
-				wake_up(skb->sk->sleep);
+			tsk = skb->sk;
+			tsk->state_change(tsk);
 			skb_free(skb);
 			continue;
 		}
 
-		/* get destination and free socket buffer */
-		other = skb->sk;
+		/* found SYN message */
+		tsk = skb->sk;
 		skb_free(skb);
 		break;
 	}
 
-	/* set new socket */
-	sock_new->state = SS_CONNECTED;
-	unix_peer(sk_new) = other;
-	sk_new->peercred.uid = sk->peercred.uid;
 
-	/* set other socket connected and wake up eventual clients connecting */
-	other->socket->state = SS_CONNECTED;
-	unix_peer(other) = sk_new;
-	wake_up(&unix_peer(sk_new)->socket->wait);
+	/* attach accepted sock to socket */
+	sock_new->state = SS_CONNECTED;
+	sock_new->sk = tsk;
+	tsk->sleep = sk_new->sleep;
+	tsk->socket = sock_new;
+
+	/* destroy handed sock */
+	sk_new->socket = NULL;
+	unix_destroy_socket(sk_new);
 
 	return 0;
 }
@@ -642,51 +642,84 @@ static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
-	unix_socket_t *sk, *other;
-	struct sk_buff *skb;
+	struct sock *sk = sock->sk, *newsk;
+	struct sk_buff *skb = NULL;
+	unix_socket_t *other;
 	int ret;
 
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
-
-	/* find other unix socket */
+	/* find listening sock */
 	other = unix_find_other(sunaddr, addrlen, sk->type, &ret);
 	if (!other)
-		return ret;
+		return -ECONNREFUSED;
 
-	/* create a SYN message */
-	skb = skb_alloc(0);
-	if (!skb)
-		return -ENOMEM;
-	UNIXCB(skb).attr = MSG_SYN;
+	/* create new sock for complete connection */
+	newsk = unix_create1(NULL, 1);
 
-	/* queue empty packet */
-	skb->sk = sk;
-	skb_queue_tail(&other->receive_queue, skb);
-
-	/* wake up eventual reader */
-	wake_up(&other->socket->wait);
-
-	/* set socket */
-	unix_peer(sk) = other;
-	sock->state = SS_CONNECTING;
-
-	/* wait for an accept */
-	while (sock->state == SS_CONNECTING) {
-		/* signal received : restart system call */
-		if (signal_pending(current_task))
-			return -ERESTARTSYS;
-
-		/* sleep */
-		sleep_on(&sock->wait);
+	/* allocate a socket buffer for sending to listening sock */
+	if (newsk) {
+		skb = skb_alloc(0);
+		if (skb) {
+			skb->sk = newsk;
+			UNIXCB(skb).attr = MSG_SYN;
+		}
 	}
 
-	/* set credentials */
-	sock->sk->peercred = other->peercred;
+	/* check socket state */
+	if (sock->state != SS_UNCONNECTED) {
+		ret = sock->state == SS_CONNECTED ? -EISCONN : -EINVAL;
+		goto out;
+	}
 
+	/* check socket state */
+	ret = -EINVAL;
+	if (sk->state != TCP_CLOSE)
+		goto out;
+
+	/* check if listener is in valid state */
+	ret = -ECONNREFUSED;
+	if (other->dead || other->state != TCP_LISTEN)
+		goto out;
+
+	/* no way to create a socket buffer */
+	ret = -ENOMEM;
+	if (!newsk || !skb)
+		goto out;
+
+	/* set up connecting socket */
+	sock->state = SS_CONNECTED;
+	unix_peer(sk) = newsk;
+	sk->state = TCP_ESTABLISHED;
+	sk->peercred = other->peercred;
+
+	/* set up newly created sock */
+	unix_peer(newsk) = sk;
+	newsk->state = TCP_ESTABLISHED;
+	newsk->type = SOCK_STREAM;
+	newsk->peercred.pid = current_task->pid;
+	newsk->peercred.uid = current_task->euid;
+	newsk->peercred.gid = current_task->egid;
+
+	/* copy address information from listening to new sock*/
+	if (other->protinfo.af_unix.sunaddr_len)
+	{
+		newsk->protinfo.af_unix.sunaddr_len = other->protinfo.af_unix.sunaddr_len;
+		memcpy(&newsk->protinfo.af_unix.sunaddr, &other->protinfo.af_unix.sunaddr, other->protinfo.af_unix.sunaddr_len);
+	}
+
+	/* update dentry reference count */
+	if (other->protinfo.af_unix.dentry)
+		newsk->protinfo.af_unix.dentry = dget(other->protinfo.af_unix.dentry);
+
+	/* send info to listening sock */
+	skb_queue_tail(&other->receive_queue,skb);
+	other->data_ready(other, 0);
 	return 0;
+out:
+	if (skb)
+		skb_free(skb);
+	if (newsk)
+		unix_destroy_socket(newsk);
+	return ret;
 }
 
 /*
