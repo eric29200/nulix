@@ -553,7 +553,6 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	unix_socket_t *sk, *osk;
 	struct dentry *dentry;
-	int ret;
 
 	/* check address length */
 	if (addrlen < UN_PATH_OFFSET || addrlen > sizeof(struct sockaddr_un))
@@ -578,12 +577,7 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 		}
 	} else {
 		/* create socket file */
-		ret = sys_mknod(sunaddr->sun_path, S_IFSOCK | S_IRWXUGO, 0);
-		if (ret)
-			return ret;
-
-		/* resolve path */
-		dentry = open_namei(AT_FDCWD, sunaddr->sun_path, 0, S_IFSOCK);
+		dentry = do_mknod(AT_FDCWD, sunaddr->sun_path, S_IFSOCK | S_IRWXUGO, 0);
 		if (IS_ERR(dentry))
 			return PTR_ERR(dentry);
 

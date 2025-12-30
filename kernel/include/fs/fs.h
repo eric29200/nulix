@@ -407,6 +407,7 @@ int generic_file_mmap(struct file *filp, struct vm_area *vma);
 int do_mount_root(dev_t dev, const char *dev_name, int flags);
 int close_fp(struct file *filp);
 int do_truncate(struct inode *inode, off_t length);
+struct dentry *do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev);
 
 /* system calls */
 int sys_access(const char *filename, mode_t mode);

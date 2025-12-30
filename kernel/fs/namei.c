@@ -809,7 +809,7 @@ int sys_renameat2(int olddirfd, const char *oldpath, int newdirfd, const char *n
 /*
  * Mknod system call.
  */
-static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
+struct dentry *do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 {
 	struct dentry *dentry;
 	struct inode *dir;
@@ -818,7 +818,7 @@ static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 	/* resolve path */
 	dentry = lookup_dentry(dirfd, NULL, pathname, 1);
 	if (IS_ERR(dentry))
-		return PTR_ERR(dentry);
+		return dentry;
 
 	/* get directory */
 	dir = dentry->d_parent->d_inode;
@@ -826,28 +826,32 @@ static int do_mknod(int dirfd, const char *pathname, mode_t mode, dev_t dev)
 	/* already exists */
 	ret = -EEXIST;
 	if (dentry->d_inode)
-		goto out;
+		goto err;
 
 	/* read only filesystem */
 	ret = -EROFS;
 	if (IS_RDONLY(dir))
-		goto out;
+		goto err;
 
 	/* check permissions */
 	ret = permission(dir, MAY_WRITE | MAY_EXEC);
 	if (ret)
-		goto out;
+		goto err;
 
 	/* mknod not implemented */
 	ret = -EPERM;
 	if (!dir->i_op || !dir->i_op->mknod)
-		goto out;
+		goto err;
 
 	/* make node */
 	ret = dir->i_op->mknod(dir, dentry, mode, dev);
-out:
+	if (ret)
+		goto err;
+
+	return dget(dentry);
+err:
 	dput(dentry);
-	return ret;
+	return ERR_PTR(ret);
 }
 
 /*
@@ -855,5 +859,13 @@ out:
  */
 int sys_mknod(const char *pathname, mode_t mode, dev_t dev)
 {
-	return do_mknod(AT_FDCWD, pathname, mode, dev);
+	struct dentry *res;
+
+	/* make node */
+	res = do_mknod(AT_FDCWD, pathname, mode, dev);
+	if (IS_ERR(res))
+		return PTR_ERR(res);
+
+	dput(res);
+	return 0;
 }
