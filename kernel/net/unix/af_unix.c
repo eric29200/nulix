@@ -52,35 +52,45 @@ static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size
 /*
  * Find other UNIX socket.
  */
-static int unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, unix_socket_t **res)
+static unix_socket_t *unix_find_other(struct sockaddr_un *sunaddr, size_t addrlen, int type, int *err)
 {
 	struct dentry *dentry;
-	int ret = 0;
-
-	/* reset result socket */
-	*res = NULL;
+	unix_socket_t *res;
 
 	/* abstract socket */
 	if (!sunaddr->sun_path[0]) {
-		*res = unix_find_socket_by_name(sunaddr, addrlen);
-		if (!*res)
-			ret = -ECONNREFUSED;
+		res = unix_find_socket_by_name(sunaddr, addrlen);
+		if (!res) {
+			dentry = res->protinfo.af_unix.dentry;
+			if (dentry)
+				update_atime(dentry->d_inode);
+		}
 	} else {
 		/* resolve socket path */
 		dentry = open_namei(AT_FDCWD, sunaddr->sun_path, S_IFSOCK, 0);
-		if (IS_ERR(dentry))
-			return PTR_ERR(dentry);
+		if (IS_ERR(dentry)) {
+			*err = PTR_ERR(dentry);
+			return NULL;
+		}
 
 		/* find UNIX socket */
-		*res = unix_find_socket_by_inode(dentry->d_inode);
-		if (!*res)
-			ret = -ECONNREFUSED;
+		res = unix_find_socket_by_inode(dentry->d_inode);
+		if (res && res->type == type)
+			update_atime(dentry->d_inode);
+		else if (res && res->type != type) {
+			*err = -EPROTOTYPE;
+			return NULL;
+		}
 
 		/* release dentry */
 		dput(dentry);
 	}
 
-	return ret;
+	/* handle error */
+	if (!res)
+		*err = -ECONNREFUSED;
+
+	return res;
 }
 
 /*
@@ -293,8 +303,8 @@ static int unix_sendmsg(struct socket *sock, const struct msghdr *msg, size_t si
 
 	/* find other socket */
 	if (sunaddr) {
-		ret = unix_find_other(sunaddr, msg->msg_namelen, &other);
-		if (ret)
+		other = unix_find_other(sunaddr, msg->msg_namelen, sk->type, &ret);
+		if (!other)
 			return ret;
 	} else {
 		other = unix_peer(sk);
@@ -477,8 +487,8 @@ static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 		return -EINVAL;
 
 	/* find other unix socket */
-	ret = unix_find_other(sunaddr, addrlen, &other);
-	if (ret)
+	other = unix_find_other(sunaddr, addrlen, sk->type, &ret);
+	if (!other)
 		return ret;
 
 	/* connect */
@@ -504,8 +514,8 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 		return -EINVAL;
 
 	/* find other unix socket */
-	ret = unix_find_other(sunaddr, addrlen, &other);
-	if (ret)
+	other = unix_find_other(sunaddr, addrlen, sk->type, &ret);
+	if (!other)
 		return ret;
 
 	/* create a SYN message */
