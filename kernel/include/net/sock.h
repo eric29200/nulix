@@ -2,6 +2,7 @@
 #define _SOCK_H_
 
 #include <lib/list.h>
+#include <proc/timer.h>
 #include <net/socket.h>
 #include <net/inet/in.h>
 #include <net/unix/un.h>
@@ -52,6 +53,7 @@ struct sock {
 	size_t				rcvbuf;
 	size_t				sndbuf;
 	size_t				wmem_alloc;
+	int				sock_readers;
 	struct ucred 			peercred;
 	int				proc;
 	struct sock *			pair;
@@ -62,6 +64,7 @@ struct sock {
 	} protinfo;
 	struct list_head		list;
 	struct sk_buff_head		receive_queue;
+	struct timer_event		timer;
 	void				(*state_change)(struct sock *);
 	void				(*data_ready)(struct sock *, size_t);
 };

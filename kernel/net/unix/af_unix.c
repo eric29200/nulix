@@ -10,6 +10,8 @@
 #include <fcntl.h>
 #include <uio.h>
 
+#define UNIX_DELETE_DELAY		(HZ)
+
 #define unix_peer(sk)			((sk)->pair)
 #define unix_our_peer(sk, osk)		(unix_peer(osk) == sk)
 #define unix_may_send(sk, osk)		(unix_peer(osk) == NULL || unix_our_peer(sk, osk))
@@ -21,6 +23,30 @@ static void unix_destroy_socket(unix_socket_t *sk);
 static LIST_HEAD(unix_sockets);
 
 /*
+ * Lock a unix socket.
+ */
+static void unix_lock(unix_socket_t *sk)
+{
+	sk->sock_readers++;
+}
+
+/*
+ * Unlock a unix socket.
+ */
+static void unix_unlock(unix_socket_t *sk)
+{
+	sk->sock_readers--;
+}
+
+/*
+ * Is a unix socket locked ?
+ */
+static int unix_locked(unix_socket_t *sk)
+{
+	return sk->sock_readers;
+}
+
+/*
  * Find a UNIX socket.
  */
 static unix_socket_t *unix_find_socket_by_inode(struct inode *inode)
@@ -30,8 +56,10 @@ static unix_socket_t *unix_find_socket_by_inode(struct inode *inode)
 
 	list_for_each(pos, &unix_sockets) {
 		sk = list_entry(pos, unix_socket_t, list);
-		if (sk && sk->protinfo.af_unix.dentry && sk->protinfo.af_unix.dentry->d_inode == inode)
+		if (sk && sk->protinfo.af_unix.dentry && sk->protinfo.af_unix.dentry->d_inode == inode) {
+			unix_lock(sk);
 			return sk;
+		}
 	}
 
 	return NULL;
@@ -47,8 +75,10 @@ static unix_socket_t *unix_find_socket_by_name(struct sockaddr_un *sunaddr, size
 
 	list_for_each(pos, &unix_sockets) {
 		sk = list_entry(pos, unix_socket_t, list);
-		if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0)
+		if (sk && sk->protinfo.af_unix.sunaddr_len == addrlen && memcmp(&sk->protinfo.af_unix.sunaddr, sunaddr, addrlen) == 0) {
+			unix_lock(sk);
 			return sk;
+		}
 	}
 
 	return NULL;
@@ -82,13 +112,16 @@ static unix_socket_t *unix_find_other(struct sockaddr_un *sunaddr, size_t addrle
 		res = unix_find_socket_by_inode(dentry->d_inode);
 		if (res && res->type == type)
 			update_atime(dentry->d_inode);
-		else if (res && res->type != type) {
-			*err = -EPROTOTYPE;
-			return NULL;
-		}
 
 		/* release dentry */
 		dput(dentry);
+
+		/* handle error */
+		if (res && res->type != type) {
+			*err = -EPROTOTYPE;
+			unix_unlock(res);
+			return NULL;
+		}
 	}
 
 	/* handle error */
@@ -112,15 +145,46 @@ static int unix_release_sock(unix_socket_t *sk)
 
 	/* shutdown pair socket */
 	pair = unix_peer(sk);
-	if (pair && sk->type == SOCK_STREAM && unix_our_peer(sk, pair)) {
-		pair->data_ready(pair, 0);
-		pair->shutdown = SHUTDOWN_MASK;
+	if (pair) {
+		if (sk->type == SOCK_STREAM && unix_our_peer(sk, pair)) {
+			pair->data_ready(pair, 0);
+			pair->shutdown = SHUTDOWN_MASK;
+		}
+
+		unix_unlock(pair);
 	}
 
 	/* destroy socket */
 	unix_destroy_socket(sk);
 
 	return 0;
+}
+
+/*
+ * Delayed destruction callback.
+ */
+static void unix_destroy_timer(void *arg)
+{
+	unix_socket_t *sk = (unix_socket_t *) arg;
+
+	/* try to destroy socket */
+	if (!unix_locked(sk) && sk->wmem_alloc == 0) {
+		kfree(sk);
+		return;
+	}
+
+	/* reschedule timer */
+	init_timer(&sk->timer, unix_destroy_timer, sk, jiffies + UNIX_DELETE_DELAY);
+	add_timer(&sk->timer);
+}
+
+/*
+ * Delay socket destruction.
+ */
+static void unix_delayed_delete(unix_socket_t *sk)
+{
+	init_timer(&sk->timer, unix_destroy_timer, sk, jiffies + UNIX_DELETE_DELAY);
+	add_timer(&sk->timer);
 }
 
 /*
@@ -146,8 +210,14 @@ static void unix_destroy_socket(unix_socket_t *sk)
 		sk->protinfo.af_unix.dentry = NULL;
 	}
 
-	/* free UNIX socket */
-	kfree(sk);
+	/* free unix socket (or delay it) */
+	if (!unix_locked(sk) && sk->wmem_alloc == 0) {
+		kfree(sk);
+	} else {
+		sk->state = TCP_CLOSE;
+		sk->dead = 1;
+		unix_delayed_delete(sk);
+	}
 }
 
 /*
@@ -367,6 +437,7 @@ static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, siz
 	/* get peer socket */
 	other = unix_peer(sk);
 	if (other && other->dead) {
+		unix_unlock(other);
 		unix_peer(sk) = NULL;
 		other = NULL;
 		ret = -ECONNRESET;
@@ -386,14 +457,20 @@ static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, siz
 
 		ret = -EINVAL;
 		if (!unix_may_send(sk, other))
-			goto err;
+			goto err_unlock;
 	}
 
 	/* queue message in other socket */
 	skb_queue_tail(&other->receive_queue, skb);
 	other->data_ready(other, len);
 
+	/* not connected : unlock other socket */
+	if (!unix_peer(sk))
+		unix_unlock(other);
+
 	return len;
+err_unlock:
+	unix_unlock(other);
 err:
 	skb_free(skb);
 	return ret;
@@ -474,8 +551,8 @@ static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, si
 static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
+	unix_socket_t *sk, *osk;
 	struct dentry *dentry;
-	unix_socket_t *sk;
 	int ret;
 
 	/* check address length */
@@ -494,8 +571,11 @@ static int unix_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 	/* abstract socket */
 	if (!sunaddr->sun_path[0]) {
 		/* check if socket already exists */
-		if (unix_find_socket_by_name(sunaddr, addrlen) != NULL)
+		osk = unix_find_socket_by_name(sunaddr, addrlen);
+		if (osk) {
+			unix_unlock(osk);
 			return -EADDRINUSE;
+		}
 	} else {
 		/* create socket file */
 		ret = sys_mknod(sunaddr->sun_path, S_IFSOCK | S_IRWXUGO, 0);
@@ -630,6 +710,18 @@ static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 	if (!other)
 		return ret;
 
+	/* check permissions */
+	if (!unix_may_send(sk, other)) {
+		unix_unlock(other);
+		return -EINVAL;
+	}
+
+	/* if it was connected, reconnect */
+	if (unix_peer(sk)) {
+		unix_unlock(unix_peer(sk));
+		unix_peer(sk) = NULL;
+	}
+
 	/* connect */
 	unix_peer(sk) = other;
 
@@ -642,7 +734,7 @@ static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
-	struct sock *sk = sock->sk, *newsk;
+	struct sock *sk = sock->sk, *sk_new;
 	struct sk_buff *skb = NULL;
 	unix_socket_t *other;
 	int ret;
@@ -653,13 +745,13 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 		return -ECONNREFUSED;
 
 	/* create new sock for complete connection */
-	newsk = unix_create1(NULL, 1);
+	sk_new = unix_create1(NULL, 1);
 
 	/* allocate a socket buffer for sending to listening sock */
-	if (newsk) {
+	if (sk_new) {
 		skb = skb_alloc(0);
 		if (skb) {
-			skb->sk = newsk;
+			skb->sk = sk_new;
 			UNIXCB(skb).attr = MSG_SYN;
 		}
 	}
@@ -682,43 +774,47 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 
 	/* no way to create a socket buffer */
 	ret = -ENOMEM;
-	if (!newsk || !skb)
+	if (!sk_new || !skb)
 		goto out;
 
 	/* set up connecting socket */
 	sock->state = SS_CONNECTED;
-	unix_peer(sk) = newsk;
+	unix_peer(sk) = sk_new;
+	unix_lock(sk);
 	sk->state = TCP_ESTABLISHED;
 	sk->peercred = other->peercred;
 
 	/* set up newly created sock */
-	unix_peer(newsk) = sk;
-	newsk->state = TCP_ESTABLISHED;
-	newsk->type = SOCK_STREAM;
-	newsk->peercred.pid = current_task->pid;
-	newsk->peercred.uid = current_task->euid;
-	newsk->peercred.gid = current_task->egid;
+	unix_peer(sk_new) = sk;
+	unix_lock(sk_new);
+	sk_new->state = TCP_ESTABLISHED;
+	sk_new->type = SOCK_STREAM;
+	sk_new->peercred.pid = current_task->pid;
+	sk_new->peercred.uid = current_task->euid;
+	sk_new->peercred.gid = current_task->egid;
 
 	/* copy address information from listening to new sock*/
-	if (other->protinfo.af_unix.sunaddr_len)
-	{
-		newsk->protinfo.af_unix.sunaddr_len = other->protinfo.af_unix.sunaddr_len;
-		memcpy(&newsk->protinfo.af_unix.sunaddr, &other->protinfo.af_unix.sunaddr, other->protinfo.af_unix.sunaddr_len);
+	if (other->protinfo.af_unix.sunaddr_len) {
+		sk_new->protinfo.af_unix.sunaddr_len = other->protinfo.af_unix.sunaddr_len;
+		memcpy(&sk_new->protinfo.af_unix.sunaddr, &other->protinfo.af_unix.sunaddr, other->protinfo.af_unix.sunaddr_len);
 	}
 
 	/* update dentry reference count */
 	if (other->protinfo.af_unix.dentry)
-		newsk->protinfo.af_unix.dentry = dget(other->protinfo.af_unix.dentry);
+		sk_new->protinfo.af_unix.dentry = dget(other->protinfo.af_unix.dentry);
 
 	/* send info to listening sock */
 	skb_queue_tail(&other->receive_queue,skb);
 	other->data_ready(other, 0);
+	unix_unlock(other);
 	return 0;
 out:
 	if (skb)
 		skb_free(skb);
-	if (newsk)
-		unix_destroy_socket(newsk);
+	if (sk_new)
+		unix_destroy_socket(sk_new);
+	if (other)
+		unix_unlock(other);
 	return ret;
 }
 
