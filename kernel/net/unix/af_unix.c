@@ -14,6 +14,7 @@
 #define unix_our_peer(sk, osk)		(unix_peer(osk) == sk)
 #define unix_may_send(sk, osk)		(unix_peer(osk) == NULL || unix_our_peer(sk, osk))
 
+static void unix_destroy_socket(unix_socket_t *sk);
 
 /* UNIX sockets */
 static LIST_HEAD(unix_sockets);
@@ -99,19 +100,44 @@ static unix_socket_t *unix_find_other(struct sockaddr_un *sunaddr, size_t addrle
 /*
  * Release a socket.
  */
-static int unix_release(struct socket *sock)
+static int unix_release_sock(unix_socket_t *sk)
 {
-	unix_socket_t *sk, *other;
+	unix_socket_t *pair;
 
-	/* get UNIX socket */
-	sk = sock->sk;
-	if (!sk)
-		return 0;
+	/* update socket */
+	sk->state_change(sk);
+	sk->dead = 1;
+	sk->socket = NULL;
 
-	/* shutdown other */
-	other = unix_peer(sk);
-	if (other && sock->type == SOCK_STREAM)
-		other->shutdown |= (RCV_SHUTDOWN | SEND_SHUTDOWN);
+	/* shutdown pair socket */
+	pair = unix_peer(sk);
+	if (pair && sk->type == SOCK_STREAM && unix_our_peer(sk, pair)) {
+		pair->data_ready(pair, 0);
+		pair->shutdown = SHUTDOWN_MASK;
+	}
+
+	/* destroy socket */
+	unix_destroy_socket(sk);
+
+	return 0;
+}
+
+/*
+ * Destroy a socket.
+ */
+static void unix_destroy_socket(unix_socket_t *sk)
+{
+	struct sk_buff *skb;
+
+	/* remove socket */
+	list_del(&sk->list);
+
+	/* free remaining packets in receive queue */
+	while ((skb = skb_dequeue(&sk->receive_queue)) != NULL) {
+		if (sk->state == TCP_LISTEN)
+			unix_release_sock(skb->sk);
+		skb_free(skb);
+	}
 
 	/* release inode */
 	if (sk->protinfo.af_unix.dentry) {
@@ -119,11 +145,29 @@ static int unix_release(struct socket *sock)
 		sk->protinfo.af_unix.dentry = NULL;
 	}
 
-	/* release UNIX socket */
-	list_del(&sk->list);
+	/* free UNIX socket */
 	kfree(sk);
+}
 
-	return 0;
+/*
+ * Release a socket.
+ */
+static int unix_release(struct socket *sock)
+{
+	unix_socket_t *sk;
+
+	/* get UNIX socket */
+	sk = sock->sk;
+	if (!sk)
+		return 0;
+
+	/* update state */
+	sock->sk = NULL;
+	if (sock->state != SS_UNCONNECTED)
+		sock->state = SS_DISCONNECTING;
+
+	/* release socket */
+	return unix_release_sock(sk);
 }
 
 /*
