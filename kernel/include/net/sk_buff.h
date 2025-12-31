@@ -59,6 +59,14 @@ static inline void skb_queue_head_init(struct sk_buff_head *list)
 }
 
 /*
+ * Get length of a socket buffer queue.
+ */
+static inline size_t skb_queue_len(struct sk_buff_head *list)
+{
+	return list->len;
+}
+
+/*
  * Is a socket buffer queue empty ?
  */
 static inline int skb_queue_empty(struct sk_buff_head *list)

@@ -12,6 +12,7 @@
 
 #define MIN_WRITE_SPACE			2048
 #define UNIX_DELETE_DELAY		(HZ)
+#define UNIX_MAX_DGRAM_QLEN		10
 
 #define unix_peer(sk)			((sk)->pair)
 #define unix_our_peer(sk, osk)		(unix_peer(osk) == sk)
@@ -22,6 +23,7 @@ static void unix_destroy_socket(unix_socket_t *sk);
 
 /* UNIX sockets */
 static LIST_HEAD(unix_sockets);
+static struct wait_queue *unix_dgram_wqueue = NULL;
 
 /*
  * Lock a unix socket.
@@ -194,6 +196,10 @@ static int unix_release_sock(unix_socket_t *sk)
 	sk->dead = 1;
 	sk->socket = NULL;
 
+	/* wake up processes waiting for space */
+	if (sk->type == SOCK_DGRAM)
+		wake_up(&unix_dgram_wqueue);
+
 	/* shutdown pair socket */
 	pair = unix_peer(sk);
 	if (pair) {
@@ -347,6 +353,9 @@ static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t si
 	skb = skb_recv_datagram(sk, msg->msg_flags, msg->msg_flags & MSG_DONTWAIT, &err);
 	if (!skb)
 		return err;
+
+	/* wake up processes waiting for space */
+	wake_up(&unix_dgram_wqueue);
 
 	/* set address */
 	if (msg->msg_name) {
@@ -508,6 +517,7 @@ static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, siz
 	/* get peer socket */
 	other = unix_peer(sk);
 	if (other && other->dead) {
+dead:
 		unix_unlock(other);
 		unix_peer(sk) = NULL;
 		other = NULL;
@@ -529,6 +539,34 @@ static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, siz
 		ret = -EINVAL;
 		if (!unix_may_send(sk, other))
 			goto err_unlock;
+	}
+
+	/* wait for space in other socket */
+	while (skb_queue_len(&other->receive_queue) >= UNIX_MAX_DGRAM_QLEN) {
+		/* non blocking */
+		if (msg->msg_flags & MSG_DONTWAIT) {
+			ret = -EAGAIN;
+			goto err_unlock;
+		}
+
+		/* wait for space */
+		sleep_on(&unix_dgram_wqueue);
+
+		/* socket is dead */
+		if (other->dead)
+			goto dead;
+
+		/* sock is down */
+		if (sk->shutdown & SEND_SHUTDOWN) {
+			ret = -EPIPE;
+			goto err_unlock;
+		}
+
+		/* handle signal */
+		if (signal_pending(current_task)) {
+			ret = -ERESTARTSYS;
+			goto err_unlock;
+		}
 	}
 
 	/* queue message in other socket */
