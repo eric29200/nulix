@@ -503,7 +503,7 @@ int do_signal(struct registers *regs)
 	}
 
 	/* interrupted system call : redo it */
-	if (regs->orig_eax && (int) regs->eax == -EINTR) {
+	if (regs->orig_eax && ((int) regs->eax == -ERESTARTSYS || (int) regs->eax == -ERESTARTNOHAND)) {
 		regs->eax = regs->orig_eax;
 		regs->eip -= 2;
 	}

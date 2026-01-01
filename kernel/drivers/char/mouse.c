@@ -233,7 +233,7 @@ static int mouse_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 
 		/* signal pending : return */
 		if (signal_pending(current_task))
-			return -EINTR;
+			return -ERESTARTNOHAND;
 
 		/* wait for data */
 		sleep_on(&queue_wait);

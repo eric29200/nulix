@@ -8,6 +8,7 @@
 #include <x86/tls.h>
 #include <x86/ldt.h>
 #include <stdio.h>
+#include <stderr.h>
 
 /* system calls table */
 static const void *syscalls[] = {

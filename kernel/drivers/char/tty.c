@@ -212,7 +212,7 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 
 			/* signal received */
 			if (signal_pending(current_task)) {
-				ret = -EINTR;
+				ret = -ERESTARTSYS;
 				break;
 			}
 
@@ -451,7 +451,7 @@ static int tty_write(struct file *filp, const char *buf, size_t count, off_t *pp
 
 		/* signal received */
 		if (signal_pending(current_task)) {
-			ret = -EINTR;
+			ret = -ERESTARTSYS;
 			break;
 		}
 
