@@ -1,11 +1,13 @@
 #include <drivers/net/rtl8139.h>
 #include <drivers/pci/pci.h>
+#include <proc/sched.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <net/inet/net.h>
 #include <net/inet/arp.h>
 #include <net/sk_buff.h>
 #include <mm/paging.h>
+#include <stdio.h>
 #include <stderr.h>
 #include <string.h>
 
@@ -20,19 +22,31 @@ static int tx_cur = 0;
 static void *rx_buffer = NULL;
 
 /*
- * Send a packet.
+ * Flush output queue.
  */
-static void rtl8139_send_packet(struct sk_buff *skb)
+static void rtl8139_flush()
 {
-	/* copy packet to tx buffer */
-	memcpy(tx_buffer[tx_cur], skb->head, skb->len);
+	struct sk_buff *skb;
 
-	/* put packet on device */
-	outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, __pa(tx_buffer[tx_cur]));
-	outl(rtl8139_net_dev->io_base + 0x10 + tx_cur * 4, skb->size);
+	for (;;) {
+		/* get next buffer to send */
+		skb = skb_dequeue(&rtl8139_net_dev->output_queue);
+		if (!skb)
+			break;
 
-	/* update tx buffer index */
-	tx_cur = tx_cur >= 3 ? 0 : tx_cur + 1;
+		/* copy packet to tx buffer */
+		memcpy(tx_buffer[tx_cur], skb->head, skb->len);
+
+		/* put packet on device */
+		outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, __pa(tx_buffer[tx_cur]));
+		outl(rtl8139_net_dev->io_base + 0x10 + tx_cur * 4, skb->size);
+
+		/* update tx buffer index */
+		tx_cur = tx_cur >= 3 ? 0 : tx_cur + 1;
+
+		/* free buffer */
+		skb_free(skb);
+	}
 }
 
 /*
@@ -132,7 +146,8 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	memcpy(rtl8139_net_dev->ip_route, ip_route, 4);
 
 	/* set methods */
-	rtl8139_net_dev->send_packet = rtl8139_send_packet;
+	skb_queue_head_init(&rtl8139_net_dev->output_queue);
+	rtl8139_net_dev->flush = rtl8139_flush;
 
 	/* enable PCI Bus Mastering to allow NIC to perform DMA */
 	pci_cmd = pci_read_field(pci_dev->address, PCI_CMD);

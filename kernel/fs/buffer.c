@@ -889,7 +889,6 @@ int bdflush(void *arg)
 	return 0;
 }
 
-
 /*
  * Init buffers.
  */

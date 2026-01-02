@@ -27,7 +27,8 @@ struct net_device {
 	uint16_t		type;
 	uint16_t		flags;
 	struct timer_event	timer;
-	void			(*send_packet)(struct sk_buff *);
+	struct sk_buff_head 	output_queue;
+	void			(*flush)();
 };
 
 /* network devices */
@@ -45,5 +46,6 @@ uint16_t net_checksum(void *data, size_t size);
 void net_handle(struct sk_buff *skb);
 void net_transmit(struct net_device *net_dev, struct sk_buff *skb);
 void net_deliver_skb(struct sk_buff *skb);
+int netflush(void *arg);
 
 #endif

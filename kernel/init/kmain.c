@@ -283,6 +283,7 @@ static void kinit()
 
 	/* create kernel threads */
 	kernel_thread(&bdflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND);
+	kernel_thread(&netflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND);
 
 	/* sleep forever */
 	for (;;)
