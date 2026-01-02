@@ -147,6 +147,31 @@ static void sockfd_put(struct socket *sock)
 }
 
 /*
+ * Send a message.
+ */
+static int sock_sendmsg(struct socket *sock, struct msghdr *msg, size_t len)
+{
+	/* send message not implemented */
+	if (!sock->ops || !sock->ops->sendmsg)
+		return -EINVAL;
+
+	/* send message */
+	return sock->ops->sendmsg(sock, msg, len);
+}
+
+/*
+ * Receive a message.
+ */
+static int sock_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
+{
+	/* receive message not implemented */
+	if (!sock->ops || !sock->ops->recvmsg)
+		return -EINVAL;
+
+	/* send message */
+	return sock->ops->recvmsg(sock, msg, len);
+}
+/*
  * Close a socket.
  */
 static int sock_close(struct inode *inode, struct file *filp)
@@ -218,10 +243,6 @@ static int sock_read(struct file *filp, char *buf, size_t len, off_t *ppos)
 	if (!sock)
 		return -EINVAL;
 
-	/* receive message not implemented */
-	if (!sock->ops || !sock->ops->recvmsg)
-		return -EINVAL;
-
 	/* build message */
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_iov = &iov;
@@ -230,7 +251,7 @@ static int sock_read(struct file *filp, char *buf, size_t len, off_t *ppos)
 	iov.iov_base = buf;
 	iov.iov_len = len;
 
-	return sock->ops->recvmsg(sock, &msg, len);
+	return sock_recvmsg(sock, &msg, len);
 }
 
 /*
@@ -251,10 +272,6 @@ static int sock_write(struct file *filp, const char *buf, size_t len, off_t *ppo
 	if (!sock)
 		return -EINVAL;
 
-	/* send message not implemented */
-	if (!sock->ops || !sock->ops->sendmsg)
-		return -EINVAL;
-
 	/* build message */
 	memset(&msg, 0, sizeof(struct msghdr));
 	msg.msg_iov = &iov;
@@ -263,7 +280,7 @@ static int sock_write(struct file *filp, const char *buf, size_t len, off_t *ppo
 	iov.iov_base = (char *) buf;
 	iov.iov_len = len;
 
-	return sock->ops->sendmsg(sock, &msg, len);
+	return sock_sendmsg(sock, &msg, len);
 }
 
 /*
@@ -287,8 +304,8 @@ int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int 
 
 	/* write or read */
 	if (type == WRITE)
-		return sock->ops->sendmsg(sock, &msg, len);
-	return sock->ops->recvmsg(sock, &msg, len);
+		return sock_sendmsg(sock, &msg, len);
+	return sock_recvmsg(sock, &msg, len);
 }
 
 /*
@@ -559,11 +576,6 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	if (!sock)
 		return ret;
 
-	/* send message not implemented */
-	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->sendmsg)
-		goto out;
-
 	/* build buffer */
 	iovec.iov_base = (void *) buf;
 	iovec.iov_len = len;
@@ -580,8 +592,8 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 		msg.msg_flags |= MSG_DONTWAIT;
 
 	/* send message */
-	ret = sock->ops->sendmsg(sock, &msg, len);
-out:
+	ret = sock_sendmsg(sock, &msg, len);
+
 	sockfd_put(sock);
 	return ret;
 }
@@ -602,11 +614,6 @@ int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 	sock = sockfd_lookup(sockfd, &ret);
 	if (!sock)
 		return ret;
-
-	/* send message not implemented */
-	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->sendmsg)
-		goto out;
 
 	/* copy message to kernel space */
 	memcpy(&msg_sys, msg, sizeof(struct msghdr));
@@ -635,7 +642,7 @@ int sys_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 		msg_sys.msg_flags |= MSG_DONTWAIT;
 
 	/* send message */
-	ret = sock->ops->sendmsg(sock, &msg_sys, total_len);
+	ret = sock_sendmsg(sock, &msg_sys, total_len);
 
 	/* free vectors */
 	if (iov != iovstack)
@@ -671,11 +678,6 @@ int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sock
 	if (!sock)
 		return ret;
 
-	/* receive message not implemented */
-	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->recvmsg)
-		goto out;
-
 	/* build buffer */
 	iovec.iov_base = (void *) buf;
 	iovec.iov_len = len;
@@ -691,8 +693,8 @@ int sys_recvfrom(int sockfd, const void *buf, size_t len, int flags, struct sock
 	if (sock->file->f_flags & O_NONBLOCK)
 		msg.msg_flags |= MSG_DONTWAIT;
 
-	ret = sock->ops->recvmsg(sock, &msg, len);
-out:
+	ret = sock_recvmsg(sock, &msg, len);
+
 	sockfd_put(sock);
 	return ret;
 }
@@ -713,11 +715,6 @@ int sys_recvmsg(int sockfd, struct msghdr *msg, int flags)
 	sock = sockfd_lookup(sockfd, &ret);
 	if (!sock)
 		return ret;
-
-	/* send message not implemented */
-	ret = -EINVAL;
-	if (!sock->ops || !sock->ops->sendmsg)
-		goto out;
 
 	/* copy message to kernel space */
 	memcpy(&msg_sys, msg, sizeof(struct msghdr));
@@ -746,7 +743,7 @@ int sys_recvmsg(int sockfd, struct msghdr *msg, int flags)
 		msg_sys.msg_flags |= MSG_DONTWAIT;
 
 	/* receive message */
-	ret = sock->ops->recvmsg(sock, &msg_sys, total_len);
+	ret = sock_recvmsg(sock, &msg_sys, total_len);
 
 	/* free vectors */
 	if (iov != iovstack)
