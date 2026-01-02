@@ -874,15 +874,12 @@ int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, 
  */
 int bdflush(void *arg)
 {
-	uint32_t flags;
-
 	UNUSED(arg);
 
 	for (;;) {
 		/* synchronize all buffers and inodes */
-		irq_save(flags);
+		irq_disable();
 		sync_dev(0);
-		irq_restore(flags);
 
 		/* go to sleep */
 		current_task->state = TASK_SLEEPING;
