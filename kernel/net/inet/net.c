@@ -13,7 +13,6 @@
 
 /* network devices */
 struct net_device net_devices[NR_NET_DEVICES];
-static struct wait_queue *net_flush_wait = NULL;
 int nr_net_devices = 0;
 
 /*
@@ -258,30 +257,6 @@ void net_transmit(struct net_device *net_dev, struct sk_buff *skb)
 		return;
 
 	/* send and free packet */
-	skb_queue_tail(&net_dev->output_queue, skb);
-	wake_up(&net_flush_wait);
-}
-
-/*
- * Flush network devices.
- */
-int netflush(void *arg)
-{
-	int i;
-
-	UNUSED(arg);
-
-	for (;;) {
-		/* disable interrupts */
-		irq_disable();
-
-		/* flush devices */
-		for (i = 0; i < nr_net_devices; i++)
-			net_devices[i].flush();
-
-		/* go to sleep */
-		sleep_on(&net_flush_wait);
-	}
-
-	return 0;
+	net_dev->start_xmit(skb);
+	skb_free(skb);
 }

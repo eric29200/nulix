@@ -11,6 +11,10 @@
 #include <stderr.h>
 #include <string.h>
 
+#define TX_STATUS_0		0x10
+#define TX_ADDR_0		0x20
+#define INTR_STATUS		0x3E
+
 /* Realtek 8139 device */
 static struct net_device *rtl8139_net_dev = NULL;
 
@@ -22,31 +26,21 @@ static int tx_cur = 0;
 static void *rx_buffer = NULL;
 
 /*
- * Flush output queue.
+ * Send a socket buffer.
  */
-static void rtl8139_flush()
+static int rtl8139_start_xmit(struct sk_buff *skb)
 {
-	struct sk_buff *skb;
+	/* copy packet to tx buffer */
+	memcpy(tx_buffer[tx_cur], skb->head, skb->len);
 
-	for (;;) {
-		/* get next buffer to send */
-		skb = skb_dequeue(&rtl8139_net_dev->output_queue);
-		if (!skb)
-			break;
+	/* put packet on device */
+	outl(rtl8139_net_dev->io_base + TX_ADDR_0 + tx_cur * 4, __pa(tx_buffer[tx_cur]));
+	outl(rtl8139_net_dev->io_base + TX_STATUS_0 + tx_cur * 4, skb->size);
 
-		/* copy packet to tx buffer */
-		memcpy(tx_buffer[tx_cur], skb->head, skb->len);
+	/* update tx buffer index */
+	tx_cur = tx_cur >= 3 ? 0 : tx_cur + 1;
 
-		/* put packet on device */
-		outl(rtl8139_net_dev->io_base + 0x20 + tx_cur * 4, __pa(tx_buffer[tx_cur]));
-		outl(rtl8139_net_dev->io_base + 0x10 + tx_cur * 4, skb->size);
-
-		/* update tx buffer index */
-		tx_cur = tx_cur >= 3 ? 0 : tx_cur + 1;
-
-		/* free buffer */
-		skb_free(skb);
-	}
+	return 0;
 }
 
 /*
@@ -93,13 +87,12 @@ void rtl8139_irq_handler(struct registers *regs)
 
 	UNUSED(regs);
 
-	/* get status */
-	status = inw(rtl8139_net_dev->io_base + 0x3E);
+	/* get and ack status */
+	status = inw(rtl8139_net_dev->io_base + INTR_STATUS);
+	outw(rtl8139_net_dev->io_base + INTR_STATUS, status);
+
 	if (!status)
 		return;
-
-	/* ack/reset interrupt */
-	outw(rtl8139_net_dev->io_base + 0x3E, status);
 
 	/* handle reception */
 	if (status & ROK)
@@ -146,8 +139,7 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	memcpy(rtl8139_net_dev->ip_route, ip_route, 4);
 
 	/* set methods */
-	skb_queue_head_init(&rtl8139_net_dev->output_queue);
-	rtl8139_net_dev->flush = rtl8139_flush;
+	rtl8139_net_dev->start_xmit = rtl8139_start_xmit;
 
 	/* enable PCI Bus Mastering to allow NIC to perform DMA */
 	pci_cmd = pci_read_field(pci_dev->address, PCI_CMD);

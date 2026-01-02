@@ -26,9 +26,7 @@ struct net_device {
 	uint8_t			ip_route[4];
 	uint16_t		type;
 	uint16_t		flags;
-	struct timer_event	timer;
-	struct sk_buff_head 	output_queue;
-	void			(*flush)();
+	int			(*start_xmit)(struct sk_buff *);
 };
 
 /* network devices */
@@ -46,6 +44,5 @@ uint16_t net_checksum(void *data, size_t size);
 void net_handle(struct sk_buff *skb);
 void net_transmit(struct net_device *net_dev, struct sk_buff *skb);
 void net_deliver_skb(struct sk_buff *skb);
-int netflush(void *arg);
 
 #endif
