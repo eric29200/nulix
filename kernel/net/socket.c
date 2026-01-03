@@ -357,6 +357,7 @@ static int sock_create(int family, int type, int protocol, struct socket **res)
 		return -EAFNOSUPPORT;
 
 	/* check type */
+	type &= SOCK_TYPE_MASK;
 	if ((type != SOCK_STREAM && type != SOCK_DGRAM && type != SOCK_RAW) || protocol < 0)
 		return -EINVAL;
 

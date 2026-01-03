@@ -78,6 +78,8 @@
 #define SYS_SENDMSG		16
 #define SYS_RECVMSG		17
 
+#define SOCK_TYPE_MASK		0x0F
+
 /*
  * Socket address.
  */
