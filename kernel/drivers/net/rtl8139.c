@@ -59,8 +59,8 @@ static int rtl8139_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	memcpy(tp->tx_buf[tp->cur_tx], skb->head, skb->len);
 
 	/* put packet on device */
-	outl(rtl8139_net_dev->io_base + TX_ADDR_0 + tp->cur_tx * 4, __pa(tp->tx_buf[tp->cur_tx]));
-	outl(rtl8139_net_dev->io_base + TX_STATUS_0 + tp->cur_tx * 4, skb->size);
+	outl(rtl8139_net_dev->io_base + TxAddr0 + tp->cur_tx * 4, __pa(tp->tx_buf[tp->cur_tx]));
+	outl(rtl8139_net_dev->io_base + TxStatus0 + tp->cur_tx * 4, skb->size);
 
 	/* update tx buffer index */
 	tp->cur_tx = tp->cur_tx >= 3 ? 0 : tp->cur_tx + 1;

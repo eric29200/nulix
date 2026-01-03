@@ -12,8 +12,6 @@
 #define TX_BUF_SIZE			1536
 
 #define NUM_TX_DESC			4
-#define TX_STATUS_0			0x10
-#define TX_ADDR_0			0x20
 
 /*
  * Realtek 8139 private data.
