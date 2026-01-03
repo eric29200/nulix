@@ -8,10 +8,22 @@
 
 #define RTL8139_MAC_ADDRESS		0x0
 
-#define ROK				0x01
-#define TOK				0x04
+#define RX_BUF_SIZE			(8192 + 16 + 1500)
+#define TX_BUF_SIZE			1536
 
-#define RX_BUFFER_SIZE			(8192 + 16 + 1500)
+#define NUM_TX_DESC			4
+#define TX_STATUS_0			0x10
+#define TX_ADDR_0			0x20
+
+/*
+ * Realtek 8139 private data.
+ */
+struct rtl8139_private {
+	size_t			cur_tx;
+	uint8_t *		tx_bufs;
+	uint8_t *		tx_buf[NUM_TX_DESC];
+	uint8_t *		rx_ring;
+};
 
 /*
  * Reception header.
@@ -20,6 +32,7 @@ struct rtl8139_rx_header {
 	uint16_t status;
 	uint16_t size;
 };
+
 
 int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route);
 struct net_device *rtl8139_get_net_device();

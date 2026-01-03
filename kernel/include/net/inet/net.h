@@ -26,7 +26,8 @@ struct net_device {
 	uint8_t			ip_route[4];
 	uint16_t		type;
 	uint16_t		flags;
-	int			(*start_xmit)(struct sk_buff *);
+	void *			private;
+	int			(*start_xmit)(struct sk_buff *, struct net_device *);
 };
 
 /* network devices */

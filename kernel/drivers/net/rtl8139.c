@@ -11,34 +11,59 @@
 #include <stderr.h>
 #include <string.h>
 
-#define TX_STATUS_0		0x10
-#define TX_ADDR_0		0x20
-#define INTR_STATUS		0x3E
-
 /* Realtek 8139 device */
 static struct net_device *rtl8139_net_dev = NULL;
 
-/* transmit buffers */
-static void *tx_buffer[4];
-static int tx_cur = 0;
+/* Realtek 8139 registers */
+enum RTL8129_registers {
+	MAC0 = 0,
+	MAR0 = 8,
+	TxStatus0 = 0x10,
+	TxAddr0 = 0x20,
+	RxBuf = 0x30, RxEarlyCnt = 0x34, RxEarlyStatus = 0x36,
+	ChipCmd = 0x37, RxBufPtr = 0x38, RxBufAddr = 0x3A,
+	IntrMask = 0x3C, IntrStatus = 0x3E,
+	TxConfig = 0x40, RxConfig = 0x44,
+	Timer = 0x48,
+	RxMissed = 0x4C,
+	Cfg9346 = 0x50, Config0 = 0x51, Config1 = 0x52,
+	FlashReg = 0x54, GPPinData = 0x58, GPPinDir = 0x59, MII_SMI = 0x5A, HltClk = 0x5B,
+	MultiIntr = 0x5C, TxSummary = 0x60,
+	MII_BMCR = 0x62, MII_BMSR = 0x64, NWayAdvert = 0x66, NWayLPAR = 0x68,
+	NWayExpansion = 0x6A,
+	FIFOTMS = 0x70,
+	CSCR = 0x74,
+	PARA78 = 0x78, PARA7c = 0x7c,
+};
 
-/* receive buffer */
-static void *rx_buffer = NULL;
+/* Realtek 8139 commands */
+enum ChipCmdBits {
+	CmdReset = 0x10, CmdRxEnb = 0x08, CmdTxEnb = 0x04, RxBufEmpty = 0x01,
+};
+
+/* Realtek 8139 interrupt register bits */
+enum IntrStatusBits {
+	PCIErr = 0x8000, PCSTimeout = 0x4000,
+	RxFIFOOver = 0x40, RxUnderrun = 0x20, RxOverflow = 0x10,
+	TxErr = 0x08, TxOK = 0x04, RxErr = 0x02, RxOK = 0x01,
+};
 
 /*
  * Send a socket buffer.
  */
-static int rtl8139_start_xmit(struct sk_buff *skb)
+static int rtl8139_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
+	struct rtl8139_private *tp = (struct rtl8139_private *) dev->private;
+
 	/* copy packet to tx buffer */
-	memcpy(tx_buffer[tx_cur], skb->head, skb->len);
+	memcpy(tp->tx_buf[tp->cur_tx], skb->head, skb->len);
 
 	/* put packet on device */
-	outl(rtl8139_net_dev->io_base + TX_ADDR_0 + tx_cur * 4, __pa(tx_buffer[tx_cur]));
-	outl(rtl8139_net_dev->io_base + TX_STATUS_0 + tx_cur * 4, skb->size);
+	outl(rtl8139_net_dev->io_base + TX_ADDR_0 + tp->cur_tx * 4, __pa(tp->tx_buf[tp->cur_tx]));
+	outl(rtl8139_net_dev->io_base + TX_STATUS_0 + tp->cur_tx * 4, skb->size);
 
 	/* update tx buffer index */
-	tx_cur = tx_cur >= 3 ? 0 : tx_cur + 1;
+	tp->cur_tx = tp->cur_tx >= 3 ? 0 : tp->cur_tx + 1;
 
 	return 0;
 }
@@ -48,15 +73,16 @@ static int rtl8139_start_xmit(struct sk_buff *skb)
  */
 static void rtl8139_receive_packet()
 {
+	struct rtl8139_private *tp = (struct rtl8139_private *) rtl8139_net_dev->private;
 	struct rtl8139_rx_header *rx_header;
 	struct sk_buff *skb;
 	uint16_t rx_buf_ptr;
 
 	/* handle all received packets */
-	while ((inb(rtl8139_net_dev->io_base + 0x37) & 0x01) == 0) {
+	while ((inb(rtl8139_net_dev->io_base + ChipCmd) & 1) == 0) {
 		/* get packet header */
 		rx_buf_ptr = inw(rtl8139_net_dev->io_base + 0x38) + 0x10;
-		rx_header = (struct rtl8139_rx_header *) (rx_buffer + rx_buf_ptr);
+		rx_header = (struct rtl8139_rx_header *) (tp->rx_ring + rx_buf_ptr);
 		rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header) + 3) & ~(0x3);
 
 		/* allocate a socket buffer */
@@ -88,14 +114,14 @@ void rtl8139_irq_handler(struct registers *regs)
 	UNUSED(regs);
 
 	/* get and ack status */
-	status = inw(rtl8139_net_dev->io_base + INTR_STATUS);
-	outw(rtl8139_net_dev->io_base + INTR_STATUS, status);
+	status = inw(rtl8139_net_dev->io_base + IntrStatus);
+	outw(rtl8139_net_dev->io_base + IntrStatus, status);
 
 	if (!status)
 		return;
 
 	/* handle reception */
-	if (status & ROK)
+	if (status & RxOK)
 		rtl8139_receive_packet();
 }
 
@@ -107,11 +133,23 @@ struct net_device *rtl8139_get_net_device()
 	return rtl8139_net_dev;
 }
 
+static void rtl8139_init_ring()
+{
+	struct rtl8139_private *tp = (struct rtl8139_private *) rtl8139_net_dev->private;
+	int i;
+
+	tp->cur_tx = 0;
+
+	for (i = 0; i < NUM_TX_DESC; i++)
+		tp->tx_buf[i] = &tp->tx_bufs[i * TX_BUF_SIZE];
+}
+
 /*
  * Init Realtek 8139 device.
  */
 int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 {
+	struct rtl8139_private *tp;
 	struct pci_device *pci_dev;
 	uint32_t io_base, pci_cmd;
 	int i;
@@ -128,6 +166,11 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	rtl8139_net_dev = register_net_device(io_base, ARPHRD_ETHER);
 	if (!rtl8139_net_dev)
 		return -ENOSPC;
+
+	/* allocate private data */
+	rtl8139_net_dev->private = tp = (struct rtl8139_private *) kmalloc(sizeof(struct rtl8139_private));
+	if (!tp)
+		return -ENOMEM;
 
 	/* get mac address */
 	for (i = 0; i < 6; i++)
@@ -149,40 +192,41 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	}
 
 	/* power on the device */
-	outb(io_base + 0x52, 0x0);
+	outb(io_base + Cfg9346, 0xC0);
+	outb(io_base + Config1, 0x03);
+	outb(io_base + HltClk, 'H');
 
 	/* software reset (to clean up remaining buffers) */
-	outb(io_base + 0x37, 0x10);
-	while (inb(io_base + 0x37) & 0x10);
+	outb(io_base + ChipCmd, CmdReset);
 
-	/* allocate receive buffer */
-	rx_buffer = kmalloc(RX_BUFFER_SIZE);
-	if (!rx_buffer)
+	/* allocate receive/transmit buffers */
+	tp->rx_ring = kmalloc(RX_BUF_SIZE);
+	tp->tx_bufs = kmalloc(TX_BUF_SIZE * NUM_TX_DESC);
+	if (!tp->rx_ring || !tp->tx_bufs) {
+		if (tp->rx_ring)
+			kfree(tp->rx_ring);
 		return -ENOMEM;
-
-	/* allocate transmit buffers */
-	for (i = 0; i < 4; i++) {
-		tx_buffer[i] = get_free_page();
-		if (!tx_buffer[i]) {
-			while (--i >= 0)
-				free_page(tx_buffer[i]);
-			kfree(rx_buffer);
-			return -ENOMEM;
-		}
 	}
+	rtl8139_init_ring();
+
+	/* check that the chip has finished the reset. */
+	for (i = 1000; i > 0; i--)
+		if ((inb(io_base + ChipCmd) & CmdReset) == 0)
+			break;
 
 	/* memzero buffer and set physical address on chip */
-	memset(rx_buffer, 0, RX_BUFFER_SIZE);
-	outl(io_base + 0x30, __pa(rx_buffer));
+	memset(tp->rx_ring, 0, RX_BUF_SIZE);
+	outl(io_base + RxBuf, __pa(tp->rx_ring));
 
 	/* set Interrupt Mask Register (only accept Transmit OK and Receive OK interrupts) */
-	outw(io_base + 0x3C, 0x0005);
+	outw(io_base + IntrMask, PCIErr | PCSTimeout | RxUnderrun | RxOverflow | RxFIFOOver
+		| TxErr | TxOK | RxErr | RxOK);
 
 	/* configure receive buffer = accept Broadcast/Multicast/Pysical/All packets */
-	outl(io_base + 0x44, 0xF | (1 << 7));
+	outl(io_base + RxConfig, 0xF | (1 << 7));
 
 	/* enable receive and transmitter (to accept and transmit packets) */
-	outb(io_base + 0x37, 0x0C);
+	outb(io_base + ChipCmd, CmdRxEnb | CmdTxEnb);
 
 	/* get PCI interrupt line */
 	rtl8139_net_dev->irq = pci_read_field(pci_dev->address, PCI_INTERRUPT_LINE);

@@ -257,6 +257,6 @@ void net_transmit(struct net_device *net_dev, struct sk_buff *skb)
 		return;
 
 	/* send and free packet */
-	net_dev->start_xmit(skb);
+	net_dev->start_xmit(skb, net_dev);
 	skb_free(skb);
 }
