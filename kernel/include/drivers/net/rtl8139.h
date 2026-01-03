@@ -20,7 +20,7 @@ struct rtl8139_private {
 	size_t			cur_tx;
 	uint8_t *		tx_bufs;
 	uint8_t *		tx_buf[NUM_TX_DESC];
-	uint8_t *		rx_ring;
+	uint8_t *		rx_buf;
 };
 
 /*

@@ -63,7 +63,9 @@ static int rtl8139_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	outl(rtl8139_net_dev->io_base + TxStatus0 + tp->cur_tx * 4, skb->size);
 
 	/* update tx buffer index */
-	tp->cur_tx = tp->cur_tx >= 3 ? 0 : tp->cur_tx + 1;
+	tp->cur_tx++;
+	if (tp->cur_tx >= NUM_TX_DESC)
+		tp->cur_tx = 0;
 
 	return 0;
 }
@@ -81,9 +83,9 @@ static void rtl8139_receive_packet()
 	/* handle all received packets */
 	while ((inb(rtl8139_net_dev->io_base + ChipCmd) & 1) == 0) {
 		/* get packet header */
-		rx_buf_ptr = inw(rtl8139_net_dev->io_base + 0x38) + 0x10;
-		rx_header = (struct rtl8139_rx_header *) (tp->rx_ring + rx_buf_ptr);
-		rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header) + 3) & ~(0x3);
+		rx_buf_ptr = inw(rtl8139_net_dev->io_base + RxBufPtr) + 0x10;
+		rx_header = (struct rtl8139_rx_header *) (tp->rx_buf + rx_buf_ptr);
+		rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header) + 3) & ~3;
 
 		/* allocate a socket buffer */
 		skb = skb_alloc(rx_header->size);
@@ -100,7 +102,7 @@ static void rtl8139_receive_packet()
 		}
 
 		/* update received buffer pointer */
-		outw(rtl8139_net_dev->io_base + 0x38, rx_buf_ptr - 0x10);
+		outw(rtl8139_net_dev->io_base + RxBufPtr, rx_buf_ptr - 0x10);
 	}
 }
 
@@ -116,9 +118,6 @@ void rtl8139_irq_handler(struct registers *regs)
 	/* get and ack status */
 	status = inw(rtl8139_net_dev->io_base + IntrStatus);
 	outw(rtl8139_net_dev->io_base + IntrStatus, status);
-
-	if (!status)
-		return;
 
 	/* handle reception */
 	if (status & RxOK)
@@ -200,11 +199,11 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	outb(io_base + ChipCmd, CmdReset);
 
 	/* allocate receive/transmit buffers */
-	tp->rx_ring = kmalloc(RX_BUF_SIZE);
+	tp->rx_buf = kmalloc(RX_BUF_SIZE);
 	tp->tx_bufs = kmalloc(TX_BUF_SIZE * NUM_TX_DESC);
-	if (!tp->rx_ring || !tp->tx_bufs) {
-		if (tp->rx_ring)
-			kfree(tp->rx_ring);
+	if (!tp->rx_buf || !tp->tx_bufs) {
+		if (tp->rx_buf)
+			kfree(tp->rx_buf);
 		return -ENOMEM;
 	}
 	rtl8139_init_ring();
@@ -215,8 +214,8 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 			break;
 
 	/* memzero buffer and set physical address on chip */
-	memset(tp->rx_ring, 0, RX_BUF_SIZE);
-	outl(io_base + RxBuf, __pa(tp->rx_ring));
+	memset(tp->rx_buf, 0, RX_BUF_SIZE);
+	outl(io_base + RxBuf, __pa(tp->rx_buf));
 
 	/* set Interrupt Mask Register (only accept Transmit OK and Receive OK interrupts) */
 	outw(io_base + IntrMask, PCIErr | PCSTimeout | RxUnderrun | RxOverflow | RxFIFOOver
