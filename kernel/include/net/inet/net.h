@@ -13,6 +13,38 @@
 #define ntohl(s)			(htonl((s)))
 
 /*
+ * Networkd device statistics.
+ */
+struct net_device_stats {
+	uint32_t		rx_packets;		/* total packets received	*/
+	uint32_t		tx_packets;		/* total packets transmitted	*/
+	uint32_t		rx_bytes;		/* total bytes received 	*/
+	uint32_t		tx_bytes;		/* total bytes transmitted	*/
+	uint32_t		rx_errors;		/* bad packets received		*/
+	uint32_t		tx_errors;		/* packet transmit problems	*/
+	uint32_t		rx_dropped;		/* no space in linux buffers	*/
+	uint32_t		tx_dropped;		/* no space available in linux	*/
+	uint32_t		multicast;		/* multicast packets received	*/
+	uint32_t		collisions;
+	/* detailed rx_errors: */
+	uint32_t		rx_length_errors;
+	uint32_t		rx_over_errors;		/* receiver ring buff overflow	*/
+	uint32_t		rx_crc_errors;		/* recved pkt with crc error	*/
+	uint32_t		rx_frame_errors;	/* recv'd frame alignment error */
+	uint32_t		rx_fifo_errors;		/* recv'r fifo overrun		*/
+	uint32_t		rx_missed_errors;	/* receiver missed packet	*/
+	/* detailed tx_errors */
+	uint32_t		tx_aborted_errors;
+	uint32_t		tx_carrier_errors;
+	uint32_t		tx_fifo_errors;
+	uint32_t		tx_heartbeat_errors;
+	uint32_t		tx_window_errors;
+	/* for cslip etc */
+	uint32_t		rx_compressed;
+	uint32_t		tx_compressed;
+};
+
+/*
  * Network device.
  */
 struct net_device {
@@ -28,6 +60,7 @@ struct net_device {
 	uint16_t		flags;
 	uint32_t		mtu;
 	size_t			tx_queue_len;
+	struct net_device_stats	stats;
 	void *			private;
 	int			(*start_xmit)(struct sk_buff *, struct net_device *);
 };

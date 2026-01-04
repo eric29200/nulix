@@ -62,6 +62,10 @@ static int rtl8139_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	outl(rtl8139_net_dev->io_base + TxAddr0 + tp->cur_tx * 4, __pa(tp->tx_buf[tp->cur_tx]));
 	outl(rtl8139_net_dev->io_base + TxStatus0 + tp->cur_tx * 4, skb->size);
 
+	/* update stats */
+	dev->stats.tx_packets++;
+	dev->stats.tx_bytes += skb->size;
+
 	/* update tx buffer index */
 	tp->cur_tx++;
 	if (tp->cur_tx >= NUM_TX_DESC)
@@ -99,6 +103,10 @@ static void rtl8139_receive_packet()
 
 			/* handle socket buffer */
 			net_handle(skb);
+
+			/* update stat */
+			rtl8139_net_dev->stats.rx_packets++;
+			rtl8139_net_dev->stats.rx_bytes += rx_header->size;
 		}
 
 		/* update received buffer pointer */

@@ -12,6 +12,8 @@
  */
 static int dev_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
 {
+	struct net_device_stats *stats;
+	struct net_device *dev;
 	size_t len;
 	int i;
 
@@ -23,8 +25,28 @@ static int dev_read_proc(char *page, char **start, off_t off, size_t count, int 
 		"drop fifo colls carrier compressed\n");
 
 	/* print interfaces */
-	for (i = 0; i < nr_net_devices; i++)
-		len += sprintf(page + len, "%s: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n", net_devices[i].name);
+	for (i = 0; i < nr_net_devices; i++) {
+		dev = &net_devices[i];
+		stats = &dev->stats;
+		len += sprintf(page + len, "%6s:%8lu %7lu %4lu %4lu %4lu %5lu %10lu %9lu %8lu %7lu %4lu %4lu %4lu %5lu %7lu %10lu\n",
+			dev->name,
+			stats->rx_bytes,
+			stats->rx_packets,
+			stats->rx_errors,
+			stats->rx_dropped + stats->rx_missed_errors,
+			stats->rx_fifo_errors,
+			stats->rx_length_errors + stats->rx_over_errors + stats->rx_crc_errors + stats->rx_frame_errors,
+			stats->rx_compressed,
+			stats->multicast,
+			stats->tx_bytes,
+			stats->tx_packets,
+			stats->tx_errors,
+			stats->tx_dropped,
+			stats->tx_fifo_errors,
+			stats->collisions,
+			stats->tx_carrier_errors + stats->tx_aborted_errors + stats->tx_window_errors + stats->tx_heartbeat_errors,
+			stats->tx_compressed);
+	}
 
 	/* end of file ? */
 	if (off + count >= len)

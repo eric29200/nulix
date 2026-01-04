@@ -121,6 +121,7 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 	net_dev->flags = 0;
 	net_dev->mtu = 1500;
 	net_dev->tx_queue_len = 100;
+	memset(&net_dev->stats, 0, sizeof(struct net_device_stats));
 
 	/* set name */
 	len = sprintf(tmp, "eth%d", nr_net_devices);
