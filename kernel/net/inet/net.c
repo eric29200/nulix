@@ -116,7 +116,7 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 	/* set net device */
 	net_dev = &net_devices[nr_net_devices];
 	net_dev->type = type;
-	net_dev->index = nr_net_devices;
+	net_dev->index = nr_net_devices + 1;
 	net_dev->io_base = io_base;
 
 	/* set name */
