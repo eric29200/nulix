@@ -24,6 +24,4 @@ struct rtentry {
 	unsigned short	rt_irtt;
 };
 
-int ip_route_new(struct rtentry *rt);
-
 #endif

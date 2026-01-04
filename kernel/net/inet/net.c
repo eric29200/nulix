@@ -118,7 +118,7 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 	net_dev->type = type;
 	net_dev->index = nr_net_devices + 1;
 	net_dev->io_base = io_base;
-	net_dev->flags = IFF_UP;
+	net_dev->flags = 0;
 	net_dev->mtu = 1500;
 	net_dev->tx_queue_len = 100;
 

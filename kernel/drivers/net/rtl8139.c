@@ -146,7 +146,7 @@ static void rtl8139_init_ring()
 /*
  * Init Realtek 8139 device.
  */
-int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
+int init_rtl8139()
 {
 	struct rtl8139_private *tp;
 	struct pci_device *pci_dev;
@@ -174,11 +174,6 @@ int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route)
 	/* get mac address */
 	for (i = 0; i < 6; i++)
 		rtl8139_net_dev->mac_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
-
-	/* set ip address */
-	memcpy(rtl8139_net_dev->ip_addr, ip_addr, 4);
-	memcpy(rtl8139_net_dev->ip_netmask, ip_netmask, 4);
-	memcpy(rtl8139_net_dev->ip_route, ip_route, 4);
 
 	/* set methods */
 	rtl8139_net_dev->start_xmit = rtl8139_start_xmit;

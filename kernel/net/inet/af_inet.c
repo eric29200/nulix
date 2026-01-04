@@ -391,8 +391,6 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 			if (sin->sin_family != AF_INET)
 				return -EINVAL;
 			break;
-		case SIOCADDRT:
-			break;
 		default:
 			return -ENOIOCTLCMD;
 	}
@@ -411,8 +409,6 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 		case SIOCSIFNETMASK:
 			inet_ntoi(sin->sin_addr, net_dev->ip_netmask);
 			return 0;
-		case SIOCADDRT:
-			return ip_route_new((struct rtentry *) arg);
 		default:
 			return -ENOIOCTLCMD;
 	}

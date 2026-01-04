@@ -1,0 +1,14 @@
+#!/bin/sh
+
+DAEMON="network"
+
+printf 'Starting %s: ' "$DAEMON"
+
+ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
+
+status=$?
+if [ "$status" -eq 0 ]; then
+	echo "OK"
+else
+	echo "FAIL"
+fi

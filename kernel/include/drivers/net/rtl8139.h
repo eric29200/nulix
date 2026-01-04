@@ -32,7 +32,7 @@ struct rtl8139_rx_header {
 };
 
 
-int init_rtl8139(uint8_t *ip_addr, uint8_t *ip_netmask, uint8_t *ip_route);
+int init_rtl8139();
 struct net_device *rtl8139_get_net_device();
 
 #endif
