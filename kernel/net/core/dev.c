@@ -1,4 +1,6 @@
 #include <net/inet/net.h>
+#include <net/inet/ip.h>
+#include <net/sock.h>
 #include <fs/proc_fs.h>
 #include <stdio.h>
 #include <string.h>
@@ -41,6 +43,92 @@ static int dev_read_proc(char *page, char **start, off_t off, size_t count, int 
 		len = count;
 
 	return len;
+}
+
+/*
+ * Network device ioctl.
+ */
+static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
+{
+	struct net_device *net_dev;
+
+	/* get network device */
+	net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
+	if (!net_dev)
+		return -EINVAL;
+
+	switch (cmd) {
+		case SIOCGIFFLAGS:
+			ifr->ifr_ifru.ifru_flags = net_dev->flags;
+			break;
+		case SIOCGIFHWADDR:
+		 	memcpy(ifr->ifr_ifru.ifru_hwaddr.sa_data, net_dev->mac_addr, 6);
+			ifr->ifr_ifru.ifru_hwaddr.sa_family = net_dev->type;
+			break;
+		case SIOCGIFINDEX:
+			ifr->ifr_ifru.ifru_ivalue = net_dev->index;
+			break;
+		case SIOCSIFFLAGS:
+			net_dev->flags = ifr->ifr_ifru.ifru_flags;
+			break;
+		default:
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+/*
+ * Get network devices configuration.
+ */
+int dev_ifconf(struct ifconf *ifc)
+{
+	char *pos = ifc->ifc_ifcu.ifcu_buf;
+	size_t len = ifc->ifc_len;
+	struct ifreq ifr;
+	int i;
+
+	/* for each network device */
+	for (i = 0; i < nr_net_devices; i++) {
+		if (len < sizeof(struct ifreq))
+			break;
+
+		/* set name/address */
+		memset(&ifr, 0, sizeof(struct ifreq));
+		strcpy(ifr.ifr_ifrn.ifrn_name, net_devices[i].name);
+		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_family = AF_INET;
+		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_addr = inet_iton(net_devices[i].ip_addr);
+
+		/* copy to ifconf */
+		memcpy(pos, &ifr, sizeof(struct ifreq));
+		pos += sizeof(struct ifreq);
+		len -= sizeof(struct ifreq);
+	}
+
+	/* set length */
+	ifc->ifc_len = pos - ifc->ifc_ifcu.ifcu_buf;
+	ifc->ifc_ifcu.ifcu_req = (struct ifreq *) ifc->ifc_ifcu.ifcu_buf;
+
+	return 0;
+}
+
+/*
+ * Network device ioctl.
+ */
+int dev_ioctl(unsigned int cmd, void *arg)
+{
+	switch (cmd) {
+		case SIOCGIFCONF:
+			return dev_ifconf((struct ifconf *) arg);
+		case SIOCGIFFLAGS:
+		case SIOCGIFHWADDR:
+		case SIOCGIFINDEX:
+		case SIOCSIFFLAGS:
+			return dev_ifsioc((struct ifreq *) arg, cmd);
+		default:
+			printf("dev_ioctl : unknown ioctl cmd 0x%x\n", cmd);
+			return -EINVAL;
+	}
 }
 
 /*

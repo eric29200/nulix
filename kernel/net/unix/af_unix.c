@@ -1070,11 +1070,9 @@ static int unix_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
 {
 	UNUSED(sock);
+	UNUSED(cmd);
 	UNUSED(arg);
-
-	printf("UNIX socket : unknown ioctl cmd 0x%x\n", cmd);
-
-	return -EINVAL;
+	return -ENOIOCTLCMD;
 }
 
 /*

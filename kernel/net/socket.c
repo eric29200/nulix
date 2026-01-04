@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <net/sock.h>
 #include <proc/sched.h>
+#include <net/inet/net.h>
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -214,6 +215,7 @@ static int sock_poll(struct file *filp, struct select_table *wait)
 static int sock_ioctl(struct inode *inode, struct file *filp, int cmd, unsigned long arg)
 {
 	struct socket *sock;
+	int ret;
 
 	UNUSED(filp);
 
@@ -222,7 +224,13 @@ static int sock_ioctl(struct inode *inode, struct file *filp, int cmd, unsigned 
 	if (!sock)
 		return -EINVAL;
 
-	return sock->ops->ioctl(sock, cmd, arg);
+	/* specific ioctl */
+	ret = sock->ops->ioctl(sock, cmd, arg);
+	if (ret != -ENOIOCTLCMD)
+		return ret;
+
+	/* generic device ioctl */
+	return dev_ioctl(cmd, (void *) arg);
 }
 
 /*

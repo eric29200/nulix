@@ -368,28 +368,10 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 	UNUSED(sock);
 
 	switch (cmd) {
-		case SIOCGIFCONF:
-			return net_device_ifconf((struct ifconf *) arg);
-		case SIOCGIFINDEX:
-		case SIOCGIFFLAGS:
-		case SIOCSIFFLAGS:
-		case SIOCGIFHWADDR:
-		case SIOCGIFMETRIC:
-		case SIOCGIFMTU:
-		case SIOCGIFMAP:
-		case SIOCGIFTXQLEN:
-		case SIOCGIFADDR:
-		case SIOCSIFADDR:
-		case SIOCGIFDSTADDR:
-		case SIOCGIFBRDADDR:
-		case SIOCGIFNETMASK:
-		case SIOCSIFNETMASK:
-			return net_device_ioctl(cmd, (struct ifreq *) arg);
 		case SIOCADDRT:
 			return ip_route_new((struct rtentry *) arg);
 		default:
-			printf("INET socket : unknown ioctl cmd 0x%x\n", cmd);
-			return -EINVAL;
+			return -ENOIOCTLCMD;
 	}
 }
 
