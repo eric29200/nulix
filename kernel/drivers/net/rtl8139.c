@@ -87,30 +87,33 @@ static void rtl8139_receive_packet()
 	/* handle all received packets */
 	while ((inb(rtl8139_net_dev->io_base + ChipCmd) & 1) == 0) {
 		/* get packet header */
-		rx_buf_ptr = inw(rtl8139_net_dev->io_base + RxBufPtr) + 0x10;
+		rx_buf_ptr = inw(rtl8139_net_dev->io_base + RxBufPtr) + 16;
 		rx_header = (struct rtl8139_rx_header *) (tp->rx_buf + rx_buf_ptr);
 		rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header) + 3) & ~3;
 
 		/* allocate a socket buffer */
 		skb = skb_alloc(rx_header->size);
-		if (skb) {
-			/* set network device */
-			skb->dev = rtl8139_net_dev;
-
-			/* copy data into socket buffer */
-			skb_put(skb, rx_header->size);
-			memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header), rx_header->size);
-
-			/* handle socket buffer */
-			net_handle(skb);
-
-			/* update stat */
-			rtl8139_net_dev->stats.rx_packets++;
-			rtl8139_net_dev->stats.rx_bytes += rx_header->size;
+		if (!skb) {
+			rtl8139_net_dev->stats.rx_dropped++;
+			break;
 		}
 
+		/* set network device */
+		skb->dev = rtl8139_net_dev;
+
+		/* copy data into socket buffer */
+		skb_put(skb, rx_header->size);
+		memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header), rx_header->size);
+
+		/* handle socket buffer */
+		net_handle(skb);
+
+		/* update stat */
+		rtl8139_net_dev->stats.rx_packets++;
+		rtl8139_net_dev->stats.rx_bytes += rx_header->size;
+
 		/* update received buffer pointer */
-		outw(rtl8139_net_dev->io_base + RxBufPtr, rx_buf_ptr - 0x10);
+		outw(rtl8139_net_dev->io_base + RxBufPtr, rx_buf_ptr - 16);
 	}
 }
 
