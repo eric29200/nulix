@@ -20,6 +20,8 @@
 #define SIOCGIFMAP			0x8970
 #define SIOCADDRT			0x890B
 
+#define IFF_UP				0x01
+
 /*
  * Device mapping.
  */

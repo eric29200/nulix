@@ -364,10 +364,32 @@ static int inet_setsockopt(struct socket *sock, int level, int optname, void *op
  */
 static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 {
+	struct ifreq *ifr = (struct ifreq *) arg;
+	struct net_device *net_dev;
+	struct sockaddr_in *sin;
+
 	/* unused socket */
 	UNUSED(sock);
 
+	/* get network device */
+	net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
+	if (!net_dev)
+		return -EINVAL;
+
+	/* get address */
+	sin = (struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr;
+
 	switch (cmd) {
+		case SIOCGIFADDR:
+			memset(sin, 0, sizeof(struct sockaddr_in));
+			sin->sin_addr = inet_iton(net_dev->ip_addr);
+		 	sin->sin_family = AF_INET;
+			return 0;
+		case SIOCGIFNETMASK:
+			memset(sin, 0, sizeof(struct sockaddr_in));
+		 	sin->sin_addr = inet_iton(net_dev->ip_netmask);
+		 	sin->sin_family = AF_INET;
+			return 0;
 		case SIOCADDRT:
 			return ip_route_new((struct rtentry *) arg);
 		default:
