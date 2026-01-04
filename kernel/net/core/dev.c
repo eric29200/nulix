@@ -68,8 +68,18 @@ static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
 		case SIOCGIFINDEX:
 			ifr->ifr_ifru.ifru_ivalue = net_dev->index;
 			break;
+		case SIOCGIFMETRIC:
+			ifr->ifr_ifru.ifru_ivalue = 0;
+			break;
+		case SIOCGIFMTU:
+			ifr->ifr_ifru.ifru_mtu = net_dev->mtu;
+			break;
+		case SIOCGIFTXQLEN:
+			ifr->ifr_ifru.ifru_ivalue = net_dev->tx_queue_len;
+			break;
 		case SIOCSIFFLAGS:
 			net_dev->flags = ifr->ifr_ifru.ifru_flags;
+			break;
 			break;
 		default:
 			return -EINVAL;
@@ -123,6 +133,9 @@ int dev_ioctl(unsigned int cmd, void *arg)
 		case SIOCGIFFLAGS:
 		case SIOCGIFHWADDR:
 		case SIOCGIFINDEX:
+		case SIOCGIFMETRIC:
+		case SIOCGIFMTU:
+		case SIOCGIFTXQLEN:
 		case SIOCSIFFLAGS:
 			return dev_ifsioc((struct ifreq *) arg, cmd);
 		default:

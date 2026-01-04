@@ -379,16 +379,37 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 	/* get address */
 	sin = (struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr;
 
+	/* check parameters */
 	switch (cmd) {
 		case SIOCGIFADDR:
-			memset(sin, 0, sizeof(struct sockaddr_in));
-			sin->sin_addr = inet_iton(net_dev->ip_addr);
-		 	sin->sin_family = AF_INET;
-			return 0;
 		case SIOCGIFNETMASK:
 			memset(sin, 0, sizeof(struct sockaddr_in));
-		 	sin->sin_addr = inet_iton(net_dev->ip_netmask);
 		 	sin->sin_family = AF_INET;
+			break;
+		case SIOCSIFADDR:
+		case SIOCSIFNETMASK:
+			if (sin->sin_family != AF_INET)
+				return -EINVAL;
+			break;
+		case SIOCADDRT:
+			break;
+		default:
+			return -ENOIOCTLCMD;
+	}
+
+	/* do ioctl */
+	switch (cmd) {
+		case SIOCGIFADDR:
+			sin->sin_addr = inet_iton(net_dev->ip_addr);
+			return 0;
+		case SIOCGIFNETMASK:
+		 	sin->sin_addr = inet_iton(net_dev->ip_netmask);
+			return 0;
+		case SIOCSIFADDR:
+			inet_ntoi(sin->sin_addr, net_dev->ip_addr);
+			return 0;
+		case SIOCSIFNETMASK:
+			inet_ntoi(sin->sin_addr, net_dev->ip_netmask);
 			return 0;
 		case SIOCADDRT:
 			return ip_route_new((struct rtentry *) arg);
