@@ -17,8 +17,8 @@
 #include <drivers/block/ata.h>
 #include <drivers/block/loop.h>
 #include <drivers/video/fb.h>
+#include <drivers/net/net_dev.h>
 #include <drivers/net/rtl8139.h>
-#include <net/inet/net.h>
 #include <ipc/ipc.h>
 #include <proc/sched.h>
 #include <proc/binfmt.h>

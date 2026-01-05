@@ -1,10 +1,9 @@
 #include <drivers/net/rtl8139.h>
+#include <drivers/net/net_dev.h>
 #include <drivers/pci/pci.h>
 #include <proc/sched.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
-#include <net/inet/net.h>
-#include <net/inet/arp.h>
 #include <net/sk_buff.h>
 #include <mm/paging.h>
 #include <stdio.h>
@@ -106,7 +105,7 @@ static void rtl8139_receive_packet()
 		memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header), rx_header->size);
 
 		/* handle socket buffer */
-		net_handle(skb);
+		skb_free(skb);
 
 		/* update stat */
 		rtl8139_net_dev->stats.rx_packets++;
@@ -173,7 +172,7 @@ int init_rtl8139()
 	io_base = pci_dev->bar0 & ~(0x3);
 
 	/* register net device */
-	rtl8139_net_dev = register_net_device(io_base, ARPHRD_ETHER);
+	rtl8139_net_dev = register_net_device(io_base);
 	if (!rtl8139_net_dev)
 		return -ENOSPC;
 

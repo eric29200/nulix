@@ -1,7 +1,7 @@
 #include <fs/fs.h>
 #include <net/sock.h>
 #include <proc/sched.h>
-#include <net/inet/net.h>
+#include <drivers/net/net_dev.h>
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <stderr.h>
