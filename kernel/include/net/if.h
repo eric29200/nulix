@@ -1,6 +1,8 @@
 #ifndef _NET_IF_H_
 #define _NET_IF_H_
 
+#include <net/if_arp.h>
+
 #define	IFNAMSIZ			16
 
 #define SIOCGIFCONF			0x8912

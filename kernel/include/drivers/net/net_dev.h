@@ -46,6 +46,7 @@ struct net_device {
 	uint8_t			index;
 	uint32_t		io_base;
 	uint8_t			irq;
+	uint16_t		type;
 	uint8_t			mac_addr[6];
 	uint8_t			ip_addr[4];
 	uint8_t			ip_netmask[4];
@@ -63,7 +64,7 @@ extern struct net_device net_devices[NR_NET_DEVICES];
 extern size_t nr_net_devices;
 
 int init_net_dev();
-struct net_device *register_net_device(uint32_t io_base);
+struct net_device *register_net_device(uint32_t io_base, uint16_t type);
 struct net_device *net_device_find(const char *name);
 int dev_ioctl(unsigned int cmd, void *arg);
 

@@ -159,7 +159,6 @@ struct net_proto_family {
 
 /* protocols init */
 void unix_proto_init();
-void inet_proto_init();
 
 /* generic functions */
 void init_proto();

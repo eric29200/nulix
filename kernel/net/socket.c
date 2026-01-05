@@ -1033,5 +1033,4 @@ int sock_register(struct net_proto_family *ops)
 void init_proto()
 {
 	unix_proto_init();
-	inet_proto_init();
 }

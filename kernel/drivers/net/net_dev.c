@@ -12,7 +12,7 @@ size_t nr_net_devices = 0;
 /*
  * Register a network device.
  */
-struct net_device *register_net_device(uint32_t io_base)
+struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 {
 	struct net_device *net_dev;
 	char tmp[32];
@@ -26,6 +26,7 @@ struct net_device *register_net_device(uint32_t io_base)
 	net_dev = &net_devices[nr_net_devices];
 	net_dev->index = nr_net_devices + 1;
 	net_dev->io_base = io_base;
+	net_dev->type = type;
 	net_dev->flags = 0;
 	net_dev->mtu = 1500;
 	net_dev->tx_queue_len = 100;
