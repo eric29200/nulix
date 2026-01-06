@@ -1,0 +1,16 @@
+VERSION="2.10"
+SRC_FILENAME="net-tools-"$VERSION".tar.xz"
+URL="https://downloads.sourceforge.net/project/net-tools/"$SRC_FILENAME
+
+function configure_port() {
+	cp /home/eric/config.h .
+	cp ../../../../ports/net-tools/config.h .
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
