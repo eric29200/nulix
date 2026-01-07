@@ -1,12 +1,13 @@
 #include <net/inet/ip.h>
 #include <net/inet/net.h>
 #include <string.h>
+#include <stdio.h>
 
 /*
  * Build an IPv4 header.
  */
 void ip_build_header(struct ip_header *ip_header, uint8_t tos, uint16_t length, uint16_t id,
-		     uint8_t ttl, uint8_t protocol, uint8_t *src_addr, uint8_t *dst_addr)
+		     uint8_t ttl, uint8_t protocol, uint32_t src_addr, uint32_t dst_addr)
 {
 	ip_header->ihl = 5;
 	ip_header->version = 4;
@@ -16,8 +17,8 @@ void ip_build_header(struct ip_header *ip_header, uint8_t tos, uint16_t length, 
 	ip_header->fragment_offset = 0;
 	ip_header->ttl = ttl;
 	ip_header->protocol = protocol;
-	memcpy(ip_header->src_addr, src_addr, 4);
-	memcpy(ip_header->dst_addr, dst_addr, 4);
+	ip_header->src_addr = src_addr;
+	ip_header->dst_addr = dst_addr;
 	ip_header->chksum = net_checksum(ip_header, sizeof(struct ip_header));
 }
 
@@ -33,21 +34,10 @@ void ip_receive(struct sk_buff *skb)
 /*
  * Get IP route.
  */
-void ip_route(struct net_device *dev, const uint8_t *dest_ip, uint8_t *route_ip)
+uint32_t ip_route(struct net_device *dev, const uint32_t dest_ip)
 {
-	int i, same_net;
-
-	/* check if destination ip is on same network */
-	for (i = 0, same_net = 0; i < 4; i++) {
-		same_net = (dev->ip_addr[i] & dev->ip_netmask[i]) == (dest_ip[i] & dev->ip_netmask[i]);
-		if (!same_net)
-			break;
-	}
-
-	/* set route ip */
-	if (same_net)
-		memcpy(route_ip, dest_ip, 4);
-	else
-		memcpy(route_ip, dev->ip_route, 4);
+	return (dev->ip_addr & dev->ip_netmask) == (dest_ip & dev->ip_netmask)
+		? dest_ip
+		: dev->ip_route;
 }
 

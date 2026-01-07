@@ -203,7 +203,7 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 
 	/* set default address */
 	if (!src_sin->sin_addr)
-		src_sin->sin_addr = inet_iton(sk->protinfo.af_inet.dev->ip_addr);
+		src_sin->sin_addr = sk->protinfo.af_inet.dev->ip_addr;
 
 	/* allocate a dynamic port */
 	if (!src_sin->sin_port)
@@ -397,16 +397,16 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 	/* do ioctl */
 	switch (cmd) {
 		case SIOCGIFADDR:
-			sin->sin_addr = inet_iton(net_dev->ip_addr);
+			sin->sin_addr = net_dev->ip_addr;
 			return 0;
 		case SIOCGIFNETMASK:
-		 	sin->sin_addr = inet_iton(net_dev->ip_netmask);
+		 	sin->sin_addr = net_dev->ip_netmask;
 			return 0;
 		case SIOCSIFADDR:
-			inet_ntoi(sin->sin_addr, net_dev->ip_addr);
+			net_dev->ip_addr = sin->sin_addr;
 			return 0;
 		case SIOCSIFNETMASK:
-			inet_ntoi(sin->sin_addr, net_dev->ip_netmask);
+			net_dev->ip_netmask = sin->sin_addr;
 			return 0;
 		default:
 			return -ENOIOCTLCMD;

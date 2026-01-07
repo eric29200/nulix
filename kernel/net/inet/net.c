@@ -66,7 +66,7 @@ void skb_handle(struct sk_buff *skb)
 				break;
 
 			/* check if packet is adressed to us */
-			if (memcmp(skb->dev->ip_addr, skb->nh.ip_header->dst_addr, 4) != 0)
+			if (skb->dev->ip_addr != skb->nh.ip_header->dst_addr)
 				break;
 
 			/* go to next layer */

@@ -94,7 +94,7 @@ static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 {
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff *skb;
-	uint8_t dest_ip[4];
+	uint32_t dest_ip;
 	size_t len, i;
 	void *buf;
 
@@ -103,7 +103,7 @@ static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
-	inet_ntoi(dest_addr_in->sin_addr, dest_ip);
+	dest_ip = dest_addr_in->sin_addr;
 
 	/* compute data length */
 	len = 0;
@@ -121,7 +121,8 @@ static int icmp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + len, 0, IPV4_DEFAULT_TTL, IP_PROTO_ICMP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
+	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + len, 0, IPV4_DEFAULT_TTL, IP_PROTO_ICMP,
+		sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* copy icmp message */
 	skb->h.icmp_header = buf = (struct icmp_header *) skb_put(skb, len);
@@ -178,7 +179,7 @@ static int icmp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	if (sin) {
 		sin->sin_family = AF_INET;
 		sin->sin_port = 0;
-		sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+		sin->sin_addr = skb->nh.ip_header->src_addr;
 	}
 
 	/* free message */

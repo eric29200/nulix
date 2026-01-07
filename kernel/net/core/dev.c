@@ -129,7 +129,7 @@ int dev_ifconf(struct ifconf *ifc)
 		memset(&ifr, 0, sizeof(struct ifreq));
 		strcpy(ifr.ifr_ifrn.ifrn_name, net_devices[i].name);
 		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_family = AF_INET;
-		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_addr = inet_iton(net_devices[i].ip_addr);
+		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_addr = net_devices[i].ip_addr;
 
 		/* copy to ifconf */
 		memcpy(pos, &ifr, sizeof(struct ifreq));

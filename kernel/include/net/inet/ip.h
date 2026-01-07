@@ -27,31 +27,13 @@ struct ip_header {
 	uint8_t		ttl;
 	uint8_t		protocol;
 	uint16_t	chksum;
-	uint8_t		src_addr[4];
-	uint8_t		dst_addr[4];
-};
-
-/*
- * Decode an IP address.
- */
-static inline void inet_ntoi(uint32_t value, uint8_t *buf)
-{
-	int i;
-	for (i = 0; i < 4; i++)
-		buf[i] = ((uint8_t *) &value)[i];
-}
-
-/*
- * Encode an IP address.
- */
-static inline uint32_t inet_iton(uint8_t *buf)
-{
-	return buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
-}
+	uint32_t	src_addr;
+	uint32_t	dst_addr;
+} __attribute__ ((packed));
 
 void ip_build_header(struct ip_header *ip_header, uint8_t tos, uint16_t length, uint16_t id,
-		     uint8_t ttl, uint8_t protocol, uint8_t *src_addr, uint8_t *dst_addr);
+		     uint8_t ttl, uint8_t protocol, uint32_t src_addr, uint32_t dst_addr);
 void ip_receive(struct sk_buff *skb);
-void ip_route(struct net_device *dev, const uint8_t *dest_ip, uint8_t *route_ip);
+uint32_t ip_route(struct net_device *dev, const uint32_t dest_ip);
 
 #endif

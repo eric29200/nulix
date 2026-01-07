@@ -12,7 +12,7 @@
 /*
  * Compute TCP checksum.
  */
-static uint16_t tcp_checksum(struct tcp_header *tcp_header, uint8_t *src_address, uint8_t *dst_address, size_t len)
+static uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint32_t dst_address, size_t len)
 {
 	uint16_t *chunk, ret;
 	uint32_t chksum;
@@ -23,8 +23,8 @@ static uint16_t tcp_checksum(struct tcp_header *tcp_header, uint8_t *src_address
 
 	/* build TCP check header */
 	struct tcp_check_header tcp_check_header = {
-		.src_address		= inet_iton(src_address),
-		.dst_address		= inet_iton(dst_address),
+		.src_address		= src_address,
+		.dst_address		= dst_address,
 		.zero			= 0,
 		.protocol		= IP_PROTO_TCP,
 		.len			= htons(size),
@@ -92,11 +92,11 @@ void tcp_receive(struct sk_buff *skb)
 static struct sk_buff *tcp_create_skb(struct sock *sk, uint16_t flags, void *msg, size_t len)
 {
 	struct sk_buff *skb;
-	uint8_t dest_ip[4];
+	uint32_t dest_ip;
 	void *buf;
 
 	/* get destination IP */
-	inet_ntoi(sk->protinfo.af_inet.dst_sin.sin_addr, dest_ip);
+	dest_ip = sk->protinfo.af_inet.dst_sin.sin_addr;
 
 	/* allocate a socket buffer */
 	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct tcp_header) + len);
@@ -139,11 +139,11 @@ static struct sk_buff *tcp_create_skb(struct sock *sk, uint16_t flags, void *msg
 static int tcp_reply_ack(struct sock *sk, struct sk_buff *skb, uint16_t flags)
 {
 	struct sk_buff *skb_ack;
-	uint8_t dest_ip[4];
+	uint32_t dest_ip;
 	int len;
 
 	/* get destination IP */
-	inet_ntoi(inet_iton(skb->nh.ip_header->src_addr), dest_ip);
+	dest_ip = skb->nh.ip_header->src_addr;
 
 	/* allocate a socket buffer */
 	skb_ack = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct tcp_header));
@@ -360,7 +360,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	if (sin) {
 		sin->sin_family = AF_INET;
 		sin->sin_port = skb->h.tcp_header->src_port;
-		sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+		sin->sin_addr = skb->nh.ip_header->src_addr;
 	}
 
 	/* free message or requeue it */
@@ -517,7 +517,7 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new, int flags)
 		memcpy(&sk_new->protinfo.af_inet.src_sin, &sk->protinfo.af_inet.src_sin, sizeof(struct sockaddr));
 		sk_new->protinfo.af_inet.dst_sin.sin_family = AF_INET;
 		sk_new->protinfo.af_inet.dst_sin.sin_port = skb->h.tcp_header->src_port;
-		sk_new->protinfo.af_inet.dst_sin.sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+		sk_new->protinfo.af_inet.dst_sin.sin_addr = skb->nh.ip_header->src_addr;
 		sk_new->protinfo.af_inet.seq_no = ntohl(1);
 		sk_new->protinfo.af_inet.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
 
@@ -533,7 +533,7 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new, int flags)
 
 			/* move socket buffer */
 			if (sk_new->protinfo.af_inet.dst_sin.sin_port == skb->h.tcp_header->src_port
-				&& sk_new->protinfo.af_inet.dst_sin.sin_addr == inet_iton(skb->nh.ip_header->src_addr))
+				&& sk_new->protinfo.af_inet.dst_sin.sin_addr == skb->nh.ip_header->src_addr)
 				skb_queue_tail(&sk_new->receive_queue, skb);
 			else
 				skb_free(skb);

@@ -22,14 +22,14 @@ void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_
 int ethernet_rebuild_header(struct net_device *dev, struct sk_buff *skb)
 {
 	struct arp_table_entry *arp_entry;
-	uint8_t route_ip[4];
+	uint32_t route_ip;
 
 	/* ARP request : do not rebuild header */
 	if (skb->eth_header->type == htons(ETHERNET_TYPE_ARP))
 		return 0;
 
 	/* get route IP */
-	ip_route(dev, skb->nh.ip_header->dst_addr, route_ip);
+	route_ip = ip_route(dev, skb->nh.ip_header->dst_addr);
 
 	/* find ARP entry */
 	arp_entry = arp_lookup(dev, route_ip, 0);

@@ -62,13 +62,13 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 {
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff *skb;
-	uint8_t dest_ip[4];
+	uint32_t dest_ip;
 	void *buf;
 	size_t i;
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
-	inet_ntoi(dest_addr_in->sin_addr, dest_ip);
+	dest_ip = dest_addr_in->sin_addr;
 
 	/* allocate a socket buffer */
 	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct udp_header) + size);
@@ -139,7 +139,7 @@ static int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	if (sin) {
 		sin->sin_family = AF_INET;
 		sin->sin_port = skb->h.udp_header->src_port;
-		sin->sin_addr = inet_iton(skb->nh.ip_header->src_addr);
+		sin->sin_addr = skb->nh.ip_header->src_addr;
 	}
 
 	/* free message */

@@ -16,9 +16,9 @@ static uint8_t zero_mac_addr[] = {0, 0, 0, 0, 0, 0};
 /*
  * Build an ARP header.
  */
-void arp_build_header(struct arp_header *arp_header, uint16_t op_code,
-		      uint8_t *src_hardware_addr, uint8_t *src_protocol_addr,
-		      uint8_t *dst_hardware_addr, uint8_t *dst_protocol_addr)
+static void arp_build_header(struct arp_header *arp_header, uint16_t op_code,
+	uint8_t *src_hardware_addr, uint32_t src_protocol_addr,
+	uint8_t *dst_hardware_addr, uint32_t dst_protocol_addr)
 {
 	arp_header->hardware_type = htons(HARWARE_TYPE_ETHERNET);
 	arp_header->protocol = htons(ETHERNET_TYPE_IP);
@@ -26,9 +26,9 @@ void arp_build_header(struct arp_header *arp_header, uint16_t op_code,
 	arp_header->protocol_addr_len = 4;
 	arp_header->opcode = htons(op_code);
 	memcpy(arp_header->src_hardware_addr, src_hardware_addr, 6);
-	memcpy(arp_header->src_protocol_addr, src_protocol_addr, 4);
+	arp_header->src_protocol_addr = src_protocol_addr;
 	memcpy(arp_header->dst_hardware_addr, dst_hardware_addr, 6);
-	memcpy(arp_header->dst_protocol_addr, dst_protocol_addr, 4);
+	arp_header->dst_protocol_addr = dst_protocol_addr;
 }
 
 /*
@@ -43,7 +43,7 @@ void arp_receive(struct sk_buff *skb)
 /*
  * Lookup for an arp table entry.
  */
-struct arp_table_entry *arp_lookup(struct net_device *dev, uint8_t *ip_addr, int block)
+struct arp_table_entry *arp_lookup(struct net_device *dev, uint32_t ip_addr, int block)
 {
 	struct sk_buff *skb;
 	int i;
@@ -51,7 +51,7 @@ struct arp_table_entry *arp_lookup(struct net_device *dev, uint8_t *ip_addr, int
 	for (;;) {
 		/* try to find address in cache */
 		for (i = 0; i < ARP_TABLE_SIZE; i++)
-			if (memcmp(arp_table[i].ip_addr, ip_addr, 4) == 0)
+			if (arp_table[i].ip_addr == ip_addr)
 				return &arp_table[i];
 
 		/* else send an ARP request */
@@ -92,7 +92,7 @@ void arp_add_table(struct arp_header *arp_header)
 	/* update MAC/IP addresses relation */
 	for (i = 0; i < arp_table_idx; i++) {
 		if (memcmp(arp_table[i].mac_addr, arp_header->src_hardware_addr, 6) == 0) {
-			memcpy(arp_table[i].ip_addr, arp_header->src_protocol_addr, 4);
+			arp_table[i].ip_addr = arp_header->src_protocol_addr;
 			return;
 		}
 	}
@@ -100,7 +100,7 @@ void arp_add_table(struct arp_header *arp_header)
 	/* add MAC/IP adresses relation */
 	if (i >= arp_table_idx) {
 		memcpy(arp_table[arp_table_idx].mac_addr, arp_header->src_hardware_addr, 6);
-		memcpy(arp_table[arp_table_idx].ip_addr, arp_header->src_protocol_addr, 4);
+		arp_table[arp_table_idx].ip_addr = arp_header->src_protocol_addr;
 
 		/* update ARP table index */
 		if (++arp_table_idx >= ARP_TABLE_SIZE)
@@ -116,7 +116,7 @@ void arp_reply_request(struct sk_buff *skb)
 	struct sk_buff *skb_reply;
 
 	/* check IP address asked is us */
-	if (memcmp(skb->dev->ip_addr, skb->nh.arp_header->dst_protocol_addr, 4) != 0)
+	if (skb->dev->ip_addr != skb->nh.arp_header->dst_protocol_addr)
 		return;
 
 	/* allocate reply buffer */
