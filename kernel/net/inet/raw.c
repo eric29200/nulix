@@ -81,8 +81,6 @@ static int raw_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff *skb;
 	uint32_t dest_ip;
-	void *buf;
-	size_t i;
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
@@ -103,11 +101,7 @@ static int raw_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 		sk->protocol, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
 
 	/* copy ip message */
-	buf = (struct ip_header *) skb_put(skb, size);
-	for (i = 0; i < msg->msg_iovlen; i++) {
-		memcpy(buf, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
-		buf += msg->msg_iov[i].iov_len;
-	}
+	memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size);
 
 	/* send message */
 	net_transmit(sk->protinfo.af_inet.dev, skb);

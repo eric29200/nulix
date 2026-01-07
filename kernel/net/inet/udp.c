@@ -63,8 +63,6 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	struct sockaddr_in *dest_addr_in;
 	struct sk_buff *skb;
 	uint32_t dest_ip;
-	void *buf;
-	size_t i;
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
@@ -89,11 +87,7 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	udp_build_header(skb->h.udp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(dest_addr_in->sin_port), sizeof(struct udp_header) + size);
 
 	/* copy message */
-	buf = skb_put(skb, size);
-	for (i = 0; i < msg->msg_iovlen; i++) {
-		memcpy(buf, msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
-		buf += msg->msg_iov[i].iov_len;
-	}
+	memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size);
 
 	/* transmit message */
 	net_transmit(sk->protinfo.af_inet.dev, skb);
