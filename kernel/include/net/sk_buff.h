@@ -13,39 +13,42 @@
  * Socket buffer.
  */
 struct sk_buff {
-	struct sk_buff *		next;
-	struct sk_buff *		prev;
-	struct sk_buff_head *		list;
-	struct sock *			sk;
-	struct net_device *		dev;
-	struct ethernet_header *	eth_header;
+	struct sk_buff *			next;
+	struct sk_buff *			prev;
+	struct sk_buff_head *			list;
+	struct sock *				sk;
+	struct net_device *			dev;
 	struct {
-		struct icmp_header *	icmp_header;
-		struct udp_header *	udp_header;
-		struct tcp_header *	tcp_header;
-		uint8_t *		raw;
+		struct ethernet_header *	eth_header;
+		uint8_t *			raw;
+	} hh;
+	struct {
+		struct icmp_header *		icmp_header;
+		struct udp_header *		udp_header;
+		struct tcp_header *		tcp_header;
+		uint8_t *			raw;
 	} h;
 	struct {
-		struct arp_header *	arp_header;
-		struct ip_header *	ip_header;
-		uint8_t *		raw;
+		struct arp_header *		arp_header;
+		struct ip_header *		ip_header;
+		uint8_t *			raw;
 	} nh;
-	size_t				size;
-	size_t				len;
-	uint8_t *			head;
-	uint8_t *			data;
-	uint8_t *			tail;
-	uint8_t *			end;
-	char				cb[48];
+	size_t					size;
+	size_t					len;
+	uint8_t *				head;
+	uint8_t *				data;
+	uint8_t *				tail;
+	uint8_t *				end;
+	char					cb[48];
 };
 
 /*
  * Socket buffer queue.
  */
 struct sk_buff_head {
-	struct sk_buff *		next;
-	struct sk_buff *		prev;
-	size_t				len;
+	struct sk_buff *			next;
+	struct sk_buff *			prev;
+	size_t					len;
 };
 
 /*

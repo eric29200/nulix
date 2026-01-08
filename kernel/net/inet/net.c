@@ -45,7 +45,7 @@ void skb_handle(struct sk_buff *skb)
 	ethernet_receive(skb);
 
 	/* handle packet */
-	switch(htons(skb->eth_header->type)) {
+	switch(htons(skb->hh.eth_header->type)) {
 		case ETHERNET_TYPE_ARP:
 			/* decode ARP header */
 			arp_receive(skb);

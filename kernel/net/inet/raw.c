@@ -92,8 +92,8 @@ static int raw_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 		return -ENOMEM;
 
 	/* build ethernet header */
-	skb->eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
-	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
+	ethernet_build_header(skb->hh.eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));

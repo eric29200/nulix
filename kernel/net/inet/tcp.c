@@ -104,8 +104,8 @@ static struct sk_buff *tcp_create_skb(struct sock *sk, uint16_t flags, void *msg
 		return NULL;
 
 	/* build ethernet header */
-	skb->eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
-	ethernet_build_header(skb->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
+	ethernet_build_header(skb->hh.eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
@@ -151,8 +151,8 @@ static int tcp_reply_ack(struct sock *sk, struct sk_buff *skb, uint16_t flags)
 		return -ENOMEM;
 
 	/* build ethernet header */
-	skb_ack->eth_header = (struct ethernet_header *) skb_put(skb_ack, sizeof(struct ethernet_header));
-	ethernet_build_header(skb_ack->eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	skb_ack->hh.eth_header = (struct ethernet_header *) skb_put(skb_ack, sizeof(struct ethernet_header));
+	ethernet_build_header(skb_ack->hh.eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb_ack->nh.ip_header = (struct ip_header *) skb_put(skb_ack, sizeof(struct ip_header));

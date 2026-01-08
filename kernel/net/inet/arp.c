@@ -60,8 +60,8 @@ struct arp_table_entry *arp_lookup(struct net_device *dev, uint32_t ip_addr, int
 			return NULL;
 
 		/* build ethernet header */
-		skb->eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
-		ethernet_build_header(skb->eth_header, dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
+		skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
+		ethernet_build_header(skb->hh.eth_header, dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
 
 		/* build ARP header */
 		skb->nh.arp_header = (struct arp_header *) skb_put(skb, sizeof(struct arp_header));
@@ -125,8 +125,8 @@ void arp_reply_request(struct sk_buff *skb)
 		return;
 
 	/* build ethernet header */
-	skb_reply->eth_header = (struct ethernet_header *) skb_put(skb_reply, sizeof(struct ethernet_header));
-	ethernet_build_header(skb_reply->eth_header, skb->dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
+	skb_reply->hh.eth_header = (struct ethernet_header *) skb_put(skb_reply, sizeof(struct ethernet_header));
+	ethernet_build_header(skb_reply->hh.eth_header, skb->dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
 
 	/* build arp header */
 	skb_reply->nh.arp_header = (struct arp_header *) skb_put(skb_reply, sizeof(struct arp_header));
