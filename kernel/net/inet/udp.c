@@ -10,14 +10,21 @@
 #include <stderr.h>
 
 /*
- * Build an UDP header.
+ * UDP fake header.
  */
-static void udp_build_header(struct udp_header *udp_header, uint16_t src_port, uint16_t dst_port, uint16_t len)
+struct udp_fake_header {
+	struct udp_header	uh;
+	struct iovec *		iov;
+};
+
+/*
+ * Copy a UDP fragment.
+ */
+static void udp_getfrag(const void *ptr, char *to, size_t fraglen)
 {
-	udp_header->src_port = htons(src_port);
-	udp_header->dst_port = htons(dst_port);
-	udp_header->len = htons(len);
-	udp_header->chksum = 0;
+	struct udp_fake_header *ufh = (struct udp_fake_header *) ptr;
+	memcpy(to, &ufh->uh, sizeof(struct udp_header));
+	memcpy_fromiovec((uint8_t *) to + sizeof(struct udp_header), ufh->iov, fraglen - sizeof(struct udp_header));
 }
 
 /*
@@ -60,37 +67,27 @@ static int udp_handle(struct sock *sk, struct sk_buff *skb)
  */
 static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 {
+	size_t usize = sizeof(struct udp_header) + size;
 	struct sockaddr_in *dest_addr_in;
-	struct sk_buff *skb;
+	struct udp_fake_header ufh;
 	uint32_t dest_ip;
+	int ret;
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
 	dest_ip = dest_addr_in->sin_addr;
 
-	/* allocate a socket buffer */
-	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + sizeof(struct udp_header) + size);
-	if (!skb)
-		return -ENOMEM;
-
-	/* build ethernet header */
-	skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
-	ethernet_build_header(skb->hh.eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
-
-	/* build ip header */
-	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + sizeof(struct udp_header) + size, 0,
-			IPV4_DEFAULT_TTL, IP_PROTO_UDP, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
-
 	/* build udp header */
-	skb->h.udp_header = (struct udp_header *) skb_put(skb, sizeof(struct udp_header));
-	udp_build_header(skb->h.udp_header, ntohs(sk->protinfo.af_inet.src_sin.sin_port), ntohs(dest_addr_in->sin_port), sizeof(struct udp_header) + size);
+	ufh.uh.src_port = sk->protinfo.af_inet.src_sin.sin_port;
+	ufh.uh.dst_port = dest_addr_in->sin_port;
+	ufh.uh.len = htons(usize);
+	ufh.uh.chksum = 0;
+	ufh.iov = msg->msg_iov;
 
-	/* copy message */
-	memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size);
-
-	/* transmit message */
-	net_transmit(sk->protinfo.af_inet.dev, skb);
+	/* build and transmit ip packet */
+	ret = ip_build_xmit(sk, udp_getfrag, &ufh, usize, dest_ip);
+	if (ret)
+		return ret;
 
 	return size;
 }

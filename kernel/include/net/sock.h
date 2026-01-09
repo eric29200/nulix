@@ -86,7 +86,6 @@ struct proto {
 extern struct proto udp_proto;
 extern struct proto tcp_proto;
 extern struct proto raw_proto;
-extern struct proto icmp_proto;
 
 struct sock *sk_alloc(int family, int zero_it);
 void sk_free(struct sock *sk);

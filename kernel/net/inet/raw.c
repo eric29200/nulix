@@ -8,6 +8,22 @@
 #include <stderr.h>
 
 /*
+ * Raw fake header.
+ */
+struct raw_fake_header {
+	struct iovec *		iov;
+};
+
+/*
+ * Copy a raw fragment.
+ */
+static void raw_getfrag(const void *ptr, char *to, size_t fraglen)
+{
+	struct raw_fake_header *rfh = (struct raw_fake_header *) ptr;
+	memcpy_fromiovec((uint8_t *) to, rfh->iov, fraglen);
+}
+
+/*
  * Handle a raw packet.
  */
 static int raw_handle(struct sock *sk, struct sk_buff *skb)
@@ -79,32 +95,21 @@ static int raw_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 static int raw_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 {
 	struct sockaddr_in *dest_addr_in;
-	struct sk_buff *skb;
+	struct raw_fake_header rfh;
 	uint32_t dest_ip;
+	int ret;
 
 	/* get destination IP */
 	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
 	dest_ip = dest_addr_in->sin_addr;
 
-	/* allocate a socket buffer */
-	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct ip_header) + size);
-	if (!skb)
-		return -ENOMEM;
+	/* build raw header */
+	rfh.iov = msg->msg_iov;
 
-	/* build ethernet header */
-	skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
-	ethernet_build_header(skb->hh.eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
-
-	/* build ip header */
-	skb->nh.ip_header = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
-	ip_build_header(skb->nh.ip_header, 0, sizeof(struct ip_header) + size, 0, IPV4_DEFAULT_TTL,
-		sk->protocol, sk->protinfo.af_inet.dev->ip_addr, dest_ip);
-
-	/* copy ip message */
-	memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size);
-
-	/* send message */
-	net_transmit(sk->protinfo.af_inet.dev, skb);
+	/* build and transmit ip packet */
+	ret = ip_build_xmit(sk, raw_getfrag, &rfh, size, dest_ip);
+	if (ret)
+		return ret;
 
 	return size;
 }

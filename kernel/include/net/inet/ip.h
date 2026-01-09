@@ -31,8 +31,8 @@ struct ip_header {
 	uint32_t	dst_addr;
 } __attribute__ ((packed));
 
-void ip_build_header(struct ip_header *ip_header, uint8_t tos, uint16_t length, uint16_t id,
-		     uint8_t ttl, uint8_t protocol, uint32_t src_addr, uint32_t dst_addr);
+int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag,
+		  size_t size, uint32_t dest_ip);
 void ip_receive(struct sk_buff *skb);
 uint32_t ip_route(struct net_device *dev, const uint32_t dest_ip);
 

@@ -1,26 +1,10 @@
 #include <net/inet/ip.h>
 #include <net/inet/net.h>
+#include <net/inet/ethernet.h>
+#include <net/sock.h>
 #include <string.h>
+#include <stderr.h>
 #include <stdio.h>
-
-/*
- * Build an IPv4 header.
- */
-void ip_build_header(struct ip_header *ip_header, uint8_t tos, uint16_t length, uint16_t id,
-		     uint8_t ttl, uint8_t protocol, uint32_t src_addr, uint32_t dst_addr)
-{
-	ip_header->ihl = 5;
-	ip_header->version = 4;
-	ip_header->tos = tos;
-	ip_header->length = htons(length);
-	ip_header->id = htons(id);
-	ip_header->fragment_offset = 0;
-	ip_header->ttl = ttl;
-	ip_header->protocol = protocol;
-	ip_header->src_addr = src_addr;
-	ip_header->dst_addr = dst_addr;
-	ip_header->chksum = net_checksum(ip_header, sizeof(struct ip_header));
-}
 
 /*
  * Receive/decode an IP packet.
@@ -41,3 +25,46 @@ uint32_t ip_route(struct net_device *dev, const uint32_t dest_ip)
 		: dev->ip_route;
 }
 
+/*
+ * Build and transmit an IP packet.
+ */
+int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag,
+		  size_t size, uint32_t dest_ip)
+{
+	struct ip_header *iph;
+	struct sk_buff *skb;
+
+	/* add ip header to packet */
+	size += sizeof(struct ip_header);
+
+	/* allocate a socket buffer */
+	skb = skb_alloc(sizeof(struct ethernet_header) + size);
+	if (!skb)
+		return -ENOMEM;
+
+	/* build ethernet header */
+	skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
+	ethernet_build_header(skb->hh.eth_header, sk->protinfo.af_inet.dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+
+	/* build ip header */
+	skb->nh.ip_header = iph = (struct ip_header *) skb_put(skb, size);
+	iph->ihl = 5;
+	iph->version = 4;
+	iph->tos = 0;
+	iph->length = htons(size);
+	iph->id = htons(0);
+	iph->fragment_offset = 0;
+	iph->ttl = IPV4_DEFAULT_TTL;
+	iph->protocol = sk->protocol;
+	iph->src_addr = sk->protinfo.af_inet.dev->ip_addr;
+	iph->dst_addr = dest_ip;
+	iph->chksum = net_checksum(iph, sizeof(struct ip_header));
+
+	/* copy udp header + message */
+	getfrag(frag, ((char *) iph) + sizeof(struct ip_header), size - sizeof(struct ip_header));
+
+	/* transmit message */
+	net_transmit(sk->protinfo.af_inet.dev, skb);
+
+	return 0;
+}

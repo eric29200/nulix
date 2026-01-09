@@ -462,9 +462,6 @@ static int inet_create(struct socket *sock, int protocol)
 					protocol = IP_PROTO_UDP;
 					prot = &udp_proto;
 					break;
-				case IP_PROTO_ICMP:
-					prot = &icmp_proto;
-					break;
 				default:
 					return -EINVAL;
 			}

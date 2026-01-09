@@ -79,13 +79,6 @@ void skb_handle(struct sk_buff *skb)
 					break;
 				case IP_PROTO_ICMP:
 					icmp_receive(skb);
-
-					/* handle ICMP requests */
-					if (skb->h.icmp_header->type == ICMP_TYPE_ECHO) {
-						icmp_reply_echo(skb);
-						return;
-					}
-
 					break;
 				default:
 					break;

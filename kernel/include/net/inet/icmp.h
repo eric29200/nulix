@@ -22,6 +22,5 @@ struct icmp_header {
 };
 
 void icmp_receive(struct sk_buff *skb);
-void icmp_reply_echo(struct sk_buff *skb);
 
 #endif
