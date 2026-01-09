@@ -3,9 +3,9 @@
 #include <net/inet/udp.h>
 #include <net/inet/net.h>
 #include <net/inet/ip.h>
-#include <net/inet/ethernet.h>
 #include <proc/sched.h>
 #include <uio.h>
+#include <stdio.h>
 #include <string.h>
 #include <stderr.h>
 
@@ -108,14 +108,8 @@ static int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	if (!skb)
  		return err;
 
-	/* get IP header */
-	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
-
-	/* get UDP header */
-	skb->h.udp_header = (struct udp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
-
 	/* get message */
-	buf = (void *) skb->h.udp_header + sizeof(struct udp_header) + sk->msg_position;
+	buf = (void *) skb->h.raw + sizeof(struct udp_header) + sk->msg_position;
 	copied = (void *) skb->end - buf;
 	if (size < copied) {
 		copied = size;

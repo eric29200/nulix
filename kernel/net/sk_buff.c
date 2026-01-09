@@ -4,6 +4,7 @@
 #include <mm/mm.h>
 #include <uio.h>
 #include <string.h>
+#include <stdio.h>
 
 /*
  * Allocate a socket buffer.
@@ -20,6 +21,7 @@ struct sk_buff *skb_alloc(size_t size)
 	/* set socket buffer */
 	memset(skb, 0, sizeof(struct sk_buff) + size);
 	skb->data = (uint8_t *) skb + sizeof(struct sk_buff);
+	skb->count = 1;
 	skb->size = size;
 	skb->head = skb->data;
 	skb->tail = skb->data;
@@ -37,17 +39,57 @@ struct sk_buff *skb_clone(struct sk_buff *skb)
 	struct sk_buff *skb_new;
 
 	/* allocate a new socket buffer */
-	skb_new = skb_alloc(skb->size);
+	skb_new = (struct sk_buff *) kmalloc(sizeof(struct sk_buff));
 	if (!skb_new)
 		return NULL;
 
-	/* put data */
-	if (skb->len > 0) {
-		memcpy(skb_new->head, skb->head, skb->size);
-		skb_put(skb_new, skb->len);
-	}
+	/* link data */
+	if (skb->data_skb)
+		skb = skb->data_skb;
+	skb->count++;
+
+	/* set new socket buffer */
+	memcpy(skb_new, skb, sizeof(struct sk_buff));
+	skb_new->count = 1;
+	skb_new->data_skb = skb;
+	skb_new->next = NULL;
+	skb_new->prev = NULL;
+	skb_new->list = NULL;
+	skb_new->sk = NULL;
 
 	return skb_new;
+}
+
+/*
+ * Free memory of a socket buffer.
+ */
+static void __skb_freemem(struct sk_buff *skb)
+{
+	/* still used */
+	if (--skb->count)
+		return;
+
+	kfree(skb->head);
+}
+
+/*
+ * Free memory of a socket buffer.
+ */
+void skb_freemem(struct sk_buff *skb)
+{
+	void *addr = skb->head;
+
+	/* still used */
+	if (--skb->count)
+		return;
+
+	/* free socket buffer containing data */
+	if (skb->data_skb) {
+		addr = skb;
+		__skb_freemem(skb->data_skb);
+	}
+
+	kfree(addr);
 }
 
 /*
@@ -67,7 +109,7 @@ void skb_free(struct sk_buff *skb)
 	}
 
 	/* free socket buffer */
-	kfree(skb);
+	skb_freemem(skb);
 }
 
 /*

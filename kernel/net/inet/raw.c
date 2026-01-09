@@ -1,6 +1,5 @@
 #include <net/sock.h>
 #include <net/inet/net.h>
-#include <net/inet/ethernet.h>
 #include <net/inet/ip.h>
 #include <proc/sched.h>
 #include <uio.h>
@@ -61,11 +60,8 @@ static int raw_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	if (!skb)
  		return err;
 
-	/* get IP header */
-	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
-
 	/* get message */
-	buf = skb->nh.ip_header + sk->msg_position;
+	buf = (void *) skb->h.raw + sk->msg_position;
 	copied = (void *) skb->end - buf;
 	if (size < copied) {
 		copied = size;

@@ -1,7 +1,6 @@
 #include <net/sock.h>
 #include <net/inet/tcp.h>
 #include <net/inet/net.h>
-#include <net/inet/ethernet.h>
 #include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
@@ -338,12 +337,6 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	/* get first message */
 	skb = skb_dequeue(&sk->receive_queue);
 
-	/* get IP header */
-	skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
-
-	/* get TCP header */
-	skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
-
 	/* get message */
 	buf = tcp_data(skb) + sk->msg_position;
 	len = tcp_data_length(skb) - sk->msg_position;
@@ -456,12 +449,6 @@ static struct sk_buff *tcp_find_established(struct sock *sk)
 
 	/* find a SYN message */
 	do {
-		/* get IP header */
-		skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
-
-		/* get TCP header */
-		skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
-
 		/* SYN message */
 		if (!skb->h.tcp_header->syn)
 			return skb;
@@ -515,11 +502,6 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new, int flags)
 
 		/* move buffers to new socket */
 		while ((skb = skb_dequeue(&sk->receive_queue)) != NULL) {
-			/* decode socket buffer */
-			skb->nh.ip_header = (struct ip_header *) (skb->head + sizeof(struct ethernet_header));
-			skb->h.tcp_header = (struct tcp_header *) (skb->head + sizeof(struct ethernet_header) + sizeof(struct ip_header));
-
-			/* move socket buffer */
 			if (sk_new->protinfo.af_inet.dst_sin.sin_port == skb->h.tcp_header->src_port
 				&& sk_new->protinfo.af_inet.dst_sin.sin_addr == skb->nh.ip_header->src_addr)
 				skb_queue_tail(&sk_new->receive_queue, skb);

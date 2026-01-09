@@ -18,17 +18,19 @@ struct sk_buff {
 	struct sk_buff_head *			list;
 	struct sock *				sk;
 	struct net_device *			dev;
-	struct {
+	int					count;
+	struct sk_buff *			data_skb;
+	union {
 		struct ethernet_header *	eth_header;
 		uint8_t *			raw;
 	} hh;
-	struct {
+	union {
 		struct icmp_header *		icmp_header;
 		struct udp_header *		udp_header;
 		struct tcp_header *		tcp_header;
 		uint8_t *			raw;
 	} h;
-	struct {
+	union {
 		struct arp_header *		arp_header;
 		struct ip_header *		ip_header;
 		uint8_t *			raw;
