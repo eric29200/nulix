@@ -16,16 +16,6 @@ void ip_receive(struct sk_buff *skb)
 }
 
 /*
- * Get IP route.
- */
-uint32_t ip_route(struct net_device *dev, const uint32_t dest_ip)
-{
-	return (dev->ip_addr & dev->ip_netmask) == (dest_ip & dev->ip_netmask)
-		? dest_ip
-		: dev->ip_route;
-}
-
-/*
  * Build and transmit an IP packet.
  */
 int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag,

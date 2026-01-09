@@ -34,6 +34,5 @@ struct ip_header {
 int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag,
 		  size_t size, uint32_t dest_ip);
 void ip_receive(struct sk_buff *skb);
-uint32_t ip_route(struct net_device *dev, const uint32_t dest_ip);
 
 #endif
