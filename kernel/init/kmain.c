@@ -262,6 +262,10 @@ static void kinit()
 	if (init_devpts_fs())
 		panic("Cannot register devpts file system");
 
+	/* init network protocols */
+	printf("[Kernel] Init network protocols\n");
+	init_proto();
+
 	/* init network devices */
 	printf("[Kernel] Network devices Init\n");
 	if (init_net_dev())
@@ -333,10 +337,6 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	/* init block buffers */
 	printf("[Kernel] Block buffers init\n");
 	init_buffer();
-
-	/* init network protocols */
-	printf("[Kernel] Init network protocols\n");
-	init_proto();
 
 	/* init IPC resources */
 	printf("[Kernel] IPC resources init\n");

@@ -1,7 +1,9 @@
 #include <net/sock.h>
 #include <net/inet/ip.h>
 #include <net/inet/net.h>
+#include <net/inet/route.h>
 #include <net/if.h>
+#include <fs/proc_fs.h>
 #include <drivers/net/rtl8139.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
@@ -359,16 +361,13 @@ static int inet_setsockopt(struct socket *sock, int level, int optname, void *op
 }
 
 /*
- * Ioctl on a INET socket.
+ * INET device ioctl.
  */
-static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
+static int devinet_ioctl(int cmd, unsigned long arg)
 {
 	struct ifreq *ifr = (struct ifreq *) arg;
 	struct net_device *net_dev;
 	struct sockaddr_in *sin;
-
-	/* unused socket */
-	UNUSED(sock);
 
 	/* get network device */
 	net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
@@ -408,6 +407,27 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 		case SIOCSIFNETMASK:
 			net_dev->ip_netmask = sin->sin_addr;
 			return 0;
+		default:
+			return -ENOIOCTLCMD;
+	}
+}
+
+/*
+ * Ioctl on a INET socket.
+ */
+static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
+{
+	/* unused socket */
+	UNUSED(sock);
+
+	switch (cmd) {
+		case SIOCGIFADDR:
+		case SIOCGIFNETMASK:
+		case SIOCSIFADDR:
+		case SIOCSIFNETMASK:
+			return devinet_ioctl(cmd, arg);
+		case SIOCADDRT:
+			return ip_rt_ioctl(cmd, (void *) arg);
 		default:
 			return -ENOIOCTLCMD;
 	}
@@ -509,4 +529,7 @@ static struct net_proto_family inet_family_ops = {
 void inet_proto_init()
 {
 	sock_register(&inet_family_ops);
+
+	/* register net/route procfs entry */
+	create_proc_read_entry("route", 0, proc_net, route_read_proc);
 }
