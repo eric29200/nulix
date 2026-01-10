@@ -1,6 +1,7 @@
 #include <net/sock.h>
 #include <net/inet/tcp.h>
 #include <net/inet/net.h>
+#include <net/inet/ethernet.h>
 #include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
