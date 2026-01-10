@@ -32,12 +32,74 @@ static void arp_build_header(struct arp_header *arp_header, uint16_t op_code,
 }
 
 /*
+ * Extract MAC/IP address relation from an ARP packet.
+ */
+static void arp_add_table(struct arp_header *arp_header)
+{
+	int i;
+
+	/* update MAC/IP addresses relation */
+	for (i = 0; i < arp_table_idx; i++) {
+		if (memcmp(arp_table[i].mac_addr, arp_header->src_hardware_addr, 6) == 0) {
+			arp_table[i].ip_addr = arp_header->src_protocol_addr;
+			return;
+		}
+	}
+
+	/* add MAC/IP adresses relation */
+	if (i >= arp_table_idx) {
+		memcpy(arp_table[arp_table_idx].mac_addr, arp_header->src_hardware_addr, 6);
+		arp_table[arp_table_idx].ip_addr = arp_header->src_protocol_addr;
+
+		/* update ARP table index */
+		if (++arp_table_idx >= ARP_TABLE_SIZE)
+			arp_table_idx = 0;
+	}
+}
+
+/*
+ * Reply to an ARP request.
+ */
+static void arp_reply_request(struct sk_buff *skb)
+{
+	struct sk_buff *skb_reply;
+
+	/* check IP address asked is us */
+	if (skb->dev->ip_addr != skb->nh.arp_header->dst_protocol_addr)
+		return;
+
+	/* allocate reply buffer */
+	skb_reply = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct arp_header));
+	if (!skb_reply)
+		return;
+
+	/* build ethernet header */
+	skb_reply->hh.eth_header = (struct ethernet_header *) skb_put(skb_reply, sizeof(struct ethernet_header));
+	ethernet_build_header(skb_reply->hh.eth_header, skb->dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
+
+	/* build arp header */
+	skb_reply->nh.arp_header = (struct arp_header *) skb_put(skb_reply, sizeof(struct arp_header));
+	arp_build_header(skb_reply->nh.arp_header, ARP_REPLY, skb->dev->mac_addr, skb->dev->ip_addr,
+			 skb->nh.arp_header->src_hardware_addr, skb->nh.arp_header->src_protocol_addr);
+
+	/* transmit reply */
+	net_transmit(skb->dev, skb_reply);
+}
+
+/*
  * Receive/decode an ARP packet.
  */
 void arp_receive(struct sk_buff *skb)
 {
+	/* decode ARP header */
 	skb->nh.arp_header = (struct arp_header *) skb->data;
 	skb_pull(skb, sizeof(struct arp_header));
+
+	/* reply to ARP request or add arp table entry */
+	if (ntohs(skb->nh.arp_header->opcode) == ARP_REQUEST)
+		arp_reply_request(skb);
+	else if (ntohs(skb->nh.arp_header->opcode) == ARP_REPLY)
+		arp_add_table(skb->nh.arp_header);
 }
 
 /*
@@ -80,59 +142,4 @@ struct arp_table_entry *arp_lookup(struct net_device *dev, uint32_t ip_addr, int
 	}
 
 	return NULL;
-}
-
-/*
- * Extract MAC/IP address relation from an ARP packet.
- */
-void arp_add_table(struct arp_header *arp_header)
-{
-	int i;
-
-	/* update MAC/IP addresses relation */
-	for (i = 0; i < arp_table_idx; i++) {
-		if (memcmp(arp_table[i].mac_addr, arp_header->src_hardware_addr, 6) == 0) {
-			arp_table[i].ip_addr = arp_header->src_protocol_addr;
-			return;
-		}
-	}
-
-	/* add MAC/IP adresses relation */
-	if (i >= arp_table_idx) {
-		memcpy(arp_table[arp_table_idx].mac_addr, arp_header->src_hardware_addr, 6);
-		arp_table[arp_table_idx].ip_addr = arp_header->src_protocol_addr;
-
-		/* update ARP table index */
-		if (++arp_table_idx >= ARP_TABLE_SIZE)
-			arp_table_idx = 0;
-	}
-}
-
-/*
- * Reply to an ARP request.
- */
-void arp_reply_request(struct sk_buff *skb)
-{
-	struct sk_buff *skb_reply;
-
-	/* check IP address asked is us */
-	if (skb->dev->ip_addr != skb->nh.arp_header->dst_protocol_addr)
-		return;
-
-	/* allocate reply buffer */
-	skb_reply = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct arp_header));
-	if (!skb_reply)
-		return;
-
-	/* build ethernet header */
-	skb_reply->hh.eth_header = (struct ethernet_header *) skb_put(skb_reply, sizeof(struct ethernet_header));
-	ethernet_build_header(skb_reply->hh.eth_header, skb->dev->mac_addr, broadcast_mac_addr, ETHERNET_TYPE_ARP);
-
-	/* build arp header */
-	skb_reply->nh.arp_header = (struct arp_header *) skb_put(skb_reply, sizeof(struct arp_header));
-	arp_build_header(skb_reply->nh.arp_header, ARP_REPLY, skb->dev->mac_addr, skb->dev->ip_addr,
-			 skb->nh.arp_header->src_hardware_addr, skb->nh.arp_header->src_protocol_addr);
-
-	/* transmit reply */
-	net_transmit(skb->dev, skb_reply);
 }

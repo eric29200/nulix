@@ -47,46 +47,10 @@ void skb_handle(struct sk_buff *skb)
 	/* handle packet */
 	switch(htons(skb->hh.eth_header->type)) {
 		case ETHERNET_TYPE_ARP:
-			/* decode ARP header */
 			arp_receive(skb);
-
-			/* reply to ARP request or add arp table entry */
-			if (ntohs(skb->nh.arp_header->opcode) == ARP_REQUEST)
-				arp_reply_request(skb);
-			else if (ntohs(skb->nh.arp_header->opcode) == ARP_REPLY)
-				arp_add_table(skb->nh.arp_header);
-
 			break;
 		case ETHERNET_TYPE_IP:
-			/* decode IP header */
 			ip_receive(skb);
-
-			/* handle IPv4 only */
-			if (skb->nh.ip_header->version != 4)
-				break;
-
-			/* check if packet is adressed to us */
-			if (skb->dev->ip_addr != skb->nh.ip_header->dst_addr)
-				break;
-
-			/* go to next layer */
-			switch (skb->nh.ip_header->protocol) {
-				case IP_PROTO_UDP:
-					udp_receive(skb);
-					break;
-				case IP_PROTO_TCP:
-					tcp_receive(skb);
-					break;
-				case IP_PROTO_ICMP:
-					icmp_receive(skb);
-					break;
-				default:
-					break;
-			}
-
-			/* deliver message to sockets */
-			net_deliver_skb(skb);
-
 			break;
 		default:
 			break;

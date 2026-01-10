@@ -36,7 +36,5 @@ struct arp_table_entry {
 
 void arp_receive(struct sk_buff *skb);
 struct arp_table_entry *arp_lookup(struct net_device *dev, uint32_t ip_addr, int block);
-void arp_add_table(struct arp_header *arp_header);
-void arp_reply_request(struct sk_buff *skb);
 
 #endif
