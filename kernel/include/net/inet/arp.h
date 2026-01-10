@@ -6,7 +6,6 @@
 #define ARP_REQUEST		1
 #define ARP_REPLY		2
 
-#define ARP_TABLE_SIZE		512
 #define ARP_REQUEST_WAIT_MS	200
 
 #define ARPHRD_ETHER 		1
@@ -26,15 +25,7 @@ struct arp_header {
 	uint32_t	dst_protocol_addr;
 } __attribute__ ((packed));
 
-/*
- * ARP table entry.
- */
-struct arp_table_entry {
-	uint8_t		mac_addr[6];
-	uint32_t	ip_addr;
-} __attribute__ ((packed));
-
 void arp_receive(struct sk_buff *skb);
-struct arp_table_entry *arp_lookup(struct net_device *dev, uint32_t ip_addr, int block);
+int arp_find(struct net_device *dev, uint32_t ip_addr, uint8_t *mac_addr);
 
 #endif

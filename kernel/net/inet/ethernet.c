@@ -25,13 +25,7 @@ void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_
  */
 void ethernet_rebuild_header(struct ethernet_header *eth_header, struct net_device *dev, uint32_t daddr)
 {
-	struct arp_table_entry *arp_entry;
-
-	/* find destination address */
-	arp_entry = arp_lookup(dev, daddr, 1);
-
-	/* copy destination address */
-	memcpy(eth_header->dst_mac_addr, arp_entry->mac_addr, 6);
+	arp_find(dev, daddr, eth_header->dst_mac_addr);
 }
 
 /*
