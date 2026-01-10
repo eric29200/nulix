@@ -31,8 +31,7 @@ struct ip_header {
 	uint32_t	dst_addr;
 } __attribute__ ((packed));
 
-int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag,
-		  size_t size, uint32_t dest_ip);
+int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag, size_t size, uint32_t daddr);
 void ip_receive(struct sk_buff *skb);
 
 #endif

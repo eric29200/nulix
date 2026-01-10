@@ -55,7 +55,6 @@ struct net_device {
 	uint8_t			mac_addr[6];
 	uint32_t		ip_addr;
 	uint32_t		ip_netmask;
-	uint32_t		ip_route;
 	uint16_t		type;
 	uint16_t		flags;
 	uint32_t		mtu;

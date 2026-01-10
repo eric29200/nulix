@@ -146,6 +146,29 @@ static int ip_rt_new(struct rtentry *rt)
 }
 
 /*
+ * Find a route.
+ */
+struct route *ip_rt_route(uint32_t daddr)
+{
+	struct route *rt, *res_gw = NULL;
+	struct list_head *pos;
+
+	/* find local route or gateway */
+	list_for_each(pos, &rt_entries) {
+		rt = list_entry(pos, struct route, rt_list);
+
+		if ((rt->rt_dst & rt->rt_mask) == (daddr & rt->rt_mask)) {
+			if (rt->rt_flags & RTF_GATEWAY)
+				res_gw = rt;
+			else
+				return rt;
+		}
+	}
+
+	return res_gw;
+}
+
+/*
  * Route ioctl.
  */
 int ip_rt_ioctl(int cmd, void *arg)
