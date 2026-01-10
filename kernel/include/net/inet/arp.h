@@ -6,8 +6,6 @@
 #define ARP_REQUEST		1
 #define ARP_REPLY		2
 
-#define ARP_REQUEST_WAIT_MS	200
-
 #define ARPHRD_ETHER 		1
 
 /*
@@ -26,6 +24,6 @@ struct arp_header {
 } __attribute__ ((packed));
 
 void arp_receive(struct sk_buff *skb);
-int arp_find(struct net_device *dev, uint32_t ip_addr, uint8_t *mac_addr);
+int arp_find(struct net_device *dev, uint32_t ip_addr, uint8_t *mac_addr, struct sk_buff *skb);
 
 #endif

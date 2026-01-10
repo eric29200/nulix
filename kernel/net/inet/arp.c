@@ -13,7 +13,9 @@ struct arp_table {
 	struct net_device *	dev;
 	uint8_t			mac_addr[6];
 	uint32_t		ip_addr;
+	uint8_t			resolved;
 	struct list_head	list;
+	struct sk_buff_head 	skb_queue;
 };
 
 /* ARP table (relation between MAC/IP addresses) */
@@ -55,6 +57,7 @@ static struct arp_table *arp_alloc_entry()
 
 	/* init entry */
 	memset(entry, 0, sizeof(struct arp_table));
+	skb_queue_head_init(&entry->skb_queue);
 
 	return entry;
 }
@@ -82,11 +85,20 @@ static struct arp_table *arp_lookup(struct net_device *dev, uint32_t ip_addr)
 static int arp_update(struct net_device *dev, uint32_t ip_addr, uint8_t *mac_addr)
 {
 	struct arp_table *entry;
+	struct sk_buff *skb;
 
 	/* update MAC/IP addresses relation */
 	entry = arp_lookup(dev, ip_addr);
 	if (entry) {
 		memcpy(entry->mac_addr, mac_addr, 6);
+		entry->resolved = 1;
+
+		/* retransmit packets waiting for mac address */
+		while ((skb = skb_dequeue(&entry->skb_queue)) != NULL) {
+			memcpy(skb->hh.eth_header->dst_mac_addr, entry->mac_addr, 6);
+			net_transmit(dev, skb);
+		}
+
 		return 0;
 	}
 
@@ -98,6 +110,7 @@ static int arp_update(struct net_device *dev, uint32_t ip_addr, uint8_t *mac_add
 	/* set entry */
 	entry->dev = dev;
 	entry->ip_addr = ip_addr;
+	entry->resolved = 1;
 	memcpy(entry->mac_addr, mac_addr, 6);
 	list_add_tail(&entry->list, &arp_entries);
 
@@ -178,26 +191,40 @@ static int arp_send(struct net_device *dev, uint32_t ip_addr)
 /*
  * Resolve an IP address.
  */
-int arp_find(struct net_device *dev, uint32_t ip_addr, uint8_t *mac_addr)
+int arp_find(struct net_device *dev, uint32_t ip_addr, uint8_t *mac_addr, struct sk_buff *skb)
 {
 	struct arp_table *entry;
 	int ret;
 
-	for (;;) {
-		/* try to find address in cache */
-		entry = arp_lookup(dev, ip_addr);
-		if (entry) {
-			memcpy(mac_addr, entry->mac_addr, 6);
-			return 0;
-		}
-
-		/* else send an ARP request */
-		ret = arp_send(dev, ip_addr);
-		if (ret)
-			return ret;
-
-		/* wait for response */
-		current_task->state = TASK_SLEEPING;
-		schedule_timeout(ms_to_jiffies(ARP_REQUEST_WAIT_MS));
+	/* try to find address in cache */
+	entry = arp_lookup(dev, ip_addr);
+	if (entry && entry->resolved) {
+		memcpy(mac_addr, entry->mac_addr, 6);
+		return 0;
 	}
+
+	/* ARP entry exists but address is not resolved : send a request */
+	if (entry)
+		goto request;
+
+	/* allocate a new entry */
+	entry = arp_alloc_entry();
+	if (!entry)
+		return -ENOMEM;
+
+	/* set entry */
+	entry->dev = dev;
+	entry->ip_addr = ip_addr;
+	list_add_tail(&entry->list, &arp_entries);
+
+request:
+	/* send an ARP request */
+	ret = arp_send(dev, ip_addr);
+	if (ret)
+		return ret;
+
+	/* queue socket buffer */
+	skb_queue_tail(&entry->skb_queue, skb);
+
+	return 1;
 }

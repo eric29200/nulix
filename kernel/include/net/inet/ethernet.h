@@ -21,6 +21,6 @@ struct ethernet_header {
 
 void ethernet_receive(struct sk_buff *skb);
 void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_addr, uint8_t *dst_mac_addr, uint16_t type);
-void ethernet_rebuild_header(struct ethernet_header *eth_header, struct net_device *dev, uint32_t daddr);
+int ethernet_rebuild_header(struct net_device *dev, uint32_t daddr, struct sk_buff *skb);
 
 #endif

@@ -55,6 +55,7 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 	struct ip_header *iph;
 	struct sk_buff *skb;
 	struct route *rt;
+	int ret;
 
 	/* find route */
 	rt = ip_rt_route(daddr);
@@ -91,10 +92,15 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 	getfrag(frag, ((char *) iph) + sizeof(struct ip_header), size - sizeof(struct ip_header));
 
 	/* rebuild ethernet header = find destination mac address */
-	ethernet_rebuild_header(skb->hh.eth_header, rt->rt_dev, rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr);
+	ret = ethernet_rebuild_header(rt->rt_dev, rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr, skb);
 
 	/* transmit message */
-	net_transmit(rt->rt_dev, skb);
+	if (ret == 0)
+		net_transmit(rt->rt_dev, skb);
+
+	/* on error, free socket buffer */
+	if (ret < 0)
+		skb_free(skb);
 
 	return 0;
 }

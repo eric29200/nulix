@@ -23,9 +23,9 @@ void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_
 /*
  * Rebuild ethernet header = find destination address.
  */
-void ethernet_rebuild_header(struct ethernet_header *eth_header, struct net_device *dev, uint32_t daddr)
+int ethernet_rebuild_header(struct net_device *dev, uint32_t daddr, struct sk_buff *skb)
 {
-	arp_find(dev, daddr, eth_header->dst_mac_addr);
+	return arp_find(dev, daddr, skb->hh.eth_header->dst_mac_addr, skb);
 }
 
 /*
