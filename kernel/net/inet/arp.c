@@ -258,7 +258,7 @@ void arp_receive(struct sk_buff *skb)
 	dest_ip = *((uint32_t *) buf);
 
 	/* reply to ARP request or add arp table entry */
-	if (ntohs(arph->opcode) == ARP_REQUEST && dev->ip_addr != dest_ip)
+	if (ntohs(arph->opcode) == ARP_REQUEST && dev->ip_addr == dest_ip)
 	 	arp_send(dev, ARP_REPLY, src_hw, src_ip);
 	else if (ntohs(arph->opcode) == ARP_REPLY)
 		arp_update(dev, src_hw, src_ip);
