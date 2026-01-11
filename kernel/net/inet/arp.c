@@ -6,6 +6,9 @@
 #include <stderr.h>
 #include <string.h>
 
+#define ARP_RES_TIME			(5 * HZ)
+#define ARP_MAX_TRIES			3
+
 /*
  * ARP table entry.
  */
@@ -16,6 +19,8 @@ struct arp_table {
 	uint32_t			flags;
 	time_t				last_used;
 	time_t				last_updated;
+	int				retries;
+	struct timer_event		timer;
 	struct list_head		list;
 	struct sk_buff_head 		skb_queue;
 };
@@ -26,6 +31,98 @@ static LIST_HEAD(arp_entries);
 /* broadcast MAC address */
 static uint8_t broadcast_hw_addr[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 static uint8_t zero_hw_addr[] = { 0, 0, 0, 0, 0, 0 };
+
+/*
+ * Send an ARP request.
+ */
+static int arp_send(struct net_device *dev, int type, uint8_t *dest_hw, uint32_t dest_ip)
+{
+	struct arp_header *arph;
+	struct sk_buff *skb;
+	uint8_t *buf;
+
+	/* else send an ARP request */
+	skb = skb_alloc(dev->hard_header_len + sizeof(struct arp_header) + 2 * (dev->addr_len + 4));
+	if (!skb)
+		return -ENOMEM;
+
+	/* build ethernet header */
+	dev->hard_header(skb, ETHERNET_TYPE_ARP, dev->hw_addr, broadcast_hw_addr);
+
+	/* build ARP header */
+	skb->nh.arp_header = arph = (struct arp_header *) skb_put(skb, sizeof(struct arp_header) + 2 * (dev->addr_len + 4));
+	arph->hw_type = htons(HARDWARE_TYPE_ETHERNET);
+	arph->protocol = htons(ETHERNET_TYPE_IP);
+	arph->hw_addr_len = dev->addr_len;
+	arph->prot_addr_len = 4;
+	arph->opcode = htons(type);
+
+	/* copy source hardware address */
+	buf = (uint8_t *) arph + sizeof(struct arp_header);
+	memcpy(buf, dev->hw_addr, dev->addr_len);
+	buf += dev->addr_len;
+
+	/* copy source IP address */
+	memcpy(buf, &dev->ip_addr, 4);
+	buf += 4;
+
+	/* copy destination hardware address */
+	memcpy(buf, dest_hw, dev->addr_len);
+	buf += dev->addr_len;
+
+	/* copy destination IP address */
+	memcpy(buf, &dest_ip, 4);
+
+	/* transmit request */
+	net_transmit(dev, skb);
+
+	return 0;
+}
+
+/*
+ * Purge send queue.
+ */
+static void arp_purge_send_queue(struct arp_table *entry)
+{
+	struct sk_buff *skb;
+
+	while ((skb = skb_dequeue(&entry->skb_queue)) != NULL)
+		skb_free(skb);
+}
+
+/*
+ * Free an ARP entry.
+ */
+static void arp_free_entry(struct arp_table *entry)
+{
+	arp_purge_send_queue(entry);
+	del_timer(&entry->timer);
+	list_del(&entry->list);
+	kfree(entry);
+}
+
+/*
+ * Handle a name resolution expiration.
+ */
+static void arp_expire_request(void *arg)
+{
+	struct arp_table *entry = (struct arp_table *) arg;
+	struct net_device *dev = entry->dev;
+
+	/* delete timer */
+	del_timer(&entry->timer);
+
+	/* retry */
+	if (entry->last_updated && --entry->retries > 0) {
+		entry->timer.expires = jiffies + ARP_RES_TIME;
+		add_timer(&entry->timer);
+		arp_send(dev, ARP_REQUEST, zero_hw_addr, entry->ip_addr);
+		return;
+	}
+
+	/* host is really dead */
+	arp_free_entry(entry);
+}
 
 /*
  * Allocate a new ARP entry.
@@ -43,6 +140,7 @@ static struct arp_table *arp_alloc_entry()
 	memset(entry, 0, sizeof(struct arp_table));
 	entry->last_updated = entry->last_used = jiffies;
 	skb_queue_head_init(&entry->skb_queue);
+	init_timer(&entry->timer, arp_expire_request, entry, 0);
 
 	return entry;
 }
@@ -96,6 +194,8 @@ static int arp_update(struct net_device *dev, uint8_t *hw_addr, uint32_t ip_addr
 	/* update MAC/IP addresses relation */
 	entry = arp_lookup(dev, ip_addr);
 	if (entry) {
+		del_timer(&entry->timer);
+
 		/* update entry if it's not a permanent entry */
 		if (!(entry->flags & ATF_PERM)) {
 			entry->last_updated = jiffies;
@@ -120,55 +220,9 @@ static int arp_update(struct net_device *dev, uint8_t *hw_addr, uint32_t ip_addr
 	entry->dev = dev;
 	entry->ip_addr = ip_addr;
 	entry->flags = ATF_COM;
+	entry->last_updated = entry->last_used = jiffies;
 	memcpy(entry->hw_addr, hw_addr, dev->addr_len);
 	list_add_tail(&entry->list, &arp_entries);
-
-	return 0;
-}
-
-/*
- * Send an ARP request.
- */
-static int arp_send(struct net_device *dev, int type, uint8_t *dest_hw, uint32_t dest_ip)
-{
-	struct arp_header *arph;
-	struct sk_buff *skb;
-	uint8_t *buf;
-
-	/* else send an ARP request */
-	skb = skb_alloc(dev->hard_header_len + sizeof(struct arp_header) + 2 * (dev->addr_len + 4));
-	if (!skb)
-		return -ENOMEM;
-
-	/* build ethernet header */
-	dev->hard_header(skb, ETHERNET_TYPE_ARP, dev->hw_addr, broadcast_hw_addr);
-
-	/* build ARP header */
-	skb->nh.arp_header = arph = (struct arp_header *) skb_put(skb, sizeof(struct arp_header) + 2 * (dev->addr_len + 4));
-	arph->hw_type = htons(HARDWARE_TYPE_ETHERNET);
-	arph->protocol = htons(ETHERNET_TYPE_IP);
-	arph->hw_addr_len = dev->addr_len;
-	arph->prot_addr_len = 4;
-	arph->opcode = htons(type);
-
-	/* copy source hardware address */
-	buf = (uint8_t *) arph + sizeof(struct arp_header);
-	memcpy(buf, dev->hw_addr, dev->addr_len);
-	buf += dev->addr_len;
-
-	/* copy source IP address */
-	memcpy(buf, &dev->ip_addr, 4);
-	buf += 4;
-
-	/* copy destination hardware address */
-	memcpy(buf, dest_hw, dev->addr_len);
-	buf += dev->addr_len;
-
-	/* copy destination IP address */
-	memcpy(buf, &dest_ip, 4);
-
-	/* transmit request */
-	net_transmit(dev, skb);
 
 	return 0;
 }
@@ -232,6 +286,9 @@ static struct arp_table *arp_new_entry(struct net_device *dev, uint32_t ip_addr,
 		skb_queue_tail(&entry->skb_queue, skb);
 
 	/* send an ARP request */
+	entry->timer.expires = jiffies + ARP_RES_TIME;
+	entry->retries = ARP_MAX_TRIES;
+	add_timer(&entry->timer);
 	arp_send(dev, ARP_REQUEST, zero_hw_addr, ip_addr);
 
 	return entry;
