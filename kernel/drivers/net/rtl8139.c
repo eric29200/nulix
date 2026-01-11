@@ -4,6 +4,7 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <net/inet/net.h>
+#include <net/inet/ethernet.h>
 #include <net/inet/arp.h>
 #include <net/sk_buff.h>
 #include <mm/paging.h>
@@ -176,6 +177,9 @@ int init_rtl8139()
 	rtl8139_net_dev = register_net_device(io_base, ARPHRD_ETHER);
 	if (!rtl8139_net_dev)
 		return -ENOSPC;
+
+	/* set ethernet device */
+	rtl8139_net_dev->addr_len = ETHERNET_ALEN;
 
 	/* allocate private data */
 	rtl8139_net_dev->private = tp = (struct rtl8139_private *) kmalloc(sizeof(struct rtl8139_private));

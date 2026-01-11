@@ -13,11 +13,11 @@ void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_
 	eth_header->type = htons(type);
 
 	/* copy source address */
-	memcpy(eth_header->src_mac_addr, src_mac_addr, 6);
+	memcpy(eth_header->src_mac_addr, src_mac_addr, ETHERNET_ALEN);
 
 	/* copy destination address */
 	if (dst_mac_addr)
-		memcpy(eth_header->dst_mac_addr, dst_mac_addr, 6);
+		memcpy(eth_header->dst_mac_addr, dst_mac_addr, ETHERNET_ALEN);
 }
 
 /*

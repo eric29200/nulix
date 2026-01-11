@@ -6,6 +6,7 @@
 #include <proc/timer.h>
 
 #define NR_NET_DEVICES			4
+#define MAX_ADDR_LEN			7
 
 #define htons(s)			((((s) & 0xFF) << 8) | (((s) & 0xFF00) >> 8))
 #define htonl(l)			((((l) & 0xFF) << 24) | (((l) & 0xFF00) << 8) | (((l) & 0xFF0000) >> 8) | (((l) & 0xFF000000) >> 24))
@@ -55,6 +56,7 @@ struct net_device {
 	uint8_t			mac_addr[6];
 	uint32_t		ip_addr;
 	uint32_t		ip_netmask;
+	size_t			addr_len;
 	uint16_t		type;
 	uint16_t		flags;
 	uint32_t		mtu;
