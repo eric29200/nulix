@@ -13,7 +13,9 @@ struct arp_table {
 	struct net_device *		dev;
 	uint8_t				hw_addr[MAX_ADDR_LEN];
 	uint32_t			ip_addr;
-	uint8_t				resolved;
+	uint32_t			flags;
+	time_t				last_used;
+	time_t				last_updated;
 	struct list_head		list;
 	struct sk_buff_head 		skb_queue;
 };
@@ -39,6 +41,7 @@ static struct arp_table *arp_alloc_entry()
 
 	/* init entry */
 	memset(entry, 0, sizeof(struct arp_table));
+	entry->last_updated = entry->last_used = jiffies;
 	skb_queue_head_init(&entry->skb_queue);
 
 	return entry;
@@ -68,17 +71,17 @@ static void arp_send_queue(struct arp_table *entry)
 {
 	struct net_device *dev = entry->dev;
 	struct sk_buff *skb;
-	int ret;
 
+	/* check if entry is up to date */
+	if (!(entry->flags & ATF_COM))
+		return;
+
+	/* send waiting packets */
 	while ((skb = skb_dequeue(&entry->skb_queue)) != NULL) {
 		/* rebuild hard header */
-		ret = dev->rebuild_header(dev, entry->ip_addr, skb);
-		if (ret) {
-			skb_free(skb);
-			continue;
-		}
+		dev->rebuild_header(dev, entry->ip_addr, skb);
 
-		/* transmit packet */
+		/* transmit packet on success */
 		net_transmit(dev, skb);
 	}
 }
@@ -93,13 +96,19 @@ static int arp_update(struct net_device *dev, uint8_t *hw_addr, uint32_t ip_addr
 	/* update MAC/IP addresses relation */
 	entry = arp_lookup(dev, ip_addr);
 	if (entry) {
-		memcpy(entry->hw_addr, hw_addr, dev->addr_len);
-		entry->resolved = 1;
+		/* update entry if it's not a permanent entry */
+		if (!(entry->flags & ATF_PERM)) {
+			entry->last_updated = jiffies;
+			memcpy(entry->hw_addr, hw_addr, dev->addr_len);
+		}
 
-		/* retransmit packets waiting for mac address */
-		arp_send_queue(entry);
+		/* new entry : mark it resolved and send waiting packets */
+		if (!(entry->flags & ATF_COM)) {
+			entry->flags |= ATF_COM;
+			arp_send_queue(entry);
+		}
 
-		return 0;
+		return 1;
 	}
 
 	/* allocate a new entry */
@@ -110,7 +119,7 @@ static int arp_update(struct net_device *dev, uint8_t *hw_addr, uint32_t ip_addr
 	/* set entry */
 	entry->dev = dev;
 	entry->ip_addr = ip_addr;
-	entry->resolved = 1;
+	entry->flags = ATF_COM;
 	memcpy(entry->hw_addr, hw_addr, dev->addr_len);
 	list_add_tail(&entry->list, &arp_entries);
 
@@ -202,42 +211,64 @@ void arp_receive(struct sk_buff *skb)
 }
 
 /*
- * Resolve an IP address.
+ * Create a new ARP entry.
  */
-int arp_find(struct net_device *dev, uint8_t *hw_addr, uint32_t ip_addr, struct sk_buff *skb)
+static struct arp_table *arp_new_entry(struct net_device *dev, uint32_t ip_addr, struct sk_buff *skb)
 {
 	struct arp_table *entry;
-	int ret;
-
-	/* try to find address in cache */
-	entry = arp_lookup(dev, ip_addr);
-	if (entry && entry->resolved) {
-		memcpy(hw_addr, entry->hw_addr, dev->addr_len);
-		return 0;
-	}
-
-	/* ARP entry exists but address is not resolved : send a request */
-	if (entry)
-		goto request;
 
 	/* allocate a new entry */
 	entry = arp_alloc_entry();
 	if (!entry)
-		return -ENOMEM;
+		return NULL;
 
 	/* set entry */
 	entry->dev = dev;
 	entry->ip_addr = ip_addr;
 	list_add_tail(&entry->list, &arp_entries);
 
-request:
-	/* send an ARP request */
-	ret = arp_send(dev, ARP_REQUEST, zero_hw_addr, ip_addr);
-	if (ret)
-		return ret;
-
 	/* queue socket buffer */
-	skb_queue_tail(&entry->skb_queue, skb);
+	if (skb)
+		skb_queue_tail(&entry->skb_queue, skb);
+
+	/* send an ARP request */
+	arp_send(dev, ARP_REQUEST, zero_hw_addr, ip_addr);
+
+	return entry;
+}
+
+/*
+ * Resolve an IP address.
+ */
+int arp_find(struct net_device *dev, uint8_t *hw_addr, uint32_t ip_addr, struct sk_buff *skb)
+{
+	struct arp_table *entry;
+
+	/* try to find address in cache */
+	entry = arp_lookup(dev, ip_addr);
+	if (entry) {
+		/* entry up to date */
+		if (entry->flags & ATF_COM) {
+			entry->last_used = jiffies;
+			memcpy(hw_addr, entry->hw_addr, dev->addr_len);
+			return 0;
+		}
+
+		/* else queue socket buffer, to send it later (or free skb if host is dead : last_updated = 0) */
+		if (skb) {
+			if (entry->last_updated)
+				skb_queue_tail(&entry->skb_queue, skb);
+			else
+				skb_free(skb);
+		}
+
+		return 1;
+	}
+
+	/* create a new ARP entry */
+	entry = arp_new_entry(dev, ip_addr, skb);
+	if (!entry && skb)
+		skb_free(skb);
 
 	return 1;
 }

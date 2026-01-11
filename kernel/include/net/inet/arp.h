@@ -8,6 +8,14 @@
 
 #define ARPHRD_ETHER 		1
 
+/* ARP flag values */
+#define ATF_COM			0x02		/* completed entry (ha valid) */
+#define	ATF_PERM		0x04		/* permanent entry */
+#define	ATF_PUBL		0x08		/* publish entry */
+#define	ATF_USETRAILERS		0x10		/* has requested trailers */
+#define ATF_NETMASK     	0x20            /* want to use a netmask (only for proxy entries) */
+
+
 /*
  * ARP header.
  */
