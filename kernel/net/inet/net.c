@@ -62,7 +62,7 @@ void skb_handle(struct sk_buff *skb)
  */
 struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 {
-	struct net_device *net_dev;
+	struct net_device *dev;
 	char tmp[32];
 	size_t len;
 
@@ -71,30 +71,30 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 		return NULL;
 
 	/* set net device */
-	net_dev = &net_devices[nr_net_devices];
-	net_dev->type = type;
-	net_dev->index = nr_net_devices + 1;
-	net_dev->io_base = io_base;
-	net_dev->flags = 0;
-	net_dev->mtu = 1500;
-	net_dev->tx_queue_len = 100;
-	memset(&net_dev->stats, 0, sizeof(struct net_device_stats));
+	dev = &net_devices[nr_net_devices];
+	dev->type = type;
+	dev->index = nr_net_devices + 1;
+	dev->io_base = io_base;
+	dev->flags = 0;
+	dev->mtu = 1500;
+	dev->tx_queue_len = 100;
+	memset(&dev->stats, 0, sizeof(struct net_device_stats));
 
 	/* set name */
 	len = sprintf(tmp, "eth%d", nr_net_devices);
 
 	/* allocate name */
-	net_dev->name = (char *) kmalloc(len + 1);
-	if (!net_dev->name)
+	dev->name = (char *) kmalloc(len + 1);
+	if (!dev->name)
 		return NULL;
 
 	/* set name */
-	memcpy(net_dev->name, tmp, len + 1);
+	memcpy(dev->name, tmp, len + 1);
 
 	/* update number of net devices */
 	nr_net_devices++;
 
-	return net_dev;
+	return dev;
 }
 
 /*
@@ -130,12 +130,12 @@ void net_handle(struct sk_buff *skb)
 /*
  * Transmit a network packet.
  */
-void net_transmit(struct net_device *net_dev, struct sk_buff *skb)
+void net_transmit(struct net_device *dev, struct sk_buff *skb)
 {
 	if (!skb)
 		return;
 
 	/* send and free packet */
-	net_dev->start_xmit(skb, net_dev);
+	dev->start_xmit(skb, dev);
 	skb_free(skb);
 }

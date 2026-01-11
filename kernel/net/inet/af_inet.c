@@ -179,6 +179,8 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 	struct sockaddr_in *src_sin;
 	struct sock *sk, *sk_tmp;
 	struct list_head *pos;
+	uint32_t saddr;
+	uint16_t sport;
 
 	/* unused address length */
 	UNUSED(addrlen);
@@ -190,6 +192,8 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 
 	/* get internet address */
 	src_sin = (struct sockaddr_in *) addr;
+	saddr = src_sin->sin_addr;
+	sport = src_sin->sin_port;
 
 	/* check if asked port is already mapped */
 	list_for_each(pos, &inet_sockets) {
@@ -200,20 +204,21 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 			continue;
 
 		/* already mapped */
-		if (src_sin->sin_port && src_sin->sin_port == sk->protinfo.af_inet.src_sin.sin_port)
+		if (sport && sport == sk->protinfo.af_inet.sport)
 			return -ENOSPC;
 	}
 
 	/* set default address */
-	if (!src_sin->sin_addr)
-		src_sin->sin_addr = sk->protinfo.af_inet.dev->ip_addr;
+	if (!saddr)
+		saddr = sk->protinfo.af_inet.dev->ip_addr;
 
 	/* allocate a dynamic port */
-	if (!src_sin->sin_port)
-		src_sin->sin_port = htons(get_next_free_port());
+	if (!sport)
+		sport = htons(get_next_free_port());
 
 	/* copy address */
-	memcpy(&sk->protinfo.af_inet.src_sin, src_sin, sizeof(struct sockaddr));
+	sk->protinfo.af_inet.saddr = saddr;
+	sk->protinfo.af_inet.sport = sport;
 
 	return 0;
 }
@@ -277,6 +282,7 @@ static int inet_shutdown(struct socket *sock, int how)
  */
 static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
+	struct sockaddr_in *sin = (struct sockaddr_in *) addr;
 	struct sock *sk;
 
 	/* unused address length */
@@ -288,10 +294,11 @@ static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t
 		return -EINVAL;
 
 	/* allocate a dynamic port */
-	sk->protinfo.af_inet.src_sin.sin_port = htons(get_next_free_port());
+	sk->protinfo.af_inet.sport = htons(get_next_free_port());
 
 	/* copy address */
-	memcpy(&sk->protinfo.af_inet.dst_sin, addr, sizeof(struct sockaddr));
+	sk->protinfo.af_inet.daddr = sin->sin_addr;
+	sk->protinfo.af_inet.dport = sin->sin_port;
 
 	/* connect not implemented */
 	if (!sk->protinfo.af_inet.prot || !sk->protinfo.af_inet.prot->connect)
@@ -319,11 +326,11 @@ static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 	*addrlen = sizeof(struct sockaddr_in);
 
 	if (peer) {
-		sin->sin_port = sk->protinfo.af_inet.dst_sin.sin_port;
-		sin->sin_addr = sk->protinfo.af_inet.dst_sin.sin_addr;
+		sin->sin_port = sk->protinfo.af_inet.dport;
+		sin->sin_addr = sk->protinfo.af_inet.daddr;
 	} else {
-		sin->sin_port = sk->protinfo.af_inet.src_sin.sin_port;
-		sin->sin_addr = sk->protinfo.af_inet.src_sin.sin_addr;
+		sin->sin_port = sk->protinfo.af_inet.sport;
+		sin->sin_addr = sk->protinfo.af_inet.saddr;
 	}
 
 	return 0;
@@ -367,12 +374,12 @@ static int inet_setsockopt(struct socket *sock, int level, int optname, void *op
 static int devinet_ioctl(int cmd, unsigned long arg)
 {
 	struct ifreq *ifr = (struct ifreq *) arg;
-	struct net_device *net_dev;
 	struct sockaddr_in *sin;
+	struct net_device *dev;
 
 	/* get network device */
-	net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
-	if (!net_dev)
+	dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
+	if (!dev)
 		return -EINVAL;
 
 	/* get address */
@@ -397,16 +404,16 @@ static int devinet_ioctl(int cmd, unsigned long arg)
 	/* do ioctl */
 	switch (cmd) {
 		case SIOCGIFADDR:
-			sin->sin_addr = net_dev->ip_addr;
+			sin->sin_addr = dev->ip_addr;
 			return 0;
 		case SIOCGIFNETMASK:
-		 	sin->sin_addr = net_dev->ip_netmask;
+		 	sin->sin_addr = dev->ip_netmask;
 			return 0;
 		case SIOCSIFADDR:
-			net_dev->ip_addr = sin->sin_addr;
+			dev->ip_addr = sin->sin_addr;
 			return 0;
 		case SIOCSIFNETMASK:
-			net_dev->ip_netmask = sin->sin_addr;
+			dev->ip_netmask = sin->sin_addr;
 			return 0;
 		default:
 			return -ENOIOCTLCMD;
@@ -502,7 +509,7 @@ static int inet_create(struct socket *sock, int protocol)
 
 	/* set socket */
 	memset(sk, 0, sizeof(struct sock));
-	sk->protinfo.af_inet.dev = rtl8139_get_net_device();
+	sk->protinfo.af_inet.dev = rtl8139_get_device();
 	sk->protocol = protocol;
 	sk->protinfo.af_inet.prot = prot;
 	sock->ops = &inet_ops;

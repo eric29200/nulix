@@ -103,13 +103,13 @@ static int tcp_send_skb(struct sock *sk, uint16_t flags, const struct msghdr *ms
 	int ret;
 
 	/* get destination IP */
-	dest_ip = sk->protinfo.af_inet.dst_sin.sin_addr;
+	dest_ip = sk->protinfo.af_inet.daddr;
 
 	/* build tcp header */
 	tfh.saddr = sk->protinfo.af_inet.dev->ip_addr;
 	tfh.daddr = dest_ip;
-	tfh.th.src_port = sk->protinfo.af_inet.src_sin.sin_port;
-	tfh.th.dst_port = sk->protinfo.af_inet.dst_sin.sin_port;
+	tfh.th.src_port = sk->protinfo.af_inet.sport;
+	tfh.th.dst_port = sk->protinfo.af_inet.dport;
 	tfh.th.seq = htonl(sk->protinfo.af_inet.seq_no);
 	tfh.th.ack_seq = htonl(sk->protinfo.af_inet.ack_no);
 	tfh.th.res1 = 0;
@@ -161,7 +161,7 @@ static int tcp_reply_ack(struct sock *sk, struct sk_buff *skb, uint16_t flags)
 	/* build tcp header */
 	tfh.saddr = sk->protinfo.af_inet.dev->ip_addr;
 	tfh.daddr = dest_ip;
-	tfh.th.src_port = sk->protinfo.af_inet.src_sin.sin_port;
+	tfh.th.src_port = sk->protinfo.af_inet.sport;
 	tfh.th.dst_port = skb->h.tcp_header->src_port;
 	tfh.th.seq = htonl(sk->protinfo.af_inet.seq_no);
 	tfh.th.ack_seq = htonl(sk->protinfo.af_inet.ack_no);
@@ -225,12 +225,12 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 		return -EINVAL;
 
 	/* check destination */
-	if (sk->protinfo.af_inet.src_sin.sin_port != skb->h.tcp_header->dst_port)
+	if (sk->protinfo.af_inet.sport != skb->h.tcp_header->dst_port)
 		return -EINVAL;
 
 	/* check source */
 	if ((sk->socket->state == SS_CONNECTED || sk->socket->state == SS_CONNECTING)
-	    && sk->protinfo.af_inet.dst_sin.sin_port != skb->h.tcp_header->src_port)
+	    && sk->protinfo.af_inet.dport != skb->h.tcp_header->src_port)
 		return -EINVAL;
 
 	/* compute data length */
@@ -494,10 +494,10 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new, int flags)
 
 		/* set new socket */
 		sk_new->socket->state = SS_CONNECTED;
-		memcpy(&sk_new->protinfo.af_inet.src_sin, &sk->protinfo.af_inet.src_sin, sizeof(struct sockaddr));
-		sk_new->protinfo.af_inet.dst_sin.sin_family = AF_INET;
-		sk_new->protinfo.af_inet.dst_sin.sin_port = skb->h.tcp_header->src_port;
-		sk_new->protinfo.af_inet.dst_sin.sin_addr = skb->nh.ip_header->src_addr;
+		sk_new->protinfo.af_inet.saddr = sk->protinfo.af_inet.saddr;
+		sk_new->protinfo.af_inet.sport = sk->protinfo.af_inet.sport;
+		sk_new->protinfo.af_inet.daddr = skb->nh.ip_header->src_addr;
+		sk_new->protinfo.af_inet.dport = skb->h.tcp_header->src_port;
 		sk_new->protinfo.af_inet.seq_no = ntohl(1);
 		sk_new->protinfo.af_inet.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
 
@@ -507,8 +507,8 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new, int flags)
 
 		/* move buffers to new socket */
 		while ((skb = skb_dequeue(&sk->receive_queue)) != NULL) {
-			if (sk_new->protinfo.af_inet.dst_sin.sin_port == skb->h.tcp_header->src_port
-				&& sk_new->protinfo.af_inet.dst_sin.sin_addr == skb->nh.ip_header->src_addr)
+			if (sk_new->protinfo.af_inet.dport == skb->h.tcp_header->src_port
+				&& sk_new->protinfo.af_inet.daddr == skb->nh.ip_header->src_addr)
 				skb_queue_tail(&sk_new->receive_queue, skb);
 			else
 				skb_free(skb);

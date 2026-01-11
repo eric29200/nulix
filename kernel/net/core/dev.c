@@ -72,36 +72,35 @@ static int dev_read_proc(char *page, char **start, off_t off, size_t count, int 
  */
 static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
 {
-	struct net_device *net_dev;
+	struct net_device *dev;
 
 	/* get network device */
-	net_dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
-	if (!net_dev)
+	dev = net_device_find(ifr->ifr_ifrn.ifrn_name);
+	if (!dev)
 		return -EINVAL;
 
 	switch (cmd) {
 		case SIOCGIFFLAGS:
-			ifr->ifr_ifru.ifru_flags = net_dev->flags;
+			ifr->ifr_ifru.ifru_flags = dev->flags;
 			break;
 		case SIOCGIFHWADDR:
-		 	memcpy(ifr->ifr_ifru.ifru_hwaddr.sa_data, net_dev->hw_addr, net_dev->addr_len);
-			ifr->ifr_ifru.ifru_hwaddr.sa_family = net_dev->type;
+		 	memcpy(ifr->ifr_ifru.ifru_hwaddr.sa_data, dev->hw_addr, dev->addr_len);
+			ifr->ifr_ifru.ifru_hwaddr.sa_family = dev->type;
 			break;
 		case SIOCGIFINDEX:
-			ifr->ifr_ifru.ifru_ivalue = net_dev->index;
+			ifr->ifr_ifru.ifru_ivalue = dev->index;
 			break;
 		case SIOCGIFMETRIC:
 			ifr->ifr_ifru.ifru_ivalue = 0;
 			break;
 		case SIOCGIFMTU:
-			ifr->ifr_ifru.ifru_mtu = net_dev->mtu;
+			ifr->ifr_ifru.ifru_mtu = dev->mtu;
 			break;
 		case SIOCGIFTXQLEN:
-			ifr->ifr_ifru.ifru_ivalue = net_dev->tx_queue_len;
+			ifr->ifr_ifru.ifru_ivalue = dev->tx_queue_len;
 			break;
 		case SIOCSIFFLAGS:
-			net_dev->flags = ifr->ifr_ifru.ifru_flags;
-			break;
+			dev->flags = ifr->ifr_ifru.ifru_flags;
 			break;
 		default:
 			return -EINVAL;

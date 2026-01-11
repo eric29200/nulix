@@ -107,8 +107,8 @@ static int rt_add(uint16_t flags, uint32_t dst, uint32_t mask, uint32_t gw, stru
  */
 static int ip_rt_new(struct rtentry *rt)
 {
-	struct net_device *net_dev = NULL;
 	uint32_t daddr, mask, gw, flags;
+	struct net_device *dev = NULL;
 	uint16_t metric;
 
 	/* check destination address */
@@ -120,8 +120,8 @@ static int ip_rt_new(struct rtentry *rt)
 		return -ENODEV;
 
 	/* find device */
-	net_dev = net_device_find(rt->rt_dev);
-	if (!net_dev)
+	dev = net_device_find(rt->rt_dev);
+	if (!dev)
 		return -ENODEV;
 
 	/* parse route */
@@ -142,7 +142,7 @@ static int ip_rt_new(struct rtentry *rt)
 		return -EINVAL;
 
 	/* add route */
-	return rt_add(flags, daddr, mask, gw, net_dev, rt->rt_mss, rt->rt_window, rt->rt_irtt, metric);
+	return rt_add(flags, daddr, mask, gw, dev, rt->rt_mss, rt->rt_window, rt->rt_irtt, metric);
 }
 
 /*

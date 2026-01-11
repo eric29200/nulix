@@ -21,7 +21,7 @@ struct ucred {
  * UNIX socket.
  */
 struct unix_opt {
-	struct unix_address	*	addr;
+	struct unix_address *		addr;
 	struct dentry *			dentry;
 };
 
@@ -30,8 +30,10 @@ struct unix_opt {
  */
 struct inet_opt {
 	struct net_device *		dev;
-	struct sockaddr_in		src_sin;
-	struct sockaddr_in		dst_sin;
+	uint32_t			saddr;
+	uint16_t			sport;
+	uint32_t			daddr;
+	uint16_t			dport;
 	uint32_t			seq_no;
 	uint32_t			ack_no;
 	struct proto *			prot;
