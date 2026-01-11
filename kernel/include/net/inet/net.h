@@ -53,7 +53,7 @@ struct net_device {
 	uint8_t			index;
 	uint32_t		io_base;
 	uint8_t			irq;
-	uint8_t			mac_addr[6];
+	uint8_t			hw_addr[MAX_ADDR_LEN];
 	uint32_t		ip_addr;
 	uint32_t		ip_netmask;
 	size_t			addr_len;

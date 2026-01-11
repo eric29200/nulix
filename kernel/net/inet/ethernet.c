@@ -8,16 +8,16 @@
 /*
  * Build an ethernet header.
  */
-void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_addr, uint8_t *dst_mac_addr, uint16_t type)
+void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_hw_addr, uint8_t *dst_hw_addr, uint16_t type)
 {
 	eth_header->type = htons(type);
 
 	/* copy source address */
-	memcpy(eth_header->src_mac_addr, src_mac_addr, ETHERNET_ALEN);
+	memcpy(eth_header->src_hw_addr, src_hw_addr, ETHERNET_ALEN);
 
 	/* copy destination address */
-	if (dst_mac_addr)
-		memcpy(eth_header->dst_mac_addr, dst_mac_addr, ETHERNET_ALEN);
+	if (dst_hw_addr)
+		memcpy(eth_header->dst_hw_addr, dst_hw_addr, ETHERNET_ALEN);
 }
 
 /*
@@ -25,7 +25,7 @@ void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_
  */
 int ethernet_rebuild_header(struct net_device *dev, uint32_t daddr, struct sk_buff *skb)
 {
-	return arp_find(dev, daddr, skb->hh.eth_header->dst_mac_addr, skb);
+	return arp_find(dev, skb->hh.eth_header->dst_hw_addr, daddr, skb);
 }
 
 /*

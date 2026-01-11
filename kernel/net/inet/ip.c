@@ -72,7 +72,7 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 
 	/* build ethernet header */
 	skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
-	ethernet_build_header(skb->hh.eth_header, rt->rt_dev->mac_addr, NULL, ETHERNET_TYPE_IP);
+	ethernet_build_header(skb->hh.eth_header, rt->rt_dev->hw_addr, NULL, ETHERNET_TYPE_IP);
 
 	/* build ip header */
 	skb->nh.ip_header = iph = (struct ip_header *) skb_put(skb, size);

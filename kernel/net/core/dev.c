@@ -84,7 +84,7 @@ static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
 			ifr->ifr_ifru.ifru_flags = net_dev->flags;
 			break;
 		case SIOCGIFHWADDR:
-		 	memcpy(ifr->ifr_ifru.ifru_hwaddr.sa_data, net_dev->mac_addr, 6);
+		 	memcpy(ifr->ifr_ifru.ifru_hwaddr.sa_data, net_dev->hw_addr, net_dev->addr_len);
 			ifr->ifr_ifru.ifru_hwaddr.sa_family = net_dev->type;
 			break;
 		case SIOCGIFINDEX:

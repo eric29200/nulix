@@ -187,8 +187,8 @@ int init_rtl8139()
 		return -ENOMEM;
 
 	/* get mac address */
-	for (i = 0; i < 6; i++)
-		rtl8139_net_dev->mac_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
+	for (i = 0; i < ETHERNET_ALEN; i++)
+		rtl8139_net_dev->hw_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
 
 	/* set methods */
 	rtl8139_net_dev->start_xmit = rtl8139_start_xmit;

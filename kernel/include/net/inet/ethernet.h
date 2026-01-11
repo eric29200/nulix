@@ -17,13 +17,13 @@
  * Ethernet header.
  */
 struct ethernet_header {
-	uint8_t			dst_mac_addr[ETHERNET_ALEN];
-	uint8_t			src_mac_addr[ETHERNET_ALEN];
+	uint8_t			dst_hw_addr[ETHERNET_ALEN];
+	uint8_t			src_hw_addr[ETHERNET_ALEN];
 	uint16_t		type;
 } __attribute__ ((packed));
 
 void ethernet_receive(struct sk_buff *skb);
-void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_mac_addr, uint8_t *dst_mac_addr, uint16_t type);
+void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_hw_addr, uint8_t *dst_hw_addr, uint16_t type);
 int ethernet_rebuild_header(struct net_device *dev, uint32_t daddr, struct sk_buff *skb);
 
 #endif
