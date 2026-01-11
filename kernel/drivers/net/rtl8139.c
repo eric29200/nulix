@@ -178,9 +178,6 @@ int init_rtl8139()
 	if (!rtl8139_net_dev)
 		return -ENOSPC;
 
-	/* set ethernet device */
-	rtl8139_net_dev->addr_len = ETHERNET_ALEN;
-
 	/* allocate private data */
 	rtl8139_net_dev->private = tp = (struct rtl8139_private *) kmalloc(sizeof(struct rtl8139_private));
 	if (!tp)
@@ -190,7 +187,11 @@ int init_rtl8139()
 	for (i = 0; i < ETHERNET_ALEN; i++)
 		rtl8139_net_dev->hw_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
 
-	/* set methods */
+	/* set device */
+	rtl8139_net_dev->addr_len = ETHERNET_ALEN;
+	rtl8139_net_dev->hard_header_len = ETHERNET_HLEN;
+	rtl8139_net_dev->hard_header = ethernet_header;
+	rtl8139_net_dev->rebuild_header = ethernet_rebuild_header;
 	rtl8139_net_dev->start_xmit = rtl8139_start_xmit;
 
 	/* enable PCI Bus Mastering to allow NIC to perform DMA */

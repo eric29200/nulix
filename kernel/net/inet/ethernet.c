@@ -8,16 +8,22 @@
 /*
  * Build an ethernet header.
  */
-void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_hw_addr, uint8_t *dst_hw_addr, uint16_t type)
+void ethernet_header(struct sk_buff *skb, uint16_t type, uint8_t *saddr, uint8_t *daddr)
 {
+	struct ethernet_header *eth_header;
+
+	/* get ethernet header */
+	skb->hh.eth_header = eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
+
+	/* set type */
 	eth_header->type = htons(type);
 
 	/* copy source address */
-	memcpy(eth_header->src_hw_addr, src_hw_addr, ETHERNET_ALEN);
+	memcpy(eth_header->src_hw_addr, saddr, ETHERNET_ALEN);
 
 	/* copy destination address */
-	if (dst_hw_addr)
-		memcpy(eth_header->dst_hw_addr, dst_hw_addr, ETHERNET_ALEN);
+	if (daddr)
+		memcpy(eth_header->dst_hw_addr, daddr, ETHERNET_ALEN);
 }
 
 /*

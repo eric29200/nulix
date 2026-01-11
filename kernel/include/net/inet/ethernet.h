@@ -9,7 +9,7 @@
 #define ETHERNET_ALEN		6
 #define ETHERNET_HLEN		14
 
-#define HARWARE_TYPE_ETHERNET	0x01
+#define HARDWARE_TYPE_ETHERNET	0x01
 
 #define ETHERNET_MAX_MTU	0xFFFF
 
@@ -23,7 +23,7 @@ struct ethernet_header {
 } __attribute__ ((packed));
 
 void ethernet_receive(struct sk_buff *skb);
-void ethernet_build_header(struct ethernet_header *eth_header, uint8_t *src_hw_addr, uint8_t *dst_hw_addr, uint16_t type);
+void ethernet_header(struct sk_buff *skb, uint16_t type, uint8_t *saddr, uint8_t *daddr);
 int ethernet_rebuild_header(struct net_device *dev, uint32_t daddr, struct sk_buff *skb);
 
 #endif

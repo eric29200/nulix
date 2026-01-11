@@ -66,13 +66,12 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 	size += sizeof(struct ip_header);
 
 	/* allocate a socket buffer */
-	skb = skb_alloc(sizeof(struct ethernet_header) + size);
+	skb = skb_alloc(rt->rt_dev->hard_header_len + size);
 	if (!skb)
 		return -ENOMEM;
 
-	/* build ethernet header */
-	skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
-	ethernet_build_header(skb->hh.eth_header, rt->rt_dev->hw_addr, NULL, ETHERNET_TYPE_IP);
+	/* build hard header */
+	rt->rt_dev->hard_header(skb, ETHERNET_TYPE_IP, rt->rt_dev->hw_addr, NULL);
 
 	/* build ip header */
 	skb->nh.ip_header = iph = (struct ip_header *) skb_put(skb, size);
@@ -91,8 +90,8 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 	/* copy udp header + message */
 	getfrag(frag, ((char *) iph) + sizeof(struct ip_header), size - sizeof(struct ip_header));
 
-	/* rebuild ethernet header = find destination mac address */
-	ret = ethernet_rebuild_header(rt->rt_dev, rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr, skb);
+	/* rebuild hard header = find destination mac address */
+	ret = rt->rt_dev->rebuild_header(rt->rt_dev, rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr, skb);
 
 	/* transmit message */
 	if (ret == 0)

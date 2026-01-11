@@ -56,6 +56,7 @@ struct net_device {
 	uint8_t			hw_addr[MAX_ADDR_LEN];
 	uint32_t		ip_addr;
 	uint32_t		ip_netmask;
+	size_t			hard_header_len;
 	size_t			addr_len;
 	uint16_t		type;
 	uint16_t		flags;
@@ -64,6 +65,8 @@ struct net_device {
 	struct net_device_stats	stats;
 	void *			private;
 	int			(*start_xmit)(struct sk_buff *, struct net_device *);
+	void 			(*hard_header)(struct sk_buff *, uint16_t, uint8_t *, uint8_t *);
+	int			(*rebuild_header)(struct net_device *, uint32_t, struct sk_buff *);
 };
 
 /* network devices */

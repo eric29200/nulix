@@ -62,12 +62,33 @@ static struct arp_table *arp_lookup(struct net_device *dev, uint32_t ip_addr)
 }
 
 /*
+ * Send packets waiting in an ARP entry.
+ */
+static void arp_send_queue(struct arp_table *entry)
+{
+	struct net_device *dev = entry->dev;
+	struct sk_buff *skb;
+	int ret;
+
+	while ((skb = skb_dequeue(&entry->skb_queue)) != NULL) {
+		/* rebuild hard header */
+		ret = dev->rebuild_header(dev, entry->ip_addr, skb);
+		if (ret) {
+			skb_free(skb);
+			continue;
+		}
+
+		/* transmit packet */
+		net_transmit(dev, skb);
+	}
+}
+
+/*
  * Update MAC/IP address relation.
  */
 static int arp_update(struct net_device *dev, uint8_t *hw_addr, uint32_t ip_addr)
 {
 	struct arp_table *entry;
-	struct sk_buff *skb;
 
 	/* update MAC/IP addresses relation */
 	entry = arp_lookup(dev, ip_addr);
@@ -76,10 +97,7 @@ static int arp_update(struct net_device *dev, uint8_t *hw_addr, uint32_t ip_addr
 		entry->resolved = 1;
 
 		/* retransmit packets waiting for mac address */
-		while ((skb = skb_dequeue(&entry->skb_queue)) != NULL) {
-			memcpy(skb->hh.eth_header->dst_hw_addr, entry->hw_addr, dev->addr_len);
-			net_transmit(dev, skb);
-		}
+		arp_send_queue(entry);
 
 		return 0;
 	}
@@ -109,17 +127,16 @@ static int arp_send(struct net_device *dev, int type, uint8_t *dest_hw, uint32_t
 	uint8_t *buf;
 
 	/* else send an ARP request */
-	skb = skb_alloc(sizeof(struct ethernet_header) + sizeof(struct arp_header) + 2 * (dev->addr_len + 4));
+	skb = skb_alloc(dev->hard_header_len + sizeof(struct arp_header) + 2 * (dev->addr_len + 4));
 	if (!skb)
 		return -ENOMEM;
 
 	/* build ethernet header */
-	skb->hh.eth_header = (struct ethernet_header *) skb_put(skb, sizeof(struct ethernet_header));
-	ethernet_build_header(skb->hh.eth_header, dev->hw_addr, broadcast_hw_addr, ETHERNET_TYPE_ARP);
+	dev->hard_header(skb, ETHERNET_TYPE_ARP, dev->hw_addr, broadcast_hw_addr);
 
 	/* build ARP header */
 	skb->nh.arp_header = arph = (struct arp_header *) skb_put(skb, sizeof(struct arp_header) + 2 * (dev->addr_len + 4));
-	arph->hw_type = htons(HARWARE_TYPE_ETHERNET);
+	arph->hw_type = htons(HARDWARE_TYPE_ETHERNET);
 	arph->protocol = htons(ETHERNET_TYPE_IP);
 	arph->hw_addr_len = dev->addr_len;
 	arph->prot_addr_len = 4;
