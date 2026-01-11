@@ -3,6 +3,7 @@
 
 #include <net/sk_buff.h>
 
+#define ICMP_TYPE_ECHO_REPLY	0x00
 #define ICMP_TYPE_ECHO		0x08
 
 /*
@@ -22,5 +23,6 @@ struct icmp_header {
 };
 
 void icmp_receive(struct sk_buff *skb);
+void icmp_init(struct net_proto_family *ops);
 
 #endif

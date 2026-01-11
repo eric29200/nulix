@@ -42,9 +42,6 @@ void ip_receive(struct sk_buff *skb)
 		default:
 			break;
 	}
-
-	/* deliver message to sockets */
-	net_deliver_skb(skb);
 }
 
 /*

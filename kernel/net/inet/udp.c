@@ -32,8 +32,12 @@ static void udp_getfrag(const void *ptr, char *to, size_t fraglen)
  */
 void udp_receive(struct sk_buff *skb)
 {
+	/* decode UDP header */
 	skb->h.udp_header = (struct udp_header *) skb->data;
 	skb_pull(skb, sizeof(struct udp_header));
+
+	/* deliver packet to sockets */
+	net_deliver_skb(skb);
 }
 
 /*

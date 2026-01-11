@@ -1,5 +1,6 @@
 #include <net/sock.h>
 #include <net/inet/ip.h>
+#include <net/inet/icmp.h>
 #include <net/inet/net.h>
 #include <net/inet/route.h>
 #include <net/if.h>
@@ -529,6 +530,7 @@ static struct net_proto_family inet_family_ops = {
 void inet_proto_init()
 {
 	sock_register(&inet_family_ops);
+	icmp_init(&inet_family_ops);
 
 	/* register net/route procfs entry */
 	create_proc_read_entry("route", 0, proc_net, route_read_proc);

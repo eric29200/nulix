@@ -68,8 +68,12 @@ static uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address
  */
 void tcp_receive(struct sk_buff *skb)
 {
+	/* decode TCP header */
 	skb->h.tcp_header = (struct tcp_header *) skb->data;
 	skb_pull(skb, sizeof(struct tcp_header));
+
+	/* deliver packet to sockets */
+	net_deliver_skb(skb);
 }
 
 /*
