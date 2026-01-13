@@ -2,6 +2,7 @@
 #include <net/inet/ip.h>
 #include <net/inet/icmp.h>
 #include <net/inet/net.h>
+#include <net/inet/tcp.h>
 #include <net/inet/route.h>
 #include <net/if.h>
 #include <fs/proc_fs.h>
@@ -236,23 +237,23 @@ static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t le
  */
 static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
-	struct sockaddr_in *src_sin;
+	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct sock *sk;
 	uint32_t saddr;
 	uint16_t sport;
-
-	/* unused address length */
-	UNUSED(addrlen);
 
 	/* get inet socket */
 	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
+	/* check active socket, bad address length and double bind */
+	if (sk->state != TCP_CLOSE || addrlen < sizeof(struct sockaddr_in) || sk->protinfo.af_inet.sport)
+		return -EINVAL;
+
 	/* get internet address */
-	src_sin = (struct sockaddr_in *) addr;
-	saddr = src_sin->sin_addr;
-	sport = src_sin->sin_port;
+	saddr = addr_in->sin_addr;
+	sport = addr_in->sin_port;
 
 	/* set default address */
 	if (!saddr)
