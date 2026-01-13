@@ -556,7 +556,7 @@ wait_for_ack:
 /*
  * TCP protocol.
  */
-struct proto tcp_proto = {
+struct proto tcp_prot = {
 	.handle		= tcp_handle,
 	.close		= tcp_close,
 	.recvmsg	= tcp_recvmsg,

@@ -113,7 +113,7 @@ static int raw_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 /*
  * Raw protocol.
  */
-struct proto raw_proto = {
+struct proto raw_prot = {
 	.handle		= raw_handle,
 	.recvmsg	= raw_recvmsg,
 	.sendmsg	= raw_sendmsg,

@@ -106,8 +106,12 @@ static void rtl8139_receive_packet()
 		skb_put(skb, rx_header->size);
 		memcpy(skb->data, ((void *) rx_header) + sizeof(struct rtl8139_rx_header), rx_header->size);
 
-		/* handle socket buffer */
-		net_handle(skb);
+		/* decode ethernet header */
+		ethernet_receive(skb);
+
+		/* handle socket buffer and free it */
+		skb_handle(skb);
+		skb_free(skb);
 
 		/* update stat */
 		rtl8139_dev->stats.rx_packets++;

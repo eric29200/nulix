@@ -476,7 +476,7 @@ static int inet_create(struct socket *sock, int protocol)
 				case 0:
 				case IP_PROTO_TCP:
 					protocol = IP_PROTO_TCP;
-					prot = &tcp_proto;
+					prot = &tcp_prot;
 					break;
 				default:
 					return -EINVAL;
@@ -488,7 +488,7 @@ static int inet_create(struct socket *sock, int protocol)
 				case 0:
 				case IP_PROTO_UDP:
 					protocol = IP_PROTO_UDP;
-					prot = &udp_proto;
+					prot = &udp_prot;
 					break;
 				default:
 					return -EINVAL;
@@ -496,7 +496,7 @@ static int inet_create(struct socket *sock, int protocol)
 
 			break;
 		case SOCK_RAW:
-			prot = &raw_proto;
+			prot = &raw_prot;
 			break;
 		default:
 			return -EINVAL;

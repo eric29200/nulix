@@ -85,9 +85,9 @@ struct proto {
 };
 
 /* inet protocols */
-extern struct proto udp_proto;
-extern struct proto tcp_proto;
-extern struct proto raw_proto;
+extern struct proto udp_prot;
+extern struct proto tcp_prot;
+extern struct proto raw_prot;
 
 struct sock *sk_alloc(int family, int zero_it);
 void sk_free(struct sock *sk);

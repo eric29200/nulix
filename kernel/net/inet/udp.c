@@ -140,7 +140,7 @@ static int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 /*
  * UDP protocol.
  */
-struct proto udp_proto = {
+struct proto udp_prot = {
 	.handle		= udp_handle,
 	.recvmsg	= udp_recvmsg,
 	.sendmsg	= udp_sendmsg,

@@ -41,10 +41,6 @@ uint16_t net_checksum(void *data, size_t size)
  */
 void skb_handle(struct sk_buff *skb)
 {
-	/* decode ethernet header */
-	ethernet_receive(skb);
-
-	/* handle packet */
 	switch(htons(skb->hh.eth_header->type)) {
 		case ETHERNET_TYPE_ARP:
 			arp_receive(skb);
@@ -112,19 +108,6 @@ struct net_device *net_device_find(const char *name)
 			return &net_devices[i];
 
 	return NULL;
-}
-
-/*
- * Handle network packet.
- */
-void net_handle(struct sk_buff *skb)
-{
-	if (!skb)
-		return;
-
-	/* handle packet */
-	skb_handle(skb);
-	skb_free(skb);
 }
 
 /*
