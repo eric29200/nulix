@@ -302,8 +302,8 @@ out:
  */
 static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 {
+	struct sockaddr_in *addr_in = (struct sockaddr_in *) msg->msg_name;
 	size_t len, n, i, count = 0;
-	struct sockaddr_in *sin;
 	struct sk_buff *skb;
 	void *buf;
 
@@ -353,11 +353,10 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	}
 
 	/* set source address */
-	sin = (struct sockaddr_in *) msg->msg_name;
-	if (sin) {
-		sin->sin_family = AF_INET;
-		sin->sin_port = skb->h.tcp_header->src_port;
-		sin->sin_addr = skb->nh.ip_header->src_addr;
+	if (addr_in) {
+		addr_in->sin_family = AF_INET;
+		addr_in->sin_port = skb->h.tcp_header->src_port;
+		addr_in->sin_addr = skb->nh.ip_header->src_addr;
 	}
 
 	/* free message or requeue it */

@@ -339,7 +339,7 @@ static int inet_shutdown(struct socket *sock, int how)
  */
 static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *) addr;
+	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct sock *sk;
 
 	/* unused address length */
@@ -356,8 +356,8 @@ static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t
 	insert_inet_socket(sk);
 
 	/* copy address */
-	sk->protinfo.af_inet.daddr = sin->sin_addr;
-	sk->protinfo.af_inet.dport = sin->sin_port;
+	sk->protinfo.af_inet.daddr = addr_in->sin_addr;
+	sk->protinfo.af_inet.dport = addr_in->sin_port;
 
 	/* connect not implemented */
 	if (!sk->protinfo.af_inet.prot || !sk->protinfo.af_inet.prot->connect)
@@ -371,7 +371,7 @@ static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t
  */
 static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addrlen, int peer)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *) addr;
+	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct sock *sk;
 
 	/* get inet socket */
@@ -381,15 +381,15 @@ static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 
 	/* copy destination address */
 	memset(addr, 0, sizeof(struct sockaddr));
-	sin->sin_family = AF_INET;
+	addr_in->sin_family = AF_INET;
 	*addrlen = sizeof(struct sockaddr_in);
 
 	if (peer) {
-		sin->sin_port = sk->protinfo.af_inet.dport;
-		sin->sin_addr = sk->protinfo.af_inet.daddr;
+		addr_in->sin_port = sk->protinfo.af_inet.dport;
+		addr_in->sin_addr = sk->protinfo.af_inet.daddr;
 	} else {
-		sin->sin_port = sk->protinfo.af_inet.sport;
-		sin->sin_addr = sk->protinfo.af_inet.saddr;
+		addr_in->sin_port = sk->protinfo.af_inet.sport;
+		addr_in->sin_addr = sk->protinfo.af_inet.saddr;
 	}
 
 	return 0;
@@ -433,7 +433,7 @@ static int inet_setsockopt(struct socket *sock, int level, int optname, void *op
 static int devinet_ioctl(int cmd, unsigned long arg)
 {
 	struct ifreq *ifr = (struct ifreq *) arg;
-	struct sockaddr_in *sin;
+	struct sockaddr_in *addr_in;
 	struct net_device *dev;
 
 	/* get network device */
@@ -442,18 +442,18 @@ static int devinet_ioctl(int cmd, unsigned long arg)
 		return -EINVAL;
 
 	/* get address */
-	sin = (struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr;
+	addr_in = (struct sockaddr_in *) &ifr->ifr_ifru.ifru_addr;
 
 	/* check parameters */
 	switch (cmd) {
 		case SIOCGIFADDR:
 		case SIOCGIFNETMASK:
-			memset(sin, 0, sizeof(struct sockaddr_in));
-		 	sin->sin_family = AF_INET;
+			memset(addr_in, 0, sizeof(struct sockaddr_in));
+		 	addr_in->sin_family = AF_INET;
 			break;
 		case SIOCSIFADDR:
 		case SIOCSIFNETMASK:
-			if (sin->sin_family != AF_INET)
+			if (addr_in->sin_family != AF_INET)
 				return -EINVAL;
 			break;
 		default:
@@ -463,16 +463,16 @@ static int devinet_ioctl(int cmd, unsigned long arg)
 	/* do ioctl */
 	switch (cmd) {
 		case SIOCGIFADDR:
-			sin->sin_addr = dev->ip_addr;
+			addr_in->sin_addr = dev->ip_addr;
 			return 0;
 		case SIOCGIFNETMASK:
-		 	sin->sin_addr = dev->ip_netmask;
+		 	addr_in->sin_addr = dev->ip_netmask;
 			return 0;
 		case SIOCSIFADDR:
-			dev->ip_addr = sin->sin_addr;
+			dev->ip_addr = addr_in->sin_addr;
 			return 0;
 		case SIOCSIFNETMASK:
-			dev->ip_netmask = sin->sin_addr;
+			dev->ip_netmask = addr_in->sin_addr;
 			return 0;
 		default:
 			return -ENOIOCTLCMD;

@@ -68,15 +68,10 @@ static int udp_handle(struct sock *sk, struct sk_buff *skb)
  */
 static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 {
+	struct sockaddr_in *dest_addr_in = (struct sockaddr_in *) msg->msg_name;
 	size_t usize = sizeof(struct udp_header) + size;
-	struct sockaddr_in *dest_addr_in;
 	struct udp_fake_header ufh;
-	uint32_t dest_ip;
 	int ret;
-
-	/* get destination IP */
-	dest_addr_in = (struct sockaddr_in *) msg->msg_name;
-	dest_ip = dest_addr_in->sin_addr;
 
 	/* build udp header */
 	ufh.uh.src_port = sk->protinfo.af_inet.sport;
@@ -86,7 +81,7 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	ufh.iov = msg->msg_iov;
 
 	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, udp_getfrag, &ufh, usize, dest_ip);
+	ret = ip_build_xmit(sk, udp_getfrag, &ufh, usize, dest_addr_in->sin_addr);
 	if (ret)
 		return ret;
 
@@ -98,7 +93,7 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
  */
 static int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 {
-	struct sockaddr_in *sin;
+	struct sockaddr_in *addr_in = (struct sockaddr_in *) msg->msg_name;
 	struct sk_buff *skb;
 	size_t copied;
 	void *buf;
@@ -121,11 +116,10 @@ static int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	memcpy_toiovec(msg->msg_iov, buf, copied);
 
 	/* set source address */
-	sin = (struct sockaddr_in *) msg->msg_name;
-	if (sin) {
-		sin->sin_family = AF_INET;
-		sin->sin_port = skb->h.udp_header->src_port;
-		sin->sin_addr = skb->nh.ip_header->src_addr;
+	if (addr_in) {
+		addr_in->sin_family = AF_INET;
+		addr_in->sin_port = skb->h.udp_header->src_port;
+		addr_in->sin_addr = skb->nh.ip_header->src_addr;
 	}
 
 	/* free message */

@@ -49,7 +49,7 @@ static int raw_handle(struct sock *sk, struct sk_buff *skb)
  */
 static int raw_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 {
-	struct sockaddr_in *sin;
+	struct sockaddr_in *addr_in = (struct sockaddr_in *) msg->msg_name;
 	struct sk_buff *skb;
 	size_t copied;
 	void *buf;
@@ -72,11 +72,10 @@ static int raw_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	memcpy_toiovec(msg->msg_iov, buf, copied);
 
 	/* set source address */
-	sin = (struct sockaddr_in *) msg->msg_name;
-	if (sin) {
-		sin->sin_family = AF_INET;
-		sin->sin_port = 0;
-		sin->sin_addr = skb->nh.ip_header->src_addr;
+	if (addr_in) {
+		addr_in->sin_family = AF_INET;
+		addr_in->sin_port = 0;
+		addr_in->sin_addr = skb->nh.ip_header->src_addr;
 	}
 
 	/* free message */
