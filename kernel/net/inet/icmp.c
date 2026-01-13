@@ -71,13 +71,8 @@ void icmp_receive(struct sk_buff *skb)
 	skb->h.icmp_header->chksum = net_checksum(skb->h.icmp_header, skb->size - skb->dev->hard_header_len - sizeof(struct ip_header));
 
 	/* reply to echo request */
-	if (skb->h.icmp_header->type == ICMP_TYPE_ECHO) {
+	if (skb->h.icmp_header->type == ICMP_TYPE_ECHO)
 		icmp_reply_echo(skb);
-		return;
-	}
-
-	/* deliver packet to sockets */
-	net_deliver_skb(skb);
 }
 
 /*

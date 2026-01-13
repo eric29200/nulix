@@ -15,7 +15,6 @@
 
 /* inet sockets */
 static LIST_HEAD(inet_sockets);
-static uint16_t dyn_port = 0;
 
 static int inet_create(struct socket *sock, int protocol);
 
@@ -44,19 +43,80 @@ void net_deliver_skb(struct sk_buff *skb)
 }
 
 /*
- * Get next free port.
+ * Insert a socket in the inet list (list must be sorted by protocol and source port).
  */
-static uint16_t get_next_free_port()
+static void insert_inet_socket(struct sock *sk)
 {
-	/* choose first dynamic port */
-	if (!dyn_port) {
-		dyn_port = IP_START_DYN_PORT + rand() % 4096;
-		return dyn_port;
+	struct list_head *pos;
+	struct sock *sk_tmp;
+
+	/* empty list */
+	if (list_empty(&inet_sockets)) {
+		list_add(&sk->list, &inet_sockets);
+		return;
 	}
 
-	/* else get next free port */
-	dyn_port++;
-	return dyn_port;
+	/* find insert position */
+	list_for_each(pos, &inet_sockets) {
+		sk_tmp = list_entry(pos, struct sock, list);
+		if (sk_tmp->protocol > sk->protocol)
+			break;
+		if (sk_tmp->protocol == sk->protocol
+			&& ntohs(sk_tmp->protinfo.af_inet.sport) >= ntohs(sk->protinfo.af_inet.sport))
+			break;
+	}
+
+	/* insert socket */
+	if (pos == &inet_sockets)
+		list_add(&sk->list, &sk_tmp->list);
+	else
+		list_add_tail(&sk->list, &sk_tmp->list);
+}
+
+/*
+ * Check if a port is already mapped.
+ */
+static int check_free_port(uint16_t protocol, uint16_t sport)
+{
+	struct list_head *pos;
+	struct sock *sk_tmp;
+
+	/* check if asked port is already mapped */
+	list_for_each(pos, &inet_sockets) {
+		sk_tmp = list_entry(pos, struct sock, list);
+
+		if (sk_tmp->protocol < protocol)
+			continue;
+		else if (sk_tmp->protocol > protocol || ntohs(sk_tmp->protinfo.af_inet.sport) > sport)
+			break;
+		else if (ntohs(sk_tmp->protinfo.af_inet.sport) == sport)
+			return 0;
+	}
+
+	return sport;
+}
+
+/*
+ * Get a free port.
+ */
+static uint16_t get_free_port(uint16_t protocol)
+{
+	int base = IP_START_DYN_PORT;
+	struct list_head *pos;
+	struct sock *sk_tmp;
+
+	list_for_each(pos, &inet_sockets) {
+		sk_tmp = list_entry(pos, struct sock, list);
+
+		if (sk_tmp->protocol < protocol)
+			continue;
+		else if (sk_tmp->protocol > protocol || sk_tmp->protinfo.af_inet.sport > base)
+			break;
+		else if (ntohs(sk_tmp->protinfo.af_inet.sport) == base)
+			base++;
+	}
+
+	return base > USHRT_MAX ? 0 : base;
 }
 
 /*
@@ -177,8 +237,7 @@ static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t le
 static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_in *src_sin;
-	struct sock *sk, *sk_tmp;
-	struct list_head *pos;
+	struct sock *sk;
 	uint32_t saddr;
 	uint16_t sport;
 
@@ -195,30 +254,27 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 	saddr = src_sin->sin_addr;
 	sport = src_sin->sin_port;
 
-	/* check if asked port is already mapped */
-	list_for_each(pos, &inet_sockets) {
-		sk_tmp = list_entry(pos, struct sock, list);
-
-		/* different protocol : skip */
-		if (sk->protocol != sk_tmp->protocol)
-			continue;
-
-		/* already mapped */
-		if (sport && sport == sk->protinfo.af_inet.sport)
-			return -ENOSPC;
-	}
-
 	/* set default address */
 	if (!saddr)
 		saddr = sk->protinfo.af_inet.dev->ip_addr;
 
-	/* allocate a dynamic port */
+	/* check or get a free port */
+	if (sport)
+		sport = check_free_port(sk->protocol, ntohs(sport));
+	else
+		sport = get_free_port(sk->protocol);
+
+	/* no free port */
 	if (!sport)
-		sport = htons(get_next_free_port());
+		return -EADDRINUSE;
 
 	/* copy address */
 	sk->protinfo.af_inet.saddr = saddr;
-	sk->protinfo.af_inet.sport = sport;
+	sk->protinfo.af_inet.sport = htons(sport);
+
+	/* reinsert socket */
+	list_del(&sk->list);
+	insert_inet_socket(sk);
 
 	return 0;
 }
@@ -294,7 +350,9 @@ static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t
 		return -EINVAL;
 
 	/* allocate a dynamic port */
-	sk->protinfo.af_inet.sport = htons(get_next_free_port());
+	sk->protinfo.af_inet.sport = htons(get_free_port(sk->protocol));
+	list_del(&sk->list);
+	insert_inet_socket(sk);
 
 	/* copy address */
 	sk->protinfo.af_inet.daddr = sin->sin_addr;
@@ -518,7 +576,7 @@ static int inet_create(struct socket *sock, int protocol)
 	sock_init_data(sock, sk);
 
 	/* insert in sockets list */
-	list_add_tail(&sk->list, &inet_sockets);
+	insert_inet_socket(sk);
 
 	return 0;
 }

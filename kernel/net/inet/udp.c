@@ -35,9 +35,6 @@ void udp_receive(struct sk_buff *skb)
 	/* decode UDP header */
 	skb->h.udp_header = (struct udp_header *) skb->data;
 	skb_pull(skb, sizeof(struct udp_header));
-
-	/* deliver packet to sockets */
-	net_deliver_skb(skb);
 }
 
 /*

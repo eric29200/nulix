@@ -8,7 +8,7 @@
 #define IP_PROTO_TCP			0x06
 #define IP_PROTO_UDP			0x11
 
-#define IP_START_DYN_PORT		49152
+#define IP_START_DYN_PORT		1024
 
 #define IPV4_DEFAULT_TTL		64
 
