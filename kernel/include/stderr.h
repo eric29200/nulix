@@ -48,6 +48,7 @@
 #define	EOPNOTSUPP	95	/* Operation not supported on transport endpoint */
 #define	EAFNOSUPPORT	97	/* Address family not supported by protocol */
 #define	EADDRINUSE	98	/* Address already in use */
+#define	EADDRNOTAVAIL	99	/* Cannot assign requested address */
 #define	ENETUNREACH	101	/* Network is unreachable */
 #define	ECONNRESET	104	/* Connection reset by peer */
 #define	ENOBUFS		105	/* No buffer space available */

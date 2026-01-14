@@ -13,6 +13,11 @@
 #define ntohs(s)			(htons((s)))
 #define ntohl(s)			(htonl((s)))
 
+#define IS_MYADDR			1		/* address is (one of) our own	*/
+#define IS_LOOPBACK			2		/* address is for LOOPBACK	*/
+#define IS_BROADCAST			3		/* address is a valid broadcast	*/
+
+
 /*
  * Networkd device statistics.
  */
@@ -53,6 +58,7 @@ struct net_device {
 	uint8_t			index;
 	uint32_t		io_base;
 	uint8_t			irq;
+	uint16_t		family;
 	uint8_t			hw_addr[MAX_ADDR_LEN];
 	uint32_t		ip_addr;
 	uint32_t		ip_netmask;

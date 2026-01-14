@@ -26,20 +26,6 @@ struct unix_opt {
 };
 
 /*
- * Inet socket.
- */
-struct inet_opt {
-	struct net_device *		dev;
-	uint32_t			saddr;
-	uint16_t			sport;
-	uint32_t			daddr;
-	uint16_t			dport;
-	uint32_t			seq_no;
-	uint32_t			ack_no;
-	struct proto *			prot;
-};
-
-/*
  * Internal socket.
  */
 struct sock {
@@ -62,8 +48,14 @@ struct sock {
 	struct wait_queue **		sleep;
 	union {
 		struct unix_opt		af_unix;
-		struct inet_opt		af_inet;
 	} protinfo;
+	uint16_t			num;
+	uint32_t			saddr;
+	uint32_t			rcv_saddr;
+	uint16_t			sport;
+	uint32_t			daddr;
+	uint16_t			dport;
+	struct proto *			prot;
 	struct list_head		list;
 	struct sk_buff_head		receive_queue;
 	struct timer_event		timer;

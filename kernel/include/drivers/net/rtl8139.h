@@ -33,6 +33,5 @@ struct rtl8139_rx_header {
 
 
 int init_rtl8139();
-struct net_device *rtl8139_get_device();
 
 #endif

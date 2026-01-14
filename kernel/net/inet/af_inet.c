@@ -33,8 +33,8 @@ void net_deliver_skb(struct sk_buff *skb)
 		sk = list_entry(pos, struct sock, list);
 
 		/* handle packet */
-		if (sk->protinfo.af_inet.prot && sk->protinfo.af_inet.prot->handle) {
-			ret = sk->protinfo.af_inet.prot->handle(sk, skb);
+		if (sk->prot && sk->prot->handle) {
+			ret = sk->prot->handle(sk, skb);
 
 			/* wake up waiting processes */
 			if (ret == 0)
@@ -63,7 +63,7 @@ static void insert_inet_socket(struct sock *sk)
 		if (sk_tmp->protocol > sk->protocol)
 			break;
 		if (sk_tmp->protocol == sk->protocol
-			&& ntohs(sk_tmp->protinfo.af_inet.sport) >= ntohs(sk->protinfo.af_inet.sport))
+			&& ntohs(sk_tmp->sport) >= ntohs(sk->sport))
 			break;
 	}
 
@@ -88,9 +88,9 @@ static int check_free_port(uint16_t protocol, uint16_t sport)
 
 		if (sk_tmp->protocol < protocol)
 			continue;
-		else if (sk_tmp->protocol > protocol || ntohs(sk_tmp->protinfo.af_inet.sport) > sport)
+		else if (sk_tmp->protocol > protocol || ntohs(sk_tmp->sport) > sport)
 			break;
-		else if (ntohs(sk_tmp->protinfo.af_inet.sport) == sport)
+		else if (ntohs(sk_tmp->sport) == sport)
 			return 0;
 	}
 
@@ -111,13 +111,35 @@ static uint16_t get_free_port(uint16_t protocol)
 
 		if (sk_tmp->protocol < protocol)
 			continue;
-		else if (sk_tmp->protocol > protocol || sk_tmp->protinfo.af_inet.sport > base)
+		else if (sk_tmp->protocol > protocol || sk_tmp->sport > base)
 			break;
-		else if (ntohs(sk_tmp->protinfo.af_inet.sport) == base)
+		else if (ntohs(sk_tmp->sport) == base)
 			base++;
 	}
 
 	return base > USHRT_MAX ? 0 : base;
+}
+
+/*
+ * Auto bind a socket.
+ */
+static int inet_autobind(struct sock *sk)
+{
+	/* already bound */
+	if (sk->num)
+		return 0;
+
+	/* get a free port */
+	sk->num = get_free_port(sk->protocol);
+	if (!sk->num)
+		return -EAGAIN;
+
+	/* update socket */
+	sk->sport = ntohs(sk->num);
+	list_del(&sk->list);
+	insert_inet_socket(sk);
+
+	return 0;
 }
 
 /*
@@ -153,8 +175,8 @@ static int inet_release(struct socket *sock)
 		skb_free(skb);
 
 	/* protocol close */
-	if (sk->protinfo.af_inet.prot->close)
-		sk->protinfo.af_inet.prot->close(sk);
+	if (sk->prot->close)
+		sk->prot->close(sk);
 
 	/* release inet socket */
 	list_del(&sk->list);
@@ -199,18 +221,25 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
  */
 static int inet_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
 {
-	struct sock *sk;
+	struct sock *sk = sock->sk;
+	int ret;
 
-	/* get inet socket */
-	sk = sock->sk;
+	/* check socket */
 	if (!sk)
 		return -EINVAL;
+	if (sk->err)
+		return sock_error(sk);
 
 	/* recvmsg not implemented */
-	if (!sk->protinfo.af_inet.prot || !sk->protinfo.af_inet.prot->recvmsg)
-		return -EINVAL;
+	if (!sk->prot || !sk->prot->recvmsg)
+		return -EOPNOTSUPP;
 
-	return sk->protinfo.af_inet.prot->recvmsg(sk, msg, len);
+	/* autobind socket if needed */
+	ret = inet_autobind(sk);
+	if (ret)
+		return ret;
+
+	return sk->prot->recvmsg(sk, msg, len);
 }
 
 /*
@@ -218,18 +247,29 @@ static int inet_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
  */
 static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
 {
-	struct sock *sk;
+	struct sock *sk = sock->sk;
+	int ret;
 
-	/* get inet socket */
-	sk = sock->sk;
+	/* check socket */
 	if (!sk)
 		return -EINVAL;
+	if (sk->shutdown & SEND_SHUTDOWN) {
+		send_sig(current_task, SIGPIPE, 1);
+		return -EPIPE;
+	}
+	if (sk->err)
+		return sock_error(sk);
 
 	/* sendmsg not implemented */
-	if (!sk->protinfo.af_inet.prot || !sk->protinfo.af_inet.prot->sendmsg)
-		return -EINVAL;
+	if (!sk->prot || !sk->prot->sendmsg)
+		return -EOPNOTSUPP;
 
-	return sk->protinfo.af_inet.prot->sendmsg(sk, msg, len);
+	/* autobind socket if needed */
+	ret = inet_autobind(sk);
+	if (ret)
+		return ret;
+
+	return sk->prot->sendmsg(sk, msg, len);
 }
 
 /*
@@ -238,40 +278,53 @@ static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t le
 static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
+	uint16_t snum = 0;
+	int chk_addr_ret;
 	struct sock *sk;
-	uint32_t saddr;
-	uint16_t sport;
 
 	/* get inet socket */
 	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
-	/* check active socket, bad address length and double bind */
-	if (sk->state != TCP_CLOSE || addrlen < sizeof(struct sockaddr_in) || sk->protinfo.af_inet.sport)
+	/* check active socket and bad address length */
+	if (sk->state != TCP_CLOSE || addrlen < sizeof(struct sockaddr_in))
 		return -EINVAL;
 
-	/* get internet address */
-	saddr = addr_in->sin_addr;
-	sport = addr_in->sin_port;
+	/* bind socket */
+	if (sock->type != SOCK_RAW) {
+		/* already bound */
+		if (sk->num)
+			return -EINVAL;
 
-	/* set default address */
-	if (!saddr)
-		saddr = sk->protinfo.af_inet.dev->ip_addr;
+		/* check or get a free port */
+		snum = ntohs(addr_in->sin_port);
+		if (snum)
+			snum = check_free_port(sk->protocol, snum);
+		else
+			snum = get_free_port(sk->protocol);
 
-	/* check or get a free port */
-	if (sport)
-		sport = check_free_port(sk->protocol, ntohs(sport));
-	else
-		sport = get_free_port(sk->protocol);
+		/* no free port */
+		if (!snum)
+			return -EADDRINUSE;
+	}
 
-	/* no free port */
-	if (!sport)
-		return -EADDRINUSE;
+	/* check source address (must be ours) */
+	chk_addr_ret = ip_chk_addr(addr_in->sin_addr);
+	if (addr_in->sin_addr && chk_addr_ret != IS_MYADDR && chk_addr_ret != IS_BROADCAST)
+		return -EADDRNOTAVAIL;
 
-	/* copy address */
-	sk->protinfo.af_inet.saddr = saddr;
-	sk->protinfo.af_inet.sport = htons(sport);
+	/* set socket source address */
+	if (chk_addr_ret || addr_in->sin_addr == 0) {
+		sk->rcv_saddr = addr_in->sin_addr;
+		sk->saddr = chk_addr_ret == IS_BROADCAST ? 0 : addr_in->sin_addr;
+	}
+
+	/* update socket */
+	sk->num = snum;
+	sk->sport = htons(snum);
+	sk->daddr = 0;
+	sk->dport = 0;
 
 	/* reinsert socket */
 	list_del(&sk->list);
@@ -330,19 +383,19 @@ static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t
 		return -EINVAL;
 
 	/* allocate a dynamic port */
-	sk->protinfo.af_inet.sport = htons(get_free_port(sk->protocol));
+	sk->sport = htons(get_free_port(sk->protocol));
 	list_del(&sk->list);
 	insert_inet_socket(sk);
 
 	/* copy address */
-	sk->protinfo.af_inet.daddr = addr_in->sin_addr;
-	sk->protinfo.af_inet.dport = addr_in->sin_port;
+	sk->daddr = addr_in->sin_addr;
+	sk->dport = addr_in->sin_port;
 
 	/* connect not implemented */
-	if (!sk->protinfo.af_inet.prot || !sk->protinfo.af_inet.prot->connect)
+	if (!sk->prot || !sk->prot->connect)
 		return -EINVAL;
 
-	return sk->protinfo.af_inet.prot->connect(sk);
+	return sk->prot->connect(sk);
 }
 
 /*
@@ -364,11 +417,11 @@ static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 	*addrlen = sizeof(struct sockaddr_in);
 
 	if (peer) {
-		addr_in->sin_port = sk->protinfo.af_inet.dport;
-		addr_in->sin_addr = sk->protinfo.af_inet.daddr;
+		addr_in->sin_port = sk->dport;
+		addr_in->sin_addr = sk->daddr;
 	} else {
-		addr_in->sin_port = sk->protinfo.af_inet.sport;
-		addr_in->sin_addr = sk->protinfo.af_inet.saddr;
+		addr_in->sin_port = sk->sport;
+		addr_in->sin_addr = sk->saddr;
 	}
 
 	return 0;
@@ -542,10 +595,13 @@ static int inet_create(struct socket *sock, int protocol)
 
 	/* set socket */
 	memset(sk, 0, sizeof(struct sock));
-	sk->protinfo.af_inet.dev = rtl8139_get_device();
 	sk->protocol = protocol;
-	sk->protinfo.af_inet.prot = prot;
+	sk->prot = prot;
 	sock->ops = &inet_ops;
+
+	/* raw sockets cannot be bound */
+	if (sock->type == SOCK_RAW)
+		sk->num = protocol;
 
 	/* init data */
 	sock_init_data(sock, sk);

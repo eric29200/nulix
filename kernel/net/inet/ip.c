@@ -12,6 +12,38 @@
 #include <stdio.h>
 
 /*
+ * Check an IP address.
+ */
+int ip_chk_addr(uint32_t addr)
+{
+	struct net_device *dev;
+	int i;
+
+	/* broadcast address */
+	if (addr == INADDR_ANY || addr == INADDR_BROADCAST || addr == htonl(0x7FFFFFFFL))
+		return IS_BROADCAST;
+
+	/* our address */
+	if ((addr & htonl(0x7F000000L)) == htonl(0x7F000000L))
+		return IS_MYADDR;
+
+	/* find network device */
+	for (i = 0; i < nr_net_devices; i++) {
+		dev = &net_devices[i];
+
+		/* skip down devices */
+		if ((!(dev->flags & IFF_UP)) || dev->family != AF_INET)
+			continue;
+
+		/* exact address */
+		if (addr == dev->ip_addr)
+			return IS_MYADDR;
+	}
+
+	return 0;
+}
+
+/*
  * Receive/decode an IP packet.
  */
 void ip_receive(struct sk_buff *skb)

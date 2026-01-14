@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#define	INADDR_ANY		((uint32_t) 0x00000000)
+#define	INADDR_BROADCAST	((uint32_t) 0xFFFFFFFF)
+
+
 /*
  * Inet socket address.
  */

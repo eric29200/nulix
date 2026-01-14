@@ -140,14 +140,6 @@ void rtl8139_irq_handler(struct registers *regs)
 		rtl8139_receive_packet();
 }
 
-/*
- * Get Realtek 8139 network device.
- */
-struct net_device *rtl8139_get_device()
-{
-	return rtl8139_dev;
-}
-
 static void rtl8139_init_ring()
 {
 	struct rtl8139_private *tp = (struct rtl8139_private *) rtl8139_dev->private;
@@ -192,6 +184,7 @@ int init_rtl8139()
 		rtl8139_dev->hw_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
 
 	/* set device */
+	rtl8139_dev->family = AF_INET;
 	rtl8139_dev->addr_len = ETHERNET_ALEN;
 	rtl8139_dev->hard_header_len = ETHERNET_HLEN;
 	rtl8139_dev->hard_header = ethernet_header;
