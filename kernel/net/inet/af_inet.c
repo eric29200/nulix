@@ -174,6 +174,9 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
 	if (!sk)
 		return -EINVAL;
 
+	/* add wait queue to select table */
+	select_wait(&sock->wait, wait);
+
 	/* connecting = waiting for TCP syn/ack */
 	if (sk->socket->state == SS_CONNECTING)
 		return mask;
@@ -185,9 +188,6 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
 	/* check if socket can write */
 	if (sk->socket->state != SS_DISCONNECTING && sk->socket->state != SS_DEAD)
 		mask |= POLLOUT;
-
-	/* add wait queue to select table */
-	select_wait(&sock->wait, wait);
 
 	return mask;
 }
