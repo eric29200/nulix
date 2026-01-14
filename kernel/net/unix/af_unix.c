@@ -10,7 +10,6 @@
 #include <fcntl.h>
 #include <uio.h>
 
-#define MIN_WRITE_SPACE			2048
 #define UNIX_DELETE_DELAY		(HZ)
 #define UNIX_MAX_DGRAM_QLEN		10
 
@@ -304,35 +303,13 @@ static int unix_release(struct socket *sock)
 static int unix_poll(struct socket *sock, struct select_table *wait)
 {
 	unix_socket_t *sk;
-	int mask = 0;
 
 	/* get inet socket */
 	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
-	/* exceptional events ? */
-	if (sk->err)
-		mask |= POLLERR;
-	if (sk->shutdown & RCV_SHUTDOWN)
-		mask |= POLLHUP;
-
-	/* readable ? */
-	if (!skb_queue_empty(&sk->receive_queue))
-		mask |= POLLIN | POLLRDNORM;
-
-	/* connection-based need to check for termination and startup */
-	if (sk->type == SOCK_STREAM && sk->state == TCP_CLOSE)
-		mask |= POLLHUP;
-
-	/* writable ? */
-	if (sk->sndbuf - sk->wmem_alloc >= MIN_WRITE_SPACE)
-		mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
-
-	/* add wait queue to select table */
-	select_wait(&sock->wait, wait);
-
-	return mask;
+	return datagram_poll(sk, wait);
 }
 
 /*

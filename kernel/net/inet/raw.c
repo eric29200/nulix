@@ -116,4 +116,5 @@ struct proto raw_prot = {
 	.handle		= raw_handle,
 	.recvmsg	= raw_recvmsg,
 	.sendmsg	= raw_sendmsg,
+	.poll		= datagram_poll,
 };

@@ -143,4 +143,5 @@ struct proto udp_prot = {
 	.handle		= udp_handle,
 	.recvmsg	= udp_recvmsg,
 	.sendmsg	= udp_sendmsg,
+	.poll		= datagram_poll,
 };

@@ -190,30 +190,17 @@ static int inet_release(struct socket *sock)
  */
 static int inet_poll(struct socket *sock, struct select_table *wait)
 {
-	struct sock *sk;
-	int mask = 0;
+	struct sock *sk = sock->sk;
 
-	/* get inet socket */
-	sk = sock->sk;
+	/* check socket */
 	if (!sk)
 		return -EINVAL;
 
-	/* connecting = waiting for TCP syn/ack */
-	if (sk->socket->state == SS_CONNECTING)
-		return mask;
+	/* poll not implemented */
+	if (!sk->prot || !sk->prot->poll)
+		return -EOPNOTSUPP;
 
-	/* check if there is a message in the queue */
-	if (sk->socket->state == SS_DISCONNECTING || !skb_queue_empty(&sk->receive_queue))
-		mask |= POLLIN;
-
-	/* check if socket can write */
-	if (sk->socket->state != SS_DISCONNECTING && sk->socket->state != SS_DEAD)
-		mask |= POLLOUT;
-
-	/* add wait queue to select table */
-	select_wait(&sock->wait, wait);
-
-	return mask;
+	return sk->prot->poll(sk, wait);
 }
 
 /*

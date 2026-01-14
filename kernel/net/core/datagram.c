@@ -1,5 +1,6 @@
 #include <net/sock.h>
 #include <proc/sched.h>
+#include <net/inet/tcp.h>
 #include <stderr.h>
 
 /*
@@ -58,4 +59,35 @@ no_packet:
 void skb_copy_datagram_iovec(struct sk_buff *skb, int offset, struct iovec *to, size_t size)
 {
 	memcpy_toiovec(to, skb->h.raw + offset, size);
+}
+
+/*
+ * Generic datagram poll function.
+ */
+int datagram_poll(struct sock *sk, struct select_table *wait)
+{
+	int mask = 0;
+
+	/* exceptional events ? */
+	if (sk->err)
+		mask |= POLLERR;
+	if (sk->shutdown & RCV_SHUTDOWN)
+		mask |= POLLHUP;
+
+	/* readable ? */
+	if (!skb_queue_empty(&sk->receive_queue))
+		mask |= POLLIN | POLLRDNORM;
+
+	/* connection-based need to check for termination and startup */
+	if (sk->type == SOCK_STREAM && sk->state == TCP_CLOSE)
+		mask |= POLLHUP;
+
+	/* writable ? */
+	if (sk->sndbuf - sk->wmem_alloc >= MIN_WRITE_SPACE)
+		mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
+
+	/* add wait queue to select table */
+	select_wait(sk->sleep, wait);
+
+	return mask;
 }

@@ -73,6 +73,7 @@ struct proto {
 	int (*recvmsg)(struct sock *, struct msghdr *, size_t);
 	int (*sendmsg)(struct sock *, const struct msghdr *, size_t);
 	int (*connect)(struct sock *);
+	int (*poll)(struct sock *, struct select_table *);
 };
 
 /* inet protocols */
@@ -92,5 +93,6 @@ int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval
 struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, int *err);
 struct sk_buff *skb_recv_datagram(struct sock *sk, int flags, int noblock, int *err);
 void skb_copy_datagram_iovec(struct sk_buff *skb, int offset, struct iovec *to, size_t size);
+int datagram_poll(struct sock *sk, struct select_table *wait);
 
 #endif

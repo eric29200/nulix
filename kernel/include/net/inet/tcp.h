@@ -19,4 +19,6 @@
 #define TCPCB_FLAG_ECE		0x40
 #define TCPCB_FLAG_CWR		0x80
 
+#define MIN_WRITE_SPACE		2048
+
 #endif
