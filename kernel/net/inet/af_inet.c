@@ -285,10 +285,9 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
  */
 static int inet_listen(struct socket *sock)
 {
-	/* set socket state */
-	sock->state = SS_LISTENING;
-
-	return 0;
+	UNUSED(sock);
+	printf("inet_listen() not implemented\n");
+	return -EINVAL;
 }
 
 /*
@@ -296,29 +295,11 @@ static int inet_listen(struct socket *sock)
  */
 static int inet_accept(struct socket *sock, struct socket *sock_new, int flags)
 {
-	struct sock *sk, *sk_new;
-	int ret;
-
-	/* get inet socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
-
-	/* get new inet socket */
-	sk_new = sock_new->sk;
-	if (!sk_new)
-		return -EINVAL;
-
-	/* accept not implemented */
-	if (!sk_new->protinfo.af_inet.prot || !sk_new->protinfo.af_inet.prot->accept)
-		return -EINVAL;
-
-	/* accept */
-	ret = sk_new->protinfo.af_inet.prot->accept(sk, sk_new, flags);
-	if (ret)
-		return ret;
-
-	return 0;
+	UNUSED(sock);
+	UNUSED(sock_new);
+	UNUSED(flags);
+	printf("inet_accept() not implemented\n");
+	return -EINVAL;
 }
 
 /*
@@ -328,10 +309,8 @@ static int inet_shutdown(struct socket *sock, int how)
 {
 	UNUSED(sock);
 	UNUSED(how);
-
 	printf("inet_shutdown() not implemented\n");
-
-	return 0;
+	return -EINVAL;
 }
 
 /*
@@ -532,11 +511,6 @@ static int inet_create(struct socket *sock, int protocol)
 	switch (sock->type) {
 		case SOCK_STREAM:
 			switch (protocol) {
-				case 0:
-				case IP_PROTO_TCP:
-					protocol = IP_PROTO_TCP;
-					prot = &tcp_prot;
-					break;
 				default:
 					return -EINVAL;
 			}

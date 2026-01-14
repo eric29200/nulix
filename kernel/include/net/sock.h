@@ -81,12 +81,10 @@ struct proto {
 	int (*recvmsg)(struct sock *, struct msghdr *, size_t);
 	int (*sendmsg)(struct sock *, const struct msghdr *, size_t);
 	int (*connect)(struct sock *);
-	int (*accept)(struct sock *, struct sock *, int);
 };
 
 /* inet protocols */
 extern struct proto udp_prot;
-extern struct proto tcp_prot;
 extern struct proto raw_prot;
 
 struct sock *sk_alloc(int family, int zero_it);

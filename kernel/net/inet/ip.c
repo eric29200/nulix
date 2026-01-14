@@ -33,9 +33,6 @@ void ip_receive(struct sk_buff *skb)
 		case IP_PROTO_UDP:
 			udp_receive(skb);
 			break;
-		case IP_PROTO_TCP:
-			tcp_receive(skb);
-			break;
 		case IP_PROTO_ICMP:
 			icmp_receive(skb);
 			break;
