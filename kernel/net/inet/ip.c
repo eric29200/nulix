@@ -44,6 +44,24 @@ int ip_chk_addr(uint32_t addr)
 }
 
 /*
+ * Get loopback address.
+ */
+uint32_t ip_my_addr()
+{
+  	struct net_device *dev;
+	int i;
+
+	for (i = 0; i < nr_net_devices; i++) {
+		dev = &net_devices[i];
+
+		if (dev->flags & IFF_LOOPBACK)
+			return dev->ip_addr;
+  	}
+
+	return 0;
+}
+
+/*
  * Receive/decode an IP packet.
  */
 void ip_receive(struct sk_buff *skb)

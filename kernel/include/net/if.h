@@ -21,6 +21,7 @@
 #define SIOCADDRT			0x890B
 
 #define IFF_UP				0x01
+#define IFF_LOOPBACK			0x08
 
 /*
  * Device mapping.

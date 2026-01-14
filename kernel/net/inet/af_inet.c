@@ -405,6 +405,7 @@ static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 {
 	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct sock *sk;
+	uint32_t saddr;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -420,8 +421,15 @@ static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 		addr_in->sin_port = sk->dport;
 		addr_in->sin_addr = sk->daddr;
 	} else {
+		saddr = sk->rcv_saddr;
+		if (!saddr) {
+			saddr = sk->saddr;
+			if (!saddr)
+				saddr = ip_my_addr();
+		}
+
 		addr_in->sin_port = sk->sport;
-		addr_in->sin_addr = sk->saddr;
+		addr_in->sin_addr = saddr;
 	}
 
 	return 0;

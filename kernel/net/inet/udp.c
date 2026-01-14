@@ -73,6 +73,13 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	struct udp_fake_header ufh;
 	int ret;
 
+	/* check destination */
+	if (!dest_addr_in
+		|| msg->msg_namelen < sizeof(struct sockaddr_in)
+		|| dest_addr_in->sin_family != AF_INET
+		|| !dest_addr_in->sin_port)
+		return -EINVAL;
+
 	/* build udp header */
 	ufh.uh.src_port = sk->sport;
 	ufh.uh.dst_port = dest_addr_in->sin_port;
@@ -117,6 +124,7 @@ static int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 
 	/* set source address */
 	if (addr_in) {
+		msg->msg_namelen = sizeof(struct sockaddr_in);
 		addr_in->sin_family = AF_INET;
 		addr_in->sin_port = skb->h.udp_header->src_port;
 		addr_in->sin_addr = skb->nh.ip_header->src_addr;
