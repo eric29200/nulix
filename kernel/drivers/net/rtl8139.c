@@ -141,13 +141,8 @@ void rtl8139_irq_handler(struct registers *regs)
 }
 
 /*
- * Get Realtek 8139 network device.
+ * Init Realtek 8139 buffers.
  */
-struct net_device *rtl8139_get_device()
-{
-	return rtl8139_dev;
-}
-
 static void rtl8139_init_ring()
 {
 	struct rtl8139_private *tp = (struct rtl8139_private *) rtl8139_dev->private;
@@ -178,7 +173,7 @@ int init_rtl8139()
 	io_base = pci_dev->bar0 & ~(0x3);
 
 	/* register net device */
-	rtl8139_dev = register_net_device(io_base, ARPHRD_ETHER);
+	rtl8139_dev = register_net_device(io_base, ARPHRD_ETHER, AF_INET, "eth0");
 	if (!rtl8139_dev)
 		return -ENOSPC;
 

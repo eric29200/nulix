@@ -2,6 +2,7 @@
 #include <net/inet/tcp.h>
 #include <net/inet/net.h>
 #include <net/inet/ethernet.h>
+#include <net/inet/route.h>
 #include <proc/sched.h>
 #include <fcntl.h>
 #include <stderr.h>
@@ -96,19 +97,26 @@ static int tcp_send_skb(struct sock *sk, uint16_t flags, const struct msghdr *ms
 {
 	size_t tlen = len + sizeof(struct tcp_header);
 	struct tcp_fake_header tfh;
-	uint32_t dest_ip;
+	struct route *rt;
+	uint32_t saddr;
 	int ret;
 
-	/* get destination IP */
-	dest_ip = sk->daddr;
+	/* find route if needed */
+	saddr = sk->saddr;
+	if (!saddr) {
+		rt = ip_rt_route(sk->daddr);
+		if (!rt)
+			return -ENETUNREACH;
+		saddr = rt->rt_dev->ip_addr;
+	}
 
 	/* build tcp header */
-	tfh.saddr = sk->protinfo.af_inet.dev->ip_addr;
-	tfh.daddr = dest_ip;
+	tfh.saddr = saddr;
+	tfh.daddr = sk->daddr;
 	tfh.th.src_port = sk->sport;
 	tfh.th.dst_port = sk->dport;
-	tfh.th.seq = htonl(sk->protinfo.af_inet.seq_no);
-	tfh.th.ack_seq = htonl(sk->protinfo.af_inet.ack_no);
+	tfh.th.seq = htonl(sk->protinfo.af_tcp.seq_no);
+	tfh.th.ack_seq = htonl(sk->protinfo.af_tcp.ack_no);
 	tfh.th.res1 = 0;
 	tfh.th.doff = sizeof(struct tcp_header) / 4;
 	tfh.th.fin = (flags & TCPCB_FLAG_FIN) != 0;
@@ -124,15 +132,15 @@ static int tcp_send_skb(struct sock *sk, uint16_t flags, const struct msghdr *ms
 	tfh.iov = msg->msg_iov;
 
 	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, tlen, dest_ip);
+	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, tlen, sk->daddr);
 	if (ret)
 		return ret;
 
 	/* update sequence */
 	if (len)
-		sk->protinfo.af_inet.seq_no += len;
+		sk->protinfo.af_tcp.seq_no += len;
 	else if ((flags & TCPCB_FLAG_SYN) || (flags & TCPCB_FLAG_FIN))
-		sk->protinfo.af_inet.seq_no += 1;
+		sk->protinfo.af_tcp.seq_no += 1;
 
 	return 0;
 }
@@ -143,25 +151,35 @@ static int tcp_send_skb(struct sock *sk, uint16_t flags, const struct msghdr *ms
 static int tcp_reply_ack(struct sock *sk, struct sk_buff *skb, uint16_t flags)
 {
 	struct tcp_fake_header tfh;
-	uint32_t dest_ip;
+	uint32_t daddr, saddr;
+	struct route *rt;
 	int len, ret;
 
 	/* get destination IP */
-	dest_ip = skb->nh.ip_header->src_addr;
+	daddr = skb->nh.ip_header->src_addr;
+
+	/* find route if needed */
+	saddr = sk->saddr;
+	if (!saddr) {
+		rt = ip_rt_route(daddr);
+		if (!rt)
+			return -ENETUNREACH;
+		saddr = rt->rt_dev->ip_addr;
+	}
 
 	/* compute ack number */
 	len = tcp_data_length(skb);
-	sk->protinfo.af_inet.ack_no = ntohl(skb->h.tcp_header->seq) + len;
+	sk->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + len;
 	if (!len)
-		sk->protinfo.af_inet.ack_no += 1;
+		sk->protinfo.af_tcp.ack_no += 1;
 
 	/* build tcp header */
-	tfh.saddr = sk->protinfo.af_inet.dev->ip_addr;
-	tfh.daddr = dest_ip;
+	tfh.saddr = saddr;
+	tfh.daddr = daddr;
 	tfh.th.src_port = sk->sport;
 	tfh.th.dst_port = skb->h.tcp_header->src_port;
-	tfh.th.seq = htonl(sk->protinfo.af_inet.seq_no);
-	tfh.th.ack_seq = htonl(sk->protinfo.af_inet.ack_no);
+	tfh.th.seq = htonl(sk->protinfo.af_tcp.seq_no);
+	tfh.th.ack_seq = htonl(sk->protinfo.af_tcp.ack_no);
 	tfh.th.res1 = 0;
 	tfh.th.doff = sizeof(struct tcp_header) / 4;
 	tfh.th.fin = (flags & TCPCB_FLAG_FIN) != 0;
@@ -177,13 +195,13 @@ static int tcp_reply_ack(struct sock *sk, struct sk_buff *skb, uint16_t flags)
 	tfh.iov = NULL;
 
 	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, sizeof(struct tcp_header), dest_ip);
+	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, sizeof(struct tcp_header), daddr);
 	if (ret)
 		return ret;
 
 	/* update sequence */
 	if (flags & TCPCB_FLAG_SYN || flags & TCPCB_FLAG_FIN)
-		sk->protinfo.af_inet.seq_no += 1;
+		sk->protinfo.af_tcp.seq_no += 1;
 
 	return 0;
 }
@@ -197,8 +215,8 @@ static int tcp_reset(struct sock *sk, uint32_t seq_no)
 	int ret;
 
 	/* set sequence number */
-	sk->protinfo.af_inet.seq_no = ntohl(seq_no);
-	sk->protinfo.af_inet.ack_no = 0;
+	sk->protinfo.af_tcp.seq_no = ntohl(seq_no);
+	sk->protinfo.af_tcp.ack_no = 0;
 
 	/* transmit a RST packet */
 	ret = tcp_send_skb(sk, TCPCB_FLAG_RST, &msg, 0);
@@ -421,8 +439,8 @@ static int tcp_connect(struct sock *sk)
 	int ret;
 
 	/* generate sequence */
-	sk->protinfo.af_inet.seq_no = ntohl(rand());
-	sk->protinfo.af_inet.ack_no = 0;
+	sk->protinfo.af_tcp.seq_no = ntohl(rand());
+	sk->protinfo.af_tcp.ack_no = 0;
 
 	/* send SYN message */
 	ret = tcp_send_skb(sk, TCPCB_FLAG_SYN, &msg, 0);
@@ -493,8 +511,8 @@ static int tcp_accept(struct sock *sk, struct sock *sk_new, int flags)
 		sk_new->sport = sk->sport;
 		sk_new->daddr = skb->nh.ip_header->src_addr;
 		sk_new->dport = skb->h.tcp_header->src_port;
-		sk_new->protinfo.af_inet.seq_no = ntohl(1);
-		sk_new->protinfo.af_inet.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
+		sk_new->protinfo.af_tcp.seq_no = ntohl(1);
+		sk_new->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
 
 		/* free socket buffer */
 		skb_unlink(skb);

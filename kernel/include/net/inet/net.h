@@ -8,6 +8,12 @@
 #define NR_NET_DEVICES			4
 #define MAX_ADDR_LEN			7
 
+#define IS_MYADDR			1		/* address is (one of) our own */
+#define IS_LOOPBACK			2		/* address is for LOOPBACK */
+#define IS_BROADCAST			3		/* address is a valid broadcast	*/
+#define IS_INVBCAST			4		/* Wrong netmask bcast not for us (unused) */
+#define IS_MULTICAST			5		/* Multicast IP address */
+
 #define htons(s)			((((s) & 0xFF) << 8) | (((s) & 0xFF00) >> 8))
 #define htonl(l)			((((l) & 0xFF) << 24) | (((l) & 0xFF00) << 8) | (((l) & 0xFF0000) >> 8) | (((l) & 0xFF000000) >> 24))
 #define ntohs(s)			(htons((s)))
@@ -50,6 +56,7 @@ struct net_device_stats {
  */
 struct net_device {
 	char *			name;
+	uint16_t		family;
 	uint8_t			index;
 	uint32_t		io_base;
 	uint8_t			irq;
@@ -75,12 +82,39 @@ extern int nr_net_devices;
 
 /* network prototypes */
 int init_net_dev();
-struct net_device *register_net_device(uint32_t io_base, uint16_t type);
+struct net_device *register_net_device(uint32_t io_base, uint16_t type, uint16_t family, const char *name);
 struct net_device *net_device_find(const char *name);
 int dev_ioctl(unsigned int cmd, void *arg);
 void skb_handle(struct sk_buff *skb);
 uint16_t net_checksum(void *data, size_t size);
 void net_transmit(struct net_device *dev, struct sk_buff *skb);
 void net_deliver_skb(struct sk_buff *skb);
+
+/*
+ * Convert an ASCII string to binary IP.
+ */
+static inline uint32_t in_aton(const char *str)
+{
+	uint32_t val, l;
+	int i;
+
+	for (i = 0, l = 0; i < 4; i++) {
+		l <<= 8;
+
+		if (*str) {
+			val = 0;
+			while (*str && *str != '.') {
+				val *= 10;
+				val += *str - '0';
+				str++;
+			}
+			l |= val;
+			if (*str)
+				str++;
+		}
+	}
+
+	return htonl(l);
+}
 
 #endif

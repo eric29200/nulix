@@ -18,7 +18,7 @@ struct ucred {
 };
 
 /*
- * UNIX socket.
+ * UNIX options.
  */
 struct unix_opt {
 	struct unix_address *		addr;
@@ -26,10 +26,9 @@ struct unix_opt {
 };
 
 /*
- * Inet socket.
+ * TCP options.
  */
-struct inet_opt {
-	struct net_device *		dev;
+struct tcp_opt {
 	uint32_t			seq_no;
 	uint32_t			ack_no;
 };
@@ -41,12 +40,8 @@ struct sock {
 	uint16_t			family;
 	uint16_t			type;
 	uint16_t			protocol;
-	uint32_t			saddr;
-	uint16_t			sport;
-	uint32_t			daddr;
-	uint16_t			dport;
-	struct socket *			socket;
 	struct proto *			prot;
+	struct socket *			socket;
 	uint8_t				state;
 	uint8_t				dead;
 	int				err;
@@ -62,8 +57,14 @@ struct sock {
 	struct wait_queue **		sleep;
 	union {
 		struct unix_opt		af_unix;
-		struct inet_opt		af_inet;
+		struct tcp_opt		af_tcp;
 	} protinfo;
+	uint16_t			num;
+	uint32_t			saddr;
+	uint32_t			rcv_saddr;
+	uint16_t			sport;
+	uint32_t			daddr;
+	uint16_t			dport;
 	struct list_head		list;
 	struct sk_buff_head		receive_queue;
 	struct timer_event		timer;

@@ -6,7 +6,6 @@
 #include <net/inet/route.h>
 #include <net/if.h>
 #include <fs/proc_fs.h>
-#include <drivers/net/rtl8139.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
 #include <fs/fs.h>
@@ -237,40 +236,53 @@ static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t le
 static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
+	uint16_t snum = 0;
+	int chk_addr_ret;
 	struct sock *sk;
-	uint32_t saddr;
-	uint16_t sport;
 
 	/* get inet socket */
 	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
-	/* check active socket, bad address length and double bind */
-	if (sk->state != TCP_CLOSE || addrlen < sizeof(struct sockaddr_in) || sk->sport)
+	/* check active socket and bad address length */
+	if (sk->state != TCP_CLOSE || addrlen < sizeof(struct sockaddr_in))
 		return -EINVAL;
 
-	/* get internet address */
-	saddr = addr_in->sin_addr;
-	sport = addr_in->sin_port;
+	/* bind socket */
+	if (sock->type != SOCK_RAW) {
+		/* already bound */
+		if (sk->num)
+			return -EINVAL;
 
-	/* set default address */
-	if (!saddr)
-		saddr = sk->protinfo.af_inet.dev->ip_addr;
+		/* check or get a free port */
+		snum = ntohs(addr_in->sin_port);
+		if (snum)
+			snum = check_free_port(sk->protocol, snum);
+		else
+			snum = get_free_port(sk->protocol);
 
-	/* check or get a free port */
-	if (sport)
-		sport = check_free_port(sk->protocol, ntohs(sport));
-	else
-		sport = get_free_port(sk->protocol);
+		/* no free port */
+		if (!snum)
+			return -EADDRINUSE;
+	}
 
-	/* no free port */
-	if (!sport)
-		return -EADDRINUSE;
+	/* check source address (must be ours) */
+	chk_addr_ret = ip_chk_addr(addr_in->sin_addr);
+	if (addr_in->sin_addr && chk_addr_ret != IS_MYADDR && chk_addr_ret != IS_BROADCAST)
+		return -EADDRNOTAVAIL;
 
-	/* copy address */
-	sk->saddr = saddr;
-	sk->sport = htons(sport);
+	/* set socket source address */
+	if (chk_addr_ret || addr_in->sin_addr == 0) {
+		sk->rcv_saddr = addr_in->sin_addr;
+		sk->saddr = chk_addr_ret == IS_BROADCAST ? 0 : addr_in->sin_addr;
+	}
+
+	/* update socket */
+	sk->num = snum;
+	sk->sport = htons(snum);
+	sk->daddr = 0;
+	sk->dport = 0;
 
 	/* reinsert socket */
 	list_del(&sk->list);
@@ -372,6 +384,7 @@ static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 {
 	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct sock *sk;
+	uint32_t saddr;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -387,8 +400,15 @@ static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
 		addr_in->sin_port = sk->dport;
 		addr_in->sin_addr = sk->daddr;
 	} else {
+		saddr = sk->rcv_saddr;
+		if (!saddr) {
+			saddr = sk->saddr;
+			if (!saddr)
+				saddr = ip_my_addr();
+		}
+
 		addr_in->sin_port = sk->sport;
-		addr_in->sin_addr = sk->saddr;
+		addr_in->sin_addr = saddr;
 	}
 
 	return 0;
@@ -567,7 +587,6 @@ static int inet_create(struct socket *sock, int protocol)
 
 	/* set socket */
 	memset(sk, 0, sizeof(struct sock));
-	sk->protinfo.af_inet.dev = rtl8139_get_device();
 	sk->protocol = protocol;
 	sk->prot = prot;
 	sock->ops = &inet_ops;

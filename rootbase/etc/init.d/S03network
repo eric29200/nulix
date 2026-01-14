@@ -4,22 +4,16 @@ DAEMON="network"
 
 printf 'Starting %s: ' "$DAEMON"
 
-# set ip
-ifconfig eth0 192.168.1.100 netmask 255.255.255.0 up
+# configure loopback
+ifconfig lo up								\
+	&& route add -host 127.0.0.1 dev lo
+
+# configure eth0
+ifconfig eth0 192.168.1.100 netmask 255.255.255.0 up			\
+	&& route add -net 192.168.1.0 netmask 255.255.255.0 dev eth0	\
+	&& route add default gw 192.168.1.1 eth0
+
 status=$?
-
-# set local route
-if [ "$status" -eq 0 ]; then
-	route add -net 192.168.1.0 netmask 255.255.255.0 dev eth0
-	status=$?
-fi
-
-# set default gateway
-if [ "$status" -eq 0 ]; then
-	route add default gw 192.168.1.1 eth0
-	status=$?
-fi
-
 if [ "$status" -eq 0 ]; then
 	echo "OK"
 else
