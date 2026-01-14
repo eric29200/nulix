@@ -49,7 +49,7 @@ static int udp_handle(struct sock *sk, struct sk_buff *skb)
 		return -EINVAL;
 
 	/* check destination */
-	if (sk->protinfo.af_inet.sport != skb->h.udp_header->dst_port)
+	if (sk->sport != skb->h.udp_header->dst_port)
 		return -EINVAL;
 
 	/* clone socket buffer */
@@ -74,7 +74,7 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	int ret;
 
 	/* build udp header */
-	ufh.uh.src_port = sk->protinfo.af_inet.sport;
+	ufh.uh.src_port = sk->sport;
 	ufh.uh.dst_port = dest_addr_in->sin_port;
 	ufh.uh.len = htons(usize);
 	ufh.uh.chksum = 0;

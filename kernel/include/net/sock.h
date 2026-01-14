@@ -30,13 +30,8 @@ struct unix_opt {
  */
 struct inet_opt {
 	struct net_device *		dev;
-	uint32_t			saddr;
-	uint16_t			sport;
-	uint32_t			daddr;
-	uint16_t			dport;
 	uint32_t			seq_no;
 	uint32_t			ack_no;
-	struct proto *			prot;
 };
 
 /*
@@ -46,7 +41,12 @@ struct sock {
 	uint16_t			family;
 	uint16_t			type;
 	uint16_t			protocol;
+	uint32_t			saddr;
+	uint16_t			sport;
+	uint32_t			daddr;
+	uint16_t			dport;
 	struct socket *			socket;
+	struct proto *			prot;
 	uint8_t				state;
 	uint8_t				dead;
 	int				err;
