@@ -170,7 +170,7 @@ int init_rtl8139()
 	io_base = pci_dev->bar0 & ~(0x3);
 
 	/* register net device */
-	rtl8139_dev = register_net_device(io_base, ARPHRD_ETHER);
+	rtl8139_dev = register_net_device(io_base, ARPHRD_ETHER, "eth0");
 	if (!rtl8139_dev)
 		return -ENOSPC;
 

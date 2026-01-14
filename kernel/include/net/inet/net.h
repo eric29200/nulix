@@ -81,12 +81,39 @@ extern int nr_net_devices;
 
 /* network prototypes */
 int init_net_dev();
-struct net_device *register_net_device(uint32_t io_base, uint16_t type);
+struct net_device *register_net_device(uint32_t io_base, uint16_t type, const char *name);
 struct net_device *net_device_find(const char *name);
 int dev_ioctl(unsigned int cmd, void *arg);
 void skb_handle(struct sk_buff *skb);
 uint16_t net_checksum(void *data, size_t size);
 void net_transmit(struct net_device *dev, struct sk_buff *skb);
 void net_deliver_skb(struct sk_buff *skb);
+
+/*
+ * Convert an ASCII string to binary IP.
+ */
+static inline uint32_t in_aton(const char *str)
+{
+	uint32_t val, l;
+	int i;
+
+	for (i = 0, l = 0; i < 4; i++) {
+		l <<= 8;
+
+		if (*str) {
+			val = 0;
+			while (*str && *str != '.') {
+				val *= 10;
+				val += *str - '0';
+				str++;
+			}
+			l |= val;
+			if (*str)
+				str++;
+		}
+	}
+
+	return(htonl(l));
+}
 
 #endif

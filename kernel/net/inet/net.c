@@ -56,14 +56,12 @@ void skb_handle(struct sk_buff *skb)
 /*
  * Register a network device.
  */
-struct net_device *register_net_device(uint32_t io_base, uint16_t type)
+struct net_device *register_net_device(uint32_t io_base, uint16_t type, const char *name)
 {
 	struct net_device *dev;
-	char tmp[32];
-	size_t len;
 
 	/* network devices table full */
-	if (nr_net_devices >= NR_NET_DEVICES)
+	if (nr_net_devices >= NR_NET_DEVICES || !name)
 		return NULL;
 
 	/* set net device */
@@ -77,15 +75,9 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type)
 	memset(&dev->stats, 0, sizeof(struct net_device_stats));
 
 	/* set name */
-	len = sprintf(tmp, "eth%d", nr_net_devices);
-
-	/* allocate name */
-	dev->name = (char *) kmalloc(len + 1);
+	dev->name = strdup(name);
 	if (!dev->name)
 		return NULL;
-
-	/* set name */
-	memcpy(dev->name, tmp, len + 1);
 
 	/* update number of net devices */
 	nr_net_devices++;

@@ -17,6 +17,7 @@
 #include <drivers/block/ata.h>
 #include <drivers/block/loop.h>
 #include <drivers/video/fb.h>
+#include <drivers/net/loopback.h>
 #include <drivers/net/rtl8139.h>
 #include <net/inet/net.h>
 #include <ipc/ipc.h>
@@ -213,6 +214,11 @@ static void kinit()
 	printf("[Kernel] Mouse Init\n");
 	if (init_mouse())
 		printf("[Kernel] Mouse Init error\n");
+
+	/* init loopback device */
+	printf("[Kernel] Loopback Init\n");
+	if (init_loopback() != 0)
+		printf("[Kernel] Loopback Init error\n");
 
 	/* init realtek 8139 device */
 	printf("[Kernel] Realtek 8139 card Init\n");
