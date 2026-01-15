@@ -119,6 +119,27 @@ static uint16_t get_free_port(uint16_t protocol)
 }
 
 /*
+ * Auto bind a socket.
+ */
+static int inet_autobind(struct sock *sk)
+{
+	/* already bound */
+	if (sk->num)
+		return 0;
+
+	/* get a free port */
+	sk->num = get_free_port(sk->protocol);
+	if (!sk->num)
+		return -EAGAIN;
+
+	/* reinsert socket in sorted list */
+	list_del(&sk->list);
+	insert_inet_socket(sk);
+
+	return 0;
+}
+
+/*
  * Release a socket.
  */
 static int inet_release(struct socket *sock)
@@ -183,6 +204,7 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
 static int inet_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
 {
 	struct sock *sk;
+	int ret;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -191,7 +213,12 @@ static int inet_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
 
 	/* recvmsg not implemented */
 	if (!sk->prot || !sk->prot->recvmsg)
-		return -EINVAL;
+		return -EOPNOTSUPP;
+
+	/* auto bind socket if needed */
+	ret = inet_autobind(sk);
+	if (ret)
+		return ret;
 
 	return sk->prot->recvmsg(sk, msg, len);
 }
@@ -202,6 +229,7 @@ static int inet_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
 static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
 {
 	struct sock *sk;
+	int ret;
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -211,6 +239,11 @@ static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t le
 	/* sendmsg not implemented */
 	if (!sk->prot || !sk->prot->sendmsg)
 		return -EINVAL;
+
+	/* auto bind socket if needed */
+	ret = inet_autobind(sk);
+	if (ret)
+		return ret;
 
 	return sk->prot->sendmsg(sk, msg, len);
 }
@@ -314,11 +347,20 @@ static int inet_shutdown(struct socket *sock, int how)
  */
 static int inet_dgram_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
-	UNUSED(sock);
-	UNUSED(addr);
-	UNUSED(addrlen);
-	printf("inet_dgram_connect() not implemented\n");
-	return 0;
+	struct sock *sk = sock->sk;
+	int ret;
+
+	/* auto bind socket if needed */
+	ret = inet_autobind(sk);
+	if (ret)
+		return ret;
+
+	/* connect not implemented */
+	if (!sk->prot || !sk->prot->connect)
+		return -EOPNOTSUPP;
+
+	/* initiate connection */
+	return sk->prot->connect(sk, addr, addrlen);
 }
 
 /*
@@ -326,31 +368,25 @@ static int inet_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
  */
 static int inet_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
-	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct sock *sk;
-
-	/* unused address length */
-	UNUSED(addrlen);
+	int ret;
 
 	/* get inet socket */
 	sk = sock->sk;
 	if (!sk)
 		return -EINVAL;
 
-	/* allocate a dynamic port */
-	sk->sport = htons(get_free_port(sk->protocol));
-	list_del(&sk->list);
-	insert_inet_socket(sk);
-
-	/* copy address */
-	sk->daddr = addr_in->sin_addr;
-	sk->dport = addr_in->sin_port;
+	/* auto bind socket */
+	ret = inet_autobind(sk);
+	if (ret)
+		return ret;
 
 	/* connect not implemented */
 	if (!sk->prot || !sk->prot->connect)
 		return -EINVAL;
 
-	return sk->prot->connect(sk);
+	/* initiate connection */
+	return sk->prot->connect(sk, addr, addrlen);
 }
 
 /*

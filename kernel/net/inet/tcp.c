@@ -422,10 +422,19 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 /*
  * Create a TCP connection.
  */
-static int tcp_connect(struct sock *sk)
+static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addrlen)
 {
+	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct msghdr msg = { 0 };
 	int ret;
+
+	/* check address length */
+	if (addrlen < sizeof(struct sockaddr_in))
+		return -EINVAL;
+
+	/* set destination */
+	sk->daddr = addr_in->sin_addr;
+	sk->dport = addr_in->sin_port;
 
 	/* generate sequence */
 	sk->protinfo.af_tcp.seq_no = ntohl(rand());
