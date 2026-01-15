@@ -10,7 +10,6 @@
 #include <fcntl.h>
 #include <uio.h>
 
-#define MIN_WRITE_SPACE			2048
 #define UNIX_DELETE_DELAY		(HZ)
 #define UNIX_MAX_DGRAM_QLEN		10
 
@@ -1081,7 +1080,7 @@ static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
 static struct proto_ops unix_dgram_ops = {
 	.dup		= sock_no_dup,
 	.release	= unix_release,
-	.poll		= unix_poll,
+	.poll		= datagram_poll,
 	.ioctl		= unix_ioctl,
 	.recvmsg	= unix_dgram_recvmsg,
 	.sendmsg	= unix_dgram_sendmsg,

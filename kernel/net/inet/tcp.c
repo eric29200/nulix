@@ -304,6 +304,32 @@ out:
 }
 
 /*
+ * Poll on TCP socket.
+ */
+static int tcp_poll(struct socket *sock, struct select_table *wait)
+{
+	struct sock *sk = sock->sk;
+	int mask = 0;
+
+	/* add wait queue to select table */
+	select_wait(sk->sleep, wait);
+
+	/* connecting = waiting for TCP syn/ack */
+	if (sock->state == SS_CONNECTING)
+		return mask;
+
+	/* check if there is a message in the queue */
+	if (sock->state == SS_DISCONNECTING || !skb_queue_empty(&sk->receive_queue))
+		mask |= POLLIN;
+
+	/* check if socket can write */
+	if (sock->state != SS_DISCONNECTING && !sk->dead)
+		mask |= POLLOUT;
+
+	return mask;
+}
+
+/*
  * Receive a TCP message.
  */
 static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
@@ -493,4 +519,5 @@ struct proto tcp_prot = {
 	.recvmsg	= tcp_recvmsg,
 	.sendmsg	= tcp_sendmsg,
 	.connect	= tcp_connect,
+	.poll		= tcp_poll,
 };

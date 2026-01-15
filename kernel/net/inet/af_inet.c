@@ -172,30 +172,13 @@ static int inet_release(struct socket *sock)
  */
 static int inet_poll(struct socket *sock, struct select_table *wait)
 {
-	struct sock *sk;
-	int mask = 0;
+	struct sock *sk = sock->sk;
 
-	/* get inet socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
+	/* poll not implement */
+	if (!sk->prot || !sk->prot->poll)
+		return 0;
 
-	/* add wait queue to select table */
-	select_wait(&sock->wait, wait);
-
-	/* connecting = waiting for TCP syn/ack */
-	if (sk->socket->state == SS_CONNECTING)
-		return mask;
-
-	/* check if there is a message in the queue */
-	if (sk->socket->state == SS_DISCONNECTING || !skb_queue_empty(&sk->receive_queue))
-		mask |= POLLIN;
-
-	/* check if socket can write */
-	if (sk->socket->state != SS_DISCONNECTING && !sk->dead)
-		mask |= POLLOUT;
-
-	return mask;
+	return sk->prot->poll(sock, wait);
 }
 
 /*
@@ -533,7 +516,7 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 struct proto_ops inet_dgram_ops = {
 	.dup		= sock_no_dup,
 	.release	= inet_release,
-	.poll		= inet_poll,
+	.poll		= datagram_poll,
 	.ioctl		= inet_ioctl,
 	.recvmsg	= inet_recvmsg,
 	.sendmsg	= inet_sendmsg,

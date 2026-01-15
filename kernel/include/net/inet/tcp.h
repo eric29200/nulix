@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #define TCP_ESTABLISHED		1
+#define TCP_SYN_SENT		2
 #define TCP_CLOSE		7
 #define TCP_LISTEN		10
 
