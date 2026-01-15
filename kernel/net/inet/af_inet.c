@@ -119,21 +119,6 @@ static uint16_t get_free_port(uint16_t protocol)
 }
 
 /*
- * Duplicate a socket.
- */
-static int inet_dup(struct socket *sock_new, struct socket *sock)
-{
-	struct sock *sk;
-
-	/* get inet socket */
-	sk = sock->sk;
-	if (!sk)
-		return 0;
-
-	return inet_create(sock_new, sk->protocol);
-}
-
-/*
  * Release a socket.
  */
 static int inet_release(struct socket *sock)
@@ -327,7 +312,19 @@ static int inet_shutdown(struct socket *sock, int how)
 /*
  * Connect system call.
  */
-static int inet_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+static int inet_dgram_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+{
+	UNUSED(sock);
+	UNUSED(addr);
+	UNUSED(addrlen);
+	printf("inet_dgram_connect() not implemented\n");
+	return 0;
+}
+
+/*
+ * Connect system call.
+ */
+static int inet_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct sock *sk;
@@ -495,10 +492,30 @@ static int inet_ioctl(struct socket *sock, int cmd, unsigned long arg)
 }
 
 /*
- * Inet operations.
+ * Inet datagram operations.
  */
-struct proto_ops inet_ops = {
-	.dup		= inet_dup,
+struct proto_ops inet_dgram_ops = {
+	.dup		= sock_no_dup,
+	.release	= inet_release,
+	.poll		= inet_poll,
+	.ioctl		= inet_ioctl,
+	.recvmsg	= inet_recvmsg,
+	.sendmsg	= inet_sendmsg,
+	.bind		= inet_bind,
+	.listen		= sock_no_listen,
+	.accept		= sock_no_accept,
+	.connect	= inet_dgram_connect,
+	.shutdown	= inet_shutdown,
+	.getname	= inet_getname,
+	.getsockopt	= inet_getsockopt,
+	.setsockopt	= inet_setsockopt,
+};
+
+/*
+ * Inet stream operations.
+ */
+struct proto_ops inet_stream_ops = {
+	.dup		= sock_no_dup,
 	.release	= inet_release,
 	.poll		= inet_poll,
 	.ioctl		= inet_ioctl,
@@ -507,7 +524,7 @@ struct proto_ops inet_ops = {
 	.bind		= inet_bind,
 	.listen		= inet_listen,
 	.accept		= inet_accept,
-	.connect	= inet_connect,
+	.connect	= inet_stream_connect,
 	.shutdown	= inet_shutdown,
 	.getname	= inet_getname,
 	.getsockopt	= inet_getsockopt,
@@ -522,6 +539,11 @@ static int inet_create(struct socket *sock, int protocol)
 	struct proto *prot = NULL;
 	struct sock *sk;
 
+	/* allocate inet socket */
+	sk = sk_alloc(AF_INET, 1);
+	if (!sk)
+		return -ENOMEM;
+
 	/* choose socket type */
 	switch (sock->type) {
 		case SOCK_STREAM:
@@ -530,9 +552,10 @@ static int inet_create(struct socket *sock, int protocol)
 				case IP_PROTO_TCP:
 					protocol = IP_PROTO_TCP;
 					prot = &tcp_prot;
+					sock->ops = &inet_stream_ops;
 					break;
 				default:
-					return -EINVAL;
+					goto err_proto;
 			}
 
 			break;
@@ -542,29 +565,26 @@ static int inet_create(struct socket *sock, int protocol)
 				case IP_PROTO_UDP:
 					protocol = IP_PROTO_UDP;
 					prot = &udp_prot;
+					sock->ops = &inet_dgram_ops;
 					break;
 				default:
-					return -EINVAL;
+					goto err_proto;
 			}
 
 			break;
 		case SOCK_RAW:
+			if (!protocol)
+				goto err_proto;
 			prot = &raw_prot;
+			sock->ops = &inet_dgram_ops;
 			break;
 		default:
-			return -EINVAL;
+			goto err_type;
 	}
 
-	/* allocate inet socket */
-	sk = kmalloc(sizeof(struct sock));
-	if (!sk)
-		return -ENOMEM;
-
 	/* set socket */
-	memset(sk, 0, sizeof(struct sock));
 	sk->protocol = protocol;
 	sk->prot = prot;
-	sock->ops = &inet_ops;
 
 	/* init data */
 	sock_init_data(sock, sk);
@@ -573,6 +593,12 @@ static int inet_create(struct socket *sock, int protocol)
 	insert_inet_socket(sk);
 
 	return 0;
+err_proto:
+	sk_free(sk);
+	return -EPROTONOSUPPORT;
+err_type:
+	sk_free(sk);
+	return -ESOCKTNOSUPPORT;
 }
 
 /*
