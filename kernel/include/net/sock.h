@@ -82,7 +82,6 @@ struct proto {
 	int (*recvmsg)(struct sock *, struct msghdr *, size_t);
 	int (*sendmsg)(struct sock *, const struct msghdr *, size_t);
 	int (*connect)(struct sock *);
-	int (*accept)(struct sock *, struct sock *, int);
 };
 
 /* inet protocols */

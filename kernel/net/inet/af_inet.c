@@ -186,7 +186,7 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
 		mask |= POLLIN;
 
 	/* check if socket can write */
-	if (sk->socket->state != SS_DISCONNECTING && sk->socket->state != SS_DEAD)
+	if (sk->socket->state != SS_DISCONNECTING && !sk->dead)
 		mask |= POLLOUT;
 
 	return mask;
@@ -296,9 +296,8 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
  */
 static int inet_listen(struct socket *sock)
 {
-	/* set socket state */
-	sock->state = SS_LISTENING;
-
+	UNUSED(sock);
+	printf("inet_listen() not implemented\n");
 	return 0;
 }
 
@@ -307,28 +306,10 @@ static int inet_listen(struct socket *sock)
  */
 static int inet_accept(struct socket *sock, struct socket *sock_new, int flags)
 {
-	struct sock *sk, *sk_new;
-	int ret;
-
-	/* get inet socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
-
-	/* get new inet socket */
-	sk_new = sock_new->sk;
-	if (!sk_new)
-		return -EINVAL;
-
-	/* accept not implemented */
-	if (!sk_new->prot || !sk_new->prot->accept)
-		return -EINVAL;
-
-	/* accept */
-	ret = sk_new->prot->accept(sk, sk_new, flags);
-	if (ret)
-		return ret;
-
+	UNUSED(sock);
+	UNUSED(sock_new);
+	UNUSED(flags);
+	printf("inet_accept() not implemented\n");
 	return 0;
 }
 
@@ -339,9 +320,7 @@ static int inet_shutdown(struct socket *sock, int how)
 {
 	UNUSED(sock);
 	UNUSED(how);
-
 	printf("inet_shutdown() not implemented\n");
-
 	return 0;
 }
 
@@ -424,9 +403,7 @@ static int inet_getsockopt(struct socket *sock, int level, int optname, void *op
 	UNUSED(optname);
 	UNUSED(optval);
 	UNUSED(optlen);
-
 	printf("inet_getsockopt(%d) undefined\n", optname);
-
 	return 0;
 }
 
@@ -440,9 +417,7 @@ static int inet_setsockopt(struct socket *sock, int level, int optname, void *op
 	UNUSED(optname);
 	UNUSED(optval);
 	UNUSED(optlen);
-
 	printf("inet_setsockopt(%d) undefined\n", optname);
-
 	return 0;
 }
 

@@ -263,17 +263,6 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 
 	/* handle TCP packet */
 	switch (sk->socket->state) {
-		case SS_LISTENING:
-			/* clone socket buffer */
-			skb_new = skb_clone(skb);
-			if (!skb_new)
-				return -ENOMEM;
-
-			/* add buffer to socket */
-			if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin)
-				skb_queue_tail(&sk->receive_queue, skb_new);
-
-			break;
 		case SS_CONNECTING:
 			/* find SYN | ACK message */
 			if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
@@ -283,7 +272,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 
 			/* else reset TCP connection and release socket */
 			tcp_reset(sk, skb->h.tcp_header->ack_seq);
-			sk->socket->state = SS_DEAD;
+			sk->dead = 1;
 
 			break;
 		case SS_CONNECTED:
@@ -330,7 +319,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 	/* sleep until we receive a packet */
 	for (;;) {
 		/* dead socket */
-		if (sk->socket->state == SS_DEAD)
+		if (sk->dead)
 			return -ENOTCONN;
 
 		/* signal received : restart system call */
@@ -403,7 +392,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	/* sleep until connected */
 	for (;;) {
 		/* dead socket */
-		if (sk->socket->state == SS_DEAD)
+		if (sk->dead)
 			return -ENOTCONN;
 
 		/* signal received : restart system call */
@@ -454,85 +443,6 @@ static int tcp_connect(struct sock *sk)
 }
 
 /*
- * Find a SYN message.
- */
-static struct sk_buff *tcp_find_established(struct sock *sk)
-{
-	struct sk_buff *skb;
-
-	/* peek first message */
-	skb = skb_peek(&sk->receive_queue);
-	if (!skb)
-		return NULL;
-
-	/* find a SYN message */
-	do {
-		/* SYN message */
-		if (!skb->h.tcp_header->syn)
-			return skb;
-
-		skb = skb->next;
-	} while (skb != (struct sk_buff *) &sk->receive_queue);
-
-	return NULL;
-}
-
-/*
- * Accept a TCP connection.
- */
-static int tcp_accept(struct sock *sk, struct sock *sk_new, int flags)
-{
-	struct sk_buff *skb;
-
-	for (;;) {
-		/* wait for a SYN message */
-		skb = tcp_find_established(sk);
-		if (!skb) {
-			/* non blocking */
-			if (flags & O_NONBLOCK)
-				return -EAGAIN;
-
-			/* signal received : restart system call */
-			if (signal_pending(current_task))
-				return -ERESTARTSYS;
-
-			/* disconnected : break */
-			if (sk->socket->state == SS_DISCONNECTING)
-				return 0;
-
-			/* sleep */
-			sleep_on(&sk->socket->wait);
-			continue;
-		}
-
-		/* set new socket */
-		sk_new->socket->state = SS_CONNECTED;
-		sk_new->saddr = sk->saddr;
-		sk_new->sport = sk->sport;
-		sk_new->daddr = skb->nh.ip_header->src_addr;
-		sk_new->dport = skb->h.tcp_header->src_port;
-		sk_new->protinfo.af_tcp.seq_no = ntohl(1);
-		sk_new->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
-
-		/* free socket buffer */
-		skb_unlink(skb);
-		skb_free(skb);
-
-		/* move buffers to new socket */
-		while ((skb = skb_dequeue(&sk->receive_queue)) != NULL) {
-			if (sk_new->dport == skb->h.tcp_header->src_port && sk_new->daddr == skb->nh.ip_header->src_addr)
-				skb_queue_tail(&sk_new->receive_queue, skb);
-			else
-				skb_free(skb);
-		}
-
-		return 0;
-	}
-
-	return 0;
-}
-
-/*
  * Close a TCP connection.
  */
 static int tcp_close(struct sock *sk)
@@ -574,5 +484,4 @@ struct proto tcp_prot = {
 	.recvmsg	= tcp_recvmsg,
 	.sendmsg	= tcp_sendmsg,
 	.connect	= tcp_connect,
-	.accept		= tcp_accept,
 };
