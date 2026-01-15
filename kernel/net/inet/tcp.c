@@ -298,7 +298,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 
 out:
 	/* wake up eventual processes */
-	wake_up(&sk->socket->wait);
+	wake_up(sk->sleep);
 
 	return 0;
 }
@@ -365,7 +365,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 			return -EAGAIN;
 
 		/* sleep */
-		sleep_on(&sk->socket->wait);
+		sleep_on(sk->sleep);
 	}
 
 	/* get first message */
@@ -434,7 +434,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 			return -EAGAIN;
 
 		/* sleep */
-		sleep_on(&sk->socket->wait);
+		sleep_on(sk->sleep);
 	}
 
 	/* send message */
@@ -504,7 +504,7 @@ wait_for_ack:
 			return -ERESTARTSYS;
 
 		/* sleep */
-		sleep_on(&sk->socket->wait);
+		sleep_on(sk->sleep);
 	}
 
 	return 0;

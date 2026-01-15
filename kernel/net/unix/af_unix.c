@@ -424,7 +424,7 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 				return -EAGAIN;
 
 			/* wait for a message */
-			sleep_on(&sk->socket->wait);
+			sleep_on(sk->sleep);
 
 			/* handle signal */
 			if (signal_pending(current_task))
