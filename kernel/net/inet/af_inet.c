@@ -133,6 +133,7 @@ static int inet_autobind(struct sock *sk)
 		return -EAGAIN;
 
 	/* reinsert socket in sorted list */
+	sk->sport = htons(sk->num);
 	list_del(&sk->list);
 	insert_inet_socket(sk);
 
