@@ -66,17 +66,34 @@ static uint16_t check_port(uint16_t protocol, uint16_t sport)
  */
 static uint16_t get_port(uint16_t protocol, uint16_t goal)
 {
-	uint32_t port;
+	static uint16_t base_port = 0;
+	uint16_t start;
+	int free;
 
 	/* just check port */
 	if (goal)
 		return check_port(protocol, goal);
 
-	/* generate a random port */
-	for (;;) {
-		port = IP_START_DYN_PORT + rand() % (USHRT_MAX - IP_START_DYN_PORT);
-		if (check_port(protocol, port))
-			return port;
+	/* generate a random port to start */
+	if (!base_port)
+		base_port = IP_START_DYN_PORT + rand() % (USHRT_MAX - IP_START_DYN_PORT);
+
+	/* find a free port */
+	for (start = base_port;;) {
+		/* check if next port is free */
+		free = check_port(protocol, base_port);
+
+		/* update base port */
+		if (++base_port < IP_START_DYN_PORT)
+			base_port = IP_START_DYN_PORT;
+
+		/* free port */
+		if (free)
+			return base_port;
+
+		/* no free port */
+		if (base_port == start)
+			return 0;
 	}
 }
 
