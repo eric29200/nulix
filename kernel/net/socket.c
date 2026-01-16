@@ -457,7 +457,7 @@ int sys_connect(int sockfd, const struct sockaddr *addr, size_t addrlen)
 	if (!sock->ops || !sock->ops->connect)
 		goto out;
 
-	ret = sock->ops->connect(sock, addr, addrlen);
+	ret = sock->ops->connect(sock, addr, addrlen, sock->file->f_flags);
 out:
 	sockfd_put(sock);
 	return ret;

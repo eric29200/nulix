@@ -861,11 +861,14 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, int flags)
 /*
  * Datagram connect.
  */
-static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen, int flags)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	unix_socket_t *sk, *other;
 	int ret, alen;
+
+	/* unused flags */
+	UNUSED(flags);
 
 	/* get UNIX socket */
 	sk = sock->sk;
@@ -903,13 +906,16 @@ static int unix_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 /*
  * Stream connect.
  */
-static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen, int flags)
 {
 	struct sockaddr_un *sunaddr = (struct sockaddr_un *) addr;
 	struct sock *sk = sock->sk, *sk_new;
 	struct sk_buff *skb = NULL;
 	unix_socket_t *other;
 	int ret, alen;
+
+	/* unused flags */
+	UNUSED(flags);
 
 	/* make destination address */
 	alen = unix_mkname(sunaddr, addrlen);

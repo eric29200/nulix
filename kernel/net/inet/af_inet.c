@@ -11,6 +11,7 @@
 #include <fs/fs.h>
 #include <stdio.h>
 #include <stderr.h>
+#include <fcntl.h>
 #include <math.h>
 
 /* inet sockets */
@@ -329,10 +330,13 @@ static int inet_shutdown(struct socket *sock, int how)
 /*
  * Connect system call.
  */
-static int inet_dgram_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+static int inet_dgram_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen, int flags)
 {
 	struct sock *sk = sock->sk;
 	int ret;
+
+	/* unused flags */
+	UNUSED(flags);
 
 	/* auto bind socket if needed */
 	ret = inet_autobind(sk);
@@ -350,27 +354,60 @@ static int inet_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 /*
  * Connect system call.
  */
-static int inet_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen)
+static int inet_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen, int flags)
 {
-	struct sock *sk;
+	struct sock *sk = sock->sk;
 	int ret;
 
-	/* get inet socket */
-	sk = sock->sk;
-	if (!sk)
-		return -EINVAL;
+	/* already connected ? */
+	if (sock->state != SS_UNCONNECTED && sock->state == SS_CONNECTING)
+		return sock->state == SS_CONNECTED ? -EISCONN : -EINVAL;
 
-	/* auto bind socket */
-	ret = inet_autobind(sk);
-	if (ret)
-		return ret;
+	/* if socket is already connecting, wait for connection. otherwise initiate connect. */
+	if (sock->state == SS_CONNECTING) {
+		if (sk->err)
+			goto err;
+		if (flags & O_NONBLOCK)
+			return -EALREADY;
+	} else {
+		/* connect not implemented */
+		if (!sk->prot || !sk->prot->connect)
+			return -EOPNOTSUPP;
 
-	/* connect not implemented */
-	if (!sk->prot || !sk->prot->connect)
-		return -EINVAL;
+		/* auto bind socket */
+		ret = inet_autobind(sk);
+		if (ret)
+			return ret;
 
-	/* initiate connection */
-	return sk->prot->connect(sk, addr, addrlen);
+		/* initiate connection */
+		ret = sk->prot->connect(sk, addr, addrlen);
+		if (ret < 0)
+			return ret;
+
+		/* set socket "connecting" */
+		sock->state = SS_CONNECTING;
+	}
+
+	/* connection in progress */
+	if (sock->state != SS_CONNECTED && (flags & O_NONBLOCK))
+		return -EINPROGRESS;
+
+	/* wait for connection */
+	while (sock->state != SS_CONNECTED) {
+		if (signal_pending(current_task))
+			return -ERESTARTSYS;
+		if (sk->err)
+			goto err;
+		sleep_on(sk->sleep);
+	}
+
+	/* set socket "connected" */
+	sock->state = SS_CONNECTED;
+
+	return 0;
+err:
+	sock->state = SS_UNCONNECTED;
+	return sock_error(sk);
 }
 
 /*

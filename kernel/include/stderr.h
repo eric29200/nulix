@@ -55,6 +55,8 @@
 #define	EISCONN		106	/* Transport endpoint is already connected */
 #define ENOTCONN	107	/* Transport endpoint is not connected */
 #define ECONNREFUSED	111	/* Connection refused */
+#define	EALREADY	114	/* Operation already in progress */
+#define	EINPROGRESS	115	/* Operation now in progress */
 #define ERESTARTSYS	512	/* Restart system call */
 #define ERESTARTNOHAND	514	/* restart if no handler */
 #define ENOIOCTLCMD	515	/* no ioctl command */

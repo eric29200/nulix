@@ -140,7 +140,7 @@ struct proto_ops {
 	int (*bind)(struct socket *, const struct sockaddr *, size_t);
 	int (*listen)(struct socket *);
 	int (*accept)(struct socket *, struct socket *, int);
-	int (*connect)(struct socket *, const struct sockaddr *, size_t);
+	int (*connect)(struct socket *, const struct sockaddr *, size_t, int);
 	int (*shutdown)(struct socket *, int);
 	int (*getname)(struct socket *, struct sockaddr *, size_t *, int);
 	int (*getsockopt)(struct socket *, int, int, void *, size_t *);
