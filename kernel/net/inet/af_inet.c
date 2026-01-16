@@ -44,52 +44,17 @@ void net_deliver_skb(struct sk_buff *skb)
 }
 
 /*
- * Insert a socket in the inet list (list must be sorted by protocol and source port).
- */
-static void insert_inet_socket(struct sock *sk)
-{
-	struct list_head *pos;
-	struct sock *sk_tmp;
-
-	/* empty list */
-	if (list_empty(&inet_sockets)) {
-		list_add(&sk->list, &inet_sockets);
-		return;
-	}
-
-	/* find insert position */
-	list_for_each(pos, &inet_sockets) {
-		sk_tmp = list_entry(pos, struct sock, list);
-		if (sk_tmp->protocol > sk->protocol)
-			break;
-		if (sk_tmp->protocol == sk->protocol && ntohs(sk_tmp->sport) >= ntohs(sk->sport))
-			break;
-	}
-
-	/* insert socket */
-	if (pos == &inet_sockets)
-		list_add(&sk->list, &sk_tmp->list);
-	else
-		list_add_tail(&sk->list, &sk_tmp->list);
-}
-
-/*
  * Check if a port is already mapped.
  */
-static int check_free_port(uint16_t protocol, uint16_t sport)
+static uint16_t check_port(uint16_t protocol, uint16_t sport)
 {
 	struct list_head *pos;
-	struct sock *sk_tmp;
+	struct sock *sk;
 
 	/* check if asked port is already mapped */
 	list_for_each(pos, &inet_sockets) {
-		sk_tmp = list_entry(pos, struct sock, list);
-
-		if (sk_tmp->protocol < protocol)
-			continue;
-		else if (sk_tmp->protocol > protocol || ntohs(sk_tmp->sport) > sport)
-			break;
-		else if (ntohs(sk_tmp->sport) == sport)
+		sk = list_entry(pos, struct sock, list);
+		if (sk->protocol == protocol && ntohs(sk->sport) == sport)
 			return 0;
 	}
 
@@ -97,26 +62,22 @@ static int check_free_port(uint16_t protocol, uint16_t sport)
 }
 
 /*
- * Get a free port.
+ * Get or check a port.
  */
-static uint16_t get_free_port(uint16_t protocol)
+static uint16_t get_port(uint16_t protocol, uint16_t goal)
 {
-	int base = IP_START_DYN_PORT;
-	struct list_head *pos;
-	struct sock *sk_tmp;
+	uint32_t port;
 
-	list_for_each(pos, &inet_sockets) {
-		sk_tmp = list_entry(pos, struct sock, list);
+	/* just check port */
+	if (goal)
+		return check_port(protocol, goal);
 
-		if (sk_tmp->protocol < protocol)
-			continue;
-		else if (sk_tmp->protocol > protocol || sk_tmp->sport > base)
-			break;
-		else if (ntohs(sk_tmp->sport) == base)
-			base++;
+	/* generate a random port */
+	for (;;) {
+		port = IP_START_DYN_PORT + rand() % (USHRT_MAX - IP_START_DYN_PORT);
+		if (check_port(protocol, port))
+			return port;
 	}
-
-	return base > USHRT_MAX ? 0 : base;
 }
 
 /*
@@ -129,14 +90,12 @@ static int inet_autobind(struct sock *sk)
 		return 0;
 
 	/* get a free port */
-	sk->num = get_free_port(sk->protocol);
+	sk->num = get_port(sk->protocol, 0);
 	if (!sk->num)
 		return -EAGAIN;
 
-	/* reinsert socket in sorted list */
+	/* update socket */
 	sk->sport = htons(sk->num);
-	list_del(&sk->list);
-	insert_inet_socket(sk);
 
 	return 0;
 }
@@ -259,13 +218,7 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 			return -EINVAL;
 
 		/* check or get a free port */
-		snum = ntohs(addr_in->sin_port);
-		if (snum)
-			snum = check_free_port(sk->protocol, snum);
-		else
-			snum = get_free_port(sk->protocol);
-
-		/* no free port */
+		snum = get_port(sk->protocol, ntohs(addr_in->sin_port));
 		if (!snum)
 			return -EADDRINUSE;
 	}
@@ -286,10 +239,6 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 	sk->sport = htons(snum);
 	sk->daddr = 0;
 	sk->dport = 0;
-
-	/* reinsert socket */
-	list_del(&sk->list);
-	insert_inet_socket(sk);
 
 	return 0;
 }
@@ -647,7 +596,7 @@ static int inet_create(struct socket *sock, int protocol)
 	sock_init_data(sock, sk);
 
 	/* insert in sockets list */
-	insert_inet_socket(sk);
+	list_add_tail(&sk->list, &inet_sockets);
 
 	return 0;
 err_proto:
