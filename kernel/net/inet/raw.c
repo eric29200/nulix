@@ -103,7 +103,7 @@ static int raw_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	rfh.iov = msg->msg_iov;
 
 	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, raw_getfrag, &rfh, size, dest_ip);
+	ret = ip_build_xmit(sk, raw_getfrag, &rfh, size, dest_ip, msg->msg_flags);
 	if (ret)
 		return ret;
 

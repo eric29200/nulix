@@ -100,7 +100,7 @@ void ip_receive(struct sk_buff *skb)
 /*
  * Build and transmit an IP packet.
  */
-int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag, size_t size, uint32_t daddr)
+int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag, size_t size, uint32_t daddr, int flags)
 {
 	struct ip_header *iph;
 	struct sk_buff *skb;
@@ -116,9 +116,9 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 	size += sizeof(struct ip_header);
 
 	/* allocate a socket buffer */
-	skb = skb_alloc(rt->rt_dev->hard_header_len + size);
+	skb = sock_alloc_send_skb(sk, rt->rt_dev->hard_header_len + size, flags & MSG_DONTWAIT, &ret);
 	if (!skb)
-		return -ENOMEM;
+		return ret;
 
 	/* build hard header */
 	rt->rt_dev->hard_header(skb, ETHERNET_TYPE_IP, rt->rt_dev->hw_addr, NULL);

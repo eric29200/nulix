@@ -82,7 +82,7 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	ufh.iov = msg->msg_iov;
 
 	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, udp_getfrag, &ufh, usize, dest_addr_in->sin_addr);
+	ret = ip_build_xmit(sk, udp_getfrag, &ufh, usize, dest_addr_in->sin_addr, msg->msg_flags);
 	if (ret)
 		return ret;
 

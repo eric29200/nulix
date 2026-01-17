@@ -132,7 +132,7 @@ static int tcp_send_skb(struct sock *sk, uint16_t flags, const struct msghdr *ms
 	tfh.iov = msg ? msg->msg_iov : NULL;
 
 	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, tlen, sk->daddr);
+	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, tlen, sk->daddr, msg->msg_flags);
 	if (ret)
 		return ret;
 

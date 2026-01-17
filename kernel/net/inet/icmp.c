@@ -56,7 +56,7 @@ static void icmp_reply_echo(struct sk_buff *skb)
 	icmpfh.data_len = ntohs(skb->nh.ip_header->length) - sizeof(struct ip_header);
 
 	/* send reply */
-	ip_build_xmit(sk, icmp_getfrag, &icmpfh, icmpfh.data_len + sizeof(struct icmp_header), daddr);
+	ip_build_xmit(sk, icmp_getfrag, &icmpfh, icmpfh.data_len + sizeof(struct icmp_header), daddr, 0);
 }
 
 /*
