@@ -8,8 +8,27 @@
 
 #define TCP_ESTABLISHED		1
 #define TCP_SYN_SENT		2
+#define TCP_SYN_RECV		3
+#define TCP_FIN_WAIT1		4
+#define TCP_FIN_WAIT2		5
+#define TCP_TIME_WAIT		6
 #define TCP_CLOSE		7
+#define TCP_CLOSE_WAIT		8
+#define TCP_LAST_ACK		9
 #define TCP_LISTEN		10
+#define TCP_CLOSING		11
+
+#define TCPF_ESTABLISHED	(1 << TCP_ESTABLISHED)
+#define TCPF_SYN_SENT		(1 << TCP_SYN_SENT)
+#define TCPF_SYN_RECV		(1 << TCP_SYN_RECV)
+#define TCPF_FIN_WAIT1		(1 << TCP_FIN_WAIT1)
+#define TCPF_FIN_WAIT2		(1 << TCP_FIN_WAIT2)
+#define TCPF_TIME_WAIT		(1 << TCP_TIME_WAIT)
+#define TCPF_CLOSE		(1 << TCP_CLOSE)
+#define TCPF_CLOSE_WAIT		(1 << TCP_CLOSE_WAIT)
+#define TCPF_LAST_ACK		(1 << TCP_LAST_ACK)
+#define TCPF_LISTEN		(1 << TCP_LISTEN)
+#define TCPF_CLOSING		(1 << TCP_CLOSING)
 
 #define TCPCB_FLAG_FIN		0x01
 #define TCPCB_FLAG_SYN		0x02
@@ -77,6 +96,14 @@ static inline uint16_t tcp_data_length(struct sk_buff *skb)
 static inline void *tcp_data(struct sk_buff *skb)
 {
 	return (void *) skb->h.tcp_header + sizeof(struct tcp_header) + tcp_option_length(skb);
+}
+
+/*
+ * Is a TCP socket connected ?
+ */
+static inline int tcp_connected(int state)
+{
+	return ((1 << state) & (TCPF_ESTABLISHED | TCPF_CLOSE_WAIT | TCPF_FIN_WAIT1 | TCPF_FIN_WAIT2 | TCPF_SYN_RECV));
 }
 
 #endif

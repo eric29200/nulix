@@ -318,6 +318,20 @@ static int inet_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 }
 
 /*
+ * Wait for connection.
+ */
+static void inet_wait_for_connect(struct sock *sk)
+{
+	while (sk->state == TCP_SYN_SENT || sk->state == TCP_SYN_RECV) {
+		if (signal_pending(current_task))
+			break;
+		if (sk->err)
+			break;
+		sleep_on(sk->sleep);
+	}
+}
+
+/*
  * Connect system call.
  */
 static int inet_stream_connect(struct socket *sock, const struct sockaddr *addr, size_t addrlen, int flags)
@@ -331,6 +345,10 @@ static int inet_stream_connect(struct socket *sock, const struct sockaddr *addr,
 
 	/* if socket is already connecting, wait for connection. otherwise initiate connect. */
 	if (sock->state == SS_CONNECTING) {
+		if (tcp_connected(sk->state)) {
+			sock->state = SS_CONNECTED;
+			return 0;
+		}
 		if (sk->err)
 			goto err;
 		if (flags & O_NONBLOCK)
@@ -354,21 +372,27 @@ static int inet_stream_connect(struct socket *sock, const struct sockaddr *addr,
 		sock->state = SS_CONNECTING;
 	}
 
+	/* handle error */
+	if (sk->state > TCP_FIN_WAIT2 && sock->state == SS_CONNECTING)
+		goto err;
+
 	/* connection in progress */
-	if (sock->state != SS_CONNECTED && (flags & O_NONBLOCK))
+	if (sk->state != TCP_ESTABLISHED && (flags & O_NONBLOCK))
 		return -EINPROGRESS;
 
 	/* wait for connection */
-	while (sock->state != SS_CONNECTED) {
+	if (sk->state == TCP_SYN_SENT || sk->state == TCP_SYN_RECV) {
+		inet_wait_for_connect(sk);
+
+		/* handle signal */
 		if (signal_pending(current_task))
 			return -ERESTARTSYS;
-		if (sk->err)
-			goto err;
-		sleep_on(sk->sleep);
 	}
 
 	/* set socket "connected" */
 	sock->state = SS_CONNECTED;
+	if ((sk->state != TCP_ESTABLISHED) && sk->err)
+		goto err;
 
 	return 0;
 err:

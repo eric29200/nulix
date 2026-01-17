@@ -182,16 +182,10 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 	uint16_t ack_flags;
 	uint32_t data_len;
 
-	/* check protocol */
-	if (sk->protocol != skb->nh.ip_header->protocol)
-		return -EINVAL;
-
-	/* check destination */
-	if (sk->sport != skb->h.tcp_header->dst_port)
-		return -EINVAL;
-
-	/* check source */
-	if (sk->dport != skb->h.tcp_header->src_port)
+	/* check protocol, destination and source */
+	if (sk->protocol != skb->nh.ip_header->protocol
+		|| sk->sport != skb->h.tcp_header->dst_port
+		|| sk->dport != skb->h.tcp_header->src_port)
 		return -EINVAL;
 
 	/* compute data length */
@@ -211,12 +205,12 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 	}
 
 	/* handle TCP packet */
-	switch (sk->socket->state) {
-		case SS_CONNECTING:
+	switch (sk->state) {
+		case TCP_SYN_SENT:
 			/* find SYN | ACK message */
 			if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
-				sk->socket->state = SS_CONNECTED;
-				goto out;
+				sk->state = TCP_ESTABLISHED;
+				break;
 			}
 
 			/* else reset TCP connection and release socket */
@@ -224,7 +218,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 			sk->dead = 1;
 
 			break;
-		case SS_CONNECTED:
+		case TCP_ESTABLISHED:
 				/* add message */
 				if (data_len > 0 || skb->h.tcp_header->fin) {
 					/* clone socket buffer */
@@ -245,7 +239,6 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 			break;
 	}
 
-out:
 	/* wake up eventual processes */
 	wake_up(sk->sleep);
 
@@ -264,7 +257,7 @@ static int tcp_poll(struct socket *sock, struct select_table *wait)
 	select_wait(sk->sleep, wait);
 
 	/* connecting = waiting for TCP syn/ack */
-	if (sock->state == SS_CONNECTING)
+	if (sk->state == TCP_SYN_SENT)
 		return mask;
 
 	/* check if there is a message in the queue */
@@ -375,7 +368,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 			return -ERESTARTSYS;
 
 		/* connected : break */
-		if (sk->socket->state == SS_CONNECTED)
+		if (tcp_connected(sk->state))
 			break;
 
 		/* non blocking */
@@ -421,7 +414,7 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 		return ret;
 
 	/* set socket state */
-	sk->socket->state = SS_CONNECTING;
+	sk->state = TCP_SYN_SENT;
 
 	return 0;
 }
