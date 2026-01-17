@@ -256,17 +256,22 @@ static int tcp_poll(struct socket *sock, struct select_table *wait)
 	/* add wait queue to select table */
 	select_wait(sk->sleep, wait);
 
-	/* connecting = waiting for TCP syn/ack */
-	if (sk->state == TCP_SYN_SENT)
-		return mask;
+	/* exceptional events ? */
+	if (sk->err)
+		mask = POLLERR;
+	if (sk->shutdown & RCV_SHUTDOWN)
+		mask |= POLLHUP;
 
-	/* check if there is a message in the queue */
-	if (sock->state == SS_DISCONNECTING || !skb_queue_empty(&sk->receive_queue))
-		mask |= POLLIN;
+	/* connected ? */
+	if ((1 << sk->state) & ~(TCPF_SYN_SENT | TCPF_SYN_RECV)) {
+		/* readable ? */
+		if (!skb_queue_empty(&sk->receive_queue))
+			mask |= POLLIN | POLLRDNORM;
 
-	/* check if socket can write */
-	if (sock->state != SS_DISCONNECTING && !sk->dead)
-		mask |= POLLOUT;
+		/* writable ? */
+		if (!(sk->shutdown & SEND_SHUTDOWN) && sock_wspace(sk) >= MIN_WRITE_SPACE)
+			mask |= POLLOUT | POLLWRNORM;
+	}
 
 	return mask;
 }

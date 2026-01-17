@@ -107,4 +107,20 @@ struct sk_buff *skb_recv_datagram(struct sock *sk, int flags, int noblock, int *
 void skb_copy_datagram_iovec(struct sk_buff *skb, int offset, struct iovec *to, size_t size);
 int datagram_poll(struct socket *sock, struct select_table *wait);
 
+/*
+ * Get write space of a socket.
+ */
+static inline size_t sock_wspace(struct sock *sk)
+{
+	int res = 0;
+
+	if (!(sk->shutdown & SEND_SHUTDOWN)) {
+		res = sk->sndbuf - sk->wmem_alloc;
+		if (res < 0)
+			res = 0;
+	}
+
+	return res;
+}
+
 #endif
