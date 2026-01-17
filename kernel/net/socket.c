@@ -839,6 +839,7 @@ out:
  */
 static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_t *optlen)
 {
+	struct sock *sk = sock->sk;
 	size_t len;
 
 	/* check length */
@@ -848,11 +849,14 @@ static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_
 
 	switch (optname) {
 		case SO_SNDBUF:
-			*((int *) optval) = sock->sk->sndbuf;
+			*((int *) optval) = sk->sndbuf;
 			break;
 		case SO_PEERCRED:
 		 	len = sizeof(struct ucred) < len ? sizeof(struct ucred) : len;
-			memcpy(optval, &sock->sk->peercred, len);
+			memcpy(optval, &sk->peercred, len);
+			break;
+		case SO_ERROR:
+			*((int *) optval) = -sock_error(sk);
 			break;
 		default:
 			printf("sock_getsockopt(%d) undefined\n", optname);
