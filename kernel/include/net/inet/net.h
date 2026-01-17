@@ -90,6 +90,8 @@ uint16_t net_checksum(void *data, size_t size);
 void net_transmit(struct net_device *dev, struct sk_buff *skb);
 void net_deliver_skb(struct sk_buff *skb);
 
+void destroy_sock(struct sock *sk);
+
 /*
  * Convert an ASCII string to binary IP.
  */

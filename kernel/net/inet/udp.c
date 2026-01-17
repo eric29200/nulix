@@ -2,6 +2,7 @@
 #include <net/socket.h>
 #include <net/inet/udp.h>
 #include <net/inet/net.h>
+#include <net/inet/tcp.h>
 #include <net/inet/ip.h>
 #include <proc/sched.h>
 #include <uio.h>
@@ -129,6 +130,18 @@ static int udp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 }
 
 /*
+ * Close a UDP socket.
+ */
+static int udp_close(struct sock *sk)
+{
+	sk->state = TCP_CLOSE;
+	list_del(&sk->list);
+	sk->dead = 1;
+	destroy_sock(sk);
+	return 0;
+}
+
+/*
  * UDP protocol.
  */
 struct proto udp_prot = {
@@ -136,4 +149,5 @@ struct proto udp_prot = {
 	.recvmsg	= udp_recvmsg,
 	.sendmsg	= udp_sendmsg,
 	.poll		= datagram_poll,
+	.close		= udp_close,
 };

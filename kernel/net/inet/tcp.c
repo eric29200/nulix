@@ -454,6 +454,11 @@ wait_for_ack:
 		sleep_on(sk->sleep);
 	}
 
+	/* destroy socket */
+	list_del(&sk->list);
+	sk->dead = 1;
+	destroy_sock(sk);
+
 	return 0;
 }
 

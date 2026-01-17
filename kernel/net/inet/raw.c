@@ -1,6 +1,7 @@
 #include <net/sock.h>
 #include <net/inet/net.h>
 #include <net/inet/ip.h>
+#include <net/inet/tcp.h>
 #include <proc/sched.h>
 #include <uio.h>
 #include <stdio.h>
@@ -110,6 +111,18 @@ static int raw_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 }
 
 /*
+ * Close a raw socket.
+ */
+static int raw_close(struct sock *sk)
+{
+	sk->state = TCP_CLOSE;
+	list_del(&sk->list);
+	sk->dead = 1;
+	destroy_sock(sk);
+	return 0;
+}
+
+/*
  * Raw protocol.
  */
 struct proto raw_prot = {
@@ -117,4 +130,5 @@ struct proto raw_prot = {
 	.recvmsg	= raw_recvmsg,
 	.sendmsg	= raw_sendmsg,
 	.poll		= datagram_poll,
+	.close		= raw_close,
 };

@@ -118,29 +118,39 @@ static int inet_autobind(struct sock *sk)
 }
 
 /*
- * Release a socket.
+ * Destroy a socket.
  */
-static int inet_release(struct socket *sock)
+void destroy_sock(struct sock *sk)
 {
 	struct sk_buff *skb;
-	struct sock *sk;
-
-	/* get inet socket */
-	sk = sock->sk;
-	if (!sk)
-		return 0;
 
 	/* free all remaining buffers */
 	while ((skb = skb_dequeue(&sk->receive_queue)) != NULL)
 		skb_free(skb);
 
-	/* protocol close */
-	if (sk->prot->close)
-		sk->prot->close(sk);
-
-	/* release inet socket */
+	/* free socket */
 	list_del(&sk->list);
-	kfree(sk);
+	sk_free(sk);
+}
+
+/*
+ * Release a socket.
+ */
+static int inet_release(struct socket *sock)
+{
+	struct sock *sk = sock->sk;
+
+	if (!sk)
+		return 0;
+
+	/* update socket state */
+	if (sock->state != SS_UNCONNECTED)
+		sock->state = SS_DISCONNECTING;
+
+	/* close socket */
+	sock->sk = NULL;
+	sk->socket = NULL;
+	sk->prot->close(sk);
 
 	return 0;
 }
