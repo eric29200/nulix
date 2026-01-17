@@ -129,7 +129,7 @@ static int tcp_send_skb(struct sock *sk, uint16_t flags, const struct msghdr *ms
 	tfh.th.window = htons(ETHERNET_MAX_MTU);
 	tfh.th.chksum = 0;
 	tfh.th.urg_ptr = 0;
-	tfh.iov = msg->msg_iov;
+	tfh.iov = msg ? msg->msg_iov : NULL;
 
 	/* build and transmit ip packet */
 	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, tlen, sk->daddr);
@@ -148,62 +148,9 @@ static int tcp_send_skb(struct sock *sk, uint16_t flags, const struct msghdr *ms
 /*
  * Reply a ACK message.
  */
-static int tcp_reply_ack(struct sock *sk, struct sk_buff *skb, uint16_t flags)
+static int tcp_reply_ack(struct sock *sk, uint16_t flags)
 {
-	struct tcp_fake_header tfh;
-	uint32_t daddr, saddr;
-	struct route *rt;
-	int len, ret;
-
-	/* get destination IP */
-	daddr = skb->nh.ip_header->src_addr;
-
-	/* find route if needed */
-	saddr = sk->saddr;
-	if (!saddr) {
-		rt = ip_rt_route(daddr);
-		if (!rt)
-			return -ENETUNREACH;
-		saddr = rt->rt_dev->ip_addr;
-	}
-
-	/* compute ack number */
-	len = tcp_data_length(skb);
-	sk->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + len;
-	if (!len)
-		sk->protinfo.af_tcp.ack_no += 1;
-
-	/* build tcp header */
-	tfh.saddr = saddr;
-	tfh.daddr = daddr;
-	tfh.th.src_port = sk->sport;
-	tfh.th.dst_port = skb->h.tcp_header->src_port;
-	tfh.th.seq = htonl(sk->protinfo.af_tcp.seq_no);
-	tfh.th.ack_seq = htonl(sk->protinfo.af_tcp.ack_no);
-	tfh.th.res1 = 0;
-	tfh.th.doff = sizeof(struct tcp_header) / 4;
-	tfh.th.fin = (flags & TCPCB_FLAG_FIN) != 0;
-	tfh.th.syn = (flags & TCPCB_FLAG_SYN) != 0;
-	tfh.th.rst = (flags & TCPCB_FLAG_RST) != 0;
-	tfh.th.psh = (flags & TCPCB_FLAG_PSH) != 0;
-	tfh.th.ack = (flags & TCPCB_FLAG_ACK) != 0;
-	tfh.th.urg = (flags & TCPCB_FLAG_URG) != 0;
-	tfh.th.res2 = 0;
-	tfh.th.window = htons(ETHERNET_MAX_MTU);
-	tfh.th.chksum = 0;
-	tfh.th.urg_ptr = 0;
-	tfh.iov = NULL;
-
-	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, sizeof(struct tcp_header), daddr);
-	if (ret)
-		return ret;
-
-	/* update sequence */
-	if (flags & TCPCB_FLAG_SYN || flags & TCPCB_FLAG_FIN)
-		sk->protinfo.af_tcp.seq_no += 1;
-
-	return 0;
+	return tcp_send_skb(sk, flags, NULL, 0);
 }
 
 /*
@@ -244,7 +191,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 		return -EINVAL;
 
 	/* check source */
-	if ((sk->socket->state == SS_CONNECTED || sk->socket->state == SS_CONNECTING) && sk->dport != skb->h.tcp_header->src_port)
+	if (sk->dport != skb->h.tcp_header->src_port)
 		return -EINVAL;
 
 	/* compute data length */
@@ -258,8 +205,10 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 		ack_flags |= TCPCB_FLAG_FIN;
 
 	/* send ACK message */
-	if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin)
-		tcp_reply_ack(sk, skb, ack_flags);
+	if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin) {
+		sk->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + (data_len ? data_len : 1);
+		tcp_reply_ack(sk, ack_flags);
+	}
 
 	/* handle TCP packet */
 	switch (sk->socket->state) {
