@@ -30,14 +30,9 @@
 #define TCPF_LISTEN		(1 << TCP_LISTEN)
 #define TCPF_CLOSING		(1 << TCP_CLOSING)
 
-#define TCPCB_FLAG_FIN		0x01
-#define TCPCB_FLAG_SYN		0x02
-#define TCPCB_FLAG_RST		0x04
-#define TCPCB_FLAG_PSH		0x08
-#define TCPCB_FLAG_ACK		0x10
-#define TCPCB_FLAG_URG		0x20
-#define TCPCB_FLAG_ECE		0x40
-#define TCPCB_FLAG_CWR		0x80
+#define MAX_SYN_SIZE		(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + 4 + MAX_HEADER + 15)
+#define MAX_FIN_SIZE		(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + MAX_HEADER + 15)
+#define MAX_ACK_SIZE		(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + MAX_HEADER + 15)
 
 /*
  * TCP header.
@@ -73,6 +68,11 @@ struct tcp_check_header {
 };
 
 void tcp_receive(struct sk_buff *skb);
+uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint32_t dst_address, size_t len);
+int tcp_send_ack(struct sock *sk, int syn, int fin);
+int tcp_send_syn(struct sock *sk);
+int tcp_send_fin(struct sock *sk);
+int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len);
 
 /*
  * Get TCP options length.

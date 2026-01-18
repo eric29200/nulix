@@ -33,6 +33,7 @@ struct ip_header {
 
 int ip_chk_addr(uint32_t addr);
 uint32_t ip_my_addr();
+int ip_build_header(struct sk_buff *skb, uint32_t daddr, size_t size, struct net_device **dev);
 int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag, size_t size, uint32_t daddr, int flags);
 void ip_receive(struct sk_buff *skb);
 

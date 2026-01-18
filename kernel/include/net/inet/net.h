@@ -7,6 +7,7 @@
 
 #define NR_NET_DEVICES			4
 #define MAX_ADDR_LEN			7
+#define MAX_HEADER			32
 
 #define IS_MYADDR			1		/* address is (one of) our own */
 #define IS_LOOPBACK			2		/* address is for LOOPBACK */

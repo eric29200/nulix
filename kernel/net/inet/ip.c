@@ -98,6 +98,41 @@ void ip_receive(struct sk_buff *skb)
 }
 
 /*
+ * Build IP header.
+ */
+int ip_build_header(struct sk_buff *skb, uint32_t daddr, size_t size, struct net_device **dev)
+{
+	struct ip_header *iph;
+	struct route *rt;
+
+	/* find route */
+	rt = ip_rt_route(daddr);
+	if (!rt)
+		return -ENETUNREACH;
+
+	/* build hard header */
+	*dev = rt->rt_dev;
+	rt->rt_dev->hard_header(skb, ETHERNET_TYPE_IP, rt->rt_dev->hw_addr, NULL);
+
+	/* build ip header */
+	skb->nh.ip_header = iph = (struct ip_header *) skb_put(skb, sizeof(struct ip_header));
+	iph->ihl = 5;
+	iph->version = 4;
+	iph->tos = 0;
+	iph->length = htons(size + sizeof(struct ip_header));
+	iph->id = htons(0);
+	iph->fragment_offset = 0;
+	iph->ttl = IPV4_DEFAULT_TTL;
+	iph->protocol = skb->sk->protocol;
+	iph->src_addr = rt->rt_dev->ip_addr;
+	iph->dst_addr = daddr;
+	iph->chksum = net_checksum(iph, sizeof(struct ip_header));
+
+	/* rebuild hard header = find destination mac address */
+	return rt->rt_dev->rebuild_header(rt->rt_dev, rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr, skb);
+}
+
+/*
  * Build and transmit an IP packet.
  */
 int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), const void *frag, size_t size, uint32_t daddr, int flags)

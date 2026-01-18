@@ -21,50 +21,6 @@ struct tcp_fake_header {
 };
 
 /*
- * Compute TCP checksum.
- */
-static uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint32_t dst_address, size_t len)
-{
-	uint16_t *chunk, ret;
-	uint32_t chksum;
-	size_t size;
-
-	/* compute size = tcp header + len */
-	size = sizeof(struct tcp_header) + len;
-
-	/* build TCP check header */
-	struct tcp_check_header tcp_check_header = {
-		.src_address		= src_address,
-		.dst_address		= dst_address,
-		.zero			= 0,
-		.protocol		= IP_PROTO_TCP,
-		.len			= htons(size),
-	};
-
-	/* compute check sum on TCP check header */
-	size = sizeof(struct tcp_check_header);
-	for (chksum = 0, chunk = (uint16_t *) &tcp_check_header; size > 1; size -= 2)
-		chksum += *chunk++;
-
-	if (size == 1)
-		chksum += *((uint8_t *) chunk);
-
-	/* compute check sum on TCP header */
-	size = sizeof(struct tcp_header) + len;
-	for (chunk = (uint16_t *) tcp_header; size > 1; size -= 2)
-		chksum += *chunk++;
-
-	if (size == 1)
-		chksum += *((uint8_t *) chunk);
-
-	chksum = (chksum & 0xFFFF) + (chksum >> 16);
-	chksum += (chksum >> 16);
-	ret = ~chksum;
-
-	return ret;
-}
-
-/*
  * Receive/decode a TCP packet.
  */
 void tcp_receive(struct sk_buff *skb)
@@ -75,111 +31,12 @@ void tcp_receive(struct sk_buff *skb)
 }
 
 /*
- * Copy a TCP fragment.
- */
-static void tcp_getfrag(const void *ptr, char *to, size_t fraglen)
-{
-	struct tcp_fake_header *tfh = (struct tcp_fake_header *) ptr;
-	struct tcp_header *th;
-
-	memcpy(to, &tfh->th, sizeof(struct tcp_header));
-	memcpy_fromiovec((uint8_t *) to + sizeof(struct tcp_header), tfh->iov, fraglen - sizeof(struct tcp_header));
-
-	/* compute tcp checksum */
-	th = (struct tcp_header *) to;
-	th->chksum = tcp_checksum(th, tfh->saddr, tfh->daddr, fraglen - sizeof(struct tcp_header));
-}
-
-/*
- * Send a TCP message.
- */
-static int tcp_send_skb(struct sock *sk, uint16_t flags, const struct msghdr *msg, size_t len)
-{
-	size_t tlen = len + sizeof(struct tcp_header);
-	struct tcp_fake_header tfh;
-	struct route *rt;
-	uint32_t saddr;
-	int ret;
-
-	/* find route if needed */
-	saddr = sk->saddr;
-	if (!saddr) {
-		rt = ip_rt_route(sk->daddr);
-		if (!rt)
-			return -ENETUNREACH;
-		saddr = rt->rt_dev->ip_addr;
-	}
-
-	/* build tcp header */
-	tfh.saddr = saddr;
-	tfh.daddr = sk->daddr;
-	tfh.th.src_port = sk->sport;
-	tfh.th.dst_port = sk->dport;
-	tfh.th.seq = htonl(sk->protinfo.af_tcp.seq_no);
-	tfh.th.ack_seq = htonl(sk->protinfo.af_tcp.ack_no);
-	tfh.th.res1 = 0;
-	tfh.th.doff = sizeof(struct tcp_header) / 4;
-	tfh.th.fin = (flags & TCPCB_FLAG_FIN) != 0;
-	tfh.th.syn = (flags & TCPCB_FLAG_SYN) != 0;
-	tfh.th.rst = (flags & TCPCB_FLAG_RST) != 0;
-	tfh.th.psh = (flags & TCPCB_FLAG_PSH) != 0;
-	tfh.th.ack = (flags & TCPCB_FLAG_ACK) != 0;
-	tfh.th.urg = (flags & TCPCB_FLAG_URG) != 0;
-	tfh.th.res2 = 0;
-	tfh.th.window = htons(ETHERNET_MAX_MTU);
-	tfh.th.chksum = 0;
-	tfh.th.urg_ptr = 0;
-	tfh.iov = msg ? msg->msg_iov : NULL;
-
-	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, tcp_getfrag, &tfh, tlen, sk->daddr, msg->msg_flags);
-	if (ret)
-		return ret;
-
-	/* update sequence */
-	if (len)
-		sk->protinfo.af_tcp.seq_no += len;
-	else if ((flags & TCPCB_FLAG_SYN) || (flags & TCPCB_FLAG_FIN))
-		sk->protinfo.af_tcp.seq_no += 1;
-
-	return 0;
-}
-
-/*
- * Reply a ACK message.
- */
-static int tcp_reply_ack(struct sock *sk, uint16_t flags)
-{
-	return tcp_send_skb(sk, flags, NULL, 0);
-}
-
-/*
- * Reset a TCP connection.
- */
-static int tcp_reset(struct sock *sk, uint32_t seq_no)
-{
-	struct msghdr msg = { 0 };
-	int ret;
-
-	/* set sequence number */
-	sk->protinfo.af_tcp.seq_no = ntohl(seq_no);
-	sk->protinfo.af_tcp.ack_no = 0;
-
-	/* transmit a RST packet */
-	ret = tcp_send_skb(sk, TCPCB_FLAG_RST, &msg, 0);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-/*
  * Handle a TCP packet.
  */
 static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 {
+	int ack_syn = 0, ack_fin = 0;
 	struct sk_buff *skb_new;
-	uint16_t ack_flags;
 	uint32_t data_len;
 
 	/* check protocol, destination and source */
@@ -192,16 +49,15 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 	data_len = tcp_data_length(skb);
 
 	/* set ack flags */
-	ack_flags = TCPCB_FLAG_ACK;
 	if (skb->h.tcp_header->syn && !skb->h.tcp_header->ack)
-		ack_flags |= TCPCB_FLAG_SYN;
+		ack_syn = 1;
 	else if (skb->h.tcp_header->fin && !skb->h.tcp_header->ack)
-		ack_flags |= TCPCB_FLAG_FIN;
+		ack_fin = 1;
 
 	/* send ACK message */
 	if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin) {
 		sk->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + (data_len ? data_len : 1);
-		tcp_reply_ack(sk, ack_flags);
+		tcp_send_ack(sk, ack_syn, ack_fin);
 	}
 
 	/* handle TCP packet */
@@ -213,10 +69,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 				break;
 			}
 
-			/* else reset TCP connection and release socket */
-			tcp_reset(sk, skb->h.tcp_header->ack_seq);
 			sk->dead = 1;
-
 			break;
 		case TCP_ESTABLISHED:
 				/* add message */
@@ -385,7 +238,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	}
 
 	/* send message */
-	ret = tcp_send_skb(sk, TCPCB_FLAG_ACK, msg, size);
+	ret = tcp_send_message(sk, msg, size);
 	if (ret)
 		return ret;
 
@@ -398,7 +251,6 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
-	struct msghdr msg = { 0 };
 	int ret;
 
 	/* check address length */
@@ -414,7 +266,7 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 	sk->protinfo.af_tcp.ack_no = 0;
 
 	/* send SYN message */
-	ret = tcp_send_skb(sk, TCPCB_FLAG_SYN, &msg, 0);
+	ret = tcp_send_syn(sk);
 	if (ret)
 		return ret;
 
@@ -429,7 +281,6 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
  */
 static int tcp_close(struct sock *sk)
 {
-	struct msghdr msg = { 0 };
 	int ret;
 
 	/* socket no connected : no need to send FIN message */
@@ -439,7 +290,7 @@ static int tcp_close(struct sock *sk)
 	}
 
 	/* send FIN message */
-	ret = tcp_send_skb(sk, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK, &msg, 0);
+	ret = tcp_send_fin(sk);
 	if (ret)
 		return ret;
 
