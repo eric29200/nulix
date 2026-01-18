@@ -51,6 +51,28 @@ void sk_free(struct sock *sk)
 }
 
 /*
+ * Allocate a socket buffer.
+ */
+struct sk_buff *sock_wmalloc(struct sock *sk, size_t size, int force)
+{
+	struct sk_buff *skb;
+
+	/* socket full */
+	if (sk->wmem_alloc >= sk->sndbuf && !force)
+		return NULL;
+
+	/* allocate a new socket buffer */
+	skb = skb_alloc(size);
+	if (!skb)
+		return NULL;
+
+	/* update socket size */
+	sk->wmem_alloc += size;
+
+	return skb;
+}
+
+/*
  * Default socket wake up.
  */
 void sock_def_wakeup(struct sock *sk)
@@ -178,8 +200,9 @@ struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, i
 			return NULL;
 		}
 
-		/* check space */
-		if (sk->wmem_alloc < sk->sndbuf)
+		/* try to allocate a socket buffer */
+		skb = sock_wmalloc(sk, len, 0);
+		if (skb)
 			break;
 
 		/* non blocking */
@@ -198,16 +221,8 @@ struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, i
 		sleep_on(sk->sleep);
 	}
 
-	/* allocate a socket buffer */
-	skb = skb_alloc(len);
-	if (!skb) {
-		*err = -ENOMEM;
-		return NULL;
-	}
-
 	/* set socket */
 	skb->sk = sk;
-	sk->wmem_alloc += len;
 
 	return skb;
 }
