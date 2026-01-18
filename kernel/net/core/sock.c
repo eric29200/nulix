@@ -68,6 +68,7 @@ struct sk_buff *sock_wmalloc(struct sock *sk, size_t size, int force)
 
 	/* update socket size */
 	sk->wmem_alloc += size;
+	skb->sk = sk;
 
 	return skb;
 }
@@ -220,9 +221,6 @@ struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, i
 		/* wait */
 		sleep_on(sk->sleep);
 	}
-
-	/* set socket */
-	skb->sk = sk;
 
 	return skb;
 }
