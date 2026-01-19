@@ -69,6 +69,7 @@ struct sock {
 	uint16_t			dport;
 	struct list_head		list;
 	struct sk_buff_head		receive_queue;
+	int				timeout;
 	struct timer_event		timer;
 	void				(*state_change)(struct sock *);
 	void				(*data_ready)(struct sock *, size_t);

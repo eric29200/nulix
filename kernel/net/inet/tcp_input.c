@@ -35,6 +35,22 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 			}
 
 			return 0;
+		case TCP_FIN_WAIT1:
+			/* we wait for an ack */
+			if (!th->ack || TCP_SKB_CB(skb)->ack_seq != tp->snd_nxt)
+				return 1;
+
+			/* ack packet */
+			tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
+			tcp_send_ack(sk, 0, 0);
+
+			/* update socket state */
+			sk->shutdown |= SEND_SHUTDOWN;
+			sk->state = TCP_FIN_WAIT2;
+
+			/* set timer to close socket */
+			tcp_set_timer(sk, TCP_TIME_CLOSE, TCP_FIN_TIMEOUT);
+			break;
 		default:
 			printf("tcp_rcv_state_process: unknown socket state %d\n", sk->state);
 			break;

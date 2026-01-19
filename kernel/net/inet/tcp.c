@@ -117,10 +117,6 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 		if (!skb_queue_empty(&sk->receive_queue))
 			break;
 
-		/* disconnected : break */
-		if (sk->socket->state == SS_DISCONNECTING)
-			return 0;
-
 		/* non blocking */
 		if (msg->msg_flags & MSG_DONTWAIT)
 			return -EAGAIN;
@@ -238,38 +234,59 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 }
 
 /*
+ * Switch to close state.
+ */
+static int tcp_close_state(struct sock *sk)
+{
+	int send_fin = 0;
+
+	/* compute next state */
+	switch (sk->state) {
+		case TCP_SYN_SENT:		/* no SYN back, no FIN needed */
+			sk->state = TCP_CLOSE;
+			break;
+		case TCP_SYN_RECV:
+		case TCP_ESTABLISHED:		/* closedown begin */
+			sk->state = TCP_FIN_WAIT1;
+			send_fin = 1;
+			break;
+		case TCP_FIN_WAIT1:		/* already closing, or FIN sent : no change */
+		case TCP_FIN_WAIT2:
+		case TCP_CLOSING:
+			break;
+		case TCP_CLOSE:
+		case TCP_LISTEN:
+			sk->state = TCP_CLOSE;
+			break;
+		case TCP_CLOSE_WAIT:		/* they have FIN'd us. We send our FIN and wait only for the ACK */
+			sk->state = TCP_LAST_ACK;
+			send_fin = 1;
+			break;
+	}
+
+	return send_fin;
+}
+
+/*
  * Close a TCP connection.
  */
 static int tcp_close(struct sock *sk)
 {
-	int ret;
+	struct sk_buff *skb;
 
-	/* socket no connected : no need to send FIN message */
-	if (sk->socket->state != SS_CONNECTED) {
-		sk->socket->state = SS_DISCONNECTING;
-		goto wait_for_ack;
-	}
+	/* shutdown socket */
+	sk->shutdown = SHUTDOWN_MASK;
 
-	/* send FIN message */
-	ret = tcp_send_fin(sk);
-	if (ret)
-		return ret;
+	/* clear receive queue */
+	while ((skb = skb_dequeue(&sk->receive_queue)) != NULL)
+		skb_free(skb);
 
-	/* wait for ACK message */
-wait_for_ack:
-	while (sk->socket->state != SS_DISCONNECTING) {
-		/* signal received : restart system call */
-		if (signal_pending(current_task))
-			return -ERESTARTSYS;
+	/* switch to close state and send a FIN message if needed */
+	if (tcp_close_state(sk))
+		tcp_send_fin(sk);
 
-		/* sleep */
-		sleep_on(sk->sleep);
-	}
-
-	/* destroy socket */
-	list_del(&sk->list);
+	/* set socket dead */
 	sk->dead = 1;
-	destroy_sock(sk);
 
 	return 0;
 }

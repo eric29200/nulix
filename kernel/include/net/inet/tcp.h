@@ -34,6 +34,12 @@
 #define MAX_FIN_SIZE		(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + MAX_HEADER + 15)
 #define MAX_ACK_SIZE		(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + MAX_HEADER + 15)
 
+#define TCP_TIME_CLOSE		4
+#define TCP_TIME_DONE		7
+
+#define TCP_FIN_TIMEOUT		(3 * HZ)
+#define TCP_DONE_TIME		(2 * HZ)
+
 /*
  * TCP header.
  */
@@ -86,6 +92,7 @@ int tcp_send_ack(struct sock *sk, int syn, int fin);
 int tcp_send_syn(struct sock *sk);
 int tcp_send_fin(struct sock *sk);
 int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len);
+void tcp_set_timer(struct sock *sk, int timeout, time_t expires);
 
 /*
  * Get TCP options length.
