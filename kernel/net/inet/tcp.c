@@ -35,65 +35,19 @@ void tcp_receive(struct sk_buff *skb)
  */
 static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 {
-	int ack_syn = 0, ack_fin = 0;
-	struct sk_buff *skb_new;
-	uint32_t data_len;
-
 	/* check protocol, destination and source */
 	if (sk->protocol != skb->nh.ip_header->protocol
 		|| sk->sport != skb->h.tcp_header->dst_port
 		|| sk->dport != skb->h.tcp_header->src_port)
 		return -EINVAL;
 
-	/* compute data length */
-	data_len = tcp_data_length(skb);
-
-	/* set ack flags */
-	if (skb->h.tcp_header->syn && !skb->h.tcp_header->ack)
-		ack_syn = 1;
-	else if (skb->h.tcp_header->fin && !skb->h.tcp_header->ack)
-		ack_fin = 1;
-
-	/* send ACK message */
-	if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin) {
-		sk->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + (data_len ? data_len : 1);
-		tcp_send_ack(sk, ack_syn, ack_fin);
-	}
-
-	/* handle TCP packet */
+	/* process socket buffer */
 	switch (sk->state) {
-		case TCP_SYN_SENT:
-			/* find SYN | ACK message */
-			if (skb->h.tcp_header->syn && skb->h.tcp_header->ack) {
-				sk->state = TCP_ESTABLISHED;
-				break;
-			}
-
-			sk->dead = 1;
-			break;
 		case TCP_ESTABLISHED:
-				/* add message */
-				if (data_len > 0 || skb->h.tcp_header->fin) {
-					/* clone socket buffer */
-					skb_new = skb_clone(skb);
-					if (!skb_new)
-						return -ENOMEM;
-
-					/* add buffer to socket */
-					skb_queue_tail(&sk->receive_queue, skb_new);
-				}
-
-				/* FIN message : close socket */
-				if (skb->h.tcp_header->fin)
-					sk->socket->state = SS_DISCONNECTING;
-
-			break;
+			return tcp_rcv_established(sk, skb);
 		default:
-			break;
+			return tcp_rcv_state_process(sk, skb);
 	}
-
-	/* wake up eventual processes */
-	wake_up(sk->sleep);
 
 	return 0;
 }

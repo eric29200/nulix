@@ -68,6 +68,8 @@ struct tcp_check_header {
 };
 
 void tcp_receive(struct sk_buff *skb);
+int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb);
+int tcp_rcv_established(struct sock *sk, struct sk_buff *skb);
 uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint32_t dst_address, size_t len);
 int tcp_send_ack(struct sock *sk, int syn, int fin);
 int tcp_send_syn(struct sock *sk);
