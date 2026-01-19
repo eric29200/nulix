@@ -67,6 +67,17 @@ struct tcp_check_header {
 	uint16_t	len;
 };
 
+/*
+ * TCP packet.
+ */
+struct tcp_skb_cb {
+	uint32_t	seq;		/* starting sequence number */
+	uint32_t	end_seq;	/* SEQ + FIN + SYN + datalen */
+	uint32_t	ack_seq;	/* sequence number ACK'd */
+};
+
+#define TCP_SKB_CB(skb)		((struct tcp_skb_cb *) &((skb)->cb[0]))
+
 void tcp_receive(struct sk_buff *skb);
 int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb);
 int tcp_rcv_established(struct sock *sk, struct sk_buff *skb);

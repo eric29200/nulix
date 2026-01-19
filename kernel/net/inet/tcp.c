@@ -35,11 +35,18 @@ void tcp_receive(struct sk_buff *skb)
  */
 static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 {
+	struct tcp_header *th = skb->h.tcp_header;
+
 	/* check protocol, destination and source */
 	if (sk->protocol != skb->nh.ip_header->protocol
-		|| sk->sport != skb->h.tcp_header->dst_port
-		|| sk->dport != skb->h.tcp_header->src_port)
+		|| sk->sport != th->dst_port
+		|| sk->dport != th->src_port)
 		return -EINVAL;
+
+	/* decode TCP header */
+	TCP_SKB_CB(skb)->seq = ntohl(th->seq);
+	TCP_SKB_CB(skb)->end_seq = TCP_SKB_CB(skb)->seq + th->syn + th->fin + tcp_data_length(skb);
+	TCP_SKB_CB(skb)->ack_seq = ntohl(th->ack_seq);
 
 	/* process socket buffer */
 	switch (sk->state) {
@@ -216,8 +223,8 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 	sk->dport = addr_in->sin_port;
 
 	/* generate sequence */
-	sk->protinfo.af_tcp.seq_no = ntohl(rand());
-	sk->protinfo.af_tcp.ack_no = 0;
+	sk->protinfo.af_tcp.snd_nxt = ntohl(rand());
+	sk->protinfo.af_tcp.rcv_nxt = 0;
 
 	/* send SYN message */
 	ret = tcp_send_syn(sk);

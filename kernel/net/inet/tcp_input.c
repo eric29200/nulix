@@ -10,10 +10,16 @@
 int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 {
 	struct tcp_header *th = skb->h.tcp_header;
+	struct tcp_opt *tp = &sk->protinfo.af_tcp;
 
 	switch (sk->state) {
 		case TCP_SYN_SENT:
 			if (th->ack) {
+				/* bad ack */
+				if (TCP_SKB_CB(skb)->ack_seq != tp->snd_nxt)
+					return 1;
+
+				/* we only want to receive a SYN message */
 				if (!th->syn)
 					return 0;
 
@@ -21,7 +27,7 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 				sk->state = TCP_ESTABLISHED;
 
 				/* ack packet */
-				sk->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + 1;
+				tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
 				tcp_send_ack(sk, 1, 0);
 
 				/* wake up processes */
@@ -43,40 +49,36 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 int tcp_rcv_established(struct sock *sk, struct sk_buff *skb)
 {
 	struct tcp_header *th = skb->h.tcp_header;
-	int ack_syn = 0, ack_fin = 0;
+	struct tcp_opt *tp = &sk->protinfo.af_tcp;
 	struct sk_buff *skb_new;
 	size_t data_len;
 
+	/* check if this is the packet we want */
+	if (TCP_SKB_CB(skb)->seq != tp->rcv_nxt)
+		return -EINVAL;
+
+	/* SYN message in establised connection ? */
+	if (th->syn)
+		return -EINVAL;
+
 	/* compute data length */
 	data_len = tcp_data_length(skb);
-
-	/* set ack flags */
-	if (skb->h.tcp_header->syn && !skb->h.tcp_header->ack)
-		ack_syn = 1;
-	else if (skb->h.tcp_header->fin && !skb->h.tcp_header->ack)
-		ack_fin = 1;
+	if (!data_len)
+		return 0;
 
 	/* send ACK message */
-	if (data_len > 0 || skb->h.tcp_header->syn || skb->h.tcp_header->fin) {
-		sk->protinfo.af_tcp.ack_no = ntohl(skb->h.tcp_header->seq) + (data_len ? data_len : 1);
-		tcp_send_ack(sk, ack_syn, ack_fin);
-	}
+	tp->rcv_nxt = TCP_SKB_CB(skb)->end_seq;
+	tcp_send_ack(sk, 0, 0);
 
-	/* add message */
-	if (data_len > 0 || th->fin) {
-		/* clone socket buffer */
-		skb_new = skb_clone(skb);
-		if (!skb_new)
-			return -ENOMEM;
+	/* clone socket buffer */
+	skb_new = skb_clone(skb);
+	if (!skb_new)
+		return -ENOMEM;
 
-		/* add buffer to socket */
-		skb_queue_tail(&sk->receive_queue, skb_new);
-	}
+	/* add buffer to socket */
+	skb_queue_tail(&sk->receive_queue, skb_new);
 
-	/* FIN message : close socket */
-	if (th->fin)
-		sk->socket->state = SS_DISCONNECTING;
-
+	/* wake up processes */
 	wake_up(sk->sleep);
 
 	return 0;

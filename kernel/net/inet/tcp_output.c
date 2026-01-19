@@ -74,8 +74,8 @@ int tcp_send_ack(struct sock *sk, int syn, int fin)
 	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header));
 	th->src_port = sk->sport;
 	th->dst_port = sk->dport;
-	th->seq = htonl(sk->protinfo.af_tcp.seq_no);
-	th->ack_seq = htonl(sk->protinfo.af_tcp.ack_no);
+	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
+	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
 	th->doff = sizeof(struct tcp_header) / 4;
 	th->ack = 1;
 	th->syn = syn;
@@ -115,8 +115,8 @@ int tcp_send_syn(struct sock *sk)
 	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header));
 	th->src_port = sk->sport;
 	th->dst_port = sk->dport;
-	th->seq = htonl(sk->protinfo.af_tcp.seq_no);
-	th->ack_seq = htonl(sk->protinfo.af_tcp.ack_no);
+	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
+	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
 	th->doff = sizeof(struct tcp_header) / 4;
 	th->syn = 1;
 	th->window = htons(ETHERNET_MAX_MTU);
@@ -126,7 +126,7 @@ int tcp_send_syn(struct sock *sk)
 	net_transmit(dev, skb);
 
 	/* update sequence number */
-	sk->protinfo.af_tcp.seq_no++;
+	sk->protinfo.af_tcp.snd_nxt++;
 
 	return 0;
 }
@@ -157,8 +157,8 @@ int tcp_send_fin(struct sock *sk)
 	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header));
 	th->src_port = sk->sport;
 	th->dst_port = sk->dport;
-	th->seq = htonl(sk->protinfo.af_tcp.seq_no);
-	th->ack_seq = htonl(sk->protinfo.af_tcp.ack_no);
+	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
+	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
 	th->doff = sizeof(struct tcp_header) / 4;
 	th->fin = 1;
 	th->ack = 1;
@@ -169,7 +169,7 @@ int tcp_send_fin(struct sock *sk)
 	net_transmit(dev, skb);
 
 	/* update sequence number */
-	sk->protinfo.af_tcp.seq_no++;
+	sk->protinfo.af_tcp.snd_nxt++;
 
 	return 0;
 }
@@ -200,8 +200,8 @@ int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
 	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header) + len);
 	th->src_port = sk->sport;
 	th->dst_port = sk->dport;
-	th->seq = htonl(sk->protinfo.af_tcp.seq_no);
-	th->ack_seq = htonl(sk->protinfo.af_tcp.ack_no);
+	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
+	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
 	th->doff = sizeof(struct tcp_header) / 4;
 	th->ack = 1;
 	th->window = htons(ETHERNET_MAX_MTU);
@@ -216,7 +216,7 @@ int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
 	net_transmit(dev, skb);
 
 	/* update sequence number */
-	sk->protinfo.af_tcp.seq_no += len;
+	sk->protinfo.af_tcp.snd_nxt += len;
 
 	return 0;
 }
