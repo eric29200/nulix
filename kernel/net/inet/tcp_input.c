@@ -28,7 +28,7 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 
 				/* ack packet */
 				tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
-				tcp_send_ack(sk, 1, 0);
+				tcp_send_ack(sk, 0, 0);
 
 				/* wake up processes */
 				wake_up(sk->sleep);
