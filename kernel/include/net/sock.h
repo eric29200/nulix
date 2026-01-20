@@ -67,6 +67,8 @@ struct sock {
 	uint16_t			sport;
 	uint32_t			daddr;
 	uint16_t			dport;
+	uint16_t			ack_backlog;
+	uint16_t			max_ack_backlog;
 	struct list_head		list;
 	struct sk_buff_head		receive_queue;
 	int				timeout;
@@ -98,7 +100,7 @@ void sk_free(struct sock *sk);
 int sock_error(struct sock *sk);
 void sock_init_data(struct socket *sock, struct sock *sk);
 int sock_no_dup(struct socket *newsock, struct socket *oldsock);
-int sock_no_listen(struct socket *sock);
+int sock_no_listen(struct socket *sock, int backlog);
 int sock_no_accept(struct socket *sock, struct socket *sock_new, int flags);
 int sock_no_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen);
 int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen);

@@ -471,9 +471,6 @@ int sys_listen(int sockfd, int backlog)
 	struct socket *sock;
 	int ret;
 
-	/* unused backlog */
-	UNUSED(backlog);
-
 	/* find socket */
 	sock = sockfd_lookup(sockfd, &ret);
 	if (!sock)
@@ -484,7 +481,7 @@ int sys_listen(int sockfd, int backlog)
 	if (!sock->ops || !sock->ops->listen)
 		goto out;
 
-	ret = sock->ops->listen(sock);
+	ret = sock->ops->listen(sock, backlog);
 out:
 	sockfd_put(sock);
 	return ret;

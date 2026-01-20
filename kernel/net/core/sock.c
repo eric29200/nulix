@@ -135,9 +135,10 @@ int sock_no_dup(struct socket *newsock, struct socket *oldsock)
 /*
  * No listen.
  */
-int sock_no_listen(struct socket *sock)
+int sock_no_listen(struct socket *sock, int backlog)
 {
 	UNUSED(sock);
+	UNUSED(backlog);
 	return -EOPNOTSUPP;
 }
 

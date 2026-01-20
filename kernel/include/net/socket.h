@@ -80,6 +80,8 @@
 
 #define SOCK_TYPE_MASK		0x0F
 
+#define SOMAXCONN		128
+
 /*
  * Socket address.
  */
@@ -138,7 +140,7 @@ struct proto_ops {
 	int (*recvmsg)(struct socket *, struct msghdr *, size_t);
 	int (*sendmsg)(struct socket *, const struct msghdr *, size_t);
 	int (*bind)(struct socket *, const struct sockaddr *, size_t);
-	int (*listen)(struct socket *);
+	int (*listen)(struct socket *, int);
 	int (*accept)(struct socket *, struct socket *, int);
 	int (*connect)(struct socket *, const struct sockaddr *, size_t, int);
 	int (*shutdown)(struct socket *, int);

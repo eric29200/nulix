@@ -273,9 +273,10 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 /*
  * Listen system call.
  */
-static int inet_listen(struct socket *sock)
+static int inet_listen(struct socket *sock, int backlog)
 {
 	UNUSED(sock);
+	UNUSED(backlog);
 	printf("inet_listen() not implemented\n");
 	return 0;
 }

@@ -22,6 +22,7 @@ static void unix_destroy_socket(unix_socket_t *sk);
 
 /* UNIX sockets */
 static LIST_HEAD(unix_sockets);
+static struct wait_queue *unix_ack_wqueue = NULL;
 static struct wait_queue *unix_dgram_wqueue = NULL;
 
 /*
@@ -196,6 +197,8 @@ static int unix_release_sock(unix_socket_t *sk)
 	sk->socket = NULL;
 
 	/* wake up processes waiting for space */
+	if (sk->state == TCP_LISTEN)
+		wake_up(&unix_ack_wqueue);
 	if (sk->type == SOCK_DGRAM)
 		wake_up(&unix_dgram_wqueue);
 
@@ -769,7 +772,7 @@ static int unix_bind(struct socket *sock, const struct sockaddr *uaddr, size_t a
 /*
  * Listen system call.
  */
-static int unix_listen(struct socket *sock)
+static int unix_listen(struct socket *sock, int backlog)
 {
 	struct sock *sk = sock->sk;
 
@@ -780,8 +783,11 @@ static int unix_listen(struct socket *sock)
 		return -EOPNOTSUPP;
 	if (!sk->protinfo.af_unix.addr)
 		return -EINVAL;
+	if ((unsigned) backlog > SOMAXCONN)
+		backlog = SOMAXCONN;
 
-	/* set */
+	/* set socket */
+	sk->max_ack_backlog = backlog;
 	sk->state = TCP_LISTEN;
 	sock->flags |= SO_ACCEPTCON;
 
@@ -840,6 +846,8 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, int flags)
 
 		/* found SYN message */
 		tsk = skb->sk;
+		if (sk->max_ack_backlog == sk->ack_backlog--)
+			wake_up(&unix_ack_wqueue);
 		skb_free(skb);
 		break;
 	}
@@ -922,10 +930,33 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 	if (alen < 0)
 		return alen;
 
+restart:
 	/* find listening sock */
 	other = unix_find_other(sunaddr, alen, sk->type, &ret);
 	if (!other)
 		return -ECONNREFUSED;
+
+	/* wait for connection release */
+	while (other->ack_backlog >= other->max_ack_backlog) {
+		unix_unlock(other);
+
+		/* connection is dead */
+		if (other->dead || other->state != TCP_LISTEN)
+			return -ECONNREFUSED;
+
+		/* non blocking : return */
+		if (flags & O_NONBLOCK)
+			return -EAGAIN;
+
+		/* wait */
+		sleep_on(&unix_ack_wqueue);
+
+		/* handle signals */
+		if (signal_pending(current_task))
+			return -ERESTARTSYS;
+
+		goto restart;
+	}
 
 	/* create new sock for complete connection */
 	sk_new = unix_create1(NULL, 1);
@@ -989,6 +1020,7 @@ static int unix_stream_connect(struct socket *sock, const struct sockaddr *addr,
 		sk_new->protinfo.af_unix.dentry = dget(other->protinfo.af_unix.dentry);
 
 	/* send info to listening sock */
+	other->ack_backlog++;
 	skb_queue_tail(&other->receive_queue,skb);
 	other->data_ready(other, 0);
 	unix_unlock(other);
