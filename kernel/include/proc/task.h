@@ -139,7 +139,6 @@ struct task {
 	struct sigpending		pending;			/* pending signals */
 	sigset_t			blocked;			/* blocked signals */
 	sigset_t			saved_sigmask;			/* saved signals mask */
-	char				in_syscall;			/* process in system call */
 	struct task_io_accounting	ioac;				/* i/o accounting */
 	struct rlimit			rlim[RLIM_NLIMITS];		/* resource limits */
 	struct registers		signal_regs;			/* saved registers at signal entry */

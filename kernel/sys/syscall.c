@@ -198,9 +198,7 @@ static void syscall_handler(struct registers *regs)
 	memcpy(&current_task->thread.regs, regs, sizeof(struct registers));
 
 	/* execute system call */
-	current_task->in_syscall = 1;
 	ret = ((syscall_f) syscalls[syscall_nr])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
-	current_task->in_syscall = 0;
 
 	/* restore registers and set return value */
 	memcpy(regs, &current_task->thread.regs, sizeof(struct registers));

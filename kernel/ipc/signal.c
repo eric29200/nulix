@@ -252,9 +252,9 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 {
 	uint32_t *esp;
 
-	/* signal in system call : restore user registers */
-	if (current_task->in_syscall)
-		memcpy(regs, &current_task->thread.regs, sizeof(struct registers));
+	/* from a system call : return -EINTR */
+	if ((int) regs->orig_eax >= 0 && (int) regs->eax == -ERESTARTSYS)
+		regs->eax = -EINTR;
 
 	/* save interrupt registers, to restore it at the end of signal */
 	memcpy(&current_task->signal_regs, regs, sizeof(struct registers));
@@ -273,13 +273,6 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 	if (!sigisemptyset(&current_task->saved_sigmask)) {
 		current_task->blocked = current_task->saved_sigmask;
 		sigemptyset(&current_task->saved_sigmask);
-	}
-
-	/* signal in system call : return to user mode */
-	if (current_task->in_syscall) {
-		current_task->in_syscall = 0;
-		regs->eax = -EINTR;
-		return_user_mode(regs);
 	}
 }
 
@@ -495,13 +488,6 @@ int do_signal(struct registers *regs)
 		sigemptyset(&current_task->saved_sigmask);
 	}
 
-	/* signal in system call : return to user mode */
-	if (current_task->in_syscall) {
-		current_task->in_syscall = 0;
-		regs->eax = -EINTR;
-		return_user_mode(regs);
-	}
-
 	/* interrupted system call : redo it */
 	if (regs->orig_eax && ((int) regs->eax == -ERESTARTSYS || (int) regs->eax == -ERESTARTNOHAND)) {
 		regs->eax = regs->orig_eax;
@@ -526,6 +512,9 @@ int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 	current_task->saved_sigmask = current_task->blocked;
 	current_task->blocked = *newset;
 	sigdelsetmask(&current_task->blocked, sigmask(SIGKILL) | sigmask(SIGSTOP));
+
+	/* get registers */
+	memcpy(regs, &current_task->thread.regs, sizeof(struct registers));
 
 	/* wait for signal */
 	regs->eax = -EINTR;
@@ -616,6 +605,7 @@ int sys_sigreturn()
 	/* restore saved registers before signal handler */
 	memcpy(&current_task->thread.regs, &current_task->signal_regs, sizeof(struct registers));
 	current_task->sig->in_sig = 0;
+	current_task->thread.regs.orig_eax = -1;
 
 	/* return value of syscall interrupted by signal */
 	return current_task->signal_regs.eax;
