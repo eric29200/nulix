@@ -62,7 +62,7 @@ static int raw_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
  		return err;
 
 	/* get message */
-	buf = (void *) skb->h.raw + sk->msg_position;
+	buf = (void *) skb->nh.raw + sk->msg_position;
 	copied = (void *) skb->end - buf;
 	if (size < copied) {
 		copied = size;
