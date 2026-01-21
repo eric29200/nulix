@@ -4,6 +4,7 @@
 #include <net/inet/net.h>
 #include <net/inet/tcp.h>
 #include <net/inet/ip.h>
+#include <net/inet/route.h>
 #include <proc/sched.h>
 #include <uio.h>
 #include <stdio.h>
@@ -65,6 +66,45 @@ static int udp_handle(struct sock *sk, struct sk_buff *skb)
 }
 
 /*
+ * Connect a UDP socket.
+ */
+static int udp_connect(struct sock *sk, const struct sockaddr *addr, size_t addrlen)
+{
+	const struct sockaddr_in *addr_in = (const struct sockaddr_in *) addr;
+	struct route *rt;
+	uint32_t daddr;
+
+	/* check address */
+	if (addrlen < sizeof(struct sockaddr_in))
+		return -EINVAL;
+	if (addr_in->sin_family && addr_in->sin_family != AF_INET)
+		return -EAFNOSUPPORT;
+
+	/* get destination address */
+	daddr = addr_in->sin_addr;
+	if (daddr == INADDR_ANY)
+		daddr = ip_my_addr();
+
+	/* get route to destination */
+	rt = ip_rt_route(daddr);
+	if (!rt)
+		return -ENETUNREACH;
+
+	/* update socket source */
+	if (!sk->saddr)
+		sk->saddr = rt->rt_dev->ip_addr;
+	if (!sk->rcv_saddr)
+		sk->rcv_saddr = rt->rt_dev->ip_addr;
+
+	/* update socket destination */
+	sk->daddr = daddr;
+	sk->dport = addr_in->sin_port;
+	sk->state = TCP_ESTABLISHED;
+
+	return(0);
+}
+
+/*
  * Send an UDP message.
  */
 static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
@@ -72,17 +112,38 @@ static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	struct sockaddr_in *dest_addr_in = (struct sockaddr_in *) msg->msg_name;
 	size_t usize = sizeof(struct udp_header) + size;
 	struct udp_fake_header ufh;
+	uint16_t dport;
+	uint32_t daddr;
 	int ret;
+
+	/* get destination */
+	if (dest_addr_in) {
+		if (msg->msg_namelen < sizeof(struct sockaddr_in))
+			return -EINVAL;
+		if (dest_addr_in->sin_family && dest_addr_in->sin_family != AF_INET)
+			return -EINVAL;
+		if (!dest_addr_in->sin_port)
+			return -EINVAL;
+
+		daddr = dest_addr_in->sin_addr;
+		dport = dest_addr_in->sin_port;
+	} else {
+		if (sk->state != TCP_ESTABLISHED)
+			return -EINVAL;
+
+		daddr = sk->daddr;
+		dport = sk->dport;
+	}
 
 	/* build udp header */
 	ufh.uh.src_port = sk->sport;
-	ufh.uh.dst_port = dest_addr_in->sin_port;
+	ufh.uh.dst_port = dport;
 	ufh.uh.len = htons(usize);
 	ufh.uh.chksum = 0;
 	ufh.iov = msg->msg_iov;
 
 	/* build and transmit ip packet */
-	ret = ip_build_xmit(sk, udp_getfrag, &ufh, usize, dest_addr_in->sin_addr, msg->msg_flags);
+	ret = ip_build_xmit(sk, udp_getfrag, &ufh, usize, daddr, msg->msg_flags);
 	if (ret)
 		return ret;
 
@@ -146,6 +207,7 @@ static int udp_close(struct sock *sk)
  */
 struct proto udp_prot = {
 	.handle		= udp_handle,
+	.connect	= udp_connect,
 	.recvmsg	= udp_recvmsg,
 	.sendmsg	= udp_sendmsg,
 	.poll		= datagram_poll,
