@@ -131,4 +131,6 @@ struct proto raw_prot = {
 	.sendmsg	= raw_sendmsg,
 	.poll		= datagram_poll,
 	.close		= raw_close,
+	.getsockopt	= ip_getsockopt,
+	.setsockopt	= ip_setsockopt,
 };

@@ -64,7 +64,7 @@ int tcp_send_ack(struct sock *sk, int syn, int fin)
 		return -ENOMEM;
 
 	/* build IP header */
-	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev);
+	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
 	if (ret) {
 		skb_free(skb);
 		return ret;
@@ -105,7 +105,7 @@ int tcp_send_syn(struct sock *sk)
 		return -ENOMEM;
 
 	/* build IP header */
-	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev);
+	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
 	if (ret) {
 		skb_free(skb);
 		return ret;
@@ -147,7 +147,7 @@ int tcp_send_fin(struct sock *sk)
 		return -ENOMEM;
 
 	/* build IP header */
-	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev);
+	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
 	if (ret) {
 		skb_free(skb);
 		return ret;
@@ -190,7 +190,7 @@ int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
 		return -ENOMEM;
 
 	/* build IP header */
-	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header) + len, &dev);
+	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header) + len, &dev, sk->ip_ttl);
 	if (ret) {
 		skb_free(skb);
 		return ret;

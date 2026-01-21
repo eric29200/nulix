@@ -100,7 +100,7 @@ void ip_receive(struct sk_buff *skb)
 /*
  * Build IP header.
  */
-int ip_build_header(struct sk_buff *skb, uint32_t daddr, size_t size, struct net_device **dev)
+int ip_build_header(struct sk_buff *skb, uint32_t daddr, size_t size, struct net_device **dev, int ttl)
 {
 	struct ip_header *iph;
 	struct route *rt;
@@ -122,7 +122,7 @@ int ip_build_header(struct sk_buff *skb, uint32_t daddr, size_t size, struct net
 	iph->length = htons(size + sizeof(struct ip_header));
 	iph->id = htons(0);
 	iph->fragment_offset = 0;
-	iph->ttl = IPV4_DEFAULT_TTL;
+	iph->ttl = ttl;
 	iph->protocol = skb->sk->protocol;
 	iph->src_addr = rt->rt_dev->ip_addr;
 	iph->dst_addr = daddr;
@@ -166,7 +166,7 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 	iph->length = htons(size);
 	iph->id = htons(0);
 	iph->fragment_offset = 0;
-	iph->ttl = IPV4_DEFAULT_TTL;
+	iph->ttl = sk->ip_ttl;
 	iph->protocol = sk->protocol;
 	iph->src_addr = rt->rt_dev->ip_addr;
 	iph->dst_addr = daddr;
@@ -185,6 +185,44 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 	/* on error, free socket buffer */
 	if (ret < 0)
 		skb_free(skb);
+
+	return 0;
+}
+
+/*
+ * IP get socket option.
+ */
+int ip_getsockopt(struct sock *sk, int level, int optname, void *optval, size_t *optlen)
+{
+	UNUSED(sk);
+	UNUSED(level);
+	UNUSED(optname);
+	UNUSED(optval);
+	UNUSED(optlen);
+	printf("ip_getsockopt: unknown option %d\n", optname);
+	return 0;
+}
+
+/*
+ * IP set socket option.
+ */
+int ip_setsockopt(struct sock *sk, int level, int optname, void *optval, size_t optlen)
+{
+	int val = optval ? *((int *) optval) : 0;
+
+	UNUSED(level);
+	UNUSED(optlen);
+
+	switch (optname) {
+		case IP_TTL:
+			if (val < 1 || val > 255)
+				return -EINVAL;
+			sk->ip_ttl = val;
+			break;
+		default:
+			printf("ip_setsockopt: unknown option %d\n", optname);
+			break;
+	}
 
 	return 0;
 }

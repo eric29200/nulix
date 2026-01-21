@@ -453,13 +453,12 @@ static int inet_getname(struct socket *sock, struct sockaddr *addr, size_t *addr
  */
 static int inet_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen)
 {
-	UNUSED(sock);
-	UNUSED(level);
-	UNUSED(optname);
-	UNUSED(optval);
-	UNUSED(optlen);
-	printf("inet_getsockopt(%d) undefined\n", optname);
-	return 0;
+	struct sock *sk = sock->sk;
+
+	if (!sk->prot->getsockopt)
+		return -EOPNOTSUPP;
+
+	return sk->prot->getsockopt(sk, level, optname, optval, optlen);
 }
 
 /*
@@ -467,13 +466,12 @@ static int inet_getsockopt(struct socket *sock, int level, int optname, void *op
  */
 static int inet_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen)
 {
-	UNUSED(sock);
-	UNUSED(level);
-	UNUSED(optname);
-	UNUSED(optval);
-	UNUSED(optlen);
-	printf("inet_setsockopt(%d) undefined\n", optname);
-	return 0;
+	struct sock *sk = sock->sk;
+
+	if (!sk->prot->setsockopt)
+		return -EOPNOTSUPP;
+
+	return sk->prot->setsockopt(sk, level, optname, optval, optlen);
 }
 
 /*
@@ -643,6 +641,7 @@ static int inet_create(struct socket *sock, int protocol)
 	/* set socket */
 	sk->protocol = protocol;
 	sk->prot = prot;
+	sk->ip_ttl = IPV4_DEFAULT_TTL;
 
 	/* init data */
 	sock_init_data(sock, sk);

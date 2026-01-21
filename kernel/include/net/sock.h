@@ -69,6 +69,7 @@ struct sock {
 	uint16_t			dport;
 	uint16_t			ack_backlog;
 	uint16_t			max_ack_backlog;
+	uint8_t				ip_ttl;
 	struct list_head		list;
 	struct sk_buff_head		receive_queue;
 	int				timeout;
@@ -88,6 +89,8 @@ struct proto {
 	int (*sendmsg)(struct sock *, const struct msghdr *, size_t);
 	int (*connect)(struct sock *, const struct sockaddr *, size_t);
 	int (*poll)(struct socket *, struct select_table *);
+	int (*getsockopt)(struct sock *sock, int, int, void *, size_t *);
+	int (*setsockopt)(struct sock *sock, int, int, void *, size_t);
 };
 
 /* inet protocols */

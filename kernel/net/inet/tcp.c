@@ -292,6 +292,34 @@ static int tcp_close(struct sock *sk)
 }
 
 /*
+ * TCP get socket option.
+ */
+static int tcp_getsockopt(struct sock *sk, int level, int optname, void *optval, size_t *optlen)
+{
+	UNUSED(sk);
+	UNUSED(level);
+	UNUSED(optname);
+	UNUSED(optval);
+	UNUSED(optlen);
+	printf("tcp_getsockopt: unknown option %d\n", optname);
+	return 0;
+}
+
+/*
+ * TCP set socket option.
+ */
+static int tcp_setsockopt(struct sock *sk, int level, int optname, void *optval, size_t optlen)
+{
+	UNUSED(sk);
+	UNUSED(level);
+	UNUSED(optname);
+	UNUSED(optval);
+	UNUSED(optlen);
+	printf("tcp_setsockopt: unknown option %d\n", optname);
+	return 0;
+}
+
+/*
  * TCP protocol.
  */
 struct proto tcp_prot = {
@@ -301,4 +329,6 @@ struct proto tcp_prot = {
 	.sendmsg	= tcp_sendmsg,
 	.connect	= tcp_connect,
 	.poll		= tcp_poll,
+	.getsockopt	= tcp_getsockopt,
+	.setsockopt	= tcp_setsockopt,
 };

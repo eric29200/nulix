@@ -59,6 +59,15 @@
 #define SO_SNDTIMEO		21
 #define SO_ACCEPTCON		(1 << 16)
 
+/* IP options */
+#define IP_TOS			1
+#define	IPTOS_LOWDELAY		0x10
+#define	IPTOS_THROUGHPUT	0x08
+#define	IPTOS_RELIABILITY	0x04
+#define IP_TTL			2
+#define IP_HDRINCL		3
+#define IP_OPTIONS		4
+
 /* system calls */
 #define SYS_SOCKET		1
 #define SYS_BIND		2
