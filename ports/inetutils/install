@@ -17,4 +17,7 @@ function build_port() {
 
 function install_port() {
 	make install DESTDIR=$SYSROOT
+	chmod +x $SYSROOT"/usr/bin/ping"
+	chmod +x $SYSROOT"/usr/bin/ping6"
+	chmod +x $SYSROOT"/usr/bin/traceroute"
 }
