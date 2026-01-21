@@ -871,11 +871,23 @@ static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_
  */
 static int sock_setsockopt(struct socket *sock, int optname, void *optval, size_t optlen)
 {
-	UNUSED(optlen);
+	struct sock *sk = sock->sk;
+	int val, valbool;
 
+	/* get value */
+	if (optlen < sizeof(int))
+		return -EINVAL;
+
+	val = *((int *) optval);
+	valbool = val ? 1 : 0;
+
+	/* set option */
 	switch (optname) {
 		case SO_SNDBUF:
-			sock->sk->sndbuf = *((int *) optval);
+			sk->sndbuf = *((int *) optval);
+			break;
+		case SO_REUSEADDR:
+			sk->reuse = valbool;
 			break;
 		default:
 			printf("sock_setsockopt(%d) undefined\n", optname);

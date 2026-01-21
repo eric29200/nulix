@@ -46,15 +46,17 @@ void net_deliver_skb(struct sk_buff *skb)
 /*
  * Check if a port is already mapped.
  */
-static uint16_t check_port(uint16_t protocol, uint16_t sport)
+static uint16_t check_port(struct sock *sk, uint16_t sport)
 {
 	struct list_head *pos;
-	struct sock *sk;
+	struct sock *sk2;
 
 	/* check if asked port is already mapped */
 	list_for_each(pos, &inet_sockets) {
-		sk = list_entry(pos, struct sock, list);
-		if (sk->protocol == protocol && ntohs(sk->sport) == sport)
+		sk2 = list_entry(pos, struct sock, list);
+		if (sk2->protocol == sk->protocol
+			&& ntohs(sk2->sport) == sport
+			&& (!sk2->reuse || !sk->reuse))
 			return 0;
 	}
 
@@ -64,7 +66,7 @@ static uint16_t check_port(uint16_t protocol, uint16_t sport)
 /*
  * Get or check a port.
  */
-static uint16_t get_port(uint16_t protocol, uint16_t goal)
+static uint16_t get_port(struct sock *sk, uint16_t goal)
 {
 	static uint16_t base_port = 0;
 	uint16_t start;
@@ -72,7 +74,7 @@ static uint16_t get_port(uint16_t protocol, uint16_t goal)
 
 	/* just check port */
 	if (goal)
-		return check_port(protocol, goal);
+		return check_port(sk, goal);
 
 	/* generate a random port to start */
 	if (!base_port)
@@ -81,7 +83,7 @@ static uint16_t get_port(uint16_t protocol, uint16_t goal)
 	/* find a free port */
 	for (start = base_port;;) {
 		/* check if next port is free */
-		free = check_port(protocol, base_port);
+		free = check_port(sk, base_port);
 
 		/* update base port */
 		if (++base_port < IP_START_DYN_PORT)
@@ -107,7 +109,7 @@ static int inet_autobind(struct sock *sk)
 		return 0;
 
 	/* get a free port */
-	sk->num = get_port(sk->protocol, 0);
+	sk->num = get_port(sk, 0);
 	if (!sk->num)
 		return -EAGAIN;
 
@@ -245,7 +247,7 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
 			return -EINVAL;
 
 		/* check or get a free port */
-		snum = get_port(sk->protocol, ntohs(addr_in->sin_port));
+		snum = get_port(sk, ntohs(addr_in->sin_port));
 		if (!snum)
 			return -EADDRINUSE;
 	}
@@ -631,6 +633,7 @@ static int inet_create(struct socket *sock, int protocol)
 		case SOCK_RAW:
 			if (!protocol)
 				goto err_proto;
+			sk->reuse = 1;
 			prot = &raw_prot;
 			sock->ops = &inet_dgram_ops;
 			break;

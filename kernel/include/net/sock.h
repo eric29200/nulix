@@ -52,6 +52,7 @@ struct sock {
 	size_t				rcvbuf;
 	size_t				sndbuf;
 	size_t				wmem_alloc;
+	uint8_t				reuse;
 	int				sock_readers;
 	struct ucred 			peercred;
 	int				proc;
