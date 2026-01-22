@@ -65,7 +65,7 @@ int tcp_send_ack(struct sock *sk, int syn, int fin)
 
 	/* build IP header */
 	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
-	if (ret) {
+	if (ret < 0) {
 		skb_free(skb);
 		return ret;
 	}
@@ -84,7 +84,8 @@ int tcp_send_ack(struct sock *sk, int syn, int fin)
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
 
 	/* transmit packet */
-	net_transmit(dev, skb);
+	if (ret == 0)
+		net_transmit(dev, skb);
 
 	return 0;
 }
@@ -106,7 +107,7 @@ int tcp_send_syn(struct sock *sk)
 
 	/* build IP header */
 	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
-	if (ret) {
+	if (ret < 0) {
 		skb_free(skb);
 		return ret;
 	}
@@ -123,7 +124,8 @@ int tcp_send_syn(struct sock *sk)
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
 
 	/* transmit packet */
-	net_transmit(dev, skb);
+	if (ret == 0)
+		net_transmit(dev, skb);
 
 	/* update sequence number */
 	sk->protinfo.af_tcp.snd_nxt++;
@@ -148,7 +150,7 @@ int tcp_send_fin(struct sock *sk)
 
 	/* build IP header */
 	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
-	if (ret) {
+	if (ret < 0) {
 		skb_free(skb);
 		return ret;
 	}
@@ -166,7 +168,8 @@ int tcp_send_fin(struct sock *sk)
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
 
 	/* transmit packet */
-	net_transmit(dev, skb);
+	if (ret == 0)
+		net_transmit(dev, skb);
 
 	/* update sequence number */
 	sk->protinfo.af_tcp.snd_nxt++;
@@ -191,7 +194,7 @@ int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
 
 	/* build IP header */
 	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header) + len, &dev, sk->ip_ttl);
-	if (ret) {
+	if (ret < 0) {
 		skb_free(skb);
 		return ret;
 	}
@@ -213,7 +216,8 @@ int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, len);
 
 	/* transmit packet */
-	net_transmit(dev, skb);
+	if (ret >= 0)
+		net_transmit(dev, skb);
 
 	/* update sequence number */
 	sk->protinfo.af_tcp.snd_nxt += len;
