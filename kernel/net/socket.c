@@ -90,8 +90,8 @@ static int get_fd(struct inode *inode)
 	/* set file */
 	current_task->files->filp[fd] = filp;
 	FD_CLR(fd, &current_task->files->close_on_exec);
-	filp->f_mode = O_RDWR;
-	filp->f_flags = 0;
+	filp->f_mode = 3;
+	filp->f_flags = O_RDWR;
 	filp->f_pos = 0;
 	filp->f_count = 1;
 	filp->f_dentry = dentry;
