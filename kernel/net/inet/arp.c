@@ -47,6 +47,8 @@ static int arp_send(struct net_device *dev, int type, uint8_t *dest_hw, uint32_t
 		return -ENOMEM;
 
 	/* build ethernet header */
+	skb->arp = 1;
+	skb->free = 1;
 	dev->hard_header(skb, ETHERNET_TYPE_ARP, dev->hw_addr, broadcast_hw_addr);
 
 	/* build ARP header */
@@ -74,7 +76,7 @@ static int arp_send(struct net_device *dev, int type, uint8_t *dest_hw, uint32_t
 	memcpy(buf, &dest_ip, 4);
 
 	/* transmit request */
-	net_transmit(dev, skb);
+	dev_queue_xmit(dev, skb);
 
 	return 0;
 }
@@ -175,13 +177,8 @@ static void arp_send_queue(struct arp_table *entry)
 		return;
 
 	/* send waiting packets */
-	while ((skb = skb_dequeue(&entry->skb_queue)) != NULL) {
-		/* rebuild hard header */
-		dev->rebuild_header(dev, entry->ip_addr, skb);
-
-		/* transmit packet on success */
-		net_transmit(dev, skb);
-	}
+	while ((skb = skb_dequeue(&entry->skb_queue)) != NULL)
+		dev_queue_xmit(dev, skb);
 }
 
 /*

@@ -223,5 +223,6 @@ struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, i
 		sleep_on(sk->sleep);
 	}
 
+	skb->free = 1;
 	return skb;
 }

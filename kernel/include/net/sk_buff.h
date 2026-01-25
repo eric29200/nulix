@@ -19,6 +19,9 @@ struct sk_buff {
 	struct sock *				sk;
 	struct net_device *			dev;
 	int					count;
+	uint32_t				raddr;
+	uint8_t					arp;
+	uint8_t					free;
 	struct sk_buff *			data_skb;
 	union {
 		struct ethernet_header *	eth_header;

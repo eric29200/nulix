@@ -84,8 +84,8 @@ int tcp_send_ack(struct sock *sk, int syn, int fin)
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
 
 	/* transmit packet */
-	if (ret == 0)
-		net_transmit(dev, skb);
+	skb->free = 1;
+	dev_queue_xmit(dev, skb);
 
 	return 0;
 }
@@ -124,8 +124,8 @@ int tcp_send_syn(struct sock *sk)
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
 
 	/* transmit packet */
-	if (ret == 0)
-		net_transmit(dev, skb);
+	skb->free = 1;
+	dev_queue_xmit(dev, skb);
 
 	/* update sequence number */
 	sk->protinfo.af_tcp.snd_nxt++;
@@ -168,8 +168,8 @@ int tcp_send_fin(struct sock *sk)
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
 
 	/* transmit packet */
-	if (ret == 0)
-		net_transmit(dev, skb);
+	skb->free = 1;
+	dev_queue_xmit(dev, skb);
 
 	/* update sequence number */
 	sk->protinfo.af_tcp.snd_nxt++;
@@ -216,8 +216,8 @@ int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, len);
 
 	/* transmit packet */
-	if (ret >= 0)
-		net_transmit(dev, skb);
+	skb->free = 1;
+	dev_queue_xmit(dev, skb);
 
 	/* update sequence number */
 	sk->protinfo.af_tcp.snd_nxt += len;

@@ -68,6 +68,23 @@ static int dev_read_proc(char *page, char **start, off_t off, size_t count, int 
 }
 
 /*
+ * Transmit a network packet.
+ */
+void dev_queue_xmit(struct net_device *dev, struct sk_buff *skb)
+{
+	/* rebuild hard header = find destination mac address */
+	if (!skb->arp && dev->rebuild_header(dev, skb->raddr, skb))
+		return;
+
+	/* start transmission */
+	dev->start_xmit(skb, dev);
+
+	/* free socket buffer */
+	if (skb->free)
+		skb_free(skb);
+}
+
+/*
  * Network device ioctl.
  */
 static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)

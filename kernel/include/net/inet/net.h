@@ -88,7 +88,7 @@ struct net_device *net_device_find(const char *name);
 int dev_ioctl(unsigned int cmd, void *arg);
 void skb_handle(struct sk_buff *skb);
 uint16_t net_checksum(void *data, size_t size);
-void net_transmit(struct net_device *dev, struct sk_buff *skb);
+void dev_queue_xmit(struct net_device *dev, struct sk_buff *skb);
 void net_deliver_skb(struct sk_buff *skb);
 
 void destroy_sock(struct sock *sk);

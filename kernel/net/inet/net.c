@@ -102,16 +102,3 @@ struct net_device *net_device_find(const char *name)
 
 	return NULL;
 }
-
-/*
- * Transmit a network packet.
- */
-void net_transmit(struct net_device *dev, struct sk_buff *skb)
-{
-	if (!skb)
-		return;
-
-	/* send and free packet */
-	dev->start_xmit(skb, dev);
-	skb_free(skb);
-}

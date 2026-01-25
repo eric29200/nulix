@@ -110,6 +110,9 @@ int ip_build_header(struct sk_buff *skb, uint32_t daddr, size_t size, struct net
 	if (!rt)
 		return -ENETUNREACH;
 
+	/* set next hop address */
+	skb->raddr = rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr;
+
 	/* build hard header */
 	*dev = rt->rt_dev;
 	rt->rt_dev->hard_header(skb, ETHERNET_TYPE_IP, rt->rt_dev->hw_addr, NULL);
@@ -128,8 +131,7 @@ int ip_build_header(struct sk_buff *skb, uint32_t daddr, size_t size, struct net
 	iph->dst_addr = daddr;
 	iph->chksum = net_checksum(iph, sizeof(struct ip_header));
 
-	/* rebuild hard header = find destination mac address */
-	return rt->rt_dev->rebuild_header(rt->rt_dev, rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr, skb);
+	return 0;
 }
 
 /*
@@ -156,6 +158,7 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 		return ret;
 
 	/* build hard header */
+	skb->raddr = rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr;
 	rt->rt_dev->hard_header(skb, ETHERNET_TYPE_IP, rt->rt_dev->hw_addr, NULL);
 
 	/* build ip header */
@@ -175,16 +178,8 @@ int ip_build_xmit(struct sock *sk, void getfrag(const void *, char *, size_t), c
 	/* copy udp header + message */
 	getfrag(frag, ((char *) iph) + sizeof(struct ip_header), size - sizeof(struct ip_header));
 
-	/* rebuild hard header = find destination mac address */
-	ret = rt->rt_dev->rebuild_header(rt->rt_dev, rt->rt_flags & RTF_GATEWAY ? rt->rt_gateway : daddr, skb);
-
-	/* transmit message */
-	if (ret == 0)
-		net_transmit(rt->rt_dev, skb);
-
-	/* on error, free socket buffer */
-	if (ret < 0)
-		skb_free(skb);
+	/* transmit packet */
+	dev_queue_xmit(rt->rt_dev, skb);
 
 	return 0;
 }
