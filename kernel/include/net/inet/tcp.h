@@ -30,9 +30,7 @@
 #define TCPF_LISTEN		(1 << TCP_LISTEN)
 #define TCPF_CLOSING		(1 << TCP_CLOSING)
 
-#define MAX_SYN_SIZE		(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + 4 + MAX_HEADER + 15)
-#define MAX_FIN_SIZE		(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + MAX_HEADER + 15)
-#define MAX_ACK_SIZE		(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + MAX_HEADER + 15)
+#define MAX_TCP_HEADER_SIZE	(sizeof(struct ip_header) + 40 + sizeof(struct tcp_header) + MAX_HEADER + 15)
 
 #define TCP_TIME_CLOSE		4
 #define TCP_TIME_DONE		7

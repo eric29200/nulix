@@ -49,9 +49,9 @@ uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint3
 }
 
 /*
- * Send a ACK message.
+ * Create a TCP packet.
  */
-int tcp_send_ack(struct sock *sk, int syn, int fin)
+static int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, int syn, int fin, int ack)
 {
 	struct net_device *dev;
 	struct tcp_header *th;
@@ -59,142 +59,14 @@ int tcp_send_ack(struct sock *sk, int syn, int fin)
 	int ret;
 
 	/* allocate a packet */
-	skb = sock_wmalloc(sk, MAX_ACK_SIZE, 0);
+	skb = sock_wmalloc(sk, MAX_TCP_HEADER_SIZE + len, 0);
 	if (!skb)
 		return -ENOMEM;
-
-	/* build IP header */
-	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
-	if (ret < 0) {
-		skb_free(skb);
-		return ret;
-	}
-
-	/* build TCP header */
-	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header));
-	th->src_port = sk->sport;
-	th->dst_port = sk->dport;
-	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
-	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
-	th->doff = sizeof(struct tcp_header) / 4;
-	th->ack = 1;
-	th->syn = syn;
-	th->fin = fin;
-	th->window = htons(ETHERNET_MAX_MTU);
-	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
-
-	/* transmit packet */
 	skb->free = 1;
-	dev_queue_xmit(dev, skb);
-
-	return 0;
-}
-
-/*
- * Send a SYN message.
- */
-int tcp_send_syn(struct sock *sk)
-{
-	struct net_device *dev;
-	struct tcp_header *th;
-	struct sk_buff *skb;
-	int ret;
-
-	/* allocate a packet */
-	skb = sock_wmalloc(sk, MAX_SYN_SIZE, 0);
-	if (!skb)
-		return -ENOMEM;
-
-	/* build IP header */
-	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
-	if (ret < 0) {
-		skb_free(skb);
-		return ret;
-	}
-
-	/* build TCP header */
-	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header));
-	th->src_port = sk->sport;
-	th->dst_port = sk->dport;
-	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
-	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
-	th->doff = sizeof(struct tcp_header) / 4;
-	th->syn = 1;
-	th->window = htons(ETHERNET_MAX_MTU);
-	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
-
-	/* transmit packet */
-	skb->free = 1;
-	dev_queue_xmit(dev, skb);
-
-	/* update sequence number */
-	sk->protinfo.af_tcp.snd_nxt++;
-
-	return 0;
-}
-
-/*
- * Send a FIN message.
- */
-int tcp_send_fin(struct sock *sk)
-{
-	struct net_device *dev;
-	struct tcp_header *th;
-	struct sk_buff *skb;
-	int ret;
-
-	/* allocate a packet */
-	skb = sock_wmalloc(sk, MAX_FIN_SIZE, 0);
-	if (!skb)
-		return -ENOMEM;
-
-	/* build IP header */
-	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header), &dev, sk->ip_ttl);
-	if (ret < 0) {
-		skb_free(skb);
-		return ret;
-	}
-
-	/* build TCP header */
-	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header));
-	th->src_port = sk->sport;
-	th->dst_port = sk->dport;
-	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
-	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
-	th->doff = sizeof(struct tcp_header) / 4;
-	th->fin = 1;
-	th->ack = 1;
-	th->window = htons(ETHERNET_MAX_MTU);
-	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, 0);
-
-	/* transmit packet */
-	skb->free = 1;
-	dev_queue_xmit(dev, skb);
-
-	/* update sequence number */
-	sk->protinfo.af_tcp.snd_nxt++;
-
-	return 0;
-}
-
-/*
- * Send a TCP message.
- */
-int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
-{
-	struct net_device *dev;
-	struct tcp_header *th;
-	struct sk_buff *skb;
-	int ret;
-
-	/* allocate a packet */
-	skb = sock_wmalloc(sk, MAX_HEADER + sizeof(struct ip_header) + sizeof(struct tcp_header) + len, 0);
-	if (!skb)
-		return -ENOMEM;
 
 	/* build IP header */
 	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header) + len, &dev, sk->ip_ttl);
-	if (ret < 0) {
+	if (ret) {
 		skb_free(skb);
 		return ret;
 	}
@@ -206,21 +78,58 @@ int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
 	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
 	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
 	th->doff = sizeof(struct tcp_header) / 4;
-	th->ack = 1;
+	th->syn = syn;
+	th->fin = fin;
+	th->ack = ack;
 	th->window = htons(ETHERNET_MAX_MTU);
 
 	/* copy data */
-	memcpy_fromiovec((uint8_t *) th + sizeof(struct tcp_header), msg->msg_iov, len);
+	if (len)
+		memcpy_fromiovec((uint8_t *) th + sizeof(struct tcp_header), iov, len);
 
 	/* compute checksum */
 	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, len);
 
 	/* transmit packet */
-	skb->free = 1;
 	dev_queue_xmit(dev, skb);
 
 	/* update sequence number */
-	sk->protinfo.af_tcp.snd_nxt += len;
+	if (len > 0)
+		sk->protinfo.af_tcp.snd_nxt += len;
+	else if (syn || fin)
+		sk->protinfo.af_tcp.snd_nxt++;
 
 	return 0;
+}
+
+/*
+ * Send a ACK message.
+ */
+int tcp_send_ack(struct sock *sk, int syn, int fin)
+{
+	return tcp_send_skb(sk, NULL, 0, syn, fin, 1);
+}
+
+/*
+ * Send a SYN message.
+ */
+int tcp_send_syn(struct sock *sk)
+{
+	return tcp_send_skb(sk, NULL, 0, 1, 0, 0);
+}
+
+/*
+ * Send a FIN message.
+ */
+int tcp_send_fin(struct sock *sk)
+{
+	return tcp_send_skb(sk, NULL, 0, 0, 1, 1);
+}
+
+/*
+ * Send a TCP message.
+ */
+int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
+{
+	return tcp_send_skb(sk, msg->msg_iov, len, 0, 0, 1);
 }
