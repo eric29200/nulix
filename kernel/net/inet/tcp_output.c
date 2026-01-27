@@ -51,7 +51,7 @@ uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint3
 /*
  * Create a TCP packet.
  */
-static int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, int syn, int fin, int ack)
+int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
 {
 	struct net_device *dev;
 	struct tcp_header *th;
@@ -78,9 +78,12 @@ static int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, int syn,
 	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
 	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
 	th->doff = sizeof(struct tcp_header) / 4;
-	th->syn = syn;
-	th->fin = fin;
-	th->ack = ack;
+	th->fin = (flags & TCPCB_FLAG_FIN) != 0;
+	th->syn = (flags & TCPCB_FLAG_SYN) != 0;
+	th->rst = (flags & TCPCB_FLAG_RST) != 0;
+	th->psh = (flags & TCPCB_FLAG_PSH) != 0;
+	th->ack = (flags & TCPCB_FLAG_ACK) != 0;
+	th->urg = (flags & TCPCB_FLAG_URG) != 0;
 	th->window = htons(ETHERNET_MAX_MTU);
 
 	/* copy data */
@@ -96,40 +99,8 @@ static int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, int syn,
 	/* update sequence number */
 	if (len > 0)
 		sk->protinfo.af_tcp.snd_nxt += len;
-	else if (syn || fin)
+	else if (th->syn || th->fin)
 		sk->protinfo.af_tcp.snd_nxt++;
 
 	return 0;
-}
-
-/*
- * Send a ACK message.
- */
-int tcp_send_ack(struct sock *sk, int syn, int fin)
-{
-	return tcp_send_skb(sk, NULL, 0, syn, fin, 1);
-}
-
-/*
- * Send a SYN message.
- */
-int tcp_send_syn(struct sock *sk)
-{
-	return tcp_send_skb(sk, NULL, 0, 1, 0, 0);
-}
-
-/*
- * Send a FIN message.
- */
-int tcp_send_fin(struct sock *sk)
-{
-	return tcp_send_skb(sk, NULL, 0, 0, 1, 1);
-}
-
-/*
- * Send a TCP message.
- */
-int tcp_send_message(struct sock *sk, const struct msghdr *msg, size_t len)
-{
-	return tcp_send_skb(sk, msg->msg_iov, len, 0, 0, 1);
 }

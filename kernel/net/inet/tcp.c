@@ -195,7 +195,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 	}
 
 	/* send message */
-	ret = tcp_send_message(sk, msg, size);
+	ret = tcp_send_skb(sk, msg->msg_iov, size, TCPCB_FLAG_ACK);
 	if (ret)
 		return ret;
 
@@ -223,7 +223,7 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 	sk->protinfo.af_tcp.rcv_nxt = 0;
 
 	/* send SYN message */
-	ret = tcp_send_syn(sk);
+	ret = tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_SYN);
 	if (ret)
 		return ret;
 
@@ -283,7 +283,7 @@ static int tcp_close(struct sock *sk)
 
 	/* switch to close state and send a FIN message if needed */
 	if (tcp_close_state(sk))
-		tcp_send_fin(sk);
+		tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_FIN | TCPCB_FLAG_ACK);
 
 	/* set socket dead */
 	sk->dead = 1;

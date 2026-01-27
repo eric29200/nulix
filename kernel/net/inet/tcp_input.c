@@ -28,7 +28,7 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 
 				/* ack packet */
 				tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
-				tcp_send_ack(sk, 0, 0);
+				tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
 
 				/* wake up processes */
 				wake_up(sk->sleep);
@@ -42,7 +42,7 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb)
 
 			/* ack packet */
 			tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
-			tcp_send_ack(sk, 0, 0);
+			tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
 
 			/* update socket state */
 			sk->shutdown |= SEND_SHUTDOWN;
@@ -84,7 +84,7 @@ int tcp_rcv_established(struct sock *sk, struct sk_buff *skb)
 
 	/* send ACK message */
 	tp->rcv_nxt = TCP_SKB_CB(skb)->end_seq;
-	tcp_send_ack(sk, 0, 0);
+	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
 
 	/* clone socket buffer */
 	skb_new = skb_clone(skb);
