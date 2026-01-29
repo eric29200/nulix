@@ -72,11 +72,11 @@ void ip_receive(struct sk_buff *skb)
 
 	/* handle IPv4 only */
 	if (skb->nh.ip_header->version != 4)
-		return;
+		goto out;
 
 	/* check if packet is adressed to us */
 	if (skb->dev->ip_addr != skb->nh.ip_header->dst_addr)
-		return;
+		goto out;
 
 	/* go to next layer */
 	switch (skb->nh.ip_header->protocol) {
@@ -95,6 +95,8 @@ void ip_receive(struct sk_buff *skb)
 
 	/* deliver packet to sockets */
 	net_deliver_skb(skb);
+out:
+	skb_free(skb);
 }
 
 /*

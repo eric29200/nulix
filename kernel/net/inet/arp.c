@@ -259,6 +259,9 @@ void arp_receive(struct sk_buff *skb)
 	 	arp_send(dev, ARP_REPLY, src_hw, src_ip);
 	else if (ntohs(arph->opcode) == ARP_REPLY)
 		arp_update(dev, src_hw, src_ip);
+
+	/* free socket buffer */
+	skb_free(skb);
 }
 
 /*

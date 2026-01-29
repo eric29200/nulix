@@ -111,7 +111,6 @@ static void rtl8139_receive_packet()
 
 		/* handle socket buffer and free it */
 		skb_handle(skb);
-		skb_free(skb);
 
 		/* update stat */
 		rtl8139_dev->stats.rx_packets++;

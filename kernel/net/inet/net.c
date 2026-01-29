@@ -49,6 +49,7 @@ void skb_handle(struct sk_buff *skb)
 			ip_receive(skb);
 			break;
 		default:
+			skb_free(skb);
 			break;
 	}
 }

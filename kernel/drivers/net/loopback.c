@@ -20,15 +20,14 @@ static int loopback_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* decode ethernet header */
 	ethernet_receive(skb);
 
-	/* handle socket buffer and free it */
-	skb_handle(skb);
-	skb_free(skb);
-
 	/* update transmit and receive stats */
 	dev->stats.tx_packets++;
 	dev->stats.tx_bytes += skb->size;
 	dev->stats.rx_packets++;
 	dev->stats.rx_bytes += skb->size;
+
+	/* handle socket buffer and free it */
+	skb_handle(skb);
 
 	return 0;
 }
