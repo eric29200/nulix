@@ -49,14 +49,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 	TCP_SKB_CB(skb)->ack_seq = ntohl(th->ack_seq);
 
 	/* process socket buffer */
-	switch (sk->state) {
-		case TCP_ESTABLISHED:
-			return tcp_rcv_established(sk, skb);
-		default:
-			return tcp_rcv_state_process(sk, skb);
-	}
-
-	return 0;
+	return tcp_rcv(sk, skb);
 }
 
 /*
