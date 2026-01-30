@@ -31,9 +31,6 @@ int tcp_rcv_state_syn_sent(struct sock *sk, struct sk_buff *skb)
 	tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
 	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
 
-	/* wake up processes */
-	wake_up(sk->sleep);
-
 	return 0;
 }
 
@@ -75,9 +72,6 @@ static int tcp_rcv_established(struct sock *sk, struct sk_buff *skb)
 	/* FIN message : go in CLOSE_WAIT state */
 	if (th->fin)
 		sk->state = TCP_CLOSE_WAIT;
-
-	/* wake up processes */
-	wake_up(sk->sleep);
 
 	return 0;
 }
