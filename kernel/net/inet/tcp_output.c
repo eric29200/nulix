@@ -53,6 +53,7 @@ uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint3
  */
 int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
 {
+	struct tcp_opt *tp = &sk->protinfo.af_tcp;
 	struct net_device *dev;
 	struct tcp_header *th;
 	struct sk_buff *skb;
@@ -75,8 +76,8 @@ int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
 	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header) + len);
 	th->src_port = sk->sport;
 	th->dst_port = sk->dport;
-	th->seq = htonl(sk->protinfo.af_tcp.snd_nxt);
-	th->ack_seq = htonl(sk->protinfo.af_tcp.rcv_nxt);
+	th->seq = htonl(tp->write_seq);
+	th->ack_seq = htonl(tp->acked_seq);
 	th->doff = sizeof(struct tcp_header) / 4;
 	th->fin = (flags & TCPCB_FLAG_FIN) != 0;
 	th->syn = (flags & TCPCB_FLAG_SYN) != 0;
@@ -98,9 +99,9 @@ int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
 
 	/* update sequence number */
 	if (len > 0)
-		sk->protinfo.af_tcp.snd_nxt += len;
+		tp->write_seq += len;
 	else if (th->syn || th->fin)
-		sk->protinfo.af_tcp.snd_nxt++;
+		tp->write_seq++;
 
 	return 0;
 }

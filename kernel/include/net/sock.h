@@ -31,8 +31,8 @@ struct unix_opt {
  * TCP options.
  */
 struct tcp_opt {
-	uint32_t			snd_nxt;		/* next sequence we send */
-	uint32_t			rcv_nxt;		/* what we want to receive next */
+	uint32_t			write_seq;		/* next sequence we send */
+	uint32_t			acked_seq;		/* ack sequence */
 };
 
 /*

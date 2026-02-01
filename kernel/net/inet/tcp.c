@@ -213,8 +213,8 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 	sk->dport = addr_in->sin_port;
 
 	/* generate sequence */
-	tp->snd_nxt = ntohl(rand());
-	tp->rcv_nxt = 0;
+	tp->write_seq = ntohl(rand());
+	tp->acked_seq = 0;
 
 	/* send SYN message */
 	ret = tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_SYN);
