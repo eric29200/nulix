@@ -201,6 +201,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addrlen)
 {
 	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
+	struct tcp_opt *tp = &sk->protinfo.af_tcp;
 	int ret;
 
 	/* check address length */
@@ -212,8 +213,8 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 	sk->dport = addr_in->sin_port;
 
 	/* generate sequence */
-	sk->protinfo.af_tcp.snd_nxt = ntohl(rand());
-	sk->protinfo.af_tcp.rcv_nxt = 0;
+	tp->snd_nxt = ntohl(rand());
+	tp->rcv_nxt = 0;
 
 	/* send SYN message */
 	ret = tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_SYN);
@@ -221,9 +222,22 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 		return ret;
 
 	/* set socket state */
-	sk->state = TCP_SYN_SENT;
+	tcp_set_state(sk, TCP_SYN_SENT);
 
 	return 0;
+}
+
+/*
+ * Set socket TCP state.
+ */
+void tcp_set_state(struct sock *sk, int state)
+{
+	/* set state */
+	sk->state = state;
+
+	/* TCP close : set a timer to close the socket */
+	if (state == TCP_CLOSE)
+		tcp_set_timer(sk, TCP_TIME_DONE, TCP_DONE_TIME);
 }
 
 /*
@@ -231,31 +245,33 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
  */
 static int tcp_close_state(struct sock *sk)
 {
-	int send_fin = 0;
+	int ns = TCP_CLOSE, send_fin = 0;
 
 	/* compute next state */
 	switch (sk->state) {
 		case TCP_SYN_SENT:		/* no SYN back, no FIN needed */
-			sk->state = TCP_CLOSE;
 			break;
 		case TCP_SYN_RECV:
 		case TCP_ESTABLISHED:		/* closedown begin */
-			sk->state = TCP_FIN_WAIT1;
+			ns = TCP_FIN_WAIT1;
 			send_fin = 1;
 			break;
 		case TCP_FIN_WAIT1:		/* already closing, or FIN sent : no change */
 		case TCP_FIN_WAIT2:
 		case TCP_CLOSING:
+			ns = sk->state;
 			break;
 		case TCP_CLOSE:
 		case TCP_LISTEN:
-			sk->state = TCP_CLOSE;
 			break;
 		case TCP_CLOSE_WAIT:		/* they have FIN'd us. We send our FIN and wait only for the ACK */
-			sk->state = TCP_LAST_ACK;
+			ns = TCP_LAST_ACK;
 			send_fin = 1;
 			break;
 	}
+
+	/* set socket state */
+	tcp_set_state(sk, ns);
 
 	return send_fin;
 }

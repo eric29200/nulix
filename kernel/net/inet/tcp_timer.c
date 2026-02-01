@@ -23,9 +23,8 @@ static void net_timer(void *arg)
 			destroy_sock(sk);
 			break;
 		case TCP_TIME_CLOSE:
-			sk->state = TCP_CLOSE;
 			sk->shutdown = SHUTDOWN_MASK;
-			tcp_set_timer(sk, TCP_TIME_DONE, TCP_DONE_TIME);
+			tcp_set_state(sk, TCP_CLOSE);
 			break;
 		default:
 			printf("net_timer: timer expired - reason %d is unknown\n", why);
