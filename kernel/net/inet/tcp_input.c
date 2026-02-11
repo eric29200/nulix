@@ -17,7 +17,7 @@ int tcp_rcv_state_syn_sent(struct sock *sk, struct sk_buff *skb)
 		return 0;
 
 	/* bad ack */
-	if (TCP_SKB_CB(skb)->ack_seq != tp->write_seq)
+	if (TCP_SKB_CB(skb)->ack_seq != tp->snd_nxt)
 		return 1;
 
 	/* we only want to receive a SYN/ACK message */
@@ -28,7 +28,7 @@ int tcp_rcv_state_syn_sent(struct sock *sk, struct sk_buff *skb)
 	sk->state = TCP_ESTABLISHED;
 
 	/* ack packet */
-	tp->acked_seq = TCP_SKB_CB(skb)->seq + 1;
+	tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
 	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
 
 	return 0;
@@ -45,7 +45,7 @@ static int tcp_rcv_established(struct sock *sk, struct sk_buff *skb)
 	size_t data_len;
 
 	/* check if this is the packet we want */
-	if (TCP_SKB_CB(skb)->seq != tp->acked_seq)
+	if (TCP_SKB_CB(skb)->seq != tp->rcv_nxt)
 		return -EINVAL;
 
 	/* SYN message in establised connection ? */
@@ -58,7 +58,7 @@ static int tcp_rcv_established(struct sock *sk, struct sk_buff *skb)
 		return 0;
 
 	/* send ACK message */
-	tp->acked_seq = TCP_SKB_CB(skb)->end_seq;
+	tp->rcv_nxt = TCP_SKB_CB(skb)->end_seq;
 	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
 
 	/* clone socket buffer */
@@ -85,11 +85,11 @@ static int tcp_rcv_fin_wait1(struct sock *sk, struct sk_buff *skb)
 	struct tcp_opt *tp = &sk->protinfo.af_tcp;
 
 	/* we wait for an ack */
-	if (!th->ack || TCP_SKB_CB(skb)->ack_seq != tp->write_seq)
+	if (!th->ack || TCP_SKB_CB(skb)->ack_seq != tp->snd_nxt)
 		return 1;
 
 	/* ack packet */
-	tp->acked_seq = TCP_SKB_CB(skb)->seq + 1;
+	tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
 	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
 
 	/* update socket state */

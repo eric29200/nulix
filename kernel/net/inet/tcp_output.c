@@ -76,8 +76,8 @@ int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
 	skb->h.tcp_header = th = (struct tcp_header *) skb_put(skb, sizeof(struct tcp_header) + len);
 	th->src_port = sk->sport;
 	th->dst_port = sk->dport;
-	th->seq = htonl(tp->write_seq);
-	th->ack_seq = htonl(tp->acked_seq);
+	th->seq = htonl(tp->snd_nxt);
+	th->ack_seq = htonl(tp->rcv_nxt);
 	th->doff = sizeof(struct tcp_header) / 4;
 	th->fin = (flags & TCPCB_FLAG_FIN) != 0;
 	th->syn = (flags & TCPCB_FLAG_SYN) != 0;
@@ -99,9 +99,9 @@ int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
 
 	/* update sequence number */
 	if (len > 0)
-		tp->write_seq += len;
+		tp->snd_nxt += len;
 	else if (th->syn || th->fin)
-		tp->write_seq++;
+		tp->snd_nxt++;
 
 	return 0;
 }
