@@ -7,7 +7,7 @@
 /*
  * Receive a packet in TCP_SYN_SENT state.
  */
-int tcp_rcv_state_syn_sent(struct sock *sk, struct sk_buff *skb)
+int tcp_rcv_syn_sent(struct sock *sk, struct sk_buff *skb)
 {
 	struct tcp_header *th = skb->h.tcp_header;
 	struct tcp_opt *tp = &sk->protinfo.af_tcp;
@@ -25,7 +25,7 @@ int tcp_rcv_state_syn_sent(struct sock *sk, struct sk_buff *skb)
 		return 0;
 
 	/* set connection established */
-	sk->state = TCP_ESTABLISHED;
+	tcp_set_state(sk, TCP_ESTABLISHED);
 
 	/* ack packet */
 	tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
@@ -71,7 +71,7 @@ static int tcp_rcv_established(struct sock *sk, struct sk_buff *skb)
 
 	/* FIN message : go in CLOSE_WAIT state */
 	if (th->fin)
-		sk->state = TCP_CLOSE_WAIT;
+	 	tcp_set_state(sk, TCP_CLOSE_WAIT);
 
 	return 0;
 }
@@ -89,15 +89,30 @@ static int tcp_rcv_fin_wait1(struct sock *sk, struct sk_buff *skb)
 		return 1;
 
 	/* ack packet */
-	tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
-	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
+	if (tcp_data_length(skb) || th->fin) {
+		tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
+		tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
+	}
 
 	/* update socket state */
 	sk->shutdown |= SEND_SHUTDOWN;
-	sk->state = TCP_FIN_WAIT2;
+	tcp_set_state(sk, TCP_FIN_WAIT2);
 
 	/* set timer to close socket */
 	tcp_set_timer(sk, TCP_TIME_CLOSE, TCP_FIN_TIMEOUT);
+
+	return 0;
+}
+
+/*
+ * Receive a packet in TCP_LAST_ACK state.
+ */
+static int tcp_rcv_last_ack(struct sock *sk, struct sk_buff *skb)
+{
+	struct tcp_header *th = skb->h.tcp_header;
+
+	if (th->ack)
+		tcp_set_state(sk, TCP_CLOSE);
 
 	return 0;
 }
@@ -109,11 +124,15 @@ int tcp_rcv(struct sock *sk, struct sk_buff *skb)
 {
 	switch (sk->state) {
 		case TCP_SYN_SENT:
-			return tcp_rcv_state_syn_sent(sk, skb);
+			return tcp_rcv_syn_sent(sk, skb);
 		case TCP_ESTABLISHED:
 			return tcp_rcv_established(sk, skb);
 		case TCP_FIN_WAIT1:
 			return tcp_rcv_fin_wait1(sk, skb);
+		case TCP_LAST_ACK:
+			return tcp_rcv_last_ack(sk, skb);
+		case TCP_CLOSE:
+			return 1;
 		default:
 			printf("tcp_rcv_state_process: unknown socket state %d\n", sk->state);
 			break;
