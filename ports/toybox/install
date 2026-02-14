@@ -1,0 +1,15 @@
+VERSION="1.36.1"
+SRC_FILENAME="toybox-"$VERSION".tar.gz"
+URL="https://landley.net/toybox/downloads/toybox-0.8.13.tar.gz"
+
+function configure_port() {
+	./configure
+}
+
+function build_port() {
+	make -j$NJOBS CC=$CC LD=$LD AR=$AR AS=$AS
+}
+
+function install_port() {
+	cp toybox-i386-elf $SYSROOT"/usr/bin/toybox"
+}
