@@ -101,6 +101,32 @@ static int tcp_rcv_fin_wait1(struct sock *sk, struct sk_buff *skb)
 }
 
 /*
+ * Receive a packet in TCP_FIN_WAIT2 state.
+ */
+static int tcp_rcv_fin_wait2(struct sock *sk, struct sk_buff *skb)
+{
+	struct tcp_header *th = skb->h.tcp_header;
+	struct tcp_opt *tp = &sk->protinfo.af_tcp;
+
+	/* check sequence number */
+	if (TCP_SKB_CB(skb)->ack_seq != tp->snd_nxt)
+		return 1;
+
+	/* ack packet if needed */
+	if (th->fin)
+		tcp_send_ack(sk, skb);
+
+	/* update socket state */
+	sk->shutdown |= SEND_SHUTDOWN;
+	tcp_set_state(sk, TCP_TIME_WAIT);
+
+	/* set timer to close socket */
+	tcp_set_timer(sk, TCP_TIME_CLOSE, TCP_FIN_TIMEOUT);
+
+	return 0;
+}
+
+/*
  * Receive a packet in TCP_LAST_ACK state.
  */
 static int tcp_rcv_last_ack(struct sock *sk, struct sk_buff *skb)
@@ -125,6 +151,8 @@ int tcp_rcv(struct sock *sk, struct sk_buff *skb)
 			return tcp_rcv_established(sk, skb);
 		case TCP_FIN_WAIT1:
 			return tcp_rcv_fin_wait1(sk, skb);
+		case TCP_FIN_WAIT2:
+			return tcp_rcv_fin_wait2(sk, skb);
 		case TCP_LAST_ACK:
 			return tcp_rcv_last_ack(sk, skb);
 		case TCP_CLOSE:
