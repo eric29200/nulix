@@ -105,3 +105,14 @@ int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
 
 	return 0;
 }
+
+/*
+ * Send a ACK.
+ */
+void tcp_send_ack(struct sock *sk, struct sk_buff *skb)
+{
+	struct tcp_opt *tp = &sk->protinfo.af_tcp;
+
+	tp->rcv_nxt = TCP_SKB_CB(skb)->end_seq;
+	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
+}

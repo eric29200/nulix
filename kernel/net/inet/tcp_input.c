@@ -28,8 +28,7 @@ int tcp_rcv_syn_sent(struct sock *sk, struct sk_buff *skb)
 	tcp_set_state(sk, TCP_ESTABLISHED);
 
 	/* ack packet */
-	tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
-	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
+	tcp_send_ack(sk, skb);
 
 	return 0;
 }
@@ -58,8 +57,7 @@ static int tcp_rcv_established(struct sock *sk, struct sk_buff *skb)
 		return 0;
 
 	/* send ACK message */
-	tp->rcv_nxt = TCP_SKB_CB(skb)->end_seq;
-	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
+	tcp_send_ack(sk, skb);
 
 	/* clone socket buffer */
 	skb_new = skb_clone(skb);
@@ -89,10 +87,8 @@ static int tcp_rcv_fin_wait1(struct sock *sk, struct sk_buff *skb)
 		return 1;
 
 	/* ack packet */
-	if (tcp_data_length(skb) || th->fin) {
-		tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
-		tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
-	}
+	if (tcp_data_length(skb) || th->fin)
+		tcp_send_ack(sk, skb);
 
 	/* update socket state */
 	sk->shutdown |= SEND_SHUTDOWN;
