@@ -206,11 +206,26 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 {
 	struct sockaddr_in *addr_in = (struct sockaddr_in *) addr;
 	struct tcp_opt *tp = &sk->protinfo.af_tcp;
+	struct route *rt;
 	int ret;
+
+	/* check socket state */
+	if (sk->state != TCP_CLOSE)
+		return -EISCONN;
 
 	/* check address length */
 	if (addrlen < sizeof(struct sockaddr_in))
 		return -EINVAL;
+
+	/* get route */
+	rt = ip_rt_route(addr_in->sin_addr);
+	if (!rt)
+		return -ENETUNREACH;
+
+	/* set source address */
+	if (!sk->saddr)
+		sk->saddr = rt->rt_dev->ip_addr;
+	sk->rcv_saddr = sk->saddr;
 
 	/* set destination */
 	sk->daddr = addr_in->sin_addr;
