@@ -40,7 +40,7 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 	/* check protocol, destination and source */
 	if (sk->protocol != skb->nh.ip_header->protocol
 		|| sk->sport != th->dst_port
-		|| sk->dport != th->src_port)
+		|| (sk->dport && sk->dport != th->src_port))
 		return -EINVAL;
 
 	/* decode TCP header */
