@@ -53,19 +53,22 @@ static int tcp_rcv_established(struct sock *sk, struct sk_buff *skb)
 
 	/* compute data length */
 	data_len = tcp_data_length(skb);
-	if (!data_len)
+	if (!data_len && !th->fin)
 		return 0;
 
 	/* send ACK message */
 	tcp_send_ack(sk, skb);
 
-	/* clone socket buffer */
-	skb_new = skb_clone(skb);
-	if (!skb_new)
-		return -ENOMEM;
+	/* handle data */
+	if (data_len > 0) {
+		/* clone socket buffer */
+		skb_new = skb_clone(skb);
+		if (!skb_new)
+			return -ENOMEM;
 
-	/* add buffer to socket */
-	skb_queue_tail(&sk->receive_queue, skb_new);
+		/* add buffer to socket */
+		skb_queue_tail(&sk->receive_queue, skb_new);
+	}
 
 	/* FIN message : go in CLOSE_WAIT state */
 	if (th->fin)
