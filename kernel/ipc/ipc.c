@@ -76,7 +76,7 @@ int ipc_addid(struct ipc_ids *ids, struct kern_ipc_perm *new, int size)
 	int id;
 
 	/* grow identifiers set if needed */
-	size = grow_ary(ids,size);
+	size = grow_ary(ids, size);
 
 	/* find a free entry */
 	for (id = 0; id < size; id++)

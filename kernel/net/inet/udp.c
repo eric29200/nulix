@@ -66,45 +66,6 @@ static int udp_handle(struct sock *sk, struct sk_buff *skb)
 }
 
 /*
- * Connect a UDP socket.
- */
-static int udp_connect(struct sock *sk, const struct sockaddr *addr, size_t addrlen)
-{
-	const struct sockaddr_in *addr_in = (const struct sockaddr_in *) addr;
-	struct route *rt;
-	uint32_t daddr;
-
-	/* check address */
-	if (addrlen < sizeof(struct sockaddr_in))
-		return -EINVAL;
-	if (addr_in->sin_family && addr_in->sin_family != AF_INET)
-		return -EAFNOSUPPORT;
-
-	/* get destination address */
-	daddr = addr_in->sin_addr;
-	if (daddr == INADDR_ANY)
-		daddr = ip_my_addr();
-
-	/* get route to destination */
-	rt = ip_rt_route(daddr);
-	if (!rt)
-		return -ENETUNREACH;
-
-	/* update socket source */
-	if (!sk->saddr)
-		sk->saddr = rt->rt_dev->ip_addr;
-	if (!sk->rcv_saddr)
-		sk->rcv_saddr = rt->rt_dev->ip_addr;
-
-	/* update socket destination */
-	sk->daddr = daddr;
-	sk->dport = addr_in->sin_port;
-	sk->state = TCP_ESTABLISHED;
-
-	return(0);
-}
-
-/*
  * Send an UDP message.
  */
 static int udp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
@@ -207,7 +168,7 @@ static int udp_close(struct sock *sk)
  */
 struct proto udp_prot = {
 	.handle		= udp_handle,
-	.connect	= udp_connect,
+	.connect	= datagram_connect,
 	.recvmsg	= udp_recvmsg,
 	.sendmsg	= udp_sendmsg,
 	.poll		= datagram_poll,

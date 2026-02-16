@@ -97,6 +97,7 @@ struct proto {
 
 /* inet protocols */
 extern struct proto udp_prot;
+extern struct proto icmp_prot;
 extern struct proto tcp_prot;
 extern struct proto raw_prot;
 
@@ -114,6 +115,7 @@ struct sk_buff *sock_wmalloc(struct sock *sk, size_t size, int force);
 struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, int *err);
 struct sk_buff *skb_recv_datagram(struct sock *sk, int flags, int noblock, int *err);
 void skb_copy_datagram_iovec(struct sk_buff *skb, int offset, struct iovec *to, size_t size);
+int datagram_connect(struct sock *sk, const struct sockaddr *addr, size_t addrlen);
 int datagram_poll(struct socket *sock, struct select_table *wait);
 
 /*

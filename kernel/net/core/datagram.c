@@ -1,6 +1,7 @@
 #include <net/sock.h>
 #include <proc/sched.h>
 #include <net/inet/tcp.h>
+#include <net/inet/route.h>
 #include <stderr.h>
 
 /*
@@ -59,6 +60,45 @@ no_packet:
 void skb_copy_datagram_iovec(struct sk_buff *skb, int offset, struct iovec *to, size_t size)
 {
 	memcpy_toiovec(to, skb->h.raw + offset, size);
+}
+
+/*
+ * Generic connect.
+ */
+int datagram_connect(struct sock *sk, const struct sockaddr *addr, size_t addrlen)
+{
+	const struct sockaddr_in *addr_in = (const struct sockaddr_in *) addr;
+	struct route *rt;
+	uint32_t daddr;
+
+	/* check address */
+	if (addrlen < sizeof(struct sockaddr_in))
+		return -EINVAL;
+	if (addr_in->sin_family && addr_in->sin_family != AF_INET)
+		return -EAFNOSUPPORT;
+
+	/* get destination address */
+	daddr = addr_in->sin_addr;
+	if (daddr == INADDR_ANY)
+		daddr = ip_my_addr();
+
+	/* get route to destination */
+	rt = ip_rt_route(daddr);
+	if (!rt)
+		return -ENETUNREACH;
+
+	/* update socket source */
+	if (!sk->saddr)
+		sk->saddr = rt->rt_dev->ip_addr;
+	if (!sk->rcv_saddr)
+		sk->rcv_saddr = rt->rt_dev->ip_addr;
+
+	/* update socket destination */
+	sk->daddr = daddr;
+	sk->dport = addr_in->sin_port;
+	sk->state = TCP_ESTABLISHED;
+
+	return 0;
 }
 
 /*

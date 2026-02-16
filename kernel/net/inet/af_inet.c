@@ -625,6 +625,11 @@ static int inet_create(struct socket *sock, int protocol)
 					prot = &udp_prot;
 					sock->ops = &inet_dgram_ops;
 					break;
+				case IP_PROTO_ICMP:
+					protocol = IP_PROTO_ICMP;
+					prot = &icmp_prot;
+					sock->ops = &inet_dgram_ops;
+					break;
 				default:
 					goto err_proto;
 			}

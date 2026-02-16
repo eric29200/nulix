@@ -1021,7 +1021,7 @@ restart:
 
 	/* send info to listening sock */
 	other->ack_backlog++;
-	skb_queue_tail(&other->receive_queue,skb);
+	skb_queue_tail(&other->receive_queue, skb);
 	other->data_ready(other, 0);
 	unix_unlock(other);
 	return 0;
