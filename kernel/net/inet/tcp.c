@@ -114,6 +114,10 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 		if (msg->msg_flags & MSG_DONTWAIT)
 			return -EAGAIN;
 
+		/* socket shutdown */
+		if (sk->state == TCP_CLOSE_WAIT || (sk->shutdown & RCV_SHUTDOWN))
+			return -EPIPE;
+
 		/* sleep */
 		sleep_on(sk->sleep);
 	}
