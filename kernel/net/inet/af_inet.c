@@ -277,9 +277,27 @@ static int inet_bind(struct socket *sock, const struct sockaddr *addr, size_t ad
  */
 static int inet_listen(struct socket *sock, int backlog)
 {
-	UNUSED(sock);
-	UNUSED(backlog);
-	printf("inet_listen() not implemented\n");
+	struct sock *sk = sock->sk;
+	int ret;
+
+	/* autobind socket if needed */
+	ret = inet_autobind(sk);
+	if (ret)
+		return ret;
+
+	/* fix backlog */
+	if (backlog == 0)
+		backlog = 1;
+	if (backlog > SOMAXCONN)
+		backlog = SOMAXCONN;
+
+	/* set socket listening */
+	sk->max_ack_backlog = backlog;
+	if (sk->state != TCP_LISTEN) {
+		sk->ack_backlog = 0;
+		tcp_set_state(sk, TCP_LISTEN);
+	}
+
 	return 0;
 }
 
