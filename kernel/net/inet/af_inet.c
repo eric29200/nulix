@@ -15,7 +15,7 @@
 #include <math.h>
 
 /* inet sockets */
-static LIST_HEAD(inet_sockets);
+LIST_HEAD(inet_sockets);
 
 static int inet_create(struct socket *sock, int protocol);
 
@@ -306,10 +306,62 @@ static int inet_listen(struct socket *sock, int backlog)
  */
 static int inet_accept(struct socket *sock, struct socket *sock_new, int flags)
 {
-	UNUSED(sock);
-	UNUSED(sock_new);
-	UNUSED(flags);
-	printf("inet_accept() not implemented\n");
+	struct sock *sk1 = sock->sk, *sk2;
+	int ret;
+
+	/* destroy new socket */
+	if (sock_new->sk) {
+		sk2 = sock_new->sk;
+		sock_new->sk = NULL;
+		destroy_sock(sk2);
+	}
+
+	/* accept not implemented */
+	if (!sk1->prot || !sk1->prot->accept)
+		return -EOPNOTSUPP;
+
+	/* accept connection */
+	if (sk1->pair) {
+		sk2 = sk1->pair;
+		sk1->pair = NULL;
+	} else {
+		sk2 = sk1->prot->accept(sk1, flags);
+		if (!sk2)
+			return sock_error(sk1);
+	}
+
+	/* set new socket */
+	sock_new->sk = sk2;
+	sk2->sleep = &sock_new->wait;
+	sk2->socket = sock_new;
+	if (flags & O_NONBLOCK)
+		return 0;
+
+	/* wait for connection */
+	while (sk2->state == TCP_SYN_RECV) {
+		sleep_on(sk2->sleep);
+
+		/* handle signal */
+		if (signal_pending(current_task)) {
+			sk1->pair = sk2;
+			sk2->sleep = NULL;
+			sk2->socket = NULL;
+			sock_new->sk = NULL;
+			return -ERESTARTSYS;
+		}
+	}
+
+	/* handle error */
+	if (sk2->state != TCP_ESTABLISHED && sk2->err > 0) {
+		ret = sock_error(sk2);
+		destroy_sock(sk2);
+		sock_new->sk = NULL;
+		return ret;
+	}
+
+	/* set new socket connected */
+	sock_new->state = SS_CONNECTED;
+
 	return 0;
 }
 

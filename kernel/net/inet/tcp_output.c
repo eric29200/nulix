@@ -49,27 +49,29 @@ uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint3
 }
 
 /*
- * Create a TCP packet.
+ * Create a socket buffer.
  */
-int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
+struct sk_buff *tcp_create_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags, struct net_device **dev, int *err)
 {
 	struct tcp_opt *tp = &sk->protinfo.af_tcp;
-	struct net_device *dev;
 	struct tcp_header *th;
 	struct sk_buff *skb;
 	int ret;
 
 	/* allocate a packet */
 	skb = sock_wmalloc(sk, MAX_TCP_HEADER_SIZE + len, 0);
-	if (!skb)
-		return -ENOMEM;
+	if (!skb) {
+		*err = -ENOMEM;
+		return NULL;
+	}
 	skb->free = 1;
 
 	/* build IP header */
-	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header) + len, &dev, sk->ip_ttl);
+	ret = ip_build_header(skb, sk->daddr, sizeof(struct tcp_header) + len, dev, sk->ip_ttl);
 	if (ret) {
 		skb_free(skb);
-		return ret;
+		*err = ret;
+		return NULL;
 	}
 
 	/* build TCP header */
@@ -92,12 +94,32 @@ int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
 		memcpy_fromiovec((uint8_t *) th + sizeof(struct tcp_header), iov, len);
 
 	/* compute checksum */
-	th->chksum = tcp_checksum(th, dev->ip_addr, sk->daddr, len);
+	th->chksum = tcp_checksum(th, (*dev)->ip_addr, sk->daddr, len);
+
+	return skb;
+}
+
+/*
+ * Create a TCP packet.
+ */
+int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags)
+{
+	struct tcp_opt *tp = &sk->protinfo.af_tcp;
+	struct net_device *dev;
+	struct tcp_header *th;
+	struct sk_buff *skb;
+	int ret;
+
+	/* create socket buffer */
+	skb = tcp_create_skb(sk, iov, len, flags, &dev, &ret);
+	if (!skb)
+		return ret;
 
 	/* transmit packet */
 	dev_queue_xmit(dev, skb);
 
 	/* update sequence number */
+	th = skb->h.tcp_header;
 	if (len > 0)
 		tp->snd_nxt += len;
 	else if (th->syn || th->fin)
@@ -115,4 +137,29 @@ void tcp_send_ack(struct sock *sk, struct sk_buff *skb)
 
 	tp->rcv_nxt = TCP_SKB_CB(skb)->end_seq;
 	tcp_send_skb(sk, NULL, 0, TCPCB_FLAG_ACK);
+}
+
+/*
+ * Send a SYN/ACK.
+ */
+void tcp_send_syn_ack(struct sock *sk_new, struct sock *sk)
+{
+	struct tcp_opt *tp_new = &sk_new->protinfo.af_tcp;
+	struct net_device *dev;
+	struct sk_buff *skb;
+	int ret;
+
+	/* create socket buffer */
+	skb = tcp_create_skb(sk_new, NULL, 0, TCPCB_FLAG_SYN | TCPCB_FLAG_ACK, &dev, &ret);
+	if (!skb)
+		return;
+
+	/* transmit packet */
+	dev_queue_xmit(dev, skb);
+
+	/* update sequence number */
+	tp_new->snd_nxt++;
+
+	/* put socket buffer un listening socket */
+	skb_queue_tail(&sk->receive_queue, skb);
 }

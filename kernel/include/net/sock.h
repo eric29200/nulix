@@ -90,6 +90,7 @@ struct proto {
 	int (*recvmsg)(struct sock *, struct msghdr *, size_t);
 	int (*sendmsg)(struct sock *, const struct msghdr *, size_t);
 	int (*connect)(struct sock *, const struct sockaddr *, size_t);
+	struct sock *(*accept)(struct sock *, int);
 	int (*poll)(struct socket *, struct select_table *);
 	int (*getsockopt)(struct sock *sock, int, int, void *, size_t *);
 	int (*setsockopt)(struct sock *sock, int, int, void *, size_t);

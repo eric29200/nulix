@@ -94,6 +94,7 @@ int tcp_rcv(struct sock *sk, struct sk_buff *skb);
 uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint32_t dst_address, size_t len);
 int tcp_send_skb(struct sock *sk, struct iovec *iov, size_t len, uint8_t flags);
 void tcp_send_ack(struct sock *sk, struct sk_buff *skb);
+void tcp_send_syn_ack(struct sock *sk_new, struct sock *sk);
 void tcp_set_state(struct sock *sk, int state);
 void tcp_set_timer(struct sock *sk, int timeout, time_t expires);
 

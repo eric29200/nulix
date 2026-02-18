@@ -247,6 +247,93 @@ static int tcp_connect(struct sock *sk, const struct sockaddr *addr, size_t addr
 }
 
 /*
+ * Find someone to accept.
+ */
+static struct sk_buff *tcp_find_established(struct sock *sk)
+{
+	struct sk_buff *skb;
+
+	/* peek first packet */
+	skb = skb_peek(&sk->receive_queue);
+	if (!skb)
+		return NULL;
+
+	/* try to find an established socket */
+	do {
+		if (skb->sk->state == TCP_ESTABLISHED || skb->sk->state >= TCP_FIN_WAIT1)
+			return skb;
+
+		skb = skb->next;
+	} while (skb != (struct sk_buff *) &sk->receive_queue);
+
+	return NULL;
+}
+
+/*
+ * Wait for an incoming connection.
+ */
+static struct sk_buff *wait_for_connect(struct sock *sk)
+{
+	struct sk_buff *skb;
+
+	for (;;) {
+		/* sleep */
+		sleep_on(sk->sleep);
+
+		/* find establised connection */
+		skb = tcp_find_established(sk);
+		if (skb)
+			return skb;
+
+		/* handle signals */
+		if (signal_pending(current_task))
+			return NULL;
+	}
+}
+
+/*
+ * Accept a connection.
+ */
+static struct sock *tcp_accept(struct sock *sk, int flags)
+{
+	struct sock *sk_new;
+	struct sk_buff *skb;
+	int ret = EINVAL;
+
+	/* socket must be listening */
+	if (sk->state != TCP_LISTEN)
+		goto err;
+
+	/* find establised connection */
+	skb = tcp_find_established(sk);
+	if (skb)
+		goto found;
+
+	/* non blocking : return */
+	ret = EAGAIN;
+	if (flags & O_NONBLOCK)
+		goto err;
+
+	/* wait for connection */
+	skb = wait_for_connect(sk);
+	if (skb)
+		goto found;
+
+	ret = ERESTARTSYS;
+	goto err;
+found:
+	skb_unlink(skb);
+	sk_new = skb->sk;
+	skb_free(skb);
+	sk->ack_backlog--;
+	sk->err = 0;
+	return sk_new;
+err:
+	sk->err = ret;
+	return NULL;
+}
+
+/*
  * Set socket TCP state.
  */
 void tcp_set_state(struct sock *sk, int state)
@@ -356,6 +443,7 @@ struct proto tcp_prot = {
 	.recvmsg	= tcp_recvmsg,
 	.sendmsg	= tcp_sendmsg,
 	.connect	= tcp_connect,
+	.accept		= tcp_accept,
 	.poll		= tcp_poll,
 	.getsockopt	= tcp_getsockopt,
 	.setsockopt	= tcp_setsockopt,
