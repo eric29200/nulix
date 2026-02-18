@@ -12,7 +12,7 @@ function configure_port() {
 }
 
 function build_port() {
-	make -j$NJOBS
+	make -j$NJOBS CFLAGS_FOR_BUILD="-std=gnu17"
 }
 
 function install_port() {
