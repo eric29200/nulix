@@ -552,7 +552,7 @@ out_put:
 out:
 	return ret;
 out_release:
-	sock_release(sock);
+	sock_release(new_sock);
 	goto out_put;
 }
 
