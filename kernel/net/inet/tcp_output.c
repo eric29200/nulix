@@ -145,8 +145,8 @@ void tcp_send_ack(struct sock *sk, struct sk_buff *skb)
 void tcp_send_syn_ack(struct sock *sk_new, struct sock *sk)
 {
 	struct tcp_opt *tp_new = &sk_new->protinfo.af_tcp;
+	struct sk_buff *skb, *skb_cp;
 	struct net_device *dev;
-	struct sk_buff *skb;
 	int ret;
 
 	/* create socket buffer */
@@ -154,12 +154,18 @@ void tcp_send_syn_ack(struct sock *sk_new, struct sock *sk)
 	if (!skb)
 		return;
 
+	/* clone socket buffer */
+	skb_cp = skb_clone(skb);
+	if (!skb_cp) {
+		skb_free(skb);
+		return;
+	}
+
+	/* put it in listening socket */
+	skb_cp->sk = sk_new;
+	skb_queue_tail(&sk->receive_queue, skb_cp);
+
 	/* transmit packet */
 	dev_queue_xmit(dev, skb);
-
-	/* update sequence number */
 	tp_new->snd_nxt++;
-
-	/* put socket buffer un listening socket */
-	skb_queue_tail(&sk->receive_queue, skb);
 }
