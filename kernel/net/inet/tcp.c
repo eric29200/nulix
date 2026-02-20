@@ -298,37 +298,35 @@ static struct sock *tcp_accept(struct sock *sk, int flags)
 {
 	struct sock *sk_new;
 	struct sk_buff *skb;
-	int ret = EINVAL;
+	int ret;
 
 	/* socket must be listening */
+	ret = EINVAL;
 	if (sk->state != TCP_LISTEN)
-		goto err;
+		goto out;
 
 	/* find establised connection */
 	skb = tcp_find_established(sk);
-	if (skb)
-		goto found;
+	if (!skb) {
+		/* non blocking : return */
+		ret = EAGAIN;
+		if (flags & O_NONBLOCK)
+			goto out;
 
-	/* non blocking : return */
-	ret = EAGAIN;
-	if (flags & O_NONBLOCK)
-		goto err;
+		/* wait for connection */
+		ret = ERESTARTSYS;
+		skb = wait_for_connect(sk);
+		if (!skb)
+			goto out;
+	}
 
-	/* wait for connection */
-	skb = wait_for_connect(sk);
-	if (skb)
-		goto found;
-
-	ret = ERESTARTSYS;
-	goto err;
-found:
 	skb_unlink(skb);
 	sk_new = skb->sk;
 	skb_free(skb);
 	sk->ack_backlog--;
 	sk->err = 0;
 	return sk_new;
-err:
+out:
 	sk->err = ret;
 	return NULL;
 }
