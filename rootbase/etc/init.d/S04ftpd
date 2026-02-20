@@ -1,0 +1,14 @@
+#!/bin/sh
+
+DAEMON="ftpd"
+
+printf 'Starting %s: ' "$DAEMON"
+
+/usr/libexec/ftpd -4 -A -d -D -l
+
+status=$?
+if [ "$status" -eq 0 ]; then
+	echo "OK"
+else
+	echo "FAIL"
+fi
