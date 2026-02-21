@@ -172,6 +172,7 @@ static const void *syscalls[] = {
 	[__NR_vhangup]			= sys_vhangup,
 	[__NR_ptrace]			= sys_ptrace,
 	[__NR_ipc]			= sys_ipc,
+	[__NR_ppoll]			= sys_ppoll,
 };
 
 /*

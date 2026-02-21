@@ -58,7 +58,7 @@ static void do_pollfd(struct pollfd *fds, int *count, struct select_table *wait)
 /*
  * Poll system call.
  */
-static int do_poll(struct pollfd *fds, size_t ndfs, int timeout)
+static int do_poll(struct pollfd *fds, size_t ndfs, time_t *timeout)
 {
 	struct select_table wait_table, *wait;
 	struct select_table_entry *entry;
@@ -86,12 +86,12 @@ static int do_poll(struct pollfd *fds, size_t ndfs, int timeout)
 			count = -EINTR;
 
 		/* events catched or timeout : break */
-		if (count || !timeout)
+		if (count || !*timeout)
 			break;
 
 		/* no events sleep */
 		current_task->state = TASK_SLEEPING;
-		timeout = schedule_timeout(timeout);
+		*timeout = schedule_timeout(*timeout);
 	}
 
 	/* free wait table */
@@ -115,7 +115,7 @@ int sys_poll(struct pollfd *fds, size_t nfds, int utimeout)
 		timeout = MAX_SCHEDULE_TIMEOUT;
 
 	/* poll */
-	return do_poll(fds, nfds, timeout);
+	return do_poll(fds, nfds, &timeout);
 }
 
 /*
@@ -317,6 +317,51 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 		tvp->tv_sec = timeout / HZ;
 		tvp->tv_nsec = timeout % HZ;
 		tvp->tv_nsec *= (1000000000 / HZ);
+	}
+
+	/* restore sigmask and delete masked pending signals */
+	if (ret == -EINTR && sigmask)
+		current_task->saved_sigmask = current_sigmask;
+	else if (sigmask)
+		current_task->blocked = current_sigmask;
+
+	return ret;
+}
+
+/*
+ * Ppoll system call.
+ */
+int sys_ppoll(struct pollfd *fds, size_t nfds, struct timespec *ts, const sigset_t *sigmask)
+{
+	sigset_t current_sigmask;
+	time_t timeout;
+	int ret;
+
+	/* handle sigmask */
+	if (sigmask) {
+		/* save current sigmask */
+		current_sigmask = current_task->blocked;
+
+		/* set new sigmask (do not mask SIGKILL and SIGSTOP) */
+		current_task->blocked = *sigmask;
+		sigdelset(&current_task->blocked, SIGKILL);
+		sigdelset(&current_task->blocked, SIGSTOP);
+	}
+
+	/* get time out */
+	if (ts)
+		timeout = timespec_to_jiffies(ts);
+	else
+		timeout = MAX_SCHEDULE_TIMEOUT;
+
+	/* poll */
+	ret = do_poll(fds, nfds, &timeout);
+
+	/* update timeout */
+	if (ts) {
+		ts->tv_sec = timeout / HZ;
+		ts->tv_nsec = timeout % HZ;
+		ts->tv_nsec *= (1000000000 / HZ);
 	}
 
 	/* restore sigmask and delete masked pending signals */

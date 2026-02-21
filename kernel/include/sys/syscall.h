@@ -144,6 +144,7 @@
 #define __NR_symlinkat			304
 #define __NR_readlinkat			305
 #define __NR_pselect6			308
+#define __NR_ppoll			309
 #define __NR_utimensat			320
 #define __NR_pipe2			331
 #define __NR_prlimit64			340

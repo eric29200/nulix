@@ -463,6 +463,7 @@ ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt);
 int sys_pread64(int fd, void *buf, size_t count, off_t offset);
 int sys_getdents64(int fd, void *dirp, size_t count);
 int sys_poll(struct pollfd *fds, size_t nfds, int timeout);
+int sys_ppoll(struct pollfd *fds, size_t nfds, struct timespec *ts, const sigset_t *sigmask);
 int sys_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timeval *timeout);
 int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, struct old_timespec *timeout, sigset_t *sigmask);
 int sys_stat64(const char *pathname, struct stat64 *statbuf);
