@@ -406,8 +406,8 @@ found_page:
  */
 int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 {
+	struct page *page, *tmp = NULL;
 	int written = 0, ret = 0;
-	struct page *page, *tmp;
 	struct inode *inode;
 	off_t offset;
 	char *kaddr;
@@ -480,7 +480,8 @@ int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *
 	}
 
 	/* execute block requests */
-	wait_on_page(tmp);
+	if (tmp)
+		wait_on_page(tmp);
 
 	/* update inode */
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;
