@@ -28,10 +28,6 @@ static void do_pollfd(struct pollfd *fds, int *count, struct select_table *wait)
 	struct file *filp;
 	uint32_t mask = 0;
 
-	/* reset mask and number of events */
-	mask = 0;
-	*count = 0;
-
 	/* get file */
 	filp = fget(fds->fd);
 	if (filp) {
@@ -124,7 +120,7 @@ int sys_poll(struct pollfd *fds, size_t nfds, int utimeout)
 static int __select_check(int fd, uint16_t mask, struct select_table *wait)
 {
 	struct pollfd pollfd;
-	int count;
+	int count = 0;
 
 	/* set poll structure */
 	pollfd.fd = fd;
