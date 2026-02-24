@@ -327,7 +327,7 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 /*
  * Ppoll system call.
  */
-int sys_ppoll(struct pollfd *fds, size_t nfds, struct timespec *ts, const sigset_t *sigmask)
+int sys_ppoll(struct pollfd *fds, size_t nfds, struct old_timespec *ts, const sigset_t *sigmask)
 {
 	sigset_t current_sigmask;
 	time_t timeout;
@@ -346,7 +346,7 @@ int sys_ppoll(struct pollfd *fds, size_t nfds, struct timespec *ts, const sigset
 
 	/* get time out */
 	if (ts)
-		timeout = timespec_to_jiffies(ts);
+		timeout = old_timespec_to_jiffies(ts);
 	else
 		timeout = MAX_SCHEDULE_TIMEOUT;
 
