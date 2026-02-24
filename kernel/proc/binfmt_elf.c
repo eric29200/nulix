@@ -351,6 +351,9 @@ static int elf_load_binary(struct binprm *bprm)
 	current_task->mm->end_code = 0;
 	elf_entry = elf_header.e_entry;
 
+	/* load dynamic programs out of the way of the default mmap base */
+	load_bias = ELF_PAGESTART(elf_header.e_type == ET_DYN ? ELF_ET_DYN_BASE: 0);
+
 	/* read each elf segment */
 	for (i = 0, ph = first_ph; i < elf_header.e_phnum; i++, ph++) {
 		/* skip non load segment */
