@@ -5,7 +5,6 @@ URL="https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/"$SRC_FILENAME
 function configure_port() {
 	./configure								\
 		--host=$HOST							\
-		--without-pie							\
 		--prefix="/usr"
 }
 
