@@ -559,7 +559,7 @@ out_release:
 /*
  * Send system call.
  */
-int sys_send(int sockfd, const void * buf, size_t len, int flags)
+int sys_send(int sockfd, const void *buf, size_t len, int flags)
 {
 	return sys_sendto(sockfd, buf, len, flags, NULL, 0);
 }
@@ -587,13 +587,16 @@ int sys_sendto(int sockfd, const void *buf, size_t len, int flags, const struct 
 	iovec.iov_len = len;
 
 	/* build message */
-	msg.msg_name = (void *) dest_addr;
-	msg.msg_namelen = sizeof(struct sockaddr);
+	msg.msg_name = NULL;
+	msg.msg_namelen = addrlen;
 	msg.msg_iov = &iovec;
 	msg.msg_iovlen = 1;
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
 	msg.msg_flags = flags;
+	if (dest_addr)
+		msg.msg_name = (void *) dest_addr;
+
 	if (sock->file->f_flags & O_NONBLOCK)
 		msg.msg_flags |= MSG_DONTWAIT;
 
