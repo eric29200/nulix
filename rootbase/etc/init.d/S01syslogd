@@ -1,0 +1,14 @@
+#!/bin/sh
+
+DAEMON="syslogd"
+
+printf 'Starting %s: ' "$DAEMON"
+
+busybox syslogd
+
+status=$?
+if [ "$status" -eq 0 ]; then
+	echo "OK"
+else
+	echo "FAIL"
+fi
