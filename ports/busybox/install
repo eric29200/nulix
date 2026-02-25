@@ -1,4 +1,4 @@
-VERSION="1.36.1"
+VERSION="1.37.0"
 SRC_FILENAME="busybox-"$VERSION".tar.bz2"
 URL="https://busybox.net/downloads/"$SRC_FILENAME
 
