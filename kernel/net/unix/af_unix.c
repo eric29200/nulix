@@ -1113,6 +1113,33 @@ static int unix_ioctl(struct socket *sock, int cmd, unsigned long arg)
 }
 
 /*
+ * Create a pair of connected sockets.
+ */
+static int unix_socketpair(struct socket *sock1, struct socket *sock2)
+{
+	struct sock *sk1 = sock1->sk, *sk2 = sock2->sk;
+
+	/* join our sockets */
+	unix_lock(sk1);
+	unix_lock(sk2);
+	unix_peer(sk1) = sk2;
+	unix_peer(sk2) = sk1;
+	sk1->peercred.pid = sk2->peercred.pid = current_task->pid;
+	sk1->peercred.uid = sk2->peercred.uid = current_task->euid;
+	sk1->peercred.gid = sk2->peercred.gid = current_task->egid;
+
+	/* set sockets connected */
+	if (sk1->type != SOCK_DGRAM) {
+		sk1->state = TCP_ESTABLISHED;
+		sk2->state = TCP_ESTABLISHED;
+		sock1->state = SS_CONNECTED;
+		sock2->state = SS_CONNECTED;
+	}
+
+	return 0;
+}
+
+/*
  * UNIX datagram operations.
  */
 static struct proto_ops unix_dgram_ops = {
@@ -1130,6 +1157,7 @@ static struct proto_ops unix_dgram_ops = {
 	.getname	= unix_getname,
 	.getsockopt	= sock_no_getsockopt,
 	.setsockopt	= sock_no_setsockopt,
+	.socketpair	= unix_socketpair,
 };
 
 /*
@@ -1150,6 +1178,7 @@ static struct proto_ops unix_stream_ops = {
 	.getname	= unix_getname,
 	.getsockopt	= sock_no_getsockopt,
 	.setsockopt	= sock_no_setsockopt,
+	.socketpair	= unix_socketpair,
 };
 
 /*

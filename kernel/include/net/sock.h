@@ -111,6 +111,7 @@ int sock_no_listen(struct socket *sock, int backlog);
 int sock_no_accept(struct socket *sock, struct socket *sock_new, int flags);
 int sock_no_getsockopt(struct socket *sock, int level, int optname, void *optval, size_t *optlen);
 int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval, size_t optlen);
+int sock_no_socketpair(struct socket *sock1, struct socket *sock2);
 
 struct sk_buff *sock_wmalloc(struct sock *sk, size_t size, int force);
 struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, int *err);

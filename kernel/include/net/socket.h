@@ -156,6 +156,7 @@ struct proto_ops {
 	int (*getname)(struct socket *, struct sockaddr *, size_t *, int);
 	int (*getsockopt)(struct socket *, int, int, void *, size_t *);
 	int (*setsockopt)(struct socket *, int, int, void *, size_t);
+	int (*socketpair)(struct socket *, struct socket *);
 };
 
 /*
@@ -194,5 +195,6 @@ int sys_getsockname(int sockfd, struct sockaddr *addr, size_t *addrlen);
 int sys_getsockopt(int sockfd, int level, int optname, void *optval, size_t *optlen);
 int sys_setsockopt(int sockfd, int level, int optname, void *optval, size_t optlen);
 int sys_socketcall(int call, unsigned long *args);
+int sys_socketpair(int domain, int type, int protocol, int sv[2]);
 
 #endif

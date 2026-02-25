@@ -180,6 +180,16 @@ int sock_no_setsockopt(struct socket *sock, int level, int optname, void *optval
 }
 
 /*
+ * No socket pair.
+ */
+int sock_no_socketpair(struct socket *sock1, struct socket *sock2)
+{
+	UNUSED(sock1);
+	UNUSED(sock2);
+	return -EOPNOTSUPP;
+}
+
+/*
  * Allocate a send buffer.
  */
 struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, int *err)

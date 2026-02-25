@@ -173,6 +173,7 @@ static const void *syscalls[] = {
 	[__NR_ptrace]			= sys_ptrace,
 	[__NR_ipc]			= sys_ipc,
 	[__NR_ppoll]			= sys_ppoll,
+	[__NR_socketpair]		= sys_socketpair,
 };
 
 /*

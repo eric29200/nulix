@@ -958,6 +958,62 @@ out:
 }
 
 /*
+ * Create a pair of connected sockets.
+ */
+int sys_socketpair(int domain, int type, int protocol, int sv[2])
+{
+	struct socket *sock1, *sock2;
+	int fd1, fd2, ret;
+
+	/* create first socket */
+	ret = sys_socket(domain, type, protocol);
+	if (ret < 0)
+		goto out;
+	fd1 = ret;
+
+	/* create second socket */
+	ret = -EINVAL;
+	fd2 = sys_socket(domain, type, protocol);
+	if (fd2 < 0)
+		goto out_close1;
+
+	/* get first socket */
+	sock1 = sockfd_lookup(fd1, &ret);
+	if (!sock1)
+		goto out_close2;
+
+	/* get second socket */
+	sock2 = sockfd_lookup(fd2, &ret);
+	if (!sock2)
+		goto out_put1;
+
+	/* try to connect the two sockets together */
+	ret = sock1->ops->socketpair(sock1, sock2);
+	if (ret < 0)
+		goto out_put2;
+
+	/* set results */
+	sv[0] = fd1;
+	sv[1] = fd2;
+
+out_put2:
+	sockfd_put(sock2);
+out_put1:
+	sockfd_put(sock1);
+
+	if (ret) {
+out_close2:
+		sys_close(fd2);
+out_close1:
+		sys_close(fd1);
+	}
+
+out:
+	return ret;
+	goto out_put2;
+}
+
+/*
  * Socketcall system call.
  */
 int sys_socketcall(int call, unsigned long *args)

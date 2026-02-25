@@ -637,6 +637,7 @@ struct proto_ops inet_dgram_ops = {
 	.getname	= inet_getname,
 	.getsockopt	= inet_getsockopt,
 	.setsockopt	= inet_setsockopt,
+	.socketpair	= sock_no_socketpair,
 };
 
 /*
@@ -657,6 +658,7 @@ struct proto_ops inet_stream_ops = {
 	.getname	= inet_getname,
 	.getsockopt	= inet_getsockopt,
 	.setsockopt	= inet_setsockopt,
+	.socketpair	= sock_no_socketpair,
 };
 
 /*
