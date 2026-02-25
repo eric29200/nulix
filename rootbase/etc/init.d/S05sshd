@@ -1,0 +1,24 @@
+#!/bin/sh
+#
+# sshd        Starts sshd.
+#
+
+DAEMON="sshd"
+PIDFILE="/var/run/$DAEMON.pid"
+
+# Make sure the ssh-keygen program exists
+[ -f /usr/bin/ssh-keygen ] || exit 0
+
+umask 077
+
+ssh-keygen -A
+
+printf "Starting %s: " "$DAEMON"
+/usr/sbin/$DAEMON
+
+status=$?
+if [ "$status" -eq 0 ]; then
+	echo "OK"
+else
+	echo "FAIL"
+fi

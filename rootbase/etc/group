@@ -1,3 +1,4 @@
 root::0:0
 nulix:x:1000:
 ftp:x:142
+sshd:x:33

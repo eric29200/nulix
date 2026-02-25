@@ -32,7 +32,7 @@ sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt/cdrom
 sudo mkdir -p tmp/tmp
 sudo mkdir -p tmp/run
-sudo mkdir -p tmp/var/run tmp/var/log
+sudo mkdir -p tmp/var/run tmp/var/log tmp/var/empty
 sudo mkdir -p tmp/srv/ftp
 
 # populate disk
