@@ -17,4 +17,5 @@ function build_port() {
 
 function install_port() {
 	make install DESTDIR=$SYSROOT
+	ln -s /usr/bin/dbclient $SYSROOT/usr/bin/ssh
 }
