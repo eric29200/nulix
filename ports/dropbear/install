@@ -1,0 +1,20 @@
+VERSION="2025.89"
+SRC_FILENAME="dropbear-"$VERSION".tar.gz"
+URL="https://github.com/mkj/dropbear/archive/refs/tags/DROPBEAR_"$VERSION".tar.gz"
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--disable-pam							\
+		--disable-harden						\
+		--prefix="/usr"							\
+		CFLAGS="-fno-stack-protector -fno-pie"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
