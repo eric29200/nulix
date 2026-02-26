@@ -59,6 +59,7 @@ sudo ln -s /usr/bin/bash tmp/bin/bash
 sudo ln -s /usr/bin/mount tmp/bin/mount
 sudo ln -s /usr/bin/umount tmp/bin/umount
 sudo ln -s /usr/X11 tmp/usr/X11R6
+sudo ln -s /usr/bin/busybox tmp/sbin/syslogd
 
 # create devices
 sudo mknod tmp/dev/null c 1 3

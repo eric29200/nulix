@@ -1,10 +1,12 @@
 #!/bin/sh
 
 DAEMON="syslogd"
+PIDFILE="/var/run/$DAEMON.pid"
+SYSLOGD_ARGS="-l 8 -L"
 
 printf 'Starting %s: ' "$DAEMON"
 
-busybox syslogd
+busybox start-stop-daemon --start --background --make-pidfile --pidfile "$PIDFILE" --exec "/sbin/$DAEMON" -- -n $SYSLOGD_ARGS
 
 status=$?
 if [ "$status" -eq 0 ]; then
