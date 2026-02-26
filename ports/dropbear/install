@@ -7,6 +7,10 @@ function configure_port() {
 		--host=$HOST							\
 		--disable-pam							\
 		--disable-harden						\
+		--disable-utmp							\
+		--disable-utmpx							\
+		--disable-wtmp							\
+		--disable-wtmpx							\
 		--prefix="/usr"							\
 		CFLAGS="-fno-stack-protector -fno-pie"
 }
@@ -17,5 +21,6 @@ function build_port() {
 
 function install_port() {
 	make install DESTDIR=$SYSROOT
+	rm -f $SYSROOT/usr/bin/ssh
 	ln -s /usr/bin/dbclient $SYSROOT/usr/bin/ssh
 }
