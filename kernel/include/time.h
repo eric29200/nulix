@@ -12,6 +12,7 @@ extern struct kernel_timeval xtimes;
 
 #define CLOCK_REALTIME			0
 #define CLOCK_MONOTONIC		 	1
+#define CLOCK_PROCESS_CPUTIME_ID	2
 #define CLOCK_MONOTONIC_RAW	 	4
 #define CLOCK_BOOTTIME			7
 

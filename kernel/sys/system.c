@@ -46,6 +46,9 @@ int sys_clock_gettime64(clockid_t clockid, struct timespec *tp)
 			tp->tv_sec = xtimes.tv_sec;
 			tp->tv_nsec = xtimes.tv_nsec;
 			break;
+		case CLOCK_PROCESS_CPUTIME_ID:
+			jiffies_to_timespec(current_task->utime + current_task->stime, tp);
+			break;
 		default:
 			printf("clock_gettime64 not implement on clockid=%d\n", clockid);
 			return -ENOSYS;
