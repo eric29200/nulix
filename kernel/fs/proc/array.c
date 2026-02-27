@@ -34,9 +34,11 @@ int proc_stat_read(struct task *task, char *page)
 	size_t vsize = 0;
 
 	/* compute virtual memory */
-	list_for_each(pos, &task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
-		vsize += vma->vm_end - vma->vm_start;
+	if (task->mm) {
+		list_for_each(pos, &task->mm->vm_list) {
+			vma = list_entry(pos, struct vm_area, list);
+			vsize += vma->vm_end - vma->vm_start;
+		}
 	}
 
 	/* print informations in temporary buffer */
@@ -57,7 +59,7 @@ int proc_stat_read(struct task *task, char *page)
 				task->tty ? dev_t_to_nr(task->tty->device) : 0,
 				task->utime, task->stime, task->cutime, task->cstime,
 				task->start_time,
-				vsize, task->mm->rss
+				vsize, task->mm ? task->mm->rss : 0
 			);
 }
 
@@ -102,29 +104,31 @@ static char *task_mem(struct task *task, char *buf)
 	struct vm_area *vma;
 
 	/* compute virtual memory */
-	list_for_each(pos, &task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
-		len = (vma->vm_end - vma->vm_start) >> 10;
+	if (task->mm) {
+		list_for_each(pos, &task->mm->vm_list) {
+			vma = list_entry(pos, struct vm_area, list);
+			len = (vma->vm_end - vma->vm_start) >> 10;
 
-		/* update virtual size */
-		vsize += len;
+			/* update virtual size */
+			vsize += len;
 
-		/* update data/stack size */
-		if (!vma->vm_file) {
-			if (vma->vm_flags & VM_GROWSDOWN)
-				stack += len;
-			else
-				data += len;
+			/* update data/stack size */
+			if (!vma->vm_file) {
+				if (vma->vm_flags & VM_GROWSDOWN)
+					stack += len;
+				else
+					data += len;
 
-			continue;
-		}
+				continue;
+			}
 
-		/* update exec/lib size */
-		if (!(vma->vm_flags & VM_WRITE) && vma->vm_flags & VM_EXEC) {
-			if (vma->vm_flags & VM_EXECUTABLE)
-				exec += len;
-			else
-				lib += len;
+			/* update exec/lib size */
+			if (!(vma->vm_flags & VM_WRITE) && vma->vm_flags & VM_EXEC) {
+				if (vma->vm_flags & VM_EXECUTABLE)
+					exec += len;
+				else
+					lib += len;
+			}
 		}
 	}
 
@@ -136,7 +140,7 @@ static char *task_mem(struct task *task, char *buf)
 					"VmExe:\t%d kB\n"
 					"VmLib:\t%d kB\n",
 					vsize,
-					task->mm->rss << (PAGE_SHIFT - 10),
+					task->mm ? task->mm->rss << (PAGE_SHIFT - 10) : 0,
 					data,
 					stack,
 					exec,
@@ -259,22 +263,24 @@ int proc_statm_read(struct task *task, char *page)
 	pgd_t *pgd;
 
 	/* compute virtual memory */
-	list_for_each(pos, &task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
+	if (task->mm) {
+		list_for_each(pos, &task->mm->vm_list) {
+			vma = list_entry(pos, struct vm_area, list);
 
-		/* stat pages */
-		size_t pages = 0, shared = 0, total = 0;
-		pgd = pgd_offset(current_task->mm->pgd, vma->vm_start);
-		statm_pgd_range(pgd, vma->vm_start, vma->vm_end, &pages, &shared, &total);
+			/* stat pages */
+			size_t pages = 0, shared = 0, total = 0;
+			pgd = pgd_offset(current_task->mm->pgd, vma->vm_start);
+			statm_pgd_range(pgd, vma->vm_start, vma->vm_end, &pages, &shared, &total);
 
-		/* update total, resident, shared and dirty pages */
-		size += total;
-		resident += pages;
-		share += shared;
+			/* update total, resident, shared and dirty pages */
+			size += total;
+			resident += pages;
+			share += shared;
 
-		/* update text, data, stack and library pages */
-		if (vma->vm_flags & VM_EXECUTABLE)
-			text += pages;
+			/* update text, data, stack and library pages */
+			if (vma->vm_flags & VM_EXECUTABLE)
+				text += pages;
+		}
 	}
 
 	return snprintf(page, PAGE_SIZE, "%d %d %d %d 0 %d 0\n", size, resident, share, text, size - share);
@@ -287,6 +293,10 @@ int proc_cmdline_read(struct task *task, char *page)
 {
 	char *p, *arg_str;
 	uint32_t arg;
+
+	/* dead task */
+	if (!task->mm)
+		return 0;
 
 	/* switch to task's pgd */
 	switch_pgd(task->mm->pgd);
@@ -320,6 +330,10 @@ int proc_environ_read(struct task *task, char *page)
 {
 	char *p, *environ_str;
 	uint32_t environ;
+
+	/* dead task */
+	if (!task->mm)
+		return 0;
 
 	/* switch to task's pgd */
 	switch_pgd(task->mm->pgd);
