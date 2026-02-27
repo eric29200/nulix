@@ -1,0 +1,19 @@
+VERSION="5.0.1"
+SRC_FILENAME="screen-"$VERSION".tar.gz"
+URL="https://ftp.gnu.org/gnu/screen/"$SRC_FILENAME
+
+function configure_port() {
+	./configure								\
+		--host=$HOST							\
+		--disable-pam							\
+		--prefix="/usr"							\
+		LIBS="-ltinfo"
+}
+
+function build_port() {
+	make -j$NJOBS
+}
+
+function install_port() {
+	make install DESTDIR=$SYSROOT
+}
