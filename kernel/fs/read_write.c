@@ -169,7 +169,6 @@ static ssize_t do_readv_writev(int type, struct file *filp, const struct iovec *
 	io_fn_t fn;
 	int ret;
 
-
 	/* check count */
 	if (!iovcnt)
 		return 0;
