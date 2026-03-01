@@ -1,0 +1,65 @@
+alias ls 'ls --color'
+alias l 'ls'
+alias ll 'ls -l'
+alias act 'cat'
+alias quit 'exit'
+alias hist 'history'
+alias h 'history'
+alias grep 'grep --colour'
+alias vi 'vim'
+
+setenv TERM "linux"
+setenv PATH "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/X11/bin"
+setenv LD_LIBRARY_PATH "/lib:/usr/lib:/usr/X11/lib"
+setenv XLOCALEDIR "/usr/X11/share/X11/locale"
+setenv LANG "C"
+
+set prompt='[%T]%B%N%b@%M:%B%~%b>' 
+set visiblebell
+set history = 256
+
+# auto completion
+## shell
+complete {cd,pushd,popd} 'p/1/d/'
+complete {unset,print}env 'n/*/e/'
+complete unalias 'n/*/a/'
+complete unset 'n/*/s/'
+complete uncomplete 'n/*/X/'
+
+## misc
+complete find 'p/1/d/' 'c/-/(name size mtime perm type print print0 user)/'
+complete kill 'c/-/S/' 'c/%/j/'
+complete {pkill,man,killall,exec,sudo,fakeroot} 'p/1/c/'
+
+## x11 & graphics
+complete xrdb 'c/-/(load merge query)/'
+complete xwd 'c/-/(root out nobdrs display frame)/'
+complete xmove 'c/-/(server port)/'
+complete xmovectrl 'c/-/(quit setdefaultserver move moveall list)/'
+
+## multimedia
+complete pngcrush 'p/*/f:*.png/'
+complete {display,convert,gimp,qiv,gqview,xzgv} 'n/*/f:*.{jpg,jpeg,gif,bmp,tiff,pcx,pbm,pgm,ppm,xpm,pm,xwd,ps,eps,png}/'
+complete xwud 'n/-in/f:*.xwd/'
+complete xmms 'p/*/f:*.{mp3,flac,ogg}/'
+complete mpg{123,321},madplay 'p/*/f:*.mp3/'
+complete ogg123 'p/*/f:*.ogg/'
+
+## documents
+complete gv 'p/*/f:*.{ps,pdf}/'
+complete xdvi 'p/*/f:*.dvi/'
+complete {xpdf,acroread} 'p/*/f:*.pdf/'
+complete {,pdf,ps}latex 'p/*/f:*.tex/'
+complete html2ps 'p/*/f:*.{html,htm}/'
+complete ps2pdf 'p/*/f:*.ps/'
+complete pdf2ps 'p/*/f:*.pdf/'
+complete dvi{pdf,ps} 'p/*/f:*.dvi/'
+complete lpr 'n/*/f:*.{ps,txt}/'
+
+## compression & archival
+complete gunzip 'p/*/f:*.{gz,tgz}/'
+complete uncompress 'p/*/f:*.{Z,z}/'
+complete bunzip2 'p/*/f:*.{bz2,tb2}/'
+complete unzip 'p/*/f:*.zip/'
+complete unrar 'p/*/f:*.rar/'
+endif
