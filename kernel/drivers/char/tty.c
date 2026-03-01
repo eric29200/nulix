@@ -203,7 +203,7 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 	/* read all characters */
 	while (count < n) {
 		/* no character available */
-		if (!tty_input_available(tty)) {
+		while (!tty_input_available(tty)) {
 			/* non blocking : return */
 			if (filp->f_flags & O_NONBLOCK) {
 				ret = -EAGAIN;
