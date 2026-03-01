@@ -154,8 +154,10 @@ void kfree(void *p)
 	page_desc->nr_free_blocks++;
 
 	/* add page to free list if needed */
-	if (page_desc->nr_free_blocks == 1)
+	if (page_desc->nr_free_blocks == 1) {
+		list_del(&page_desc->list);
 		list_add_tail(&page_desc->list, &bucket->free_pages);
+	}
 
 	/* no more used blocks : free pages */
 	if (page_desc->nr_free_blocks == page_desc->nr_blocks) {
