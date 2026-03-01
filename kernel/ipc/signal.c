@@ -502,7 +502,7 @@ int do_signal(struct registers *regs)
  */
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 {
-	struct registers *regs = (struct registers *) &newset;
+	struct registers *regs = &current_task->thread.regs;
 
 	/* check sigset size */
 	if (sigsetsize != sizeof(sigset_t))
