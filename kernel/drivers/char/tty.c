@@ -116,11 +116,11 @@ static int tty_open(struct inode *inode, struct file *filp)
 	dev = inode->i_rdev;
 
 	/* open pty controller */
-	if (filp->f_dentry->d_inode->i_rdev == DEV_PTMX)
+	if (dev == DEV_PTMX)
 		return ptmx_open(filp);
 
 	/* get tty */
-	tty = tty_lookup(inode->i_rdev);
+	tty = tty_lookup(dev);
 	if (!tty)
 		return -EINVAL;
 
@@ -129,7 +129,7 @@ static int tty_open(struct inode *inode, struct file *filp)
 
 	/* check if tty must be associated to process */
 	noctty = filp->f_flags & O_NOCTTY;
-	if (dev == DEV_TTY || dev == DEV_TTY0 || dev == DEV_PTMX)
+	if (dev == DEV_TTY || dev == DEV_TTY0)
 		noctty = 1;
 
 	/* associate tty */
