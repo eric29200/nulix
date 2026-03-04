@@ -85,6 +85,7 @@ struct tty {
 	struct termios		termios;						/* terminal i/o */
 	struct wait_queue *	wait;							/* wait queue */
 	struct tty *		link;							/* linked tty */
+	uint8_t			packet:1;						/* packet mode */
 	struct tty_driver *	driver;							/* tty driver */
 	void *			driver_data;						/* tty driver data */
 };

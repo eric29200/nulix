@@ -220,6 +220,13 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 			sleep_on(&tty->wait);
 		}
 
+		/* deal with packet mode */
+		if (tty->packet && count == 0) {
+			buf[count++] = TIOCPKT_DATA;
+			if (count >= n)
+				break;
+		}
+
 		/* read next character */
 		c = tty_queue_getc(&tty->cooked_queue);
 		if (c < 0)
@@ -627,6 +634,12 @@ int tty_ioctl(struct inode *inode, struct file *filp, int request, unsigned long
 				disassociate_ctty();
 
 			current_task->tty = NULL;
+			return 0;
+		case TIOCPKT:
+			if (tty->device != DEV_PTMX)
+				return -ENOTTY;
+
+			tty->packet = *((int *) arg) ? 1 : 0;
 			return 0;
 		default:
 			if (tty->driver->ioctl) {

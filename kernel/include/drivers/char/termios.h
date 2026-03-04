@@ -28,6 +28,7 @@
 #define TIOCMBIC		0x5417
 #define TIOCMSET		0x5418
 #define TIOCGSOFTCAR		0x5419
+#define TIOCPKT			0x5420
 #define TIOCSSOFTCAR		0x541A
 #define FIONREAD		0x541B
 #define TIOCLINUX		0x541C
@@ -43,6 +44,8 @@
 #define TCIFLUSH		0
 #define TCOFLUSH		1
 #define TCIOFLUSH		2
+
+#define TIOCPKT_DATA		0
 
 /*
  * Window size structure.
