@@ -110,10 +110,10 @@ static int elf_create_tables(struct binprm *bprm, struct elf_header *elf_header,
 	do_mmap(NULL, start, end - start, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | VM_GROWSDOWN, 0);
 
 	/* put string arguments at the end of the stack */
-	csp = (uint32_t *) sp;
 	memcpy((void *) args_str, bprm->buf_args, bprm->argv_len + bprm->envp_len);
 
 	/* put argc */
+	csp = (uint32_t *) sp;
 	*csp++ = bprm->argc;
 
 	/* put argv */
@@ -139,10 +139,10 @@ static int elf_create_tables(struct binprm *bprm, struct elf_header *elf_header,
 	*csp++ = 0;
 
 #define AUX_ENT(id, val)	*csp++ = id; *csp++ = val;
-	AUX_ENT(AT_PAGESZ, PAGE_SIZE);
 	AUX_ENT(AT_PHDR, load_addr + elf_header->e_phoff);
 	AUX_ENT(AT_PHENT, sizeof(struct elf_prog_header));
 	AUX_ENT(AT_PHNUM, elf_header->e_phnum);
+	AUX_ENT(AT_PAGESZ, PAGE_SIZE);
 	AUX_ENT(AT_BASE, interp_load_addr);
 	AUX_ENT(AT_FLAGS, 0);
 	AUX_ENT(AT_ENTRY, load_bias + elf_header->e_entry);
@@ -464,6 +464,8 @@ out:
 		dput(interp_dentry);
 	kfree(elf_interpreter);
 	kfree(first_ph);
+	if (bprm->buf_args)
+		kfree(bprm->buf_args);
 	return ret;
 }
 
