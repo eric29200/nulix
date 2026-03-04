@@ -306,15 +306,15 @@ int proc_cmdline_read(struct task *task, char *page)
 		arg_str = *((char **) arg);
 
 		/* copy argument */
-		while (*arg_str && p - page < PAGE_SIZE)
+		while (*arg_str && p - page < PAGE_SIZE - 1)
 			*p++ = *arg_str++;
+
+		/* end argument */
+		*p++ = 0;
 
 		/* overflow */
 		if (p - page >= PAGE_SIZE)
 			break;
-
-		/* end argument */
-		*p++ = 0;
 	}
 
 	/* switch back to current's pgd */
