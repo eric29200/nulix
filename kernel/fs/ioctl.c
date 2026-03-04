@@ -53,11 +53,14 @@ int sys_ioctl(int fd, unsigned long request, unsigned long arg)
 			break;
 		default:
 		 	/* check inode */
-			ret = -ENOENT;
+			ret = -ENOTTY;
 			if (!filp->f_dentry || !filp->f_dentry->d_inode)
-				break;
+				ret = -ENOENT;
+			else if (S_ISREG(filp->f_dentry->d_inode->i_mode))
+				ret = file_ioctl(filp, request, arg);
+			else if (filp->f_op && filp->f_op->ioctl)
+				ret = filp->f_op->ioctl(filp->f_dentry->d_inode, filp, request, arg);
 
-			ret = file_ioctl(filp, request, arg);
 			break;
 	}
 
