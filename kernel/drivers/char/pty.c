@@ -128,7 +128,7 @@ int ptmx_open(struct file *filp)
 	/* create slave pty */
 	pts = &tty_table[NR_CONSOLES + i];
 	memset(pts, 0, sizeof(struct tty));
-	tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i + 1), &pts_driver);
+	tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i), &pts_driver);
 
 	/* create master pty */
 	ptm = &tty_table[NR_CONSOLES + NR_PTYS + i];
