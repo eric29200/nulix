@@ -14,6 +14,23 @@
 static struct pty pty_table[NR_PTYS];
 
 /*
+ * Slave pty open.
+ */
+static int pts_open(struct tty *tty)
+{
+	if (!tty || !tty->link)
+		return -ENODEV;
+	if (test_bit(&tty->flags, TTY_OTHER_CLOSED))
+		return -EIO;
+	if (tty->link->count != 1)
+		return -EIO;
+
+	clear_bit(&tty->link->flags, TTY_OTHER_CLOSED);
+
+	return 0;
+}
+
+/*
  * Master/slave pty write.
  */
 static ssize_t pty_write(struct tty *tty)
@@ -41,10 +58,64 @@ static ssize_t pty_write(struct tty *tty)
 }
 
 /*
+ * Pty close.
+ */
+static void pty_close(struct tty *tty)
+{
+	struct pty *pty = tty->driver_data;
+	struct list_head *pos;
+	struct task *task;
+
+	/* check reference count */
+	if (tty->device == DEV_PTMX) {
+		if (tty->count > 1)
+			printf("master pty_close : count = %d\n", tty->count);
+	} else {
+		if (tty->count > 2)
+			return;
+	}
+
+	/* clear packet mode */
+	wake_up(&tty->wait);
+	tty->packet = 0;
+	if (!tty->link)
+		return;
+
+	/* close other tty */
+	tty->link->packet = 0;
+	wake_up(&tty->link->wait);
+	set_bit(&tty->link->flags, TTY_OTHER_CLOSED);
+
+	/* close master pty */
+	if (tty->device == DEV_PTMX) {
+		/* salve pty closed */
+		set_bit(&tty->flags, TTY_OTHER_CLOSED);
+
+		/* unregister device */
+		if (pty->de)
+			devpts_unregister(pty->de);
+
+		/* update reference count */
+		pty->p_count--;
+
+		/* send SIGHUP signal to processes attached to slave pty */
+		list_for_each(pos, &tasks_list) {
+			task = list_entry(pos, struct task, list);
+			if (task->tty == tty->link) {
+				send_sig(task, SIGHUP, 1);
+				send_sig(task, SIGCONT, 1);
+			}
+		}
+	}
+}
+
+/*
  * Slave pty driver.
  */
 static struct tty_driver pts_driver = {
+	.open		= pts_open,
 	.write		= pty_write,
+	.close		= pty_close,
 };
 
 /*
@@ -68,43 +139,12 @@ static int ptm_ioctl(struct tty *tty, int request, unsigned long arg)
 }
 
 /*
- * Master pty close.
- */
-static int ptm_close(struct tty *tty)
-{
-	struct pty *pty = tty->driver_data;
-	struct list_head *pos;
-	struct task *task;
-
-	if (!tty->link)
-		return 0;
-
-	/* unregister device */
-	if (pty->de)
-		devpts_unregister(pty->de);
-
-	/* update reference count */
-	pty->p_count--;
-
-	/* send SIGHUP signal to processes attached to slave pty */
-	list_for_each(pos, &tasks_list) {
-		task = list_entry(pos, struct task, list);
-		if (task->tty == tty->link) {
-			send_sig(task, SIGHUP, 1);
-			send_sig(task, SIGCONT, 1);
-		}
-	}
-
-	return 0;
-}
-
-/*
  * Master pty driver.
  */
 static struct tty_driver ptm_driver = {
 	.write		= pty_write,
 	.ioctl		= ptm_ioctl,
-	.close		= ptm_close,
+	.close		= pty_close,
 };
 
 /*
@@ -129,11 +169,13 @@ int ptmx_open(struct file *filp)
 	pts = &tty_table[NR_CONSOLES + i];
 	memset(pts, 0, sizeof(struct tty));
 	tty_init_dev(pts, mkdev(DEV_PTS_MAJOR, i), &pts_driver);
+	pts->count = 1;
 
 	/* create master pty */
 	ptm = &tty_table[NR_CONSOLES + NR_PTYS + i];
 	memset(ptm, 0, sizeof(struct tty));
 	tty_init_dev(ptm, DEV_PTMX, &ptm_driver);
+	ptm->count = 1;
 
 	/* reset master termios */
 	memset(&ptm->termios, 0, sizeof(struct termios));

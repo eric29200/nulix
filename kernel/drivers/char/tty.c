@@ -105,7 +105,7 @@ static struct tty *tty_lookup(dev_t dev)
 static int tty_open(struct inode *inode, struct file *filp)
 {
 	struct tty *tty;
-	int noctty;
+	int noctty, ret;
 	dev_t dev;
 
 	/* check inode */
@@ -137,6 +137,13 @@ static int tty_open(struct inode *inode, struct file *filp)
 		current_task->tty = tty;
 		tty->session = current_task->session;
 		tty->pgrp = current_task->pgrp;
+	}
+
+	/* specific open */
+	if (tty->driver->open) {
+		ret = tty->driver->open(tty);
+		if (ret)
+			return ret;
 	}
 
 	/* update reference count */
@@ -171,7 +178,7 @@ static int tty_release(struct inode *inode, struct file *filp)
 
 	/* specifice close */
 	if (tty->driver && tty->driver->close)
-		return tty->driver->close(tty);
+		tty->driver->close(tty);
 
 	/* reset termios on last tty release */
 	if (!tty_check_count(tty))
@@ -204,6 +211,12 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 	while (count < n) {
 		/* no character available */
 		while (!tty_input_available(tty)) {
+			/* other tty closed */
+			if (test_bit(&tty->flags, TTY_OTHER_CLOSED)) {
+				ret = -EIO;
+				break;
+			}
+
 			/* non blocking : return */
 			if (filp->f_flags & O_NONBLOCK) {
 				ret = -EAGAIN;
@@ -675,6 +688,10 @@ static int tty_poll(struct file *filp, struct select_table *wait)
 	/* check if there is some characters to write */
 	if (!tty_queue_full(&tty->write_queue))
 		mask |= POLLOUT;
+
+	/* other tty closed */
+	if (test_bit(&tty->flags, TTY_OTHER_CLOSED))
+		mask |= POLLHUP;
 
 	/* add wait queue to select table */
 	select_wait(&tty->wait, wait);

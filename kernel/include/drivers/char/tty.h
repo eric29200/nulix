@@ -14,6 +14,8 @@
 #define TTY_ESC_BUF_SIZE	16
 #define TTY_DELAY_UPDATE_MS	20
 
+#define TTY_OTHER_CLOSED	2
+
 #define _L_FLAG(tty,f)		((tty)->termios.c_lflag & f)
 #define _I_FLAG(tty,f)		((tty)->termios.c_iflag & f)
 #define _O_FLAG(tty,f)		((tty)->termios.c_oflag & f)
@@ -64,7 +66,8 @@ struct tty_queue {
 struct tty_driver {
 	ssize_t			(*write)(struct tty *);					/* write function */
 	int			(*ioctl)(struct tty *, int, unsigned long);		/* ioctl function */
-	int			(*close)(struct tty *);					/* close function */
+	int			(*open)(struct tty *);					/* open function */
+	void			(*close)(struct tty *);					/* close function */
 	struct termios		termios;						/* terminal i/o */
 };
 
@@ -85,6 +88,7 @@ struct tty {
 	struct termios		termios;						/* terminal i/o */
 	struct wait_queue *	wait;							/* wait queue */
 	struct tty *		link;							/* linked tty */
+	uint32_t		flags;							/* flags */
 	uint8_t			packet:1;						/* packet mode */
 	struct tty_driver *	driver;							/* tty driver */
 	void *			driver_data;						/* tty driver data */
