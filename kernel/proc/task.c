@@ -53,7 +53,7 @@ static void init_entry(struct task *task)
 	enter_user_mode(task->thread.regs.useresp, task->thread.regs.eip, TASK_RETURN_ADDRESS);
 	return;
 err:
-	panic("cannot load init process");
+	panic("cannot load init process\n");
 }
 
 /*

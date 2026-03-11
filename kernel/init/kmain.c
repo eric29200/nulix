@@ -242,12 +242,12 @@ static void kinit()
 	/* init frame buffer */
 	printf("[Kernel] Frame buffer Init\n");
 	if (init_framebuffer_device(&tag_fb))
-		panic("Cannot init frame buffer");
+		panic("Cannot init frame buffer\n");
 
 	/* init ttys */
 	printf("[Kernel] Ttys Init\n");
 	if (init_tty(&tag_fb))
-		panic("Cannot init ttys");
+		panic("Cannot init ttys\n");
 
 	/* init binary formats */
 	printf("[Kernel] Binary formats Init\n");
@@ -256,17 +256,17 @@ static void kinit()
 	/* register filesystems */
 	printf("[Kernel] Register file systems\n");
 	if (init_minix_fs())
-		panic("Cannot register minix file system");
+		panic("Cannot register minix file system\n");
 	if (init_ext2_fs())
-		panic("Cannot register ext2 file system");
+		panic("Cannot register ext2 file system\n");
 	if (init_proc_fs())
-		panic("Cannot register proc file system");
+		panic("Cannot register proc file system\n");
 	if (init_tmp_fs())
-		panic("Cannot register tmp file system");
+		panic("Cannot register tmp file system\n");
 	if (init_iso_fs())
-		panic("Cannot register iso file system");
+		panic("Cannot register iso file system\n");
 	if (init_devpts_fs())
-		panic("Cannot register devpts file system");
+		panic("Cannot register devpts file system\n");
 
 	/* init network protocols */
 	printf("[Kernel] Init network protocols\n");
@@ -275,16 +275,16 @@ static void kinit()
 	/* init network devices */
 	printf("[Kernel] Network devices Init\n");
 	if (init_net_dev())
-		panic("Cannot init network devices");
+		panic("Cannot init network devices\n");
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
 	if (do_mount_root(root_dev, root_dev_name, root_mountflags) != 0)
-		panic("Cannot mount root file system");
+		panic("Cannot mount root file system\n");
 
 	/* spawn init process */
 	if (spawn_init() != 0)
-		panic("Cannot spawn init process");
+		panic("Cannot spawn init process\n");
 
 	/* create kernel threads */
 	kernel_thread(&bdflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND);
@@ -363,7 +363,7 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	/* init processes */
 	printf("[Kernel] Processes Init\n");
 	if (init_scheduler(kinit) != 0)
-		panic("Cannot init processes");
+		panic("Cannot init processes\n");
 
 	return 0;
 }

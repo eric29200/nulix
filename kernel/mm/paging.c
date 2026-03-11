@@ -26,7 +26,7 @@ void wait_on_page(struct page *page)
 	execute_block_requests();
 
 	if (PageLocked(page))
-		panic("wait_on_page: page still locked after execute_block_requests()");
+		panic("wait_on_page: page still locked after execute_block_requests()\n");
 }
 
 /*
@@ -535,7 +535,7 @@ bad_area:
 		do_exit(SIGKILL);
 
 	/* otherwise panic */
-	panic("");
+	panic("\n");
 }
 
 /*

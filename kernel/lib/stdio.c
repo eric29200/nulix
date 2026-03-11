@@ -15,9 +15,10 @@ static struct wait_queue *log_wait = NULL;
 /*
  * Panic.
  */
-void panic(const char *message)
+void panic(const char *message, ...)
 {
-	printf("[PANIC] %s\n", message);
+	printf("[PANIC] ");
+	printf("%s", message);
 	for (;;);
 }
 

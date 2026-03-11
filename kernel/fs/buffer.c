@@ -50,7 +50,7 @@ void wait_on_buffer(struct buffer_head *bh)
 	execute_block_requests();
 
 	if (buffer_locked(bh))
-		panic("wait_on_buffer: buffer still locked after execute_block_requests()");
+		panic("wait_on_buffer: buffer still locked after execute_block_requests()\n");
 }
 
 /*
@@ -597,7 +597,8 @@ void set_blocksize(dev_t dev, size_t blocksize)
 		case 4096:
 			break;
 		default:
-			panic("set_blocksize : invalid block size");
+			panic("set_blocksize : invalid block size\n");
+			break;
 	}
 
 	/* nothing to do */

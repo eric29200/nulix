@@ -96,7 +96,7 @@ void icmp_init(struct net_proto_family *ops)
 	/* create icmp socket */
 	ret = ops->create(icmp_socket, IP_PROTO_ICMP);
 	if (ret)
-		panic("icmp_init: dailed to create the ICMP control socket");
+		panic("icmp_init: dailed to create the ICMP control socket\n");
 }
 
 /*
