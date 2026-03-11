@@ -364,3 +364,27 @@ int printf(const char *fmt, ...)
 
 	return i;
 }
+
+/*
+ * Panic.
+ */
+void panic(const char *fmt, ...)
+{
+	va_list args;
+	int i, j;
+
+	/* print panic */
+	printf("[PANIC] ");
+
+	/* print in tmp buf */
+	va_start(args, fmt);
+	i = vsnprintf(__buf, sizeof(__buf), fmt, args);
+	va_end(args);
+
+	/* write tmp buf to serial line */
+	for (j = 0; j < i; j++)
+		write_serial(__buf[j]);
+
+	/* infinite loop */
+	for (;;);
+}

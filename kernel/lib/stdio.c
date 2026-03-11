@@ -13,16 +13,6 @@ static int log_size = 0;
 static struct wait_queue *log_wait = NULL;
 
 /*
- * Panic.
- */
-void panic(const char *message, ...)
-{
-	printf("[PANIC] ");
-	printf("%s", message);
-	for (;;);
-}
-
-/*
  * Syslog system call.
  */
 int sys_syslog(int type, char *buf, int len)
