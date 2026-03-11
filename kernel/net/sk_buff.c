@@ -77,19 +77,15 @@ static void __skb_freemem(struct sk_buff *skb)
  */
 void skb_freemem(struct sk_buff *skb)
 {
-	void *addr = skb;
-
 	/* still used */
 	if (--skb->count)
 		return;
 
 	/* free socket buffer containing data */
-	if (skb->data_skb) {
-		addr = skb;
+	if (skb->data_skb)
 		__skb_freemem(skb->data_skb);
-	}
 
-	kfree(addr);
+	kfree(skb);
 }
 
 /*
