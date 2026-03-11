@@ -69,7 +69,7 @@ static void __skb_freemem(struct sk_buff *skb)
 	if (--skb->count)
 		return;
 
-	kfree(skb->head);
+	kfree(skb);
 }
 
 /*
@@ -77,7 +77,7 @@ static void __skb_freemem(struct sk_buff *skb)
  */
 void skb_freemem(struct sk_buff *skb)
 {
-	void *addr = skb->head;
+	void *addr = skb;
 
 	/* still used */
 	if (--skb->count)
