@@ -287,7 +287,7 @@ static void kinit()
 		panic("Cannot spawn init process\n");
 
 	/* create kernel threads */
-	kernel_thread(&bdflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND);
+	kernel_thread(&bdflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND, "bdflush");
 
 	/* sleep forever */
 	for (;;)

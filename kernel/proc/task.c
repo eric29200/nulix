@@ -610,8 +610,10 @@ err_stack:
 /*
  * Create a kernel thread.
  */
-int kernel_thread(int (*func)(void *), void *arg, uint32_t flags)
+int kernel_thread(int (*func)(void *), void *arg, uint32_t flags, const char *name)
 {
+	struct task *task;
+	size_t name_len;
 	long ret, d0;
 
 	__asm__ __volatile__(
@@ -630,6 +632,17 @@ int kernel_thread(int (*func)(void *), void *arg, uint32_t flags)
 		 "r" (arg), "r" (func),
 		 "b" (flags | CLONE_VM)
 		: "memory");
+
+	/* set task name */
+	task = find_task(ret);
+	if (task) {
+		name_len = strlen(name);
+		if (name_len >= TASK_NAME_LEN)
+			name_len = TASK_NAME_LEN - 1;
+
+		memcpy(task->name, name, name_len);
+		task->name[name_len] = 0;
+	}
 
 	return ret;
 }
