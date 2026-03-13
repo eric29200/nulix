@@ -259,6 +259,10 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 			break;
 	}
 
+	/* wake up linked tty */
+	if (tty->link)
+		wake_up(&tty->link->wait);
+
 	return count ? (int) count : ret;
 }
 
@@ -448,20 +452,17 @@ static int tty_write(struct file *filp, const char *buf, size_t count, off_t *pp
 
 	for (;;) {
 		/* post characters */
-		for (; i < count; i++)
+		for (; i < count; i++) {
 			if (opost(tty, buf[i]) < 0)
 				break;
 
-		/* flush write queue */
-		tty->driver->write(tty);
+			if (tty->driver->write(tty) <= 0)
+				break;
+		}
 
 		/* all characters written */
 		if (i == count)
 			break;
-
-		/* all characters flushed : continue */
-		if (tty_queue_empty(&tty->write_queue))
-			continue;
 
 		/* non blocking : return */
 		if (filp->f_flags & O_NONBLOCK) {

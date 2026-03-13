@@ -54,6 +54,7 @@ static ssize_t pty_write(struct tty *tty)
 
 	/* do cook */
 	tty_do_cook(tty->link);
+
 	return count;
 }
 
