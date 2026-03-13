@@ -456,7 +456,7 @@ static int tty_write(struct file *filp, const char *buf, size_t count, off_t *pp
 		tty->driver->write(tty);
 
 		/* all characters written */
-		if (i >= count - 1)
+		if (i == count)
 			break;
 
 		/* all characters flushed : continue */
