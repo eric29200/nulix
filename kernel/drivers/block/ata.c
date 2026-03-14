@@ -242,6 +242,9 @@ static int ata_ioctl(struct inode *inode, struct file *filp, int request, unsign
 		case BLKGETSIZE64:
 			*((uint64_t *) arg) = ata_get_nr_sectors(device, dev) * ATA_SECTOR_SIZE;
 			break;
+		case BLKSSZGET:
+		 	*((uint32_t *) arg) = blksize_size[major(dev)][minor(dev)];
+			break;
 		case BLKROGET:
 		 	*((int *) arg) = is_read_only(dev);
 			break;

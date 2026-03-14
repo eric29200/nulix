@@ -10,6 +10,7 @@
 
 #define BLKGETSIZE 		_IO(0x12, 96)
 #define BLKROGET		_IO(0x12, 94)
+#define BLKSSZGET		_IO(0x12, 104)
 #define BLKDISCARDZEROES	_IO(0x12, 124)
 #define BLKBSZGET		_IOR(0x12, 112, sizeof(int))
 #define BLKBSZSET		_IOW(0x12, 113, sizeof(int))
