@@ -69,6 +69,7 @@ typedef uint32_t pte_t;
 #define PG_uptodate			0
 #define PG_lock				1
 #define PG_reserved			2
+#define PG_swap_cache			10
 
 #define PageReserved(page)		test_bit(&(page)->flags, PG_reserved)
 #define PageUptodate(page)		test_bit(&(page)->flags, PG_uptodate)
@@ -77,6 +78,7 @@ typedef uint32_t pte_t;
 #define PageLocked(page)		test_bit(&(page)->flags, PG_lock)
 #define UnlockPage(page)		clear_bit(&(page)->flags, PG_lock)
 #define LockPage(page)			set_bit(&(page)->flags, PG_lock)
+#define PageSwapCache(page)		test_bit(&(page)->flags, PG_swap_cache)
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))

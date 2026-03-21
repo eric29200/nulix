@@ -56,6 +56,7 @@
 #define __NR_getrusage			77
 #define __NR_symlink			83
 #define __NR_readlink			85
+#define __NR_swapon			87
 #define __NR_reboot			88
 #define __NR_mmap			90
 #define __NR_munmap			91

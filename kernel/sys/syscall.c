@@ -3,6 +3,7 @@
 #include <proc/ptrace.h>
 #include <fs/fs.h>
 #include <net/socket.h>
+#include <mm/swap.h>
 #include <ipc/ipc.h>
 #include <sys/sys.h>
 #include <x86/tls.h>
@@ -174,6 +175,7 @@ static const void *syscalls[] = {
 	[__NR_ipc]			= sys_ipc,
 	[__NR_ppoll]			= sys_ppoll,
 	[__NR_socketpair]		= sys_socketpair,
+	[__NR_swapon]			= sys_swapon,
 };
 
 /*

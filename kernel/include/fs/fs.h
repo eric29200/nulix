@@ -313,6 +313,7 @@ void mark_buffer_uptodate(struct buffer_head *bh, int on);
 void mark_buffer_new(struct buffer_head *bh);
 struct buffer_head *find_buffer(dev_t dev, uint32_t block, size_t blocksize);
 struct buffer_head *bread(dev_t dev, uint32_t block, size_t blocksize);
+int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_blocks, size_t size);
 void brelse(struct buffer_head *bh);
 void sync_dev(dev_t dev);
 int bdflush(void *arg);

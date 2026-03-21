@@ -10,6 +10,8 @@
 struct kernel_stat {
 	uint32_t	irqs[NR_IRQS];
 	uint32_t	context_switch;
+	uint32_t	pswpin;
+	uint32_t	pswpout;
 };
 
 extern struct kernel_stat kstat;
