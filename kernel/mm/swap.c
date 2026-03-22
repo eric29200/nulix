@@ -13,6 +13,145 @@ static int least_priority = 0;
 static LIST_HEAD(swap_list);
 
 /*
+ * Get reference count of a swap entry.
+ */
+static int swap_count(uint32_t entry)
+{
+	uint32_t offset, type;
+	struct swap_info *si;
+
+	if (!entry)
+		goto err_entry;
+
+	/* get swap file */
+	type = SWP_TYPE(entry);
+	if (type >= nr_swapfiles)
+		goto err_file;
+	si = &swap_info[type];
+
+	/* check offset */
+	offset = SWP_OFFSET(entry);
+	if (offset >= si->max)
+		goto err_offset;
+	if (!si->swap_map[offset])
+		goto err_unused;
+
+	return si->swap_map[offset];
+err_entry:
+	printf("swap_count: null entry\n");
+	goto err;
+err_file:
+	printf("swap_count: entry %08lx, nonexistent swap file\n", entry);
+	goto err;
+err_offset:
+	printf("swap_count: entry %08lx, offset exceeds max\n", entry);
+	goto err;
+err_unused:
+	printf("swap_count at %8p: entry %08lx, unused page\n", __builtin_return_address(0), entry);
+err:
+	return 0;
+}
+
+/*
+ * Free a swap entry.
+ */
+static void swap_free(uint32_t entry)
+{
+	uint32_t offset, type;
+	struct swap_info *si;
+
+	if (!entry)
+		return;
+
+	/* get swap file */
+	type = SWP_TYPE(entry);
+	if (type >= nr_swapfiles)
+		goto err_nofile;
+	si = &swap_info[type];
+
+	/* check swap file */
+	if (!(si->flags & SWP_USED))
+		goto err_device;
+
+	/* check offset */
+	offset = SWP_OFFSET(entry);
+	if (offset >= si->max)
+		goto err_offset;
+	if (!si->swap_map[offset])
+		goto err_free;
+
+	/* update reference count */
+	if (si->swap_map[offset] < SWAP_MAP_MAX) {
+		if (!--si->swap_map[offset]) {
+			if (offset < si->lowest_bit)
+				si->lowest_bit = offset;
+			if (offset > si->highest_bit)
+				si->highest_bit = offset;
+		}
+	}
+
+	return;
+err_nofile:
+	printf("swap_free: trying to free nonexistent swap-page\n");
+	return;
+err_device:
+	printf("swap_free: trying to free swap from unused swap-device\n");
+	return;
+err_offset:
+	printf("swap_free: offset exceeds max\n");
+	return;
+err_free:
+	printf("swap_free: swap-space map bad (entry %08lx)\n", entry);
+}
+
+/*
+ * Verify that a swap entry is valid and increment its swap map count.
+ */
+static int swap_duplicate(uint32_t entry)
+{
+	static int overflow = 0;
+	uint32_t offset, type;
+	struct swap_info *si;
+
+	if (!entry)
+		return 0;
+
+	/* get swap file */
+	type = SWP_TYPE(entry);
+	if (type >= nr_swapfiles)
+		goto err_file;
+	si = &swap_info[type];
+
+	/* check offset */
+	offset = SWP_OFFSET(entry);
+	if (offset >= si->max)
+		goto err_offset;
+	if (!si->swap_map[offset])
+		goto err_unused;
+
+	/* entry is valid, so increment the map count */
+	if (si->swap_map[offset] < SWAP_MAP_MAX) {
+		si->swap_map[offset]++;
+	} else {
+		if (overflow++ < 5)
+			printf("swap_duplicate: entry %08lx map count=%d\n", entry, si->swap_map[offset]);
+		si->swap_map[offset] = SWAP_MAP_MAX;
+	}
+
+	return 1;
+err_file:
+	printf("swap_duplicate: entry %08lx, nonexistent swap file\n", entry);
+	goto err;
+err_offset:
+	printf("swap_duplicate: entry %08lx, offset exceeds max\n", entry);
+	goto err;
+err_unused:
+	printf("swap_duplicate at %8p: entry %08lx, unused page\n", __builtin_return_address(0), entry);
+err:
+	return 0;
+}
+
+/*
  * Read/write a swap page.
  */
 static void rw_swap_page_base(int rw, uint32_t entry, struct page *page)
