@@ -313,7 +313,7 @@ static int do_anonymous_page(struct vm_area *vma, pte_t *pte, int write_access)
 	/* try to get a page */
 	page = __get_free_page(GFP_HIGHUSER);
 	if (!page)
-		return -ENOMEM;
+		return 0;
 
 	/* clear page */
 	clear_user_highpage(page);
@@ -326,7 +326,7 @@ static int do_anonymous_page(struct vm_area *vma, pte_t *pte, int write_access)
 	/* update memory size */
 	vma->vm_mm->rss++;
 
-	return 0;
+	return 1;
 }
 
 /*
@@ -346,7 +346,7 @@ static int do_no_page(struct vm_area *vma, uint32_t address, int write_access, p
 	/* specific mapping */
 	new_page = vma->vm_ops->nopage(vma, address);
 	if (!new_page)
-		return -ENOMEM;
+		return 0;
 
 	/* no share : copy to new page and keep old page in offset */
 	if (write_access && !(vma->vm_flags & VM_SHARED)) {
@@ -354,7 +354,7 @@ static int do_no_page(struct vm_area *vma, uint32_t address, int write_access, p
 		page = __get_free_page(GFP_HIGHUSER);
 		if (!page) {
 			__free_page(new_page);
-			return -ENOMEM;
+			return 0;
 		}
 
 		/* copy page */
@@ -373,7 +373,7 @@ static int do_no_page(struct vm_area *vma, uint32_t address, int write_access, p
 	/* update memory size */
 	vma->vm_mm->rss++;
 
-	return 0;
+	return 1;
 }
 
 /*
@@ -390,13 +390,13 @@ static int do_wp_page(struct vm_area *vma, uint32_t address, pte_t *pte)
 	if (old_page->count == 1) {
 		*pte = pte_mkdirty(pte_mkwrite(*pte));
 		flush_tlb_page(vma->vm_mm->pgd, address);
-		return 0;
+		return 1;
 	}
 
 	/* get a new page */
 	new_page = __get_free_page(GFP_HIGHUSER);
 	if (!new_page)
-		return -ENOMEM;
+		return 0;
 
 	/* copy page */
 	copy_user_highpage(new_page, old_page);
@@ -411,7 +411,7 @@ static int do_wp_page(struct vm_area *vma, uint32_t address, pte_t *pte)
 	/* update memory size */
 	vma->vm_mm->rss++;
 
-	return 0;
+	return 1;
 }
 
 /*
@@ -461,10 +461,10 @@ static int handle_mm_fault(struct vm_area *vma, uint32_t address, int write_acce
 	pgd = pgd_offset(vma->vm_mm->pgd, address);
 	pmd = pmd_alloc(pgd, address);
 	if (!pmd)
-		return -ENOMEM;
+		return -1;
 	pte = pte_alloc(pmd, address);
 	if (!pte)
-		return -ENOMEM;
+		return -1;
 
 	/* handle fault */
 	return handle_pte_fault(vma, address, write_access, pte);
@@ -521,7 +521,7 @@ good_area:
 
 	/* handle fault */
 	ret = handle_mm_fault(vma, fault_addr, write_access);
-	if (ret)
+	if (ret <= 0)
 		goto bad_area;
 
 	return;
