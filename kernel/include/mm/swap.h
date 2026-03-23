@@ -22,6 +22,7 @@
  * Swap file/device.
  */
 struct swap_info {
+	uint32_t			type;
 	uint32_t			flags;
 	dev_t				swap_device;
 	struct dentry *			swap_file;
@@ -52,6 +53,7 @@ union swap_header {
 };
 
 int swap_out(int priority);
+int swap_in(struct vm_area *vma, pte_t *pte, uint32_t entry, int write_access);
 int sys_swapon(const char *path, int swap_flags);
 
 #endif

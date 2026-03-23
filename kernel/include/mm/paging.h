@@ -79,6 +79,8 @@ typedef uint32_t pte_t;
 #define UnlockPage(page)		clear_bit(&(page)->flags, PG_lock)
 #define LockPage(page)			set_bit(&(page)->flags, PG_lock)
 #define PageSwapCache(page)		test_bit(&(page)->flags, PG_swap_cache)
+#define SetPageSwapCache(page)		set_bit(&(page)->flags, PG_swap_cache)
+#define ClearPageSwapCache(page)	clear_bit(&(page)->flags, PG_swap_cache)
 
 #define __pa(addr)			((uint32_t)(addr) - PAGE_OFFSET)
 #define __va(addr)			((void *)((uint32_t)(addr) + PAGE_OFFSET))

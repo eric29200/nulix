@@ -3,6 +3,7 @@
 #include <drivers/block/blk_dev.h>
 #include <mm/paging.h>
 #include <mm/highmem.h>
+#include <mm/swap.h>
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <string.h>
@@ -438,8 +439,11 @@ static int expand_stack(struct vm_area *vma, uint32_t addr)
 static int handle_pte_fault(struct vm_area *vma, uint32_t address, int write_access, pte_t *pte)
 {
 	/* page not present */
-	if (!pte_present(*pte))
-		return do_no_page(vma, address, write_access, pte);
+	if (!pte_present(*pte)) {
+		if (pte_none(*pte))
+			return do_no_page(vma, address, write_access, pte);
+		return swap_in(vma, pte, *pte, write_access);
+	}
 
 	/* write access */
 	if (write_access)

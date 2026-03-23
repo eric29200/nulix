@@ -13,6 +13,110 @@ static int least_priority = 0;
 static LIST_HEAD(swap_list);
 
 /*
+ * Find a swap page in cache.
+ */
+static struct page *lookup_swap_cache(uint32_t entry)
+{
+	struct page *page;
+
+	for (;;) {
+		page = find_page(&swapper_inode, entry);
+		if (!page)
+			return NULL;
+		if (page->inode != &swapper_inode || !PageSwapCache(page))
+			goto err;
+		if (!PageLocked(page))
+			return page;
+		__free_page(page);
+		wait_on_page(page);
+	}
+
+err:
+	printf("lookup_swap_cache: found a non-swapper swap page\n");
+	__free_page(page);
+	return 0;
+}
+
+/*
+ * Cache a swap page.
+ */
+static int add_to_swap_cache(struct page *page, uint32_t entry)
+{
+	if (PageSwapCache(page) || page->inode) {
+		printf("swap_cache: replacing non-empty entry %08lx on page %08lx\n", page->offset, page_address(page));
+		return 0;
+	}
+
+	SetPageSwapCache(page);
+	page->flags = page->flags & ~(1 << PG_uptodate);
+	add_to_page_cache(page, &swapper_inode, entry);
+
+	return 1;
+}
+
+/*
+ * Remove a page from swap cache.
+ */
+static void remove_from_swap_cache(struct page *page)
+{
+	if (!page->inode) {
+		printf("remove_from_swap_cache: removing swap cache page with zero inode hash on page %08lx\n", page_address(page));
+		return;
+	}
+
+	if (page->inode != &swapper_inode)
+		printf("remove_from_swap_cache: removing swap cache page with wrong inode hash on page %08lx\n", page_address(page));
+
+	ClearPageSwapCache(page);
+	remove_from_page_cache(page);
+}
+
+/*
+ * Find a free swap entry.
+ */
+static int scan_swap_map(struct swap_info *si)
+{
+	uint32_t offset;
+
+	for (offset = si->lowest_bit; offset <= si->highest_bit; offset++) {
+		if (si->swap_map[offset])
+			continue;
+
+		si->lowest_bit = offset;
+		si->swap_map[offset] = 1;
+		if (offset == si->highest_bit)
+			si->highest_bit--;
+
+		return offset;
+	}
+
+	return 0;
+}
+
+/*
+ * Get a swap page.
+ */
+static uint32_t get_swap_page()
+{
+	struct list_head *pos;
+	struct swap_info *si;
+	uint32_t offset;
+
+	list_for_each(pos, &swap_list) {
+		si = list_entry(pos, struct swap_info, list);
+		if ((si->flags & SWP_WRITEOK) != SWP_WRITEOK)
+			continue;
+
+		offset = scan_swap_map(si);
+		if (offset)
+			return SWP_ENTRY(si->type, offset);
+	}
+
+	return 0;
+}
+
+
+/*
  * Get reference count of a swap entry.
  */
 static int swap_count(uint32_t entry)
@@ -243,6 +347,7 @@ static void rw_swap_page_base(int rw, uint32_t entry, struct page *page)
 	 /* read/write page */
  	brw_page(rw, page, dev, blocks, nr_blocks, block_size);
 	wait_on_page(page);
+	__free_page(page);
 }
 
 /*
@@ -297,11 +402,136 @@ static void rw_swap_page_nocache(int rw, uint32_t entry, char *buffer)
 }
 
 /*
+ * Read a page from disk and store it in cache.
+ */
+static struct page *read_swap_cache(uint32_t entry)
+{
+	struct page *found_page = NULL, *new_page;
+
+	/* make sure the swap entry is still in use */
+	if (!swap_duplicate(entry))
+		goto out;
+
+	/* look for the page in the swap cache */
+	found_page = lookup_swap_cache(entry);
+	if (found_page)
+		goto out_free_swap;
+
+	/* get a new page */
+	new_page = __get_free_page(GFP_KERNEL);
+	if (!new_page)
+		goto out_free_swap;
+
+	/* check the swap cache again, in case we stalled above */
+	found_page = lookup_swap_cache(entry);
+	if (found_page)
+		goto out_free_page;
+
+	/* add it to the swap cache */
+	if (!add_to_swap_cache(new_page, entry))
+		goto out_free_page;
+
+	/* read page from disk */
+	set_bit(&new_page->flags, PG_lock);
+	rw_swap_page(READ, entry, page_address(new_page));
+
+	return new_page;
+out_free_page:
+	__free_page(new_page);
+out_free_swap:
+	swap_free(entry);
+out:
+	return found_page;
+}
+
+/*
+ * Check if swap page is shared.
+ */
+static int is_page_shared(struct page *page)
+{
+	int count;
+
+	if (PageReserved(page))
+		return 1;
+
+	count = page->count;
+	if (PageSwapCache(page))
+		count += swap_count(page->offset) - 2;
+
+	return count > 1;
+}
+
+/*
+ * Delete a page from swap cache.
+ */
+static void delete_from_swap_cache(struct page *page)
+{
+	uint32_t entry = page->offset;
+
+	remove_from_swap_cache(page);
+	swap_free(entry);
+}
+
+/*
+ * Free a swap page and remove it from cache.
+ */
+void free_page_and_swap_cache(struct page *page)
+{
+	/* if we are the only user, then free up the swap cache */
+	if (PageSwapCache(page) && !is_page_shared(page))
+		delete_from_swap_cache(page);
+
+	__free_page(page);
+}
+
+/*
+ * Swap in a page.
+ */
+int swap_in(struct vm_area *vma, pte_t *pte, uint32_t entry, int write_access)
+{
+	struct page *page;
+
+	/* try to find swap page in cache */
+	page = lookup_swap_cache(entry);
+
+	/* read page on disk if needed */
+	if (!page)
+		page = read_swap_cache(entry);
+
+	/* check entry */
+	if (*pte != entry) {
+		if (page)
+			free_page_and_swap_cache(page_address(page));
+		return 1;
+	}
+
+	if (!page)
+		return -1;
+
+	/* free swap entry */
+	vma->vm_mm->rss++;
+	swap_free(entry);
+
+	/* read only access : update page table entry */
+	if (!write_access || is_page_shared(page)) {
+		*pte = mk_pte(page, vma->vm_page_prot);
+		return 1;
+	}
+
+	/* page is unshared and we're going to dirty it : remove it from cache */
+	delete_from_swap_cache(page);
+	*pte = pte_mkwrite(pte_mkdirty(mk_pte(page, vma->vm_page_prot)));
+
+  	return 1;
+}
+
+/*
  * Try to swap out a page.
  */
 static int try_to_swap_out(struct vm_area *vma, uint32_t address, pte_t *pte)
 {
 	struct page *page;
+	uint32_t entry;
 
 	/* page not present */
 	if (!pte_present(*pte))
@@ -312,22 +542,57 @@ static int try_to_swap_out(struct vm_area *vma, uint32_t address, pte_t *pte)
 	if (!VALID_PAGE(page))
 		return 0;
 
-	if (!page->inode || PageReserved(page))
+	/* skip reserved pages */
+	if (PageReserved(page))
 		return 0;
 
-	/* clean page : drop pte */
-	if (!pte_dirty(*pte))
+	/* page already in swap cache */
+	if (PageSwapCache(page)) {
+		entry = page->offset;
+		swap_duplicate(entry);
+		*pte = entry;
 		goto drop_pte;
+	}
 
-	/* swapout not implemented */
-	if (!vma->vm_ops || !vma->vm_ops->swapout)
+	/* inode page */
+	if (page->inode) {
+		/* clean page : drop pte */
+		if (!pte_dirty(*pte)) {
+			pte_clear(pte);
+			goto drop_pte;
+		}
+
+		/* swapout not implemented */
+		if (!vma->vm_ops || !vma->vm_ops->swapout)
+			return 0;
+
+		/* swap out page */
+		vma->vm_ops->swapout(vma, page);
+		pte_clear(pte);
+		goto drop_pte;
+	}
+
+	/* get a free swap page */
+	entry = get_swap_page();
+	if (!entry)
 		return 0;
 
-	/* swap out page */
-	vma->vm_ops->swapout(vma, page);
+	/* update page table */
+	vma->vm_mm->rss--;
+	*pte = entry;
+	flush_tlb_page(vma->vm_mm->pgd, address);
+
+	/* store page in swap cache */
+	swap_duplicate(entry);
+	add_to_swap_cache(page, entry);
+	set_bit(&page->flags, PG_lock);
+
+	/* write page on disk */
+	rw_swap_page(WRITE, entry, page_address(page));
+	__free_page(page);
+
+	return 1;
 drop_pte:
-	/* drop pte and free page */
-	pte_clear(pte);
 	vma->vm_mm->rss--;
 	flush_tlb_page(vma->vm_mm->pgd, address);
 	__free_page(page);
@@ -568,6 +833,7 @@ int sys_swapon(const char *path, int swap_flags)
 		nr_swapfiles = type + 1;
 
 	/* init swap file/device */
+	p->type = type;
 	p->flags = SWP_USED;
 	p->swap_file = NULL;
 	p->swap_device = 0;
@@ -680,6 +946,7 @@ err:
 		kfree(p->swap_map);
 	if (p->swap_file)
 		dput(p->swap_file);
+	p->type = 0;
 	p->swap_device = 0;
 	p->swap_file = NULL;
 	p->swap_map = NULL;
