@@ -31,6 +31,7 @@ struct swap_info {
 	uint32_t			highest_bit;
 	int				priority;
 	uint32_t			max;
+	size_t				pages;
 	struct list_head		list;
 };
 
@@ -56,6 +57,7 @@ void swap_free(uint32_t entry);
 void free_page_and_swap_cache(struct page *page);
 int swap_out(int priority);
 int swap_in(struct vm_area *vma, pte_t *pte, uint32_t entry, int write_access);
+int get_swaparea_info(char *buf);
 int sys_swapon(const char *path, int swap_flags);
 int sys_swapoff(const char *path);
 

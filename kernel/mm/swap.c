@@ -14,6 +14,55 @@ static int least_priority = 0;
 static LIST_HEAD(swap_list);
 
 /*
+ * Get swap area informations.
+ */
+int get_swaparea_info(char *buf)
+{
+	struct swap_info *si = swap_info;
+	size_t len = 0, i, j, used;
+	char *path, *page;
+	int err;
+
+	/* get a free page */
+	page = get_free_page();
+	if (!page)
+		return -ENOMEM;
+
+	/* print header */
+	len += sprintf(buf, "Filename\t\t\tType\t\tSize\tUsed\tPriority\n");
+
+	/* print all swap files */
+	for (i = 0; i < nr_swapfiles; i++, si++) {
+		/* check if swap file is used */
+		if (!(si->flags & SWP_USED) || !si->swap_map)
+			continue;
+
+		/* print path */
+		path = d_path(si->swap_file, page, PAGE_SIZE, &err);
+		len += sprintf(buf + len, "%-31s ", path);
+
+		/* print type */
+		if (!si->swap_device)
+			len += sprintf(buf + len, "file\t\t");
+		else
+			len += sprintf(buf + len, "partition\t");
+
+		/* count number of used pages */
+		for (j = 0, used = 0; j < si->max; j++)
+			if (si->swap_map[j] && si->swap_map[j] != SWAP_MAP_BAD)
+				used++;
+
+		/* print used pages and priority */
+		len += sprintf(buf + len, "%d\t%d\t%d\n", si->pages << (PAGE_SHIFT - 10), used << (PAGE_SHIFT - 10), si->priority);
+	}
+
+	/* free page */
+	free_page(page);
+
+	return len;
+}
+
+/*
  * Find a swap page in cache.
  */
 static struct page *lookup_swap_cache(uint32_t entry)
@@ -970,6 +1019,7 @@ int sys_swapon(const char *path, int swap_flags)
 	/* set swap file/device */
 	p->swap_map[0] = SWAP_MAP_BAD;
 	p->flags = SWP_WRITEOK;
+	p->pages = nr_good_pages;
 	printf("Adding Swap: %dk swap-space (priority %d)\n", nr_good_pages << (PAGE_SHIFT - 10), p->priority);
 
 	/* insert swap file/device in swap list */

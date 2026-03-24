@@ -5,6 +5,7 @@
 #include <sys/syscall.h>
 #include <x86/cpu.h>
 #include <kernel_stat.h>
+#include <mm/swap.h>
 #include <string.h>
 #include <stderr.h>
 #include <stdio.h>
@@ -202,8 +203,21 @@ static int cpuinfo_read_proc(char *page, char **start, off_t off, size_t count, 
 {
 	size_t len;
 
-	/* get cpu informations */
-	len = get_cpuinfo(page);
+	/* get irq list */
+	len = get_irq_list(page);
+
+	return proc_calc_metrics(page, start, off, count, eof, len);
+}
+
+/*
+ * Read swaps.
+ */
+static int swaps_read_proc(char *page, char **start, off_t off, size_t count, int *eof)
+{
+	size_t len;
+
+	/* get swap area informations */
+	len = get_swaparea_info(page);
 
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }
@@ -223,4 +237,5 @@ void proc_misc_init()
 	create_proc_read_entry("devices", 0, NULL, devices_read_proc);
 	create_proc_read_entry("interrupts", 0, NULL, interrupts_read_proc);
 	create_proc_read_entry("cpuinfo", 0, NULL, cpuinfo_read_proc);
+	create_proc_read_entry("swaps", 0, NULL, swaps_read_proc);
 }
