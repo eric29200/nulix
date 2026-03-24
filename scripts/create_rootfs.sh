@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DISK=hda.img
-DISK_SIZE=2G
+DISK_SIZE=2500M
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
@@ -15,11 +15,13 @@ qemu-img create -f raw $DISK $DISK_SIZE
 LOOP_DEVICE=`sudo losetup -Pf --show $DISK`
 
 # create partition table
-sudo parted --script $LOOP_DEVICE mktable msdos
-sudo parted --script $LOOP_DEVICE mkpart primary 2048s 100%
+sudo parted --script $LOOP_DEVICE mklabel msdos
+sudo parted --script $LOOP_DEVICE mkpart primary ext2 1MiB 2GiB
+sudo parted --script $LOOP_DEVICE mkpart primary linux-swap 2GiB 100%
 
-# create file system
+# create file systems
 sudo mkfs.ext2 ${LOOP_DEVICE}p1
+sudo mkswap ${LOOP_DEVICE}p2
 
 # mount disk
 mkdir tmp >& /dev/null
@@ -81,6 +83,7 @@ sudo mknod tmp/dev/mouse c 13 0
 sudo mknod tmp/dev/fb0 c 29 0
 sudo mknod tmp/dev/hda b 3 0
 sudo mknod tmp/dev/hda1 b 3 1
+sudo mknod tmp/dev/hda2 b 3 2
 sudo mknod tmp/dev/hdb b 3 16
 sudo mknod tmp/dev/hdb1 b 3 17
 sudo mknod tmp/dev/hdc b 3 32

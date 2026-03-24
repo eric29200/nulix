@@ -1,4 +1,5 @@
 #include <proc/sched.h>
+#include <drivers/block/blk_dev.h>
 #include <mm/swap.h>
 #include <stdio.h>
 #include <kernel_stat.h>
@@ -815,9 +816,11 @@ int sys_swapon(const char *path, int swap_flags)
 	size_t swap_file_size, nr_good_pages = 0, i;
 	union swap_header *swap_header = NULL;
 	struct dentry *swap_dentry;
+	struct file filp = { 0 };
 	struct swap_info *p;
 	uint32_t type;
 	int ret, page;
+	dev_t dev;
 
 	/* find a free swap file */
 	for (type = 0, p = swap_info; type < nr_swapfiles ; type++, p++)
@@ -853,22 +856,55 @@ int sys_swapon(const char *path, int swap_flags)
 		goto err;
 	p->swap_file = swap_dentry;
 
-	/* swap file must be a regular file */
+	/* open block device or regular file */
 	ret = -EINVAL;
-	if (!S_ISREG(swap_dentry->d_inode->i_mode))
-		goto err;
+	if (S_ISBLK(swap_dentry->d_inode->i_mode)) {
+		/* configure device */
+		dev = swap_dentry->d_inode->i_rdev;
+		p->swap_device = dev;
+		set_blocksize(dev, PAGE_SIZE);
 
-	/* check if swap file is already used */
-	ret = -EBUSY;
-	for (i = 0 ; i < nr_swapfiles ; i++) {
-		if (i == type || !swap_info[i].swap_file)
-			continue;
-		if (swap_dentry->d_inode == swap_info[i].swap_file->d_inode)
+		/* open block device */
+		filp.f_dentry = swap_dentry;
+		filp.f_mode = 3;
+		ret = blkdev_open(swap_dentry->d_inode, &filp);
+		if (ret)
 			goto err;
-	}
 
-	/* get file size */
-	swap_file_size = swap_dentry->d_inode->i_size >> PAGE_SHIFT;
+		/* set block size */
+		set_blocksize(dev, PAGE_SIZE);
+		ret = -ENODEV;
+		if (!dev || (blk_size[major(dev)] && !blk_size[major(dev)][minor(dev)]))
+			goto err;
+
+		/* check if device is aleady used */
+		ret = -EBUSY;
+		for (i = 0 ; i < nr_swapfiles ; i++) {
+			if (i == type)
+				continue;
+			if (dev == swap_info[i].swap_device)
+				goto err;
+		}
+
+		/* get device size */
+		swap_file_size = 0;
+		if (blk_size[major(dev)])
+			swap_file_size = blk_size[major(dev)][minor(dev)] >> (PAGE_SHIFT - 10);
+	} else if (S_ISREG(swap_dentry->d_inode->i_mode)) {
+		/* check if swap file is already used */
+		ret = -EBUSY;
+		for (i = 0 ; i < nr_swapfiles ; i++) {
+			if (i == type || !swap_info[i].swap_file)
+				continue;
+			if (swap_dentry->d_inode == swap_info[i].swap_file->d_inode)
+				goto err;
+		}
+
+		/* get file size */
+		swap_file_size = swap_dentry->d_inode->i_size >> PAGE_SHIFT;
+	} else {
+		goto err;
+	}
 
 	/* allocate memory to read swap header */
 	swap_header = (union swap_header *) get_free_page();
@@ -942,6 +978,8 @@ int sys_swapon(const char *path, int swap_flags)
 	ret = 0;
 	goto out;
 err:
+	if (filp.f_op && filp.f_op->release)
+		filp.f_op->release(filp.f_dentry->d_inode, &filp);
 	if (p->swap_map)
 		kfree(p->swap_map);
 	if (p->swap_file)
@@ -1124,6 +1162,7 @@ found_entry:
 int sys_swapoff(const char *path)
 {
 	struct swap_info *si = NULL;
+	struct file filp = { 0 };
 	struct dentry *dentry;
 	struct list_head *pos;
 	int ret;
@@ -1137,8 +1176,13 @@ int sys_swapoff(const char *path)
 	/* find swap file */
 	list_for_each(pos, &swap_list) {
 		si = list_entry(pos, struct swap_info, list);
-		if ((si->flags & SWP_WRITEOK) == SWP_WRITEOK && si->swap_file == dentry)
-			break;
+		if ((si->flags & SWP_WRITEOK) == SWP_WRITEOK) {
+			if (si->swap_file == dentry)
+				break;
+			if (S_ISBLK(dentry->d_inode->i_mode) && si->swap_device == dentry->d_inode->i_rdev)
+				break;
+		}
+
 		si = NULL;
 	}
 
@@ -1153,6 +1197,18 @@ int sys_swapoff(const char *path)
 	if (ret) {
 		si->flags = SWP_WRITEOK;
 		goto out_dput;
+	}
+
+	/* release block device */
+	if (si->swap_device) {
+		filp.f_dentry = dentry;
+		filp.f_mode = 3;
+
+		/* open it again to get fops */
+		if (!blkdev_open(dentry->d_inode, &filp) && filp.f_op && filp.f_op->release) {
+			filp.f_op->release(dentry->d_inode,&filp);
+			filp.f_op->release(dentry->d_inode,&filp);
+		}
 	}
 
 	/* clear swap file */
