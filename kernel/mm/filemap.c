@@ -1,6 +1,7 @@
 #include <mm/mmap.h>
 #include <mm/paging.h>
 #include <mm/highmem.h>
+#include <mm/swap.h>
 #include <drivers/block/blk_dev.h>
 #include <proc/sched.h>
 #include <fcntl.h>
@@ -115,8 +116,10 @@ static int filemap_sync_pte(pte_t *pte, struct vm_area *vma, uint32_t address, u
 	if (pte_none(*pte))
 		return 0;
 
-	if (!pte_present(*pte))
+	if (!pte_present(*pte)) {
+		swap_free(*pte);
 		return 0;
+	}
 
 	if (!pte_dirty(*pte))
 		return 0;

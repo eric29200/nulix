@@ -176,6 +176,7 @@ static const void *syscalls[] = {
 	[__NR_ppoll]			= sys_ppoll,
 	[__NR_socketpair]		= sys_socketpair,
 	[__NR_swapon]			= sys_swapon,
+	[__NR_swapoff]			= sys_swapoff,
 };
 
 /*

@@ -70,6 +70,7 @@
 #define __NR_fstat			108
 #define __NR_vhangup			111
 #define __NR_wait4			114
+#define __NR_swapoff			115
 #define __NR_sysinfo			116
 #define __NR_ipc			117
 #define __NR_fsync			118

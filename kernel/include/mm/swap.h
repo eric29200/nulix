@@ -52,8 +52,11 @@ union swap_header {
 	} info;
 };
 
+void swap_free(uint32_t entry);
+void free_page_and_swap_cache(struct page *page);
 int swap_out(int priority);
 int swap_in(struct vm_area *vma, pte_t *pte, uint32_t entry, int write_access);
 int sys_swapon(const char *path, int swap_flags);
+int sys_swapoff(const char *path);
 
 #endif

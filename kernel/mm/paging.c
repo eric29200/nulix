@@ -90,8 +90,13 @@ static int pte_free(pte_t pte)
 {
 	struct page *page;
 
-	if (pte_none(pte) || !pte_present(pte))
+	if (pte_none(pte))
 		return 0;
+
+	if (!pte_present(pte)) {
+		swap_free(pte);
+		return 0;
+	}
 
 	/* get page */
 	page = pte_page(pte);
@@ -99,7 +104,7 @@ static int pte_free(pte_t pte)
 		return 0;
 
 	/* free page */
-	__free_page(page);
+	free_page_and_swap_cache(page);
 	return 1;
 }
 

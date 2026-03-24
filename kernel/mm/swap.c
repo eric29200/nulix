@@ -159,7 +159,7 @@ err:
 /*
  * Free a swap entry.
  */
-static void swap_free(uint32_t entry)
+void swap_free(uint32_t entry)
 {
 	uint32_t offset, type;
 	struct swap_info *si;
@@ -501,7 +501,7 @@ int swap_in(struct vm_area *vma, pte_t *pte, uint32_t entry, int write_access)
 	/* check entry */
 	if (*pte != entry) {
 		if (page)
-			free_page_and_swap_cache(page_address(page));
+			free_page_and_swap_cache(page);
 		return 1;
 	}
 
@@ -956,5 +956,216 @@ err:
 out:
 	if (swap_header)
 		free_page(swap_header);
+	return ret;
+}
+
+/*
+ * Try to unuse a swap page.
+ */
+static void unuse_pte(struct vm_area *vma, pte_t *pte, uint32_t entry, struct page *page)
+{
+	if (pte_none(*pte))
+		return;
+
+	if (pte_present(*pte)) {
+		/* If this entry is swap-cached, then page must already
+                   hold the right address for any copies in physical
+                   memory */
+		if (pte_page(*pte) != page)
+			return;
+		/* We will be removing the swap cache in a moment, so... */
+		*pte = pte_mkdirty(*pte);
+		return;
+	}
+	if (*pte != entry)
+		return;
+
+	*pte = pte_mkdirty(mk_pte(page, vma->vm_page_prot));
+	swap_free(entry);
+	page->count++;
+}
+
+/*
+ * Try to unuse a swap page.
+ */
+static void unuse_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, size_t size, uint32_t offset, uint32_t entry, struct page *page)
+{
+	uint32_t end;
+	pte_t *pte;
+
+	if (pmd_none(*pmd))
+		return;
+
+	pte = pte_offset(pmd, address);
+	offset += address & PMD_MASK;
+	address &= ~PMD_MASK;
+	end = address + size;
+	if (end > PMD_SIZE)
+		end = PMD_SIZE;
+
+	do {
+		unuse_pte(vma, pte, entry, page);
+		address += PAGE_SIZE;
+		pte++;
+	} while (address < end);
+}
+
+/*
+ * Try to unuse a swap page.
+ */
+static void unuse_pgd(struct vm_area *vma, pgd_t *pgd, uint32_t address, size_t size, uint32_t entry, struct page *page)
+{
+	uint32_t offset, end;
+	pmd_t *pmd;
+
+	pmd = pmd_offset(pgd);
+	offset = address & PGDIR_MASK;
+	address &= ~PGDIR_MASK;
+	end = address + size;
+	if (end > PGDIR_SIZE)
+		end = PGDIR_SIZE;
+
+	do {
+		unuse_pmd(vma, pmd, address, end - address, offset, entry, page);
+		address = (address + PMD_SIZE) & PMD_MASK;
+		pmd++;
+	} while (address < end);
+}
+
+/*
+ * Try to unuse a swap page.
+ */
+static void unuse_vma(struct vm_area *vma, pgd_t *pgd, uint32_t entry, struct page *page)
+{
+	uint32_t start = vma->vm_start, end = vma->vm_end;
+
+	while (start < end) {
+		unuse_pgd(vma, pgd, start, end - start, entry, page);
+		start = (start + PGDIR_SIZE) & PGDIR_MASK;
+		pgd++;
+	}
+}
+
+/*
+ * Try to unuse a swap page.
+ */
+static void unuse_process(struct mm_struct *mm, uint32_t entry, struct page *page)
+{
+	struct list_head *pos;
+	struct vm_area *vma;
+	pgd_t *pgd;
+
+	if (!mm || mm == init_task->mm)
+		return;
+
+	list_for_each(pos, &mm->vm_list) {
+		vma = list_entry(pos, struct vm_area, list);
+		pgd = pgd_offset(mm->pgd, vma->vm_start);
+		unuse_vma(vma, pgd, entry, page);
+	}
+}
+
+/*
+ * Try to unuse a swap file.
+ */
+static int try_to_unuse(struct swap_info *si)
+{
+	struct list_head *pos;
+	struct page *page;
+	struct task *task;
+	uint32_t entry;
+	size_t i;
+
+	for (;;) {
+		/* find a swap page in use */
+		for (i = 1; i < si->max ; i++)
+			if (si->swap_map[i] > 0 && si->swap_map[i] != SWAP_MAP_BAD)
+				goto found_entry;
+
+		/* no swap page in use */
+		break;
+found_entry:
+		/* get swap entry */
+		entry = SWP_ENTRY(si->type, i);
+
+		/* read page from disk */
+		page = read_swap_cache(entry);
+		if (!page) {
+			if (si->swap_map[i] == 0)
+				continue;
+  			return -ENOMEM;
+		}
+
+		/* try to unuse swap pages for each process */
+		list_for_each(pos, &tasks_list) {
+			task = list_entry(pos, struct task, list);
+			unuse_process(task->mm, entry, page);
+		}
+
+		/* delete page from swap cache */
+		if (PageSwapCache(page))
+			delete_from_swap_cache(page);
+		__free_page(page);
+
+		/* check for and clear any overflowed swap map counts */
+		if (si->swap_map[i]) {
+			if (si->swap_map[i] != SWAP_MAP_MAX)
+				printf("try_to_unuse: entry %08lx count=%d\n", entry, si->swap_map[i]);
+			si->swap_map[i] = 0;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Stop swapping to file/device.
+ */
+int sys_swapoff(const char *path)
+{
+	struct swap_info *si = NULL;
+	struct dentry *dentry;
+	struct list_head *pos;
+	int ret;
+
+	/* resolve path */
+	dentry = namei(AT_FDCWD, path, 1);
+	ret = PTR_ERR(dentry);
+	if (IS_ERR(dentry))
+		return ret;
+
+	/* find swap file */
+	list_for_each(pos, &swap_list) {
+		si = list_entry(pos, struct swap_info, list);
+		if ((si->flags & SWP_WRITEOK) == SWP_WRITEOK && si->swap_file == dentry)
+			break;
+		si = NULL;
+	}
+
+	/* can't find swap file */
+	ret = -EINVAL;
+	if (!si)
+		goto out_dput;
+
+	/* try to unused swap file */
+	si->flags = SWP_USED;
+	ret = try_to_unuse(si);
+	if (ret) {
+		si->flags = SWP_WRITEOK;
+		goto out_dput;
+	}
+
+	/* clear swap file */
+	list_del(&si->list);
+	dput(dentry);
+	dentry = si->swap_file;
+	si->swap_file = NULL;
+	si->swap_device = 0;
+	kfree(si->swap_map);
+	si->swap_map = NULL;
+	si->flags = 0;
+	ret = 0;
+out_dput:
+	dput(dentry);
 	return ret;
 }
