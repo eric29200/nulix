@@ -3,6 +3,7 @@
 
 #include <lib/list.h>
 #include <grub/multiboot2.h>
+#include <sys/sys.h>
 #include <stddef.h>
 
 #define KCODE_START			0x00000000				/* kernel code : from 0 to 4 MB */
@@ -48,6 +49,7 @@ void init_mem(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_upper);
 void *kmalloc(uint32_t size);
 void kfree(void *p);
 void kheap_init();
+void si_meminfo(struct sysinfo *info);
 
 
 #endif

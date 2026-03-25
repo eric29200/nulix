@@ -1,5 +1,6 @@
 #include <drivers/char/mem.h>
 #include <drivers/char/keyboard.h>
+#include <mm/swap.h>
 #include <proc/sched.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
@@ -234,12 +235,13 @@ int sys_sysinfo(struct sysinfo *info)
 	/* clear info */
 	memset(info, 0, sizeof(struct sysinfo));
 
-	/* set info */
+	/* set proc informations */
 	info->uptime = jiffies / HZ;
 	info->procs = nr_tasks - 1;
-	info->totalram = totalram_pages << PAGE_SHIFT;
-	info->freeram = nr_free_pages() << PAGE_SHIFT;
-	info->bufferram = buffermem_pages << PAGE_SHIFT;
+
+	/* get memory informations */
+	si_meminfo(info);
+	si_swapinfo(info);
 
 	return 0;
 }

@@ -92,12 +92,16 @@ static int meminfo_read_proc(char *page, char **start, off_t off, size_t count, 
 		"MemFree:   %d kB\n"
 		"MemShared: %d kB\n"
 		"Buffers:   %d kB\n"
-		"Cached:    %d kB\n",
+		"Cached:    %d kB\n"
+		"SwapTotal: %d kB\n"
+		"SwapFree:  %d kB\n",
 		info.totalram >> 10,
 		info.freeram >> 10,
 		info.sharedram >> 10,
 		info.bufferram >> 10,
-		page_cache_size << (PAGE_SHIFT - 10));
+		page_cache_size << (PAGE_SHIFT - 10),
+		info.totalswap >> 10,
+		info.freeswap >> 10);
 
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }

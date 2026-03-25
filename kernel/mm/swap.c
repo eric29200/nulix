@@ -14,6 +14,35 @@ static int least_priority = 0;
 static LIST_HEAD(swap_list);
 
 /*
+ * Get informations on swap.
+ */
+void si_swapinfo(struct sysinfo *info)
+{
+	size_t i, j;
+
+	/* reset informations */
+	info->freeswap = 0;
+	info->totalswap = 0;
+
+	/* compute swap pages */
+	for (i = 0; i < nr_swapfiles; i++) {
+		if ((swap_info[i].flags & SWP_WRITEOK) != SWP_WRITEOK)
+			continue;
+
+		for (j = 0; j < swap_info[i].max; ++j) {
+			if (swap_info[i].swap_map[j] == SWAP_MAP_BAD)
+				continue;
+			if (swap_info[i].swap_map[j] == 0)
+				info->freeswap++;
+			info->totalswap++;
+		}
+	}
+
+	info->freeswap <<= PAGE_SHIFT;
+	info->totalswap <<= PAGE_SHIFT;
+}
+
+/*
  * Get swap area informations.
  */
 int get_swaparea_info(char *buf)

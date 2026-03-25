@@ -53,6 +53,7 @@ union swap_header {
 	} info;
 };
 
+void si_swapinfo(struct sysinfo *info);
 void swap_free(uint32_t entry);
 void free_page_and_swap_cache(struct page *page);
 int swap_out(int priority);
