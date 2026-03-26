@@ -126,19 +126,27 @@ static int kstat_read_proc(char *page, char **start, off_t off, size_t count, in
 {
 	uint32_t intr = 0;
 	size_t len, i;
+	time_t idle;
 
 	/* compute number of interrupts */
 	for (i = 0; i < NR_IRQS; i++)
 		intr += kstat.irqs[i];
 
-	/* print boot time */
-	len = sprintf(page,	"cpu 0 0 0 0 0 0 0 0 0 0\n"
+	/* compute idle time */
+	idle = jiffies - (kstat.cpu_user + kstat.cpu_nice + kstat.cpu_system);
+
+	/* print stats */
+	len = sprintf(page,	"cpu %d %d %d %d 0 0 0 0 0 0\n"
 				"intr %u\n"
 				"ctxt %u\n"
 				"btime %llu\n",
-		      intr,
-		      kstat.context_switch,
-		      startup_time);
+			kstat.cpu_user,
+			kstat.cpu_nice,
+			kstat.cpu_system,
+			idle,
+			intr,
+			kstat.context_switch,
+			startup_time);
 
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }

@@ -3,6 +3,7 @@
 #include <x86/gdt.h>
 #include <x86/ldt.h>
 #include <drivers/char/pit.h>
+#include <kernel_stat.h>
 #include <proc/sched.h>
 #include <proc/task.h>
 #include <proc/timer.h>
@@ -113,11 +114,17 @@ int spawn_init()
  */
 static void update_process_times()
 {
-	/* don't update kinit */
-	if (!current_task || !current_task->pid)
+	if (!current_task)
 		return;
 
-	/* update time */
+	/* update system time */
+	if (!current_task->pid) {
+		kstat.cpu_system++;
+		return;
+	}
+
+	/* update user time */
+	kstat.cpu_user++;
 	current_task->utime++;
 
 	/* update counter */
