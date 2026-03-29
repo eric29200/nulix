@@ -3,6 +3,8 @@
 .extern exception_handler
 .extern irq_handler
 
+#define CS					0x3C
+
 #define SAVE_ALL				\
 	pusha					;\
 	push %ds				;\
@@ -35,6 +37,20 @@
 	call irq_handler			;\
 	add $4, %esp
 
+#define HANDLE_NESTED_INTERRUPT			\
+	cmpw $(KERNEL_CSEG), CS(%esp)		;\
+	je 1f
+
+#define HANDLE_SIGNAL				\
+	call sigpending				;\
+	testl $0xFFFFFFFF, %eax			;\
+	jz 1f					;\
+	movl %esp, %eax				;\
+	pushl %eax				;\
+	call do_signal				;\
+	addl $4, %esp				;\
+1:
+
 #define BUILD_EXCEPTION(num, name)		\
 .globl name; name:				;\
 	cli					;\
@@ -43,6 +59,8 @@
 	SAVE_ALL				;\
 	LOAD_KERNEL_DSEG			;\
 	EXCEPTION				;\
+	HANDLE_NESTED_INTERRUPT			;\
+	HANDLE_SIGNAL				;\
 	RESTORE_ALL				;\
 	iret
 
@@ -53,6 +71,8 @@
 	SAVE_ALL				;\
 	LOAD_KERNEL_DSEG			;\
 	EXCEPTION				;\
+	HANDLE_NESTED_INTERRUPT			;\
+	HANDLE_SIGNAL				;\
 	RESTORE_ALL				;\
 	iret
 
@@ -64,6 +84,8 @@
 	SAVE_ALL				;\
 	LOAD_KERNEL_DSEG			;\
 	IRQ					;\
+	HANDLE_NESTED_INTERRUPT			;\
+	HANDLE_SIGNAL				;\
 	RESTORE_ALL				;\
 	iret
 

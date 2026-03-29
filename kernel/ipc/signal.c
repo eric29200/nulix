@@ -13,6 +13,14 @@ extern void return_user_mode(struct registers *regs);
 static size_t nr_queued_signals = 0;
 
 /*
+ * Has current task signal pending ?
+ */
+int sigpending()
+{
+	return !sigisemptyset(&current_task->pending.signal) && !current_task->sig->in_sig;
+}
+
+/*
  * Initialize pending signals.
  */
 void init_sigpending(struct sigpending *pending)

@@ -208,10 +208,6 @@ static void syscall_handler(struct registers *regs)
 	/* restore registers and set return value */
 	memcpy(regs, &current_task->thread.regs, sizeof(struct registers));
 	regs->eax = ret;
-
-	/* handle pending signals */
-	if (!sigisemptyset(&current_task->pending.signal) && !current_task->sig->in_sig)
-		do_signal(regs);
 }
 
 /*
