@@ -290,8 +290,13 @@ static void kinit()
 	kernel_thread(&bdflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND, "bdflush");
 
 	/* sleep forever */
-	for (;;)
+	for (;;) {
+		/* reschedule if needed */
+		if (need_resched)
+			schedule();
+
 		halt();
+	}
 }
 
 /*

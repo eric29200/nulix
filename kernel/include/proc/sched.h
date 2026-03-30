@@ -67,6 +67,7 @@ static inline int signal_pending(struct task *task)
 
 extern unsigned long avenrun[];				/* Load averages */
 
+extern int need_resched;
 extern struct task *init_task;
 extern struct task *current_task;
 extern struct list_head tasks_list;
