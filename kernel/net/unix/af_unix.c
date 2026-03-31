@@ -406,6 +406,9 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 	/* reset address */
 	msg->msg_namelen = 0;
 
+	/* lock socket to prevent queue disordering */
+	down(&sk->protinfo.af_unix.readsem);
+
 	do {
 		/* get next message or wait */
 		skb = skb_dequeue(&sk->receive_queue);
@@ -415,14 +418,17 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 				break;
 
 			/* socket error */
-			if (sk->err)
+			if (sk->err) {
+				up(&sk->protinfo.af_unix.readsem);
 				return sock_error(sk);
+			}
 
 			/* socket is down */
 			if (sk->shutdown & RCV_SHUTDOWN)
 				break;
 
 			/* non blocking */
+			up(&sk->protinfo.af_unix.readsem);
 			if (noblock)
 				return -EAGAIN;
 
@@ -433,6 +439,7 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 			if (signal_pending(current_task))
 				return -ERESTARTSYS;
 
+			down(&sk->protinfo.af_unix.readsem);
 			continue;
 		}
 
@@ -471,6 +478,7 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 		}
 	} while (size);
 
+	up(&sk->protinfo.af_unix.readsem);
 	return copied;
 }
 
@@ -1197,7 +1205,8 @@ static struct sock *unix_create1(struct socket *sock, int protocol)
 	sk->protocol = protocol;
 	sock_init_data(sock, sk);
 	sk->destruct = unix_destruct_addr;
-	sk->protinfo.af_unix.dentry=NULL;
+	sk->protinfo.af_unix.dentry = NULL;
+	init_semaphore(&sk->protinfo.af_unix.readsem, 1);
 
 	/* insert in sockets list */
 	list_add_tail(&sk->list, &unix_sockets);

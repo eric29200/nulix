@@ -7,6 +7,7 @@
 #include <net/inet/in.h>
 #include <net/unix/un.h>
 #include <net/sk_buff.h>
+#include <lib/semaphore.h>
 
 #define MIN_WRITE_SPACE			2048
 
@@ -25,6 +26,7 @@ struct ucred {
 struct unix_opt {
 	struct unix_address *		addr;
 	struct dentry *			dentry;
+	struct semaphore		readsem;
 };
 
 /*
