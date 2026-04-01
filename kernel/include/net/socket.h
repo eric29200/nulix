@@ -2,6 +2,7 @@
 #define _SOCKET_H_
 
 #include <proc/wait.h>
+#include <net/scm.h>
 #include <stddef.h>
 
 #define NPROTO			32
@@ -146,8 +147,8 @@ struct proto_ops {
 	int (*release)(struct socket *);
 	int (*poll)(struct socket *, struct select_table *);
 	int (*ioctl)(struct socket *, int, unsigned long);
-	int (*recvmsg)(struct socket *, struct msghdr *, size_t);
-	int (*sendmsg)(struct socket *, const struct msghdr *, size_t);
+	int (*recvmsg)(struct socket *, struct msghdr *, size_t, struct scm_cookie *);
+	int (*sendmsg)(struct socket *, const struct msghdr *, size_t, struct scm_cookie *);
 	int (*bind)(struct socket *, const struct sockaddr *, size_t);
 	int (*listen)(struct socket *, int);
 	int (*accept)(struct socket *, struct socket *, int);

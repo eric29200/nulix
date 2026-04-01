@@ -340,7 +340,7 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 /*
  * Receive a message.
  */
-static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
+static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t size, struct scm_cookie *scm)
 {
 	struct sk_buff *skb;
 	unix_socket_t *sk;
@@ -378,6 +378,9 @@ static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t si
 	/* copy data */
 	skb_copy_datagram_iovec(skb, 0, msg->msg_iov, size);
 
+	/* get creds */
+	scm->creds = *UNIXCREDS(skb);
+
 	/* free packet */
 	skb_free(skb);
 
@@ -387,9 +390,9 @@ static int unix_dgram_recvmsg(struct socket *sock, struct msghdr *msg, size_t si
 /*
  * Receive a stream message.
  */
-static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t size)
+static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t size, struct scm_cookie *scm)
 {
-	int noblock = msg->msg_flags & MSG_DONTWAIT;
+	int noblock = msg->msg_flags & MSG_DONTWAIT, check_creds = 0;
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	size_t target = 1, chunk, copied = 0;
 	struct sock *sk = sock->sk;
@@ -443,6 +446,12 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 			continue;
 		}
 
+		/* do not glue messages from different writers */
+		if (check_creds && memcmp(UNIXCREDS(skb), &scm->creds, sizeof(scm->creds))) {
+			skb_queue_head(&sk->receive_queue, skb);
+			break;
+		}
+
 		/* copy address just once */
 		if (sunaddr) {
 			msg->msg_namelen = sizeof(short);
@@ -460,6 +469,10 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 		memcpy_toiovec(msg->msg_iov, skb->data, chunk);
 		copied += chunk;
 		size -= chunk;
+
+		/* copy creds */
+		scm->creds = *UNIXCREDS(skb);
+		check_creds = 1;
 
 		/* free message or requeue it */
 		if (!(msg->msg_flags & MSG_PEEK)) {
@@ -485,7 +498,7 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 /*
  * Send a datagram message.
  */
-static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
+static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len, struct scm_cookie *scm)
 {
 	struct sockaddr_un *sunaddr = msg->msg_name;
 	struct sock *sk = sock->sk;
@@ -519,8 +532,11 @@ static int unix_dgram_sendmsg(struct socket *sock, const struct msghdr *msg, siz
 	if (!skb)
 		return ret;
 
-	/* copy data to socket buffer */
+	/* set creds */
+	memcpy(UNIXCREDS(skb), &scm->creds, sizeof(struct ucred));
 	UNIXCB(skb).attr = msg->msg_flags;
+
+	/* copy data to socket buffer */
 	skb->h.raw = skb->data;
 	memcpy_fromiovec(skb_put(skb, len), msg->msg_iov, len);
 
@@ -598,7 +614,7 @@ err:
 /*
  * Send a stream message.
  */
-static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
+static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len, struct scm_cookie *scm)
 {
 	struct sock *sk = sock->sk;
 	size_t sent = 0, size;
@@ -642,10 +658,15 @@ static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, si
 		if (!skb)
 			return sent ? (int) sent : ret;
 
-		/* copy data to socket buffer */
+		/* get size */
 		if (skb_tailroom(skb) < (int) size)
 			size = skb_tailroom(skb);
+
+		/* set creds */
+		memcpy(UNIXCREDS(skb), &scm->creds, sizeof(struct ucred));
 		UNIXCB(skb).attr = msg->msg_flags;
+
+		/* copy data to socket buffer */
 		memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size);
 
 		/* chec if peer socket is down */

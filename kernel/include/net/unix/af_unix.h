@@ -10,8 +10,10 @@ typedef struct sock unix_socket_t;
  */
 struct unix_skb_parms {
 	uint32_t		attr;
+	struct ucred		creds;
 };
 
-#define UNIXCB(skb) 	(*(struct unix_skb_parms *) &((skb)->cb))
+#define UNIXCB(skb) 		(*(struct unix_skb_parms *) &((skb)->cb))
+#define UNIXCREDS(skb)		(&UNIXCB((skb)).creds)
 
 #endif

@@ -7,18 +7,10 @@
 #include <net/inet/in.h>
 #include <net/unix/un.h>
 #include <net/sk_buff.h>
+#include <net/scm.h>
 #include <lib/semaphore.h>
 
 #define MIN_WRITE_SPACE			2048
-
-/*
- * Socket credentials.
- */
-struct ucred {
-	pid_t				pid;
-	uid_t				uid;
-	gid_t				gid;
-};
 
 /*
  * UNIX options.

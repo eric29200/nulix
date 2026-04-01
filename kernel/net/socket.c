@@ -152,12 +152,20 @@ static void sockfd_put(struct socket *sock)
  */
 static int sock_sendmsg(struct socket *sock, struct msghdr *msg, size_t len)
 {
+	struct scm_cookie scm;
+	int ret;
+
 	/* send message not implemented */
 	if (!sock->ops || !sock->ops->sendmsg)
 		return -EINVAL;
 
+	/* prepare cookie */
+	ret = scm_send(&scm);
+	if (ret < 0)
+		return ret;
+
 	/* send message */
-	return sock->ops->sendmsg(sock, msg, len);
+	return sock->ops->sendmsg(sock, msg, len, &scm);
 }
 
 /*
@@ -165,12 +173,14 @@ static int sock_sendmsg(struct socket *sock, struct msghdr *msg, size_t len)
  */
 static int sock_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
 {
+	struct scm_cookie scm = { 0 };
+
 	/* receive message not implemented */
 	if (!sock->ops || !sock->ops->recvmsg)
 		return -EINVAL;
 
-	/* send message */
-	return sock->ops->recvmsg(sock, msg, len);
+	/* receive message */
+	return sock->ops->recvmsg(sock, msg, len, &scm);
 }
 /*
  * Close a socket.

@@ -174,10 +174,12 @@ static int inet_poll(struct socket *sock, struct select_table *wait)
 /*
  * Receive a message.
  */
-static int inet_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
+static int inet_recvmsg(struct socket *sock, struct msghdr *msg, size_t len, struct scm_cookie *scm)
 {
 	struct sock *sk;
 	int ret;
+
+	UNUSED(scm);
 
 	/* get inet socket */
 	sk = sock->sk;
@@ -199,10 +201,12 @@ static int inet_recvmsg(struct socket *sock, struct msghdr *msg, size_t len)
 /*
  * Send a message.
  */
-static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len)
+static int inet_sendmsg(struct socket *sock, const struct msghdr *msg, size_t len, struct scm_cookie *scm)
 {
 	struct sock *sk;
 	int ret;
+
+	UNUSED(scm);
 
 	/* get inet socket */
 	sk = sock->sk;
