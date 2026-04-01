@@ -1054,7 +1054,7 @@ static int unix_shutdown(struct socket *sock, int mode)
 
 	/* fix mode */
 	mode = (mode + 1) & (RCV_SHUTDOWN | SEND_SHUTDOWN);
-	if (mode)
+	if (!mode)
 		return 0;
 
 	/* shutdown socket */
