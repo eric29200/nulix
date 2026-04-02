@@ -39,7 +39,7 @@
 
 #define HANDLE_NESTED_INTERRUPT			\
 	cmpw $(KERNEL_CSEG), CS(%esp)		;\
-	je 1f
+	je 2f
 
 #define HANDLE_SIGNAL				\
 	call sigpending				;\
@@ -51,6 +51,12 @@
 	addl $4, %esp				;\
 1:
 
+#define HANDLE_RESCHEDULE			\
+	cmpl $0, need_resched			;\
+	je 2f					;\
+	call schedule				;\
+2:
+
 #define BUILD_EXCEPTION(num, name)		\
 .globl name; name:				;\
 	cli					;\
@@ -61,6 +67,7 @@
 	EXCEPTION				;\
 	HANDLE_NESTED_INTERRUPT			;\
 	HANDLE_SIGNAL				;\
+	HANDLE_RESCHEDULE			;\
 	RESTORE_ALL				;\
 	iret
 
@@ -73,6 +80,7 @@
 	EXCEPTION				;\
 	HANDLE_NESTED_INTERRUPT			;\
 	HANDLE_SIGNAL				;\
+	HANDLE_RESCHEDULE			;\
 	RESTORE_ALL				;\
 	iret
 
@@ -86,6 +94,7 @@
 	IRQ					;\
 	HANDLE_NESTED_INTERRUPT			;\
 	HANDLE_SIGNAL				;\
+	HANDLE_RESCHEDULE			;\
 	RESTORE_ALL				;\
 	iret
 

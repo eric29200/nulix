@@ -144,10 +144,6 @@ void do_timer_interrupt()
 	update_times();
 	update_process_times();
 	update_timers();
-
-	/* schedule */
-	if (need_resched)
-		schedule();
 }
 
 /*
