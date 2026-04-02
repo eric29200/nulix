@@ -1,167 +1,287 @@
-#include <ctype.h>
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
+#include <string.h>
+#include <fcntl.h>
+#include <termios.h>
 #include <sys/time.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/Xatom.h>
-#include <X11/XKBlib.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <linux/fb.h>
+#include <linux/kd.h>
 
-#include "doomkeys.h"
 #include "doomgeneric.h"
+#include "doomkeys.h"
 
-#define KEY_QUEUE_SIZE		16
+#define KEY_QUEUE_SIZE			16
+
+
+/* direct frame buffer */
+static int fb_fd = -1;
+static int *fb_buf = NULL;
+static size_t fb_buf_size;
+static struct fb_var_screeninfo fb_var;
+
+/* console attributes */
+static struct termios old_term;
+static int old_kbd_mode = -1;
 
 /* key queue */
-static unsigned short key_queue[KEY_QUEUE_SIZE];
-static unsigned int key_queue_widx = 0;
-static unsigned int key_queue_ridx = 0;
-
-/* xlib stuff */
-static Display *display = NULL;
-static Window window = 0;
-static int screen = 0;
-static GC gc = 0;
-static XImage *image = NULL;
+static uint16_t key_queue[KEY_QUEUE_SIZE];
+static uint8_t key_queue_widx = 0;
+static uint8_t key_queue_ridx = 0;
 
 /*
- * Convert to doom key.
+ * Init framebuffer.
  */
-static unsigned char convert_to_doom_key(unsigned int key)
+static int __init_framebuffer()
 {
-	switch (key)
-	{
-		case XK_Return:
-			key = KEY_ENTER;
-			break;
-		case XK_Escape:
-			key = KEY_ESCAPE;
-			break;
-		case XK_Left:
-			key = KEY_LEFTARROW;
-			break;
-		case XK_Right:
-			key = KEY_RIGHTARROW;
-			break;
-		case XK_Up:
-			key = KEY_UPARROW;
-			break;
-		case XK_Down:
-			key = KEY_DOWNARROW;
-			break;
-		case XK_Control_L:
-		case XK_Control_R:
-			key = KEY_FIRE;
-			break;
-		case XK_space:
-			key = KEY_USE;
-			break;
-		case XK_Shift_L:
-		case XK_Shift_R:
-			key = KEY_RSHIFT;
-			break;
-		default:
-			key = tolower(key);
-			break;
+	/* open direct frame buffer */
+	fb_fd = open("/dev/fb0", 0);
+	if (fb_fd < 0) {
+		fprintf(stderr, "Error: can't open direct framebuffer\n");
+		return -1;
 	}
 
-	return key;
+	/* get screen size */
+	if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &fb_var)) {
+		fprintf(stderr, "Error: can't get screen information\n");
+		close(fb_fd);
+		return -1;
+	}
+
+	/* map frame buffer */
+	fb_buf_size = fb_var.xres * fb_var.yres * 4;
+	fb_buf = mmap(NULL, fb_buf_size, PROT_READ | PROT_WRITE, 0, fb_fd, 0);
+	if (!fb_buf) {
+		fprintf(stderr, "Error: can't map framebuffer\n");
+		close(fb_fd);
+		return -1;
+	}
+
+	return 0;
 }
 
 /*
- * Add key to queue.
+ * Exit framebuffer.
  */
-static void add_key_to_queue(int pressed, unsigned int key_code)
+static void __exit_framebuffer()
 {
-	unsigned char key = convert_to_doom_key(key_code);
-	unsigned short key_data = (pressed << 8) | key;
+	if (fb_buf)
+		munmap(fb_buf, fb_buf_size);
 
+	if (fb_fd >= 0)
+		close(fb_fd);
+}
+
+/*
+ * Init console.
+ */
+static int __init_console()
+{
+	struct termios new_term;
+
+	/* get console attributes */
+	if (tcgetattr(STDIN_FILENO, &old_term)) {
+		fprintf(stderr, "Can't get console attributes\n");
+		return -1;
+	}
+
+	/* set console attributes */
+	new_term = old_term;
+	new_term.c_iflag = 0;
+	new_term.c_lflag &= ~(ECHO | ICANON | ISIG);
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new_term)) {
+		fprintf(stderr, "Can't set console attributes\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
+ * Restore initial console.
+ */
+static void __exit_console()
+{
+	/* restore console attributes */
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_term))
+		fprintf(stderr, "Can't restore console attributes\n");
+}
+
+/*
+ * Init keyboard.
+ */
+static int __init_keyboard()
+{
+	int flags;
+
+	/* get keyboard mode */
+	if (ioctl(STDIN_FILENO, KDGKBMODE, &old_kbd_mode)) {
+		fprintf(stderr, "Error: can't get keyboard mode\n");
+		return -1;
+	}
+
+	/* set keyboard mode */
+	if (ioctl(STDIN_FILENO, KDSKBMODE, K_MEDIUMRAW)) {
+		fprintf(stderr, "Error: Can't set keyboard mode\n");
+		return -1;
+	}
+
+	/* set non blocking mode */
+	flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+
+	return 0;
+}
+
+/*
+ * Restore initial keyboard.
+ */
+static void __exit_keyboard()
+{
+	/* restore keyboard mode */
+	if (ioctl(STDIN_FILENO, KDSKBMODE, old_kbd_mode))
+		fprintf(stderr, "Error: Can't restore keyboard mode\n");
+}
+
+/*
+ * Exit function.
+ */
+static void __exit()
+{
+	__exit_framebuffer();
+	__exit_console();
+	__exit_keyboard();
+}
+
+/*
+ * Init function.
+ */
+void DG_Init()
+{
+	/* init framebuffer */
+	if (__init_framebuffer())
+		exit(1);
+
+	/* init console */
+	if (__init_console()) {
+		__exit_framebuffer();
+		exit(1);
+	}
+
+	/* init keyboard */
+	if (__init_keyboard()) {
+		__exit_console();
+		exit(1);
+	}
+
+	/* restore at exit */
+	atexit(__exit);
+}
+
+/*
+ * Handle keyboard.
+ */
+static void __handle_keyboard()
+{
+	uint8_t scan_code, key_code, key;
+	uint16_t key_data;
+	int pressed;
+
+	/* read from keyboard */
+	if (read(STDIN_FILENO, &scan_code, 1) < 1)
+		return;
+
+	/* parse key */
+	pressed = (scan_code & 0x80) == 0 ? 1 : 0;
+	key_code = scan_code & 0x7F;
+
+	/* convert to doom key */
+	switch (key_code) {
+		case 0x1C:
+		case 0x60:
+			key = KEY_ENTER;
+			break;
+		case 0x01:
+			key = KEY_ESCAPE;
+			break;
+		case 0x69:
+			key = KEY_LEFTARROW;
+			break;
+		case 0x6A:
+			key = KEY_RIGHTARROW;
+			break;
+		case 0x67:
+			key = KEY_UPARROW;
+			break;
+		case 0x6C:
+			key = KEY_DOWNARROW;
+			break;
+		case 0x39:
+			key = KEY_USE;
+			break;
+		case 0x1D:
+		case 0x61:
+			key = KEY_FIRE;
+			break;
+		case 0x2A:
+		case 0x36:
+			key = KEY_RSHIFT;
+			break;
+		case 0x15:
+			key = 'y';
+			break;
+		default:
+		 	key = 0;
+			break;
+	}
+
+	/* queue key */
+	key_data = (pressed << 8) | key;
 	key_queue[key_queue_widx++] = key_data;
 	key_queue_widx %= KEY_QUEUE_SIZE;
 }
 
 /*
- * Init DOOM.
- */
-void DG_Init()
-{
-	XSetWindowAttributes attr;
-	int black, white, depth;
-	XEvent e;
-
-	/* clear key queue */
-	memset(key_queue, 0, KEY_QUEUE_SIZE * sizeof(unsigned short));
-
-	/* open display */
-	display = XOpenDisplay(NULL);
-	if (!display) {
-		fprintf(stderr, "Can't open display\n");
-		exit(1);
-	}
-
-	/* get default screen */
-	screen = DefaultScreen(display);
-
-	/* create window */
-	memset(&attr, 0, sizeof(XSetWindowAttributes));
-	attr.event_mask = ExposureMask | KeyPressMask;
-	attr.background_pixel = BlackPixel(display, screen);
-	black = BlackPixel(display, screen);
-	white = WhitePixel(display, screen);
-	depth = DefaultDepth(display, screen);
-	window = XCreateSimpleWindow(display, DefaultRootWindow(display), 0, 0, DOOMGENERIC_RESX, DOOMGENERIC_RESY, 0, black, white);
-
-	/* select input */
-	XSelectInput(display, window, StructureNotifyMask | KeyPressMask | KeyReleaseMask);
-
-	/* map window */
-	XMapWindow(display, window);
-
-	/* configure */
-	gc = XCreateGC(display, window, 0, NULL);
-	XSetForeground(display, gc, white);
-	XkbSetDetectableAutoRepeat(display, 1, 0);
-
-	/* wait for the map notify event */
-	for (;;) {
-		XNextEvent(display, &e);
-		if (e.type == MapNotify)
-			break;
-	}
-
-	/* create frame */
-	image = XCreateImage(display, DefaultVisual(display, screen), depth, ZPixmap, 0, (char *)DG_ScreenBuffer, DOOMGENERIC_RESX, DOOMGENERIC_RESX, 32, 0);
-}
-
-/*
- * Draw a frame.
+ * Draw frame.
  */
 void DG_DrawFrame()
 {
-	KeySym sym;
-	XEvent e;
+	int i;
 
-	if (!display)
-		return;
+	/* draw framebuffer */
+	if (fb_buf)
+		for (i = 0; i < DOOMGENERIC_RESY; i++)
+			memcpy(fb_buf + i * fb_var.xres, DG_ScreenBuffer + i * DOOMGENERIC_RESX, DOOMGENERIC_RESX * 4);
 
-	/* handle key events */
-	while (XPending(display) > 0) {
-		/* get next event */
-		XNextEvent(display, &e);
-
-		if (e.type == KeyPress)
-			add_key_to_queue(1, XKeycodeToKeysym(display, e.xkey.keycode, 0));
-		else if (e.type == KeyRelease)
-			add_key_to_queue(0, XKeycodeToKeysym(display, e.xkey.keycode, 0));
-	}
-
-	/* update frame */
-	XPutImage(display, window, gc, image, 0, 0, 0, 0, DOOMGENERIC_RESX, DOOMGENERIC_RESY);
+	/* handle keyboard */
+	__handle_keyboard();
 }
 
 /*
- * Sleep in millisecond.
+ * Get key.
+ */
+int DG_GetKey(int *pressed, uint8_t *doom_key)
+{
+	uint16_t key_data;
+
+	/* empty queue */
+	if (key_queue_ridx == key_queue_widx)
+		return 0;
+
+	/* pop from queue */
+	key_data = key_queue[key_queue_ridx++];
+	key_queue_ridx %= KEY_QUEUE_SIZE;
+
+	/* set result */
+	*pressed = key_data >> 8;
+	*doom_key = key_data & 0xFF;
+
+	return 1;
+}
+
+/*
+ * Sleep in ms.
  */
 void DG_SleepMs(uint32_t ms)
 {
@@ -169,7 +289,7 @@ void DG_SleepMs(uint32_t ms)
 }
 
 /*
- * Get tick in millisecond.
+ * Get time in ms.
  */
 uint32_t DG_GetTicksMs()
 {
@@ -182,38 +302,14 @@ uint32_t DG_GetTicksMs()
 }
 
 /*
- * Get key.
- */
-int DG_GetKey(int *pressed, unsigned char *doom_key)
-{
-	unsigned short key_data;
-
-	/* key queue is empty */
-	if (key_queue_ridx == key_queue_widx)
-		return 0;
-
-	/* get next key */
-	key_data = key_queue[key_queue_ridx++];
-	key_queue_ridx %= KEY_QUEUE_SIZE;
-
-	/* decode key */
-	*pressed = key_data >> 8;
-	*doom_key = key_data & 0xFF;
-
-	return 1;
-}
-
-/*
  * Set window title.
  */
 void DG_SetWindowTitle(const char *title)
 {
-	if (window)
-		XChangeProperty(display, window, XA_WM_NAME, XA_STRING, 8, PropModeReplace, (const unsigned char *) title, strlen(title));
 }
 
 /*
- * Entry point.
+ * Main loop.
  */
 int main(int argc, char **argv)
 {
@@ -222,7 +318,7 @@ int main(int argc, char **argv)
 
 	/* main loop */
 	for (;;)
-		doomgeneric_Tick(); 
+		doomgeneric_Tick();
 
 	return 0;
 }

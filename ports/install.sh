@@ -1,9 +1,8 @@
 #!/bin/bash
 
 # base ports, needed to build other ports
-BASE_PORTS=("pkgconf" "libncurses" "termcap" "zlib" "bzip2" "openssl" "util-linux"	\
-	"libpng" "libjpeg" "libgif" "expat" "freetype2" "fontconfig" "liberation"	\
-	"tinyx" "imlib2" "argp-standalone" "musl-fts" "musl-obstack" "libpipeline")
+BASE_PORTS=("pkgconf" "libncurses" "termcap" "zlib" "bzip2" "openssl" "util-linux"					\
+	"libpng" "libjpeg" "libgif" "expat" "imlib2" "argp-standalone" "musl-fts" "musl-obstack" "libpipeline")
 
 if [[ `basename $PWD` != "nulix" ]]; then
 	echo "This script must be run from main/root directory"
@@ -168,13 +167,6 @@ fi
 # for each port
 for PORT in ${PORTS[@]}; do
 	cd $BASE_DIR
-
-	# specific script for tinyx
-	if [[ $PORT == "tinyx" ]]; then
-		cd ../
-		./ports/install_tinyx.sh
-		continue
-	fi
 
 	# download and extract
 	check_port

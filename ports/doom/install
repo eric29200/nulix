@@ -13,7 +13,7 @@ function build_port() {
 }
 
 function install_port() {
-	cp doom $SYSROOT/usr/bin/
+	cp fbdoom $SYSROOT/usr/bin/doom
 
 	# install wad
 	rm -f DOOM1.WAD doom1.wad.zip
