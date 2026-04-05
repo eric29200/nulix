@@ -152,7 +152,7 @@ size_t get_cpuinfo(char *page)
 	/* for each cpu */
 	for (n = 0, c = cpu_data; n < NR_CPUS; n++, c++) {
 		/* skip offline CPU */
-		if (!(cpu_online_map & ( 1 <<n)))
+		if (!(cpu_online_map & (1 << n)))
 			continue;
 
 		/* print processor informations */
