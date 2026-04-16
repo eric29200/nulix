@@ -7,7 +7,10 @@
  * Minix in memory inode.
  */
 struct minix_inode_info {
-	uint32_t		i_zone[10];
+	union {
+		uint16_t		i1_data[16];
+		uint32_t		i2_data[16];
+	} u;
 };
 
 #endif

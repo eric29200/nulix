@@ -19,6 +19,22 @@
 #define MINIX_ROOT_INODE		1
 
 /*
+ * Minix V1/V2 super block.
+ */
+struct minix_super_block {
+	uint16_t		s_ninodes;
+	uint16_t		s_nzones;
+	uint16_t		s_imap_blocks;
+	uint16_t		s_zmap_blocks;
+	uint16_t		s_firstdatazone;
+	uint16_t		s_log_zone_size;
+	uint32_t		s_max_size;
+	uint16_t		s_magic;
+	uint16_t		s_state;
+	uint32_t		s_zones;
+};
+
+/*
  * Minix V3 super block.
  */
 struct minix3_super_block {
@@ -58,6 +74,19 @@ struct minix_sb_info {
 };
 
 /*
+ * Minix V1 inode.
+ */
+struct minix_inode {
+	uint16_t		i_mode;
+	uint16_t		i_uid;
+	uint32_t		i_size;
+	uint32_t		i_time;
+	uint8_t			i_gid;
+	uint8_t			i_nlinks;
+	uint16_t		i_zone[9];
+};
+
+/*
  * Minix V2/V3 inode.
  */
 struct minix2_inode {
@@ -70,6 +99,14 @@ struct minix2_inode {
 	uint32_t		i_mtime;
 	uint32_t		i_ctime;
 	uint32_t		i_zone[10];
+};
+
+/*
+ * Minix V1/V2 directory entry.
+ */
+struct minix_dir_entry {
+	uint16_t		d_inode;
+	char			d_name[0];
 };
 
 /*

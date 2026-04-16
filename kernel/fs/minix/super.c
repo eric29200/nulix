@@ -10,6 +10,7 @@
 static struct super_block *minix_read_super(struct super_block *sb, void *data, int silent)
 {
 	struct minix3_super_block *msb3;
+	struct minix_super_block *msb;
 	struct minix_sb_info *sbi;
 	uint32_t block;
 	int i;
@@ -32,33 +33,60 @@ static struct super_block *minix_read_super(struct super_block *sb, void *data, 
 	if (!sbi->s_sbh)
 		goto err_bad_sb;
 
-	/* check super block */
-	msb3 = (struct minix3_super_block *) sbi->s_sbh->b_data;
-	if (msb3->s_magic != MINIX3_MAGIC)
-		goto err_bad_magic;
-
 	/* set super block */
-	sbi->s_ninodes = msb3->s_ninodes;
-	sbi->s_nzones = msb3->s_zones;
-	sbi->s_imap_blocks = msb3->s_imap_blocks;
-	sbi->s_zmap_blocks = msb3->s_zmap_blocks;
-	sbi->s_firstdatazone = msb3->s_firstdatazone;
-	sbi->s_log_zone_size = msb3->s_log_zone_size;
-	sbi->s_state = MINIX_VALID_FS;
-	sbi->s_version = MINIX_V3;
-	sbi->s_name_len = 60;
-	sbi->s_dirsize = 64;
-	sbi->s_max_size = msb3->s_max_size;
+	msb = (struct minix_super_block *) sbi->s_sbh->b_data;
+	sbi->s_state = msb->s_state;
+	sbi->s_ninodes = msb->s_ninodes;
+	sbi->s_nzones = msb->s_nzones;
+	sbi->s_imap_blocks = msb->s_imap_blocks;
+	sbi->s_zmap_blocks = msb->s_zmap_blocks;
+	sbi->s_firstdatazone = msb->s_firstdatazone;
+	sbi->s_log_zone_size = msb->s_log_zone_size;
+	sbi->s_max_size = msb->s_max_size;
 	sbi->s_imap = NULL;
 	sbi->s_zmap = NULL;
-	sb->s_magic = msb3->s_magic;
-	sb->s_blocksize = msb3->s_blocksize;
-	sb->s_blocksize_bits = blksize_bits(msb3->s_blocksize);
+	sb->s_magic = msb->s_magic;
 	sb->s_op = &minix_sops;
 	sb->s_root = NULL;
 
-	/* set real block size */
-	set_blocksize(sb->s_dev, sb->s_blocksize);
+	if (sb->s_magic == MINIX1_MAGIC1) {
+		sbi->s_version = MINIX_V1;
+		sbi->s_dirsize = 16;
+		sbi->s_name_len = 14;
+	} else if (sb->s_magic == MINIX1_MAGIC2) {
+		sbi->s_version = MINIX_V1;
+		sbi->s_dirsize = 32;
+		sbi->s_name_len = 30;
+	} else if (sb->s_magic == MINIX2_MAGIC1) {
+		sbi->s_version = MINIX_V2;
+		sbi->s_nzones = msb->s_zones;
+		sbi->s_dirsize = 16;
+		sbi->s_name_len = 14;
+	} else if (sb->s_magic == MINIX2_MAGIC2) {
+		sbi->s_version = MINIX_V2;
+		sbi->s_nzones = msb->s_zones;
+		sbi->s_dirsize = 32;
+		sbi->s_name_len = 30;
+	} else if (*(uint16_t *)(sbi->s_sbh->b_data + 24) == MINIX3_MAGIC) {
+		msb3 = (struct minix3_super_block *) sbi->s_sbh->b_data;
+		sbi->s_ninodes = msb3->s_ninodes;
+		sbi->s_nzones = msb3->s_zones;
+		sbi->s_imap_blocks = msb3->s_imap_blocks;
+		sbi->s_zmap_blocks = msb3->s_zmap_blocks;
+		sbi->s_firstdatazone = msb3->s_firstdatazone;
+		sbi->s_log_zone_size = msb3->s_log_zone_size;
+		sbi->s_max_size = msb3->s_max_size;
+		sb->s_magic = msb3->s_magic;
+		sbi->s_dirsize = 64;
+		sbi->s_name_len = 60;
+		sbi->s_version = MINIX_V3;
+		sbi->s_state = MINIX_VALID_FS;
+		sb->s_blocksize = msb3->s_blocksize;
+		sb->s_blocksize_bits = blksize_bits(msb3->s_blocksize);
+		set_blocksize(sb->s_dev, sb->s_blocksize);
+	} else {
+		goto err_bad_magic;
+	}
 
 	/* allocate inodes bitmap */
 	sbi->s_imap = (struct buffer_head **) kmalloc(sizeof(struct buffer_head *) * sbi->s_imap_blocks);

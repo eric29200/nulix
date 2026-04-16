@@ -44,10 +44,6 @@ ssize_t minix_readlink(struct dentry *dentry, char *buf, size_t bufsize)
 	if (bufsize > sb->s_blocksize - 1)
 		bufsize = sb->s_blocksize - 1;
 
-	/* check 1st block */
-	if (!inode->u.minix_i.i_zone[0])
-		return 0;
-
 	/* get 1st block */
 	bh = minix_bread(inode, 0, 0);
 	if (!bh)

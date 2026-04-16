@@ -20,12 +20,14 @@ static inline int minix_name_match(const char *name1, size_t len1, const char *n
 /*
  * Find an entry inside a directory.
  */
-static struct buffer_head *minix_find_entry(struct inode *dir, const char *name, int name_len, struct minix3_dir_entry **res_de)
+static struct buffer_head *minix_find_entry(struct inode *dir, const char *name, int name_len, struct minix_dir_entry **res_de)
 {
 	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
 	int nr_entries, nr_entries_per_block, i;
 	struct buffer_head *bh = NULL;
-	struct minix3_dir_entry *de;
+	struct minix3_dir_entry *de3;
+	struct minix_dir_entry *de;
+	char *namx, *p;
 
 	/* check file name length */
 	if (name_len <= 0 || name_len > sbi->s_name_len)
@@ -49,11 +51,18 @@ static struct buffer_head *minix_find_entry(struct inode *dir, const char *name,
 		}
 
 		/* get directory entry */
-		de = (struct minix3_dir_entry *) (bh->b_data + (i % nr_entries_per_block) * sbi->s_dirsize);
+		p = (char *) (bh->b_data + (i % nr_entries_per_block) * sbi->s_dirsize);
+		if (sbi->s_version == MINIX_V3) {
+			de3 = (struct minix3_dir_entry *) p;
+			namx = de3->d_name;
+		} else {
+			de = (struct minix_dir_entry *) p;
+			namx = de->d_name;
+		}
 
 		/* name match */
-		if (minix_name_match(name, name_len, de->d_name, sbi->s_dirsize)) {
-			*res_de = de;
+		if (minix_name_match(name, name_len, namx, sbi->s_dirsize)) {
+			*res_de = (struct minix_dir_entry *) p;
 			return bh;
 		}
 	}
@@ -70,7 +79,8 @@ static int minix_add_entry(struct inode *dir, const char *name, int name_len, st
 {
 	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
 	int nr_entries, nr_entries_per_block, i;
-	struct minix3_dir_entry *de3 = NULL;
+	struct minix3_dir_entry *mde3 = NULL;
+	struct minix_dir_entry *mde = NULL;
 	struct buffer_head *bh = NULL;
 	char *de, *de_name;
 	ino_t de_ino;
@@ -104,9 +114,15 @@ static int minix_add_entry(struct inode *dir, const char *name, int name_len, st
 
 		/* get directory entry */
 		de = bh->b_data + (i % nr_entries_per_block) * sbi->s_dirsize;
-		de3 = (struct minix3_dir_entry *) de;
-		de_ino = de3->d_inode;
-		de_name = de3->d_name;
+		if (sbi->s_version == MINIX_V3) {
+			mde3 = (struct minix3_dir_entry *) de;
+			de_ino = mde3->d_inode;
+			de_name = mde3->d_name;
+		} else {
+			mde = (struct minix_dir_entry *) de;
+			de_ino = mde->d_inode;
+			de_name = mde->d_name;
+		}
 
 		/* found a free entry */
 		if (!de_ino)
@@ -122,7 +138,10 @@ found_free_entry:
 	memcpy(de_name, name, name_len);
 
 	/* set new entry inode */
-	de3->d_inode = inode->i_ino;
+	if (sbi->s_version == MINIX_V3)
+		mde3->d_inode = inode->i_ino;
+	else
+		mde->d_inode = inode->i_ino;
 
 	/* mark buffer dirty and release it */
 	mark_buffer_dirty(bh);
@@ -173,7 +192,10 @@ static int minix_empty_dir(struct inode *dir)
 
 		/* get inode number */
 		de = bh->b_data + (i % nr_entries_per_block) * sbi->s_dirsize;
-		ino = ((struct minix3_dir_entry *) de)->d_inode;
+		if (sbi->s_version == MINIX_V3)
+			ino = ((struct minix3_dir_entry *) de)->d_inode;
+		else
+			ino = ((struct minix_dir_entry *) de)->d_inode;
 
 		/* found an entry : directory is not empty */
 		if (ino) {
@@ -192,7 +214,7 @@ static int minix_empty_dir(struct inode *dir)
  */
 struct dentry *minix_lookup(struct inode *dir, struct dentry *dentry)
 {
-	struct minix3_dir_entry *de;
+	struct minix_dir_entry *de;
 	struct inode *inode = NULL;
 	struct buffer_head *bh;
 	ino_t ino;
@@ -203,7 +225,10 @@ struct dentry *minix_lookup(struct inode *dir, struct dentry *dentry)
 		goto out;
 
 	/* get inode number */
-	ino = de->d_inode;
+	if (minix_sb(dir->i_sb)->s_version == MINIX_V3)
+		ino = ((struct minix3_dir_entry *) de)->d_inode;
+	else
+		ino = de->d_inode;
 	brelse(bh);
 
 	/* get inode */
@@ -255,7 +280,7 @@ int minix_create(struct inode *dir, struct dentry *dentry, mode_t mode)
  */
 int minix_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 {
-	struct minix3_dir_entry *de;
+	struct minix_dir_entry *de;
 	struct buffer_head *bh;
 	int ret;
 
@@ -294,8 +319,9 @@ int minix_unlink(struct inode *dir, struct dentry *dentry)
 {
 	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
 	struct inode *inode = dentry->d_inode;
-	struct minix3_dir_entry *de;
+	struct minix_dir_entry *de;
 	struct buffer_head *bh;
+	ino_t ino;
 	int ret;
 
 	/* get directory entry */
@@ -308,8 +334,14 @@ int minix_unlink(struct inode *dir, struct dentry *dentry)
 	if (S_ISDIR(inode->i_mode))
 		goto out;
 
+	/* get inode number */
+	if (sbi->s_version == MINIX_V3)
+		ino = ((struct minix3_dir_entry *) de)->d_inode;
+	else
+		ino = de->d_inode;
+
 	/* check inode */
-	if (de->d_inode != inode->i_ino)
+	if (ino != inode->i_ino)
 		goto out;
 
 	/* reset directory entry */
@@ -338,7 +370,7 @@ out:
  */
 int minix_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 {
-	struct minix3_dir_entry *de;
+	struct minix_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
 	size_t i;
@@ -403,7 +435,8 @@ int minix_symlink(struct inode *dir, struct dentry *dentry, const char *target)
  */
 int minix_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
-	struct minix3_dir_entry *de;
+	struct minix3_dir_entry *de3;
+	struct minix_dir_entry *de;
 	struct minix_sb_info *sbi;
 	struct buffer_head *bh;
 	struct inode *inode;
@@ -440,14 +473,26 @@ int minix_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 	}
 
 	/* add '.' entry */
-	de = (struct minix3_dir_entry *) bh->b_data;
-	de->d_inode = inode->i_ino;
-	strcpy(de->d_name, ".");
+	if (sbi->s_version == MINIX_V3) {
+		de3 = (struct minix3_dir_entry *) bh->b_data;
+		de3->d_inode = inode->i_ino;
+		strcpy(de3->d_name, ".");
+	} else {
+		de = (struct minix_dir_entry *) bh->b_data;
+		de->d_inode = inode->i_ino;
+		strcpy(de->d_name, ".");
+	}
 
 	/* add '..' entry */
-	de = (struct minix3_dir_entry *) (bh->b_data + sbi->s_dirsize);
-	de->d_inode = dir->i_ino;
-	strcpy(de->d_name, "..");
+	if (sbi->s_version == MINIX_V3) {
+		de3 = (struct minix3_dir_entry *) (bh->b_data + sbi->s_dirsize);
+		de3->d_inode = dir->i_ino;
+		strcpy(de3->d_name, "..");
+	} else {
+		de = (struct minix_dir_entry *) (bh->b_data + sbi->s_dirsize);
+		de->d_inode = dir->i_ino;
+		strcpy(de->d_name, "..");
+	}
 
 	/* release first block */
 	mark_buffer_dirty(bh);
@@ -478,8 +523,9 @@ int minix_rmdir(struct inode *dir, struct dentry *dentry)
 {
 	struct minix_sb_info *sbi = minix_sb(dir->i_sb);
 	struct inode *inode = dentry->d_inode;
-	struct minix3_dir_entry *de;
+	struct minix_dir_entry *de;
 	struct buffer_head *bh;
+	ino_t ino;
 	int ret;
 
 	/* check if file exists */
@@ -497,9 +543,15 @@ int minix_rmdir(struct inode *dir, struct dentry *dentry)
 	if (!S_ISDIR(inode->i_mode))
 		goto out;
 
+	/* get inode number */
+	if (sbi->s_version == MINIX_V3)
+		ino = ((struct minix3_dir_entry *) de)->d_inode;
+	else
+		ino = de->d_inode;
+
 	/* check inode */
 	ret = -ENOENT;
-	if (inode->i_ino != de->d_inode)
+	if (inode->i_ino != ino)
 		goto out;
 
 	/* directory must be empty */
@@ -535,9 +587,10 @@ out:
 int minix_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
 {
 	struct inode *old_inode = old_dentry->d_inode, *new_inode = new_dentry->d_inode;
+	struct minix_sb_info *sbi = minix_sb(old_dir->i_sb);
 	struct buffer_head *old_bh = NULL, *new_bh = NULL;
-	struct minix3_dir_entry *old_de, *new_de;
-	struct minix_sb_info *sbi;
+	struct minix_dir_entry *old_de, *new_de;
+	ino_t old_ino, new_ino;
 	int ret;
 
 	/* find old entry */
@@ -546,16 +599,28 @@ int minix_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode 
 	if (!old_bh)
 		goto out;
 
+	/* get old inode number */
+	if (sbi->s_version == MINIX_V3)
+		old_ino = ((struct minix3_dir_entry *) old_de)->d_inode;
+	else
+		old_ino = old_de->d_inode;
+
 	/* check old inode */
-	if (old_inode->i_ino != old_de->d_inode)
+	if (old_inode->i_ino != old_ino)
 		goto out;
 
 	/* find new entry (if exists) or add new one */
 	new_bh = minix_find_entry(new_dir, new_dentry->d_name.name, new_dentry->d_name.len, &new_de);
 	if (new_bh) {
+		/* get new inode number */
+		if (sbi->s_version == MINIX_V3)
+			new_ino = ((struct minix3_dir_entry *) new_de)->d_inode;
+		else
+			new_ino = new_de->d_inode;
+
 		/* check new inode */
 		ret = -ENOENT;
-		if (!new_inode || new_inode->i_ino != new_de->d_inode)
+		if (!new_inode || new_inode->i_ino != new_ino)
 			goto out;
 
 		/* same inode : exit */
@@ -564,7 +629,10 @@ int minix_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode 
 			goto out;
 
 		/* modify new directory entry inode */
-		new_de->d_inode = old_inode->i_ino;
+		if (sbi->s_version == MINIX_V3)
+			((struct minix3_dir_entry *) new_de)->d_inode = old_inode->i_ino;
+		else
+			new_de->d_inode = old_inode->i_ino;
 
 		/* update new inode */
 		new_inode->i_nlinks--;
@@ -578,9 +646,13 @@ int minix_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode 
 	}
 
 	/* cancel old directory entry */
-	sbi = minix_sb(old_dir->i_sb);
-	old_de->d_inode = 0;
-	memset(old_de->d_name, 0, sbi->s_name_len);
+	if (sbi->s_version == MINIX_V3) {
+		((struct minix3_dir_entry *) old_de)->d_inode = 0;
+		memset(((struct minix3_dir_entry *) old_de)->d_name, 0, sbi->s_name_len);
+	} else {
+		old_de->d_inode = 0;
+		memset(old_de->d_name, 0, sbi->s_name_len);
+	}
 	mark_buffer_dirty(old_bh);
 
 	/* update old and new directories */
@@ -603,7 +675,7 @@ out:
  */
 int minix_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 {
-	struct minix3_dir_entry *de;
+	struct minix_dir_entry *de;
 	struct buffer_head *bh;
 	struct inode *inode;
 	int ret;

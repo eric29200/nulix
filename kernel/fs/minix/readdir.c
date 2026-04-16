@@ -13,9 +13,12 @@ int minix_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	struct super_block *sb = filp->f_dentry->d_inode->i_sb;
 	struct inode *inode = filp->f_dentry->d_inode;
 	struct buffer_head *bh = NULL;
-	struct minix3_dir_entry *de;
+	struct minix3_dir_entry *de3;
+	struct minix_dir_entry *de;
 	uint32_t offset, block;
 	size_t name_len;
+	char *name;
+	ino_t ino;
 
 	/* get start offset */
 	offset = filp->f_pos & (sb->s_blocksize - 1);
@@ -33,15 +36,23 @@ int minix_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		/* read all entries in block */
 		while (filp->f_pos < inode->i_size && offset < sb->s_blocksize) {
 			/* check next entry */
-			de = (struct minix3_dir_entry *) (bh->b_data + offset);
+			if (sbi->s_version == MINIX_V3) {
+				de3 = (struct minix3_dir_entry *) (bh->b_data + offset);
+				ino = de3->d_inode;
+				name = de3->d_name;
+			} else {
+				de = (struct minix_dir_entry *) (bh->b_data + offset);
+				ino = de->d_inode;
+				name = de->d_name;
+			}
 
 			/* skip null entry */
-			if (de->d_inode == 0)
+			if (ino == 0)
 				goto next;
 
 			/* fill in directory entry */
-			name_len = strlen(de->d_name);
-			if (filldir(dirent, de->d_name, name_len, filp->f_pos, de->d_inode)) {
+			name_len = strlen(name);
+			if (filldir(dirent, name, name_len, filp->f_pos, ino)) {
 				brelse(bh);
 				return 0;
 			}

@@ -63,9 +63,74 @@ struct inode_operations minix_dir_iops = {
 };
 
 /*
+ * Read a Minix V1 inode on disk.
+ */
+static int V1_minix_read_inode(struct inode *inode)
+{
+	struct minix_sb_info *sbi = minix_sb(inode->i_sb);
+	struct minix_inode *raw_inode;
+	struct buffer_head *bh;
+	int inodes_per_block, i;
+	uint32_t block;
+
+	/* check inode number */
+	if (!inode->i_ino || inode->i_ino > sbi->s_ninodes)
+		return -EINVAL;
+
+	/* compute inode store block */
+	inodes_per_block = inode->i_sb->s_blocksize / sizeof(struct minix_inode);
+	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks + (inode->i_ino - 1) / inodes_per_block;
+
+	/* read inode store block */
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
+	if (!bh) {
+		iput(inode);
+		return -EIO;
+	}
+
+	/* get raw inode */
+	raw_inode = &((struct minix_inode *) bh->b_data)[(inode->i_ino - 1) % inodes_per_block];
+
+	/* set inode */
+	inode->i_mode = raw_inode->i_mode;
+	inode->i_nlinks = raw_inode->i_nlinks;
+	inode->i_uid = raw_inode->i_uid;
+	inode->i_gid = raw_inode->i_gid;
+	inode->i_size = raw_inode->i_size;
+	inode->i_atime = raw_inode->i_time;
+	inode->i_ctime = raw_inode->i_time;
+	inode->i_mtime = raw_inode->i_time;
+	inode->i_blocks = 0;
+	for (i = 0; i < 9; i++)
+		inode->u.minix_i.u.i1_data[i] = raw_inode->i_zone[i];
+
+	/* set operations */
+	if (S_ISDIR(inode->i_mode)) {
+		inode->i_op = &minix_dir_iops;
+	} else if (S_ISLNK(inode->i_mode)) {
+		inode->i_op = &minix_symlink_iops;
+	} else if (S_ISCHR(inode->i_mode)) {
+		inode->i_rdev = raw_inode->i_zone[0];
+		inode->i_op = &chrdev_iops;
+	} else if (S_ISBLK(inode->i_mode)) {
+		inode->i_rdev = raw_inode->i_zone[0];
+		inode->i_op = &blkdev_iops;
+	} else if (S_ISFIFO(inode->i_mode)) {
+		init_fifo(inode);
+	} else {
+		inode->i_op = &minix_file_iops;
+	}
+
+	/* release block buffer */
+	brelse(bh);
+
+	return 0;
+}
+
+/*
  * Read a Minix V2 inode on disk.
  */
-int minix_read_inode(struct inode *inode)
+static int V2_minix_read_inode(struct inode *inode)
 {
 	struct minix_sb_info *sbi = minix_sb(inode->i_sb);
 	struct minix2_inode *raw_inode;
@@ -102,7 +167,7 @@ int minix_read_inode(struct inode *inode)
 	inode->i_mtime = raw_inode->i_mtime;
 	inode->i_blocks = 0;
 	for (i = 0; i < 10; i++)
-		inode->u.minix_i.i_zone[i] = raw_inode->i_zone[i];
+		inode->u.minix_i.u.i2_data[i] = raw_inode->i_zone[i];
 
 	/* set operations */
 	if (S_ISDIR(inode->i_mode)) {
@@ -110,10 +175,10 @@ int minix_read_inode(struct inode *inode)
 	} else if (S_ISLNK(inode->i_mode)) {
 		inode->i_op = &minix_symlink_iops;
 	} else if (S_ISCHR(inode->i_mode)) {
-		inode->i_rdev = inode->u.minix_i.i_zone[0];
+		inode->i_rdev = raw_inode->i_zone[0];
 		inode->i_op = &chrdev_iops;
 	} else if (S_ISBLK(inode->i_mode)) {
-		inode->i_rdev = inode->u.minix_i.i_zone[0];
+		inode->i_rdev = raw_inode->i_zone[0];
 		inode->i_op = &blkdev_iops;
 	} else if (S_ISFIFO(inode->i_mode)) {
 		init_fifo(inode);
@@ -128,9 +193,65 @@ int minix_read_inode(struct inode *inode)
 }
 
 /*
- * Write a Minix V2/V3 inode on disk.
+ * Read a Minix inode on disk.
  */
-int minix_write_inode(struct inode *inode)
+int minix_read_inode(struct inode *inode)
+{
+	if (minix_sb(inode->i_sb)->s_version == MINIX_V1)
+		return V1_minix_read_inode(inode);
+	else
+		return V2_minix_read_inode(inode);
+}
+
+/*
+ * Write a Minix V1 inode on disk.
+ */
+static int V1_minix_write_inode(struct inode *inode)
+{
+	struct minix_sb_info *sbi = minix_sb(inode->i_sb);
+	struct minix_inode *raw_inode;
+	struct buffer_head *bh;
+	int inodes_per_block, i;
+	uint32_t block;
+
+	/* compute inode store block */
+	inodes_per_block = inode->i_sb->s_blocksize / sizeof(struct minix_inode);
+	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks + (inode->i_ino - 1) / inodes_per_block;
+
+	/* read inode store block */
+	bh = bread(inode->i_dev, block, inode->i_sb->s_blocksize);
+	if (!bh) {
+		iput(inode);
+		return -EIO;
+	}
+
+	/* get raw inode */
+	raw_inode = &((struct minix_inode *) bh->b_data)[(inode->i_ino - 1) % inodes_per_block];
+
+	/* set on disk inode */
+	raw_inode->i_mode = inode->i_mode;
+	raw_inode->i_uid = inode->i_uid;
+	raw_inode->i_size = inode->i_size;
+	raw_inode->i_time = inode->i_mtime;
+	raw_inode->i_gid = inode->i_gid;
+	raw_inode->i_nlinks = inode->i_nlinks;
+	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
+		raw_inode->i_zone[0] = inode->i_rdev;
+	else
+		for (i = 0; i < 9; i++)
+			raw_inode->i_zone[i] = inode->u.minix_i.u.i1_data[i];
+
+	/* write inode block */
+	mark_buffer_dirty(bh);
+	brelse(bh);
+
+	return 0;
+}
+
+/*
+ * Write a Minix V2 inode on disk.
+ */
+static int V2_minix_write_inode(struct inode *inode)
 {
 	struct minix_sb_info *sbi = minix_sb(inode->i_sb);
 	struct minix2_inode *raw_inode;
@@ -165,13 +286,24 @@ int minix_write_inode(struct inode *inode)
 		raw_inode->i_zone[0] = inode->i_rdev;
 	else
 		for (i = 0; i < 10; i++)
-			raw_inode->i_zone[i] = inode->u.minix_i.i_zone[i];
+			raw_inode->i_zone[i] = inode->u.minix_i.u.i2_data[i];
 
 	/* write inode block */
 	mark_buffer_dirty(bh);
 	brelse(bh);
 
 	return 0;
+}
+
+/*
+ * Write a Minix inode on disk.
+ */
+int minix_write_inode(struct inode *inode)
+{
+	if (minix_sb(inode->i_sb)->s_version == MINIX_V1)
+		return V1_minix_write_inode(inode);
+	else
+		return V2_minix_write_inode(inode);
 }
 
 /*
@@ -196,14 +328,14 @@ int minix_put_inode(struct inode *inode)
 /*
  * Get an inode buffer.
  */
-static int minix_inode_getblk(struct inode *inode, int inode_block, struct buffer_head **bh_res, int create)
+static int V1_minix_inode_getblk(struct inode *inode, int inode_block, struct buffer_head **bh_res, int create)
 {
 	struct minix_inode_info *minix_inode = &inode->u.minix_i;
 	struct super_block *sb = inode->i_sb;
 	int new = 0;
 
 	/* existing block */
-	if (minix_inode->i_zone[inode_block])
+	if (minix_inode->u.i1_data[inode_block])
 		goto found;
 
 	/* don't create a new block */
@@ -212,27 +344,26 @@ static int minix_inode_getblk(struct inode *inode, int inode_block, struct buffe
 
 	/* create a new block */
 	new = 1;
-	minix_inode->i_zone[inode_block] = minix_new_block(inode->i_sb);
-	if (!minix_inode->i_zone[inode_block])
+	minix_inode->u.i1_data[inode_block] = minix_new_block(inode->i_sb);
+	if (!minix_inode->u.i1_data[inode_block])
 		return -EIO;
 
 	/* update inode */
 	inode->i_blocks++;
 	mark_inode_dirty(inode);
-
 found:
 	/* set result */
 	if (*bh_res) {
 		if (new)
 			mark_buffer_new(*bh_res);
 
-		(*bh_res)->b_block = minix_inode->i_zone[inode_block];
+		(*bh_res)->b_block = minix_inode->u.i1_data[inode_block];
 		return 0;
 	}
 
 	/* new buffer : hash and clear it */
 	if (new) {
-		*bh_res = getblk(inode->i_dev, minix_inode->i_zone[inode_block], sb->s_blocksize);
+		*bh_res = getblk(inode->i_dev, minix_inode->u.i1_data[inode_block], sb->s_blocksize);
 		if (!*bh_res)
 			return -EIO;
 
@@ -243,7 +374,63 @@ found:
 	}
 
 	/* read block on disk */
-	*bh_res = bread(inode->i_dev, minix_inode->i_zone[inode_block], inode->i_sb->s_blocksize);
+	*bh_res = bread(inode->i_dev, minix_inode->u.i1_data[inode_block], inode->i_sb->s_blocksize);
+	if (!*bh_res)
+		return -EIO;
+
+	return 0;
+}
+
+/*
+ * Get an inode buffer.
+ */
+static int V2_minix_inode_getblk(struct inode *inode, int inode_block, struct buffer_head **bh_res, int create)
+{
+	struct minix_inode_info *minix_inode = &inode->u.minix_i;
+	struct super_block *sb = inode->i_sb;
+	int new = 0;
+
+	/* existing block */
+	if (minix_inode->u.i2_data[inode_block])
+		goto found;
+
+	/* don't create a new block */
+	if (!create)
+		return -EIO;
+
+	/* create a new block */
+	new = 1;
+	minix_inode->u.i2_data[inode_block] = minix_new_block(inode->i_sb);
+	if (!minix_inode->u.i2_data[inode_block])
+		return -EIO;
+
+	/* update inode */
+	inode->i_blocks++;
+	mark_inode_dirty(inode);
+found:
+	/* set result */
+	if (*bh_res) {
+		if (new)
+			mark_buffer_new(*bh_res);
+
+		(*bh_res)->b_block = minix_inode->u.i2_data[inode_block];
+		return 0;
+	}
+
+	/* new buffer : hash and clear it */
+	if (new) {
+		*bh_res = getblk(inode->i_dev, minix_inode->u.i2_data[inode_block], sb->s_blocksize);
+		if (!*bh_res)
+			return -EIO;
+
+		memset((*bh_res)->b_data, 0, (*bh_res)->b_size);
+		mark_buffer_dirty(*bh_res);
+		mark_buffer_uptodate(*bh_res, 1);
+		return 0;
+	}
+
+	/* read block on disk */
+	*bh_res = bread(inode->i_dev, minix_inode->u.i2_data[inode_block], inode->i_sb->s_blocksize);
 	if (!*bh_res)
 		return -EIO;
 
@@ -253,7 +440,73 @@ found:
 /*
  * Get a block buffer.
  */
-static int minix_block_getblk(struct inode *inode, struct buffer_head *bh, int block_block, struct buffer_head **bh_res, int create)
+static int V1_minix_block_getblk(struct inode *inode, struct buffer_head *bh, int block_block, struct buffer_head **bh_res, int create)
+{
+	struct super_block *sb = inode->i_sb;
+	int new = 0, i;
+
+	if (!bh)
+		return -EIO;
+
+	/* existing block */
+	i = ((uint16_t *) bh->b_data)[block_block];
+	if (i)
+		goto found;
+
+	/* don't create a new block */
+	if (!create)
+		goto err;
+
+	/* create a new block */
+	new = 1;
+	i = minix_new_block(inode->i_sb);
+	if (!i)
+		goto err;
+
+	/* update parent block */
+	((uint16_t *) (bh->b_data))[block_block] = i;
+	mark_buffer_dirty(bh);
+
+found:
+	/* release parent block */
+	brelse(bh);
+
+	/* set result */
+	if (*bh_res) {
+		if (new)
+			mark_buffer_new(*bh_res);
+
+		(*bh_res)->b_block = i;
+		return 0;
+	}
+
+	/* new buffer : hash and clear it */
+	if (new) {
+		*bh_res = getblk(inode->i_dev, i, sb->s_blocksize);
+		if (!*bh_res)
+			return -EIO;
+
+		memset((*bh_res)->b_data, 0, (*bh_res)->b_size);
+		mark_buffer_dirty(*bh_res);
+		mark_buffer_uptodate(*bh_res, 1);
+		return 0;
+	}
+
+	/* read block on disk */
+	*bh_res = bread(inode->i_dev, i, inode->i_sb->s_blocksize);
+	if (!*bh_res)
+		return -EIO;
+
+	return 0;
+err:
+	brelse(bh);
+	return -EIO;
+}
+
+/*
+ * Get a block buffer.
+ */
+static int V2_minix_block_getblk(struct inode *inode, struct buffer_head *bh, int block_block, struct buffer_head **bh_res, int create)
 {
 	struct super_block *sb = inode->i_sb;
 	int new = 0, i;
@@ -319,7 +572,44 @@ err:
 /*
  * Get or create a block.
  */
-int minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
+static int V1_minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
+{
+	struct buffer_head *bh1 = NULL, *bh2 = NULL;
+	struct super_block *sb = inode->i_sb;
+	int ret;
+
+	/* check block number */
+	if (block >= minix_sb(sb)->s_max_size / sb->s_blocksize)
+		return -EIO;
+
+	/* direct block */
+	if (block < 7)
+		return V1_minix_inode_getblk(inode, block, &bh_res, create);
+
+	/* indirect block */
+	block -= 7;
+	if (block < 512) {
+		ret = V1_minix_inode_getblk(inode, 7, &bh1, create);
+		if (ret)
+			return ret;
+		return V1_minix_block_getblk(inode, bh1, block, &bh_res, create);
+	}
+
+	/* double indirect block */
+	block -= 512;
+	ret = V1_minix_inode_getblk(inode, 8, &bh1, create);
+	if (ret)
+		return ret;
+	ret = V1_minix_block_getblk(inode, bh1, (block >> 9) & 511, &bh2, create);
+	if (ret)
+		return ret;
+	return V1_minix_block_getblk(inode, bh2, block & 511, &bh_res, create);
+}
+
+/*
+ * Get or create a block.
+ */
+static int V2_minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
 {
 	struct buffer_head *bh1 = NULL, *bh2 = NULL, *bh3 = NULL;
 	struct super_block *sb = inode->i_sb;
@@ -331,41 +621,52 @@ int minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_
 
 	/* direct block */
 	if (block < 7)
-		return minix_inode_getblk(inode, block, &bh_res, create);
+		return V2_minix_inode_getblk(inode, block, &bh_res, create);
 
 	/* indirect block */
 	block -= 7;
 	if (block < 256) {
-		ret = minix_inode_getblk(inode, 7, &bh1, create);
+		ret = V2_minix_inode_getblk(inode, 7, &bh1, create);
 		if (ret)
 			return ret;
-		return minix_block_getblk(inode, bh1, block, &bh_res, create);
+		return V2_minix_block_getblk(inode, bh1, block, &bh_res, create);
 	}
 
 	/* double indirect block */
 	block -= 256;
 	if (block < 256 * 256) {
-		ret = minix_inode_getblk(inode, 8, &bh1, create);
+		ret = V2_minix_inode_getblk(inode, 8, &bh1, create);
 		if (ret)
 			return ret;
-		ret = minix_block_getblk(inode, bh1, (block >> 8) & 255, &bh2, create);
+		ret = V2_minix_block_getblk(inode, bh1, (block >> 8) & 255, &bh2, create);
 		if (ret)
 			return ret;
-		return minix_block_getblk(inode, bh2, block & 255, &bh_res, create);
+		return V2_minix_block_getblk(inode, bh2, block & 255, &bh_res, create);
 	}
 
 	/* triple indirect block */
 	block -= 256 * 256;
-	ret = minix_inode_getblk(inode, 9, &bh1, create);
+	ret = V2_minix_inode_getblk(inode, 9, &bh1, create);
 	if (ret)
 		return ret;
-	ret = minix_block_getblk(inode, bh1, (block >> 16) & 255, &bh2, create);
+	ret = V2_minix_block_getblk(inode, bh1, (block >> 16) & 255, &bh2, create);
 	if (ret)
 		return ret;
-	ret = minix_block_getblk(inode, bh2, (block >> 8) & 255, &bh3, create);
+	ret = V2_minix_block_getblk(inode, bh2, (block >> 8) & 255, &bh3, create);
 	if (ret)
 		return ret;
-	return minix_block_getblk(inode, bh3, block & 255, &bh_res, create);
+	return V2_minix_block_getblk(inode, bh3, block & 255, &bh_res, create);
+}
+
+/*
+ * Get or create a block.
+ */
+int minix_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_res, int create)
+{
+	if (minix_sb(inode->i_sb)->s_version == MINIX_V1)
+		return V1_minix_get_block(inode, block, bh_res, create);
+	else
+		return V2_minix_get_block(inode, block, bh_res, create);
 }
 
 /*
