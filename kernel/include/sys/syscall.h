@@ -98,6 +98,7 @@
 #define __NR_rt_sigtimedwait		177
 #define __NR_rt_sigsuspend		179
 #define __NR_pread64			180
+#define __NR_write64			181
 #define __NR_getcwd			183
 #define __NR_vfork			190
 #define __NR_mmap2			192

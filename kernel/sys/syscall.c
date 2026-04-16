@@ -138,6 +138,7 @@ static const void *syscalls[] = {
 	[__NR_getrandom]		= sys_getrandom,
 	[__NR_mprotect]			= sys_mprotect,
 	[__NR_pread64]			= sys_pread64,
+	[__NR_write64]			= sys_pwrite64,
 	[__NR_getsid]			= sys_getsid,
 	[__NR_setsid]			= sys_setsid,
 	[__NR_getrusage]		= sys_getrusage,

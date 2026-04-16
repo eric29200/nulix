@@ -343,8 +343,31 @@ int sys_pread64(int fd, void *buf, size_t count, off_t offset)
 	if (!filp)
 		goto out;
 
-	/* do pread */
+	/* do read */
 	ret = do_read(filp, buf, count, &offset);
+
+	/* release file */
+	fput(filp);
+out:
+	current_task->ioac.syscr++;
+	return ret;
+}
+
+/*
+ * Pwrite64 system call.
+ */
+int sys_pwrite64(int fd, const void *buf, size_t count, off_t offset)
+{
+	struct file *filp;
+	int ret = EBADF;
+
+	/* get file */
+	filp = fget(fd);
+	if (!filp)
+		goto out;
+
+	/* do write */
+	ret = do_write(filp, buf, count, &offset);
 
 	/* release file */
 	fput(filp);
