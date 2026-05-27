@@ -9,6 +9,7 @@
  */
 uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint32_t dst_address, size_t len)
 {
+	struct tcp_check_header tcp_check_header = { 0 };
 	uint16_t *chunk, ret;
 	uint32_t chksum;
 	size_t size;
@@ -17,13 +18,10 @@ uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint3
 	size = sizeof(struct tcp_header) + len;
 
 	/* build TCP check header */
-	struct tcp_check_header tcp_check_header = {
-		.src_address		= src_address,
-		.dst_address		= dst_address,
-		.zero			= 0,
-		.protocol		= IP_PROTO_TCP,
-		.len			= htons(size),
-	};
+	tcp_check_header.src_address = src_address;
+	tcp_check_header.dst_address = dst_address;
+	tcp_check_header.protocol = IP_PROTO_TCP;
+	tcp_check_header.len = htons(size);
 
 	/* compute check sum on TCP check header */
 	size = sizeof(struct tcp_check_header);
