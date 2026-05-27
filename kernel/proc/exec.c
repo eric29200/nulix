@@ -363,7 +363,7 @@ int search_binary_handler(struct binprm *bprm)
 {
 	struct list_head *pos;
 	struct binfmt *fmt;
-	int ret;
+	int ret = -ENOEXEC;
 
 	/* find binary format */
 	list_for_each(pos, &formats) {

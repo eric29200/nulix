@@ -66,18 +66,18 @@ static int send_signal(struct sigpending *pending, int sig, siginfo_t *info)
 
 		switch ((uint32_t) info) {
 			case 0:
-				info->si_signo = sig;
-				info->si_errno = 0;
-				info->si_code = SI_USER;
-				info->__si_fields.__si_common.__first.__piduid.si_pid = current_task->pid;
-				info->__si_fields.__si_common.__first.__piduid.si_uid = current_task->uid;
+				q->info.si_signo = sig;
+				q->info.si_errno = 0;
+				q->info.si_code = SI_USER;
+				q->info.__si_fields.__si_common.__first.__piduid.si_pid = current_task->pid;
+				q->info.__si_fields.__si_common.__first.__piduid.si_uid = current_task->uid;
 				break;
 			case 1:
-				info->si_signo = sig;
-				info->si_errno = 0;
-				info->si_code = SI_KERNEL;
-				info->__si_fields.__si_common.__first.__piduid.si_pid = 0;
-				info->__si_fields.__si_common.__first.__piduid.si_uid = 0;
+				q->info.si_signo = sig;
+				q->info.si_errno = 0;
+				q->info.si_code = SI_KERNEL;
+				q->info.__si_fields.__si_common.__first.__piduid.si_pid = 0;
+				q->info.__si_fields.__si_common.__first.__piduid.si_uid = 0;
 				break;
 			default:
 				memcpy(&q->info, info, sizeof(siginfo_t));

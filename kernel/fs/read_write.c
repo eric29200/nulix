@@ -382,7 +382,7 @@ out:
 ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 {
 	struct file *filp_in, *filp_out;
-	ssize_t n, tot = 0;
+	ssize_t n = 0, tot = 0;
 	off_t *f_pos;
 	int buf_len;
 	void *buf;

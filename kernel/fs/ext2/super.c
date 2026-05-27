@@ -71,7 +71,7 @@ static struct super_operations ext2_sops = {
 static int ext2_check_descriptors(struct super_block *sb)
 {
 	struct ext2_sb_info *sbi = ext2_sb(sb);
-	struct ext2_group_desc *gdp;
+	struct ext2_group_desc *gdp = NULL;
 	uint32_t block, i, j;
 
 	/* get first data block */

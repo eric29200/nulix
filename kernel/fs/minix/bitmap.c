@@ -54,7 +54,7 @@ uint32_t minix_new_block(struct super_block *sb)
 {
 	struct minix_sb_info *sbi = minix_sb(sb);
 	uint32_t block_nr, i;
-	int j;
+	int j = -1;
 
 	/* find first free block in bitmap */
 	for (i = 0; i < sbi->s_zmap_blocks; i++) {
@@ -143,7 +143,7 @@ struct inode *minix_new_inode(struct super_block *sb)
 	struct minix_sb_info *sbi = minix_sb(sb);
 	struct inode *inode;
 	uint32_t i;
-	int j;
+	int j = -1;
 
 	/* get an empty new inode */
 	inode = get_empty_inode(sb);

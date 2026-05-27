@@ -97,7 +97,7 @@ int sys_nanosleep(const struct old_timespec *req, struct old_timespec *rem)
  */
 static int do_getitimer(int which, struct itimerval *value)
 {
-	uint32_t val;
+	uint32_t val = 0;
 
 	/* implement only real timer */
 	if (which != ITIMER_REAL) {

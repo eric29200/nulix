@@ -161,7 +161,7 @@ static int elf_create_tables(struct binprm *bprm, struct elf_header *elf_header,
 static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentry *interp_dentry, uint32_t *interp_load_addr)
 {
 	uint32_t i, load_addr = 0, map_addr, k, elf_bss = 0, last_bss = 0, ret = ~0UL;
-	int fd, elf_type, elf_prot, load_addr_set = 0;
+	int fd = -1, elf_type, elf_prot, load_addr_set = 0;
 	struct elf_prog_header *ph, *first_ph = NULL;
 	struct file *filp;
 	size_t size;
@@ -251,7 +251,8 @@ static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentr
 	*interp_load_addr = load_addr;
 	ret = elf_header->e_entry + load_addr;
 out:
-	sys_close(fd);
+	if (fd >= 0)
+		sys_close(fd);
 	kfree(first_ph);
 	return ret;
 }
@@ -261,8 +262,8 @@ out:
  */
 static int elf_load_binary(struct binprm *bprm)
 {
+	uint32_t elf_entry, elf_bss = 0, elf_brk = 0, start_code = 0, end_code = 0, end_data = 0;
 	uint32_t i, k, sp, load_addr = 0, load_bias = 0, interp_load_addr = 0, map_addr;
-	uint32_t elf_entry, elf_bss = 0, elf_brk = 0, start_code, end_code, end_data;
 	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *elf_interpreter = NULL;
 	struct elf_header elf_header, interp_elf_header;

@@ -86,8 +86,8 @@ static struct page_descriptor *create_heap_blocks(struct bucket *bucket)
 void *kmalloc(size_t size)
 {
 	struct page_descriptor *page_desc;
+	struct bucket *bucket = NULL;
 	struct heap_block *block;
-	struct bucket *bucket;
 	size_t real_size, i;
 
 	/* compute real size */

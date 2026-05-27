@@ -155,7 +155,7 @@ int isofs_get_block(struct inode *inode, uint32_t block, struct buffer_head *bh_
  */
 struct buffer_head *isofs_bread(struct inode *inode, int block, int create)
 {
-	struct buffer_head bh_res;
+	struct buffer_head bh_res = { 0 };
 
 	/* get block */
 	if (isofs_get_block(inode, block, &bh_res, create))
