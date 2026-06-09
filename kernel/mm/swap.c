@@ -699,7 +699,7 @@ static int swap_out_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, uint3
 	do {
 		vma->vm_mm->swap_address = address + PAGE_SIZE;
 
-		ret -= try_to_swap_out(vma, address, pte);
+		ret = try_to_swap_out(vma, address, pte);
 		if (ret)
 			return ret;
 
