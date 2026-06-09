@@ -407,7 +407,7 @@ int sys_prctl(int option, uint32_t arg2, uint32_t arg3, uint32_t arg4, uint32_t 
 		case PR_GET_DUMPABLE:
 			break;
 		default:
-			printf("Prctl: unknown option %d\n");
+			printf("Prctl: unknown option %d\n", option);
 	}
 
 	return 0;
