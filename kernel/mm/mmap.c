@@ -54,20 +54,9 @@ struct vm_area *find_vma_prev(struct task *task, uint32_t addr)
  */
 struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_t end)
 {
-	struct vm_area *vma_prev, *vm_next = NULL;
+	struct vm_area *vma = find_vma(task, start);
 
-	/* find previous and next vma */
-	vma_prev = find_vma_prev(task, start);
-	if (vma_prev)
-		vm_next = list_next_entry_or_null(vma_prev, &task->mm->vm_list, list);
-	else if (!list_empty(&task->mm->vm_list))
-		vm_next = list_first_entry(&task->mm->vm_list, struct vm_area, list);
-
-	/* check next vma */
-	if (vm_next && end > vm_next->vm_start)
-		return vm_next;
-
-	return NULL;
+	return vma && end <= vma->vm_start ? NULL : vma;
 }
 
 /*
