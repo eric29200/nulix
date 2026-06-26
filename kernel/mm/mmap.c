@@ -76,11 +76,8 @@ struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_
 void insert_vma(struct vm_area *vma)
 {
 	struct file *filp = vma->vm_file;
-	struct vm_area *vma_prev;
-
-	/* add memory region to inode */
-	if (filp)
-		list_add_tail(&vma->list_share, &filp->f_dentry->d_inode->i_mmap);
+	struct vm_area *vma_prev, **head;
+	struct inode *inode;
 
 	/* add it to the list */
 	vma_prev = find_vma_prev(current_task, vma->vm_start);
@@ -88,6 +85,17 @@ void insert_vma(struct vm_area *vma)
 		list_add(&vma->list, &vma_prev->list);
 	else
 		list_add(&vma->list, &current_task->mm->vm_list);
+
+	/* add memory region to inode */
+	if (filp) {
+		inode = filp->f_dentry->d_inode;
+		head = &inode->i_mmap;
+		vma->vm_next_share = *head;
+		if (*head)
+			(*head)->vm_pprev_share = &vma->vm_next_share;
+		*head = vma;
+		vma->vm_pprev_share = head;
+	}
 }
 
 /*
@@ -98,8 +106,11 @@ void remove_vma(struct vm_area *vma)
 	struct file *filp = vma->vm_file;
 
 	/* remove memory region from inode */
-	if (filp)
-		list_del(&vma->list_share);
+	if (filp) {
+		if (vma->vm_next_share)
+			vma->vm_next_share->vm_pprev_share = vma->vm_pprev_share;
+		*vma->vm_pprev_share = vma->vm_next_share;
+	}
 
 	/* remove it from list */
 	list_del(&vma->list);
@@ -813,7 +824,6 @@ int do_mprotect(uint32_t start, size_t size, int prot)
  */
 void vmtruncate(struct inode *inode, off_t offset)
 {
-	struct list_head *pos, *n;
 	struct vm_area *vma;
 	uint32_t start, end;
 	size_t len, diff;
@@ -822,8 +832,7 @@ void vmtruncate(struct inode *inode, off_t offset)
 	truncate_inode_pages(inode, offset);
 
 	/* unmap pages */
-	list_for_each_safe(pos, n, &inode->i_mmap) {
-		vma = list_entry(pos, struct vm_area, list_share);
+	for (vma = inode->i_mmap; vma != NULL; vma = vma->vm_next_share) {
 		start = vma->vm_start;
 		end = vma->vm_end;
 		len = end - start;

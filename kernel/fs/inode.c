@@ -206,8 +206,8 @@ found:
 	inode->i_sb = sb;
 	inode->i_dev = sb->s_dev;
 	inode->i_count = 1;
+	inode->i_mmap = NULL;
 	INIT_LIST_HEAD(&inode->i_pages);
-	INIT_LIST_HEAD(&inode->i_mmap);
 	INIT_LIST_HEAD(&inode->i_dentry);
 
 	/* put inode at the end of LRU list */

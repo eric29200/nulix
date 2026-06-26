@@ -134,9 +134,9 @@ struct inode {
 	char				i_shm;
 	char				i_sock;
 	struct list_head		i_pages;
-	struct list_head		i_mmap;
 	struct list_head		i_dentry;
 	struct list_head		i_list;
+	struct vm_area *		i_mmap;
 	struct inode *			i_next_hash;
 	struct inode *			i_prev_hash;
 	union {
