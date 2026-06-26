@@ -33,9 +33,9 @@ struct vm_area *find_vma(struct task *task, uint32_t addr)
 /*
  * Find previous memory region.
  */
-struct vm_area *find_vma_prev(struct task *task, uint32_t addr)
+static struct vm_area *find_vma_prev(struct task *task, uint32_t addr, struct vm_area **pprev)
 {
-	struct vm_area *vma, *vma_prev = NULL;
+	struct vm_area *vma = NULL, *vma_prev = NULL;
 	struct list_head *pos;
 
 	list_for_each(pos, &task->mm->vm_list) {
@@ -46,7 +46,9 @@ struct vm_area *find_vma_prev(struct task *task, uint32_t addr)
 		vma_prev = vma;
 	}
 
-	return vma_prev;
+	*pprev = vma_prev;
+
+	return vma;
 }
 
 /*
@@ -64,12 +66,12 @@ struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_
  */
 void insert_vma(struct vm_area *vma)
 {
+	struct vm_area *vma_prev = NULL, **head;
 	struct file *filp = vma->vm_file;
-	struct vm_area *vma_prev, **head;
 	struct inode *inode;
 
 	/* add it to the list */
-	vma_prev = find_vma_prev(current_task, vma->vm_start);
+	find_vma_prev(current_task, vma->vm_start, &vma_prev);
 	if (vma_prev)
 		list_add(&vma->list, &vma_prev->list);
 	else
@@ -265,7 +267,7 @@ static uint32_t move_vma(struct vm_area *vma, uint32_t old_address, size_t old_s
  */
 static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 {
-	struct vm_area *vma, *vma_prev, *vm_next = NULL;
+	struct vm_area *vma, *vma_prev = NULL, *vma_next = NULL;
 	struct list_head *pos;
 
 	/* fixed address */
@@ -280,14 +282,10 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 		*addr = PAGE_ALIGN_UP(*addr);
 
 		/* find previous and next vm */
-		vma_prev = find_vma_prev(current_task, *addr);
-		if (vma_prev)
-			vm_next = list_next_entry_or_null(vma_prev, &current_task->mm->vm_list, list);
-		else if (!list_empty(&current_task->mm->vm_list))
-			vm_next = list_first_entry(&current_task->mm->vm_list, struct vm_area, list);
+		vma_next = find_vma_prev(current_task, *addr, &vma_prev);
 
 		/* addr is available */
-		if (!vm_next || *addr + len <= vm_next->vm_start)
+		if (!vma_next || *addr + len <= vma_next->vm_start)
 			return 0;
 	}
 
