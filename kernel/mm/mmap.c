@@ -64,7 +64,7 @@ struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_
 /*
  * Insert a memory region.
  */
-void insert_vma(struct vm_area *vma)
+static void insert_vma(struct vm_area *vma)
 {
 	struct vm_area *vma_prev = NULL, **head;
 	struct file *filp = vma->vm_file;
@@ -385,7 +385,7 @@ err:
 /*
  * Unmap a region (create a hole if needed).
  */
-static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
+static struct vm_area *unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len, struct vm_area *extra)
 {
 	uint32_t end = addr + len;
 	struct vm_area *vma_new;
@@ -399,7 +399,7 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 
 		remove_vma(vma);
 		kfree(vma);
-		return 0;
+		return extra;
 	}
 
 	/* shrink area or create a hole */
@@ -409,10 +409,9 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 		vma->vm_offset += (end - vma->vm_start);
 		vma->vm_start = end;
 	} else {
-		/* create new memory region */
-		vma_new = (struct vm_area *) kmalloc(sizeof(struct vm_area));
-		if (!vma_new)
-			return -ENOMEM;
+		/* use extra as new memory region */
+		vma_new = extra;
+		extra = NULL;
 
 		/* set new memory region = after the hole */
 		memset(vma_new, 0, sizeof(struct vm_area));
@@ -438,7 +437,7 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
 		insert_vma(vma_new);
 	}
 
-	return 0;
+	return extra;
 }
 
 /*
@@ -446,9 +445,9 @@ static int unmap_fixup(struct vm_area *vma, uint32_t addr, size_t len)
  */
 int do_munmap(uint32_t addr, size_t len)
 {
+	struct vm_area *vma, *extra;
 	struct list_head *pos, *n;
 	uint32_t start, end, nr;
-	struct vm_area *vma;
 
 	/* add must be page aligned */
 	if (addr & ~PAGE_MASK)
@@ -456,6 +455,11 @@ int do_munmap(uint32_t addr, size_t len)
 
 	/* adjust length */
 	len = PAGE_ALIGN_UP(len);
+
+	/* we may need one additional vma to fix up the mappings */
+	extra = (struct vm_area *) kmalloc(sizeof(struct vm_area));
+	if (!extra)
+		return -ENOMEM;
 
 	/* find regions to unmap */
 	list_for_each_safe(pos, n, &current_task->mm->vm_list) {
@@ -474,8 +478,12 @@ int do_munmap(uint32_t addr, size_t len)
 			vma->vm_ops->unmap(vma, start, end - start);
 
 		/* unmap it */
-		unmap_fixup(vma, start, end - start);
+		extra = unmap_fixup(vma, start, end - start, extra);
 	}
+
+	/* free additional vma */
+	if (extra)
+		kfree(extra);
 
 	/* unmap region */
 	nr = zap_page_range(current_task->mm->pgd, addr, len);
