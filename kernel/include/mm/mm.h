@@ -27,7 +27,7 @@ struct vm_area {
 	struct file *			vm_file;
 	struct mm_struct *		vm_mm;
 	struct vm_operations *		vm_ops;
-	struct list_head		list;
+	struct vm_area *		vm_next;
 	struct vm_area *		vm_next_share;
 	struct vm_area **		vm_pprev_share;
 };

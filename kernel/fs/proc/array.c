@@ -29,17 +29,13 @@ static char *proc_states_desc[] = {
  */
 int proc_stat_read(struct task *task, char *page)
 {
-	struct list_head *pos;
 	struct vm_area *vma;
 	size_t vsize = 0;
 
 	/* compute virtual memory */
-	if (task->mm) {
-		list_for_each(pos, &task->mm->vm_list) {
-			vma = list_entry(pos, struct vm_area, list);
+	if (task->mm)
+		for (vma = task->mm->mmap; vma != NULL; vma = vma->vm_next)
 			vsize += vma->vm_end - vma->vm_start;
-		}
-	}
 
 	/* print informations in temporary buffer */
 	return sprintf(page,	"%d (%s) "						/* pid, name */
@@ -100,13 +96,11 @@ static char *task_state(struct task *task, char *buf)
 static char *task_mem(struct task *task, char *buf)
 {
 	size_t len, vsize = 0, data = 0, stack = 0, exec = 0, lib = 0;
-	struct list_head *pos;
 	struct vm_area *vma;
 
 	/* compute virtual memory */
 	if (task->mm) {
-		list_for_each(pos, &task->mm->vm_list) {
-			vma = list_entry(pos, struct vm_area, list);
+		for (vma = task->mm->mmap; vma != NULL; vma = vma->vm_next) {
 			len = (vma->vm_end - vma->vm_start) >> 10;
 
 			/* update virtual size */
@@ -258,15 +252,12 @@ static void statm_pgd_range(pgd_t *pgd, uint32_t address, uint32_t end, size_t *
 int proc_statm_read(struct task *task, char *page)
 {
 	size_t size = 0, resident = 0, share = 0, text = 0;
-	struct list_head *pos;
 	struct vm_area *vma;
 	pgd_t *pgd;
 
 	/* compute virtual memory */
 	if (task->mm) {
-		list_for_each(pos, &task->mm->vm_list) {
-			vma = list_entry(pos, struct vm_area, list);
-
+		for (vma = task->mm->mmap; vma != NULL; vma = vma->vm_next) {
 			/* stat pages */
 			size_t pages = 0, shared = 0, total = 0;
 			pgd = pgd_offset(current_task->mm->pgd, vma->vm_start);

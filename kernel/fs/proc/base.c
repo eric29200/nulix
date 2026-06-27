@@ -272,15 +272,12 @@ static int proc_cwd_link(struct task *task, struct dentry **dentry)
  */
 static int proc_exe_link(struct task *task, struct dentry **dentry)
 {
-	struct list_head *pos;
 	struct vm_area *vma;
 
 	/* find first executable memory region */
-	list_for_each(pos, &task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
+	for (vma = task->mm->mmap; vma != NULL; vma = vma->vm_next)
 		if ((vma->vm_flags & VM_EXEC) && vma->vm_file)
 			goto out;
-	}
 
 	return -ENOENT;
 out:
@@ -407,7 +404,6 @@ static ssize_t proc_base_maps_read(struct file *filp, char *buf, size_t count, o
 	char *page, *line, perms[5], *destptr = buf;
 	ssize_t column, i = 0, len;
 	size_t j, maxlen = 60;
-	struct list_head *pos;
 	struct vm_area *vma;
 	struct task *task;
 	off_t lineno;
@@ -433,13 +429,10 @@ static ssize_t proc_base_maps_read(struct file *filp, char *buf, size_t count, o
 	column = *ppos & (MAPS_LINE_LENGTH - 1);
 
 	/* for each memory area */
-	list_for_each(pos, &task->mm->vm_list) {
+	for (vma = task->mm->mmap; vma != NULL; vma = vma->vm_next) {
 		/* skip first areas */
 		if (i++ < lineno)
 			continue;
-
-		/* get memory area */
-		vma = list_entry(pos, struct vm_area, list);
 
 		/* get permissions */
 		perms[0] = vma->vm_flags & VM_READ ? 'r' : '-';

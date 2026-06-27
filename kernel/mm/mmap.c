@@ -18,16 +18,12 @@ uint32_t protection_map[16] = {
  */
 struct vm_area *find_vma(struct task *task, uint32_t addr)
 {
-	struct list_head *pos;
-	struct vm_area *vma;
+	struct vm_area *vma = task->mm->mmap;
 
-	list_for_each(pos, &task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
-		if (addr < vma->vm_end)
-			return vma;
-	}
+	while (vma && vma->vm_end <= addr)
+		vma = vma->vm_next;
 
-	return NULL;
+	return vma;
 }
 
 /*
@@ -35,18 +31,14 @@ struct vm_area *find_vma(struct task *task, uint32_t addr)
  */
 static struct vm_area *find_vma_prev(struct task *task, uint32_t addr, struct vm_area **pprev)
 {
-	struct vm_area *vma = NULL, *vma_prev = NULL;
-	struct list_head *pos;
+	struct vm_area *vma = task->mm->mmap, *prev = NULL;
 
-	list_for_each(pos, &task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
-		if (addr < vma->vm_end)
-			break;
-
-		vma_prev = vma;
+	while (vma && vma->vm_end <= addr) {
+		prev = vma;
+		vma = vma->vm_next;
 	}
 
-	*pprev = vma_prev;
+	*pprev = prev;
 
 	return vma;
 }
@@ -66,16 +58,15 @@ struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_
  */
 static void insert_vma(struct vm_area *vma)
 {
-	struct vm_area *vma_prev = NULL, **head;
+	struct vm_area **pprev = &current_task->mm->mmap, **head;
 	struct file *filp = vma->vm_file;
 	struct inode *inode;
 
 	/* add it to the list */
-	find_vma_prev(current_task, vma->vm_start, &vma_prev);
-	if (vma_prev)
-		list_add(&vma->list, &vma_prev->list);
-	else
-		list_add(&vma->list, &current_task->mm->vm_list);
+	while (*pprev && (*pprev)->vm_start <= vma->vm_start)
+		pprev = &(*pprev)->vm_next;
+	vma->vm_next = *pprev;
+	*pprev = vma;
 
 	/* add memory region to inode */
 	if (filp) {
@@ -265,7 +256,6 @@ static uint32_t move_vma(struct vm_area *vma, uint32_t old_address, size_t old_s
 static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 {
 	struct vm_area *vma, *vma_prev = NULL, *vma_next = NULL;
-	struct list_head *pos;
 
 	/* fixed address */
 	if (flags & MAP_FIXED) {
@@ -288,8 +278,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 
 	/* find a memory region */
 	*addr = UMAP_START;
-	list_for_each(pos, &current_task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
+	for (vma = current_task->mm->mmap; vma != NULL; vma = vma->vm_next) {
 		if (*addr + len <= vma->vm_start)
 			break;
 		if (vma->vm_end > *addr)
@@ -444,8 +433,7 @@ static struct vm_area *unmap_fixup(struct vm_area *vma, uint32_t addr, size_t le
  */
 int do_munmap(uint32_t addr, size_t len)
 {
-	struct vm_area *vma, *extra;
-	struct list_head *pos, *n;
+	struct vm_area *mpnt, *prev, **npp, *free, *extra;
 	uint32_t start, end, nr;
 
 	/* add must be page aligned */
@@ -455,33 +443,46 @@ int do_munmap(uint32_t addr, size_t len)
 	/* adjust length */
 	len = PAGE_ALIGN_UP(len);
 
+	/* check if this memory area is ok */
+	mpnt = find_vma_prev(current_task, addr, &prev);
+	if (!mpnt)
+		return 0;
+
+	/* we have  addr < mpnt->vm_end  */
+	if (mpnt->vm_start >= addr+len)
+		return 0;
+
 	/* we may need one additional vma to fix up the mappings */
 	extra = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 	if (!extra)
 		return -ENOMEM;
 
 	/* find regions to unmap */
-	list_for_each_safe(pos, n, &current_task->mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
-		if (addr >= vma->vm_end)
-			continue;
-		if (addr + len <= vma->vm_start)
-			break;
+	npp = prev ? &prev->vm_next : &current_task->mm->mmap;
+	free = NULL;
+	for (; mpnt && mpnt->vm_start < addr + len; mpnt = *npp) {
+		*npp = mpnt->vm_next;
+		mpnt->vm_next = free;
+		free = mpnt;
+	}
+
+	/* release memory regions */
+	while ((mpnt = free) != NULL) {
+		free = free->vm_next;
 
 		/* compute area to unmap */
-		start = addr < vma->vm_start ? vma->vm_start : addr;
-		end = addr + len > vma->vm_end ? vma->vm_end : addr + len;
+		start = addr < mpnt->vm_start ? mpnt->vm_start : addr;
+		end = addr + len > mpnt->vm_end ? mpnt->vm_end : addr + len;
 
 		/* unmap */
-		if (vma->vm_ops && vma->vm_ops->unmap)
-			vma->vm_ops->unmap(vma, start, end - start);
+		if (mpnt->vm_ops && mpnt->vm_ops->unmap)
+			mpnt->vm_ops->unmap(mpnt, start, end - start);
 
 		/* remove memory region */
-		list_del(&vma->list);
-		remove_shared_vma(vma);
+		remove_shared_vma(mpnt);
 
 		/* fix mappings */
-		extra = unmap_fixup(vma, start, end - start, extra);
+		extra = unmap_fixup(mpnt, start, end - start, extra);
 	}
 
 	/* free additional vma */
@@ -572,7 +573,7 @@ static uint32_t do_mremap(uint32_t old_address, size_t old_size, size_t new_size
 		&& new_address != old_address
 		&& (old_size != new_size || !(flags & MREMAP_MAYMOVE))) {
 			/* get next vma */
-			vma_next = list_next_entry_or_null(vma, &current_task->mm->vm_list, list);
+			vma_next = vma->vm_next;
 
 			/* just expand old region */
 			if (!vma_next || vma_next->vm_start - old_address >= new_size) {
@@ -798,7 +799,7 @@ int do_mprotect(uint32_t start, size_t size, int prot)
 
 		/* protect memory region */
 		tmp = vma->vm_end;
-		next = list_next_entry_or_null(vma, &current_task->mm->vm_list, list);
+		next = vma->vm_next;
 		ret = mprotect_fixup(vma, nstart, tmp, newflags);
 		if (ret)
 			break;

@@ -161,7 +161,6 @@ struct mm_struct *task_alloc_mm()
 	/* init memory structure */
 	memset(mm_new, 0, sizeof(struct mm_struct));
 	mm_new->count = 1;
-	INIT_LIST_HEAD(&mm_new->vm_list);
 
 	return mm_new;
 }
@@ -171,9 +170,8 @@ struct mm_struct *task_alloc_mm()
  */
 struct mm_struct *task_dup_mm(struct mm_struct *mm)
 {
-	struct vm_area *vma_parent, *vma_child;
+	struct vm_area *vma_parent, *vma_child, *prev = NULL;
 	struct mm_struct *mm_new;
-	struct list_head *pos;
 	int ret;
 
 	/* allocate memory structure */
@@ -212,8 +210,8 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	mm_new->env_end = mm->env_end;
 
 	/* copy virtual memory areas */
-	list_for_each(pos, &mm->vm_list) {
-		vma_parent = list_entry(pos, struct vm_area, list);
+	for (vma_parent = mm->mmap; vma_parent != NULL; vma_parent = vma_parent->vm_next) {
+		/* allocate a new memory region */
 		vma_child = (struct vm_area *) kmalloc(sizeof(struct vm_area));
 		if (!vma_child)
 			goto err;
@@ -230,7 +228,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 			vma_child->vm_file->f_count++;
 		vma_child->vm_ops = vma_parent->vm_ops;
 		vma_child->vm_mm = mm_new;
-		list_add_tail(&vma_child->list, &mm_new->vm_list);
+		vma_child->vm_next = NULL;
 
 		/* copy pages */
 		copy_page_range(mm->pgd, mm_new->pgd, vma_child);
@@ -238,6 +236,14 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 		/* open region */
 		if (vma_child->vm_ops && vma_child->vm_ops->open)
 			vma_child->vm_ops->open(vma_child);
+
+		/* link the new memory region */
+		if (prev)
+			prev->vm_next = vma_child;
+		else
+			mm_new->mmap = vma_child;
+
+		prev = vma_child;
 	}
 
 	/* flush tlb */
@@ -449,34 +455,34 @@ void task_exit_files(struct task *task)
  */
 void task_exit_mmap(struct mm_struct *mm)
 {
-	struct list_head *pos, *n;
-	struct vm_area *vma;
+	struct vm_area *mpnt = mm->mmap, *next;
 
 	/* clear memory size */
 	mm->rss = 0;
+	mm->mmap = NULL;
 
 	/* free memory regions */
-	list_for_each_safe(pos, n, &mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
-		if (vma) {
-			/* unmap and close */
-			if (vma->vm_ops && vma->vm_ops->unmap)
-				vma->vm_ops->unmap(vma, vma->vm_start, vma->vm_end - vma->vm_start);
-			if (vma->vm_ops && vma->vm_ops->close)
-				vma->vm_ops->close(vma);
+	while (mpnt) {
+		next = mpnt->vm_next;
 
-			/* unmap pages */
-			zap_page_range(mm->pgd, vma->vm_start, vma->vm_end - vma->vm_start);
+		/* unmap and close */
+		if (mpnt->vm_ops && mpnt->vm_ops->unmap)
+			mpnt->vm_ops->unmap(mpnt, mpnt->vm_start, mpnt->vm_end - mpnt->vm_start);
+		if (mpnt->vm_ops && mpnt->vm_ops->close)
+			mpnt->vm_ops->close(mpnt);
 
-			/* release file */
-			if (vma->vm_file)
-				fput(vma->vm_file);
+		/* unmap pages */
+		zap_page_range(mm->pgd, mpnt->vm_start, mpnt->vm_end - mpnt->vm_start);
 
-			/* free memory region */
-			list_del(&vma->list);
-			remove_shared_vma(vma);
-			kfree(vma);
-		}
+		/* release file */
+		if (mpnt->vm_file)
+			fput(mpnt->vm_file);
+
+		/* free memory region */
+		remove_shared_vma(mpnt);
+		kfree(mpnt);
+
+		mpnt = next;
 	}
 }
 

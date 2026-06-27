@@ -791,7 +791,7 @@ static int swap_out_process(struct task *task)
 			return ret;
 
 		/* try next memory region */
-		vma = list_next_entry_or_null(vma, &task->mm->vm_list, list);
+		vma = vma->vm_next;
 		if (!vma)
 			break;
 
@@ -1168,15 +1168,13 @@ static void unuse_vma(struct vm_area *vma, pgd_t *pgd, uint32_t entry, struct pa
  */
 static void unuse_process(struct mm_struct *mm, uint32_t entry, struct page *page)
 {
-	struct list_head *pos;
 	struct vm_area *vma;
 	pgd_t *pgd;
 
 	if (!mm || mm == init_task->mm)
 		return;
 
-	list_for_each(pos, &mm->vm_list) {
-		vma = list_entry(pos, struct vm_area, list);
+	for (vma = mm->mmap; vma != NULL; vma = vma->vm_next) {
 		pgd = pgd_offset(mm->pgd, vma->vm_start);
 		unuse_vma(vma, pgd, entry, page);
 	}
