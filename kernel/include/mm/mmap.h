@@ -47,7 +47,7 @@ struct mmap_arg_struct {
 #define MS_INVALIDATE		2
 #define MS_SYNC			4
 
-void remove_vma(struct vm_area *vma);
+void remove_shared_vma(struct vm_area *vma);
 uint32_t do_mmap(struct file *filp, uint32_t addr, size_t length, int prot, int flags, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
 struct vm_area *find_vma(struct task *task, uint32_t addr);

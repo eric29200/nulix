@@ -92,7 +92,7 @@ static void insert_vma(struct vm_area *vma)
 /*
  * Remove a memory region.
  */
-void remove_vma(struct vm_area *vma)
+void remove_shared_vma(struct vm_area *vma)
 {
 	struct file *filp = vma->vm_file;
 
@@ -102,9 +102,6 @@ void remove_vma(struct vm_area *vma)
 			vma->vm_next_share->vm_pprev_share = vma->vm_pprev_share;
 		*vma->vm_pprev_share = vma->vm_next_share;
 	}
-
-	/* remove it from list */
-	list_del(&vma->list);
 }
 
 /*
@@ -397,7 +394,6 @@ static struct vm_area *unmap_fixup(struct vm_area *vma, uint32_t addr, size_t le
 		if (vma->vm_file)
 			fput(vma->vm_file);
 
-		remove_vma(vma);
 		kfree(vma);
 		return extra;
 	}
@@ -436,6 +432,9 @@ static struct vm_area *unmap_fixup(struct vm_area *vma, uint32_t addr, size_t le
 		/* insert new memory region */
 		insert_vma(vma_new);
 	}
+
+	/* reinsert memory region */
+	insert_vma(vma);
 
 	return extra;
 }
@@ -477,7 +476,11 @@ int do_munmap(uint32_t addr, size_t len)
 		if (vma->vm_ops && vma->vm_ops->unmap)
 			vma->vm_ops->unmap(vma, start, end - start);
 
-		/* unmap it */
+		/* remove memory region */
+		list_del(&vma->list);
+		remove_shared_vma(vma);
+
+		/* fix mappings */
 		extra = unmap_fixup(vma, start, end - start, extra);
 	}
 

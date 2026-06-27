@@ -473,7 +473,8 @@ void task_exit_mmap(struct mm_struct *mm)
 				fput(vma->vm_file);
 
 			/* free memory region */
-			remove_vma(vma);
+			list_del(&vma->list);
+			remove_shared_vma(vma);
 			kfree(vma);
 		}
 	}
