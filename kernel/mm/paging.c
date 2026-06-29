@@ -505,7 +505,7 @@ void page_fault_handler(struct registers *regs)
 	id = regs->err_code & 0x10 ? 1 : 0;
 
 	/* get memory region */
-	vma = find_vma(current_task, fault_addr);
+	vma = find_vma(current_task->mm, fault_addr);
 	if (!vma)
 		goto bad_area;
 

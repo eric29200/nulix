@@ -16,9 +16,9 @@ uint32_t protection_map[16] = {
 /*
  * Find a memory region = return first VMA which satisfies addr < vm_end.
  */
-struct vm_area *find_vma(struct task *task, uint32_t addr)
+struct vm_area *find_vma(struct mm_struct *mm, uint32_t addr)
 {
-	struct vm_area *vma = task->mm->mmap;
+	struct vm_area *vma = mm->mmap;
 
 	while (vma && vma->vm_end <= addr)
 		vma = vma->vm_next;
@@ -29,9 +29,9 @@ struct vm_area *find_vma(struct task *task, uint32_t addr)
 /*
  * Find previous memory region.
  */
-static struct vm_area *find_vma_prev(struct task *task, uint32_t addr, struct vm_area **pprev)
+static struct vm_area *find_vma_prev(struct mm_struct *mm, uint32_t addr, struct vm_area **pprev)
 {
-	struct vm_area *vma = task->mm->mmap, *prev = NULL;
+	struct vm_area *vma = mm->mmap, *prev = NULL;
 
 	while (vma && vma->vm_end <= addr) {
 		prev = vma;
@@ -46,9 +46,9 @@ static struct vm_area *find_vma_prev(struct task *task, uint32_t addr, struct vm
 /*
  * Find first vm intersecting start <-> end.
  */
-struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_t end)
+struct vm_area *find_vma_intersection(struct mm_struct *mm, uint32_t start, uint32_t end)
 {
-	struct vm_area *vma = find_vma(task, start);
+	struct vm_area *vma = find_vma(mm, start);
 
 	return vma && end <= vma->vm_start ? NULL : vma;
 }
@@ -269,7 +269,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 		*addr = PAGE_ALIGN_UP(*addr);
 
 		/* find previous and next vm */
-		vma_next = find_vma_prev(current_task, *addr, &vma_prev);
+		vma_next = find_vma_prev(current_task->mm, *addr, &vma_prev);
 
 		/* addr is available */
 		if (!vma_next || *addr + len <= vma_next->vm_start)
@@ -444,7 +444,7 @@ int do_munmap(uint32_t addr, size_t len)
 	len = PAGE_ALIGN_UP(len);
 
 	/* check if this memory area is ok */
-	mpnt = find_vma_prev(current_task, addr, &prev);
+	mpnt = find_vma_prev(current_task->mm, addr, &prev);
 	if (!mpnt)
 		return 0;
 
@@ -559,7 +559,7 @@ static uint32_t do_mremap(uint32_t old_address, size_t old_size, size_t new_size
 
 	/* find old memory region */
 	ret = -EFAULT;
-	vma = find_vma(current_task, old_address);
+	vma = find_vma(current_task->mm, old_address);
 	if (!vma || vma->vm_start > old_address)
 		goto err;
 
@@ -782,7 +782,7 @@ int do_mprotect(uint32_t start, size_t size, int prot)
 		return 0;
 
 	/* find first memory region */
-	vma = find_vma(current_task, start);
+	vma = find_vma(current_task->mm, start);
 	if (!vma || vma->vm_start > start)
 		return -EFAULT;
 
@@ -968,7 +968,7 @@ uint32_t sys_brk(uint32_t brk)
 	}
 
 	/* check against existing mapping */
-	if (find_vma_intersection(current_task, oldbrk, newbrk + PAGE_SIZE))
+	if (find_vma_intersection(current_task->mm, oldbrk, newbrk + PAGE_SIZE))
 		goto out;
 
 	/* map new pages */

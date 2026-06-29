@@ -777,7 +777,7 @@ static int swap_out_process(struct task *task)
 	address = task->mm->swap_address;
 
 	/* find memory region to swap */
-	vma = find_vma(task, address);
+	vma = find_vma(task->mm, address);
 	if (!vma)
 		goto out;
 

@@ -50,8 +50,8 @@ struct mmap_arg_struct {
 void remove_shared_vma(struct vm_area *vma);
 uint32_t do_mmap(struct file *filp, uint32_t addr, size_t length, int prot, int flags, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
-struct vm_area *find_vma(struct task *task, uint32_t addr);
-struct vm_area *find_vma_intersection(struct task *task, uint32_t start, uint32_t end);
+struct vm_area *find_vma(struct mm_struct *mm, uint32_t addr);
+struct vm_area *find_vma_intersection(struct mm_struct *mm, uint32_t start, uint32_t end);
 void vmtruncate(struct inode *inode, off_t offset);
 
 int old_mmap(struct mmap_arg_struct *arg);
