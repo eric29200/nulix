@@ -96,6 +96,62 @@ void remove_shared_vma(struct vm_area *vma)
 }
 
 /*
+ * Try to merge segments.
+ */
+static void merge_segments(struct mm_struct *mm, uint32_t start_addr, uint32_t end_addr)
+{
+	struct vm_area *vma, *prev, *next;
+	uint32_t off;
+
+	/* find memory area */
+	vma = find_vma_prev(mm, start_addr, &prev);
+	if (!vma)
+		return;
+
+	if (!prev) {
+		prev = vma;
+		vma = vma->vm_next;
+	}
+
+	/* try to merge segments */
+	for (; vma && prev->vm_start < end_addr ; prev = vma, vma = next) {
+		next = vma->vm_next;
+
+		/* to merge, we must have same file, operations... */
+		if (vma->vm_file != prev->vm_file
+			|| vma->vm_ops != prev->vm_ops
+			|| vma->vm_flags != prev->vm_flags
+			|| prev->vm_end != vma->vm_start)
+			continue;
+
+		/* offsets must be contiguous */
+		if (vma->vm_file || vma->vm_flags & VM_SHM) {
+			off = prev->vm_offset + prev->vm_end - prev->vm_start;
+			if (off != vma->vm_offset)
+				continue;
+		}
+
+		/* merge areas */
+		prev->vm_end = vma->vm_end;
+		prev->vm_next = vma->vm_next;
+		if (vma->vm_ops && vma->vm_ops->close) {
+			vma->vm_offset += vma->vm_end - vma->vm_start;
+			vma->vm_start = vma->vm_end;
+			vma->vm_ops->close(vma);
+		}
+
+		/* remove old area */
+		remove_shared_vma(vma);
+		if (vma->vm_file)
+			fput(vma->vm_file);
+		kfree(vma);
+
+		/* go to next area */
+		vma = prev;
+	}
+}
+
+/*
  * Get one page table entry.
  */
 static pte_t *get_one_pte(struct mm_struct *mm, uint32_t address)
@@ -243,6 +299,7 @@ static uint32_t move_vma(struct vm_area *vma, uint32_t old_address, size_t old_s
 
 	/* insert new memory region */
 	insert_vma(vma_new);
+	merge_segments(vma_new->vm_mm, vma_new->vm_start, vma_new->vm_end);
 
 	/* unmap old region */
 	do_munmap(old_address, old_size);
@@ -361,6 +418,9 @@ uint32_t do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int fla
 
 	/* insert memory region */
 	insert_vma(vma);
+
+	/* merge segments */
+	merge_segments(current_task->mm, vma->vm_start, vma->vm_end);
 
 	return vma->vm_start;
 err:
@@ -814,6 +874,9 @@ int do_mprotect(uint32_t start, size_t size, int prot)
 			break;
 		}
 	}
+
+	/* merge segments */
+	merge_segments(current_task->mm, start, end);
 
 	return ret;
 }
