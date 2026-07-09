@@ -1,171 +1,233 @@
+#include <mm/mm.h>
 #include <mm/mmap.h>
+#include <proc/sched.h>
+#include <stdio.h>
 
-#define max(a, b)			(((a) > (b)) ? (a) : (b))
-#define avl_height(vma)			((vma) != NULL ? (vma)->vm_avl_height : 0)
-#define avl_balance(vma)		((vma) != NULL ? (avl_height((vma)->vm_avl_left) - avl_height((vma)->vm_avl_right)) : 0)
+#define AVL_MAXHEIGHT		41
+#define heightof(tree)		((tree) == NULL ? 0 : (tree)->vm_avl_height)
 
-static struct vm_area *__rotate_right(struct vm_area *y)
+/*
+ * Rebalance an AVL tree.
+ */
+static void avl_rebalance(struct vm_area ***nodeplaces_ptr, int count)
 {
-	struct vm_area *x, *t2;
+	for ( ; count > 0 ; count--) {
+		struct vm_area **nodeplace = *--nodeplaces_ptr;
+		struct vm_area *node = *nodeplace;
+		struct vm_area *nodeleft = node->vm_avl_left;
+		struct vm_area *noderight = node->vm_avl_right;
+		int heightleft = heightof(nodeleft);
+		int heightright = heightof(noderight);
 
-	x = y->vm_avl_left;
-	t2 = x->vm_avl_right;
+		if (heightright + 1 < heightleft) {
+			/*                                                      */
+			/*                            *                         */
+			/*                          /   \                       */
+			/*                       n+2      n                     */
+			/*                                                      */
+			struct vm_area *nodeleftleft = nodeleft->vm_avl_left;
+			struct vm_area *nodeleftright = nodeleft->vm_avl_right;
+			int heightleftright = heightof(nodeleftright);
 
-	x->vm_avl_right = y;
-	y->vm_avl_left = t2;
+			if (heightof(nodeleftleft) >= heightleftright) {
+				/*                                                        */
+				/*                *                    n+2|n+3            */
+				/*              /   \                  /    \             */
+				/*           n+2      n      -->      /   n+1|n+2         */
+				/*           / \                      |    /    \         */
+				/*         n+1 n|n+1                 n+1  n|n+1  n        */
+				/*                                                        */
+				node->vm_avl_left = nodeleftright; nodeleft->vm_avl_right = node;
+				nodeleft->vm_avl_height = 1 + (node->vm_avl_height = 1 + heightleftright);
+				*nodeplace = nodeleft;
+			} else {
+				/*                                                        */
+				/*                *                     n+2               */
+				/*              /   \                 /     \             */
+				/*           n+2      n      -->    n+1     n+1           */
+				/*           / \                    / \     / \           */
+				/*          n  n+1                 n   L   R   n          */
+				/*             / \                                        */
+				/*            L   R                                       */
+				/*                                                        */
+				nodeleft->vm_avl_right = nodeleftright->vm_avl_left;
+				node->vm_avl_left = nodeleftright->vm_avl_right;
+				nodeleftright->vm_avl_left = nodeleft;
+				nodeleftright->vm_avl_right = node;
+				nodeleft->vm_avl_height = node->vm_avl_height = heightleftright;
+				nodeleftright->vm_avl_height = heightleft;
+				*nodeplace = nodeleftright;
+			}
+		} else if (heightleft + 1 < heightright) {
+			/* similar to the above, just interchange 'left' <--> 'right' */
+			struct vm_area *noderightright = noderight->vm_avl_right;
+			struct vm_area *noderightleft = noderight->vm_avl_left;
+			int heightrightleft = heightof(noderightleft);
 
-	y->vm_avl_height = max(avl_height(y->vm_avl_left), avl_height(y->vm_avl_right)) + 1;
-	x->vm_avl_height = max(avl_height(x->vm_avl_left), avl_height(x->vm_avl_right)) + 1;
+			if (heightof(noderightright) >= heightrightleft) {
+				node->vm_avl_right = noderightleft;
+				noderight->vm_avl_left = node;
+				noderight->vm_avl_height = 1 + (node->vm_avl_height = 1 + heightrightleft);
+				*nodeplace = noderight;
+			} else {
+				noderight->vm_avl_left = noderightleft->vm_avl_right;
+				node->vm_avl_right = noderightleft->vm_avl_left;
+				noderightleft->vm_avl_right = noderight;
+				noderightleft->vm_avl_left = node;
+				noderight->vm_avl_height = node->vm_avl_height = heightrightleft;
+				noderightleft->vm_avl_height = heightright;
+				*nodeplace = noderightleft;
+			}
+		} else {
+			int height = (heightleft < heightright ? heightright : heightleft) + 1;
 
-	return x;
+			if (height == node->vm_avl_height)
+				break;
+			node->vm_avl_height = height;
+		}
+	}
 }
 
-static struct vm_area *__rotate_left(struct vm_area *x)
+/*
+ * Insert a memory region in AVL tree.
+ */
+static void avl_insert(struct vm_area *new_node, struct vm_area **ptree)
 {
-	struct vm_area *y, *t2;
+	struct vm_area **nodeplace = ptree, **stack[AVL_MAXHEIGHT], *node;
+	struct vm_area ***stack_ptr = &stack[0];
+	uint32_t key = new_node->vm_end;
+	int stack_count = 0;
 
-	y = x->vm_avl_right;
-	t2 = y->vm_avl_left;
-
-	y->vm_avl_left = x;
-	x->vm_avl_right = t2;
-
-	x->vm_avl_height = max(avl_height(x->vm_avl_left), avl_height(x->vm_avl_right)) + 1;
-	y->vm_avl_height = max(avl_height(y->vm_avl_left), avl_height(y->vm_avl_right)) + 1;
-
-	return y;
-}
-
-struct vm_area *mmap_avl_insert(struct vm_area *root, struct vm_area *new, struct vm_area **pprev, struct vm_area **pnext)
-{
-	int balance;
-
-	/*if (!vma) {
-		new->vm_next = *next;
-		if (*prev)
-			(*prev)->vm_next = new;
+	/* find place to insert */
+	for (;;) {
+		node = *nodeplace;
+		if (!node)
+			break;
+		*stack_ptr++ = nodeplace;
+		stack_count++;
+		if (key < node->vm_end)
+			nodeplace = &node->vm_avl_left;
 		else
-			vm_areas_tree_list = new;
-		return new;
-	}*/
-
-	if (new->vm_end < root->vm_end) {
-		*pnext = root;
-		root->vm_avl_left = mmap_avl_insert(root->vm_avl_left, new, pprev, pnext);
-	} else if (new->vm_end > root->vm_end) {
-		*pprev = root;
-		root->vm_avl_right = mmap_avl_insert(root->vm_avl_right, new, pprev, pnext);
-	} else {
-		return root;
+			nodeplace = &node->vm_avl_right;
 	}
 
-	root->vm_avl_height = 1 + max(avl_height(root->vm_avl_left), avl_height(root->vm_avl_right));
+	/* insert new node */
+	new_node->vm_avl_left = NULL;
+	new_node->vm_avl_right = NULL;
+	new_node->vm_avl_height = 1;
+	*nodeplace = new_node;
 
-	balance = avl_balance(root);
-
-	if (balance > 1 && new->vm_end < root->vm_avl_left->vm_end)
-		return __rotate_right(root);
-
-	if (balance < -1 && new->vm_end > root->vm_avl_right->vm_end)
-		return __rotate_left(root);
-
-	if (balance > 1 && new->vm_end > root->vm_avl_left->vm_end) {
-		root->vm_avl_left = __rotate_left(root->vm_avl_left);
-		return __rotate_right(root);
-	}
-
-	if (balance < -1 && new->vm_end < root->vm_avl_right->vm_end) {
-		root->vm_avl_right = __rotate_right(root->vm_avl_right);
-		return __rotate_left(root);
-	}
-
-	return root;
+	/* rebalance tree */
+	avl_rebalance(stack_ptr, stack_count);
 }
 
-static struct vm_area *detach_min(struct vm_area *root, struct vm_area **min_node)
+/*
+ * Insert a memory region in AVL tree.
+ */
+void avl_insert_neighbours(struct vm_area *new_node, struct vm_area **ptree, struct vm_area **to_the_left, struct vm_area **to_the_right)
 {
-	int balance;
+	struct vm_area **nodeplace = ptree, **stack[AVL_MAXHEIGHT], *node;
+	struct vm_area ***stack_ptr = &stack[0];
+	uint32_t key = new_node->vm_end;
+	int stack_count = 0;
 
-	if (!root->vm_avl_left) {
-		*min_node = root;
-		return root->vm_avl_right;
+	*to_the_left = NULL;
+	*to_the_right = NULL;
+
+	/* find place to insert */
+	for (;;) {
+		node = *nodeplace;
+		if (!node)
+			break;
+
+		*stack_ptr++ = nodeplace;
+		stack_count++;
+
+		if (key < node->vm_end) {
+			*to_the_right = node;
+			nodeplace = &node->vm_avl_left;
+		} else {
+			*to_the_left = node;
+			nodeplace = &node->vm_avl_right;
+		}
 	}
 
-	root->vm_avl_left = detach_min(root->vm_avl_left, min_node);
+	/* insert new node */
+	new_node->vm_avl_left = NULL;
+	new_node->vm_avl_right = NULL;
+	new_node->vm_avl_height = 1;
+	*nodeplace = new_node;
 
-	root->vm_avl_height = 1 + max(avl_height(root->vm_avl_left), avl_height(root->vm_avl_right));
-
-	balance = avl_balance(root);
-
-	if (balance > 1 && avl_balance(root->vm_avl_left) >= 0)
-		return __rotate_right(root);
-
-	if (balance > 1 && avl_balance(root->vm_avl_left) < 0) {
-		root->vm_avl_left = __rotate_left(root->vm_avl_left);
-		return __rotate_right(root);
-	}
-
-	if (balance < -1 && avl_balance(root->vm_avl_right) <= 0)
-		return __rotate_left(root);
-
-	if (balance < -1 && avl_balance(root->vm_avl_right) > 0) {
-		root->vm_avl_right = __rotate_right(root->vm_avl_right);
-		return __rotate_left(root);
-	}
-
-	return root;
+	/* rebalance tree */
+	avl_rebalance(stack_ptr, stack_count);
 }
 
-struct vm_area *mmap_avl_remove(struct vm_area *root, struct vm_area *to_remove)
+/*
+ * Remove a memory region from an AVL tree.
+ */
+void avl_remove(struct vm_area *node_to_delete, struct vm_area **ptree)
 {
-	struct vm_area *successor;
-	int balance;
+	struct vm_area **nodeplace = ptree, **stack[AVL_MAXHEIGHT], **nodeplace_to_delete, *node;
+	struct vm_area ***stack_ptr = &stack[0], ***stack_ptr_to_delete;
+	uint32_t key = node_to_delete->vm_end;
+	int stack_count = 0;
 
-	if (!root)
-		return NULL;
+	/* find place to delete */
+	for (;;) {
+		node = *nodeplace;
+		*stack_ptr++ = nodeplace;
+		stack_count++;
+		if (key == node->vm_end)
+			break;
+		if (key < node->vm_end)
+			nodeplace = &node->vm_avl_left;
+		else
+			nodeplace = &node->vm_avl_right;
+	}
+	nodeplace_to_delete = nodeplace;
 
-	if (to_remove->vm_end < root->vm_end) {
-		root->vm_avl_left = mmap_avl_remove(root->vm_avl_left, to_remove);
-	} else if (to_remove->vm_end > root->vm_end) {
-		root->vm_avl_right = mmap_avl_remove(root->vm_avl_right, to_remove);
+	/* have to remove node_to_delete = *nodeplace_to_delete */
+	if (!node_to_delete->vm_avl_left) {
+		*nodeplace_to_delete = node_to_delete->vm_avl_right;
+		stack_ptr--;
+		stack_count--;
 	} else {
-		if (!root->vm_avl_left && !root->vm_avl_right)
-			return NULL;
+		stack_ptr_to_delete = stack_ptr;
+		nodeplace = &node_to_delete->vm_avl_left;
 
-		if (!root->vm_avl_left)
-			return root->vm_avl_right;
+		for (;;) {
+			node = *nodeplace;
+			if (!node->vm_avl_right)
+				break;
+			*stack_ptr++ = nodeplace;
+			stack_count++;
+			nodeplace = &node->vm_avl_right;
+		}
+		*nodeplace = node->vm_avl_left;
 
-		if (!root->vm_avl_right)
-			return root->vm_avl_left;
-
-		successor = NULL;
-		root->vm_avl_right = detach_min(root->vm_avl_right, &successor);
-
-		successor->vm_avl_left = root->vm_avl_left;
-		successor->vm_avl_right = root->vm_avl_right;
-
-		root = successor;
+		/* node replaces node_to_delete */
+		node->vm_avl_left = node_to_delete->vm_avl_left;
+		node->vm_avl_right = node_to_delete->vm_avl_right;
+		node->vm_avl_height = node_to_delete->vm_avl_height;
+		*nodeplace_to_delete = node;
+		*stack_ptr_to_delete = &node->vm_avl_left;
 	}
 
-	root->vm_avl_height = 1 + max(avl_height(root->vm_avl_left), avl_height(root->vm_avl_right));
+	/* rebalance tree */
+	avl_rebalance(stack_ptr, stack_count);
+}
 
-	balance = avl_balance(root);
+/*
+ * Build mmap AVL tree.
+ */
+void build_mmap_avl(struct mm_struct *mm)
+{
+	struct vm_area *vma;
 
-	if (balance > 1 && avl_balance(root->vm_avl_left) >= 0)
-		return __rotate_right(root);
+	/* reset tree */
+	mm->mmap_avl = NULL;
 
-	if (balance > 1 && avl_balance(root->vm_avl_left) < 0) {
-		root->vm_avl_left = __rotate_left(root->vm_avl_left);
-		return __rotate_right(root);
-	}
-
-	if (balance < -1 && avl_balance(root->vm_avl_right) <= 0)
-		return __rotate_left(root);
-
-	if (balance < -1 && avl_balance(root->vm_avl_right) > 0) {
-		root->vm_avl_right = __rotate_right(root->vm_avl_right);
-		return __rotate_left(root);
-	}
-
-	return root;
+	/* insert memory regions */
+	for (vma = mm->mmap; vma; vma = vma->vm_next)
+		avl_insert(vma, &mm->mmap_avl);
 }

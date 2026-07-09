@@ -18,10 +18,28 @@ uint32_t protection_map[16] = {
  */
 struct vm_area *find_vma(struct mm_struct *mm, uint32_t addr)
 {
-	struct vm_area *vma = mm->mmap;
+	struct vm_area *vma = NULL, *tree = mm->mmap_avl;
 
-	while (vma && vma->vm_end <= addr)
-		vma = vma->vm_next;
+	/* use linear list or avl tree */
+	if (!tree) {
+		vma = mm->mmap;
+		while (vma && vma->vm_end <= addr)
+			vma = vma->vm_next;
+	} else {
+		for (;;) {
+			if (!tree)
+				break;
+
+			if (tree->vm_end > addr) {
+				vma = tree;
+				if (tree->vm_start <= addr)
+					break;
+				tree = tree->vm_avl_left;
+			} else {
+				tree = tree->vm_avl_right;
+			}
+		}
+	}
 
 	return vma;
 }
@@ -31,15 +49,52 @@ struct vm_area *find_vma(struct mm_struct *mm, uint32_t addr)
  */
 static struct vm_area *find_vma_prev(struct mm_struct *mm, uint32_t addr, struct vm_area **pprev)
 {
-	struct vm_area *vma = mm->mmap, *prev = NULL;
+	struct vm_area *prev = NULL, *vma = NULL, *tree = mm->mmap_avl, *last_turn_right = NULL;
 
-	while (vma && vma->vm_end <= addr) {
-		prev = vma;
-		vma = vma->vm_next;
+	/* use linear list */
+	if (!tree) {
+		vma = mm->mmap;
+		while (vma && vma->vm_end <= addr) {
+			prev = vma;
+			vma = vma->vm_next;
+		}
+		*pprev = prev;
+		return vma;
 	}
 
-	*pprev = prev;
+	/* use AVL tree */
+	for (;;) {
+		if (!tree)
+			break;
+		if (tree->vm_end > addr) {
+			vma = tree;
+			prev = last_turn_right;
+			if (tree->vm_start <= addr)
+				break;
+			tree = tree->vm_avl_left;
+		} else {
+			last_turn_right = tree;
+			tree = tree->vm_avl_right;
+		}
+	}
 
+	if (!vma) {
+		*pprev = NULL;
+		return NULL;
+	}
+
+	/* find previous region */
+	if (vma->vm_avl_left) {
+		prev = vma->vm_avl_left;
+		while (prev->vm_avl_right)
+			prev = prev->vm_avl_right;
+	}
+
+	/* check tree/list */
+	if ((prev ? prev->vm_next : mm->mmap) != vma)
+		printf("find_vma_prev: tree inconsistent with list\n");
+
+	*pprev = prev;
 	return vma;
 }
 
@@ -58,13 +113,26 @@ struct vm_area *find_vma_intersection(struct mm_struct *mm, uint32_t start, uint
  */
 static void insert_vma(struct vm_area *vma)
 {
-	struct vm_area **pprev = &current_task->mm->mmap, **head;
+	struct vm_area **pprev, **head, *prev, *next;
+	struct mm_struct *mm = vma->vm_mm;
 	struct file *filp = vma->vm_file;
 	struct inode *inode;
 
-	/* add it to the list */
-	while (*pprev && (*pprev)->vm_start <= vma->vm_start)
-		pprev = &(*pprev)->vm_next;
+	/* use linear list or avl tree */
+	if (!mm->mmap_avl) {
+		pprev = &mm->mmap;
+		while (*pprev && (*pprev)->vm_start <= vma->vm_start)
+			pprev = &(*pprev)->vm_next;
+	} else {
+		avl_insert_neighbours(vma, &mm->mmap_avl, &prev, &next);
+		pprev = prev ? &prev->vm_next : &mm->mmap;
+
+		/* check tree/list */
+		if (*pprev != next)
+			printf("insert_vm_struct: tree inconsistent with list\n");
+	}
+
+	/* add it to linear list */
 	vma->vm_next = *pprev;
 	*pprev = vma;
 
@@ -78,6 +146,10 @@ static void insert_vma(struct vm_area *vma)
 		*head = vma;
 		vma->vm_pprev_share = head;
 	}
+
+	/* build AVL tree if needed */
+	if (!mm->mmap_avl)
+		build_mmap_avl(mm);
 }
 
 /*
@@ -132,6 +204,8 @@ static void merge_segments(struct mm_struct *mm, uint32_t start_addr, uint32_t e
 		}
 
 		/* merge areas */
+		if (mm->mmap_avl)
+			avl_remove(vma, &mm->mmap_avl);
 		prev->vm_end = vma->vm_end;
 		prev->vm_next = vma->vm_next;
 		if (vma->vm_ops && vma->vm_ops->close) {
@@ -494,6 +568,7 @@ static struct vm_area *unmap_fixup(struct vm_area *vma, uint32_t addr, size_t le
 int do_munmap(uint32_t addr, size_t len)
 {
 	struct vm_area *mpnt, *prev, **npp, *free, *extra;
+	struct mm_struct *mm = current_task->mm;
 	uint32_t start, end, nr;
 
 	/* add must be page aligned */
@@ -504,7 +579,7 @@ int do_munmap(uint32_t addr, size_t len)
 	len = PAGE_ALIGN_UP(len);
 
 	/* check if this memory area is ok */
-	mpnt = find_vma_prev(current_task->mm, addr, &prev);
+	mpnt = find_vma_prev(mm, addr, &prev);
 	if (!mpnt)
 		return 0;
 
@@ -518,12 +593,14 @@ int do_munmap(uint32_t addr, size_t len)
 		return -ENOMEM;
 
 	/* find regions to unmap */
-	npp = prev ? &prev->vm_next : &current_task->mm->mmap;
+	npp = prev ? &prev->vm_next : &mm->mmap;
 	free = NULL;
 	for (; mpnt && mpnt->vm_start < addr + len; mpnt = *npp) {
 		*npp = mpnt->vm_next;
 		mpnt->vm_next = free;
 		free = mpnt;
+		if (mm->mmap_avl)
+			avl_remove(mpnt, &mm->mmap_avl);
 	}
 
 	/* release memory regions */
@@ -550,13 +627,13 @@ int do_munmap(uint32_t addr, size_t len)
 		kfree(extra);
 
 	/* unmap region */
-	nr = zap_page_range(current_task->mm->pgd, addr, len);
+	nr = zap_page_range(mm->pgd, addr, len);
 
 	/* update resident memory size */
-	if (nr >= current_task->mm->rss)
-		current_task->mm->rss -= nr;
+	if (nr >= mm->rss)
+		mm->rss -= nr;
 	else
-		current_task->mm->rss = 0;
+		mm->rss = 0;
 
 	return 0;
 }

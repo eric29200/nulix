@@ -246,6 +246,9 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 		prev = vma_child;
 	}
 
+	/* build AVL tree */
+	build_mmap_avl(mm_new);
+
 	/* flush tlb */
 	flush_tlb(current_task->mm->pgd);
 
@@ -460,6 +463,7 @@ void task_exit_mmap(struct mm_struct *mm)
 	/* clear memory size */
 	mm->rss = 0;
 	mm->mmap = NULL;
+	mm->mmap_avl = NULL;
 
 	/* free memory regions */
 	while (mpnt) {

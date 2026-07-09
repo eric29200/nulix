@@ -47,6 +47,9 @@ struct mmap_arg_struct {
 #define MS_INVALIDATE		2
 #define MS_SYNC			4
 
+void build_mmap_avl(struct mm_struct *mm);
+void avl_insert_neighbours(struct vm_area *new_node, struct vm_area **ptree, struct vm_area **to_the_left, struct vm_area **to_the_right);
+void avl_remove(struct vm_area *node_to_delete, struct vm_area **ptree);
 void remove_shared_vma(struct vm_area *vma);
 uint32_t do_mmap(struct file *filp, uint32_t addr, size_t length, int prot, int flags, off_t offset);
 int do_munmap(uint32_t addr, size_t length);
