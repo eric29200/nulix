@@ -28,6 +28,9 @@ struct vm_area {
 	struct mm_struct *		vm_mm;
 	struct vm_operations *		vm_ops;
 	struct vm_area *		vm_next;
+	int				vm_avl_height;
+	struct vm_area *		vm_avl_left;
+	struct vm_area *		vm_avl_right;
 	struct vm_area *		vm_next_share;
 	struct vm_area **		vm_pprev_share;
 };
