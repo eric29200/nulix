@@ -20,24 +20,27 @@ struct vm_area *find_vma(struct mm_struct *mm, uint32_t addr)
 {
 	struct vm_area *vma = NULL, *tree = mm->mmap_avl;
 
-	/* use linear list or avl tree */
+	/* use linear list */
 	if (!tree) {
 		vma = mm->mmap;
 		while (vma && vma->vm_end <= addr)
 			vma = vma->vm_next;
-	} else {
-		for (;;) {
-			if (!tree)
-				break;
 
-			if (tree->vm_end > addr) {
-				vma = tree;
-				if (tree->vm_start <= addr)
-					break;
-				tree = tree->vm_avl_left;
-			} else {
-				tree = tree->vm_avl_right;
-			}
+		return vma;
+	}
+
+	/* use AVL tree */
+	for (;;) {
+		if (!tree)
+			break;
+
+		if (tree->vm_end > addr) {
+			vma = tree;
+			if (tree->vm_start <= addr)
+				break;
+			tree = tree->vm_avl_left;
+		} else {
+			tree = tree->vm_avl_right;
 		}
 	}
 
