@@ -11,26 +11,26 @@
  */
 static void avl_rebalance_left(struct vm_area *node, struct vm_area **nodeplace)
 {
-	struct vm_area *nodeleft = node->vm_avl_left;
-	struct vm_area *nodeleftleft = nodeleft->vm_avl_left;
-	struct vm_area *nodeleftright = nodeleft->vm_avl_right;
-	int heightleftright = heightof(nodeleftright);
-	int heightleft = heightof(nodeleft);
+	struct vm_area *node_left = node->vm_avl_left;
+	struct vm_area *node_left_left = node_left->vm_avl_left;
+	struct vm_area *node_left_right = node_left->vm_avl_right;
+	int height_left_right = heightof(node_left_right);
+	int height_left = heightof(node_left);
 
-	if (heightof(nodeleftleft) >= heightleftright) {
-		node->vm_avl_left = nodeleftright;
-		nodeleft->vm_avl_right = node;
-		nodeleft->vm_avl_height = 1 + (node->vm_avl_height = 1 + heightleftright);
-		*nodeplace = nodeleft;
+	if (heightof(node_left_left) >= height_left_right) {
+		node->vm_avl_left = node_left_right;
+		node_left->vm_avl_right = node;
+		node_left->vm_avl_height = 1 + (node->vm_avl_height = 1 + height_left_right);
+		*nodeplace = node_left;
 	} else {
-		nodeleft->vm_avl_right = nodeleftright->vm_avl_left;
-		node->vm_avl_left = nodeleftright->vm_avl_right;
-		nodeleftright->vm_avl_left = nodeleft;
-		nodeleftright->vm_avl_right = node;
-		nodeleft->vm_avl_height = heightleftright;
-		node->vm_avl_height = heightleftright;
-		nodeleftright->vm_avl_height = heightleft;
-		*nodeplace = nodeleftright;
+		node_left->vm_avl_right = node_left_right->vm_avl_left;
+		node->vm_avl_left = node_left_right->vm_avl_right;
+		node_left_right->vm_avl_left = node_left;
+		node_left_right->vm_avl_right = node;
+		node_left->vm_avl_height = height_left_right;
+		node->vm_avl_height = height_left_right;
+		node_left_right->vm_avl_height = height_left;
+		*nodeplace = node_left_right;
 	}
 }
 
@@ -39,26 +39,26 @@ static void avl_rebalance_left(struct vm_area *node, struct vm_area **nodeplace)
  */
 static void avl_rebalance_right(struct vm_area *node, struct vm_area **nodeplace)
 {
-	struct vm_area *noderight = node->vm_avl_right;
-	struct vm_area *noderightright = noderight->vm_avl_right;
-	struct vm_area *noderightleft = noderight->vm_avl_left;
-	int heightright = heightof(noderight);
-	int heightrightleft = heightof(noderightleft);
+	struct vm_area *node_right = node->vm_avl_right;
+	struct vm_area *node_right_right = node_right->vm_avl_right;
+	struct vm_area *node_right_left = node_right->vm_avl_left;
+	int height_right = heightof(node_right);
+	int height_right_left = heightof(node_right_left);
 
-	if (heightof(noderightright) >= heightrightleft) {
-		node->vm_avl_right = noderightleft;
-		noderight->vm_avl_left = node;
-		noderight->vm_avl_height = 1 + (node->vm_avl_height = 1 + heightrightleft);
-		*nodeplace = noderight;
+	if (heightof(node_right_right) >= height_right_left) {
+		node->vm_avl_right = node_right_left;
+		node_right->vm_avl_left = node;
+		node_right->vm_avl_height = 1 + (node->vm_avl_height = 1 + height_right_left);
+		*nodeplace = node_right;
 	} else {
-		noderight->vm_avl_left = noderightleft->vm_avl_right;
-		node->vm_avl_right = noderightleft->vm_avl_left;
-		noderightleft->vm_avl_right = noderight;
-		noderightleft->vm_avl_left = node;
-		noderight->vm_avl_height = heightrightleft;
-		node->vm_avl_height = heightrightleft;
-		noderightleft->vm_avl_height = heightright;
-		*nodeplace = noderightleft;
+		node_right->vm_avl_left = node_right_left->vm_avl_right;
+		node->vm_avl_right = node_right_left->vm_avl_left;
+		node_right_left->vm_avl_right = node_right;
+		node_right_left->vm_avl_left = node;
+		node_right->vm_avl_height = height_right_left;
+		node->vm_avl_height = height_right_left;
+		node_right_left->vm_avl_height = height_right;
+		*nodeplace = node_right_left;
 	}
 }
 
@@ -67,21 +67,21 @@ static void avl_rebalance_right(struct vm_area *node, struct vm_area **nodeplace
  */
 static void avl_rebalance(struct vm_area ***nodeplaces_ptr, int count)
 {
-	int height, heightleft, heightright;
+	int height, height_left, height_right;
 	struct vm_area **nodeplace, *node;
 
 	for ( ; count > 0 ; count--) {
 		nodeplace = *--nodeplaces_ptr;
 		node = *nodeplace;
-		heightleft = heightof(node->vm_avl_left);
-		heightright = heightof(node->vm_avl_right);
+		height_left = heightof(node->vm_avl_left);
+		height_right = heightof(node->vm_avl_right);
 
-		if (heightright + 1 < heightleft) {
+		if (height_right + 1 < height_left) {
 			avl_rebalance_left(node, nodeplace);
-		} else if (heightleft + 1 < heightright) {
+		} else if (height_left + 1 < height_right) {
 			avl_rebalance_right(node, nodeplace);
 		} else {
-			height = (heightleft < heightright ? heightright : heightleft) + 1;
+			height = (height_left < height_right ? height_right : height_left) + 1;
 			if (height == node->vm_avl_height)
 				break;
 			node->vm_avl_height = height;
