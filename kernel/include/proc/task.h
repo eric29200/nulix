@@ -50,6 +50,7 @@ struct mm_struct {
 	uint32_t			swap_cnt;			/* swap counter */
 	struct vm_area *		mmap;				/* virtual memory areas sorted list */
 	struct vm_area *		mmap_avl;			/* virtual memory areas AVL tree */
+	struct vm_area *		mmap_cache;			/* last virtual memory found */
 };
 
 /*

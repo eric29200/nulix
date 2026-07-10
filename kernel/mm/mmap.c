@@ -18,7 +18,12 @@ uint32_t protection_map[16] = {
  */
 struct vm_area *find_vma(struct mm_struct *mm, uint32_t addr)
 {
-	struct vm_area *vma = NULL, *tree = mm->mmap_avl;
+	struct vm_area *vma, *tree = mm->mmap_avl;
+
+	/* use cache first */
+	vma = mm->mmap_cache;
+	if (vma && addr >= vma->vm_start && addr < vma->vm_end)
+		return vma;
 
 	/* use linear list */
 	if (!tree) {
@@ -26,10 +31,11 @@ struct vm_area *find_vma(struct mm_struct *mm, uint32_t addr)
 		while (vma && vma->vm_end <= addr)
 			vma = vma->vm_next;
 
-		return vma;
+		goto out;
 	}
 
 	/* use AVL tree */
+	vma = NULL;
 	for (;;) {
 		if (!tree)
 			break;
@@ -44,6 +50,9 @@ struct vm_area *find_vma(struct mm_struct *mm, uint32_t addr)
 		}
 	}
 
+out:
+	if (vma)
+		mm->mmap_cache = vma;
 	return vma;
 }
 
@@ -226,6 +235,9 @@ static void merge_segments(struct mm_struct *mm, uint32_t start_addr, uint32_t e
 		/* go to next area */
 		vma = prev;
 	}
+
+	/* kill the cache */
+	mm->mmap_cache = NULL;
 }
 
 /*
@@ -637,6 +649,9 @@ int do_munmap(uint32_t addr, size_t len)
 		mm->rss -= nr;
 	else
 		mm->rss = 0;
+
+	/* kill the cache */
+	mm->mmap_cache = NULL;
 
 	return 0;
 }

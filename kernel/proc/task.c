@@ -464,6 +464,7 @@ void task_exit_mmap(struct mm_struct *mm)
 	mm->rss = 0;
 	mm->mmap = NULL;
 	mm->mmap_avl = NULL;
+	mm->mmap_cache = NULL;
 
 	/* free memory regions */
 	while (mpnt) {
