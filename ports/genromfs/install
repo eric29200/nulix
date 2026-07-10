@@ -1,0 +1,15 @@
+VERSION="0.5.7"
+SRC_FILENAME="genromfs-"$VERSION".tar.gz"
+URL="https://github.com/chexum/genromfs/archive/refs/tags/"$VERSION".tar.gz"
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	make CC=$CC
+}
+
+function install_port() {
+	cp genromfs $SYSROOT"/usr/bin/"
+}
