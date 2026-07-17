@@ -10,12 +10,9 @@
 uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint32_t dst_address, size_t len)
 {
 	struct tcp_check_header tcp_check_header = { 0 };
-	uint16_t *chunk, ret;
+	size_t size = sizeof(struct tcp_header) + len;
 	uint32_t chksum;
-	size_t size;
-
-	/* compute size = tcp header + len */
-	size = sizeof(struct tcp_header) + len;
+	uint8_t *buf;
 
 	/* build TCP check header */
 	tcp_check_header.src_address = src_address;
@@ -23,27 +20,22 @@ uint16_t tcp_checksum(struct tcp_header *tcp_header, uint32_t src_address, uint3
 	tcp_check_header.protocol = IP_PROTO_TCP;
 	tcp_check_header.len = htons(size);
 
-	/* compute check sum on TCP check header */
-	size = sizeof(struct tcp_check_header);
-	for (chksum = 0, chunk = (uint16_t *) &tcp_check_header; size > 1; size -= 2)
-		chksum += *chunk++;
+	/* allocate a tmp buffer */
+	buf = (uint8_t *) kmalloc(sizeof(struct tcp_check_header) + size);
+	if (!buf)
+		return 0;
 
-	if (size == 1)
-		chksum += *((uint8_t *) chunk);
+	/* concat tcp check header and tcp packet */
+	memcpy(buf, &tcp_check_header, sizeof(struct tcp_check_header));
+	memcpy(buf + sizeof(struct tcp_check_header), tcp_header, size);
 
-	/* compute check sum on TCP header */
-	size = sizeof(struct tcp_header) + len;
-	for (chunk = (uint16_t *) tcp_header; size > 1; size -= 2)
-		chksum += *chunk++;
+	/* compute checksum */
+	chksum = net_checksum(buf, sizeof(struct tcp_check_header) + size);
 
-	if (size == 1)
-		chksum += *((uint8_t *) chunk);
+	/* free tmp buffer */
+	kfree(buf);
 
-	chksum = (chksum & 0xFFFF) + (chksum >> 16);
-	chksum += (chksum >> 16);
-	ret = ~chksum;
-
-	return ret;
+	return chksum;
 }
 
 /*
