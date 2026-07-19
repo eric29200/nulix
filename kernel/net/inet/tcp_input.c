@@ -198,6 +198,8 @@ static int tcp_rcv_listen(struct sock *sk, struct sk_buff *skb)
 	sk_new->state = TCP_SYN_RECV;
 	sk_new->timeout = 0;
 	sk_new->socket = NULL;
+	sk_new->list.prev = NULL;
+	sk_new->list.next = NULL;
 
 	/* set tcp options */
 	tp_new = &sk_new->protinfo.af_tcp;
