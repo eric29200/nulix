@@ -109,8 +109,8 @@ static void rtl8139_receive_packet()
 		/* decode ethernet header */
 		ethernet_receive(skb);
 
-		/* handle socket buffer and free it */
-		skb_handle(skb);
+		/* receive packet */
+		netif_rx(skb);
 
 		/* update stat */
 		rtl8139_dev->stats.rx_packets++;

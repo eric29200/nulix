@@ -7,6 +7,12 @@
 #include <stderr.h>
 #include <fcntl.h>
 
+#define NETDEV_MAX_BACKLOG		300
+
+/* receive queue */
+static struct sk_buff_head *backlog = NULL;
+static struct wait_queue *backlog_wait = NULL;
+
 /*
  * Read net dev.
  */
@@ -183,16 +189,66 @@ int dev_ioctl(unsigned int cmd, void *arg)
 }
 
 /*
+ * Receive a packet from a device driver.
+ */
+void netif_rx(struct sk_buff *skb)
+{
+	/* receive queue full */
+	if (backlog->len > NETDEV_MAX_BACKLOG) {
+		skb_free(skb);
+		return;
+	}
+
+	/* add it to receive queue */
+	skb_queue_tail(backlog, skb);
+	wake_up(&backlog_wait);
+}
+
+/*
+ * Handle received packets = kernel thread.
+ */
+int net_handle(void *arg)
+{
+	struct sk_buff *skb;
+
+	UNUSED(arg);
+
+	for (;;) {
+		/* get next packet or sleep */
+		skb = skb_dequeue(backlog);
+		if (!skb) {
+			sleep_on(&backlog_wait);
+			continue;
+		}
+
+		/* handle packet */
+		skb_handle(skb);
+	}
+
+	return 0;
+}
+
+/*
  * Init network devices.
  */
 int init_net_dev()
 {
 	struct proc_dir_entry *de;
 
+	/* allocate receive queue */
+	backlog = (struct sk_buff_head *) kmalloc(sizeof(struct sk_buff_head));
+	if (!backlog)
+		return -ENOMEM;
+
+	/* init receive queue */
+	skb_queue_head_init(backlog);
+
 	/* register net/dev procfs entry */
 	de = create_proc_read_entry("dev", 0, proc_net, dev_read_proc);
-	if (!de)
+	if (!de) {
+		kfree(backlog);
 		return -EINVAL;
+	}
 
 	return 0;
 }

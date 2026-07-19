@@ -26,8 +26,8 @@ static int loopback_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	dev->stats.rx_packets++;
 	dev->stats.rx_bytes += skb->size;
 
-	/* handle socket buffer and free it */
-	skb_handle(skb);
+	/* receive packet */
+	netif_rx(skb);
 
 	return 0;
 }

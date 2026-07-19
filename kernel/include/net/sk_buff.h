@@ -144,7 +144,7 @@ static inline void skb_queue_tail(struct sk_buff_head *list, struct sk_buff *new
 
 	list->len++;
 	newsk->list = list;
-	next = (struct sk_buff *)list;
+	next = (struct sk_buff *) list;
 	prev = next->prev;
 	newsk->next = next;
 	newsk->prev = prev;
@@ -161,7 +161,7 @@ static inline void skb_queue_head(struct sk_buff_head *list, struct sk_buff *new
 
 	list->len++;
 	newsk->list = list;
-	prev = (struct sk_buff *)list;
+	prev = (struct sk_buff *) list;
 	next = prev->next;
 	newsk->next = next;
 	newsk->prev = prev;
