@@ -220,6 +220,7 @@ static int tcp_rcv_listen(struct sock *sk, struct sk_buff *skb)
 
 	/* send SYN/ACK */
 	tcp_send_syn_ack(sk_new, sk);
+	sk->ack_backlog++;
 
 	return 0;
 }
