@@ -25,6 +25,7 @@
 #include <proc/binfmt.h>
 #include <sys/syscall.h>
 #include <fs/minix_fs.h>
+#include <fs/cramfs_fs.h>
 #include <fs/ext2_fs.h>
 #include <fs/proc_fs.h>
 #include <fs/tmp_fs.h>
@@ -257,6 +258,8 @@ static void kinit()
 	printf("[Kernel] Register file systems\n");
 	if (init_minix_fs())
 		panic("Cannot register minix file system\n");
+	if (init_cramfs_fs())
+		panic("Cannot register cramfs file system\n");
 	if (init_ext2_fs())
 		panic("Cannot register ext2 file system\n");
 	if (init_proc_fs())
