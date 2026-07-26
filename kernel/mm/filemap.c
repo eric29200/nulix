@@ -586,3 +586,46 @@ int shrink_mmap(int priority)
 
 	return 0;
 }
+
+/*
+ * Read into page cache.
+ */
+struct page *read_cache_page(struct inode *inode, off_t offset)
+{
+	struct page *page;
+	char *kaddr;
+	int ret;
+
+	/* page allign offset */
+	offset &= PAGE_MASK;
+
+	/* try to find page in cache */
+	page = grab_cache_page(inode, offset);
+	if (!page)
+		return ERR_PTR(-ENOMEM);
+
+	/* page up to date */
+	if (PageUptodate(page))
+		return page;
+
+	/* map page in kernel address space */
+	kaddr = kmap(page);
+	if (!kaddr) {
+		__free_page(page);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	/* read page */
+	ret = inode->i_op->readpage(inode, page);
+	if (ret) {
+		kunmap(page);
+		__free_page(page);
+		return ERR_PTR(ret);
+	}
+
+	/* wait on page */
+	wait_on_page(page);
+	kunmap(page);
+
+	return page;
+}

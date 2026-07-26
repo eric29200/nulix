@@ -74,6 +74,15 @@ struct inode_operations cramfs_file_iops = {
 };
 
 /*
+ * Cramfs symbolic link inode operations.
+ */
+struct inode_operations cramfs_symlink_iops = {
+	.readpage		= cramfs_readpage,
+	.follow_link		= page_follow_link,
+	.readlink		= page_readlink,
+};
+
+/*
  * Get a cramfs inode.
  */
 struct inode *cramfs_get_inode(struct super_block *sb, struct cramfs_inode *cramfs_inode, uint32_t offset)
@@ -98,6 +107,8 @@ struct inode *cramfs_get_inode(struct super_block *sb, struct cramfs_inode *cram
 	/* set operations */
 	if (S_ISDIR(inode->i_mode)) {
 		inode->i_op = &cramfs_dir_iops;
+	} else if (S_ISLNK(inode->i_mode)) {
+		inode->i_op = &cramfs_symlink_iops;
 	} else if (S_ISCHR(inode->i_mode)) {
 		inode->i_rdev = cramfs_inode->size;
 		inode->i_op = &chrdev_iops;

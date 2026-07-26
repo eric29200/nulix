@@ -154,10 +154,6 @@ uint32_t minix_new_block(struct super_block *sb);
 int minix_free_block(struct super_block *sb, uint32_t block);
 uint32_t minix_count_free_blocks(struct super_block *sb);
 
-/* minix symlink prototypes */
-struct dentry *minix_follow_link(struct dentry *dentry, struct dentry *base);
-ssize_t minix_readlink(struct dentry *dentry, char *buf, size_t bufsize);
-
 /* minix name resolutions prototypes */
 struct dentry *minix_lookup(struct inode *dir, struct dentry *dentry);
 int minix_create(struct inode *dir, struct dentry *dentry, mode_t mode);

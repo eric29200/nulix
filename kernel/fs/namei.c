@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
 #include <mm/mm.h>
+#include <mm/highmem.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <fcntl.h>
@@ -868,4 +869,99 @@ int sys_mknod(const char *pathname, mode_t mode, dev_t dev)
 
 	dput(res);
 	return 0;
+}
+
+/*
+ * Get link contents into page cache.
+ */
+char *page_getlink(struct dentry *dentry, struct page **ppage)
+{
+	struct page *page;
+
+	/* get and read page if needed */
+	page = read_cache_page(dentry->d_inode, 0);
+	if (IS_ERR(page))
+		return (char *) page;
+
+	/* wait on page */
+	wait_on_page(page);
+	if (!PageUptodate(page)) {
+		__free_page(page);
+		return ERR_PTR(-EIO);
+	}
+
+	*ppage = page;
+	return kmap(page);
+}
+
+/*
+ * Read a link.
+ */
+int vfs_readlink(char *buf, size_t bufsize, const char *link)
+{
+	size_t len;
+
+	/* check link */
+	if (IS_ERR(link))
+		return PTR_ERR(link);
+
+	/* limit size */
+	len = strlen(link);
+	if (len > bufsize)
+		len = bufsize;
+
+	/* copy to output buffer */
+	memcpy(buf, link, len);
+
+	return len;
+}
+
+/*
+ * Read a symbolic link.
+ */
+ssize_t page_readlink(struct dentry *dentry, char *buf, size_t bufsize)
+{
+	struct page *page = NULL;
+	char *s;
+	int ret;
+
+	/* read into page cache */
+	s = page_getlink(dentry, &page);
+	if (IS_ERR(s))
+		return PTR_ERR(s);
+
+	/* parse link */
+	ret = vfs_readlink(buf, bufsize, s);
+
+	/* release page */
+	if (page) {
+		kunmap(page);
+		__free_page(page);
+	}
+
+	return ret;
+}
+
+/*
+ * Resolve a symbolic link.
+ */
+struct dentry *page_follow_link(struct dentry *dentry, struct dentry *base)
+{
+	struct page *page = NULL;
+	struct dentry *res;
+	char *s;
+
+	/* read into page cache */
+	s = page_getlink(dentry, &page);
+
+	/* resolve target */
+	res = lookup_dentry(AT_FDCWD, base, s, 1);
+
+	/* release page */
+	if (page) {
+		kunmap(page);
+		__free_page(page);
+	}
+
+	return res;
 }

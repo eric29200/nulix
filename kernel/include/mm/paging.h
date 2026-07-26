@@ -187,6 +187,7 @@ void remove_from_page_cache(struct page *page);
 void invalidate_inode_pages(struct inode *inode);
 void truncate_inode_pages(struct inode *inode, off_t start);
 int shrink_mmap(int priority);
+struct page *read_cache_page(struct inode *inode, off_t offset);
 
 /*
  * Get page directory offset for an address.

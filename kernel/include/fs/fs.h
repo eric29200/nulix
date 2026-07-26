@@ -381,6 +381,10 @@ int permission(struct inode *inode, int mask);
 struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathname, int follow_link);
 struct dentry *namei(int dirfd, const char *pathname, int follow_link);
 struct dentry *open_namei(int dirfd, const char *pathname, int flags, mode_t mode);
+char *page_getlink(struct dentry *dentry, struct page **ppage);
+int vfs_readlink(char *buf, size_t bufsize, const char *link);
+ssize_t page_readlink(struct dentry *dentry, char *buf, size_t bufsize);
+struct dentry *page_follow_link(struct dentry *dentry, struct dentry *base);
 
 /* character/block devices operations */
 int register_chrdev(int major, const char *name, struct file_operations *fops);

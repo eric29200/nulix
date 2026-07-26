@@ -45,8 +45,11 @@ struct inode_operations ext2_fast_symlink_iops = {
  * Ext2 page symbolic link inode operations.
  */
 struct inode_operations ext2_page_symlink_iops = {
-	.follow_link	= ext2_page_follow_link,
-	.readlink	= ext2_page_readlink,
+	.get_block	= ext2_get_block,
+	.bmap		= generic_block_bmap,
+	.readpage	= generic_readpage,
+	.follow_link	= page_follow_link,
+	.readlink	= page_readlink,
 };
 
 /*

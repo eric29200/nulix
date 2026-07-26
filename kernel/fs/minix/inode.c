@@ -28,8 +28,11 @@ struct file_operations minix_file_fops = {
  * Minix symbolic link inode operations.
  */
 struct inode_operations minix_symlink_iops = {
-	.follow_link		= minix_follow_link,
-	.readlink		= minix_readlink,
+	.get_block		= minix_get_block,
+	.bmap			= generic_block_bmap,
+	.readpage		= generic_readpage,
+	.follow_link		= page_follow_link,
+	.readlink		= page_readlink,
 };
 
 /*
