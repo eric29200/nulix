@@ -15,6 +15,8 @@ char *strcat(char *dest, const char *src);
 char *strncat(char *dest, const char *src, size_t n);
 size_t strspn(const char *s, const char *accept);
 size_t strcspn(const char *s, const char *reject);
+char *strpbrk(const char *cs, const char *ct);
+char *strsep(char **s, const char *ct);
 
 void memset(void *s, char v, size_t n);
 void memsetw(void *s, uint16_t v, size_t n);
