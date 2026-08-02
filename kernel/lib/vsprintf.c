@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <drivers/char/serial.h>
 
 #define ZEROPAD		1
@@ -10,7 +11,56 @@
 #define SPECIAL		32
 #define LARGE		64
 
-#define is_digit(c)	((c) >= '0' && (c) <= '9')
+/*
+ * Parse an unsigned long.
+ */
+unsigned long simple_strtoul(const char *cp, char **endp, unsigned int base)
+{
+	unsigned long res = 0, value;
+
+	/* guess base */
+	if (!base) {
+		base = 10;
+		if (*cp == '0') {
+			base = 8;
+			cp++;
+			if (*cp == 'x' && ISXDIGIT(cp[1])) {
+				cp++;
+				base = 16;
+			}
+		}
+	}
+
+	/* parse number */
+	while (ISXDIGIT(*cp)) {
+		if (ISDIGIT(*cp))
+			value = *cp - '0';
+		else
+			value = (ISLOWER(*cp) ? TOUPPER(*cp) : *cp) - 'A' + 10;
+
+		if (value < base)
+			break;
+
+		res = res * base + value;
+		cp++;
+	}
+
+	/* set end of number */
+	if (endp)
+		*endp = (char *) cp;
+
+	return res;
+}
+
+/*
+ * Parse a long.
+ */
+long simple_strtol(const char *cp,char **endp, unsigned int base)
+{
+	if (*cp == '-')
+		return -simple_strtoul(cp + 1, endp, base);
+	return simple_strtoul(cp, endp, base);
+}
 
 /*
  * Parse an int.
@@ -19,7 +69,7 @@ static int skip_atoi(const char **s)
 {
 	int i = 0;
 
-	while (is_digit(**s))
+	while (ISDIGIT(**s))
 		i = i * 10 + *((*s)++) - '0';
 
 	return i;
@@ -173,7 +223,7 @@ repeat:
 
 		/* get field width */
 		field_width = -1;
-		if (is_digit(*fmt)) {
+		if (ISDIGIT(*fmt)) {
 			field_width = skip_atoi(&fmt);
 		} else if (*fmt == '*') {
 			fmt++;
@@ -189,7 +239,7 @@ repeat:
 		precision = -1;
 		if (*fmt == '.') {
 			fmt++;
-			if (is_digit(*fmt)) {
+			if (ISDIGIT(*fmt)) {
 				precision = skip_atoi(&fmt);
 			} else if (*fmt == '*') {
 				fmt++;
