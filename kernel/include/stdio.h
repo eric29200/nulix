@@ -10,4 +10,7 @@ int printf(const char *format, ...);
 void panic(const char *format, ...);
 int sys_syslog(int type, char *buf, int len);
 
+unsigned long simple_strtoul(const char *cp, char **endp, unsigned int base);
+long simple_strtol(const char *cp,char **endp, unsigned int base);
+
 #endif
