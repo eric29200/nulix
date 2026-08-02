@@ -38,7 +38,7 @@ unsigned long simple_strtoul(const char *cp, char **endp, unsigned int base)
 		else
 			value = (ISLOWER(*cp) ? TOUPPER(*cp) : *cp) - 'A' + 10;
 
-		if (value < base)
+		if (value >= base)
 			break;
 
 		res = res * base + value;
