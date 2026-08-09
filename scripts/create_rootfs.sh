@@ -31,7 +31,7 @@ sudo mount ${LOOP_DEVICE}p1 tmp
 sudo mkdir -p tmp/etc
 sudo mkdir -p tmp/dev/pts tmp/dev/shm
 sudo mkdir -p tmp/proc
-sudo mkdir -p tmp/mnt/cdrom
+sudo mkdir -p tmp/mnt/cdrom tmp/mnt/9p
 sudo mkdir -p tmp/tmp
 sudo mkdir -p tmp/run
 sudo mkdir -p tmp/var/run tmp/var/log tmp/var/empty
