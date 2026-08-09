@@ -46,7 +46,7 @@ static struct socket *sock_alloc()
 /*
  * Release a socket.
  */
-static void sock_release(struct socket *sock)
+void sock_release(struct socket *sock)
 {
 	/* set state */
 	if (sock->state != SS_UNCONNECTED)
@@ -62,11 +62,43 @@ static void sock_release(struct socket *sock)
 }
 
 /*
+ * Map a socket to a file.
+ */
+struct file *sock_get_file(struct socket *sock)
+{
+	struct inode *inode = sock->inode;
+	struct dentry *dentry;
+	struct file *filp;
+
+	/* get a new empty file */
+	filp = get_empty_filp();
+	if (!filp)
+		return ERR_PTR(-EMFILE);
+
+	/* allocate a dentry */
+	dentry = d_alloc_root(inode);
+	if (!dentry) {
+		close_fp(filp);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	/* set file */
+	filp->f_mode = 3;
+	filp->f_flags = O_RDWR;
+	filp->f_pos = 0;
+	filp->f_count = 1;
+	filp->f_dentry = dentry;
+	filp->f_op = &socket_fops;
+	inode->i_count++;
+
+	return filp;
+}
+
+/*
  * Get a file slot.
  */
-static int get_fd(struct inode *inode)
+static int get_fd(struct socket *sock)
 {
-	struct dentry *dentry;
 	struct file *filp;
 	int fd;
 
@@ -75,28 +107,14 @@ static int get_fd(struct inode *inode)
 	if (fd < 0)
 		return fd;
 
-	/* get a new empty file */
-	filp = get_empty_filp();
-	if (!filp)
-		return -EMFILE;
+	/* get a file */
+	filp = sock_get_file(sock);
+	if (IS_ERR(filp))
+		return PTR_ERR(filp);
 
-	/* allocate a dentry */
-	dentry = d_alloc_root(inode);
-	if (!dentry) {
-		close_fp(filp);
-		return -ENOMEM;
-	}
-
-	/* set file */
+	/* install file */
 	current_task->files->filp[fd] = filp;
 	FD_CLR(fd, &current_task->files->close_on_exec);
-	filp->f_mode = 3;
-	filp->f_flags = O_RDWR;
-	filp->f_pos = 0;
-	filp->f_count = 1;
-	filp->f_dentry = dentry;
-	filp->f_op = &socket_fops;
-	inode->i_count++;
 
 	return fd;
 }
@@ -365,7 +383,7 @@ struct file_operations socket_fops = {
 /*
  * Create a socket.
  */
-static int sock_create(int family, int type, int protocol, struct socket **res)
+int sock_create(int family, int type, int protocol, struct socket **res)
 {
 	struct socket *sock;
 	int ret;
@@ -413,7 +431,7 @@ int sys_socket(int domain, int type, int protocol)
 		return ret;
 
 	/* get a file slot */
-	fd = get_fd(sock->inode);
+	fd = get_fd(sock);
 	if (fd < 0) {
 		sock_release(sock);
 		return -EINVAL;
@@ -540,7 +558,7 @@ restart:
 		goto out_release;
 
 	/* get a file slot */
-	ret = get_fd(new_sock->inode);
+	ret = get_fd(new_sock);
 	if (ret < 0)
 		goto out_release;
 

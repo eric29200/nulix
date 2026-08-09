@@ -6,13 +6,18 @@
 #include <lib/list.h>
 
 #define P9_PROTO_2000L			2
+#define P9_PORT				564
 
 #define P9_IOHDRSZ			24
+
+#define P9_CLIENT_CONNECTED		1
+#define P9_CLIENT_DISCONNECTED		2
 
 /*
  * 9p client.
  */
 struct p9_client {
+	uint8_t				status;
 	int				msize;
 	uint8_t				proto_version;
 	struct p9_trans_module *	trans_mod;

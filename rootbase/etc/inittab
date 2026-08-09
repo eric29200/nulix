@@ -10,7 +10,7 @@ si4::sysinit:/bin/mount -a -t no9p
 rcS:12345:wait:/etc/init.d/rcS
 
 # mount network filesystem
-si5::sysinit:/bin/mount -a -t 9p
+si5::wait:/bin/mount -a -t 9p
 
 # Virtual consoles
 1:2345:respawn:/sbin/mingetty --noclear tty1

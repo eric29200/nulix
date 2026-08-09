@@ -175,6 +175,9 @@ void inet_proto_init();
 /* generic functions */
 void init_proto();
 int sock_register(struct net_proto_family *ops);
+int sock_create(int family, int type, int protocol, struct socket **res);
+void sock_release(struct socket *sock);
+struct file *sock_get_file(struct socket *sock);
 int sock_fcntl(struct file *filp, int cmd, unsigned long arg);
 int sock_readv_writev(int type, struct file *filp, const struct iovec *iov, int iovcnt, size_t len);
 
