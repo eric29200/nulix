@@ -65,9 +65,10 @@ err:
 /*
  * Read super block.
  */
-static struct super_block *tmpfs_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *tmpfs_read_super(struct super_block *sb, const char *dev_name, void *data, int silent)
 {
 	/* unused data */
+	UNUSED(dev_name);
 	UNUSED(data);
 
 	/* set super block */

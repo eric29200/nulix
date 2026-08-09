@@ -73,13 +73,14 @@ void *cramfs_read(struct super_block *sb, uint32_t offset, size_t len)
 /*
  * Read super block.
  */
-static struct super_block *cramfs_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *cramfs_read_super(struct super_block *sb, const char *dev_name, void *data, int silent)
 {
 	struct cramfs_super_block *csb;
 	struct buffer_head *sbh;
 	uint32_t root_offset;
 
 	/* unused data */
+	UNUSED(dev_name);
 	UNUSED(data);
 
 	/* set default block size */

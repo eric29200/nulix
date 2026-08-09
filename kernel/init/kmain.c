@@ -31,6 +31,7 @@
 #include <fs/tmp_fs.h>
 #include <fs/iso_fs.h>
 #include <fs/devpts_fs.h>
+#include <fs/v9fs_fs.h>
 #include <stdio.h>
 #include <string.h>
 #include <stderr.h>
@@ -270,6 +271,8 @@ static void kinit()
 		panic("Cannot register iso file system\n");
 	if (init_devpts_fs())
 		panic("Cannot register devpts file system\n");
+	if (init_v9fs_fs())
+		panic("Cannot register 9p file system\n");
 
 	/* init network protocols */
 	printf("[Kernel] Init network protocols\n");

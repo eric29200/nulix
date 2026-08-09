@@ -107,7 +107,7 @@ static int ext2_check_descriptors(struct super_block *sb)
 /*
  * Read super block.
  */
-static struct super_block *ext2_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *ext2_read_super(struct super_block *sb, const char *dev_name, void *data, int silent)
 {
 	uint32_t block, sb_block = 1, offset = 0, logic_sb_block = 1;
 	struct ext2_sb_info *sbi;
@@ -115,6 +115,7 @@ static struct super_block *ext2_read_super(struct super_block *sb, void *data, i
 	uint32_t i;
 
 	/* unused data */
+	UNUSED(dev_name);
 	UNUSED(data);
 
 	/* allocate Ext2 in memory super block */

@@ -7,7 +7,7 @@
 /*
  * Read super block.
  */
-static struct super_block *isofs_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *isofs_read_super(struct super_block *sb, const char *dev_name, void *data, int silent)
 {
 	struct iso_directory_record *root_dir;
 	struct iso_primary_descriptor *pri;
@@ -17,6 +17,7 @@ static struct super_block *isofs_read_super(struct super_block *sb, void *data, 
 	int block;
 
 	/* unused data */
+	UNUSED(dev_name);
 	UNUSED(data);
 
 	/* allocate ISOFS super block */

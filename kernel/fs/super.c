@@ -384,7 +384,7 @@ struct super_block *get_super(dev_t dev)
 /*
  * Read a super block.
  */
-static struct super_block *read_super(dev_t dev, const char *name, int flags, void *data, int silent)
+static struct super_block *read_super(dev_t dev, const char *dev_name, const char *name, int flags, void *data, int silent)
 {
 	struct file_system_type *fs;
 	struct super_block *sb;
@@ -414,7 +414,7 @@ static struct super_block *read_super(dev_t dev, const char *name, int flags, vo
 	sb->s_type = fs;
 
 	/* read super block */
-	if (!fs->read_super(sb, data, silent)) {
+	if (!fs->read_super(sb, dev_name, data, silent)) {
 		sb->s_dev = 0;
 		return NULL;
 	}
@@ -454,7 +454,7 @@ static int do_mount(dev_t dev, const char *dev_name, const char *dir_name, const
 
 	/* get an empty super block */
 	ret = -EINVAL;
-	sb = read_super(dev, type, flags, data, 0);
+	sb = read_super(dev, dev_name, type, flags, data, 0);
 	if (!sb)
 		goto err;
 
@@ -544,7 +544,7 @@ int do_mount_root(dev_t dev, const char *dev_name, int flags)
 			continue;
 
 		/* read super block */
-		sb = read_super(dev, fs->name, flags, NULL, 1);
+		sb = read_super(dev, dev_name, fs->name, flags, NULL, 1);
 		if (sb)
 			goto found;
 	}

@@ -7,7 +7,7 @@
 /*
  * Read super block.
  */
-static struct super_block *minix_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *minix_read_super(struct super_block *sb, const char *dev_name, void *data, int silent)
 {
 	struct minix3_super_block *msb3;
 	struct minix_super_block *msb;
@@ -16,6 +16,7 @@ static struct super_block *minix_read_super(struct super_block *sb, void *data, 
 	int i;
 
 	/* unused data */
+	UNUSED(dev_name);
 	UNUSED(data);
 
 	/* allocate minix super block */

@@ -35,11 +35,12 @@ static struct super_operations devpts_sops = {
 /*
  * Read super block.
  */
-static struct super_block *devpts_read_super(struct super_block *sb, void *data, int silent)
+static struct super_block *devpts_read_super(struct super_block *sb, const char *dev_name, void *data, int silent)
 {
 	struct devpts_entry *root_entry;
 
 	/* unused data */
+	UNUSED(dev_name);
 	UNUSED(data);
 
 	/* set super block */

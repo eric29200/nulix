@@ -90,7 +90,7 @@ struct buffer_head {
 struct file_system_type {
 	const char *			name;
 	int				flags;
-	struct super_block *		(*read_super)(struct super_block *, void *, int);
+	struct super_block *		(*read_super)(struct super_block *, const char *, void *, int);
 	struct file_system_type *	next;
 };
 

@@ -398,15 +398,12 @@ static char __buf[1024];
 /*
  * Print a formatted string.
  */
-int printf(const char *fmt, ...)
+int vprintf(const char *fmt, va_list ap)
 {
-	va_list args;
 	int i, j;
 
 	/* print in tmp buf */
-	va_start(args, fmt);
-	i = vsnprintf(__buf, sizeof(__buf), fmt, args);
-	va_end(args);
+	i = vsnprintf(__buf, sizeof(__buf), fmt, ap);
 
 	/* write tmp buf to serial line */
 	for (j = 0; j < i; j++)
@@ -416,24 +413,35 @@ int printf(const char *fmt, ...)
 }
 
 /*
+ * Print a formatted string.
+ */
+int printf(const char *fmt, ...)
+{
+	va_list args;
+	int ret;
+
+	/* print in tmp buf */
+	va_start(args, fmt);
+	ret = vprintf(fmt, args);
+	va_end(args);
+
+	return ret;
+}
+
+/*
  * Panic.
  */
 void panic(const char *fmt, ...)
 {
 	va_list args;
-	int i, j;
 
 	/* print panic */
 	printf("[PANIC] ");
 
 	/* print in tmp buf */
 	va_start(args, fmt);
-	i = vsnprintf(__buf, sizeof(__buf), fmt, args);
+	vprintf(fmt, args);
 	va_end(args);
-
-	/* write tmp buf to serial line */
-	for (j = 0; j < i; j++)
-		write_serial(__buf[j]);
 
 	/* infinite loop */
 	for (;;);
