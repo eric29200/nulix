@@ -18,9 +18,32 @@ static void v9fs_session_close(struct v9fs_session_info *v9ses)
  */
 static struct p9_fid *v9fs_session_init(struct v9fs_session_info *v9ses, const char *dev_name, char *data)
 {
-	UNUSED(v9ses);
-	UNUSED(dev_name);
-	UNUSED(data);
+	int ret;
+
+	/* allocate memory for uname */
+	v9ses->uname = get_free_page();
+	if (!v9ses->uname)
+		return ERR_PTR(-ENOMEM);
+
+	/* allocate memory for aname */
+	v9ses->aname = get_free_page();
+	if (!v9ses->aname) {
+		free_page(v9ses->uname);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	/* se uname/aname to default */
+	strcpy(v9ses->uname, V9FS_DEFUSER);
+	strcpy(v9ses->aname, V9FS_DEFANAME);
+
+	/* create client */
+	v9ses->client = p9_client_create(dev_name, data);
+	if (IS_ERR(v9ses->client)) {
+		ret = PTR_ERR(v9ses->client);
+		v9ses->client = NULL;
+		return ERR_PTR(ret);
+	}
+
 	printf("TODO: v9fs_session_init\n");
 	return ERR_PTR(-EINVAL);
 }
@@ -66,5 +89,13 @@ static struct file_system_type v9fs_fs = {
  */
 int init_v9fs_fs()
 {
+	int ret;
+
+	/* init 9p */
+	ret = init_p9();
+	if (ret)
+		return ret;
+
+	/* register 9p filesystem */
 	return register_filesystem(&v9fs_fs);
 }

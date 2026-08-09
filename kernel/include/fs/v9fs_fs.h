@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#define V9FS_PORT		564
+#define V9FS_DEFUSER		"nobody"
+#define V9FS_DEFANAME		""
+
 /*
  * 9p session.
  */
