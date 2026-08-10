@@ -5,8 +5,10 @@
 
 #define le16toh(x)	((uint16_t) x)
 #define le32toh(x)	((uint32_t) x)
+#define le64toh(x)	((uint64_t) x)
 
 #define htole16(x)	((uint16_t) x)
 #define htole32(x)	((uint32_t) x)
+#define htole64(x)	((uint64_t) x)
 
 #endif

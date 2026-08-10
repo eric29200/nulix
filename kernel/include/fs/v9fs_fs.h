@@ -14,30 +14,7 @@ struct v9fs_session_info {
 	char *			uname;
 	char *			aname;
 	struct p9_client *	client;
-};
-
-/*
- * File system entity information (server side).
- */
-struct p9_qid {
-	uint8_t			type;
-	uint32_t		version;
-	uint64_t		path;
-};
-
-/*
- * File system entity handle (client side).
- */
-struct p9_fid {
-	struct p9_client *	client;
-	uint32_t		fid;
-	int			mode;
-	struct p9_qid		qid;
-	uint32_t		iounit;
-	uid_t			uid;
-	void *			rdir;
-	struct list_head	flist;
-	struct list_head	dlist;
+	uint32_t		maxdata;
 };
 
 /* 9p super operations */

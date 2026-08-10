@@ -23,6 +23,7 @@
 #define NR_FILE				256
 #define NR_SUPER			256
 #define MAX_INODES			4096
+#define PATH_MAX			4096
 
 #define MS_RDONLY			1
 #define MS_NOSUID			2

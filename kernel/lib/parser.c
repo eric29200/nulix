@@ -103,6 +103,22 @@ int match_token(char *string, const struct match_token tokens[], struct substrin
 }
 
 /*
+ * Copy the characters from a substring_t to a sized buffer.
+ */
+size_t match_strlcpy(char *dest, const struct substring *src, size_t size)
+{
+	size_t ret = src->to - src->from, len;
+
+	if (size) {
+		len = ret >= size ? size - 1 : ret;
+		memcpy(dest, src->from, len);
+		dest[len] = '\0';
+	}
+
+	return ret;
+}
+
+/*
  * Scan a number.
  */
 static int match_number(struct substring *s, int *res, int base)

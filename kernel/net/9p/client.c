@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <net/9p/9p.h>
 #include <lib/parser.h>
+#include <proc/sched.h>
 #include <stderr.h>
 
 #define min(x, y)		((x) <= (y) ? (x) : (y))
@@ -108,6 +109,40 @@ out:
 }
 
 /*
+ * Create a fid.
+ */
+static struct p9_fid *p9_fid_create(struct p9_client *client)
+{
+	struct p9_fid *fid;
+
+	/* allocate a new fid */
+	fid = (struct p9_fid *) kmalloc(sizeof(struct p9_fid));
+	if (!fid)
+		return NULL;
+
+	/* init fid */
+	memset(fid, 0, sizeof(struct p9_fid));
+	fid->mode = -1;
+	fid->uid = current_task->fsuid;
+	fid->client = client;
+	fid->fid = client->fid++;
+	if (client->fid == UINT_MAX)
+		client->fid++;
+
+	return fid;
+}
+
+/*
+ * Destroy a fid.
+ */
+static void p9_fid_destroy(struct p9_fid *fid)
+{
+	if (fid->rdir)
+		kfree(fid->rdir);
+	kfree(fid);
+}
+
+/*
  * Create a client.
  */
 struct p9_client *p9_client_create(const char *dev_name, char *options)
@@ -163,6 +198,28 @@ err:
 }
 
 /*
+ * Destroy a client.
+ */
+void p9_client_destroy(struct p9_client *client)
+{
+	struct list_head *pos, *n;
+	struct p9_fid *fid;
+
+	/* close connection */
+	if (client->trans_mod)
+		client->trans_mod->close(client);
+
+	/* destroy fids */
+	list_for_each_safe(pos, n, &client->fid_list) {
+		fid = list_entry(pos, struct p9_fid, flist);
+		p9_fid_destroy(fid);
+	}
+
+	/* free client */
+	kfree(client);
+}
+
+/*
  * Get next tag.
  */
 uint16_t p9_client_next_tag(struct p9_client *client)
@@ -174,7 +231,6 @@ uint16_t p9_client_next_tag(struct p9_client *client)
 
 	return ret;
 }
-
 
 /*
  * Init a packet.
@@ -461,4 +517,52 @@ out:
 		kfree(version);
 	p9_request_free(req);
 	return ret;
+}
+
+/*
+ * Attach request.
+ */
+struct p9_fid *p9_client_attach(struct p9_client *client, struct p9_fid *afid, const char *uname, uid_t n_uname, const char *aname)
+{
+	struct p9_request *req;
+	struct p9_fid *fid;
+	struct p9_qid qid;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TATTACH afid %d uname %s aname %s\n", afid ? (int) afid->fid : -1, uname, aname);
+
+	/* create file identifier */
+	fid = p9_fid_create(client);
+	if (!fid)
+		return ERR_PTR(-ENOMEM);
+	fid->uid = n_uname;
+
+	/* issue attach request */
+	req = p9_client_rpc(client, P9_TATTACH, "ddssu", fid->fid, afid ? afid->fid : P9_NOFID, uname, aname, n_uname);
+	if (IS_ERR(req)) {
+		ret = PTR_ERR(req);
+		goto err;
+	}
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "Q", &qid);
+	if (ret)
+		goto err_free_req;
+
+	/* print reply */
+	p9_debug("RATTACH qid %x.%llx.%x\n", qid.type, qid.path, qid.version);
+
+	/* set file identifier from server */
+	memcpy(&fid->qid, &qid, sizeof(struct p9_qid));
+
+	/* free request */
+	p9_request_free(req);
+
+	return fid;
+err_free_req:
+	p9_request_free(req);
+err:
+	p9_fid_destroy(fid);
+	return ERR_PTR(ret);
 }

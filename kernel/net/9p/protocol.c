@@ -18,9 +18,10 @@ int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 	switch (type) {
 		case P9_TVERSION:
 		case P9_RVERSION:
+		case P9_RATTACH:
 			return 4096;
 		case P9_TATTACH:
-			if (strcmp("ddss?u", fmt))
+			if (strcmp("ddssu", fmt))
 				p9_fatal("p9_msg_buf_size: wrong format for message %d\n", type);
 			va_arg(ap, int32_t);
 			va_arg(ap, int32_t);
@@ -83,6 +84,11 @@ int p9pdu_vwritef(struct p9_fcall *pdu, const char *fmt, va_list ap)
 				if (pdu_write(pdu, &val32, sizeof(val32)))
 					ret = -EFAULT;
 				break;
+			case 'u':
+				uid_t uid = htole32(va_arg(ap, uid_t));
+				if (pdu_write(pdu, &uid, sizeof(uid)))
+					ret = -EFAULT;
+				break;
 			case 's':
 				const char *sptr = va_arg(ap, const char *);
 				uint16_t len = 0;
@@ -138,6 +144,15 @@ int p9pdu_vreadf(struct p9_fcall *pdu, const char *fmt, va_list ap)
 				}
 				*val32 = le32toh(*val32);
 				break;
+			case 'q':{
+				int64_t *val64 = va_arg(ap, int64_t *);
+				if (pdu_read(pdu, val64, sizeof(*val64))) {
+					ret = -EFAULT;
+					break;
+				}
+				*val64 = le64toh(*val64);
+			}
+			break;
 			case 's':
 				char **sptr = va_arg(ap, char **);
 				uint16_t len;
@@ -160,6 +175,10 @@ int p9pdu_vreadf(struct p9_fcall *pdu, const char *fmt, va_list ap)
 					(*sptr)[len] = 0;
 				}
 
+				break;
+			case 'Q':
+				struct p9_qid *qid = va_arg(ap, struct p9_qid *);
+				ret = p9pdu_readf(pdu, "bdq", &qid->type, &qid->version, &qid->path);
 				break;
 			default:
 				p9_fatal("p9pdu_vreadf: unknwon format %c\n", *ptr);

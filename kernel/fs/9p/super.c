@@ -1,8 +1,71 @@
 #include <fs/fs.h>
 #include <fs/v9fs_fs.h>
 #include <net/9p/9p.h>
+#include <lib/parser.h>
 #include <stderr.h>
 #include <stdio.h>
+
+/*
+ * Options.
+ */
+enum {
+	Opt_uname,
+	Opt_remotename,
+	Opt_err
+};
+
+static const struct match_token tokens[] = {
+	{ Opt_uname,		"uname=%s" 	},
+	{ Opt_remotename,	"aname=%s" 	},
+	{ Opt_err, 		NULL 		},
+};
+
+/*
+ * Parse options.
+ */
+static int v9fs_parse_options(struct v9fs_session_info *v9ses, char *opts)
+{
+	struct substring args[MAX_OPT_ARGS];
+	char *options, *tmp_options, *p;
+	int token;
+
+	/* no options */
+	if (!opts)
+		return 0;
+
+	/* dup options */
+	tmp_options = strdup(opts);
+	if (!tmp_options)
+		return -ENOMEM;
+	options = tmp_options;
+
+	/* parse options */
+	for (;;) {
+		p = strsep(&options, ",");
+		if (!p)
+			break;
+		if (!*p)
+			continue;
+
+		/* get next option */
+		token = match_token(p, tokens, args);
+
+		/* parse option */
+		switch (token) {
+			case Opt_uname:
+				match_strlcpy(v9ses->uname, &args[0], PATH_MAX);
+				break;
+			case Opt_remotename:
+				match_strlcpy(v9ses->aname, &args[0], PATH_MAX);
+				break;
+			default:
+				continue;
+		}
+	}
+
+	kfree(tmp_options);
+	return 0;
+}
 
 /*
  * Close a session.
@@ -18,7 +81,8 @@ static void v9fs_session_close(struct v9fs_session_info *v9ses)
  */
 static struct p9_fid *v9fs_session_init(struct v9fs_session_info *v9ses, const char *dev_name, char *data)
 {
-	int ret;
+	struct p9_fid *fid;
+	int ret = -ENOMEM;
 
 	/* allocate memory for uname */
 	v9ses->uname = get_free_page();
@@ -41,11 +105,32 @@ static struct p9_fid *v9fs_session_init(struct v9fs_session_info *v9ses, const c
 	if (IS_ERR(v9ses->client)) {
 		ret = PTR_ERR(v9ses->client);
 		v9ses->client = NULL;
-		return ERR_PTR(ret);
+		goto err;
 	}
 
-	printf("TODO: v9fs_session_init\n");
-	return ERR_PTR(-EINVAL);
+	/* parse options */
+	ret = v9fs_parse_options(v9ses, data);
+	if (ret)
+		goto err;
+
+	/* max data for client interface */
+	v9ses->maxdata = v9ses->client->msize - P9_IOHDRSZ;
+
+	/* attach to server */
+	fid = p9_client_attach(v9ses->client, NULL, v9ses->uname, ~0, v9ses->aname);
+	if (IS_ERR(fid)) {
+		ret = PTR_ERR(fid);
+		p9_error("v9fs_session_init: cannot attach\n");
+		goto err;
+	}
+
+	return fid;
+err:
+	if (v9ses->client)
+		p9_client_destroy(v9ses->client);
+	free_page(v9ses->uname);
+	free_page(v9ses->aname);
+	return ERR_PTR(ret);
 }
 
 /*

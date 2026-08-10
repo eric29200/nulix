@@ -33,6 +33,7 @@ struct p9_client {
 	int				msize;
 	uint8_t				proto_version;
 	uint16_t			tag;
+	uint32_t			fid;
 	struct p9_trans_module *	trans_mod;
 	void *				trans;
 	struct list_head 		fid_list;
@@ -70,14 +71,40 @@ struct p9_trans_module {
 	int				(*request) (struct p9_client *, struct p9_request *req);
 };
 
+/*
+ * File system entity information (server side).
+ */
+struct p9_qid {
+	uint8_t			type;
+	uint32_t		version;
+	uint64_t		path;
+};
+
+/*
+ * File system entity handle (client side).
+ */
+struct p9_fid {
+	struct p9_client *	client;
+	uint32_t		fid;
+	int			mode;
+	struct p9_qid		qid;
+	uint32_t		iounit;
+	uid_t			uid;
+	void *			rdir;
+	struct list_head	flist;
+	struct list_head	dlist;
+};
+
 /* init functions */
 int init_p9();
 int p9_trans_fd_init();
 
 /* client functions */
 struct p9_client *p9_client_create(const char *dev_name, char *options);
+void p9_client_destroy(struct p9_client *client);
 int p9_parse_header(struct p9_fcall *fc, int32_t *size, int8_t *type, int16_t *tag);
 int p9_client_version(struct p9_client *client);
+struct p9_fid *p9_client_attach(struct p9_client *client, struct p9_fid *afid, const char *uname, uid_t n_uname, const char *aname);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);
