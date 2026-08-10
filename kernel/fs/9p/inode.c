@@ -1,0 +1,93 @@
+#include <fs/fs.h>
+#include <fs/v9fs_fs.h>
+#include <proc/sched.h>
+#include <net/9p/9p.h>
+#include <stdio.h>
+#include <stderr.h>
+#include <fcntl.h>
+
+/*
+ * Read an inode.
+ */
+int v9fs_read_inode(struct inode *inode)
+{
+	UNUSED(inode);
+	printf("TODO: v9fs_read_inode\n");
+	return -EINVAL;
+}
+
+/*
+ * Release an inode.
+ */
+int v9fs_put_inode(struct inode *inode)
+{
+	UNUSED(inode);
+	printf("TODO: v9fs_put_inode\n");
+	return -EINVAL;
+}
+
+/*
+ * Directory operations.
+ */
+static struct file_operations v9fs_dir_fops = {
+	.readdir	= v9fs_readdir,
+};
+
+/*
+ * Directory inode operations.
+ */
+static struct inode_operations v9fs_dir_iops = {
+	.fops		= &v9fs_dir_fops,
+	.lookup		= v9fs_lookup,
+};
+
+/*
+ * Init a 9p inode.
+ */
+int v9fs_init_inode(struct inode *inode, int mode)
+{
+	/* set inode */
+	inode->i_mode = mode;
+	inode->i_uid = current_task->fsuid;
+	inode->i_gid = current_task->fsgid;
+	inode->i_blocks = 0;
+	inode->i_rdev = 0;
+	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;
+	inode->i_nlinks = 1;
+
+	/* set operations */
+	switch (mode & S_IFMT) {
+		case S_IFDIR:
+			inode->i_nlinks++;
+			inode->i_op = &v9fs_dir_iops;
+			break;
+		default:
+			p9_error("v9fs_init_inode: can't inode for mode 0x%x\n", mode & S_IFMT);
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+/*
+ * Get a 9p inode.
+ */
+struct inode *v9fs_get_inode(struct super_block *sb, int mode)
+{
+	struct inode *inode;
+	int ret;
+
+	/* get an empty inode */
+	inode = get_empty_inode(sb);
+	if (!inode)
+		return ERR_PTR(-ENOMEM);
+
+	/* init inode */
+	ret = v9fs_init_inode(inode, mode);
+	if (ret) {
+		iput(inode);
+		return ERR_PTR(ret);
+	}
+
+	return inode;
+}

@@ -24,6 +24,11 @@
 #define P9_RATTACH			105
 #define P9_TERROR			106
 #define P9_RERROR			107
+#define P9_TCLUNK			120
+#define P9_RCLUNK			121
+
+#define P9_STATS_BASIC			0x000007FFULL
+#define P9_STATS_ALL			0x00003FFFULL
 
 /*
  * 9p client.
@@ -105,6 +110,7 @@ void p9_client_destroy(struct p9_client *client);
 int p9_parse_header(struct p9_fcall *fc, int32_t *size, int8_t *type, int16_t *tag);
 int p9_client_version(struct p9_client *client);
 struct p9_fid *p9_client_attach(struct p9_client *client, struct p9_fid *afid, const char *uname, uid_t n_uname, const char *aname);
+int p9_client_clunk(struct p9_fid *fid);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);

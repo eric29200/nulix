@@ -566,3 +566,32 @@ err:
 	p9_fid_destroy(fid);
 	return ERR_PTR(ret);
 }
+
+/*
+ * Release a fid.
+ */
+int p9_client_clunk(struct p9_fid *fid)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+	int ret = 0;
+
+	/* print a debug message */
+	p9_debug("TCLUNK fid %d\n", fid->fid);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TCLUNK, "d", fid->fid);
+	if (IS_ERR(req)) {
+		ret = PTR_ERR(req);
+		goto out;
+	}
+
+	/* print reply */
+	p9_debug("RCLUNK fid %d\n", fid->fid);
+
+	/* free request */
+	p9_request_free(req);
+out:
+	p9_fid_destroy(fid);
+	return ret;
+}

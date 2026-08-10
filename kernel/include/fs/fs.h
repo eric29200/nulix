@@ -103,7 +103,7 @@ struct super_block {
 	size_t				s_blocksize;
 	uint8_t				s_blocksize_bits;
 	void *				s_fs_info;
-	uint16_t			s_magic;
+	uint32_t			s_magic;
 	uint32_t			s_flags;
 	struct file_system_type *	s_type;
 	struct dentry *			s_root;

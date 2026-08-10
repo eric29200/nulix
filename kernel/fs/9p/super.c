@@ -4,6 +4,7 @@
 #include <lib/parser.h>
 #include <stderr.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 /*
  * Options.
@@ -134,11 +135,41 @@ err:
 }
 
 /*
+ * Release a super block.
+ */
+static void v9fs_put_super(struct super_block *sb)
+{
+	UNUSED(sb);
+	printf("TODO: v9fs_put_super\n");
+}
+
+/*
+ * Get statistics on file system.
+ */
+static void v9fs_statfs(struct super_block *sb, struct statfs64 *buf)
+{
+	UNUSED(sb);
+	UNUSED(buf);
+	printf("TODO: v9fs_statfs\n");
+}
+
+/*
+ * Superblock operations.
+ */
+static struct super_operations v9fs_sops = {
+	.put_super		= v9fs_put_super,
+	.read_inode		= v9fs_read_inode,
+	.put_inode		= v9fs_put_inode,
+	.statfs			= v9fs_statfs,
+};
+
+/*
  * Read super block.
  */
 static struct super_block *v9fs_read_super(struct super_block *sb, const char *dev_name, void *data, int silent)
 {
 	struct v9fs_session_info *v9ses;
+	struct inode *inode;
 	struct p9_fid *fid;
 
 	/* allocate a new session */
@@ -149,13 +180,28 @@ static struct super_block *v9fs_read_super(struct super_block *sb, const char *d
 	/* init session */
 	fid = v9fs_session_init(v9ses, dev_name, data);
 	if (IS_ERR(fid))
-		goto err_close_session;
+		goto err_session;
+
+	/* set super block */
+	sb->s_magic = V9FS_SUPER_MAGIC;
+	sb->s_op = &v9fs_sops;
+
+	/* get root inode */
+	inode = v9fs_get_inode(sb, S_IFDIR | S_IRWXUGO);
+	if (IS_ERR(inode))
+		goto err_root_inode;
 
 	printf("TODO: v9fs_read_super\n");
-	return NULL;
-err_close_session:
+	return sb;
+err_root_inode:
+	if (!silent)
+		p9_error("Can't get root inode\n");
+	p9_client_clunk(fid);
+	goto err;
+err_session:
 	if (!silent)
 		p9_error("Can't init session\n");
+err:
 	v9fs_session_close(v9ses);
 	kfree(v9ses);
 	return NULL;
