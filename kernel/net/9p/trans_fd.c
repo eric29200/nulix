@@ -3,6 +3,7 @@
 #include <net/inet/ip.h>
 #include <net/inet/in.h>
 #include <net/inet/net.h>
+#include <x86/endian.h>
 #include <fs/fs.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -185,14 +186,108 @@ static void p9_fd_close(struct p9_client *client)
 }
 
 /*
+ * write to socket.
+ */
+static int __write(struct file *filp, const char *buf, size_t len)
+{
+	int ret;
+
+	/* write not implemented */
+	if (!filp || !filp->f_op || !filp->f_op->write)
+		return -EINVAL;
+
+	/* write */
+	ret = filp->f_op->write(filp, buf, len, &filp->f_pos);
+	if (ret < 0)
+		return ret;
+	if (ret != (int) len)
+		return -EIO;
+
+	return 0;
+}
+
+/*
+ * Send a 9P packet.
+ */
+static int p9_packet_send(struct p9_client *client, struct p9_fcall *fc)
+{
+	struct p9_trans_fd *trans = client->trans;
+	return __write(trans->filp, (const char *) fc->sdata, fc->size);
+}
+
+/*
+ * Read from socket.
+ */
+static int __read(struct file *filp, char *buf, size_t len)
+{
+	int ret;
+
+	/* read not implemented */
+	if (!filp || !filp->f_op || !filp->f_op->read)
+		return -EINVAL;
+
+	/* read */
+	ret = filp->f_op->read(filp, buf, len, &filp->f_pos);
+	if (ret < 0)
+		return ret;
+	if (ret != (int) len)
+		return -EIO;
+
+	return 0;
+}
+
+/*
+ * Receive a 9P packet.
+ */
+static int p9_packet_receive(struct p9_client *client, struct p9_fcall *fc)
+{
+	struct p9_trans_fd *trans = client->trans;
+	int ret;
+
+	/* read packet length */
+	ret = __read(trans->filp, (char *) &fc->size, sizeof(uint32_t));
+	if (ret)
+		return ret;
+
+	/* check if packet is big enough */
+	fc->size = le32toh(fc->size);
+	if (fc->size + sizeof(uint32_t) > fc->capacity)
+		return -EINVAL;
+
+	/* put packet size in packet */
+	*((uint32_t *) fc->sdata) = htole32(fc->size);
+
+	/* read packet */
+	return __read(trans->filp, (char *) fc->sdata + sizeof(uint32_t), fc->size - sizeof(uint32_t));
+}
+
+/*
  * Create a TCP request.
  */
 static int p9_fd_request(struct p9_client *client, struct p9_request *req)
 {
-	UNUSED(client);
-	UNUSED(req);
-	printf("TODO: p9_fd_request\n");
-	return -EINVAL;
+	int ret;
+
+	/* send packet */
+	ret = p9_packet_send(client, &req->tc);
+	if (ret)
+		return ret;
+
+	/* receive reply */
+	ret = p9_packet_receive(client, &req->rc);
+	if (ret)
+		return ret;
+
+	/* parse reply header */
+	ret = p9_parse_header(&req->rc, NULL, NULL, NULL);
+	if (ret)
+		return ret;
+
+	/* check tag */
+	if (req->tc.tag != req->rc.tag)
+		return -EINVAL;
+
+	return 0;
 }
 
 /*

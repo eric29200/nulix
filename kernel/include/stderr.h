@@ -57,6 +57,7 @@
 #define ECONNREFUSED	111	/* Connection refused */
 #define	EALREADY	114	/* Operation already in progress */
 #define	EINPROGRESS	115	/* Operation now in progress */
+#define	EREMOTEIO	121	/* Remote I/O error */
 #define ERESTARTSYS	512	/* Restart system call */
 #define ERESTARTNOHAND	514	/* restart if no handler */
 #define ENOIOCTLCMD	515	/* no ioctl command */

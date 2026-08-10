@@ -3,6 +3,8 @@
 #include <lib/parser.h>
 #include <stderr.h>
 
+#define min(x, y)		((x) <= (y) ? (x) : (y))
+
 /*
  * Options.
  */
@@ -161,11 +163,302 @@ err:
 }
 
 /*
+ * Get next tag.
+ */
+uint16_t p9_client_next_tag(struct p9_client *client)
+{
+	uint16_t ret = client->tag++;
+
+	if (client->tag == USHRT_MAX)
+		client->tag++;
+
+	return ret;
+}
+
+
+/*
+ * Init a packet.
+ */
+static int p9_fcall_init(struct p9_fcall *fc, int alloc_msize)
+{
+	/* allocate data */
+	fc->sdata = kmalloc(alloc_msize);
+	if (!fc->sdata)
+		return -ENOMEM;
+
+	/* set packet */
+	fc->capacity = alloc_msize;
+	fc->id = 0;
+	fc->tag = P9_NOTAG;
+
+	return 0;
+}
+
+/*
+ * Free a packet.
+ */
+void p9_fcall_fini(struct p9_fcall *fc)
+{
+	if (fc->sdata)
+		kfree(fc->sdata);
+}
+
+/*
+ * Free a request.
+ */
+void p9_request_free(struct p9_request *req)
+{
+	p9_fcall_fini(&req->tc);
+	p9_fcall_fini(&req->rc);
+	kfree(req);
+}
+
+/*
+ * Allocate a new request.
+ */
+static struct p9_request *p9_tag_alloc(struct p9_client *client, int8_t type, const char *fmt, va_list ap)
+{
+	int alloc_tsize, alloc_rsize;
+	struct p9_request *req;
+	va_list apc;
+
+	/* allocate a new request */
+	req = (struct p9_request *) kmalloc(sizeof(struct p9_request));
+	if (!req)
+		return ERR_PTR(-ENOMEM);
+
+	/* get transmit packet size */
+	va_copy(apc, ap);
+	alloc_tsize = min(client->msize, p9_msg_buf_size(type, fmt, apc));
+	va_end(apc);
+
+	/* get reply packet size */
+	alloc_rsize = min(client->msize, p9_msg_buf_size(type + 1, fmt, ap));
+
+	/* init packets */
+	if (p9_fcall_init(&req->tc, alloc_tsize))
+		goto err1;
+	if (p9_fcall_init(&req->rc, alloc_rsize))
+		goto err2;
+
+	/* reset packets */
+	p9pdu_reset(&req->tc);
+	p9pdu_reset(&req->rc);
+
+	/* get a tag */
+	req->tc.tag = type == P9_TVERSION ? P9_NOTAG : p9_client_next_tag(client);
+
+	return req;
+err2:
+	p9_fcall_fini(&req->tc);
+	p9_fcall_fini(&req->rc);
+err1:
+	kfree(req);
+	return ERR_PTR(-ENOMEM);
+}
+
+/*
+ * Prepare a request.
+ */
+static struct p9_request *p9_client_prepare_req(struct p9_client *client, int8_t type, const char *fmt, va_list ap)
+{
+	struct p9_request *req;
+	va_list apc;
+	int ret;
+
+	/* client disconnected */
+	if (client->status == P9_CLIENT_DISCONNECTED)
+		return ERR_PTR(-EIO);
+
+	/* allocate request */
+	va_copy(apc, ap);
+	req = p9_tag_alloc(client, type, fmt, apc);
+	va_end(apc);
+	if (IS_ERR(req))
+		return req;
+
+	/* marshall data */
+	p9pdu_prepare(&req->tc, req->tc.tag, type);
+	ret = p9pdu_vwritef(&req->tc, fmt, ap);
+	if (ret)
+		goto err;
+
+	/* finalize request */
+	p9pdu_finalize(&req->tc);
+
+	return req;
+err:
+	p9_request_free(req);
+	return ERR_PTR(ret);
+}
+
+/*
+ * Parse a 9p packet header.
+ */
+int p9_parse_header(struct p9_fcall *fc, int32_t *size, int8_t *type, int16_t *tag)
+{
+	int32_t r_size;
+	int16_t r_tag;
+	int8_t r_type;
+	int ret;
+
+	/* rewind to header */
+	fc->offset = 0;
+
+	/* read packet size, type and tag */
+	ret = p9pdu_readf(fc, "dbw", &r_size, &r_type, &r_tag);
+	if (ret)
+		return ret;
+
+	/* set output values */
+	if (type)
+		*type = r_type;
+	if (tag)
+		*tag = r_tag;
+	if (size)
+		*size = r_size;
+
+	/* check packet size */
+	if (fc->size != (uint32_t) r_size || r_size < 7)
+		return -EINVAL;
+
+	/* set packet */
+	fc->id = r_type;
+	fc->tag = r_tag;
+
+	return 0;
+}
+
+/*
+ * Check errors on a request.
+ */
+static int p9_check_errors(struct p9_request *req)
+{
+	int ret, error_code;
+	int8_t type;
+
+	/* parse reply header */
+	ret = p9_parse_header(&req->rc, NULL, &type, NULL);
+	if (ret) {
+		p9_error("couldn't parse header\n");
+		return ret;
+	}
+
+	/* check packet size */
+	if (req->rc.size > req->rc.capacity) {
+		p9_error("requested packet size too big: %d does not fit %zu (type=%d)\n", req->rc.size, req->rc.capacity, req->rc.id);
+		return -EIO;
+	}
+
+	/* ok */
+	if (type != P9_RERROR && type != P9_RLERROR)
+		return 0;
+
+	/* read error code */
+	ret = p9pdu_readf(&req->rc, "d", &error_code);
+	if (ret) {
+		p9_error("couldn't parse error code\n");
+		return ret;
+	}
+
+	/* print error code */
+	p9_debug("RLERROR (%d)\n", error_code);
+
+	return -error_code;
+}
+
+/*
+ * Issue a request and wait for a response.
+ */
+static struct p9_request *p9_client_rpc(struct p9_client *client, int8_t type, const char *fmt, ...)
+{
+	struct p9_request *req;
+	va_list ap;
+	int ret;
+
+	/* client disconnected */
+	if (client->status == P9_CLIENT_DISCONNECTED)
+		return ERR_PTR(-EIO);
+
+	/* prepare request */
+	va_start(ap, fmt);
+	req = p9_client_prepare_req(client, type, fmt, ap);
+	va_end(ap);
+	if (IS_ERR(req))
+		return req;
+
+	/* issue request */
+	ret = client->trans_mod->request(client, req);
+	if (ret < 0)
+		goto err;
+
+	/* check errors */
+	ret = p9_check_errors(req);
+	if (ret)
+		goto err;
+
+	return req;
+err:
+	p9_request_free(req);
+	return ERR_PTR(ret);
+}
+
+/*
  * Version request.
  */
 int p9_client_version(struct p9_client *client)
 {
-	UNUSED(client);
-	printf("TODO: p9_client_version\n");
-	return -EINVAL;
+	struct p9_request *req;
+	char *version = NULL;
+	int ret, msize;
+
+	/* print a debug message */
+	p9_debug("TVERSION msize %d protocol %d\n", client->msize, client->proto_version);
+
+	/* send request */
+	switch (client->proto_version) {
+		case P9_PROTO_2000L:
+			req = p9_client_rpc(client, P9_TVERSION, "ds", client->msize, "9P2000.L");
+			break;
+		default:
+			return -EINVAL;
+	}
+
+	/* error on request */
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "ds", &msize, &version);
+	if (ret)
+		goto out;
+
+	/* print reply */
+	p9_debug("RVERSION msize %d %s\n", msize, version);
+
+	/* set version */
+	if (strncmp(version, "9P2000.L", 8) == 0) {
+		client->proto_version = P9_PROTO_2000L;
+	} else {
+		p9_error("Server returned an unknown version: %s\n", version);
+		ret = -EREMOTEIO;
+		goto out;
+	}
+
+	/* check message size */
+	if (msize < 4096) {
+		p9_error("Server returned a msize < 4096: %d\n", msize);
+		ret = -EREMOTEIO;
+		goto out;
+	}
+
+	/* set message size */
+	if (msize < client->msize)
+		client->msize = msize;
+
+out:
+	if (version)
+		kfree(version);
+	p9_request_free(req);
+	return ret;
 }
