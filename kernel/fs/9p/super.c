@@ -197,8 +197,24 @@ static struct super_block *v9fs_read_super(struct super_block *sb, const char *d
 	if (IS_ERR(st))
 		goto err_getattr;
 
-	printf("TODO: v9fs_read_super\n");
+	/* fill in root inode */
+	inode->i_ino = v9fs_qid2ino(&st->qid);
+	v9fs_stat2inode(st, inode);
+	kfree(st);
+
+	/* get root dentry */
+	sb->s_root = d_alloc_root(inode);
+	if (!sb->s_root)
+		goto err_root;
+
+	/* add root fid to root dentry */
+	v9fs_fid_add(sb->s_root, fid);
+
 	return sb;
+err_root:
+	if (!silent)
+		p9_error("Can't get root dentry\n");
+	goto err_getattr;
 err_getattr:
 	if (!silent)
 		p9_error("Can't stat root inode\n");

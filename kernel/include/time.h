@@ -116,6 +116,18 @@ static inline time_t old_timeval_to_jiffies(const struct old_timeval *otv)
 }
 
 /*
+ * Convert sec/nsec to jiffies.
+ */
+static inline time_t sec_nsec_to_jiffies(time_t sec, time_t nsec)
+{
+	/* convert nano seconds to jiffies */
+	nsec += 1000000000L / HZ - 1;
+	nsec /= 1000000000L / HZ;
+
+	return sec * HZ + nsec;
+}
+
+/*
  * Convert kernel time value to jiffies.
  */
 static inline time_t kernel_timeval_to_jiffies(const struct kernel_timeval *tv)

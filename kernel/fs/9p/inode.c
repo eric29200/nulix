@@ -91,3 +91,64 @@ struct inode *v9fs_get_inode(struct super_block *sb, int mode)
 
 	return inode;
 }
+
+/*
+ * Populate an inode structure with stat info
+ */
+void v9fs_stat2inode(struct p9_stat *stat, struct inode *inode)
+{
+	if ((stat->st_result_mask & P9_STATS_BASIC) == P9_STATS_BASIC) {
+		inode->i_atime = sec_nsec_to_jiffies(stat->st_atime_sec, stat->st_atime_nsec);
+		inode->i_mtime = sec_nsec_to_jiffies(stat->st_mtime_sec, stat->st_mtime_nsec);
+		inode->i_ctime = sec_nsec_to_jiffies(stat->st_ctime_sec, stat->st_ctime_nsec);
+		inode->i_uid = stat->st_uid;
+		inode->i_gid = stat->st_gid;
+		inode->i_nlinks = stat->st_nlink;
+		inode->i_mode = stat->st_mode;
+		inode->i_rdev = stat->st_rdev;
+
+		if (S_ISCHR(inode->i_mode))
+			inode->i_op = &chrdev_iops;
+		else if (S_ISBLK(inode->i_mode))
+			inode->i_op = &blkdev_iops;
+
+		inode->i_size = stat->st_size;
+		inode->i_blocks = stat->st_blocks;
+	}
+
+	if (stat->st_result_mask & P9_STATS_ATIME)
+		inode->i_atime = sec_nsec_to_jiffies(stat->st_atime_sec, stat->st_atime_nsec);
+
+	if (stat->st_result_mask & P9_STATS_MTIME)
+		inode->i_mtime = sec_nsec_to_jiffies(stat->st_mtime_sec, stat->st_mtime_nsec);
+
+	if (stat->st_result_mask & P9_STATS_CTIME)
+		inode->i_ctime = sec_nsec_to_jiffies(stat->st_ctime_sec, stat->st_ctime_nsec);
+
+	if (stat->st_result_mask & P9_STATS_UID)
+		inode->i_uid = stat->st_uid;
+
+	if (stat->st_result_mask & P9_STATS_GID)
+		inode->i_gid = stat->st_gid;
+
+	if (stat->st_result_mask & P9_STATS_NLINK)
+		inode->i_nlinks = stat->st_nlink;
+
+	if (stat->st_result_mask & P9_STATS_MODE) {
+		inode->i_mode = stat->st_mode;
+		if (S_ISCHR(inode->i_mode))
+			inode->i_op = &chrdev_iops;
+		else if (S_ISBLK(inode->i_mode))
+			inode->i_op = &blkdev_iops;
+
+	}
+
+	if (stat->st_result_mask & P9_STATS_RDEV)
+		inode->i_rdev = stat->st_rdev;
+
+	if (stat->st_result_mask & P9_STATS_SIZE)
+		inode->i_size = stat->st_size;
+
+	if (stat->st_result_mask & P9_STATS_BLOCKS)
+		inode->i_blocks = stat->st_blocks;
+}

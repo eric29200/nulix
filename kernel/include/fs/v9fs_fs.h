@@ -2,6 +2,7 @@
 #define _V9FS_FS_H_
 
 #include <stddef.h>
+#include <net/9p/9p.h>
 
 #define V9FS_PORT		564
 #define V9FS_DEFUSER		"nobody"
@@ -19,6 +20,13 @@ struct v9fs_session_info {
 	uint32_t		maxdata;
 };
 
+/*
+ * 9p private data stored in dentry d_private.
+ */
+struct v9fs_dentry {
+	struct list_head	fidlist;
+};
+
 /* 9p super operations */
 int init_v9fs_fs();
 
@@ -26,11 +34,24 @@ int init_v9fs_fs();
 int v9fs_read_inode(struct inode *inode);
 int v9fs_put_inode(struct inode *inode);
 struct inode *v9fs_get_inode(struct super_block *sb, int mode);
+void v9fs_stat2inode(struct p9_stat *stat, struct inode *inode);
+
+/* fid operations */
+int v9fs_fid_add(struct dentry *dentry, struct p9_fid *fid);
 
 /* name resolution operations */
 struct dentry *v9fs_lookup(struct inode *dir, struct dentry *dentry);
 
 /* read directory operations */
 int v9fs_readdir(struct file *filp, void *dirent, filldir_t filldir);
+
+/*
+ * Convert qid into inode number.
+ */
+static inline ino_t v9fs_qid2ino(struct p9_qid *qid)
+{
+	uint64_t path = qid->path + 2;
+	return (ino_t) (path ^ (path >> 32));
+}
 
 #endif

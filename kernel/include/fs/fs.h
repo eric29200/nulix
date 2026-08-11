@@ -187,6 +187,7 @@ struct dentry {
 	struct dentry_operations *	d_op;
 	struct qstr			d_name;
 	char				d_iname[DNAME_INLINE_LEN];
+	void *				d_private;
 };
 
 /*
