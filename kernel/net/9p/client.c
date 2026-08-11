@@ -670,3 +670,93 @@ err:
 	kfree(st);
 	return ERR_PTR(ret);
 }
+
+/*
+ * Open a file.
+ */
+int p9_client_open(struct p9_fid *fid, int mode)
+{
+	UNUSED(fid);
+	UNUSED(mode);
+	printf("TODO: p9_client_open\n");
+	return -EINVAL;
+}
+
+/*
+ * Walk a path.
+ */
+struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wnames, int clone)
+{
+	struct p9_client *client = oldfid->client;
+	struct p9_fid *fid = oldfid;
+	struct p9_request *req;
+	uint16_t nwqids, count;
+	struct p9_qid *wqids;
+	int ret;
+
+	/* clone fid ? */
+	if (clone) {
+		fid = p9_fid_create(client);
+		if (IS_ERR(fid))
+			return fid;
+		fid->uid = oldfid->uid;
+	} else {
+		fid = oldfid;
+	}
+
+	/* print a debug message */
+	p9_debug("TWALK fids %d,%d nwname %ud wname[0] %s\n", oldfid->fid, fid->fid, nwname, wnames ? wnames[0] : NULL);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TWALK, "ddT", oldfid->fid, fid->fid, nwname, wnames);
+	if (IS_ERR(req)) {
+		ret = PTR_ERR(req);
+		goto err;
+	}
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "R", &nwqids, &wqids);
+	if (ret) {
+		p9_request_free(req);
+		goto err_clunk_fid;
+	}
+
+	/* print reply */
+	p9_debug("RWALK nwqid %d:\n", nwqids);
+
+	/* free request */
+	p9_request_free(req);
+
+	/* check reply */
+	if (nwqids != nwname) {
+		ret = -ENOENT;
+		goto err_clunk_fid;
+	}
+
+	/* print reply */
+	for (count = 0; count < nwqids; count++)
+		p9_debug("<<<     [%d] %x.%llx.%x\n",
+			count,
+			wqids[count].type,
+			(unsigned long long) wqids[count].path,
+			wqids[count].version);
+
+	/* set names/qid */
+	if (nwname)
+		memcpy(&fid->qid, &wqids[nwqids - 1], sizeof(struct p9_qid));
+	else
+		fid->qid = oldfid->qid;
+
+	/* free qids*/
+	kfree(wqids);
+
+	return fid;
+err_clunk_fid:
+	kfree(wqids);
+	p9_client_clunk(fid);
+	fid = NULL;
+err:
+	if (fid && fid != oldfid)
+		p9_fid_destroy(fid);
+	return ERR_PTR(ret);
+}

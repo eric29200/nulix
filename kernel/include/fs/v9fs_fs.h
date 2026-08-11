@@ -38,12 +38,16 @@ void v9fs_stat2inode(struct p9_stat *stat, struct inode *inode);
 
 /* fid operations */
 int v9fs_fid_add(struct dentry *dentry, struct p9_fid *fid);
+struct p9_fid *v9fs_fid_clone(struct dentry *dentry);
 
 /* name resolution operations */
 struct dentry *v9fs_lookup(struct inode *dir, struct dentry *dentry);
 
 /* read directory operations */
 int v9fs_readdir(struct file *filp, void *dirent, filldir_t filldir);
+
+/* file operations */
+int v9fs_open(struct inode *inode, struct file *file);
 
 /*
  * Convert qid into inode number.

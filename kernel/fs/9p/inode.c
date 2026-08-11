@@ -30,6 +30,7 @@ int v9fs_put_inode(struct inode *inode)
  * Directory operations.
  */
 static struct file_operations v9fs_dir_fops = {
+	.open		= v9fs_open,
 	.readdir	= v9fs_readdir,
 };
 

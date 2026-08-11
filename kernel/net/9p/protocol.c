@@ -6,6 +6,7 @@
 #include <x86/endian.h>
 
 #define min(x, y)		((x) <= (y) ? (x) : (y))
+#define max(x, y)		((x) >= (y) ? (x) : (y))
 #define P9_STRLEN(s)		(2 + min(s ? strlen(s) : 0, USHRT_MAX))
 
 /*
@@ -14,6 +15,7 @@
 int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 {
 	const int hdr = 4 + 1 + 2;
+	const int err_size = hdr + 4;
 
 	switch (type) {
 		case P9_TVERSION:
@@ -34,6 +36,30 @@ int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 				const char *aname = va_arg(ap, const char *);
 				/* fid[4] afid[4] uname[s] aname[s] n_uname[4] */
 				return hdr + 4 + 4 + P9_STRLEN(uname) + P9_STRLEN(aname) + 4;
+			}
+		case P9_TWALK:
+			if (strcmp("ddT", fmt))
+				p9_fatal("p9_msg_buf_size: wrong format for message %d\n", type);
+			va_arg(ap, int32_t);
+			va_arg(ap, int32_t);
+			{
+				uint32_t i, nwname = va_arg(ap, int);
+				size_t wname_all;
+				const char **wnames = va_arg(ap, const char **);
+				for (i = 0, wname_all = 0; i < nwname; i++)
+					wname_all += P9_STRLEN(wnames[i]);
+				/* fid[4] newfid[4] nwname[2] nwname*(wname[s]) */
+				return hdr + 4 + 4 + 2 + wname_all;
+			}
+		case P9_RWALK:
+			if (strcmp("ddT", fmt))
+				p9_fatal("p9_msg_buf_size: wrong format for message %d\n", type);
+			va_arg(ap, int32_t);
+			va_arg(ap, int32_t);
+			{
+				uint32_t nwname = va_arg(ap, int);
+				/* nwqid[2] nwqid*(wqid[13]) */
+				return max(hdr + 6 + nwname * 13, err_size);
 			}
 		default:
 			p9_fatal("p9_msg_buf_size: unknown message %d\n", type);
@@ -108,6 +134,20 @@ int p9pdu_vwritef(struct p9_fcall *pdu, const char *fmt, va_list ap)
 				if (ret == 0 && pdu_write(pdu, sptr, len))
 					ret = -EFAULT;
 				break;
+			case 'T':
+				uint16_t nwname = va_arg(ap, int);
+				const char **wnames = va_arg(ap, const char **);
+				ret = p9pdu_writef(pdu, "w", nwname);
+				if (ret == 0) {
+					int i;
+
+					for (i = 0; i < nwname; i++) {
+						ret = p9pdu_writef(pdu, "s", wnames[i]);
+						if (ret)
+							break;
+					}
+				}
+				break;
 			default:
 				p9_fatal("p9pdu_vwritef: unknwon format %c\n", *ptr);
 				break;
@@ -126,7 +166,7 @@ int p9pdu_vwritef(struct p9_fcall *pdu, const char *fmt, va_list ap)
 int p9pdu_vreadf(struct p9_fcall *pdu, const char *fmt, va_list ap)
 {
 	const char *ptr;
-	int ret = 0;
+	int ret = 0, i;
 
 	for (ptr = fmt; *ptr; ptr++) {
 		switch (*ptr) {
@@ -228,6 +268,32 @@ int p9pdu_vreadf(struct p9_fcall *pdu, const char *fmt, va_list ap)
 					&st->st_btime_nsec,
 					&st->st_gen,
 					&st->st_data_version);
+				break;
+			case 'R':
+				uint16_t *nwqid = va_arg(ap, uint16_t *);
+				struct p9_qid **wqids = va_arg(ap, struct p9_qid **);
+				*wqids = NULL;
+
+				ret = p9pdu_readf(pdu, "w", nwqid);
+				if (ret == 0) {
+					*wqids = (struct p9_qid *) kmalloc(sizeof(struct p9_qid) * *nwqid);
+					if (!*wqids)
+						ret = -ENOMEM;
+				}
+
+				if (ret == 0) {
+					for (i = 0; i < *nwqid; i++) {
+						ret = p9pdu_readf(pdu, "Q", &(*wqids)[i]);
+						if (ret)
+							break;
+					}
+				}
+
+				if (ret) {
+					kfree(*wqids);
+					*wqids = NULL;
+				}
+
 				break;
 			default:
 				p9_fatal("p9pdu_vreadf: unknwon format %c\n", *ptr);

@@ -26,6 +26,8 @@
 #define P9_RATTACH			105
 #define P9_TERROR			106
 #define P9_RERROR			107
+#define P9_TWALK			110
+#define P9_RWALK			111
 #define P9_TCLUNK			120
 #define P9_RCLUNK			121
 
@@ -154,6 +156,8 @@ int p9_client_version(struct p9_client *client);
 struct p9_fid *p9_client_attach(struct p9_client *client, struct p9_fid *afid, const char *uname, uid_t n_uname, const char *aname);
 int p9_client_clunk(struct p9_fid *fid);
 struct p9_stat *p9_client_getattr(struct p9_fid *fid, uint64_t request_mask);
+int p9_client_open(struct p9_fid *fid, int mode);
+struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wnames, int clone);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);
