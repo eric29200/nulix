@@ -18,6 +18,8 @@
 
 #define P9_TLERROR			6
 #define P9_RLERROR			7
+#define P9_TLOPEN			12
+#define P9_RLOPEN			13
 #define P9_TGETATTR			24
 #define P9_RGETATTR			25
 #define P9_TVERSION			100
@@ -47,6 +49,8 @@
 #define P9_STATS_BTIME			0x00000800ULL
 #define P9_STATS_GEN			0x00001000ULL
 #define P9_STATS_DATA_VERSION		0x00002000ULL
+
+#define P9_MODE_MASK			0x1FFF
 
 /*
  * 9p client.

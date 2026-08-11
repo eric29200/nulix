@@ -25,6 +25,8 @@ int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_RCLUNK:
 		case P9_TGETATTR:
 		case P9_RGETATTR:
+		case P9_TLOPEN:
+		case P9_RLOPEN:
 			return 4096;
 		case P9_TATTACH:
 			if (strcmp("ddssu", fmt))

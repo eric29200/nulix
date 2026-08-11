@@ -676,10 +676,38 @@ err:
  */
 int p9_client_open(struct p9_fid *fid, int mode)
 {
-	UNUSED(fid);
-	UNUSED(mode);
-	printf("TODO: p9_client_open\n");
-	return -EINVAL;
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+	struct p9_qid qid;
+	int ret, iounit;
+
+	/* print a debug message */
+	p9_debug("TLOPEN fid %d mode %d\n", fid->fid, mode);
+
+	/* already opened ? */
+	if (fid->mode != -1)
+		return -EINVAL;
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TLOPEN, "dd", fid->fid, mode & P9_MODE_MASK);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "Qd", &qid, &iounit);
+	if (ret)
+		goto out;
+
+	/* print reply */
+	p9_debug("RLOPEN qid %x.%llx.%x iounit %x\n", qid.type, qid.path, qid.version, iounit);
+
+	/* update fid */
+	memcpy(&fid->qid, &qid, sizeof(struct p9_qid));
+	fid->mode = mode;
+	fid->iounit = iounit;
+out:
+	p9_request_free(req);
+	return ret;
 }
 
 /*
