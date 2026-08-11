@@ -17,12 +17,12 @@ int v9fs_fid_add(struct dentry *dentry, struct p9_fid *fid)
 		if (!dent)
 			return -ENOMEM;
 
-		INIT_LIST_HEAD(&dent->fidlist);
+		INIT_LIST_HEAD(&dent->fid_list);
 		dentry->d_private = dent;
 	}
 
 	/* add fid to dentry */
-	list_add(&fid->dlist, &dent->fidlist);
+	list_add(&fid->dlist, &dent->fid_list);
 
 	return 0;
 }
@@ -40,7 +40,7 @@ static struct p9_fid *v9fs_fid_find(struct dentry *dentry, uint32_t uid, int any
 	if (!dent)
 		return NULL;
 
-	list_for_each(pos, &dent->fidlist) {
+	list_for_each(pos, &dent->fid_list) {
 		fid = list_entry(pos, struct p9_fid, dlist);
 		if (any || fid->uid == uid)
 			return fid;

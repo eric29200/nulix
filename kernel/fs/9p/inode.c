@@ -153,3 +153,51 @@ void v9fs_stat2inode(struct p9_stat *stat, struct inode *inode)
 	if (stat->st_result_mask & P9_STATS_BLOCKS)
 		inode->i_blocks = stat->st_blocks;
 }
+
+/*
+ * Get an inode from a qid.
+ */
+static struct inode *v9fs_qid_iget(struct super_block *sb, struct p9_qid *qid, struct p9_stat *st)
+{
+	struct inode *inode;
+	int ret;
+
+	/* get an empty inode */
+	inode = get_empty_inode(sb);
+	if (!inode)
+		return ERR_PTR(-ENOMEM);
+
+	/* init inode */
+	inode->i_ino = v9fs_qid2ino(qid);
+	ret = v9fs_init_inode(inode, st->st_mode);
+	if (ret)
+		goto err;
+
+	/* fill in inode */
+	v9fs_stat2inode(st, inode);
+
+	return inode;
+err:
+	iput(inode);
+	return ERR_PTR(ret);
+}
+
+/*
+ * Get an inode from a fid.
+ */
+struct inode *v9fs_get_inode_from_fid(struct p9_fid *fid, struct super_block *sb)
+{
+	struct inode *inode = NULL;
+	struct p9_stat *st;
+
+	/* get attributes */
+	st = p9_client_getattr(fid, P9_STATS_BASIC);
+	if (IS_ERR(st))
+		return ERR_CAST(st);
+
+	/* get inode */
+	inode = v9fs_qid_iget(sb, &st->qid, st);
+	kfree(st);
+
+	return inode;
+}

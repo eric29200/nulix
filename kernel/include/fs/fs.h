@@ -60,6 +60,7 @@
 #define DNAME_INLINE_LEN		16
 
 #define ERR_PTR(err)			((void *) ((long) (err)))
+#define ERR_CAST(ptr)			((void *) (ptr))
 #define PTR_ERR(ptr)			((long) (ptr))
 #define IS_ERR(ptr)			((unsigned long) (ptr) > (unsigned long) (-1000))
 

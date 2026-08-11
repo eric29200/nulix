@@ -194,6 +194,7 @@ struct dentry *d_alloc(struct dentry *parent, const struct qstr *name)
 	dentry->d_name.len = name->len;
 	dentry->d_name.hash = name->hash;
 	dentry->d_op = NULL;
+	dentry->d_private = NULL;
 	INIT_LIST_HEAD(&dentry->d_hash);
 	INIT_LIST_HEAD(&dentry->d_alias);
 	INIT_LIST_HEAD(&dentry->d_lru);

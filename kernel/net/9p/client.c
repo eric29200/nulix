@@ -126,6 +126,7 @@ static struct p9_fid *p9_fid_create(struct p9_client *client)
 	fid->uid = current_task->fsuid;
 	fid->client = client;
 	fid->fid = client->fid++;
+	list_add(&fid->flist, &client->fid_list);
 	if (client->fid == UINT_MAX)
 		client->fid++;
 
@@ -137,6 +138,7 @@ static struct p9_fid *p9_fid_create(struct p9_client *client)
  */
 static void p9_fid_destroy(struct p9_fid *fid)
 {
+	list_del(&fid->flist);
 	if (fid->rdir)
 		kfree(fid->rdir);
 	kfree(fid);
@@ -629,38 +631,11 @@ struct p9_stat *p9_client_getattr(struct p9_fid *fid, uint64_t request_mask)
 	}
 
 	/* print a debug message */
-	p9_debug("RGETATTR st_result_mask=%lld\n"
-		 "<<< qid=%x.%llx.%x\n"
-		 "<<< st_mode=%8.8x st_nlink=%llu\n"
-		 "<<< st_uid=%d st_gid=%d\n"
-		 "<<< st_rdev=%llx st_size=%llx st_blksize=%llu st_blocks=%llu\n"
-		 "<<< st_atime_sec=%lld st_atime_nsec=%lld\n"
-		 "<<< st_mtime_sec=%lld st_mtime_nsec=%lld\n"
-		 "<<< st_ctime_sec=%lld st_ctime_nsec=%lld\n"
-		 "<<< st_btime_sec=%lld st_btime_nsec=%lld\n"
-		 "<<< st_gen=%lld st_data_version=%lld\n",
+	p9_debug("RGETATTR st_result_mask=%lld qid=%x.%llx.%x\n",
 		 st->st_result_mask,
 		 st->qid.type,
 		 st->qid.path,
-		 st->qid.version,
-		 st->st_mode,
-		 st->st_nlink,
-		 st->st_uid,
-		 st->st_gid,
-		 st->st_rdev,
-		 st->st_size,
-		 st->st_blksize,
-		 st->st_blocks,
-		 st->st_atime_sec,
-		 st->st_atime_nsec,
-		 st->st_mtime_sec,
-		 st->st_mtime_nsec,
-		 st->st_ctime_sec,
-		 st->st_ctime_nsec,
-		 st->st_btime_sec,
-		 st->st_btime_nsec,
-		 st->st_gen,
-		 st->st_data_version);
+		 st->qid.version);
 
 	/* free request */
 	p9_request_free(req);
@@ -718,8 +693,8 @@ struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wna
 	struct p9_client *client = oldfid->client;
 	struct p9_fid *fid = oldfid;
 	struct p9_request *req;
-	uint16_t nwqids, count;
 	struct p9_qid *wqids;
+	uint16_t nwqids;
 	int ret;
 
 	/* clone fid ? */
@@ -750,7 +725,7 @@ struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wna
 	}
 
 	/* print reply */
-	p9_debug("RWALK nwqid %d:\n", nwqids);
+	p9_debug("RWALK nwqid %d\n", nwqids);
 
 	/* free request */
 	p9_request_free(req);
@@ -760,14 +735,6 @@ struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wna
 		ret = -ENOENT;
 		goto err_clunk_fid;
 	}
-
-	/* print reply */
-	for (count = 0; count < nwqids; count++)
-		p9_debug("<<<     [%d] %x.%llx.%x\n",
-			count,
-			wqids[count].type,
-			(unsigned long long) wqids[count].path,
-			wqids[count].version);
 
 	/* set names/qid */
 	if (nwname)

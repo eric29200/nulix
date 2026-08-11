@@ -24,7 +24,7 @@ struct v9fs_session_info {
  * 9p private data stored in dentry d_private.
  */
 struct v9fs_dentry {
-	struct list_head	fidlist;
+	struct list_head	fid_list;
 };
 
 /* 9p super operations */
@@ -35,9 +35,11 @@ int v9fs_read_inode(struct inode *inode);
 int v9fs_put_inode(struct inode *inode);
 struct inode *v9fs_get_inode(struct super_block *sb, int mode);
 void v9fs_stat2inode(struct p9_stat *stat, struct inode *inode);
+struct inode *v9fs_get_inode_from_fid(struct p9_fid *fid, struct super_block *sb);
 
 /* fid operations */
 int v9fs_fid_add(struct dentry *dentry, struct p9_fid *fid);
+struct p9_fid *v9fs_fid_lookup(struct dentry *dentry);
 struct p9_fid *v9fs_fid_clone(struct dentry *dentry);
 
 /* name resolution operations */
