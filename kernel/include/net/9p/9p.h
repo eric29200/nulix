@@ -9,6 +9,8 @@
 #define P9_PORT				564
 
 #define P9_IOHDRSZ			24
+#define P9_READDIRHDRSZ			24
+
 
 #define P9_CLIENT_CONNECTED		1
 #define P9_CLIENT_DISCONNECTED		2
@@ -22,6 +24,8 @@
 #define P9_RLOPEN			13
 #define P9_TGETATTR			24
 #define P9_RGETATTR			25
+#define P9_TREADDIR			40
+#define P9_RREADDIR			41
 #define P9_TVERSION			100
 #define P9_RVERSION			101
 #define P9_TATTACH			104
@@ -148,6 +152,16 @@ struct p9_fid {
 	struct list_head	dlist;
 };
 
+/*
+ * Directory entry.
+ */
+struct p9_dirent {
+	struct p9_qid		qid;
+	uint64_t		d_off;
+	uint8_t			d_type;
+	char			d_name[256];
+};
+
 /* init functions */
 int init_p9();
 int p9_trans_fd_init();
@@ -162,6 +176,7 @@ int p9_client_clunk(struct p9_fid *fid);
 struct p9_stat *p9_client_getattr(struct p9_fid *fid, uint64_t request_mask);
 int p9_client_open(struct p9_fid *fid, int mode);
 struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wnames, int clone);
+int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t offset);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);
@@ -177,6 +192,7 @@ int p9pdu_readf(struct p9_fcall *pdu, const char *fmt, ...);
 int p9pdu_prepare(struct p9_fcall *pdu, int16_t tag, int8_t type);
 int p9pdu_finalize(struct p9_fcall *pdu);
 void p9pdu_reset(struct p9_fcall *pdu);
+int p9dirent_read(char *buf, int len, struct p9_dirent *dirent);
 
 /*
  * Print a fatal message.

@@ -788,3 +788,58 @@ err:
 		p9_fid_destroy(fid);
 	return ERR_PTR(ret);
 }
+
+/*
+ * Read a directory.
+ */
+int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t offset)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+	uint32_t rsize;
+	char *dataptr;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TREADDIR fid %d offset %llu count %u\n", fid->fid, offset, count);
+
+	/* choose read size */
+	rsize = fid->iounit;
+	if (!rsize || (int) rsize > client->msize - P9_READDIRHDRSZ)
+		rsize = client->msize - P9_READDIRHDRSZ;
+
+	/* limit read size */
+	if (count < rsize)
+		rsize = count;
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TREADDIR, "dqd", fid->fid, offset, rsize);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "D", &count, &dataptr);
+	if (ret)
+		goto err;
+
+	/* check read size */
+	if (rsize < count) {
+		p9_error("bogus RREADDIR count (%u > %u)\n", count, rsize);
+		ret = -EIO;
+		goto err;
+	}
+
+	/* print reply */
+	p9_debug("RREADDIR count %u\n", count);
+
+	/* copy data */
+	memcpy(buf, dataptr, count);
+
+	/* free request */
+	p9_request_free(req);
+
+	return count;
+err:
+	p9_request_free(req);
+	return ret;
+}

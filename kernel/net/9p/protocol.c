@@ -27,6 +27,7 @@ int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_RGETATTR:
 		case P9_TLOPEN:
 		case P9_RLOPEN:
+		case P9_TREADDIR:
 			return 4096;
 		case P9_TATTACH:
 			if (strcmp("ddssu", fmt))
@@ -62,6 +63,16 @@ int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 				uint32_t nwname = va_arg(ap, int);
 				/* nwqid[2] nwqid*(wqid[13]) */
 				return max(hdr + 6 + nwname * 13, err_size);
+			}
+		case P9_RREADDIR:
+			if (strcmp("dqd", fmt))
+				p9_fatal("p9_msg_buf_size: wrong format for message %d\n", type);
+			va_arg(ap, int32_t);
+			va_arg(ap, int64_t);
+			{
+				const int32_t count = va_arg(ap, int32_t);
+				/* count[4] data[count] */
+				return max(hdr + 4 + count, err_size);
 			}
 		default:
 			p9_fatal("p9_msg_buf_size: unknown message %d\n", type);
@@ -297,6 +308,16 @@ int p9pdu_vreadf(struct p9_fcall *pdu, const char *fmt, va_list ap)
 				}
 
 				break;
+			case 'D':
+				uint32_t *count = va_arg(ap, uint32_t *);
+				void **data = va_arg(ap, void **);
+
+				ret = p9pdu_readf(pdu, "d", count);
+				if (ret == 0) {
+					*count = min(*count, pdu->size - pdu->offset);
+					*data = &pdu->sdata[pdu->offset];
+				}
+				break;
 			default:
 				p9_fatal("p9pdu_vreadf: unknwon format %c\n", *ptr);
 				break;
@@ -371,4 +392,31 @@ void p9pdu_reset(struct p9_fcall *pdu)
 {
 	pdu->offset = 0;
 	pdu->size = 0;
+}
+
+/*
+ * Read a directory entry.
+ */
+int p9dirent_read(char *buf, int len, struct p9_dirent *dirent)
+{
+	struct p9_fcall fake_pdu;
+	char *nameptr;
+	int ret;
+
+	/* create a fake packet */
+	fake_pdu.size = len;
+	fake_pdu.capacity = len;
+	fake_pdu.sdata = (uint8_t *) buf;
+	fake_pdu.offset = 0;
+
+	/* read directory entry */
+	ret = p9pdu_readf(&fake_pdu, "Qqbs", &dirent->qid, &dirent->d_off, &dirent->d_type, &nameptr);
+	if (ret)
+		return ret;
+
+	/* copy name */
+	strncpy(dirent->d_name, nameptr, sizeof(dirent->d_name));
+	kfree(nameptr);
+
+	return fake_pdu.offset;
 }

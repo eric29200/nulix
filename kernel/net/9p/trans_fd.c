@@ -197,11 +197,16 @@ static int __write(struct file *filp, const char *buf, size_t len)
 		return -EINVAL;
 
 	/* write */
-	ret = filp->f_op->write(filp, buf, len, &filp->f_pos);
-	if (ret < 0)
-		return ret;
-	if (ret != (int) len)
-		return -EIO;
+	while (len > 0) {
+		ret = filp->f_op->write(filp, buf, len, &filp->f_pos);
+		if (ret < 0)
+			return ret;
+		if (ret == 0)
+			return -EIO;
+
+		buf += ret;
+		len -= ret;
+	}
 
 	return 0;
 }
@@ -227,11 +232,16 @@ static int __read(struct file *filp, char *buf, size_t len)
 		return -EINVAL;
 
 	/* read */
-	ret = filp->f_op->read(filp, buf, len, &filp->f_pos);
-	if (ret < 0)
-		return ret;
-	if (ret != (int) len)
-		return -EIO;
+	while (len > 0) {
+		ret = filp->f_op->read(filp, buf, len, &filp->f_pos);
+		if (ret < 0)
+			return ret;
+		if (ret == 0)
+			return -EIO;
+
+		buf += ret;
+		len -= ret;
+	}
 
 	return 0;
 }
@@ -257,7 +267,7 @@ static int p9_packet_receive(struct p9_client *client, struct p9_fcall *fc)
 	/* put packet size in packet */
 	*((uint32_t *) fc->sdata) = htole32(fc->size);
 
-	/* read packet */
+	/* read data */
 	return __read(trans->filp, (char *) fc->sdata + sizeof(uint32_t), fc->size - sizeof(uint32_t));
 }
 
