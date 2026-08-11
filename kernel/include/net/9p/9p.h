@@ -18,6 +18,8 @@
 
 #define P9_TLERROR			6
 #define P9_RLERROR			7
+#define P9_TGETATTR			24
+#define P9_RGETATTR			25
 #define P9_TVERSION			100
 #define P9_RVERSION			101
 #define P9_TATTACH			104
@@ -86,6 +88,32 @@ struct p9_qid {
 };
 
 /*
+ * File stats.
+ */
+struct p9_stat {
+	uint64_t		st_result_mask;
+	struct p9_qid		qid;
+	uint32_t 		st_mode;
+	uid_t 			st_uid;
+	gid_t 			st_gid;
+	uint64_t 		st_nlink;
+	uint64_t 		st_rdev;
+	uint64_t 		st_size;
+	uint64_t 		st_blksize;
+	uint64_t 		st_blocks;
+	uint64_t 		st_atime_sec;
+	uint64_t 		st_atime_nsec;
+	uint64_t 		st_mtime_sec;
+	uint64_t 		st_mtime_nsec;
+	uint64_t 		st_ctime_sec;
+	uint64_t 		st_ctime_nsec;
+	uint64_t 		st_btime_sec;
+	uint64_t 		st_btime_nsec;
+	uint64_t 		st_gen;
+	uint64_t 		st_data_version;
+};
+
+/*
  * File system entity handle (client side).
  */
 struct p9_fid {
@@ -111,6 +139,7 @@ int p9_parse_header(struct p9_fcall *fc, int32_t *size, int8_t *type, int16_t *t
 int p9_client_version(struct p9_client *client);
 struct p9_fid *p9_client_attach(struct p9_client *client, struct p9_fid *afid, const char *uname, uid_t n_uname, const char *aname);
 int p9_client_clunk(struct p9_fid *fid);
+struct p9_stat *p9_client_getattr(struct p9_fid *fid, uint64_t request_mask);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);

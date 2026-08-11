@@ -595,3 +595,78 @@ out:
 	p9_fid_destroy(fid);
 	return ret;
 }
+
+/*
+ * Get attributes.
+ */
+struct p9_stat *p9_client_getattr(struct p9_fid *fid, uint64_t request_mask)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+	struct p9_stat *st;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TGETATTR fid %d, request_mask %lld\n", fid->fid, request_mask);
+
+	/* allocate a stat buffer */
+	st = (struct p9_stat *) kmalloc(sizeof(struct p9_stat));
+	if (!st)
+		return ERR_PTR(-ENOMEM);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TGETATTR, "dq", fid->fid, request_mask);
+	if (IS_ERR(req)) {
+		ret = PTR_ERR(req);
+		goto err;
+	}
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "A", st);
+	if (ret) {
+		p9_request_free(req);
+		goto err;
+	}
+
+	/* print a debug message */
+	p9_debug("RGETATTR st_result_mask=%lld\n"
+		 "<<< qid=%x.%llx.%x\n"
+		 "<<< st_mode=%8.8x st_nlink=%llu\n"
+		 "<<< st_uid=%d st_gid=%d\n"
+		 "<<< st_rdev=%llx st_size=%llx st_blksize=%llu st_blocks=%llu\n"
+		 "<<< st_atime_sec=%lld st_atime_nsec=%lld\n"
+		 "<<< st_mtime_sec=%lld st_mtime_nsec=%lld\n"
+		 "<<< st_ctime_sec=%lld st_ctime_nsec=%lld\n"
+		 "<<< st_btime_sec=%lld st_btime_nsec=%lld\n"
+		 "<<< st_gen=%lld st_data_version=%lld\n",
+		 st->st_result_mask,
+		 st->qid.type,
+		 st->qid.path,
+		 st->qid.version,
+		 st->st_mode,
+		 st->st_nlink,
+		 st->st_uid,
+		 st->st_gid,
+		 st->st_rdev,
+		 st->st_size,
+		 st->st_blksize,
+		 st->st_blocks,
+		 st->st_atime_sec,
+		 st->st_atime_nsec,
+		 st->st_mtime_sec,
+		 st->st_mtime_nsec,
+		 st->st_ctime_sec,
+		 st->st_ctime_nsec,
+		 st->st_btime_sec,
+		 st->st_btime_nsec,
+		 st->st_gen,
+		 st->st_data_version);
+
+	/* free request */
+	p9_request_free(req);
+
+	return st;
+err:
+	kfree(st);
+	return ERR_PTR(ret);
+}

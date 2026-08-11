@@ -171,6 +171,7 @@ static struct super_block *v9fs_read_super(struct super_block *sb, const char *d
 	struct v9fs_session_info *v9ses;
 	struct inode *inode;
 	struct p9_fid *fid;
+	struct p9_stat *st;
 
 	/* allocate a new session */
 	sb->s_fs_info = v9ses = (struct v9fs_session_info *) kmalloc(sizeof(struct v9fs_session_info));
@@ -191,11 +192,22 @@ static struct super_block *v9fs_read_super(struct super_block *sb, const char *d
 	if (IS_ERR(inode))
 		goto err_root_inode;
 
+	/* get attributes of root */
+	st = p9_client_getattr(fid, P9_STATS_BASIC);
+	if (IS_ERR(st))
+		goto err_getattr;
+
 	printf("TODO: v9fs_read_super\n");
 	return sb;
+err_getattr:
+	if (!silent)
+		p9_error("Can't stat root inode\n");
+	iput(inode);
+	goto err_clunk;
 err_root_inode:
 	if (!silent)
 		p9_error("Can't get root inode\n");
+err_clunk:
 	p9_client_clunk(fid);
 	goto err;
 err_session:

@@ -21,6 +21,8 @@ int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_RATTACH:
 		case P9_TCLUNK:
 		case P9_RCLUNK:
+		case P9_TGETATTR:
+		case P9_RGETATTR:
 			return 4096;
 		case P9_TATTACH:
 			if (strcmp("ddssu", fmt))
@@ -86,6 +88,11 @@ int p9pdu_vwritef(struct p9_fcall *pdu, const char *fmt, va_list ap)
 				if (pdu_write(pdu, &val32, sizeof(val32)))
 					ret = -EFAULT;
 				break;
+			case 'q':
+				int64_t val64 = htole64(va_arg(ap, int64_t));
+				if (pdu_write(pdu, &val64, sizeof(val64)))
+					ret = -EFAULT;
+				break;
 			case 'u':
 				uid_t uid = htole32(va_arg(ap, uid_t));
 				if (pdu_write(pdu, &uid, sizeof(uid)))
@@ -146,15 +153,30 @@ int p9pdu_vreadf(struct p9_fcall *pdu, const char *fmt, va_list ap)
 				}
 				*val32 = le32toh(*val32);
 				break;
-			case 'q':{
+			case 'q':
 				int64_t *val64 = va_arg(ap, int64_t *);
 				if (pdu_read(pdu, val64, sizeof(*val64))) {
 					ret = -EFAULT;
 					break;
 				}
 				*val64 = le64toh(*val64);
-			}
-			break;
+				break;
+			case 'u':
+				uid_t *uid = va_arg(ap, uid_t *);
+				if (pdu_read(pdu, uid, sizeof(*uid))) {
+					ret = -EFAULT;
+					break;
+				}
+				*uid = le32toh(*uid);
+				break;
+			case 'g':
+				gid_t *gid = va_arg(ap, gid_t *);
+				if (pdu_read(pdu, gid, sizeof(*gid))) {
+					ret = -EFAULT;
+					break;
+				}
+				*gid = le32toh(*gid);
+				break;
 			case 's':
 				char **sptr = va_arg(ap, char **);
 				uint16_t len;
@@ -181,6 +203,31 @@ int p9pdu_vreadf(struct p9_fcall *pdu, const char *fmt, va_list ap)
 			case 'Q':
 				struct p9_qid *qid = va_arg(ap, struct p9_qid *);
 				ret = p9pdu_readf(pdu, "bdq", &qid->type, &qid->version, &qid->path);
+				break;
+			case 'A':
+				struct p9_stat *st = va_arg(ap, struct p9_stat *);
+				memset(st, 0, sizeof(struct p9_stat));
+				ret = p9pdu_readf(pdu, "qQdugqqqqqqqqqqqqqqq",
+					&st->st_result_mask,
+					&st->qid,
+					&st->st_mode,
+					&st->st_uid,
+					&st->st_gid,
+					&st->st_nlink,
+					&st->st_rdev,
+					&st->st_size,
+					&st->st_blksize,
+					&st->st_blocks,
+					&st->st_atime_sec,
+					&st->st_atime_nsec,
+					&st->st_mtime_sec,
+					&st->st_mtime_nsec,
+					&st->st_ctime_sec,
+					&st->st_ctime_nsec,
+					&st->st_btime_sec,
+					&st->st_btime_nsec,
+					&st->st_gen,
+					&st->st_data_version);
 				break;
 			default:
 				p9_fatal("p9pdu_vreadf: unknwon format %c\n", *ptr);
