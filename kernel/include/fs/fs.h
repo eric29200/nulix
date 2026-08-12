@@ -97,6 +97,14 @@ struct file_system_type {
 };
 
 /*
+ * Dentry operations.
+ */
+struct dentry_operations {
+	int (*d_delete)(struct dentry *);
+	int (*d_revalidate)(struct dentry *);
+};
+
+/*
  * Generic super block.
  */
 struct super_block {
@@ -151,14 +159,6 @@ struct inode {
 		struct socket			socket_i;
 		void *				generic_i;
 	} u;
-};
-
-/*
- * Dentry operations.
- */
-struct dentry_operations {
-	int (*d_delete)(struct dentry *);
-	int (*d_revalidate)(struct dentry *);
 };
 
 /*

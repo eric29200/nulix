@@ -195,6 +195,22 @@ static struct super_operations v9fs_sops = {
 };
 
 /*
+ * Delete a dentry.
+ */
+static int v9fs_dentry_delete(struct dentry *dentry)
+{
+	d_drop(dentry);
+	return 1;
+}
+
+/*
+ * Dentry operations.
+ */
+struct dentry_operations v9fs_dops = {
+	.d_delete		= v9fs_dentry_delete,
+};
+
+/*
  * Read super block.
  */
 static struct super_block *v9fs_read_super(struct super_block *sb, const char *dev_name, void *data, int silent)
@@ -237,6 +253,9 @@ static struct super_block *v9fs_read_super(struct super_block *sb, const char *d
 	sb->s_root = d_alloc_root(inode);
 	if (!sb->s_root)
 		goto err_root;
+
+	/* set dentry operations */
+	sb->s_root->d_op = &v9fs_dops;
 
 	/* add root fid to root dentry */
 	v9fs_fid_add(sb->s_root, fid);

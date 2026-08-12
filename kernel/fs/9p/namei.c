@@ -13,6 +13,9 @@ struct dentry *v9fs_lookup(struct inode *dir, struct dentry *dentry)
 	char *name;
 	int ret;
 
+	/* set dentry operations */
+	dentry->d_op = &v9fs_dops;
+
 	/* get parent fid */
 	d_fid = v9fs_fid_lookup(dentry->d_parent);
 	if (IS_ERR(d_fid))

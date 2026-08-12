@@ -51,6 +51,9 @@ int v9fs_open(struct inode *inode, struct file *file);
 int v9fs_release(struct inode *inode, struct file *filp);
 int v9fs_file_read(struct file *filp, char *buf, size_t count, off_t *offset);
 
+/* dentry operations */
+extern struct dentry_operations v9fs_dops;
+
 /*
  * Convert qid into inode number.
  */
