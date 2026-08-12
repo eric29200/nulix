@@ -40,6 +40,15 @@ static struct inode_operations v9fs_file_iops = {
 };
 
 /*
+ * Symbolic link inode operations.
+ */
+static struct inode_operations v9fs_symlink_iops = {
+	.follow_link	= v9fs_follow_link,
+	.readlink	= v9fs_readlink,
+};
+
+
+/*
  * Init a 9p inode.
  */
 int v9fs_init_inode(struct inode *inode, int mode)
@@ -61,6 +70,9 @@ int v9fs_init_inode(struct inode *inode, int mode)
 			break;
 		case S_IFREG:
 			inode->i_op = &v9fs_file_iops;
+			break;
+		case S_IFLNK:
+			inode->i_op = &v9fs_symlink_iops;
 			break;
 		default:
 			p9_error("v9fs_init_inode: can't inode for mode 0x%x\n", mode & S_IFMT);

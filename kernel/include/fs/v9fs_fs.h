@@ -51,6 +51,10 @@ int v9fs_open(struct inode *inode, struct file *file);
 int v9fs_release(struct inode *inode, struct file *filp);
 int v9fs_file_read(struct file *filp, char *buf, size_t count, off_t *offset);
 
+/* symbolic link operations */
+struct dentry *v9fs_follow_link(struct dentry *dentry, struct dentry *base);
+ssize_t v9fs_readlink(struct dentry *dentry, char *buf, size_t bufsize);
+
 /* dentry operations */
 extern struct dentry_operations v9fs_dops;
 

@@ -25,6 +25,8 @@
 #define P9_RSTATFS			9
 #define P9_TLOPEN			12
 #define P9_RLOPEN			13
+#define P9_TREADLINK			22
+#define P9_RREADLINK			23
 #define P9_TGETATTR			24
 #define P9_RGETATTR			25
 #define P9_TREADDIR			40
@@ -199,6 +201,7 @@ struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wna
 int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t offset);
 int p9_client_read(struct p9_fid *fid, char *buf, uint64_t offset, uint32_t count);
 int p9_client_statfs(struct p9_fid *fid, struct p9_rstatfs *st);
+int p9_client_readlink(struct p9_fid *fid, char **target);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);

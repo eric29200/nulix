@@ -31,7 +31,10 @@ size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_TREAD:
 		case P9_TSTATFS:
 		case P9_RSTATFS:
+		case P9_TREADLINK:
 			return 4096;
+		case P9_RREADLINK:
+			return 8192;
 		case P9_TATTACH:
 			if (strcmp("ddssu", fmt))
 				p9_fatal("p9_msg_buf_size: wrong format for message %d\n", type);

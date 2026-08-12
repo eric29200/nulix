@@ -905,3 +905,32 @@ out:
 	p9_request_free(req);
 	return ret;
 }
+
+/*
+ * Read link request.
+ */
+int p9_client_readlink(struct p9_fid *fid, char **target)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TREADLINK fid %d\n", fid->fid);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TREADLINK, "d", fid->fid);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "s", target);
+	if (ret)
+		goto out;
+
+	/* print a debug message */
+	p9_debug("RREADLINK target %s\n", *target);
+out:
+	p9_request_free(req);
+	return ret;
+}
