@@ -73,8 +73,15 @@ static int v9fs_parse_options(struct v9fs_session_info *v9ses, char *opts)
  */
 static void v9fs_session_close(struct v9fs_session_info *v9ses)
 {
-	UNUSED(v9ses);
-	printf("TODO: v9fs_session_close\n");
+	/* destroy client */
+	if (v9ses->client) {
+		p9_client_destroy(v9ses->client);
+		v9ses->client = NULL;
+	}
+
+	/* free aname/uname */
+	free_page(v9ses->uname);
+	free_page(v9ses->aname);
 }
 
 /*
@@ -139,8 +146,12 @@ err:
  */
 static void v9fs_put_super(struct super_block *sb)
 {
-	UNUSED(sb);
-	printf("TODO: v9fs_put_super\n");
+	struct v9fs_session_info *v9ses = sb->s_fs_info;
+
+	/* close session */
+	v9fs_session_close(v9ses);
+	kfree(v9ses);
+	sb->s_fs_info = NULL;
 }
 
 /*
@@ -180,8 +191,6 @@ static int v9fs_statfs(struct super_block *sb, struct statfs64 *buf)
  */
 static struct super_operations v9fs_sops = {
 	.put_super		= v9fs_put_super,
-	.read_inode		= v9fs_read_inode,
-	.put_inode		= v9fs_put_inode,
 	.statfs			= v9fs_statfs,
 };
 

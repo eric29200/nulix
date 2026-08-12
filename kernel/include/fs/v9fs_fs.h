@@ -31,8 +31,6 @@ struct v9fs_dentry {
 int init_v9fs_fs();
 
 /* inode operations */
-int v9fs_read_inode(struct inode *inode);
-int v9fs_put_inode(struct inode *inode);
 struct inode *v9fs_get_inode(struct super_block *sb, int mode);
 void v9fs_stat2inode(struct p9_stat *stat, struct inode *inode);
 struct inode *v9fs_get_inode_from_fid(struct p9_fid *fid, struct super_block *sb);

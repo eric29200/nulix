@@ -7,26 +7,6 @@
 #include <fcntl.h>
 
 /*
- * Read an inode.
- */
-int v9fs_read_inode(struct inode *inode)
-{
-	UNUSED(inode);
-	printf("TODO: v9fs_read_inode\n");
-	return -EINVAL;
-}
-
-/*
- * Release an inode.
- */
-int v9fs_put_inode(struct inode *inode)
-{
-	UNUSED(inode);
-	printf("TODO: v9fs_put_inode\n");
-	return -EINVAL;
-}
-
-/*
  * Directory operations.
  */
 static struct file_operations v9fs_dir_fops = {
