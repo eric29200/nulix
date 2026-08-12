@@ -468,7 +468,8 @@ int p9_client_version(struct p9_client *client)
 {
 	struct p9_request *req;
 	char *version = NULL;
-	int ret, msize;
+	uint32_t msize;
+	int ret;
 
 	/* print a debug message */
 	p9_debug("TVERSION msize %d protocol %d\n", client->msize, client->proto_version);
@@ -772,7 +773,7 @@ int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t of
 
 	/* choose read size */
 	rsize = fid->iounit;
-	if (!rsize || (int) rsize > client->msize - P9_READDIRHDRSZ)
+	if (!rsize || rsize > client->msize - P9_READDIRHDRSZ)
 		rsize = client->msize - P9_READDIRHDRSZ;
 
 	/* limit read size */
@@ -806,6 +807,61 @@ int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t of
 	p9_request_free(req);
 
 	return count;
+err:
+	p9_request_free(req);
+	return ret;
+}
+
+/*
+ * Read request.
+ */
+int p9_client_read(struct p9_fid *fid, char *buf, uint64_t offset, uint32_t count)
+{
+	struct p9_client *client = fid->client;
+	uint32_t r_size, received;
+	struct p9_request *req;
+	char *dataptr;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TREAD fid %d offset %llu %d\n", fid->fid, offset, count);
+
+	/* choose read size */
+	r_size = fid->iounit;
+	if (!r_size || r_size > client->msize - P9_IOHDRSZ)
+		r_size = client->msize - P9_IOHDRSZ;
+
+	/* limit read size */
+	if (count < r_size)
+		r_size = count;
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TREAD, "dqd", fid->fid, offset, r_size);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "D", &received, &dataptr);
+	if (ret)
+		goto err;
+
+	/* check received */
+	if (r_size < received) {
+		p9_error("bogus RREAD count (%u > %u)\n", received, r_size);
+		ret = -EIO;
+		goto err;
+	}
+
+	/* print reply */
+	p9_debug("RREAD count %u\n", received);
+
+	/* get data */
+	memcpy(buf, dataptr, received);
+
+	/* free request */
+	p9_request_free(req);
+
+	return received;
 err:
 	p9_request_free(req);
 	return ret;

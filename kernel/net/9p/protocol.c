@@ -12,7 +12,7 @@
 /*
  * Get needed size packet.
  */
-int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
+size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 {
 	const int hdr = 4 + 1 + 2;
 	const int err_size = hdr + 4;
@@ -28,6 +28,7 @@ int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_TLOPEN:
 		case P9_RLOPEN:
 		case P9_TREADDIR:
+		case P9_TREAD:
 			return 4096;
 		case P9_TATTACH:
 			if (strcmp("ddssu", fmt))
@@ -64,6 +65,7 @@ int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 				/* nwqid[2] nwqid*(wqid[13]) */
 				return max(hdr + 6 + nwname * 13, err_size);
 			}
+		case P9_RREAD:
 		case P9_RREADDIR:
 			if (strcmp("dqd", fmt))
 				p9_fatal("p9_msg_buf_size: wrong format for message %d\n", type);

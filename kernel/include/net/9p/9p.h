@@ -34,6 +34,8 @@
 #define P9_RERROR			107
 #define P9_TWALK			110
 #define P9_RWALK			111
+#define P9_TREAD			116
+#define P9_RREAD			117
 #define P9_TCLUNK			120
 #define P9_RCLUNK			121
 
@@ -61,7 +63,7 @@
  */
 struct p9_client {
 	uint8_t				status;
-	int				msize;
+	uint32_t			msize;
 	uint8_t				proto_version;
 	uint16_t			tag;
 	uint32_t			fid;
@@ -96,7 +98,7 @@ struct p9_request {
 struct p9_trans_module {
 	struct list_head		list;
 	char *				name;
-	int				maxsize;
+	uint32_t			maxsize;
 	int 				(*create)(struct p9_client *, const char *, char *);
 	void				(*close) (struct p9_client *);
 	int				(*request) (struct p9_client *, struct p9_request *req);
@@ -177,6 +179,7 @@ struct p9_stat *p9_client_getattr(struct p9_fid *fid, uint64_t request_mask);
 int p9_client_open(struct p9_fid *fid, int mode);
 struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wnames, int clone);
 int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t offset);
+int p9_client_read(struct p9_fid *fid, char *buf, uint64_t offset, uint32_t count);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);
@@ -184,7 +187,7 @@ struct p9_trans_module *v9fs_get_trans_by_name(const struct substring *name);
 struct p9_trans_module *v9fs_get_default_trans();
 
 /* packet functions */
-int p9_msg_buf_size(int8_t type, const char *fmt, va_list ap);
+size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap);
 int p9pdu_writef(struct p9_fcall *pdu, const char *fmt, ...);
 int p9pdu_vwritef(struct p9_fcall *pdu, const char *fmt, va_list ap);
 int p9pdu_vreadf(struct p9_fcall *pdu, const char *fmt, va_list ap);

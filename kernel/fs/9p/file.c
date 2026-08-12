@@ -38,3 +38,80 @@ int v9fs_open(struct inode *inode, struct file *filp)
 
 	return 0;
 }
+
+/*
+ * Release a file.
+ */
+int v9fs_release(struct inode *inode, struct file *filp)
+{
+	struct p9_fid *fid = filp->f_private;
+
+	UNUSED(inode);
+
+	if (fid)
+		p9_client_clunk(fid);
+
+	return 0;
+}
+
+/*
+ * Read from a fid.
+ */
+static int v9fs_fid_readn(struct p9_fid *fid, char *buf, uint32_t count, uint64_t offset)
+{
+	int n = 0, total = 0, r_size;
+
+	/* choose read size */
+	r_size = fid->iounit ? fid->iounit : fid->client->msize - P9_IOHDRSZ;
+
+	/* read */
+	do {
+		n = p9_client_read(fid, buf, offset, count);
+		if (n <= 0)
+			break;
+
+		buf += n;
+		offset += n;
+		count -= n;
+		total += n;
+	} while (count > 0 && n == r_size);
+
+	/* return error */
+	if (n < 0)
+		total = n;
+
+	return total;
+}
+
+/*
+ * Read from a file.
+ */
+static int v9fs_file_readn(struct file *filp, char *buf, uint32_t count, uint64_t offset)
+{
+	return v9fs_fid_readn(filp->f_private, buf, count, offset);
+}
+
+/*
+ * Read from a file.
+ */
+int v9fs_file_read(struct file *filp, char *buf, size_t count, off_t *offset)
+{
+	struct p9_fid *fid = filp->f_private;
+	size_t r_size;
+	int ret;
+
+	/* choose read size */
+	r_size = fid->iounit ? fid->iounit : fid->client->msize - P9_IOHDRSZ;
+
+	/* can be read in one time */
+	if (count <= r_size)
+		ret = p9_client_read(fid, buf, *offset, count);
+	else
+		ret = v9fs_file_readn(filp, buf, count, *offset);
+
+	/* update offset */
+	if (ret > 0)
+		*offset += ret;
+
+	return ret;
+}

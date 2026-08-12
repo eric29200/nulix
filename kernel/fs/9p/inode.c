@@ -31,6 +31,7 @@ int v9fs_put_inode(struct inode *inode)
  */
 static struct file_operations v9fs_dir_fops = {
 	.open		= v9fs_open,
+	.release	= v9fs_release,
 	.readdir	= v9fs_readdir,
 };
 
@@ -40,6 +41,22 @@ static struct file_operations v9fs_dir_fops = {
 static struct inode_operations v9fs_dir_iops = {
 	.fops		= &v9fs_dir_fops,
 	.lookup		= v9fs_lookup,
+};
+
+/*
+ * File operations.
+ */
+static struct file_operations v9fs_file_fops = {
+	.open		= v9fs_open,
+	.release	= v9fs_release,
+	.read		= v9fs_file_read,
+};
+
+/*
+ * File inode operations.
+ */
+static struct inode_operations v9fs_file_iops = {
+	.fops		= &v9fs_file_fops,
 };
 
 /*
@@ -61,6 +78,9 @@ int v9fs_init_inode(struct inode *inode, int mode)
 		case S_IFDIR:
 			inode->i_nlinks++;
 			inode->i_op = &v9fs_dir_iops;
+			break;
+		case S_IFREG:
+			inode->i_op = &v9fs_file_iops;
 			break;
 		default:
 			p9_error("v9fs_init_inode: can't inode for mode 0x%x\n", mode & S_IFMT);
