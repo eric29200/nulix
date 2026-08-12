@@ -13,9 +13,7 @@ static int do_statfs64(struct inode *inode, struct statfs64 *buf)
 		return -ENOSYS;
 
 	/* do statfs */
-	inode->i_sb->s_op->statfs(inode->i_sb, buf);
-
-	return 0;
+	return inode->i_sb->s_op->statfs(inode->i_sb, buf);
 }
 
 /*

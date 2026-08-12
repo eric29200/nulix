@@ -29,6 +29,8 @@ size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_RLOPEN:
 		case P9_TREADDIR:
 		case P9_TREAD:
+		case P9_TSTATFS:
+		case P9_RSTATFS:
 			return 4096;
 		case P9_TATTACH:
 			if (strcmp("ddssu", fmt))

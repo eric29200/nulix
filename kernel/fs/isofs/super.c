@@ -108,7 +108,7 @@ err:
 /*
  * Get statistics on file system.
  */
-static void isofs_statfs(struct super_block *sb, struct statfs64 *buf)
+static int isofs_statfs(struct super_block *sb, struct statfs64 *buf)
 {
 	struct isofs_sb_info *sbi = isofs_sb(sb);
 
@@ -121,6 +121,8 @@ static void isofs_statfs(struct super_block *sb, struct statfs64 *buf)
 	buf->f_files = sbi->s_ninodes;
 	buf->f_ffree = 0;
 	buf->f_namelen = ISOFS_MAX_NAME_LEN;
+
+	return 0;
 }
 
 /*

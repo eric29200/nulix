@@ -146,11 +146,33 @@ static void v9fs_put_super(struct super_block *sb)
 /*
  * Get statistics on file system.
  */
-static void v9fs_statfs(struct super_block *sb, struct statfs64 *buf)
+static int v9fs_statfs(struct super_block *sb, struct statfs64 *buf)
 {
-	UNUSED(sb);
-	UNUSED(buf);
-	printf("TODO: v9fs_statfs\n");
+	struct p9_rstatfs rs;
+	struct p9_fid *fid;
+	int ret;
+
+	/* get root fid */
+	fid = v9fs_fid_lookup(sb->s_root);
+	if (IS_ERR(fid))
+		return PTR_ERR(fid);
+
+	/* stat file system */
+	ret = p9_client_statfs(fid, &rs);
+	if (ret)
+		return ret;
+
+	/* fill in stat buffer */
+	buf->f_type = V9FS_SUPER_MAGIC;
+	buf->f_bsize = rs.bsize;
+	buf->f_blocks = rs.blocks;
+	buf->f_bfree = rs.bfree;
+	buf->f_bavail = rs.bavail;
+	buf->f_files = rs.files;
+	buf->f_ffree = rs.ffree;
+	buf->f_namelen = rs.namelen;
+
+	return 0;
 }
 
 /*

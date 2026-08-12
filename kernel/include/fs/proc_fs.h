@@ -69,7 +69,7 @@ struct inode *proc_get_inode(struct super_block *sb, ino_t ino, struct proc_dir_
 int proc_read_inode(struct inode *inode);
 int proc_write_inode(struct inode *inode);
 int proc_put_inode(struct inode *inode);
-void proc_statfs(struct super_block *sb, struct statfs64 *buf);
+int proc_statfs(struct super_block *sb, struct statfs64 *buf);
 
 /* directories entries */
 extern struct proc_dir_entry proc_root;

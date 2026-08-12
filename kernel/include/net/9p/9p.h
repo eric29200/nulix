@@ -20,6 +20,8 @@
 
 #define P9_TLERROR			6
 #define P9_RLERROR			7
+#define P9_TSTATFS			8
+#define P9_RSTATFS			9
 #define P9_TLOPEN			12
 #define P9_RLOPEN			13
 #define P9_TGETATTR			24
@@ -164,6 +166,21 @@ struct p9_dirent {
 	char			d_name[256];
 };
 
+/*
+ * File system statistics.
+ */
+struct p9_rstatfs {
+	uint32_t 		type;
+	uint32_t 		bsize;
+	uint64_t 		blocks;
+	uint64_t 		bfree;
+	uint64_t 		bavail;
+	uint64_t 		files;
+	uint64_t 		ffree;
+	uint64_t 		fsid;
+	uint32_t 		namelen;
+};
+
 /* init functions */
 int init_p9();
 int p9_trans_fd_init();
@@ -180,6 +197,7 @@ int p9_client_open(struct p9_fid *fid, int mode);
 struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wnames, int clone);
 int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t offset);
 int p9_client_read(struct p9_fid *fid, char *buf, uint64_t offset, uint32_t count);
+int p9_client_statfs(struct p9_fid *fid, struct p9_rstatfs *st);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);

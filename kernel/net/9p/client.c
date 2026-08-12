@@ -866,3 +866,42 @@ err:
 	p9_request_free(req);
 	return ret;
 }
+
+/*
+ * File system statistics request.
+ */
+int p9_client_statfs(struct p9_fid *fid, struct p9_rstatfs *st)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TSTATFS fid %d\n", fid->fid);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TSTATFS, "d", fid->fid);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "ddqqqqqqd",
+		&st->type,
+		&st->bsize,
+		&st->blocks,
+		&st->bfree,
+		&st->bavail,
+		&st->files,
+		&st->ffree,
+		&st->fsid,
+		&st->namelen);
+	if (ret)
+		goto out;
+
+	/* print reply */
+	p9_debug("RSTATFS fid %d type 0x%x ...\n", fid->fid, st->type);
+
+out:
+	p9_request_free(req);
+	return ret;
+}

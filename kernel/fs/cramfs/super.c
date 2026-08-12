@@ -166,7 +166,7 @@ err:
 /*
  * Get statistics on file system.
  */
-static void cramfs_statfs(struct super_block *sb, struct statfs64 *buf)
+static int cramfs_statfs(struct super_block *sb, struct statfs64 *buf)
 {
 	memset(buf, 0, sizeof(struct statfs64));
 	buf->f_type = sb->s_magic;
@@ -175,6 +175,8 @@ static void cramfs_statfs(struct super_block *sb, struct statfs64 *buf)
 	buf->f_bavail = 0;
 	buf->f_ffree = 0;
 	buf->f_namelen = 255;
+
+	return 0;
 }
 
 /*

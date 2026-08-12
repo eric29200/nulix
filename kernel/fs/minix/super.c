@@ -172,7 +172,7 @@ err:
 /*
  * Get statistics on file system.
  */
-static void minix_statfs(struct super_block *sb, struct statfs64 *buf)
+static int minix_statfs(struct super_block *sb, struct statfs64 *buf)
 {
 	struct minix_sb_info *sbi = minix_sb(sb);
 
@@ -185,6 +185,8 @@ static void minix_statfs(struct super_block *sb, struct statfs64 *buf)
 	buf->f_files = sbi->s_ninodes;
 	buf->f_ffree = minix_count_free_inodes(sb);
 	buf->f_namelen = sbi->s_name_len;
+
+	return 0;
 }
 
 /*

@@ -58,11 +58,13 @@ err_root_inode:
 /*
  * Get statistics on file system.
  */
-void proc_statfs(struct super_block *sb, struct statfs64 *buf)
+int proc_statfs(struct super_block *sb, struct statfs64 *buf)
 {
 	memset(buf, 0, sizeof(struct statfs64));
 	buf->f_type = sb->s_magic;
 	buf->f_bsize = sb->s_blocksize;
+
+	return 0;
 }
 
 /*

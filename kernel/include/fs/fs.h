@@ -245,7 +245,7 @@ struct super_operations {
 	int (*read_inode)(struct inode *);
 	int (*write_inode)(struct inode *);
 	int (*put_inode)(struct inode *);
-	void (*statfs)(struct super_block *, struct statfs64 *);
+	int (*statfs)(struct super_block *, struct statfs64 *);
 };
 
 /*

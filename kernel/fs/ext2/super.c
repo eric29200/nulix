@@ -6,7 +6,7 @@
 /*
  * Get Ext2 File system status.
  */
-static void ext2_statfs(struct super_block *sb, struct statfs64 *buf)
+static int ext2_statfs(struct super_block *sb, struct statfs64 *buf)
 {
 	struct ext2_sb_info *sbi = ext2_sb(sb);
 	uint32_t overhead_per_group, overhead;
@@ -30,6 +30,8 @@ static void ext2_statfs(struct super_block *sb, struct statfs64 *buf)
 	buf->f_files = sbi->s_es->s_inodes_count;
 	buf->f_ffree = sbi->s_es->s_free_inodes_count;
 	buf->f_namelen = EXT2_NAME_LEN;
+
+	return 0;
 }
 
 /*
