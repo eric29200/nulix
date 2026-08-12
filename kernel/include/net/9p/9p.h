@@ -17,6 +17,7 @@
 
 #define P9_NOTAG			((uint16_t) (~0))
 #define P9_NOFID			((uint32_t) (~0))
+#define P9_MAXWELEM			16
 
 #define P9_TLERROR			6
 #define P9_RLERROR			7
