@@ -4,19 +4,55 @@
 #include <net/inet/in.h>
 #include <net/inet/net.h>
 #include <x86/endian.h>
+#include <proc/sched.h>
+#include <proc/tqueue.h>
 #include <fs/fs.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <mm/mm.h>
 #include <string.h>
+#include <fcntl.h>
 
 #define MAX_SOCK_BUF		(64 * 1024)
+
+#define RWORKSCHED		1	/* read work scheduled */
+#define RPENDING		2	/* can read */
+#define WWORKSCHED		4	/* write work scheduled */
+#define WPENDING		8	/* can write */
+
+/* connections */
+static LIST_HEAD(p9_poll_pending_list);
+static struct tqueue poll_tq;
+
+/*
+ * Connection.
+ */
+struct p9_conn {
+	struct p9_client *	client;
+	int			err;
+	struct list_head	req_list;
+	struct list_head	unsent_req_list;
+	struct p9_request *	req;
+	char			tmp_buf[7];
+	int			rsize;
+	int			rpos;
+	char *			rbuf;
+	int			wsize;
+	int			wpos;
+	char *			wbuf;
+	struct select_table	st;
+	uint32_t		wsched;
+	struct list_head	poll_pending_link;
+	struct tqueue		rq;
+	struct tqueue		wq;
+};
 
 /*
  * File transport.
  */
 struct p9_trans_fd {
-	struct file *	filp;
+	struct file *		filp;
+	struct p9_conn *	conn;
 };
 
 /*
@@ -96,12 +132,374 @@ static int parse_opts(char *params, struct p9_fd_opts *opts)
 }
 
 /*
+ * Find a request by tag.
+ */
+static struct p9_request *p9_tag_lookup(struct p9_client *client, uint16_t tag)
+{
+	struct p9_trans_fd *trans = client->trans;
+	struct p9_conn *conn = trans->conn;
+	struct p9_request *req;
+	struct list_head *pos;
+
+	list_for_each(pos, &conn->req_list) {
+		req = list_entry(pos, struct p9_request, list);
+		if (req->tc.tag == tag)
+			return req;
+	}
+
+	return NULL;
+}
+
+/*
+ * Poll connection.
+ */
+static int p9_fd_poll(struct p9_client *client, struct select_table *st)
+{
+	struct p9_trans_fd *ts = NULL;
+
+	/* check if client is connected */
+	if (client && client->status == P9_CLIENT_CONNECTED)
+		ts = client->trans;
+	if (!ts)
+		return -EREMOTEIO;
+
+	/* poll not implemented */
+	if (!ts->filp->f_op || !ts->filp->f_op->poll)
+		return -EIO;
+
+	/* poll */
+	return ts->filp->f_op->poll(ts->filp, st);
+}
+
+/*
+ * Cancel a connection.
+ */
+static void p9_conn_cancel(struct p9_conn *conn, int err)
+{
+	UNUSED(conn);
+	UNUSED(err);
+	printf("TODO: p9_conn_cancel\n");
+}
+
+/*
+ * Read from a socket.
+ */
+static int p9_fd_read(struct p9_client *client, void *buf, int len)
+{
+	struct p9_trans_fd *trans = NULL;
+	int ret;
+
+	/* client must be connected */
+	if (client && client->status != P9_CLIENT_DISCONNECTED)
+		trans = client->trans;
+	if (!trans)
+		return -EREMOTEIO;
+
+	/* check permssions */
+	if (!(trans->filp->f_mode & FMODE_READ))
+		return -EBADF;
+	if (!trans->filp->f_op || !trans->filp->f_op->read)
+		return -EINVAL;
+
+	/* write */
+	ret = trans->filp->f_op->read(trans->filp, buf, len, &trans->filp->f_pos);
+	if (ret <= 0 && ret != -ERESTARTSYS && ret != -EAGAIN)
+		client->status = P9_CLIENT_DISCONNECTED;
+
+	return ret;
+}
+
+/*
+ * Read work = receive requests.
+ */
+static void p9_read_work(void *arg)
+{
+	struct p9_conn *conn = (struct p9_conn *) arg;
+	uint16_t tag;
+	uint32_t n;
+	int ret;
+
+	/* connection error */
+	if (conn->err < 0)
+		return;
+
+	/* start by reading header */
+	if (!conn->rbuf) {
+		conn->rbuf = conn->tmp_buf;
+		conn->rpos = 0;
+		conn->rsize = P9_HDRSZ;
+	}
+
+	/* read request */
+	clear_bit(&conn->wsched, RPENDING);
+	ret = p9_fd_read(conn->client, conn->rbuf + conn->rpos, conn->rsize - conn->rpos);
+	if (ret == -EAGAIN) {
+		clear_bit(&conn->wsched, RWORKSCHED);
+		return;
+	}
+	if (ret <= 0)
+		goto err;
+
+	/* update read position */
+	conn->rpos += ret;
+
+	/* read header */
+	if (!conn->req && conn->rpos == conn->rsize) {
+		/* read packet size */
+		n = le32toh(*((uint32_t *) conn->rbuf));
+		if (n >= conn->client->msize) {
+			ret = -EIO;
+			goto err;
+		}
+
+		/* read tag */
+		tag = le16toh(*((uint16_t *) (conn->rbuf + 5)));
+
+		/* find request */
+		conn->req = p9_tag_lookup(conn->client, tag);
+		if (!conn->req || (conn->req->status != P9_REQUEST_STATUS_SENT && conn->req->status != P9_REQUEST_STATUS_FLSH)) {
+			ret = -EIO;
+			goto err;
+		}
+
+		/* get data */
+		conn->rbuf = (char *) conn->req->rc.sdata;
+		memcpy(conn->rbuf, conn->tmp_buf, conn->rsize);
+		conn->rsize = n;
+	}
+
+	/* packet is read in */
+	if (conn->req && conn->rpos == conn->rsize) {
+		if (conn->req->status != P9_REQUEST_STATUS_ERROR)
+			conn->req->status = P9_REQUEST_STATUS_RCVD;
+		list_del(&conn->req->list);
+		p9_client_cb(conn->req);
+		conn->req->rc.size = conn->rsize;
+		conn->rbuf = NULL;
+		conn->rpos = 0;
+		conn->rsize = 0;
+		conn->req = NULL;
+	}
+
+	/* reschedule read if needed */
+	if (!list_empty(&conn->req_list)) {
+		if (test_and_clear_bit(&conn->wsched, RPENDING))
+			n = POLLIN;
+		else
+			n = p9_fd_poll(conn->client, NULL);
+
+		if (n & POLLIN)
+		 	queue_task(&conn->rq);
+		else
+			clear_bit(&conn->wsched, RWORKSCHED);
+	} else {
+		clear_bit(&conn->wsched, RWORKSCHED);
+	}
+
+	return;
+err:
+	p9_conn_cancel(conn, ret);
+	clear_bit(&conn->wsched, RWORKSCHED);
+}
+
+/*
+ * Write to a socket.
+ */
+static int p9_fd_write(struct p9_client *client, void *buf, int len)
+{
+	struct p9_trans_fd *trans = NULL;
+	int ret;
+
+	/* client must be connected */
+	if (client && client->status != P9_CLIENT_DISCONNECTED)
+		trans = client->trans;
+	if (!trans)
+		return -EREMOTEIO;
+
+	/* check permssions */
+	if (!(trans->filp->f_mode & FMODE_WRITE))
+		return -EBADF;
+	if (!trans->filp->f_op || !trans->filp->f_op->write)
+		return -EINVAL;
+
+	/* write */
+	ret = trans->filp->f_op->write(trans->filp, buf, len, &trans->filp->f_pos);
+	if (ret <= 0 && ret != -ERESTARTSYS && ret != -EAGAIN)
+		client->status = P9_CLIENT_DISCONNECTED;
+
+	return ret;
+}
+
+/*
+ * Write work = send requests.
+ */
+static void p9_write_work(void *arg)
+{
+	struct p9_conn *conn = (struct p9_conn *) arg;
+	struct p9_request *req;
+	int ret, n;
+
+	/* error on connection */
+	if (conn->err < 0) {
+		clear_bit(&conn->wsched, WWORKSCHED);
+		return;
+	}
+
+	/* no request being sent : choose a new one */
+	if (!conn->wsize) {
+		/* no more request */
+		if (list_empty(&conn->unsent_req_list)) {
+			clear_bit(&conn->wsched, WWORKSCHED);
+			return;
+		}
+
+		/* pick first request */
+		req = list_first_entry(&conn->unsent_req_list, struct p9_request, list);
+		req->status = P9_REQUEST_STATUS_SENT;
+		conn->wbuf = (char *) req->tc.sdata;
+		conn->wsize = req->tc.size;
+		conn->wpos = 0;
+
+		/* move request */
+		list_del(&req->list);
+		list_add_tail(&req->list, &conn->req_list);
+	}
+
+	/* write request */
+	clear_bit(&conn->wsched, WPENDING);
+	ret = p9_fd_write(conn->client, conn->wbuf + conn->wpos, conn->wsize - conn->wpos);
+	if (ret == -EAGAIN) {
+		clear_bit(&conn->wsched, WWORKSCHED);
+		return;
+	}
+
+	/* handle error */
+	if (ret == 0)
+		ret = -EREMOTEIO;
+	if (ret < 0)
+		goto err;
+
+	/* update write position */
+	conn->wpos += ret;
+	if (conn->wpos == conn->wsize)
+		conn->wpos = conn->wsize = 0;
+
+	/* schedule next request */
+	if (conn->wsize == 0 && !list_empty(&conn->unsent_req_list)) {
+		if (test_and_clear_bit(&conn->wsched, WPENDING))
+			n = POLLOUT;
+		else
+			n = p9_fd_poll(conn->client, NULL);
+
+		if (n & POLLOUT)
+			queue_task(&conn->wq);
+		else
+			clear_bit(&conn->wsched, WWORKSCHED);
+	} else {
+		clear_bit(&conn->wsched, WWORKSCHED);
+	}
+
+	return;
+err:
+	p9_conn_cancel(conn, ret);
+	clear_bit(&conn->wsched, WWORKSCHED);
+}
+
+/**
+ * Polls a connection and schedules read or write works if necessary.
+ */
+static void p9_poll_mux(struct p9_conn *conn)
+{
+	int n;
+
+	/* connection error */
+	if (conn->err < 0)
+		return;
+
+	/* poll */
+	n = p9_fd_poll(conn->client, NULL);
+	if (n < 0 || n & (POLLERR | POLLHUP | POLLNVAL)) {
+		if (n >= 0)
+			n = -ECONNRESET;
+		p9_conn_cancel(conn, n);
+	}
+
+	/* handle read */
+	if (n & POLLIN) {
+		set_bit(&conn->wsched, RPENDING);
+		if (!test_and_set_bit(&conn->wsched, RWORKSCHED))
+			queue_task(&conn->rq);
+	}
+
+	/* handle write */
+	if (n & POLLOUT) {
+		set_bit(&conn->wsched, WPENDING);
+		if ((conn->wsize || !list_empty(&conn->unsent_req_list)) && !test_and_set_bit(&conn->wsched, WWORKSCHED))
+			queue_task(&conn->wq);
+	}
+}
+
+/*
+ * Poll pending connections.
+ */
+static void p9_poll_work(void *arg)
+{
+	struct list_head *pos;
+	struct p9_conn *conn;
+
+	/* no argument */
+	UNUSED(arg);
+
+	/* poll connections */
+	list_for_each(pos, &p9_poll_pending_list) {
+		conn = list_entry(pos, struct p9_conn, poll_pending_link);
+		p9_poll_mux(conn);
+	}
+
+	/* requeue poll task */
+	queue_task(&poll_tq);
+}
+
+/*
+ * Create a connection.
+ */
+static struct p9_conn *p9_conn_create(struct p9_client *client)
+{
+	struct p9_conn *conn;
+	int n;
+
+	/* allocate connection */
+	conn = (struct p9_conn *) kmalloc(sizeof(struct p9_conn));
+	if (!conn)
+		return ERR_PTR(-ENOMEM);
+
+	/* init connection */
+	memset(conn, 0, sizeof(struct p9_conn));
+	conn->client = client;
+	INIT_LIST_HEAD(&conn->req_list);
+	INIT_LIST_HEAD(&conn->unsent_req_list);
+	INIT_TQUEUE(&conn->rq, &p9_read_work, conn);
+	INIT_TQUEUE(&conn->wq, &p9_write_work, conn);
+	list_add_tail(&conn->poll_pending_link, &p9_poll_pending_list);
+
+	/* poll client */
+	n = p9_fd_poll(client, &conn->st);
+	if (n & POLLIN)
+		set_bit(&conn->wsched, RPENDING);
+	if (n & POLLOUT)
+		set_bit(&conn->wsched, WPENDING);
+
+	return conn;
+}
+
+/*
  * Attach socket to the client.
  */
 static int p9_socket_open(struct p9_client *client, struct socket *sock)
 {
 	struct p9_trans_fd *trans;
 	struct file *filp;
+	int ret;
 
 	/* allocate file transport */
 	trans = (struct p9_trans_fd *) kmalloc(sizeof(struct p9_trans_fd));
@@ -118,10 +516,21 @@ static int p9_socket_open(struct p9_client *client, struct socket *sock)
 	}
 
 	/* install file */
+	filp->f_flags = O_NONBLOCK;
 	trans->filp = filp;
 	sock->file = filp;
 	client->trans = trans;
 	client->status = P9_CLIENT_CONNECTED;
+
+	/* create a connection */
+	trans->conn = p9_conn_create(client);
+	if (IS_ERR(trans->conn)) {
+		ret = PTR_ERR(trans->conn);
+		trans->conn = NULL;
+		fput(trans->filp);
+		kfree(trans);
+		return ret;
+	}
 
 	return 0;
 }
@@ -168,107 +577,8 @@ static int p9_fd_create_tcp(struct p9_client *client, const char *addr, char *ar
  */
 static void p9_fd_close(struct p9_client *client)
 {
-	struct p9_trans_fd *trans;
-
-	if (!client)
-		return;
-
-	trans = client->trans;
-	if (!trans)
-		return;
-
-	/* set client disconnected */
-	client->status = P9_CLIENT_DISCONNECTED;
-
-	/* free transport */
-	fput(trans->filp);
-	kfree(trans);
-}
-
-/*
- * write to socket.
- */
-static int __write(struct file *filp, const char *buf, size_t len)
-{
-	int ret;
-
-	/* write not implemented */
-	if (!filp || !filp->f_op || !filp->f_op->write)
-		return -EINVAL;
-
-	/* write */
-	while (len > 0) {
-		ret = filp->f_op->write(filp, buf, len, &filp->f_pos);
-		if (ret < 0)
-			return ret;
-		if (ret == 0)
-			return -EIO;
-
-		buf += ret;
-		len -= ret;
-	}
-
-	return 0;
-}
-
-/*
- * Send a 9P packet.
- */
-static int p9_packet_send(struct p9_client *client, struct p9_fcall *fc)
-{
-	struct p9_trans_fd *trans = client->trans;
-	return __write(trans->filp, (const char *) fc->sdata, fc->size);
-}
-
-/*
- * Read from socket.
- */
-static int __read(struct file *filp, char *buf, size_t len)
-{
-	int ret;
-
-	/* read not implemented */
-	if (!filp || !filp->f_op || !filp->f_op->read)
-		return -EINVAL;
-
-	/* read */
-	while (len > 0) {
-		ret = filp->f_op->read(filp, buf, len, &filp->f_pos);
-		if (ret < 0)
-			return ret;
-		if (ret == 0)
-			return -EIO;
-
-		buf += ret;
-		len -= ret;
-	}
-
-	return 0;
-}
-
-/*
- * Receive a 9P packet.
- */
-static int p9_packet_receive(struct p9_client *client, struct p9_fcall *fc)
-{
-	struct p9_trans_fd *trans = client->trans;
-	int ret;
-
-	/* read packet length */
-	ret = __read(trans->filp, (char *) &fc->size, sizeof(uint32_t));
-	if (ret)
-		return ret;
-
-	/* check if packet is big enough */
-	fc->size = le32toh(fc->size);
-	if (fc->size + sizeof(uint32_t) > fc->capacity)
-		return -EINVAL;
-
-	/* put packet size in packet */
-	*((uint32_t *) fc->sdata) = htole32(fc->size);
-
-	/* read data */
-	return __read(trans->filp, (char *) fc->sdata + sizeof(uint32_t), fc->size - sizeof(uint32_t));
+	UNUSED(client);
+	printf("TODO: p9_fd_close\n");
 }
 
 /*
@@ -276,28 +586,40 @@ static int p9_packet_receive(struct p9_client *client, struct p9_fcall *fc)
  */
 static int p9_fd_request(struct p9_client *client, struct p9_request *req)
 {
-	int ret;
+	struct p9_trans_fd *trans = client->trans;
+	struct p9_conn *conn = trans->conn;
+	int n;
 
-	/* send packet */
-	ret = p9_packet_send(client, &req->tc);
-	if (ret)
-		return ret;
+	/* error on connection */
+	if (conn->err < 0)
+		return conn->err;
 
-	/* receive reply */
-	ret = p9_packet_receive(client, &req->rc);
-	if (ret)
-		return ret;
+	/* add request */
+	req->status = P9_REQUEST_STATUS_UNSENT;
+	list_add_tail(&req->list, &conn->unsent_req_list);
 
-	/* parse reply header */
-	ret = p9_parse_header(&req->rc, NULL, NULL, NULL);
-	if (ret)
-		return ret;
+	/* poll connection */
+	if (test_and_clear_bit(&conn->wsched, WPENDING))
+		n = POLLOUT;
+	else
+		n = p9_fd_poll(conn->client, NULL);
 
-	/* check tag */
-	if (req->tc.tag != req->rc.tag)
-		return -EINVAL;
+	/* schedule write work */
+	if ((n & POLLOUT) && !test_and_set_bit(&conn->wsched, WWORKSCHED))
+		queue_task(&conn->wq);
 
 	return 0;
+}
+
+/*
+ * Cancel a request.
+ */
+static int p9_fd_cancel(struct p9_client *client, struct p9_request *req)
+{
+	UNUSED(client);
+	UNUSED(req);
+	printf("TODO: p9_fd_cancel\n");
+	return -EINVAL;
 }
 
 /*
@@ -308,6 +630,7 @@ static struct p9_trans_module p9_tcp_trans = {
 	.maxsize 	= MAX_SOCK_BUF,
 	.create 	= p9_fd_create_tcp,
 	.close 		= p9_fd_close,
+	.cancel		= p9_fd_cancel,
 	.request	= p9_fd_request,
 };
 
@@ -316,6 +639,12 @@ static struct p9_trans_module p9_tcp_trans = {
  */
 int p9_trans_fd_init()
 {
+	/* register tcp module */
 	v9fs_register_trans(&p9_tcp_trans);
+
+	/* init poll task queue */
+	INIT_TQUEUE(&poll_tq, p9_poll_work, NULL);
+	queue_task(&poll_tq);
+
 	return 0;
 }

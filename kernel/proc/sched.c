@@ -9,6 +9,7 @@
 #include <proc/timer.h>
 #include <sys/syscall.h>
 #include <lib/list.h>
+#include <proc/tqueue.h>
 #include <kernel_stat.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -144,6 +145,9 @@ void do_timer_interrupt()
 	update_times();
 	update_process_times();
 	update_timers();
+
+	/* run task queues */
+	run_task_queues();
 }
 
 /*

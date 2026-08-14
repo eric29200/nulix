@@ -42,6 +42,26 @@ static inline int clear_bit(uint32_t *addr, uint32_t bit)
 }
 
 /*
+ * Test and clear a bit.
+ */
+static inline int test_and_clear_bit(uint32_t *addr, uint32_t bit)
+{
+	int ret = test_bit(addr, bit);
+	clear_bit(addr, bit);
+	return ret;
+}
+
+/*
+ * Test and set a bit.
+ */
+static inline int test_and_set_bit(uint32_t *addr, uint32_t bit)
+{
+	int ret = test_bit(addr, bit);
+	set_bit(addr, bit);
+	return ret;
+}
+
+/*
  * Find first zero bit.
  */
 static inline uint32_t find_first_zero_bit(uint32_t *addr, size_t limit)

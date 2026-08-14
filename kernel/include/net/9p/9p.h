@@ -8,12 +8,22 @@
 #define P9_PROTO_2000L			2
 #define P9_PORT				564
 
+#define P9_HDRSZ			7
 #define P9_IOHDRSZ			24
 #define P9_READDIRHDRSZ			24
 
 
 #define P9_CLIENT_CONNECTED		1
 #define P9_CLIENT_DISCONNECTED		2
+
+#define P9_REQUEST_STATUS_IDLE		0
+#define P9_REQUEST_STATUS_ALLOC		1
+#define P9_REQUEST_STATUS_UNSENT	2
+#define P9_REQUEST_STATUS_SENT		3
+#define P9_REQUEST_STATUS_FLSH		4
+#define P9_REQUEST_STATUS_RCVD		5
+#define P9_REQUEST_STATUS_FLSHD		6
+#define P9_REQUEST_STATUS_ERROR		7
 
 #define P9_NOTAG			((uint16_t) (~0))
 #define P9_NOFID			((uint32_t) (~0))
@@ -47,6 +57,8 @@
 #define P9_RATTACH			105
 #define P9_TERROR			106
 #define P9_RERROR			107
+#define P9_TFLUSH			108
+#define P9_RFLUSH			109
 #define P9_TWALK			110
 #define P9_RWALK			111
 #define P9_TREAD			116
@@ -109,6 +121,10 @@ struct p9_fcall {
 struct p9_request {
 	struct p9_fcall  		tc;
 	struct p9_fcall 		rc;
+	int				t_err;
+	int				status;
+	struct wait_queue *		wait;
+	struct list_head		list;
 };
 
 /*
@@ -121,6 +137,7 @@ struct p9_trans_module {
 	int 				(*create)(struct p9_client *, const char *, char *);
 	void				(*close) (struct p9_client *);
 	int				(*request) (struct p9_client *, struct p9_request *req);
+	int				(*cancel)(struct p9_client *, struct p9_request *req);
 };
 
 /*
@@ -205,7 +222,7 @@ int p9_trans_fd_init();
 /* client functions */
 struct p9_client *p9_client_create(const char *dev_name, char *options);
 void p9_client_destroy(struct p9_client *client);
-int p9_parse_header(struct p9_fcall *fc, int32_t *size, int8_t *type, int16_t *tag);
+void p9_client_cb(struct p9_request *req);
 int p9_client_version(struct p9_client *client);
 struct p9_fid *p9_client_attach(struct p9_client *client, struct p9_fid *afid, const char *uname, uid_t n_uname, const char *aname);
 int p9_client_clunk(struct p9_fid *fid);
@@ -223,6 +240,7 @@ int p9_client_link(struct p9_fid *dfid, struct p9_fid *oldfid, const char *newna
 int p9_client_symlink(struct p9_fid *dfid, const char *name, const char *symtgt, gid_t gid, struct p9_qid *qid);
 int p9_client_remove(struct p9_fid *fid);
 int p9_client_rename(struct p9_fid *fid, struct p9_fid *newdirfid, const char *name);
+int p9_client_flush(struct p9_client *client, struct p9_request *oldreq);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);

@@ -41,6 +41,8 @@ size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_RREMOVE:
 		case P9_RRENAME:
 		case P9_RWRITE:
+		case P9_TFLUSH:
+		case P9_RFLUSH:
 			return 4096;
 		case P9_RREADLINK:
 		case P9_TMKDIR:

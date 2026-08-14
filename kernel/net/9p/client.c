@@ -285,6 +285,11 @@ static struct p9_request *p9_tag_alloc(struct p9_client *client, int8_t type, co
 	if (!req)
 		return ERR_PTR(-ENOMEM);
 
+	/* init request */
+	req->status = P9_REQUEST_STATUS_ALLOC;
+	req->wait = NULL;
+	req->t_err = 0;
+
 	/* get transmit packet size */
 	va_copy(apc, ap);
 	alloc_tsize = min(client->msize, p9_msg_buf_size(type, fmt, apc));
@@ -353,7 +358,7 @@ err:
 /*
  * Parse a 9p packet header.
  */
-int p9_parse_header(struct p9_fcall *fc, int32_t *size, int8_t *type, int16_t *tag)
+static int p9_parse_header(struct p9_fcall *fc, int32_t *size, int8_t *type, int16_t *tag)
 {
 	int32_t r_size;
 	int16_t r_tag;
@@ -398,7 +403,7 @@ static int p9_check_errors(struct p9_request *req)
 	/* parse reply header */
 	ret = p9_parse_header(&req->rc, NULL, &type, NULL);
 	if (ret) {
-		p9_error("couldn't parse header\n");
+		p9_error("couldn't parse header = %d\n", ret);
 		return ret;
 	}
 
@@ -447,6 +452,31 @@ static struct p9_request *p9_client_rpc(struct p9_client *client, int8_t type, c
 
 	/* issue request */
 	ret = client->trans_mod->request(client, req);
+	if (ret < 0) {
+		if (ret != -ERESTARTSYS && ret != -EFAULT)
+			client->status = P9_CLIENT_DISCONNECTED;
+		goto err;
+	}
+
+	/* wait for reply */
+	for (;;) {
+		if (req->status >= P9_REQUEST_STATUS_RCVD)
+			break;
+		sleep_on(&req->wait);
+	}
+
+	/* check request status */
+	if (req->status == P9_REQUEST_STATUS_ERROR)
+		ret = req->t_err;
+
+	/* handle error */
+	if (ret == -ERESTARTSYS && client->status == P9_CLIENT_CONNECTED) {
+		if (client->trans_mod->cancel(client, req))
+			p9_client_flush(client, req);
+		if (req->status == P9_REQUEST_STATUS_RCVD)
+			ret = 0;
+	}
+
 	if (ret < 0)
 		goto err;
 
@@ -459,6 +489,14 @@ static struct p9_request *p9_client_rpc(struct p9_client *client, int8_t type, c
 err:
 	p9_request_free(req);
 	return ERR_PTR(ret);
+}
+
+/*
+ * Call back from transport to client.
+ */
+void p9_client_cb(struct p9_request *req)
+{
+	wake_up(&req->wait);
 }
 
 /*
@@ -1144,6 +1182,38 @@ int p9_client_rename(struct p9_fid *fid, struct p9_fid *newdirfid, const char *n
 
 	/* print reply */
 	p9_debug("RRENAME fid %d\n", fid->fid);
+
+	/* free request */
+	p9_request_free(req);
+
+	return 0;
+}
+
+/*
+ * Flush (cancel) a request.
+ */
+int p9_client_flush(struct p9_client *client, struct p9_request *oldreq)
+{
+	struct p9_request *req;
+	int16_t oldtag;
+	int ret;
+
+	/* parse old header */
+	ret = p9_parse_header(&oldreq->tc, NULL, NULL, &oldtag);
+	if (ret)
+		return ret;
+
+	/* print debug message */
+	p9_debug("TFLUSH tag %d\n", oldtag);
+
+	/* issue flush request */
+	req = p9_client_rpc(client, P9_TFLUSH, "w", oldtag);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* on success, remove old request */
+	if (oldreq->status == P9_REQUEST_STATUS_FLSH)
+		list_del(&oldreq->list);
 
 	/* free request */
 	p9_request_free(req);
