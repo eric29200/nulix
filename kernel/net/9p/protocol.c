@@ -40,6 +40,7 @@ size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_TREMOVE:
 		case P9_RREMOVE:
 		case P9_RRENAME:
+		case P9_RWRITE:
 			return 4096;
 		case P9_RREADLINK:
 		case P9_TMKDIR:
@@ -92,6 +93,16 @@ size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 				const int32_t count = va_arg(ap, int32_t);
 				/* count[4] data[count] */
 				return max(hdr + 4 + count, err_size);
+			}
+		case P9_TWRITE:
+			if (strcmp("dqD", fmt))
+				p9_fatal("p9_msg_buf_size: wrong format for message %d\n", type);
+			va_arg(ap, int32_t);
+			va_arg(ap, int64_t);
+			{
+				const int32_t count = va_arg(ap, int32_t);
+				/* fid[4] offset[8] count[4] data[count] */
+				return hdr + 4 + 8 + 4 + count;
 			}
 		default:
 			p9_fatal("p9_msg_buf_size: unknown message %d\n", type);
@@ -184,6 +195,13 @@ int p9pdu_vwritef(struct p9_fcall *pdu, const char *fmt, va_list ap)
 							break;
 					}
 				}
+				break;
+			case 'D':
+				uint32_t count = va_arg(ap, uint32_t);
+				const void *data = va_arg(ap, const void *);
+				ret = p9pdu_writef(pdu, "d", count);
+				if (ret == 0 && pdu_write(pdu, data, count))
+					ret = -EFAULT;
 				break;
 			default:
 				p9_fatal("p9pdu_vwritef: unknwon format %c\n", *ptr);

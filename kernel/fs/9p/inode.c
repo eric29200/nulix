@@ -38,6 +38,7 @@ static struct file_operations v9fs_file_fops = {
 	.open		= v9fs_open,
 	.release	= v9fs_release,
 	.read		= v9fs_file_read,
+	.write		= v9fs_file_write,
 };
 
 /*

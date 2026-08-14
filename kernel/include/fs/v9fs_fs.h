@@ -60,6 +60,7 @@ int v9fs_readdir(struct file *filp, void *dirent, filldir_t filldir);
 int v9fs_open(struct inode *inode, struct file *file);
 int v9fs_release(struct inode *inode, struct file *filp);
 int v9fs_file_read(struct file *filp, char *buf, size_t count, off_t *offset);
+int v9fs_file_write(struct file *filp, const char *buf, size_t count, off_t *offset);
 
 /* symbolic link operations */
 struct dentry *v9fs_follow_link(struct dentry *dentry, struct dentry *base);

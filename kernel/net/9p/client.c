@@ -868,6 +868,57 @@ err:
 }
 
 /*
+ * Write request.
+ */
+int p9_client_write(struct p9_fid *fid, const char *buf, uint64_t offset, uint32_t count)
+{
+	struct p9_client *client = fid->client;
+	uint32_t w_size, written;
+	struct p9_request *req;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TWRITE fid %d offset %llu %d\n", fid->fid, offset, count);
+
+	/* choose write size */
+	w_size = fid->iounit;
+	if (!w_size || w_size > client->msize - P9_IOHDRSZ)
+		w_size = client->msize - P9_IOHDRSZ;
+
+	/* limit write size */
+	if (count < w_size)
+		w_size = count;
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TWRITE, "dqD", fid->fid, offset, w_size, buf);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "d", &written);
+	if (ret)
+		goto err;
+
+	/* check wirtten */
+	if (w_size < written) {
+		p9_error("bogus RWRITE count (%u > %u)\n", written, w_size);
+		ret = -EIO;
+		goto err;
+	}
+
+	/* print reply */
+	p9_debug("RWRITE count %u\n", written);
+
+	/* free request */
+	p9_request_free(req);
+
+	return written;
+err:
+	p9_request_free(req);
+	return ret;
+}
+
+/*
  * File system statistics request.
  */
 int p9_client_statfs(struct p9_fid *fid, struct p9_rstatfs *st)

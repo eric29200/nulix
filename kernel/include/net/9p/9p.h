@@ -51,6 +51,8 @@
 #define P9_RWALK			111
 #define P9_TREAD			116
 #define P9_RREAD			117
+#define P9_TWRITE			118
+#define P9_RWRITE			119
 #define P9_TCLUNK			120
 #define P9_RCLUNK			121
 #define P9_TREMOVE			122
@@ -212,6 +214,7 @@ int p9_client_open(struct p9_fid *fid, int mode);
 struct p9_fid *p9_client_walk(struct p9_fid *oldfid, uint16_t nwname, char **wnames, int clone);
 int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t offset);
 int p9_client_read(struct p9_fid *fid, char *buf, uint64_t offset, uint32_t count);
+int p9_client_write(struct p9_fid *fid, const char *buf, uint64_t offset, uint32_t count);
 int p9_client_statfs(struct p9_fid *fid, struct p9_rstatfs *st);
 int p9_client_readlink(struct p9_fid *fid, char **target);
 int p9_client_mkdir(struct p9_fid *fid, const char *name, int mode, gid_t gid, struct p9_qid *qid);
