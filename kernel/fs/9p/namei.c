@@ -157,6 +157,7 @@ int v9fs_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 {
 	struct dentry *dir_dentry, *old_dentry;
 	struct p9_fid *dfid, *oldfid;
+	int ret;
 
 	/* get directory fid */
 	dir_dentry = v9fs_dentry_from_dir_inode(dir);
@@ -171,7 +172,15 @@ int v9fs_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 		return PTR_ERR(oldfid);
 
 	/* issue link request */
-	return p9_client_link(dfid, oldfid, dentry->d_name.name);
+	ret = p9_client_link(dfid, oldfid, dentry->d_name.name);
+	if (ret)
+		return ret;
+
+	/* instantiate dentry */
+	old_dentry->d_inode->i_count++;
+	d_instantiate(dentry, old_dentry->d_inode);
+
+	return 0;
 }
 
 /*
@@ -180,8 +189,10 @@ int v9fs_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
 int v9fs_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 {
 	struct p9_fid *dfid;
+	struct inode *inode;
 	struct p9_qid qid;
 	gid_t gid;
+	int ret;
 
 	/* get gid for create */
 	gid = dir->i_mode & S_ISGID ? dir->i_gid : current_task->fsgid;
@@ -192,7 +203,19 @@ int v9fs_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 		return PTR_ERR(dfid);
 
 	/* issue symlink request */
-	return p9_client_symlink(dfid, dentry->d_name.name, target, gid, &qid);
+	ret = p9_client_symlink(dfid, dentry->d_name.name, target, gid, &qid);
+	if (ret)
+		return ret;
+
+	/* get a new inode */
+	inode = v9fs_get_inode(dir->i_sb, S_IFLNK);
+	if (IS_ERR(inode))
+		return PTR_ERR(inode);
+
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
+
+	return 0;
 }
 
 /*
