@@ -34,10 +34,14 @@ size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_TREADLINK:
 		case P9_RMKDIR:
 		case P9_RMKNOD:
+		case P9_RLINK:
+		case P9_TSYMLINK:
+		case P9_RSYMLINK:
 			return 4096;
 		case P9_RREADLINK:
 		case P9_TMKDIR:
 		case P9_TMKNOD:
+		case P9_TLINK:
 			return 8192;
 		case P9_TATTACH:
 			if (strcmp("ddssu", fmt))

@@ -47,6 +47,8 @@ struct dentry *v9fs_lookup(struct inode *dir, struct dentry *dentry);
 int v9fs_create(struct inode *dir, struct dentry *dentry, mode_t mode);
 int v9fs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 int v9fs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
+int v9fs_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
+int v9fs_symlink(struct inode *dir, struct dentry *dentry, const char *target);
 
 /* read directory operations */
 int v9fs_readdir(struct file *filp, void *dirent, filldir_t filldir);

@@ -121,3 +121,48 @@ int v9fs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 	/* issue mkdir request */
 	return p9_client_mkdir(dfid, name, mode, gid, &qid);
 }
+
+/*
+ * Make a new name for a file = hard link.
+ */
+int v9fs_link(struct inode *inode, struct inode *dir, struct dentry *dentry)
+{
+	struct dentry *dir_dentry, *old_dentry;
+	struct p9_fid *dfid, *oldfid;
+
+	/* get directory fid */
+	dir_dentry = v9fs_dentry_from_dir_inode(dir);
+	dfid = v9fs_fid_lookup(dir_dentry);
+	if (IS_ERR(dfid))
+		return PTR_ERR(dfid);
+
+	/* get old fid */
+	old_dentry = v9fs_dentry_from_dir_inode(inode);
+	oldfid = v9fs_fid_lookup(old_dentry);
+	if (IS_ERR(oldfid))
+		return PTR_ERR(oldfid);
+
+	/* issue link request */
+	return p9_client_link(dfid, oldfid, dentry->d_name.name);
+}
+
+/*
+ * Create a symbolic link.
+ */
+int v9fs_symlink(struct inode *dir, struct dentry *dentry, const char *target)
+{
+	struct p9_fid *dfid;
+	struct p9_qid qid;
+	gid_t gid;
+
+	/* get gid for create */
+	gid = dir->i_mode & S_ISGID ? dir->i_gid : current_task->fsgid;
+
+	/* get parent directory fid */
+	dfid = v9fs_parent_fid(dentry);
+	if (IS_ERR(dfid))
+		return PTR_ERR(dfid);
+
+	/* issue symlink request */
+	return p9_client_symlink(dfid, dentry->d_name.name, target, gid, &qid);
+}

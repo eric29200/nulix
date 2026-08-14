@@ -25,6 +25,8 @@
 #define P9_RSTATFS			9
 #define P9_TLOPEN			12
 #define P9_RLOPEN			13
+#define P9_TSYMLINK			16
+#define P9_RSYMLINK			17
 #define P9_TMKNOD			18
 #define P9_RMKNOD			19
 #define P9_TREADLINK			22
@@ -33,6 +35,8 @@
 #define P9_RGETATTR			25
 #define P9_TREADDIR			40
 #define P9_RREADDIR			41
+#define P9_TLINK			70
+#define P9_RLINK			71
 #define P9_TMKDIR			72
 #define P9_RMKDIR			73
 #define P9_TVERSION			100
@@ -208,6 +212,8 @@ int p9_client_statfs(struct p9_fid *fid, struct p9_rstatfs *st);
 int p9_client_readlink(struct p9_fid *fid, char **target);
 int p9_client_mkdir(struct p9_fid *fid, const char *name, int mode, gid_t gid, struct p9_qid *qid);
 int p9_client_mknod(struct p9_fid *fid, const char *name, int mode, dev_t rdev, gid_t gid, struct p9_qid *qid);
+int p9_client_link(struct p9_fid *dfid, struct p9_fid *oldfid, const char *newname);
+int p9_client_symlink(struct p9_fid *dfid, const char *name, const char *symtgt, gid_t gid, struct p9_qid *qid);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);

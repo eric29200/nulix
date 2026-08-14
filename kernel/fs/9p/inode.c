@@ -24,6 +24,8 @@ static struct inode_operations v9fs_dir_iops = {
 	.create		= v9fs_create,
 	.mknod		= v9fs_mknod,
 	.mkdir		= v9fs_mkdir,
+	.link		= v9fs_link,
+	.symlink	= v9fs_symlink,
 };
 
 /*

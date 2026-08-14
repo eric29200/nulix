@@ -992,3 +992,57 @@ out:
 	p9_request_free(req);
 	return ret;
 }
+
+/*
+ * Create a link.
+ */
+int p9_client_link(struct p9_fid *dfid, struct p9_fid *oldfid, const char *newname)
+{
+	struct p9_client *client = dfid->client;
+	struct p9_request *req;
+
+	/* print a debug message */
+	p9_debug("TLINK dfid %d oldfid %d newname %s\n", dfid->fid, oldfid->fid, newname);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TLINK, "dds", dfid->fid, oldfid->fid, newname);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* print reply */
+	p9_debug("RLINK\n");
+
+	/* free request */
+	p9_request_free(req);
+
+	return 0;
+}
+
+/*
+ * Create a symbolic link.
+ */
+int p9_client_symlink(struct p9_fid *dfid, const char *name, const char *symtgt, gid_t gid, struct p9_qid *qid)
+{
+	struct p9_client *client = dfid->client;
+	struct p9_request *req;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TSYMLINK dfid %d name %s  symtgt %s\n", dfid->fid, name, symtgt);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TSYMLINK, "dssg", dfid->fid, name, symtgt, gid);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "Q", qid);
+	if (ret)
+		goto out;
+
+	/* print reply */
+	p9_debug("RSYMLINK qid %x.%llx.%x\n", qid->type, qid->path, qid->version);
+out:
+	p9_request_free(req);
+	return ret;
+}
