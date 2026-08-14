@@ -114,9 +114,11 @@ int v9fs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 int v9fs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 {
 	char *name = dentry->d_name.name;
+	struct inode *inode;
 	struct p9_fid *dfid;
 	struct p9_qid qid;
 	gid_t gid;
+	int ret;
 
 	/* fix mode */
 	mode |= S_IFDIR;
@@ -133,7 +135,19 @@ int v9fs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 		return PTR_ERR(dfid);
 
 	/* issue mkdir request */
-	return p9_client_mkdir(dfid, name, mode, gid, &qid);
+	ret = p9_client_mkdir(dfid, name, mode, gid, &qid);
+	if (ret)
+		return ret;
+
+	/* get a new inode */
+	inode = v9fs_get_inode(dir->i_sb, mode);
+	if (IS_ERR(inode))
+		return PTR_ERR(inode);
+
+	/* instantiate dentry */
+	d_instantiate(dentry, inode);
+
+	return 0;
 }
 
 /*
