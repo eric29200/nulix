@@ -29,6 +29,8 @@
 #define P9_RSYMLINK			17
 #define P9_TMKNOD			18
 #define P9_RMKNOD			19
+#define P9_TRENAME			20
+#define P9_RRENAME			21
 #define P9_TREADLINK			22
 #define P9_RREADLINK			23
 #define P9_TGETATTR			24
@@ -217,6 +219,7 @@ int p9_client_mknod(struct p9_fid *fid, const char *name, int mode, dev_t rdev, 
 int p9_client_link(struct p9_fid *dfid, struct p9_fid *oldfid, const char *newname);
 int p9_client_symlink(struct p9_fid *dfid, const char *name, const char *symtgt, gid_t gid, struct p9_qid *qid);
 int p9_client_remove(struct p9_fid *fid);
+int p9_client_rename(struct p9_fid *fid, struct p9_fid *newdirfid, const char *name);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);

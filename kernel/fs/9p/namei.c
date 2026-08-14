@@ -212,3 +212,58 @@ int v9fs_rmdir(struct inode *dir, struct dentry *dentry)
 {
 	return v9fs_remove(dir, dentry, 1);
 }
+
+/*
+ * Rename a file.
+ */
+int v9fs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry)
+{
+	struct inode *old_inode = old_dentry->d_inode, *new_inode = new_dentry->d_inode;
+	struct p9_fid *oldfid, *olddirfid, *newdirfid;
+	int ret;
+
+	/* get old fid */
+	oldfid = v9fs_fid_lookup(old_dentry);
+	if (IS_ERR(oldfid))
+		return PTR_ERR(oldfid);
+
+	/* get old directory fid */
+	olddirfid = v9fs_fid_clone(old_dentry->d_parent);
+	if (IS_ERR(olddirfid))
+		return PTR_ERR(olddirfid);
+
+	/* get new directory fid */
+	newdirfid = v9fs_fid_clone(new_dentry->d_parent);
+	if (IS_ERR(newdirfid)) {
+		ret = PTR_ERR(newdirfid);
+		goto out_clunk_olddir;
+	}
+
+	/* issue rename request */
+	ret = p9_client_rename(oldfid, newdirfid, new_dentry->d_name.name);
+	if (ret)
+		goto out_clunk_newdir;
+
+	/* update new inode */
+	if (new_inode) {
+		if (S_ISDIR(new_inode->i_mode))
+			new_inode->i_nlinks = 0;
+		else
+			new_inode->i_nlinks--;
+	}
+
+	/* update old inode */
+	if (S_ISDIR(old_inode->i_mode)) {
+		if (!new_inode)
+			new_dir->i_nlinks++;
+		old_dir->i_nlinks = 0;
+	}
+
+	/* successful rename */
+	d_move(old_dentry, new_dentry);
+out_clunk_newdir:
+	p9_client_clunk(newdirfid);
+out_clunk_olddir:
+	p9_client_clunk(olddirfid);
+	return ret;
+}

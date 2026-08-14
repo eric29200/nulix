@@ -1074,3 +1074,28 @@ int p9_client_remove(struct p9_fid *fid)
 
 	return 0;
 }
+
+/*
+ * Rename a file.
+ */
+int p9_client_rename(struct p9_fid *fid, struct p9_fid *newdirfid, const char *name)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+
+	/* print a debug message */
+	p9_debug("TRENAME fid %d newdirfid %d name %s\n", fid->fid, newdirfid->fid, name);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TRENAME, "dds", fid->fid, newdirfid->fid, name);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* print reply */
+	p9_debug("RRENAME fid %d\n", fid->fid);
+
+	/* free request */
+	p9_request_free(req);
+
+	return 0;
+}

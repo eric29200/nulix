@@ -51,6 +51,7 @@ int v9fs_link(struct inode *inode, struct inode *dir, struct dentry *dentry);
 int v9fs_symlink(struct inode *dir, struct dentry *dentry, const char *target);
 int v9fs_unlink(struct inode *dir, struct dentry *dentry);
 int v9fs_rmdir(struct inode *dir, struct dentry *dentry);
+int v9fs_rename(struct inode *old_dir, struct dentry *old_dentry, struct inode *new_dir, struct dentry *new_dentry);
 
 /* read directory operations */
 int v9fs_readdir(struct file *filp, void *dirent, filldir_t filldir);
