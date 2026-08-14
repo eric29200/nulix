@@ -963,3 +963,32 @@ out:
 	p9_request_free(req);
 	return ret;
 }
+
+/*
+ * Make a node.
+ */
+int p9_client_mknod(struct p9_fid *fid, const char *name, int mode, dev_t rdev, gid_t gid, struct p9_qid *qid)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TMKNOD fid %d name %s mode %d major %d minor %d\n", fid->fid, name, mode, major(rdev), minor(rdev));
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TMKNOD, "dsdddg", fid->fid, name, mode, major(rdev), minor(rdev), gid);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "Q", qid);
+	if (ret)
+		goto out;
+
+	/* print reply */
+	p9_debug("RMKNOD qid %x.%llx.%x\n", qid->type, qid->path, qid->version);
+out:
+	p9_request_free(req);
+	return ret;
+}

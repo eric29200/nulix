@@ -44,6 +44,8 @@ struct p9_fid *v9fs_parent_fid(struct dentry *dentry);
 
 /* name resolution operations */
 struct dentry *v9fs_lookup(struct inode *dir, struct dentry *dentry);
+int v9fs_create(struct inode *dir, struct dentry *dentry, mode_t mode);
+int v9fs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev);
 int v9fs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
 
 /* read directory operations */

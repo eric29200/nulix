@@ -21,6 +21,8 @@ static struct file_operations v9fs_dir_fops = {
 static struct inode_operations v9fs_dir_iops = {
 	.fops		= &v9fs_dir_fops,
 	.lookup		= v9fs_lookup,
+	.create		= v9fs_create,
+	.mknod		= v9fs_mknod,
 	.mkdir		= v9fs_mkdir,
 };
 
