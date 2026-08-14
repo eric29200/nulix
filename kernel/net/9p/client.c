@@ -1046,3 +1046,31 @@ out:
 	p9_request_free(req);
 	return ret;
 }
+
+/*
+ * Remove request.
+ */
+int p9_client_remove(struct p9_fid *fid)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+
+	/* print a debug message */
+	p9_debug("TREMOVE fid %d\n", fid->fid);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TREMOVE, "d", fid->fid);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* print reply */
+	p9_debug("RREMOVE fid %d\n", fid->fid);
+
+	/* free request */
+	p9_request_free(req);
+
+	/* destroy fid */
+	p9_fid_destroy(fid);
+
+	return 0;
+}

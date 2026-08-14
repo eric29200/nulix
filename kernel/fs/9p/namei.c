@@ -166,3 +166,49 @@ int v9fs_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 	/* issue symlink request */
 	return p9_client_symlink(dfid, dentry->d_name.name, target, gid, &qid);
 }
+
+/*
+ * Remvove a file/directory.
+ */
+static int v9fs_remove(struct inode *dir, struct dentry *dentry, int rmdir)
+{
+	struct inode *inode = dentry->d_inode;
+	struct p9_fid *fid;
+	int ret;
+
+	/* get fid */
+	fid = v9fs_fid_clone(dentry);
+	if (IS_ERR(fid))
+		return PTR_ERR(fid);
+
+	/* remove request */
+	ret = p9_client_remove(fid);
+	if (ret)
+		return ret;
+
+	/* directories on unlink should have zero link count */
+	if (rmdir) {
+		inode->i_nlinks = 0;
+		dir->i_nlinks--;
+	} else {
+		inode->i_nlinks--;
+	}
+
+	return 0;
+}
+
+/*
+ * Remove a file.
+ */
+int v9fs_unlink(struct inode *dir, struct dentry *dentry)
+{
+	return v9fs_remove(dir, dentry, 0);
+}
+
+/*
+ * Remove a directory.
+ */
+int v9fs_rmdir(struct inode *dir, struct dentry *dentry)
+{
+	return v9fs_remove(dir, dentry, 1);
+}

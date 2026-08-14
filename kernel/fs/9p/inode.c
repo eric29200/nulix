@@ -26,6 +26,8 @@ static struct inode_operations v9fs_dir_iops = {
 	.mkdir		= v9fs_mkdir,
 	.link		= v9fs_link,
 	.symlink	= v9fs_symlink,
+	.unlink		= v9fs_unlink,
+	.rmdir		= v9fs_rmdir,
 };
 
 /*

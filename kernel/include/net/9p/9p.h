@@ -51,6 +51,8 @@
 #define P9_RREAD			117
 #define P9_TCLUNK			120
 #define P9_RCLUNK			121
+#define P9_TREMOVE			122
+#define P9_RREMOVE			123
 
 #define P9_STATS_BASIC			0x000007FFULL
 #define P9_STATS_ALL			0x00003FFFULL
@@ -214,6 +216,7 @@ int p9_client_mkdir(struct p9_fid *fid, const char *name, int mode, gid_t gid, s
 int p9_client_mknod(struct p9_fid *fid, const char *name, int mode, dev_t rdev, gid_t gid, struct p9_qid *qid);
 int p9_client_link(struct p9_fid *dfid, struct p9_fid *oldfid, const char *newname);
 int p9_client_symlink(struct p9_fid *dfid, const char *name, const char *symtgt, gid_t gid, struct p9_qid *qid);
+int p9_client_remove(struct p9_fid *fid);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);
