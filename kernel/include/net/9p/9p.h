@@ -31,6 +31,8 @@
 #define P9_RGETATTR			25
 #define P9_TREADDIR			40
 #define P9_RREADDIR			41
+#define P9_TMKDIR			72
+#define P9_RMKDIR			73
 #define P9_TVERSION			100
 #define P9_RVERSION			101
 #define P9_TATTACH			104
@@ -202,6 +204,7 @@ int p9_client_readdir(struct p9_fid *fid, char *buf, uint32_t count, uint64_t of
 int p9_client_read(struct p9_fid *fid, char *buf, uint64_t offset, uint32_t count);
 int p9_client_statfs(struct p9_fid *fid, struct p9_rstatfs *st);
 int p9_client_readlink(struct p9_fid *fid, char **target);
+int p9_client_mkdir(struct p9_fid *fid, const char *name, int mode, gid_t gid, struct p9_qid *qid);
 
 /* transport functions */
 void v9fs_register_trans(struct p9_trans_module *trans);

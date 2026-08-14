@@ -34,14 +34,17 @@ int init_v9fs_fs();
 struct inode *v9fs_get_inode(struct super_block *sb, int mode);
 void v9fs_stat2inode(struct p9_stat *stat, struct inode *inode);
 struct inode *v9fs_get_inode_from_fid(struct p9_fid *fid, struct super_block *sb);
+struct dentry *v9fs_dentry_from_dir_inode(struct inode *inode);
 
 /* fid operations */
 int v9fs_fid_add(struct dentry *dentry, struct p9_fid *fid);
 struct p9_fid *v9fs_fid_lookup(struct dentry *dentry);
 struct p9_fid *v9fs_fid_clone(struct dentry *dentry);
+struct p9_fid *v9fs_parent_fid(struct dentry *dentry);
 
 /* name resolution operations */
 struct dentry *v9fs_lookup(struct inode *dir, struct dentry *dentry);
+int v9fs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode);
 
 /* read directory operations */
 int v9fs_readdir(struct file *filp, void *dirent, filldir_t filldir);

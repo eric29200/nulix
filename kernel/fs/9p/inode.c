@@ -21,6 +21,7 @@ static struct file_operations v9fs_dir_fops = {
 static struct inode_operations v9fs_dir_iops = {
 	.fops		= &v9fs_dir_fops,
 	.lookup		= v9fs_lookup,
+	.mkdir		= v9fs_mkdir,
 };
 
 /*
@@ -212,4 +213,21 @@ struct inode *v9fs_get_inode_from_fid(struct p9_fid *fid, struct super_block *sb
 	kfree(st);
 
 	return inode;
+}
+
+/*
+ * Get dentry of an inode.
+ */
+struct dentry *v9fs_dentry_from_dir_inode(struct inode *inode)
+{
+	struct dentry *dentry;
+
+	/* directory should have only one entry */
+	if (S_ISDIR(inode->i_mode) && !list_is_singular(&inode->i_dentry))
+		p9_fatal("v9fs_dentry_from_dir_inode: directory with multiple dentries\n");
+
+	/* get first dentry of inode */
+	dentry = list_first_entry(&inode->i_dentry, struct dentry, d_alias);
+
+	return dentry;
 }

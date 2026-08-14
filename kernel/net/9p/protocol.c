@@ -32,8 +32,10 @@ size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 		case P9_TSTATFS:
 		case P9_RSTATFS:
 		case P9_TREADLINK:
+		case P9_RMKDIR:
 			return 4096;
 		case P9_RREADLINK:
+		case P9_TMKDIR:
 			return 8192;
 		case P9_TATTACH:
 			if (strcmp("ddssu", fmt))
@@ -142,6 +144,11 @@ int p9pdu_vwritef(struct p9_fcall *pdu, const char *fmt, va_list ap)
 			case 'u':
 				uid_t uid = htole32(va_arg(ap, uid_t));
 				if (pdu_write(pdu, &uid, sizeof(uid)))
+					ret = -EFAULT;
+				break;
+			case 'g':
+				gid_t gid = htole32(va_arg(ap, gid_t));
+				if (pdu_write(pdu, &gid, sizeof(gid)))
 					ret = -EFAULT;
 				break;
 			case 's':

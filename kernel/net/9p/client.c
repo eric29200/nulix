@@ -934,3 +934,32 @@ out:
 	p9_request_free(req);
 	return ret;
 }
+
+/*
+ * Create a directory.
+ */
+int p9_client_mkdir(struct p9_fid *fid, const char *name, int mode, gid_t gid, struct p9_qid *qid)
+{
+	struct p9_client *client = fid->client;
+	struct p9_request *req;
+	int ret;
+
+	/* print a debug message */
+	p9_debug("TMKDIR fid %d name %s mode %d gid %d\n", fid->fid, name, mode, gid);
+
+	/* issue request */
+	req = p9_client_rpc(client, P9_TMKDIR, "dsdg", fid->fid, name, mode, gid);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
+
+	/* read reply */
+	ret = p9pdu_readf(&req->rc, "Q", qid);
+	if (ret)
+		goto out;
+
+	/* print reply */
+	p9_debug("RMKDIR qid %x.%llx.%x\n", qid->type, qid->path, qid->version);
+out:
+	p9_request_free(req);
+	return ret;
+}

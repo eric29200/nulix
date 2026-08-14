@@ -167,3 +167,11 @@ struct p9_fid *v9fs_fid_clone(struct dentry *dentry)
 	/* do a twalk */
 	return p9_client_walk(fid, 0, NULL, 1);
 }
+
+/*
+ * Get parent fid.
+ */
+struct p9_fid *v9fs_parent_fid(struct dentry *dentry)
+{
+	return v9fs_fid_lookup(dentry->d_parent);
+}

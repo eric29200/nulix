@@ -78,7 +78,7 @@ static inline void list_del(struct list_head *entry)
 /*
  * Tests if a list is empty.
  */
-static inline int list_empty(struct list_head *head)
+static inline int list_empty(const struct list_head *head)
 {
 	return head->next == head;
 }
@@ -89,6 +89,14 @@ static inline int list_empty(struct list_head *head)
 static inline int list_is_last(const struct list_head *list, const struct list_head *head)
 {
 	return list->next == head;
+}
+
+/*
+ * Tests if a list has just one entry.
+ */
+static inline int list_is_singular(const struct list_head *list)
+{
+	return !list_empty(list) && list->next == list->prev;
 }
 
 #endif
