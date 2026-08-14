@@ -73,7 +73,7 @@ int v9fs_create(struct inode *dir, struct dentry *dentry, mode_t mode)
 int v9fs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 {
 	char *name = dentry->d_name.name;
-	struct *inode *inode;
+	struct inode *inode;
 	struct p9_fid *dfid;
 	struct p9_qid qid;
 	gid_t gid;
