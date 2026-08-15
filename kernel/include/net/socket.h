@@ -145,7 +145,7 @@ struct socket {
 struct proto_ops {
 	int (*dup)(struct socket *, struct socket *);
 	int (*release)(struct socket *);
-	int (*poll)(struct socket *, struct select_table *);
+	int (*poll)(struct socket *, struct poll_table *);
 	int (*ioctl)(struct socket *, int, unsigned long);
 	int (*recvmsg)(struct socket *, struct msghdr *, size_t, struct scm_cookie *);
 	int (*sendmsg)(struct socket *, const struct msghdr *, size_t, struct scm_cookie *);

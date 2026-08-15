@@ -303,7 +303,7 @@ static int unix_release(struct socket *sock)
 /*
  * Poll on a socket.
  */
-static int unix_poll(struct socket *sock, struct select_table *wait)
+static int unix_poll(struct socket *sock, struct poll_table *wait)
 {
 	unix_socket_t *sk;
 	int mask = 0;
@@ -331,8 +331,8 @@ static int unix_poll(struct socket *sock, struct select_table *wait)
 	if (sk->sndbuf - sk->wmem_alloc >= MIN_WRITE_SPACE)
 		mask |= POLLOUT | POLLWRNORM | POLLWRBAND;
 
-	/* add wait queue to select table */
-	select_wait(&sock->wait, wait);
+	/* add wait queue to poll table */
+	poll_wait(&sock->wait, wait);
 
 	return mask;
 }

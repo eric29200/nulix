@@ -85,7 +85,7 @@ struct proto {
 	int (*sendmsg)(struct sock *, const struct msghdr *, size_t);
 	int (*connect)(struct sock *, const struct sockaddr *, size_t);
 	struct sock *(*accept)(struct sock *, int);
-	int (*poll)(struct socket *, struct select_table *);
+	int (*poll)(struct socket *, struct poll_table *);
 	int (*getsockopt)(struct sock *sock, int, int, void *, size_t *);
 	int (*setsockopt)(struct sock *sock, int, int, void *, size_t);
 };
@@ -112,7 +112,7 @@ struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, i
 struct sk_buff *skb_recv_datagram(struct sock *sk, int flags, int noblock, int *err);
 void skb_copy_datagram_iovec(struct sk_buff *skb, int offset, struct iovec *to, size_t size);
 int datagram_connect(struct sock *sk, const struct sockaddr *addr, size_t addrlen);
-int datagram_poll(struct socket *sock, struct select_table *wait);
+int datagram_poll(struct socket *sock, struct poll_table *wait);
 
 /*
  * Get write space of a socket.

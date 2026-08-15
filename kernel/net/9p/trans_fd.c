@@ -40,7 +40,7 @@ struct p9_conn {
 	int			wsize;
 	int			wpos;
 	char *			wbuf;
-	struct select_table	st;
+	struct poll_table	pt;
 	uint32_t		wsched;
 	struct list_head	poll_pending_link;
 	struct tqueue		rq;
@@ -153,7 +153,7 @@ static struct p9_request *p9_tag_lookup(struct p9_client *client, uint16_t tag)
 /*
  * Poll connection.
  */
-static int p9_fd_poll(struct p9_client *client, struct select_table *st)
+static int p9_fd_poll(struct p9_client *client, struct poll_table *pt)
 {
 	struct p9_trans_fd *ts = NULL;
 
@@ -168,7 +168,7 @@ static int p9_fd_poll(struct p9_client *client, struct select_table *st)
 		return -EIO;
 
 	/* poll */
-	return ts->filp->f_op->poll(ts->filp, st);
+	return ts->filp->f_op->poll(ts->filp, pt);
 }
 
 /*
@@ -483,7 +483,7 @@ static struct p9_conn *p9_conn_create(struct p9_client *client)
 	list_add_tail(&conn->poll_pending_link, &p9_poll_pending_list);
 
 	/* poll client */
-	n = p9_fd_poll(client, &conn->st);
+	n = p9_fd_poll(client, &conn->pt);
 	if (n & POLLIN)
 		set_bit(&conn->wsched, RPENDING);
 	if (n & POLLOUT)

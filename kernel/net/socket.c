@@ -220,7 +220,7 @@ static int sock_close(struct inode *inode, struct file *filp)
 /*
  * Poll on a socket.
  */
-static int sock_poll(struct file *filp, struct select_table *wait)
+static int sock_poll(struct file *filp, struct poll_table *wait)
 {
 	struct socket *sock;
 	int mask = 0;

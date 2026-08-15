@@ -7,14 +7,14 @@
 #include <time.h>
 
 /*
- * Free a select table.
+ * Free a poll table.
  */
-static void free_wait(struct select_table *st)
+static void free_wait(struct poll_table *pt)
 {
-	struct select_table_entry *entry = st->entry + st->nr;
+	struct poll_table_entry *entry = pt->entry + pt->nr;
 
-	while (st->nr > 0) {
-		st->nr--;
+	while (pt->nr > 0) {
+		pt->nr--;
 		entry--;
 		remove_wait_queue(&entry->wait);
 	}
@@ -23,7 +23,7 @@ static void free_wait(struct select_table *st)
 /*
  * Poll a list of file descriptors.
  */
-static void do_pollfd(struct pollfd *fds, int *count, struct select_table *wait)
+static void do_pollfd(struct pollfd *fds, int *count, struct poll_table *wait)
 {
 	struct file *filp;
 	uint32_t mask = 0;
@@ -56,13 +56,13 @@ static void do_pollfd(struct pollfd *fds, int *count, struct select_table *wait)
  */
 static int do_poll(struct pollfd *fds, size_t ndfs, time_t *timeout)
 {
-	struct select_table wait_table, *wait;
-	struct select_table_entry *entry;
+	struct poll_table wait_table, *wait;
+	struct poll_table_entry *entry;
 	int count = 0;
 	size_t i;
 
 	/* allocate table entry */
-	entry = (struct select_table_entry *) get_free_page();
+	entry = (struct poll_table_entry *) get_free_page();
 	if (!entry)
 		return -ENOMEM;
 
@@ -117,7 +117,7 @@ int sys_poll(struct pollfd *fds, size_t nfds, int utimeout)
 /*
  * Check events on a file.
  */
-static int __select_check(int fd, uint16_t mask, struct select_table *wait)
+static int __select_check(int fd, uint16_t mask, struct poll_table *wait)
 {
 	struct pollfd pollfd;
 	int count = 0;
@@ -139,8 +139,8 @@ static int __select_check(int fd, uint16_t mask, struct select_table *wait)
 static int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exceptfds, time_t *timeout)
 {
 	fd_set_t res_readfds, res_writefds, res_exceptfds;
-	struct select_table wait_table, *wait;
-	struct select_table_entry *entry;
+	struct poll_table wait_table, *wait;
+	struct poll_table_entry *entry;
 	int i, max = -1, count;
 	uint32_t set, j;
 
@@ -185,7 +185,7 @@ end_check:
 	count = 0;
 
 	/* allocate table entry */
-	entry = (struct select_table_entry *) get_free_page();
+	entry = (struct poll_table_entry *) get_free_page();
 	if (!entry)
 		return -ENOMEM;
 

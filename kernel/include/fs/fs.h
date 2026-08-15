@@ -287,7 +287,7 @@ struct file_operations {
 	int (*write)(struct file *, const char *, size_t, off_t *);
 	int (*llseek)(struct file *, off_t, int);
 	int (*readdir)(struct file *, void *, filldir_t);
-	int (*poll)(struct file *, struct select_table *);
+	int (*poll)(struct file *, struct poll_table *);
 	int (*ioctl)(struct inode *inode, struct file *, int, unsigned long);
 	int (*mmap)(struct file *, struct vm_area *);
 };

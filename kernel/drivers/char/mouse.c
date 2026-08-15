@@ -267,7 +267,7 @@ static int mouse_write(struct file *filp, const char *buf, size_t n, off_t *ppos
 /*
  * Poll mouse device.
  */
-static int mouse_poll(struct file *filp, struct select_table *wait)
+static int mouse_poll(struct file *filp, struct poll_table *wait)
 {
 	int mask = 0;
 
@@ -278,8 +278,8 @@ static int mouse_poll(struct file *filp, struct select_table *wait)
 	if (mouse_ready)
 		mask |= POLLIN;
 
-	/* add queue wait to select table */
-	select_wait(&queue_wait, wait);
+	/* add queue wait to poll table */
+	poll_wait(&queue_wait, wait);
 
 	return mask;
 }

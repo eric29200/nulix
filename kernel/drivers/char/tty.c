@@ -672,7 +672,7 @@ int tty_ioctl(struct inode *inode, struct file *filp, int request, unsigned long
 /*
  * Poll a tty.
  */
-static int tty_poll(struct file *filp, struct select_table *wait)
+static int tty_poll(struct file *filp, struct poll_table *wait)
 {
 	struct tty *tty;
 	int mask = 0;
@@ -694,8 +694,8 @@ static int tty_poll(struct file *filp, struct select_table *wait)
 	if (test_bit(&tty->flags, TTY_OTHER_CLOSED))
 		mask |= POLLHUP;
 
-	/* add wait queue to select table */
-	select_wait(&tty->wait, wait);
+	/* add wait queue to poll table */
+	poll_wait(&tty->wait, wait);
 
 	return mask;
 }

@@ -304,24 +304,24 @@ void remove_wait_queue(struct wait_queue *wait)
 }
 
 /*
- * Add wait queue to select table.
+ * Add wait queue to poll table.
  */
-void select_wait(struct wait_queue **wait_address, struct select_table *st)
+void poll_wait(struct wait_queue **wait_address, struct poll_table *pt)
 {
-	struct select_table_entry *entry;
+	struct poll_table_entry *entry;
 
-	if (!st || !wait_address)
+	if (!pt || !wait_address)
 		return;
 
-	if (st->nr >= MAX_SELECT_TABLE_ENTRIES)
+	if (pt->nr >= MAX_POLL_TABLE_ENTRIES)
 		return;
 
 	/* set new select entry */
-	entry = st->entry + st->nr;
+	entry = pt->entry + pt->nr;
 	entry->wait_address = wait_address;
 	entry->wait.task = current_task;
 	entry->wait.next = NULL;
-	st->nr++;
+	pt->nr++;
 
 	/* add wait queue */
 	add_wait_queue(wait_address, &entry->wait);

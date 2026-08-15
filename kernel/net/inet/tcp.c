@@ -55,13 +55,13 @@ static int tcp_handle(struct sock *sk, struct sk_buff *skb)
 /*
  * Poll on TCP socket.
  */
-static int tcp_poll(struct socket *sock, struct select_table *wait)
+static int tcp_poll(struct socket *sock, struct poll_table *wait)
 {
 	struct sock *sk = sock->sk;
 	int mask = 0;
 
-	/* add wait queue to select table */
-	select_wait(sk->sleep, wait);
+	/* add wait queue to poll table */
+	poll_wait(sk->sleep, wait);
 
 	/* exceptional events ? */
 	if (sk->err)

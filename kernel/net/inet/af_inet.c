@@ -160,7 +160,7 @@ static int inet_release(struct socket *sock)
 /*
  * Poll on a socket.
  */
-static int inet_poll(struct socket *sock, struct select_table *wait)
+static int inet_poll(struct socket *sock, struct poll_table *wait)
 {
 	struct sock *sk = sock->sk;
 

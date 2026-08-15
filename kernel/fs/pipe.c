@@ -276,13 +276,13 @@ static int pipe_rdwr_release(struct inode *inode, struct file *filp)
 /*
  * Poll a pipe.
  */
-static int pipe_poll(struct file *filp, struct select_table *wait)
+static int pipe_poll(struct file *filp, struct poll_table *wait)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
 	int mask = POLLIN;
 
-	/* add wait queue to select table */
-	select_wait(&PIPE_WAIT(inode), wait);
+	/* add wait queue to poll table */
+	poll_wait(&PIPE_WAIT(inode), wait);
 
 	if (PIPE_EMPTY(inode))
 		mask = POLLOUT;
@@ -297,13 +297,13 @@ static int pipe_poll(struct file *filp, struct select_table *wait)
 /*
  * Poll a fifo.
  */
-static int fifo_poll(struct file *filp, struct select_table *wait)
+static int fifo_poll(struct file *filp, struct poll_table *wait)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
 	int mask = POLLIN;
 
-	/* add wait queue to select table */
-	select_wait(&PIPE_WAIT(inode), wait);
+	/* add wait queue to poll table */
+	poll_wait(&PIPE_WAIT(inode), wait);
 
 	if (PIPE_EMPTY(inode))
 		mask = POLLOUT;
@@ -316,12 +316,12 @@ static int fifo_poll(struct file *filp, struct select_table *wait)
 /*
  * Poll a connecting fifo.
  */
-static int connect_poll(struct file *filp, struct select_table *wait)
+static int connect_poll(struct file *filp, struct poll_table *wait)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
 
-	/* add wait queue to select table */
-	select_wait(&PIPE_WAIT(filp->f_dentry->d_inode), wait);
+	/* add wait queue to poll table */
+	poll_wait(&PIPE_WAIT(filp->f_dentry->d_inode), wait);
 
 	if (!PIPE_EMPTY(inode)) {
 		filp->f_op = &read_fifo_fops;
