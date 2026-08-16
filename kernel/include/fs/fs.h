@@ -14,7 +14,6 @@
 #include <ipc/signal.h>
 #include <x86/bitops.h>
 #include <net/socket.h>
-#include <proc/wait.h>
 #include <mm/paging.h>
 #include <uio.h>
 #include <time.h>

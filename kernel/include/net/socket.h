@@ -1,7 +1,7 @@
 #ifndef _SOCKET_H_
 #define _SOCKET_H_
 
-#include <proc/wait.h>
+#include <fs/poll.h>
 #include <net/scm.h>
 #include <stddef.h>
 
