@@ -9,12 +9,39 @@
 extern struct list_head inet_sockets;
 
 /*
+ * Handle a reset.
+ */
+static int tcp_reset(struct sock *sk, struct sk_buff *skb)
+{
+	/* set error */
+	sk->err = ECONNRESET;
+	if (sk->state == TCP_SYN_SENT)
+		sk->err = ECONNREFUSED;
+	if (sk->state == TCP_CLOSE_WAIT)
+		sk->err = EPIPE;
+
+	/* shutdown socket */
+	tcp_set_state(sk, TCP_CLOSE);
+	sk->shutdown = SHUTDOWN_MASK;
+	if (!sk->dead)
+		sk->state_change(sk);
+
+	/* free socket buffer */
+	skb_free(skb);
+
+	return 0;
+}
+
+/*
  * Receive a packet in TCP_SYN_SENT state.
  */
 int tcp_rcv_syn_sent(struct sock *sk, struct sk_buff *skb)
 {
 	struct tcp_header *th = skb->h.tcp_header;
 	struct tcp_opt *tp = &sk->protinfo.af_tcp;
+
+	if (th->rst)
+		return tcp_reset(sk, skb);
 
 	/* we only want to receive a SYN/ACK message */
 	if (!th->ack)
