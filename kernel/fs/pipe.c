@@ -421,13 +421,13 @@ static struct inode *get_pipe_inode()
 	inode->i_uid = current_task->fsuid;
 	inode->i_gid = current_task->fsgid;
 	inode->i_atime = inode->i_ctime = inode->i_mtime = CURRENT_TIME;
-	PIPE_WAIT(inode) = NULL;
 	PIPE_START(inode) = 0;
 	PIPE_LEN(inode) = 0;
 	PIPE_READERS(inode) = 1;
 	PIPE_WRITERS(inode) = 1;
 	PIPE_RD_OPENERS(inode) = 0;
 	PIPE_WR_OPENERS(inode) = 0;
+	init_waitqueue_head(&PIPE_WAIT(inode));
 
 	return inode;
 }

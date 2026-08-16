@@ -708,6 +708,7 @@ void tty_init_dev(struct tty *tty, dev_t device, struct tty_driver *driver)
 	memset(tty, 0, sizeof(struct tty));
 	tty->driver = driver;
 	tty->device = device;
+	init_waitqueue_head(&tty->wait);
 
 	/* init termios */
 	tty->termios = driver->termios;

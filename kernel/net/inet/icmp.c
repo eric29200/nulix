@@ -92,6 +92,7 @@ void icmp_init(struct net_proto_family *ops)
 	icmp_socket->inode = &icmp_inode;
 	icmp_socket->state = SS_UNCONNECTED;
 	icmp_socket->type = SOCK_RAW;
+	init_waitqueue_head(&icmp_socket->wait);
 
 	/* create icmp socket */
 	ret = ops->create(icmp_socket, IP_PROTO_ICMP);

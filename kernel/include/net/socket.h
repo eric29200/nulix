@@ -133,7 +133,7 @@ struct socket {
 	socket_state_t		state;
 	uint32_t		flags;
 	struct proto_ops *	ops;
-	struct wait_queue *	wait;
+	struct wait_queue_head	wait;
 	struct inode *		inode;
 	struct file *		file;
 	struct sock *		sk;

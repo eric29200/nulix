@@ -11,7 +11,7 @@
 
 /* receive queue */
 static struct sk_buff_head *backlog = NULL;
-static struct wait_queue *backlog_wait = NULL;
+static DECLARE_WAIT_QUEUE_HEAD(backlog_wait);
 
 /*
  * Read net dev.

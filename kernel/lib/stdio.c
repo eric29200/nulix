@@ -10,7 +10,7 @@
 static char log_buf[LOG_BUF_LEN];
 static int log_start = 0;
 static int log_size = 0;
-static struct wait_queue *log_wait = NULL;
+static DECLARE_WAIT_QUEUE_HEAD(log_wait);
 
 /*
  * Syslog system call.

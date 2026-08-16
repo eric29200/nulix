@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <lib/parser.h>
 #include <lib/list.h>
+#include <proc/wait.h>
 
 #define P9_PROTO_2000L			2
 #define P9_PORT				564
@@ -123,7 +124,7 @@ struct p9_request {
 	struct p9_fcall 		rc;
 	int				t_err;
 	int				status;
-	struct wait_queue *		wait;
+	struct wait_queue_head		wait;
 	struct list_head		list;
 };
 

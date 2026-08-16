@@ -36,7 +36,7 @@ struct msg_queue {
 	size_t				q_qbytes;		/* max number of bytes on queue */
 	pid_t				q_lspid;		/* pid of last msgsnd */
 	pid_t				q_lrpid;		/* last receive pid */
-	struct wait_queue *		q_wait;			/* wait queue */
+	struct wait_queue_head		q_wait;			/* wait queue */
 	struct list_head		q_messages;		/* messages */
 };
 
@@ -76,7 +76,7 @@ static int msg_newque(key_t key, int msgflg)
 	msq->q_qbytes = MSGMNB;
 	msq->q_lspid = 0;
 	msq->q_lrpid = 0;
-	msq->q_wait = NULL;
+	init_waitqueue_head(&msq->q_wait);
 	INIT_LIST_HEAD(&msq->q_messages);
 
 	/* return message id */

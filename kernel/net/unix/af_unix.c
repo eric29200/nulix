@@ -22,8 +22,8 @@ static void unix_destroy_socket(unix_socket_t *sk);
 
 /* UNIX sockets */
 static LIST_HEAD(unix_sockets);
-static struct wait_queue *unix_ack_wqueue = NULL;
-static struct wait_queue *unix_dgram_wqueue = NULL;
+static DECLARE_WAIT_QUEUE_HEAD(unix_ack_wqueue);
+static DECLARE_WAIT_QUEUE_HEAD(unix_dgram_wqueue);
 
 /*
  * Lock a unix socket.

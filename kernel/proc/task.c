@@ -577,6 +577,7 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	task->vfork_sem = NULL;
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->real_timer.list);
+	init_waitqueue_head(&task->wait_child_exit);
 
 	/* copy task name and TLS */
 	if (parent)

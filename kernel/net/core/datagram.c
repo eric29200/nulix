@@ -2,6 +2,7 @@
 #include <proc/sched.h>
 #include <net/inet/tcp.h>
 #include <net/inet/route.h>
+#include <stdio.h>
 #include <stderr.h>
 
 /*

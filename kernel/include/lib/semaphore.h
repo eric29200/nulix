@@ -9,7 +9,7 @@
  */
 struct semaphore {
 	int 			count;
-	struct wait_queue *	wait;
+	struct wait_queue_head	wait;
 };
 
 /*
@@ -18,7 +18,7 @@ struct semaphore {
 static inline void init_semaphore(struct semaphore *sem, int count)
 {
 	sem->count = count;
-	sem->wait = NULL;
+	init_waitqueue_head(&sem->wait);
 }
 
 /*

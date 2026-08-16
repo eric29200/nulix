@@ -145,7 +145,7 @@ struct task {
 	struct rlimit			rlim[RLIM_NLIMITS];		/* resource limits */
 	struct registers		signal_regs;			/* saved registers at signal entry */
 	struct timer_event		real_timer;			/* timer */
-	struct wait_queue *		wait_child_exit;		/* wait queue for child exit */
+	struct wait_queue_head 		wait_child_exit;		/* wait queue for child exit */
 	struct thread_struct		thread;				/* thread stuff */
 	struct fs_struct *		fs;				/* file system stuff */
 	struct files_struct *		files;				/* opened files */

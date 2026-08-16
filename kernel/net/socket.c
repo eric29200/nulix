@@ -39,6 +39,7 @@ static struct socket *sock_alloc()
 	memset(sock, 0, sizeof(struct socket));
 	sock->state = SS_UNCONNECTED;
 	sock->inode = inode;
+	init_waitqueue_head(&sock->wait);
 
 	return sock;
 }

@@ -287,7 +287,7 @@ static struct p9_request *p9_tag_alloc(struct p9_client *client, int8_t type, co
 
 	/* init request */
 	req->status = P9_REQUEST_STATUS_ALLOC;
-	req->wait = NULL;
+	init_waitqueue_head(&req->wait);
 	req->t_err = 0;
 
 	/* get transmit packet size */

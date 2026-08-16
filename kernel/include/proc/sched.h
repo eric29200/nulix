@@ -82,13 +82,15 @@ void schedule();
 time_t schedule_timeout(time_t timeout);
 void do_timer_interrupt();
 
-void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait);
+void init_waitqueue_head(struct wait_queue_head *wq);
+void init_waitqueue_entry(struct wait_queue *wait, struct task *task);
+void add_wait_queue(struct wait_queue_head *head, struct wait_queue *wait);
 void remove_wait_queue(struct wait_queue *wait);
 
 void wake_up_process(struct task *task);
-void poll_wait(struct wait_queue **wait_address, struct poll_table *pt);
-void sleep_on(struct wait_queue **wq);
-void wake_up(struct wait_queue **wq);
+void poll_wait(struct wait_queue_head *wait_address, struct poll_table *pt);
+void sleep_on(struct wait_queue_head *wq);
+void wake_up(struct wait_queue_head *wq);
 
 pid_t sys_getpid();
 pid_t sys_getppid();

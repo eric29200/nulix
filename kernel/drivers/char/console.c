@@ -16,7 +16,7 @@ struct vc console_table[NR_CONSOLES];
 int fg_console;
 
 /* processes waiting for console activation */
-struct wait_queue *vt_activate_wq = NULL;
+static DECLARE_WAIT_QUEUE_HEAD(vt_activate_wq);
 
 /* ansi color table */
 static uint8_t ansi_color_table[] = {

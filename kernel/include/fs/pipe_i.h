@@ -2,6 +2,7 @@
 #define _PIPE_I_H_
 
 #include <stddef.h>
+#include <proc/wait.h>
 
 #define PIPE_BUF			PAGE_SIZE
 
@@ -33,7 +34,7 @@ struct pipe_inode_info {
 	size_t			i_writers;
 	size_t			i_rd_openers;
 	size_t			i_wr_openers;
-	struct wait_queue *	i_wait;
+	struct wait_queue_head	i_wait;
 };
 
 #endif

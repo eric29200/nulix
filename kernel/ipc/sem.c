@@ -24,7 +24,7 @@ struct sem_array {
 	time_t			sem_otime;	/* last semop time */
 	time_t			sem_ctime;	/* last change time */
 	struct sem *		sem_base;	/* ptr to first semaphore in array */
-	struct wait_queue *	sem_wait;	/* processes waiting for semval */
+	struct wait_queue_head 	sem_wait;	/* processes waiting for semval */
 	struct sem_undo	*	undo;		/* undo requests on this array */
 	size_t			sem_nsems;	/* number of semaphores in array */
 };
@@ -68,6 +68,7 @@ static int sem_newary(key_t key, int nsems, int semflg)
 	sma->sem_base = (struct sem *) &sma[1];
 	sma->sem_nsems = nsems;
 	sma->sem_ctime = CURRENT_TIME;
+	init_waitqueue_head(&sma->sem_wait);
 
 	/* update global stats */
 	used_sems += nsems;
@@ -92,8 +93,7 @@ static void sem_freeary(int id)
 	        un->semadj = 0;
 
 	/* wake up processes */
-	if (sma->sem_wait)
-		wake_up(&sma->sem_wait);
+	wake_up(&sma->sem_wait);
 
 	/* update global stats */
 	used_sems -= sma->sem_nsems;
@@ -150,8 +150,7 @@ found:
 		sma->sem_otime = CURRENT_TIME;
 
 		/* wake up sleepers */
-		if (sma->sem_wait)
-			wake_up(&sma->sem_wait);
+		wake_up(&sma->sem_wait);
 	}
 
 	/* reset undo */
@@ -406,9 +405,7 @@ int sys_semop(int semid, struct sembuf *sops, size_t nsops)
 
 update:
 	/* wake up processes */
-       	if (sma->sem_wait)
-		wake_up(&sma->sem_wait);
-
+	wake_up(&sma->sem_wait);
 	return 0;
 }
 
@@ -456,8 +453,7 @@ static int semctl_main(int semid, int cmd, union semun arg)
 				un->semadj = 0;
 
 			/* wake up processes */
-			if (sma->sem_wait)
-				wake_up(&sma->sem_wait);
+			wake_up(&sma->sem_wait);
 
 			/* update change time */
 			sma->sem_ctime = CURRENT_TIME;

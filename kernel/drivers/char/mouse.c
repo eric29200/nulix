@@ -33,7 +33,7 @@
 static uint8_t queue_buf[MOUSE_BUF_SIZE];
 static int queue_head = 0;
 static int queue_tail = 0;
-static struct wait_queue *queue_wait = NULL;
+static DECLARE_WAIT_QUEUE_HEAD(queue_wait);
 static int mouse_count = 0;
 static int mouse_ready = 0;
 

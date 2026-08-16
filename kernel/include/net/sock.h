@@ -52,7 +52,7 @@ struct sock {
 	struct ucred 			peercred;
 	int				proc;
 	struct sock *			pair;
-	struct wait_queue **		sleep;
+	struct wait_queue_head *	sleep;
 	union {
 		struct unix_opt		af_unix;
 		struct tcp_opt		af_tcp;

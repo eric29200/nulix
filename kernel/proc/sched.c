@@ -269,18 +269,27 @@ void schedule()
 }
 
 /*
+ * Init a wait queue.
+ */
+void init_waitqueue_head(struct wait_queue_head *wq)
+{
+	INIT_LIST_HEAD(&wq->task_list);
+}
+
+/*
+ * Init a wait queue entry.
+ */
+void init_waitqueue_entry(struct wait_queue *wait, struct task *task)
+{
+	wait->task = task;
+}
+
+/*
  * Add to a wait queue.
  */
-void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait)
+void add_wait_queue(struct wait_queue_head *head, struct wait_queue *wait)
 {
-	struct wait_queue *next = WAIT_QUEUE_HEAD(wq);
-	struct wait_queue *head = *wq;
-
-	if (head)
-		next = head;
-
-	*wq = wait;
-	wait->next = next;
+	list_add(&wait->task_list, &head->task_list);
 }
 
 /*
@@ -288,25 +297,13 @@ void add_wait_queue(struct wait_queue **wq, struct wait_queue *wait)
  */
 void remove_wait_queue(struct wait_queue *wait)
 {
-	struct wait_queue *next = wait->next;
-	struct wait_queue *head = next;
-
-	for (;;) {
-		struct wait_queue *nextlist = head->next;
-
-		if (nextlist == wait)
-			break;
-
-		head = nextlist;
-	}
-
-	head->next = next;
+	list_del(&wait->task_list);
 }
 
 /*
  * Add wait queue to poll table.
  */
-void poll_wait(struct wait_queue **wait_address, struct poll_table *pt)
+void poll_wait(struct wait_queue_head *wait_address, struct poll_table *pt)
 {
 	struct poll_table_entry *entry;
 
@@ -319,8 +316,7 @@ void poll_wait(struct wait_queue **wait_address, struct poll_table *pt)
 	/* set new select entry */
 	entry = pt->entry + pt->nr;
 	entry->wait_address = wait_address;
-	entry->wait.task = current_task;
-	entry->wait.next = NULL;
+	init_waitqueue_entry(&entry->wait, current_task);
 	pt->nr++;
 
 	/* add wait queue */
@@ -330,9 +326,12 @@ void poll_wait(struct wait_queue **wait_address, struct poll_table *pt)
 /*
  * Sleep on a wait queue.
  */
-void sleep_on(struct wait_queue **wq)
+void sleep_on(struct wait_queue_head *wq)
 {
-	struct wait_queue wait = { current_task, NULL };
+	struct wait_queue wait;
+
+	/* init wait queue entry */
+	init_waitqueue_entry(&wait, current_task);
 
 	/* set task's state */
 	current_task->state = TASK_SLEEPING;
@@ -350,24 +349,16 @@ void sleep_on(struct wait_queue **wq)
 /*
  * Wake up all tasks sleeping on a wait queue.
  */
-void wake_up(struct wait_queue **wq)
+void wake_up(struct wait_queue_head *wq)
 {
 	struct wait_queue *tmp;
+	struct list_head *pos;
 
-	if (!wq)
-		return;
-
-	tmp = *wq;
-	if (!tmp)
-		return;
-
-	/* wake up all tasks */
-	do {
+	list_for_each(pos, &wq->task_list) {
+		tmp = list_entry(pos, struct wait_queue, task_list);
 		if (tmp->task->state == TASK_SLEEPING)
 			wake_up_process(tmp->task);
-
-		tmp = tmp->next;
-	} while (tmp != *wq && tmp != NULL);
+	}
 }
 
 /*
