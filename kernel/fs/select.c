@@ -7,6 +7,37 @@
 #include <time.h>
 
 /*
+ * Add wait queue to poll table.
+ */
+static void __pollwait(struct wait_queue_head *wait_address, struct poll_table *pt)
+{
+	struct poll_table_entry *entry;
+
+	if (!pt || !wait_address)
+		return;
+
+	if (pt->nr >= MAX_POLL_TABLE_ENTRIES)
+		return;
+
+	/* set new select entry */
+	entry = pt->entry + pt->nr;
+	entry->wait_address = wait_address;
+	init_waitqueue_entry(&entry->wait, current_task);
+	pt->nr++;
+
+	/* add wait queue */
+	add_wait_queue(wait_address, &entry->wait);
+}
+
+/*
+ * Init a poll table.
+ */
+void poll_initwait(struct poll_table *pt)
+{
+	init_poll_funcptr(pt, __pollwait);
+}
+
+/*
  * Free a poll table.
  */
 static void free_wait(struct poll_table *pt)
@@ -70,6 +101,7 @@ static int do_poll(struct pollfd *fds, size_t ndfs, time_t *timeout)
 	wait_table.nr = 0;
 	wait_table.entry = entry;
 	wait = &wait_table;
+	poll_initwait(&wait_table);
 
 	for (;;) {
 		/* poll each file */
@@ -193,6 +225,7 @@ end_check:
 	wait_table.nr = 0;
 	wait_table.entry = entry;
 	wait = &wait_table;
+	poll_initwait(&wait_table);
 
 	/* zero results */
 	memset(&res_readfds, 0, sizeof(fd_set_t));

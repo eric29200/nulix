@@ -25,6 +25,15 @@ static LIST_HEAD(p9_poll_pending_list);
 static struct tqueue poll_tq;
 
 /*
+ * 9p poll table.
+ */
+struct p9_poll_wait {
+	struct p9_conn *		conn;
+	struct wait_queue		wait;
+	struct wait_queue_head *	wait_addr;
+};
+
+/*
  * Connection.
  */
 struct p9_conn {
@@ -40,6 +49,7 @@ struct p9_conn {
 	int			wsize;
 	int			wpos;
 	char *			wbuf;
+	struct p9_poll_wait	poll_wait;
 	struct poll_table	pt;
 	uint32_t		wsched;
 	struct list_head	poll_pending_link;
@@ -455,9 +465,45 @@ static void p9_poll_work(void *arg)
 		conn = list_entry(pos, struct p9_conn, poll_pending_link);
 		p9_poll_mux(conn);
 	}
+}
 
-	/* requeue poll task */
+/*
+ * Poll callback.
+ */
+static int p9_pollwake(struct wait_queue *wait)
+{
+	struct p9_poll_wait *pwait = container_of(wait, struct p9_poll_wait, wait);
+	struct p9_conn *conn = pwait->conn;
+
+	/* add current connection if needed */
+	if (list_empty(&conn->poll_pending_link))
+		list_add_tail(&conn->poll_pending_link, &p9_poll_pending_list);
+
+	/* queue poll multiplexer */
 	queue_task(&poll_tq);
+
+	return 1;
+}
+
+/*
+ * Add wait queue to poll table.
+ */
+static void p9_pollwait(struct wait_queue_head *wait_address, struct poll_table *pt)
+{
+	struct p9_conn *conn = container_of(pt, struct p9_conn, pt);
+	struct p9_poll_wait *pwait = &conn->poll_wait;
+
+	/* check if wait adress is free */
+	if (pwait->wait_addr) {
+		p9_error("p9_pollwait: not enouth wait_address slots\n");
+		return;
+	}
+
+	/* set poll table */
+	pwait->conn = conn;
+	pwait->wait_addr = wait_address;
+	init_waitqueue_func_entry(&pwait->wait, p9_pollwake);
+	add_wait_queue(wait_address, &pwait->wait);
 }
 
 /*
@@ -481,6 +527,7 @@ static struct p9_conn *p9_conn_create(struct p9_client *client)
 	INIT_TQUEUE(&conn->rq, &p9_read_work, conn);
 	INIT_TQUEUE(&conn->wq, &p9_write_work, conn);
 	list_add_tail(&conn->poll_pending_link, &p9_poll_pending_list);
+	init_poll_funcptr(&conn->pt, p9_pollwait);
 
 	/* poll client */
 	n = p9_fd_poll(client, &conn->pt);
@@ -644,7 +691,6 @@ int p9_trans_fd_init()
 
 	/* init poll task queue */
 	INIT_TQUEUE(&poll_tq, p9_poll_work, NULL);
-	queue_task(&poll_tq);
 
 	return 0;
 }

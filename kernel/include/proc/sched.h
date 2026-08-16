@@ -84,11 +84,11 @@ void do_timer_interrupt();
 
 void init_waitqueue_head(struct wait_queue_head *wq);
 void init_waitqueue_entry(struct wait_queue *wait, struct task *task);
+void init_waitqueue_func_entry(struct wait_queue *q, wait_queue_func_t func);
 void add_wait_queue(struct wait_queue_head *head, struct wait_queue *wait);
 void remove_wait_queue(struct wait_queue *wait);
 
 void wake_up_process(struct task *task);
-void poll_wait(struct wait_queue_head *wait_address, struct poll_table *pt);
 void sleep_on(struct wait_queue_head *wq);
 void wake_up(struct wait_queue_head *wq);
 

@@ -15,6 +15,12 @@
 #define DECLARE_WAIT_QUEUE_HEAD(name)		struct wait_queue_head name = WAIT_QUEUE_HEAD_INITIALIZER(name)
 
 /*
+ * Wait queue callback.
+ */
+struct wait_queue;
+typedef int (*wait_queue_func_t)(struct wait_queue *);
+
+/*
  * Wait queue head.
  */
 struct wait_queue_head {
@@ -26,6 +32,7 @@ struct wait_queue_head {
  */
 struct wait_queue {
 	struct task *			task;
+	wait_queue_func_t		func;
 	struct list_head		task_list;
 };
 

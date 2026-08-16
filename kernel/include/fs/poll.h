@@ -19,7 +19,13 @@
 #define MAX_POLL_TABLE_ENTRIES			((PAGE_SIZE) / sizeof(struct poll_table_entry))
 
 /*
- * Poll file descriptore.
+ * Poll callback function.
+ */
+struct poll_table;
+typedef void (*poll_queue_proc)(struct wait_queue_head *, struct poll_table *);
+
+/*
+ * Poll file descriptor.
  */
 struct pollfd {
 	int		fd;
@@ -39,8 +45,26 @@ struct poll_table_entry {
  * Poll table.
  */
 struct poll_table {
+	poll_queue_proc			qproc;
 	size_t				nr;
 	struct poll_table_entry *	entry;
 };
+
+/*
+ * Set poll callback function.
+ */
+static inline void init_poll_funcptr(struct poll_table *pt, poll_queue_proc qproc)
+{
+	pt->qproc = qproc;
+}
+
+/*
+ * Add a wait queue to a poll table.
+ */
+static inline void poll_wait(struct wait_queue_head *wait_address, struct poll_table *pt)
+{
+	if (pt && wait_address)
+		pt->qproc(wait_address, pt);
+}
 
 #endif

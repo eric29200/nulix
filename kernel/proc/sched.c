@@ -276,12 +276,33 @@ void init_waitqueue_head(struct wait_queue_head *wq)
 	INIT_LIST_HEAD(&wq->task_list);
 }
 
+
+/*
+ * Wake up all tasks sleeping on a wait queue.
+ */
+static int default_wake_function(struct wait_queue *wait)
+{
+	if (wait->task->state == TASK_SLEEPING)
+		wake_up_process(wait->task);
+
+	return 1;
+}
+
 /*
  * Init a wait queue entry.
  */
 void init_waitqueue_entry(struct wait_queue *wait, struct task *task)
 {
 	wait->task = task;
+	wait->func = default_wake_function;
+}
+
+/*
+ * Init wait queue function entry.
+ */
+void init_waitqueue_func_entry(struct wait_queue *q, wait_queue_func_t func)
+{
+	q->func = func;
 }
 
 /*
@@ -298,29 +319,6 @@ void add_wait_queue(struct wait_queue_head *head, struct wait_queue *wait)
 void remove_wait_queue(struct wait_queue *wait)
 {
 	list_del(&wait->task_list);
-}
-
-/*
- * Add wait queue to poll table.
- */
-void poll_wait(struct wait_queue_head *wait_address, struct poll_table *pt)
-{
-	struct poll_table_entry *entry;
-
-	if (!pt || !wait_address)
-		return;
-
-	if (pt->nr >= MAX_POLL_TABLE_ENTRIES)
-		return;
-
-	/* set new select entry */
-	entry = pt->entry + pt->nr;
-	entry->wait_address = wait_address;
-	init_waitqueue_entry(&entry->wait, current_task);
-	pt->nr++;
-
-	/* add wait queue */
-	add_wait_queue(wait_address, &entry->wait);
 }
 
 /*
@@ -351,13 +349,12 @@ void sleep_on(struct wait_queue_head *wq)
  */
 void wake_up(struct wait_queue_head *wq)
 {
-	struct wait_queue *tmp;
-	struct list_head *pos;
+	struct list_head *pos, *n;
+	struct wait_queue *wait;
 
-	list_for_each(pos, &wq->task_list) {
-		tmp = list_entry(pos, struct wait_queue, task_list);
-		if (tmp->task->state == TASK_SLEEPING)
-			wake_up_process(tmp->task);
+	list_for_each_safe(pos, n, &wq->task_list) {
+		wait = list_entry(pos, struct wait_queue, task_list);
+		wait->func(wait);
 	}
 }
 
