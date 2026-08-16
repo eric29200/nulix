@@ -99,4 +99,13 @@ static inline int list_is_singular(const struct list_head *list)
 	return !list_empty(list) && list->next == list->prev;
 }
 
+/*
+ * Delete from one list and add to another.
+ */
+static inline void list_move(struct list_head *list, struct list_head *head)
+{
+	__list_del(list->prev, list->next);
+	list_add(list, head);
+}
+
 #endif

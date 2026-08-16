@@ -15,6 +15,7 @@ struct tqueue {
 };
 
 int queue_task(struct tqueue *tqueue);
+int unqueue_task(struct tqueue *tqueue);
 void run_task_queues();
 
 /*

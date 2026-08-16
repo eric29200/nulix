@@ -17,6 +17,18 @@ int queue_task(struct tqueue *tqueue)
 }
 
 /*
+ * Unqueue a task.
+ */
+int unqueue_task(struct tqueue *tqueue)
+{
+	if (!test_and_clear_bit(&tqueue->sync, 0))
+		return 0;
+
+	list_del(&tqueue->list);
+	return 1;
+}
+
+/*
  * Run task queues.
  */
 void run_task_queues()

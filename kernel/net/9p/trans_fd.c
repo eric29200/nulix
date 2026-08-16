@@ -85,6 +85,8 @@ struct p9_fd_opts {
 	uint16_t	port;
 };
 
+static void p9_conn_cancel(struct p9_conn *conn, int err);
+
 /*
  * Parse options.
  */
@@ -179,16 +181,6 @@ static int p9_fd_poll(struct p9_client *client, struct poll_table *pt)
 
 	/* poll */
 	return ts->filp->f_op->poll(ts->filp, pt);
-}
-
-/*
- * Cancel a connection.
- */
-static void p9_conn_cancel(struct p9_conn *conn, int err)
-{
-	UNUSED(conn);
-	UNUSED(err);
-	printf("TODO: p9_conn_cancel\n");
 }
 
 /*
@@ -450,6 +442,21 @@ static void p9_poll_mux(struct p9_conn *conn)
 }
 
 /*
+ * Stop polling a connection.
+ */
+static void p9_mux_poll_stop(struct p9_conn *conn)
+{
+	struct p9_poll_wait *pwait = &conn->poll_wait;
+
+	if (pwait->wait_addr) {
+		remove_wait_queue(&pwait->wait);
+		pwait->wait_addr = NULL;
+	}
+
+	list_del(&conn->poll_pending_link);
+}
+
+/*
  * Poll pending connections.
  */
 static void p9_poll_work(void *arg)
@@ -540,6 +547,67 @@ static struct p9_conn *p9_conn_create(struct p9_client *client)
 }
 
 /*
+ * Destroy a connection.
+ */
+static void p9_conn_destroy(struct p9_conn *conn)
+{
+	/* stop task queues */
+	p9_mux_poll_stop(conn);
+	unqueue_task(&conn->rq);
+	unqueue_task(&conn->wq);
+
+	/* cancel connection */
+	p9_conn_cancel(conn, -ECONNRESET);
+
+	/* free connection */
+	conn->client = NULL;
+	kfree(conn);
+}
+
+/*
+ * Cancel a connection.
+ */
+static void p9_conn_cancel(struct p9_conn *conn, int err)
+{
+	struct list_head *pos, *n;
+	struct p9_request *req;
+	LIST_HEAD(cancel_list);
+
+	/* print a debug message */
+	p9_error("mux %x err %d\n", conn, err);
+
+	/* set error */
+	if (conn->err)
+		return;
+	conn->err = err;
+
+	/* move requests to cancel list */
+	list_for_each_safe(pos, n, &conn->req_list) {
+		req = list_entry(pos, struct p9_request, list);
+		req->status = P9_REQUEST_STATUS_ERROR;
+		if (!req->t_err)
+			req->t_err = err;
+		list_move(&req->list, &cancel_list);
+	}
+
+	/* move unsent requests to cancel list */
+	list_for_each_safe(pos, n, &conn->unsent_req_list) {
+		req = list_entry(pos, struct p9_request, list);
+		req->status = P9_REQUEST_STATUS_ERROR;
+		if (!req->t_err)
+			req->t_err = err;
+		list_move(&req->list, &cancel_list);
+	}
+
+	/* cancel requests */
+	list_for_each_safe(pos, n, &conn->req_list) {
+		req = list_entry(pos, struct p9_request, list);
+		list_del(&req->list);
+		wake_up(&req->wait);
+	}
+}
+
+/*
  * Attach socket to the client.
  */
 static int p9_socket_open(struct p9_client *client, struct socket *sock)
@@ -624,8 +692,28 @@ static int p9_fd_create_tcp(struct p9_client *client, const char *addr, char *ar
  */
 static void p9_fd_close(struct p9_client *client)
 {
-	UNUSED(client);
-	printf("TODO: p9_fd_close\n");
+	struct p9_trans_fd *trans;
+
+	if (!client)
+		return;
+
+	/* get transport module */
+	trans = client->trans;
+	if (!trans)
+		return;
+
+	/* set client disconnected */
+	client->status = P9_CLIENT_DISCONNECTED;
+
+	/* destroy connection */
+	p9_conn_destroy(trans->conn);
+
+	/* release file */
+	if (trans->filp)
+		fput(trans->filp);
+
+	/* free transport module */
+	kfree(trans);
 }
 
 /*
@@ -663,10 +751,20 @@ static int p9_fd_request(struct p9_client *client, struct p9_request *req)
  */
 static int p9_fd_cancel(struct p9_client *client, struct p9_request *req)
 {
-	UNUSED(client);
-	UNUSED(req);
-	printf("TODO: p9_fd_cancel\n");
-	return -EINVAL;
+	/* print a debug message */
+	p9_debug("client %x req %x\n", client, req);
+
+	/* request not sent : just delete it */
+	if (req->status == P9_REQUEST_STATUS_UNSENT) {
+		list_del(&req->list);
+		req->status = P9_REQUEST_STATUS_FLSHD;
+		return 0;
+	}
+
+	if (req->status == P9_REQUEST_STATUS_SENT)
+		req->status = P9_REQUEST_STATUS_FLSHD;
+
+	return 1;
 }
 
 /*
