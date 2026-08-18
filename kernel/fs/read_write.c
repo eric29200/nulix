@@ -93,7 +93,7 @@ int sys_llseek(int fd, uint32_t offset_high, uint32_t offset_low, off_t *result,
 		return -EBADF;
 
 	/* compute offset */
-	offset = ((unsigned long long) offset_high << 32) | offset_low;
+	offset = ((off_t) offset_high << 32) | offset_low;
 
 	/* seek */
 	*result = do_llseek(filp, offset, whence);
