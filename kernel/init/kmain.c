@@ -219,12 +219,12 @@ static void kinit()
 
 	/* init loopback device */
 	printf("[Kernel] Loopback Init\n");
-	if (init_loopback() != 0)
+	if (init_loopback())
 		printf("[Kernel] Loopback Init error\n");
 
 	/* init realtek 8139 device */
 	printf("[Kernel] Realtek 8139 card Init\n");
-	if (init_rtl8139() != 0)
+	if (init_rtl8139())
 		printf("[Kernel] Realtek 8139 card Init error\n");
 
 	/* init block devices */
@@ -285,11 +285,11 @@ static void kinit()
 
 	/* mount root file system */
 	printf("[Kernel] Root file system init\n");
-	if (do_mount_root(root_dev, root_dev_name, root_mountflags) != 0)
+	if (do_mount_root(root_dev, root_dev_name, root_mountflags))
 		panic("Cannot mount root file system\n");
 
 	/* spawn init process */
-	if (spawn_init() != 0)
+	if (spawn_init())
 		panic("Cannot spawn init process\n");
 
 	/* create kernel threads */
@@ -374,7 +374,7 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 
 	/* init processes */
 	printf("[Kernel] Processes Init\n");
-	if (init_scheduler(kinit) != 0)
+	if (init_scheduler(kinit))
 		panic("Cannot init processes\n");
 
 	return 0;
