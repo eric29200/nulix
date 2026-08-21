@@ -283,8 +283,8 @@ int init_ata()
 	int ret, i, j;
 
 	/* register interrupt handlers */
-	request_irq(14, ata_irq_handler, "primary hd");
-	request_irq(15, ata_irq_handler, "secondary hd");
+	request_irq(14, ata_irq_handler, 0, "primary hd", NULL);
+	request_irq(15, ata_irq_handler, 0, "secondary hd", NULL);
 
 	/* register ata device */
 	ret = register_blkdev(DEV_ATA_MAJOR, "ata", &ata_fops);

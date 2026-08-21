@@ -13,9 +13,9 @@ static irq_desc_t irq_desc[NR_IRQS] = { NULL, };
 /*
  * Request an IRQ.
  */
-int request_irq(uint32_t irq, void *handler, const char *devname)
+int request_irq(uint32_t irq, void *handler, uint32_t flags, const char *devname, void *dev_id)
 {
-	struct irq_action *action;
+	struct irq_action *action, *old;
 
 	/* check irq */
 	if (irq >= NR_IRQS)
@@ -36,10 +36,27 @@ int request_irq(uint32_t irq, void *handler, const char *devname)
 
 	/* set action */
 	action->handler = handler;
+	action->flags = flags;
 	action->name = devname;
+	action->dev_id = dev_id;
+	action->next = NULL;
 
 	/* install IRQ */
-	irq_desc[irq].action = action;
+	old = irq_desc[irq].action;
+	if (!old) {
+		irq_desc[irq].action = action;
+		return 0;
+	}
+
+	/* can't share irq */
+	if (!(old->flags & action->flags & SA_SHIRQ)) {
+		kfree(action);
+		return -EBUSY;
+	}
+
+	/* install shared IRQ */
+	for (; old->next; old = old->next);
+	old->next = action;
 
 	return 0;
 }
@@ -47,15 +64,22 @@ int request_irq(uint32_t irq, void *handler, const char *devname)
 /*
  * Free an IRQ.
  */
-void free_irq(uint32_t irq)
+void free_irq(uint32_t irq, void *dev_id)
 {
+	struct irq_action *action, **p;
+
 	/* check irq */
-	if (irq >= NR_IRQS || !irq_desc[irq].action)
+	if (irq >= NR_IRQS)
 		return;
 
-	/* free irq */
-	kfree(irq_desc[irq].action);
-	irq_desc[irq].action = NULL;
+	/* find irq to free */
+	for (p = &irq_desc[irq].action; (action = *p) != NULL; p = &action->next) {
+		if (action->dev_id != dev_id)
+			continue;
+
+		*p = action->next;
+		kfree(action);
+	}
 }
 
 /*
@@ -63,6 +87,7 @@ void free_irq(uint32_t irq)
  */
 void irq_handler(struct registers *regs)
 {
+	struct irq_action *action;
 	int irq = regs->int_no;
 
 	/* update kernel statistics */
@@ -76,8 +101,8 @@ void irq_handler(struct registers *regs)
 	outb(0x20, 0x20);
 
 	/* handle interrupt */
-	if (irq_desc[irq].action)
-		irq_desc[irq].action->handler(regs);
+	for (action = irq_desc[irq].action; action != NULL; action = action->next)
+		action->handler(regs);
 }
 
 /*
@@ -100,7 +125,10 @@ size_t get_irq_list(char *page)
 			continue;
 
 		/* print irq */
-		ptr += sprintf(ptr, "%3d: %10u   %s\n", i, kstat.irqs[i], action->name);
+		ptr += sprintf(ptr, "%3d: %10u   %s", i, kstat.irqs[i], action->name);
+		for (action = action->next; action != NULL; action = action->next)
+			ptr += sprintf(ptr, ", %s", action->name);
+		*ptr++ = '\n';
 	}
 
 	return ptr - page;

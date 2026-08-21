@@ -7,6 +7,7 @@
 
 #define NR_EXCEPTIONS		129
 #define NR_IRQS			224
+#define SA_SHIRQ		0x04000000
 
 #define __save_flags(x)		__asm__ __volatile__("pushfl ; popl %0":"=g" (x):)
 #define __restore_flags(x)	__asm__ __volatile__("pushl %0 ; popfl": :"g" (x):"memory", "cc")
@@ -20,7 +21,10 @@
  */
 struct irq_action {
 	void 			(*handler)(struct registers *);
+	uint32_t		flags;
 	const char *		name;
+	void *			dev_id;
+	struct irq_action *	next;
 };
 
 /*
@@ -36,8 +40,8 @@ void irq_handler(struct registers *regs);
 
 /* IRQ handler registration */
 void register_exception_handler(uint32_t n, void *handler);
-int request_irq(uint32_t irq, void *handler, const char *devname);
-void free_irq(uint32_t irq);
+int request_irq(uint32_t irq, void *handler, uint32_t flags, const char *devname, void *dev_id);
+void free_irq(uint32_t irq, void *dev_id);
 size_t get_irq_list(char *page);
 
 #endif
