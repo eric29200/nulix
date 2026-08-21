@@ -25,10 +25,6 @@ int request_irq(uint32_t irq, void *handler, uint32_t flags, const char *devname
 	if (!handler)
 		return -EINVAL;
 
-	/* handler already installed */
-	if (irq_desc[irq].action)
-		return -EBUSY;
-
 	/* allocate a new irq action */
 	action = (struct irq_action *) kmalloc(sizeof(struct irq_action));
 	if (!action)
