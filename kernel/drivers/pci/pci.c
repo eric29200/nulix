@@ -50,19 +50,37 @@ static inline uint16_t pci_get_device_id(uint32_t address)
 }
 
 /*
- * Activate a PCI device.
+ * Enables bus mastering.
  */
-void pci_activate_device(struct pci_device *pci_dev)
+void pci_set_master(struct pci_device *pci_dev)
 {
-	uint32_t pci_cmd = pci_read_field(pci_dev->address, PCI_CMD);
+	uint16_t cmd;
 
 	/* already activated */
-	if (pci_cmd & PCI_CMD_REG_BUS_MASTER)
+	cmd = pci_read_field(pci_dev->address, PCI_CMD);
+	if (cmd & PCI_CMD_MASTER)
 		return;
 
 	/* activate */
-	pci_cmd |= PCI_CMD_REG_BUS_MASTER;
-	pci_write_field(pci_dev->address, PCI_CMD, pci_cmd);
+	cmd |= PCI_CMD_MASTER;
+	pci_write_field(pci_dev->address, PCI_CMD, cmd);
+}
+
+/*
+ * Enables device.
+ */
+void pci_enable_device(struct pci_device *pci_dev)
+{
+	uint16_t cmd;
+
+	/* already activated */
+	cmd = pci_read_field(pci_dev->address, PCI_CMD);
+	if (cmd & PCI_CMD_IO & PCI_CMD_MEMORY)
+		return;
+
+	/* activate */
+	cmd |= PCI_CMD_IO | PCI_CMD_MEMORY;
+	pci_write_field(pci_dev->address, PCI_CMD, cmd);
 }
 
 /*

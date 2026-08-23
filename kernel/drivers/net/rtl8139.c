@@ -192,8 +192,9 @@ int init_rtl8139()
 	rtl8139_dev->rebuild_header = ethernet_rebuild_header;
 	rtl8139_dev->start_xmit = rtl8139_start_xmit;
 
-	/* activate PCI device */
-	pci_activate_device(pci_dev);
+	/* enable pci device */
+	pci_enable_device(pci_dev);
+	pci_set_master(pci_dev);
 
 	/* power on the device */
 	outb(io_base + Cfg9346, 0xC0);
