@@ -160,7 +160,7 @@ int init_rtl8139()
 {
 	struct rtl8139_private *tp;
 	struct pci_device *pci_dev;
-	uint32_t io_base, pci_cmd;
+	uint32_t io_base;
 	int i;
 
 	/* get pci device */
@@ -192,12 +192,8 @@ int init_rtl8139()
 	rtl8139_dev->rebuild_header = ethernet_rebuild_header;
 	rtl8139_dev->start_xmit = rtl8139_start_xmit;
 
-	/* enable PCI Bus Mastering to allow NIC to perform DMA */
-	pci_cmd = pci_read_field(pci_dev->address, PCI_CMD);
-	if (!(pci_cmd & PCI_CMD_REG_BUS_MASTER)) {
-		pci_cmd |= PCI_CMD_REG_BUS_MASTER;
-		pci_write_field(pci_dev->address, PCI_CMD, pci_cmd);
-	}
+	/* activate PCI device */
+	pci_activate_device(pci_dev);
 
 	/* power on the device */
 	outb(io_base + Cfg9346, 0xC0);

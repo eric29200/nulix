@@ -50,6 +50,22 @@ static inline uint16_t pci_get_device_id(uint32_t address)
 }
 
 /*
+ * Activate a PCI device.
+ */
+void pci_activate_device(struct pci_device *pci_dev)
+{
+	uint32_t pci_cmd = pci_read_field(pci_dev->address, PCI_CMD);
+
+	/* already activated */
+	if (pci_cmd & PCI_CMD_REG_BUS_MASTER)
+		return;
+
+	/* activate */
+	pci_cmd |= PCI_CMD_REG_BUS_MASTER;
+	pci_write_field(pci_dev->address, PCI_CMD, pci_cmd);
+}
+
+/*
  * Scan a PCI bus and register devices.
  */
 static void pci_scan_bus(uint8_t bus)

@@ -130,7 +130,6 @@ static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_se
 int ata_hd_init(struct ata_device *device)
 {
 	struct pci_device *ata_pci_device;
-	uint32_t cmd_reg;
 
 	/* no sectors */
 	if (!device->identify.sectors_28 && !device->identify.sectors_48)
@@ -161,12 +160,8 @@ int ata_hd_init(struct ata_device *device)
 	device->prdt[0].buffer_phys = __pa(device->buf);
 	device->prdt[0].mark_end = 0x8000;
 
-	/* activate pci */
-	cmd_reg = pci_read_field(ata_pci_device->address, PCI_CMD);
-	if (!(cmd_reg & (1 << 2))) {
-		cmd_reg |= (1 << 2);
-		pci_write_field(ata_pci_device->address, PCI_CMD, cmd_reg);
-	}
+	/* activate device */
+	pci_activate_device(ata_pci_device);
 
 	/* get BAR4 from pci device */
 	device->bar4 = pci_read_field(ata_pci_device->address, PCI_BAR4);
