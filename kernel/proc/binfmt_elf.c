@@ -264,9 +264,9 @@ static int elf_load_binary(struct binprm *bprm)
 {
 	uint32_t elf_entry, elf_bss = 0, elf_brk = 0, start_code = 0, end_code = 0, end_data = 0;
 	uint32_t i, k, sp, load_addr = 0, load_bias = 0, interp_load_addr = 0, map_addr;
+	struct elf_header elf_header, interp_elf_header = { 0 };
 	int fd, ret, elf_type, elf_prot, load_addr_set = 0;
 	char name[TASK_NAME_LEN], *elf_interpreter = NULL;
-	struct elf_header elf_header, interp_elf_header;
 	struct elf_prog_header *ph, *first_ph;
 	struct dentry *interp_dentry = NULL;
 	struct file *filp = NULL;
