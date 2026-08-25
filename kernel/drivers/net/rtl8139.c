@@ -12,9 +12,6 @@
 #include <stderr.h>
 #include <string.h>
 
-/* Realtek 8139 device */
-static struct net_device *rtl8139_dev = NULL;
-
 /* Realtek 8139 registers */
 enum RTL8129_registers {
 	MAC0 = 0,
@@ -52,20 +49,20 @@ enum IntrStatusBits {
 /*
  * Send a socket buffer.
  */
-static int rtl8139_start_xmit(struct sk_buff *skb, struct net_device *dev)
+static int rtl8139_start_xmit(struct sk_buff *skb, struct net_device *net_dev)
 {
-	struct rtl8139_private *tp = (struct rtl8139_private *) dev->private;
+	struct rtl8139_private *tp = (struct rtl8139_private *) net_dev->private;
 
 	/* copy packet to tx buffer */
 	memcpy(tp->tx_buf[tp->cur_tx], skb->head, skb->len);
 
 	/* put packet on device */
-	outl(rtl8139_dev->io_base + TxAddr0 + tp->cur_tx * 4, __pa(tp->tx_buf[tp->cur_tx]));
-	outl(rtl8139_dev->io_base + TxStatus0 + tp->cur_tx * 4, skb->size);
+	outl(net_dev->io_base + TxAddr0 + tp->cur_tx * 4, __pa(tp->tx_buf[tp->cur_tx]));
+	outl(net_dev->io_base + TxStatus0 + tp->cur_tx * 4, skb->size);
 
 	/* update stats */
-	dev->stats.tx_packets++;
-	dev->stats.tx_bytes += skb->size;
+	net_dev->stats.tx_packets++;
+	net_dev->stats.tx_bytes += skb->size;
 
 	/* update tx buffer index */
 	tp->cur_tx++;
@@ -78,29 +75,29 @@ static int rtl8139_start_xmit(struct sk_buff *skb, struct net_device *dev)
 /*
  * Receive a packet.
  */
-static void rtl8139_receive_packet()
+static void rtl8139_receive_packet(struct net_device *net_dev)
 {
-	struct rtl8139_private *tp = (struct rtl8139_private *) rtl8139_dev->private;
+	struct rtl8139_private *tp = (struct rtl8139_private *) net_dev->private;
 	struct rtl8139_rx_header *rx_header;
 	struct sk_buff *skb;
 	uint16_t rx_buf_ptr;
 
 	/* handle all received packets */
-	while ((inb(rtl8139_dev->io_base + ChipCmd) & 1) == 0) {
+	while ((inb(net_dev->io_base + ChipCmd) & 1) == 0) {
 		/* get packet header */
-		rx_buf_ptr = inw(rtl8139_dev->io_base + RxBufPtr) + 16;
+		rx_buf_ptr = inw(net_dev->io_base + RxBufPtr) + 16;
 		rx_header = (struct rtl8139_rx_header *) (tp->rx_buf + rx_buf_ptr);
 		rx_buf_ptr = (rx_buf_ptr + rx_header->size + sizeof(struct rtl8139_rx_header) + 3) & ~3;
 
 		/* allocate a socket buffer */
 		skb = skb_alloc(rx_header->size);
 		if (!skb) {
-			rtl8139_dev->stats.rx_dropped++;
+			net_dev->stats.rx_dropped++;
 			break;
 		}
 
 		/* set network device */
-		skb->dev = rtl8139_dev;
+		skb->dev = net_dev;
 
 		/* copy data into socket buffer */
 		skb_put(skb, rx_header->size);
@@ -113,38 +110,39 @@ static void rtl8139_receive_packet()
 		netif_rx(skb);
 
 		/* update stat */
-		rtl8139_dev->stats.rx_packets++;
-		rtl8139_dev->stats.rx_bytes += rx_header->size;
+		net_dev->stats.rx_packets++;
+		net_dev->stats.rx_bytes += rx_header->size;
 
 		/* update received buffer pointer */
-		outw(rtl8139_dev->io_base + RxBufPtr, rx_buf_ptr - 16);
+		outw(net_dev->io_base + RxBufPtr, rx_buf_ptr - 16);
 	}
 }
 
 /*
  * Realtek 8139 IRQ handler.
  */
-void rtl8139_irq_handler(struct registers *regs)
+static void rtl8139_irq_handler(struct registers *regs, void *dev_instance)
 {
+	struct net_device *net_dev = (struct net_device *) dev_instance;
 	int status;
 
 	UNUSED(regs);
 
 	/* get and ack status */
-	status = inw(rtl8139_dev->io_base + IntrStatus);
-	outw(rtl8139_dev->io_base + IntrStatus, status);
+	status = inw(net_dev->io_base + IntrStatus);
+	outw(net_dev->io_base + IntrStatus, status);
 
 	/* handle reception */
 	if (status & RxOK)
-		rtl8139_receive_packet();
+		rtl8139_receive_packet(net_dev);
 }
 
 /*
  * Init Realtek 8139 buffers.
  */
-static void rtl8139_init_ring()
+static void rtl8139_init_ring(struct net_device *net_dev)
 {
-	struct rtl8139_private *tp = (struct rtl8139_private *) rtl8139_dev->private;
+	struct rtl8139_private *tp = (struct rtl8139_private *) net_dev->private;
 	int i;
 
 	tp->cur_tx = 0;
@@ -160,6 +158,7 @@ int init_rtl8139()
 {
 	struct rtl8139_private *tp;
 	struct pci_device *pci_dev;
+	struct net_device *net_dev;
 	uint32_t io_base;
 	int i;
 
@@ -172,25 +171,25 @@ int init_rtl8139()
 	io_base = pci_dev->bar0 & ~(0x3);
 
 	/* register net device */
-	rtl8139_dev = register_net_device(io_base, ARPHRD_ETHER, AF_INET, "eth0");
-	if (!rtl8139_dev)
+	net_dev = register_net_device(io_base, ARPHRD_ETHER, AF_INET, "eth0");
+	if (!net_dev)
 		return -ENOSPC;
 
 	/* allocate private data */
-	rtl8139_dev->private = tp = (struct rtl8139_private *) kmalloc(sizeof(struct rtl8139_private));
+	net_dev->private = tp = (struct rtl8139_private *) kmalloc(sizeof(struct rtl8139_private));
 	if (!tp)
 		return -ENOMEM;
 
 	/* get mac address */
 	for (i = 0; i < ETHERNET_ALEN; i++)
-		rtl8139_dev->hw_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
+		net_dev->hw_addr[i] = inb(io_base + RTL8139_MAC_ADDRESS + i);
 
 	/* set device */
-	rtl8139_dev->addr_len = ETHERNET_ALEN;
-	rtl8139_dev->hard_header_len = ETHERNET_HLEN;
-	rtl8139_dev->hard_header = ethernet_header;
-	rtl8139_dev->rebuild_header = ethernet_rebuild_header;
-	rtl8139_dev->start_xmit = rtl8139_start_xmit;
+	net_dev->addr_len = ETHERNET_ALEN;
+	net_dev->hard_header_len = ETHERNET_HLEN;
+	net_dev->hard_header = ethernet_header;
+	net_dev->rebuild_header = ethernet_rebuild_header;
+	net_dev->start_xmit = rtl8139_start_xmit;
 
 	/* enable pci device */
 	pci_enable_device(pci_dev);
@@ -212,7 +211,7 @@ int init_rtl8139()
 			kfree(tp->rx_buf);
 		return -ENOMEM;
 	}
-	rtl8139_init_ring();
+	rtl8139_init_ring(net_dev);
 
 	/* check that the chip has finished the reset. */
 	for (i = 1000; i > 0; i--)
@@ -234,10 +233,10 @@ int init_rtl8139()
 	outb(io_base + ChipCmd, CmdRxEnb | CmdTxEnb);
 
 	/* get PCI interrupt line */
-	rtl8139_dev->irq = pci_read_field(pci_dev->address, PCI_INTERRUPT_LINE);
+	net_dev->irq = pci_read_field(pci_dev->address, PCI_INTERRUPT_LINE);
 
 	/* register interrupt handler */
-	request_irq(rtl8139_dev->irq, rtl8139_irq_handler, SA_SHIRQ, "rtl8139", rtl8139_dev);
+	request_irq(net_dev->irq, rtl8139_irq_handler, SA_SHIRQ, "rtl8139", net_dev);
 
 	return 0;
 }

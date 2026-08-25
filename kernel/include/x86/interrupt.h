@@ -20,7 +20,7 @@
  * IRQ action.
  */
 struct irq_action {
-	void 			(*handler)(struct registers *);
+	void 			(*handler)(struct registers *, void *);
 	uint32_t		flags;
 	const char *		name;
 	void *			dev_id;

@@ -98,7 +98,7 @@ void irq_handler(struct registers *regs)
 
 	/* handle interrupt */
 	for (action = irq_desc[irq].action; action != NULL; action = action->next)
-		action->handler(regs);
+		action->handler(regs, action->dev_id);
 }
 
 /*
