@@ -116,6 +116,22 @@ static struct node *__find_free_node(int priority, uint32_t order)
 }
 
 /*
+ * Get order of a size.
+ */
+int get_order(size_t size)
+{
+	int order = -1;
+
+	size = (size - 1) >> (PAGE_SHIFT - 1);
+	do {
+		size >>= 1;
+		order++;
+	} while (size);
+
+	return order;
+}
+
+/*
  * Get free pages.
  */
 struct page *__get_free_pages(int priority, uint32_t order)

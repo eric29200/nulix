@@ -7,6 +7,7 @@
 #define DEV_TTY_MAJOR		4		/* tty major number */
 #define DEV_TTYAUX_MAJOR	5		/* auxiliary tty major number */
 #define DEV_LOOP_MAJOR		7		/* loop major number */
+#define DEV_MISC_MAJOR		10		/* misc major number */
 #define DEV_MOUSE_MAJOR		13		/* mouse major number */
 #define DEV_FB_MAJOR		29		/* frame buffer major number */
 #define DEV_PTS_MAJOR		136		/* pty major number */

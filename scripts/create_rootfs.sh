@@ -80,6 +80,7 @@ sudo mknod tmp/dev/console c 5 1
 sudo mknod tmp/dev/ptmx c 5 2
 sudo mknod tmp/dev/mouse c 13 0
 sudo mknod tmp/dev/fb0 c 29 0
+sudo mknod tmp/dev/hwrng c 10 183
 sudo mknod tmp/dev/hda b 3 0
 sudo mknod tmp/dev/hda1 b 3 1
 sudo mknod tmp/dev/hda2 b 3 2

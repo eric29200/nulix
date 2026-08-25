@@ -6,6 +6,7 @@
 #include <mm/mm.h>
 #include <grub/multiboot2.h>
 #include <drivers/char/mem.h>
+#include <drivers/char/misc.h>
 #include <drivers/char/serial.h>
 #include <drivers/char/pit.h>
 #include <drivers/char/rtc.h>
@@ -19,6 +20,7 @@
 #include <drivers/video/fb.h>
 #include <drivers/net/rtl8139.h>
 #include <drivers/net/loopback.h>
+#include <drivers/virtio/virtio.h>
 #include <net/inet/net.h>
 #include <ipc/ipc.h>
 #include <proc/sched.h>
@@ -199,10 +201,15 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
  */
 static void kinit()
 {
-	/* init mouse */
+	/* init memory devices */
 	printf("[Kernel] Memory devices Init\n");
 	if (init_mem_devices())
 		printf("[Kernel] Memory devices Init error\n");
+
+	/* init misc devices */
+	printf("[Kernel] Misc devices Init\n");
+	if (init_misc_devices())
+		printf("[Kernel] Misc devices Init error\n");
 
 	/* init pci devices */
 	printf("[Kernel] PCI devices Init\n");
@@ -250,6 +257,11 @@ static void kinit()
 	printf("[Kernel] Ttys Init\n");
 	if (init_tty(&tag_fb))
 		panic("Cannot init ttys\n");
+
+	/* init virtio */
+	printf("[Kernel] Virtio Init\n");
+	if (init_virtio())
+		printf("[Kernel] Virtio Init error\n");
 
 	/* init binary formats */
 	printf("[Kernel] Binary formats Init\n");

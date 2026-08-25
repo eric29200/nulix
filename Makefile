@@ -20,7 +20,9 @@ run:
 		-drive format=raw,file=$(DISK)					\
 		-netdev tap,id=nulix_net					\
 		-device rtl8139,netdev=nulix_net,id=nulix_nic			\
-		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap
+		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap	\
+		-object rng-random,filename=/dev/urandom,id=rng0		\
+		-device virtio-rng-pci,rng=rng0,vectors=2
 
 %:
 	@:
