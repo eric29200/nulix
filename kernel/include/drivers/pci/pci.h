@@ -2,6 +2,7 @@
 #define _PCI_H_
 
 #include <stddef.h>
+#include <lib/list.h>
 
 #define NR_PCI_DEVICES			32
 
@@ -23,10 +24,27 @@
  * PCI device structure.
  */
 struct pci_device {
-	uint32_t address;
-	uint32_t device_id;
-	uint32_t vendor_id;
-	uint32_t bar0;
+	uint32_t 		address;
+	uint32_t 		device_id;
+	uint32_t 		vendor_id;
+	uint32_t 		bar0;
+	struct pci_driver *	driver;
+};
+
+/*
+ * PCI device id.
+ */
+struct pci_device_id {
+	uint32_t		vendor;
+	uint32_t		device;
+};
+
+/*
+ * PCI device driver.
+ */
+struct pci_driver {
+	struct pci_device_id *	id_table;
+	int			(*probe)(struct pci_device *, struct pci_device_id *);
 };
 
 void init_pci();
@@ -35,5 +53,6 @@ uint32_t pci_read_field(uint32_t address, uint8_t offset);
 void pci_write_field(uint32_t address, uint8_t offset, uint32_t value);
 void pci_set_master(struct pci_device *pci_dev);
 void pci_enable_device(struct pci_device *pci_dev);
+int pci_register_driver(struct pci_driver *drv);
 
 #endif

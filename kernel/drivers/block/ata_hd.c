@@ -136,7 +136,7 @@ int ata_hd_init(struct ata_device *device)
 		return -EINVAL;
 
 	/* get PCI device */
-	pci_dev = pci_get_device(ATA_VENDOR_ID, ATA_DEVICE_ID);
+	pci_dev = pci_get_device(ATA_PCI_VENDOR_ID, ATA_PCI_DEVICE_ID);
 	if (!pci_dev)
 		return -EINVAL;
 

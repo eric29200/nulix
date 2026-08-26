@@ -152,20 +152,17 @@ static void rtl8139_init_ring(struct net_device *net_dev)
 }
 
 /*
- * Init Realtek 8139 device.
+ * Probe a Realtek 8139 device.
  */
-int init_rtl8139()
+static int rtl8139_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
 	struct rtl8139_private *tp;
-	struct pci_device *pci_dev;
 	struct net_device *net_dev;
 	uint32_t io_base;
 	int i;
 
-	/* get pci device */
-	pci_dev = pci_get_device(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID);
-	if (!pci_dev)
-		return -EINVAL;
+	/* unused device id */
+	UNUSED(id);
 
 	/* get I/O base address */
 	io_base = pci_dev->bar0 & ~(0x3);
@@ -239,4 +236,46 @@ int init_rtl8139()
 	request_irq(net_dev->irq, rtl8139_irq_handler, SA_SHIRQ, "rtl8139", net_dev);
 
 	return 0;
+}
+
+/*
+ * PCI ids table.
+ */
+static struct pci_device_id rtl8139_pci_tbl[] = {
+	{ 0x10ec, 0x8139 },
+	{ 0x10ec, 0x8138 },
+	{ 0x1113, 0x1211 },
+	{ 0x1500, 0x1360 },
+	{ 0x4033, 0x1360 },
+	{ 0x1186, 0x1300 },
+	{ 0x1186, 0x1340 },
+	{ 0x13d1, 0xab06 },
+	{ 0x1259, 0xa117 },
+	{ 0x1259, 0xa11e },
+	{ 0x14ea, 0xab06 },
+	{ 0x14ea, 0xab07 },
+	{ 0x11db, 0x1234 },
+	{ 0x1432, 0x9130 },
+	{ 0x02ac, 0x1012 },
+	{ 0x018a, 0x0106 },
+	{ 0x126c, 0x1211 },
+	{ 0x1743, 0x8139 },
+	{ 0x021b, 0x8139 },
+	{ 0, }
+};
+
+/*
+ * PCI driver.
+ */
+static struct pci_driver rtl8139_pci_driver = {
+	.id_table		= rtl8139_pci_tbl,
+	.probe			= rtl8139_probe,
+};
+
+/*
+ * Init Realtek 8139 devices.
+ */
+int init_rtl8139()
+{
+	return pci_register_driver(&rtl8139_pci_driver);
 }

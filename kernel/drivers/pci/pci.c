@@ -1,6 +1,7 @@
 #include <drivers/pci/pci.h>
 #include <x86/io.h>
 #include <string.h>
+#include <stderr.h>
 #include <stdio.h>
 
 /* PCI devices array */
@@ -135,6 +136,60 @@ struct pci_device *pci_get_device(uint32_t vendor_id, uint32_t device_id)
 			return &pci_devices[i];
 
 	return NULL;
+}
+
+/*
+ * Check if a PCI device matches a PCI table id.
+ */
+static struct pci_device_id *pci_match_device(struct pci_device_id *ids, struct pci_device *dev)
+{
+	while (ids->vendor) {
+		if (ids->vendor == dev->vendor_id && ids->device == dev->device_id)
+			return ids;
+		ids++;
+	}
+
+	return NULL;
+}
+
+/*
+ * Announce a PCI device.
+ */
+static int pci_announce_device(struct pci_driver *drv, struct pci_device *dev)
+{
+	struct pci_device_id *id = NULL;
+	int ret = 0;
+
+	/* check if device matches driver */
+	if (drv->id_table) {
+		id = pci_match_device(drv->id_table, dev);
+		if (!id)
+			return 0;
+	}
+
+	/* probe device */
+	if (drv->probe(dev, id) >= 0) {
+		dev->driver = drv;
+		ret = 1;
+	}
+
+	return ret;
+}
+
+/*
+ * Register a PCI driver (returns number of devices attached).
+ */
+int pci_register_driver(struct pci_driver *drv)
+{
+	int i, ret = 0;
+
+	if (!drv->id_table)
+		return -EINVAL;
+
+	for (i = 0; i < nr_pci_devices; i++)
+		ret += pci_announce_device(drv, &pci_devices[i]);
+
+	return ret;
 }
 
 /*

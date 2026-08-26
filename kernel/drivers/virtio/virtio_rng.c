@@ -224,22 +224,19 @@ static int setup_vq()
 }
 
 /*
-* Init virtio random generator.
+* Probe a virtio random generator.
 */
-int init_virtio_rng()
+static int virtio_rng_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
-        struct pci_device *dev;
         int ret;
 
-        /* find pci device */
-        dev = pci_get_device(VIRTIO_PCI_VENDOR_ID, VIRTIO_PCI_RNG_DEVICE_ID);
-        if (!dev)
-                return -ENODEV;
+	/* unused device id */
+	UNUSED(id);
 
         /* enable pci device */
-        vr.io_base = dev->bar0 & ~(0x03);
-        pci_enable_device(dev);
-        pci_set_master(dev);
+        vr.io_base = pci_dev->bar0 & ~(0x03);
+        pci_enable_device(pci_dev);
+        pci_set_master(pci_dev);
 
         /* init virtio device */
         vp_reset();
@@ -273,4 +270,28 @@ int init_virtio_rng()
 err:
         vp_add_status(VIRTIO_STATUS_FAILED);
         return ret;
+}
+
+/*
+ * PCI ids table.
+ */
+static struct pci_device_id virtio_rng_pci_tbl[] = {
+        { VIRTIO_PCI_VENDOR_ID, VIRTIO_PCI_RNG_DEVICE_ID},
+        { 0, }
+};
+
+/*
+ * PCI driver.
+ */
+static struct pci_driver virtio_rng_pci_driver = {
+	.id_table		= virtio_rng_pci_tbl,
+	.probe			= virtio_rng_probe,
+};
+
+/*
+* Init virtio random generator.
+*/
+int init_virtio_rng()
+{
+	return pci_register_driver(&virtio_rng_pci_driver);
 }

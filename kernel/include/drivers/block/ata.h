@@ -66,8 +66,8 @@
 #define ATA_ER_TK0NF			0x02
 #define ATA_ER_AMNF			0x01
 
-#define ATA_VENDOR_ID			0x8086
-#define ATA_DEVICE_ID			0x7010
+#define ATA_PCI_VENDOR_ID		0x8086
+#define ATA_PCI_DEVICE_ID		0x7010
 
 /*
  * ATA identification.
