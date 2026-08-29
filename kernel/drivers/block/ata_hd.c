@@ -1,5 +1,4 @@
 #include <drivers/block/ata.h>
-#include <drivers/pci/pci.h>
 #include <x86/io.h>
 #include <stderr.h>
 
@@ -129,15 +128,8 @@ static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_se
  */
 int ata_hd_init(struct ata_device *device)
 {
-	struct pci_device *pci_dev;
-
 	/* no sectors */
 	if (!device->identify.sectors_28 && !device->identify.sectors_48)
-		return -EINVAL;
-
-	/* get PCI device */
-	pci_dev = pci_get_device(ATA_PCI_VENDOR_ID, ATA_PCI_DEVICE_ID);
-	if (!pci_dev)
 		return -EINVAL;
 
 	/* allocate prdt */
@@ -159,15 +151,6 @@ int ata_hd_init(struct ata_device *device)
 	/* set prdt */
 	device->prdt[0].buffer_phys = __pa(device->buf);
 	device->prdt[0].mark_end = 0x8000;
-
-	/* enable pci device */
-	pci_enable_device(pci_dev);
-	pci_set_master(pci_dev);
-
-	/* get BAR4 from pci device */
-	device->bar4 = pci_read_field(pci_dev->address, PCI_BAR4);
-	if (device->bar4 & 0x00000001)
-		device->bar4 &= 0xFFFFFFFC;
 
 	/* set operations */
 	device->sector_size = ATA_SECTOR_SIZE;

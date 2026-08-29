@@ -293,5 +293,12 @@ static struct pci_driver virtio_rng_pci_driver = {
 */
 int init_virtio_rng()
 {
-	return pci_register_driver(&virtio_rng_pci_driver);
+        int ret;
+
+        /* register pci driver */
+	ret = pci_register_driver(&virtio_rng_pci_driver);
+        if (ret > 0)
+                return 0;
+
+        return ret == 0 ? -ENODEV : ret;
 }

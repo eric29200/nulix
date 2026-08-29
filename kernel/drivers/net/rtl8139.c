@@ -277,5 +277,12 @@ static struct pci_driver rtl8139_pci_driver = {
  */
 int init_rtl8139()
 {
-	return pci_register_driver(&rtl8139_pci_driver);
+	int ret;
+
+	/* register pci driver */
+	ret = pci_register_driver(&rtl8139_pci_driver);
+	if (ret > 0)
+		return 0;
+
+	return ret == 0 ? -ENODEV : ret;
 }

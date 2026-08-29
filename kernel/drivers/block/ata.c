@@ -1,5 +1,6 @@
 #include <drivers/block/ata.h>
 #include <drivers/block/blk_dev.h>
+#include <drivers/pci/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>
@@ -276,11 +277,24 @@ static struct file_operations ata_fops = {
 };
 
 /*
- * Init ata devices.
+ * Probe a ata device.
  */
-int init_ata()
+static int ata_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
+	uint32_t bar4;
 	int ret, i, j;
+
+	/* unused device id */
+	UNUSED(id);
+
+	/* enable pci device */
+	pci_enable_device(pci_dev);
+	pci_set_master(pci_dev);
+
+	/* get BAR4 from pci device */
+	bar4 = pci_read_field(pci_dev->address, PCI_BAR4);
+	if (bar4 & 0x00000001)
+		bar4 &= 0xFFFFFFFC;
 
 	/* register interrupt handlers */
 	request_irq(14, ata_irq_handler, 0, "primary hd", NULL);
@@ -300,6 +314,10 @@ int init_ata()
 
 	/* detect hard drives */
 	for (i = 0; i < NR_ATA_DEVICES; i++) {
+		/* set bar4 */
+		ata_devices[i].bar4 = bar4;
+
+		/* detect device */
 		ret = ata_detect(&ata_devices[i]);
 		if (ret)
 			continue;
@@ -316,4 +334,35 @@ int init_ata()
 	}
 
 	return 0;
+}
+
+/*
+ * PCI ids table.
+ */
+static struct pci_device_id ata_pci_tbl[] = {
+	{ ATA_PCI_VENDOR_ID, ATA_PCI_DEVICE_ID },
+	{ 0, }
+};
+
+/*
+ * PCI driver.
+ */
+static struct pci_driver ata_pci_driver = {
+	.id_table		= ata_pci_tbl,
+	.probe			= ata_probe,
+};
+
+/*
+ * Init ata devices.
+ */
+int init_ata()
+{
+	int ret;
+
+	/* register pci driver */
+	ret = pci_register_driver(&ata_pci_driver);
+	if (ret > 0)
+		return 0;
+
+	return ret == 0 ? -ENODEV : ret;
 }
