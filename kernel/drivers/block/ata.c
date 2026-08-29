@@ -13,24 +13,28 @@
 static struct ata_device ata_devices[NR_ATA_DEVICES] = {
 	{
 		.id 		= 0,
+		.present	= 0,
 		.bus 		= ATA_PRIMARY,
 		.drive 		= ATA_MASTER,
 		.io_base 	= ATA_PRIMARY_IO
 	},
 	{
 		.id 		= 1,
+		.present	= 0,
 		.bus 		= ATA_PRIMARY,
 		.drive 		= ATA_SLAVE,
 		.io_base 	= ATA_PRIMARY_IO
 	},
 	{
 		.id 		= 2,
+		.present	= 0,
 		.bus 		= ATA_SECONDARY,
 		.drive 		= ATA_MASTER,
 		.io_base 	= ATA_SECONDARY_IO
 	},
 	{
 		.id 		= 3,
+		.present	= 0,
 		.bus 		= ATA_SECONDARY,
 		.drive 		= ATA_SLAVE,
 		.io_base 	= ATA_SECONDARY_IO
@@ -55,6 +59,10 @@ static struct ata_device *ata_get_device(dev_t dev)
 	/* get device id */
 	id = minor(dev) >> PARTITION_MINOR_SHIFT;
 	if (id >= NR_ATA_DEVICES)
+		return NULL;
+
+	/* device not present */
+	if (!ata_devices[id].present)
 		return NULL;
 
 	return &ata_devices[id];
@@ -217,6 +225,10 @@ static int ata_detect(struct ata_device *device)
 		ret = ata_cd_init(device);
 	else
 		ret = ata_hd_init(device);
+
+	/* set device present */
+	if (ret == 0)
+		device->present = 1;
 
 	return ret;
 }
