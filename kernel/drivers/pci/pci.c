@@ -125,20 +125,6 @@ static void pci_scan_bus(uint8_t bus)
 }
 
 /*
- * Get a PCI device.
- */
-struct pci_device *pci_get_device(uint32_t vendor_id, uint32_t device_id)
-{
-	int i;
-
-	for (i = 0; i < nr_pci_devices; i++)
-		if (pci_devices[i].vendor_id == vendor_id && pci_devices[i].device_id == device_id)
-			return &pci_devices[i];
-
-	return NULL;
-}
-
-/*
  * Check if a PCI device matches a PCI table id.
  */
 static struct pci_device_id *pci_match_device(struct pci_device_id *ids, struct pci_device *dev)

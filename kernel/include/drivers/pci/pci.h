@@ -48,7 +48,6 @@ struct pci_driver {
 };
 
 void init_pci();
-struct pci_device *pci_get_device(uint32_t vendor_id, uint32_t device_id);
 uint32_t pci_read_field(uint32_t address, uint8_t offset);
 void pci_write_field(uint32_t address, uint8_t offset, uint32_t value);
 void pci_set_master(struct pci_device *pci_dev);
