@@ -4,8 +4,6 @@
 #include <stddef.h>
 #include <lib/list.h>
 
-#define NR_PCI_DEVICES			32
-
 #define PCI_ADDRESS_PORT		0xCF8
 #define PCI_VALUE_PORT			0xCFC
 #define PCI_CMD				0x04
@@ -29,6 +27,7 @@ struct pci_device {
 	uint32_t 		vendor_id;
 	uint32_t 		bar0;
 	struct pci_driver *	driver;
+	struct list_head	list;
 };
 
 /*
@@ -47,7 +46,7 @@ struct pci_driver {
 	int			(*probe)(struct pci_device *, struct pci_device_id *);
 };
 
-void init_pci();
+int init_pci();
 uint32_t pci_read_field(uint32_t address, uint8_t offset);
 void pci_write_field(uint32_t address, uint8_t offset, uint32_t value);
 void pci_set_master(struct pci_device *pci_dev);

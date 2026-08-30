@@ -213,7 +213,8 @@ static void kinit()
 
 	/* init pci devices */
 	printf("[Kernel] PCI devices Init\n");
-	init_pci();
+	if (init_pci())
+		printf("[Kernel] PCI devices Init error\n");
 
 	/* init keyboard */
 	printf("[Kernel] Keyboard Init\n");

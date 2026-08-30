@@ -1,12 +1,12 @@
 #include <drivers/pci/pci.h>
+#include <mm/mm.h>
 #include <x86/io.h>
 #include <string.h>
 #include <stderr.h>
 #include <stdio.h>
 
 /* PCI devices array */
-static struct pci_device pci_devices[NR_PCI_DEVICES];
-static int nr_pci_devices = 0;
+static LIST_HEAD(pci_devices);
 
 /*
  * Create a PCI address.
@@ -87,11 +87,12 @@ void pci_enable_device(struct pci_device *pci_dev)
 /*
  * Scan a PCI bus and register devices.
  */
-static void pci_scan_bus(uint8_t bus)
+static int pci_scan_bus(uint8_t bus)
 {
-	uint16_t vendor_id, device_id;
-	uint32_t address, bar0;
+	struct pci_device *pci_dev;
 	uint8_t device, func;
+	uint16_t vendor_id;
+	uint32_t address;
 
 	/* parse all devices/functions slots */
 	for (device = 0; device < 32; device++) {
@@ -103,25 +104,27 @@ static void pci_scan_bus(uint8_t bus)
 			if (vendor_id == PCI_INVALID_VENDOR)
 				continue;
 
-			/* get device id and first Base Address Register */
-			device_id = pci_get_device_id(address);
-			bar0 = pci_read_field(address, PCI_BAR0);
+			/* allocate a new pci device */
+			pci_dev = (struct pci_device *) kmalloc(sizeof(struct pci_device));
+			if (!pci_dev)
+				return -ENOMEM;
 
-			if (nr_pci_devices >= NR_PCI_DEVICES) {
-				printf("PCI device (vendor id = 0x%x, device id = 0x%x) cannot be registered : too many devices\n", vendor_id, device_id);
-				continue;
-			}
+			/* set pci device */
+			memset(pci_dev, 0, sizeof(struct pci_device));
+			pci_dev->address = address;
+			pci_dev->vendor_id = vendor_id;
+			pci_dev->device_id = pci_get_device_id(address);
+			pci_dev->bar0 = pci_read_field(address, PCI_BAR0);
 
-			/* register PCI device */
-			pci_devices[nr_pci_devices].address = address;
-			pci_devices[nr_pci_devices].vendor_id = vendor_id;
-			pci_devices[nr_pci_devices].device_id = device_id;
-			pci_devices[nr_pci_devices].bar0 = bar0;
-			nr_pci_devices++;
+			/* print device */
+			printf("PCI device (vendor id = 0x%x, device id = 0x%x, BAR = 0x%x) registered\n", vendor_id, pci_dev->device_id, pci_dev->bar0);
 
-			printf("PCI device (vendor id = 0x%x, device id = 0x%x, BAR = 0x%x) registered\n", vendor_id, device_id, bar0);
+			/* add device */
+			list_add_tail(&pci_dev->list, &pci_devices);
 		}
 	}
+
+	return 0;
 }
 
 /*
@@ -167,13 +170,17 @@ static int pci_announce_device(struct pci_driver *drv, struct pci_device *dev)
  */
 int pci_register_driver(struct pci_driver *drv)
 {
-	int i, ret = 0;
+	struct pci_device *pci_dev;
+	struct list_head *pos;
+	int ret = 0;
 
 	if (!drv->id_table)
 		return -EINVAL;
 
-	for (i = 0; i < nr_pci_devices; i++)
-		ret += pci_announce_device(drv, &pci_devices[i]);
+	list_for_each(pos, &pci_devices) {
+		pci_dev = list_entry(pos, struct pci_device, list);
+		ret += pci_announce_device(drv, pci_dev);
+	}
 
 	return ret;
 }
@@ -181,11 +188,8 @@ int pci_register_driver(struct pci_driver *drv)
 /*
  * Init PCI devices.
  */
-void init_pci()
+int init_pci()
 {
-	/* reset pci devices */
-	memset(pci_devices, 0, sizeof(struct pci_device) * NR_PCI_DEVICES);
-
 	/* scan first bus */
-	pci_scan_bus(0);
+	return pci_scan_bus(0);
 }
