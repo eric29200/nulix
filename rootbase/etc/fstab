@@ -1,5 +1,6 @@
 # <file system> 	<mount pt>      <type>  <options>       							<dump>  <pass>
 /dev/root       	/               ext2    rw,noauto       							0       1
+/dev/hda2		none		swap	sw									0	0
 /dev/hdc		/mnt/cdrom	iso9660	defaults								0	0
 192.168.1.4  		/mnt/9p  	9p	trans=tcp,port=8080,version=9p2000.L,uname=eric,aname=/home/eric/tmp	0	0
 proc            	/proc           proc    defaults        							0       0

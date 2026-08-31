@@ -3,7 +3,7 @@ id:3:initdefault:
 
 si0::sysinit:/bin/mount -t proc proc /proc
 si1::sysinit:/usr/sbin/fsck.ext2 /dev/root
-si2::sysinit:/usr/sbin/swapon /dev/hda2
+si2::sysinit:/usr/sbin/swapon -a
 si3::sysinit:/bin/mount -o remount,rw /
 si4::sysinit:/bin/mount -a -t no9p
 
