@@ -2,7 +2,8 @@ KERNEL		= kernel/kernel.bin
 ISO		= nulix.iso
 NJOBS		= $(shell nproc)
 MEM_SIZE	= 3G
-DISK		= hda.img
+DISK1		= hda.img
+DISK2		= hdb.img
 QEMU		= kvm
 args		= `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
@@ -17,8 +18,10 @@ run:
 		-serial stdio 							\
 		-boot order=d 							\
 		-cdrom $(ISO) 							\
-		-drive format=raw,file=$(DISK)					\
-		-drive format=raw,file="hdb.img"				\
+		-drive file=$(DISK1),if=none,format=raw,id=disk1		\
+		-device ide-hd,drive=disk1,bus=ide.0,unit=0			\
+		-drive file=$(DISK2),if=none,format=raw,id=disk2		\
+		-device ide-hd,drive=disk2,bus=ide.0,unit=1			\
 		-netdev tap,id=nulix_net					\
 		-device rtl8139,netdev=nulix_net,id=nulix_nic			\
 		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap	\
