@@ -46,7 +46,7 @@ void virtqueue_get_buf(struct virtqueue *vq, size_t *len)
 int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len)
 {
         struct vring *vr = &vq->vring;
-        int head;
+        int head, avail;
 
         /* no free buffer */
         if (vq->num_free < 1)
@@ -62,8 +62,9 @@ int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len)
         vq->num_free--;
         vq->free_head = head + vr->desc[head].next;
 
-        /* publish descriptor 0 */
-        vr->avail->ring[vr->avail->idx % vr->num] = head;
+        /* publish descriptor */
+        avail = (vq->vring.avail->idx + vq->num_added++) % vq->vring.num;
+	vq->vring.avail->ring[avail] = head;
 
         return 0;
 }
@@ -77,7 +78,8 @@ void virtqueue_kick(struct virtqueue *vq)
 
         /* descriptors and available array need to be set before we expose the new available array entries */
         __asm__ volatile("" ::: "memory");
-        vr->avail->idx += 1;
+        vr->avail->idx += vq->num_added;
+        vq->num_added = 0;
         __asm__ volatile("" ::: "memory");
 
         /* kick queue */
