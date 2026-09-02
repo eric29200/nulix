@@ -2,6 +2,7 @@
 #include <drivers/virtio/virtio.h>
 #include <drivers/pci/pci.h>
 #include <drivers/char/misc.h>
+#include <proc/sched.h>
 #include <mm/paging.h>
 #include <string.h>
 #include <stderr.h>
@@ -12,49 +13,57 @@
 /* virtio rng device */
 static struct virtqueue *vq = NULL;
 static uint32_t *random_data = NULL;
+static DECLARE_WAIT_QUEUE_HEAD(wait);
+static size_t data_avail = 0;
+
+/*
+ * Read callback.
+ */
+static void random_recv_done(struct virtqueue *vq)
+{
+        /* get buffer */
+        if (!virtqueue_get_buf(vq, &data_avail))
+                return;
+
+        /* wake up readers */
+        wake_up(&wait);
+}
 
 /*
  * Read a random buffer.
  */
-static int virtio_rng_read_buf(size_t len)
+static int virtio_rng_read_buf(void *buf, size_t len)
 {
-        struct vring *vr = &vq->vring;
-        int done = 0, ret, i;
         size_t n;
+        int ret;
 
         /* limit length to random data size */
         if (len > RANDOM_DATA_SIZE)
                 len = RANDOM_DATA_SIZE;
 
         /* add buffer */
-        ret = virtqueue_add_buf(vq, random_data, len);
+        ret = virtqueue_add_buf(vq, random_data, len, buf);
         if (ret)
                 return ret;
 
         /* kick queue */
         virtqueue_kick(vq);
 
-        /* poll the device */
-        for (i = 0; i < 100000000; i++) {
-                if (vr->used->idx != vq->last_used_idx) {
-                        done = 1;
-                        break;
-                }
+        /* wait for buffer */
+        while (!data_avail) {
+                /* handle signal */
+                if (signal_pending(current_task))
+                        return -EINTR;
 
-                __asm__ volatile("pause");
+                /* wait */
+                sleep_on(&wait);
         }
 
-        /* timeout */
-        if (!done)
-                return -EIO;
-
-        /* get buffer */
-        virtqueue_get_buf(vq, &n);
+        /* get buffer length */
+        n = data_avail;
         if (n > len)
                 n = len;
-
-        /* ack pending irq */
-        inb(vq->vdev->io_base + VIRTIO_PCI_ISR);
+        data_avail = 0;
 
         return n;
 }
@@ -76,7 +85,7 @@ static int virtio_rng_read(struct file *filp, char *buf, size_t len, off_t *off)
 
         while (len > 0) {
                 /* read random buffer */
-                ret = virtio_rng_read_buf(len);
+                ret = virtio_rng_read_buf(buf, len);
                 if (ret <= 0)
                         break;
 
@@ -129,7 +138,7 @@ static int virtio_rng_probe(struct pci_device *pci_dev, struct pci_device_id *id
                 return -ENOMEM;
 
         /* setup virtual queue */
-        vq = virtio_find_single_vq(vdev);
+        vq = virtio_find_single_vq(vdev, random_recv_done);
         if (IS_ERR(vq)) {
                 ret = PTR_ERR(vq);
                 goto err;

@@ -3,7 +3,11 @@
 #include <mm/paging.h>
 #include <fs/fs.h>
 #include <string.h>
+#include <stdio.h>
 #include <stderr.h>
+
+/* virtio device id */
+static int virtio_device_id = 0;
 
 /*
  * Detach a buffer.
@@ -11,6 +15,9 @@
 static void detach_buf(struct virtqueue *vq, uint32_t head)
 {
         uint32_t i;
+
+        /* clear data */
+        vq->data[head] = NULL;
 
 	/* put back on free list */
         for (i = head; vq->vring.desc[i].flags & VRING_DESC_F_NEXT;) {
@@ -27,23 +34,33 @@ static void detach_buf(struct virtqueue *vq, uint32_t head)
 /*
  * Get a buffer.
  */
-void virtqueue_get_buf(struct virtqueue *vq, size_t *len)
+void *virtqueue_get_buf(struct virtqueue *vq, size_t *len)
 {
+        void *ret;
         size_t i;
+
+        /* no buffers in queue */
+        if (vq->last_used_idx == vq->vring.used->idx) {
+		printf("virtqueue_get_buf: no more buffers in queue\n");
+		return NULL;
+	}
 
         /* get buffer */
         i = vq->vring.used->ring[vq->last_used_idx % vq->vring.num].id;
 	*len = vq->vring.used->ring[vq->last_used_idx % vq->vring.num].len;
 
         /* detach buffer */
+        ret = vq->data[i];
         detach_buf(vq, i);
 	vq->last_used_idx++;
+
+        return ret;
 }
 
 /*
  * Add a buffer.
  */
-int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len)
+int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len, void *data)
 {
         struct vring *vr = &vq->vring;
         int head, avail;
@@ -61,6 +78,9 @@ int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len)
         /* update free pointer */
         vq->num_free--;
         vq->free_head = head + vr->desc[head].next;
+
+        /* set data */
+        vq->data[head] = data;
 
         /* publish descriptor */
         avail = (vq->vring.avail->idx + vq->num_added++) % vq->vring.num;
@@ -100,18 +120,19 @@ static void vring_init(struct vring *vr, uint32_t num, void *p)
 /*
  * Create a new virtual queue.
  */
-static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int index, uint32_t num)
+static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int index, uint32_t num, vq_callback_t *callback)
 {
         struct virtqueue *vq;
         size_t size, i;
 
         /* allocate a new virt queue */
-        vq = (struct virtqueue *) kmalloc(sizeof(struct virtqueue));
+        vq = (struct virtqueue *) kmalloc(sizeof(struct virtqueue) + num * sizeof(void *));
         if (!vq)
                 return NULL;
 
         /* clear virtual queue */
         memset(vq, 0, sizeof(struct virtqueue));
+        vq->callback = callback;
 
         /* compute size of virtual queue */
         size = PAGE_ALIGN_UP(vring_size(num));
@@ -124,6 +145,9 @@ static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int ind
                 return NULL;
         }
 
+        /* clear memory */
+        memset(vq->queue, 0, size);
+
         /* init memory layout */
         vring_init(&vq->vring, num, vq->queue);
 
@@ -132,6 +156,7 @@ static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int ind
 	vq->free_head = 0;
 	for (i = 0; i < num - 1; i++)
 		vq->vring.desc[i].next = i + 1;
+        vq->data[i] = NULL;
 
         /* activate queue */
         outl(vdev->io_base + VIRTIO_PCI_QUEUE_PFN, (uint32_t) (__pa(vq->queue) >> VIRTIO_QUEUE_SHIFT));
@@ -147,7 +172,7 @@ static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int ind
 /*
  * Setup virtual queue.
  */
-static struct virtqueue *setup_vq(struct virtio_device *vdev, int index)
+static struct virtqueue *setup_vq(struct virtio_device *vdev, int index, vq_callback_t *callback)
 {
         struct virtqueue *vq;
         uint16_t num;
@@ -165,7 +190,7 @@ static struct virtqueue *setup_vq(struct virtio_device *vdev, int index)
                 num = 256;
 
         /* create virtual queue */
-        vq = vring_new_virtqueue(vdev, index, num);
+        vq = vring_new_virtqueue(vdev, index, num, callback);
         if (!vq)
                 return ERR_PTR(-ENOMEM);
 
@@ -191,6 +216,12 @@ static void virtio_del_vqs(struct virtio_device *vdev)
         struct list_head *pos, *n;
         struct virtqueue *vq;
 
+        /* free irq */
+        if (vdev->irq_enabled) {
+                free_irq(vdev->pci_dev->irq, vdev);
+                vdev->irq_enabled = 0;
+        }
+
         /* free virtual queues */
         list_for_each_safe(pos, n, &vdev->vqs) {
                 vq = list_entry(pos, struct virtqueue, list);
@@ -199,16 +230,74 @@ static void virtio_del_vqs(struct virtio_device *vdev)
 }
 
 /*
+ * Virtual queue irq interrupt.
+ */
+static void vring_interrupt(struct virtqueue *vq)
+{
+        if (vq->last_used_idx == vq->vring.used->idx) {
+                printf("vring_interrupt: no work for virtual queue\n");
+                return;
+	}
+
+	if (vq->callback)
+		vq->callback(vq);
+}
+
+/*
+ * Virtio IRQ handler.
+ */
+static void virtio_irq_handler(struct registers *regs, void *dev_instance)
+{
+        struct virtio_device *vdev = dev_instance;
+        struct list_head *pos;
+        struct virtqueue *vq;
+	uint8_t isr;
+
+        /* unused registers */
+        UNUSED(regs);
+
+        /* read isr */
+	isr = inb(vdev->io_base + VIRTIO_PCI_ISR);
+	if (!isr)
+                return;
+
+        /* handle virtqueues */
+        list_for_each(pos, &vdev->vqs) {
+                vq = list_entry(pos, struct virtqueue, list);
+		vring_interrupt(vq);
+	}
+}
+
+/*
+ * Request irq.
+ */
+static int virtio_request_irq(struct virtio_device *vdev)
+{
+	int ret;
+
+	ret = request_irq(vdev->pci_dev->irq, virtio_irq_handler, SA_SHIRQ, vdev->name, vdev);
+        if (ret == 0)
+		vdev->irq_enabled = 1;
+
+	return ret;
+}
+
+/*
  * Find virtqueues.
  */
-static int virtio_find_vqs(struct virtio_device *vdev, size_t nvqs, struct virtqueue *vqs[])
+static int virtio_find_vqs(struct virtio_device *vdev, size_t nvqs, struct virtqueue *vqs[], vq_callback_t *callbacks[])
 {
         size_t i;
         int ret;
 
+        /* request irq */
+	ret = virtio_request_irq(vdev);
+	if (ret)
+		return ret;
+
         /* set up virt queues */
         for (i = 0; i < nvqs; i++) {
-                vqs[i] = setup_vq(vdev, i);
+                vqs[i] = setup_vq(vdev, i, callbacks[i]);
                 if (IS_ERR(vqs[i])) {
                         ret = PTR_ERR(vqs[i]);
                         goto err;
@@ -224,12 +313,13 @@ err:
 /*
  * Find a single virtual queue.
  */
-struct virtqueue *virtio_find_single_vq(struct virtio_device *vdev)
+struct virtqueue *virtio_find_single_vq(struct virtio_device *vdev, vq_callback_t *callback)
 {
+        vq_callback_t *callbacks[] = { callback };
 	struct virtqueue *vq;
         int ret;
 
-        ret = virtio_find_vqs(vdev, 1, &vq);
+        ret = virtio_find_vqs(vdev, 1, &vq, callbacks);
         if (ret)
 		return ERR_PTR(ret);
 
@@ -250,7 +340,11 @@ struct virtio_device *virtio_device_create(struct pci_device *pci_dev)
 
         /* clear device */
         memset(vdev, 0, sizeof(struct virtio_device));
+        vdev->pci_dev = pci_dev;
         INIT_LIST_HEAD(&vdev->vqs);
+
+        /* set name */
+        snprintf(vdev->name, VIRTIO_DEV_NAME_LEN, "virtio%d\n", virtio_device_id++);
 
         /* enable pci device */
         vdev->io_base = pci_dev->bar0 & ~(0x03);

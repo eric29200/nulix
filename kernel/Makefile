@@ -7,7 +7,7 @@ C_SOURCES 	= $(wildcard */*.c */*/*.c)
 AS_SOURCES 	= $(wildcard */*.S)
 PSF_SOURCES 	= $(wildcard */*.psf)
 OBJS 		= ${C_SOURCES:.c=.o} ${AS_SOURCES:.S=.o} ${PSF_SOURCES:.psf=.o}
-CFLAGS		= -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -I$(HEADER_PATH) -D__KERNEL__ -g -O2
+CFLAGS		= -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra -I$(HEADER_PATH) -D__KERNEL__ -g -O3
 LDFLAGS		= -N -T link.ld -m elf_i386
 LIBGCC		= -L$(shell dirname `$(CC) $(CFLAGS) -print-libgcc-file-name`) -lgcc
 
