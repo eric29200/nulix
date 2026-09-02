@@ -136,7 +136,7 @@ static void remap_pte_range(pte_t *pte, uint32_t start, size_t size, uint32_t ph
 
 		/* set page table entry */
 		pte_clear(pte);
-		page = &page_array[MAP_NR(__va(phys_addr))];
+		page = virt_to_page(__va(phys_addr));
 		if (!VALID_PAGE(page) || PageReserved(page))
 			*pte = mk_pte_phys(phys_addr, pgprot);
 

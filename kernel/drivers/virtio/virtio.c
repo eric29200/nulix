@@ -60,24 +60,49 @@ void *virtqueue_get_buf(struct virtqueue *vq, size_t *len)
 /*
 * Add a buffer.
 */
-int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len, void *data)
+int virtqueue_add_buf(struct virtqueue *vq, struct scatterlist sg[], size_t out_num, size_t in_num, void *data)
 {
 	struct vring *vr = &vq->vring;
+	uint32_t prev = 0, i;
 	int head, avail;
 
+	/* check counts */
+	if (out_num + in_num > vr->num)
+		panic("virtqueue_add_buf: out_num + in_num > vr->num\n");
+	if (out_num + in_num == 0)
+		panic("virtqueue_add_buf: out_num and in_num = 0\n");
+
 	/* no free buffer */
-	if (vq->num_free < 1)
+	if (vq->num_free < out_num + in_num)
 		return -ENOSPC;
 
-	/* set descriptor */
+	/* we're about to use some buffers from the free list */
+	vq->num_free -= out_num + in_num;
+
+	/* set output descriptors */
 	head = vq->free_head;
-	vr->desc[head].addr = __pa(buf);
-	vr->desc[head].len = len;
-	vr->desc[head].flags = VRING_DESC_F_WRITE;
+	for (i = vq->free_head; out_num != 0; i = vq->vring.desc[i].next, out_num--) {
+		vq->vring.desc[i].flags = VRING_DESC_F_NEXT;
+		vq->vring.desc[i].addr = sg_phys(sg);
+		vq->vring.desc[i].len = sg->length;
+		prev = i;
+		sg++;
+	}
+
+	/* set input descriptors */
+	for (; in_num != 0; i = vq->vring.desc[i].next, in_num--) {
+		vq->vring.desc[i].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
+		vq->vring.desc[i].addr = sg_phys(sg);
+		vq->vring.desc[i].len = sg->length;
+		prev = i;
+		sg++;
+	}
+
+	/* last one doesn't continue */
+	vq->vring.desc[prev].flags &= ~VRING_DESC_F_NEXT;
 
 	/* update free pointer */
-	vq->num_free--;
-	vq->free_head = head + vr->desc[head].next;
+	vq->free_head = i;
 
 	/* set data */
 	vq->data[head] = data;

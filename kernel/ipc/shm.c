@@ -127,7 +127,7 @@ static struct page *shm_nopage(struct vm_area *vma, uint32_t address)
 	memset((void *) new_page, 0, PAGE_SIZE);
 
 	/* get page and add it to cache */
-	page = &page_array[MAP_NR(new_page)];
+	page = virt_to_page(new_page);
 	add_to_page_cache(page, inode, offset);
 
 	return page;

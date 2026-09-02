@@ -2,6 +2,7 @@
 #include <drivers/virtio/virtio.h>
 #include <drivers/pci/pci.h>
 #include <drivers/char/misc.h>
+#include <lib/scatterlist.h>
 #include <proc/sched.h>
 #include <mm/paging.h>
 #include <string.h>
@@ -34,6 +35,7 @@ static void random_recv_done(struct virtqueue *vq)
 */
 static int virtio_rng_read_buf(void *buf, size_t len)
 {
+	struct scatterlist sg;
 	size_t n;
 	int ret;
 
@@ -41,8 +43,11 @@ static int virtio_rng_read_buf(void *buf, size_t len)
 	if (len > RANDOM_DATA_SIZE)
 		len = RANDOM_DATA_SIZE;
 
+	/* init scatter list */
+	sg_init_one(&sg, random_data, len);
+
 	/* add buffer */
-	ret = virtqueue_add_buf(vq, random_data, len, buf);
+	ret = virtqueue_add_buf(vq, &sg, 0, 1, buf);
 	if (ret)
 		return ret;
 

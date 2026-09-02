@@ -2,6 +2,7 @@
 #define _VIRTIO_H_
 
 #include <drivers/pci/pci.h>
+#include <lib/scatterlist.h>
 #include <stddef.h>
 #include <x86/io.h>
 
@@ -102,7 +103,7 @@ struct virtio_device *virtio_device_create(struct pci_device *pci_dev);
 void virtio_device_free(struct virtio_device *vdev);
 struct virtqueue *virtio_find_single_vq(struct virtio_device *vdev, vq_callback_t *callback);
 void virtqueue_kick(struct virtqueue *vq);
-int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len, void *data);
+int virtqueue_add_buf(struct virtqueue *vq, struct scatterlist sg[], size_t out_num, size_t in_num, void *data);
 void *virtqueue_get_buf(struct virtqueue *vq, size_t *len);
 
 /*

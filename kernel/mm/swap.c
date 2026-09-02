@@ -434,7 +434,7 @@ static void rw_swap_page_base(int rw, uint32_t entry, struct page *page)
  */
 static void rw_swap_page(int rw, uint32_t entry, char *buffer)
 {
-	struct page *page = &page_array[MAP_NR(buffer)];
+	struct page *page = virt_to_page(buffer);
 
 	/* check page */
 	if (page->inode && page->inode != &swapper_inode)
@@ -457,7 +457,7 @@ static void rw_swap_page(int rw, uint32_t entry, char *buffer)
  */
 static void rw_swap_page_nocache(int rw, uint32_t entry, char *buffer)
 {
-	struct page *page = &page_array[MAP_NR(buffer)];
+	struct page *page = virt_to_page(buffer);
 
 	/* lock page */
 	wait_on_page(page);

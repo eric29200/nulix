@@ -87,6 +87,9 @@ typedef uint32_t pte_t;
 #define page_address(page)		((page)->virtual ? (page)->virtual : __va(((page) - page_array) * PAGE_SIZE))
 #define MAP_NR(addr)			(__pa(addr) >> PAGE_SHIFT)
 #define VALID_PAGE(page)		((uint32_t) (page - page_array) < nr_pages)
+#define virt_to_page(addr)		(&page_array[MAP_NR(addr)])
+#define page_to_phys(page)		(((uint32_t) ((page) - page_array)) << PAGE_SHIFT)
+#define offset_in_page(addr)		((uint32_t) (addr) & ~PAGE_MASK)
 
 #define __mk_pte(page_nr, prot)		(((page_nr) << PAGE_SHIFT) | (prot))
 #define mk_pte(page, prot)		__mk_pte((page) - page_array, (prot))
