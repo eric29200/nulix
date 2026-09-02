@@ -6,54 +6,47 @@
 #include <stderr.h>
 
 /*
- * Setup virtual queue.
+ * Init memory layout of a queue.
  */
-static struct virtqueue *setup_vq(struct virtio_device *vdev, int index)
+static void vring_init(struct virtqueue *vq, uint32_t num, void *p)
 {
-        size_t size, used_off;
-        struct virtqueue *vq;
-        int ret;
+        size_t used_off;
 
-        /* select queue 0 */
-        outw(vdev->io_base + VIRTIO_PCI_QUEUE_SEL, index);
+	vq->num = num;
+	vq->desc = p;
+	vq->avail = p + num * sizeof(struct vring_desc);
+        used_off = (uint32_t) num * sizeof(struct vring_desc) + sizeof(uint16_t) * (2 + num);
+        used_off = (used_off + (VIRTIO_QUEUE_ALIGN - 1)) & ~(uint32_t) (VIRTIO_QUEUE_ALIGN - 1);
+        vq->used = (struct vring_used *) (p + used_off);
+        vq->last_used_idx = 0;
+}
+
+/*
+ * Create a new virtual queue.
+ */
+static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int index, uint32_t num)
+{
+        struct virtqueue *vq;
+        size_t size;
 
         /* allocate a new virt queue */
         vq = (struct virtqueue *) kmalloc(sizeof(struct virtqueue));
         if (!vq)
-                return ERR_PTR(-ENOMEM);
-
-        /* check if queue is either not available or already active */
-        vq->num = inw(vdev->io_base + VIRTIO_PCI_QUEUE_SIZE);
-        if (!vq->num || inl(vdev->io_base + VIRTIO_PCI_QUEUE_PFN)) {
-                ret = -ENOENT;
-                goto err;
-        }
-
-        /* fix queue size */
-        if (vq->num > 256)
-                vq->num = 256;
+                return NULL;
 
         /* compute size of virtual queue */
-        size = PAGE_ALIGN_UP(vring_size(vq->num));
+        size = PAGE_ALIGN_UP(vring_size(num));
         vq->queue_order = get_order(size);
 
         /* allocate queue */
         vq->queue = get_free_pages(vq->queue_order);
         if (!vq->queue) {
-                ret = -ENOMEM;
-                goto err;
+                kfree(vq);
+                return NULL;
         }
 
-        /* clear queue */
-        memset((void *) vq->queue, 0, size);
-
-        /* setup queue */
-        vq->desc  = (struct vring_desc *) vq->queue;
-        vq->avail = (struct vring_avail *) (vq->queue + vq->num * sizeof(struct vring_desc));
-        used_off = (uint32_t) vq->num * sizeof(struct vring_desc) + sizeof(uint16_t) * (2 + vq->num);
-        used_off = (used_off + (VIRTIO_QUEUE_ALIGN - 1)) & ~(uint32_t) (VIRTIO_QUEUE_ALIGN - 1);
-        vq->used = (struct vring_used *) (vq->queue + used_off);
-        vq->last_used_idx = 0;
+        /* init memory layout */
+        vring_init(vq, num, vq->queue);
 
         /* activate queue */
         outl(vdev->io_base + VIRTIO_PCI_QUEUE_PFN, (uint32_t) (__pa(vq->queue) >> VIRTIO_QUEUE_SHIFT));
@@ -64,9 +57,34 @@ static struct virtqueue *setup_vq(struct virtio_device *vdev, int index)
         list_add_tail(&vq->list, &vdev->vqs);
 
         return vq;
-err:
-        kfree(vq);
-        return ERR_PTR(ret);
+}
+
+/*
+ * Setup virtual queue.
+ */
+static struct virtqueue *setup_vq(struct virtio_device *vdev, int index)
+{
+        struct virtqueue *vq;
+        uint16_t num;
+
+        /* select queue */
+        outw(vdev->io_base + VIRTIO_PCI_QUEUE_SEL, index);
+
+        /* check if queue is either not available or already active */
+        num = inw(vdev->io_base + VIRTIO_PCI_QUEUE_SIZE);
+        if (!num || inl(vdev->io_base + VIRTIO_PCI_QUEUE_PFN))
+                return ERR_PTR(-ENOENT);
+
+        /* fix queue size */
+        if (num > 256)
+                num = 256;
+
+        /* create virtual queue */
+        vq = vring_new_virtqueue(vdev, index, num);
+        if (!vq)
+                return ERR_PTR(-ENOMEM);
+
+        return vq;
 }
 
 /*
