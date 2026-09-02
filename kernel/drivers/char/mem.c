@@ -92,7 +92,7 @@ int random_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 	if ((iter = (n & 0x03)) != 0)
 		random_unaligned((unsigned char *)&buf32[i], iter);
 
-    	return n;
+	return n;
 }
 
 /*

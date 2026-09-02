@@ -353,33 +353,33 @@ extern const int max_vals[];
 #define K_CAPSSHIFT			K(KT_SHIFT, KG_CAPSSHIFT)
 
 #define E0_KPENTER 			96
-#define E0_RCTRL   			97
-#define E0_KPSLASH 			98
-#define E0_PRSCR   			99
-#define E0_RALT    			100
-#define E0_BREAK   			101
-#define E0_HOME    			102
-#define E0_UP      			103
-#define E0_PGUP    			104
-#define E0_LEFT    			105
-#define E0_RIGHT   			106
-#define E0_END     			107
-#define E0_DOWN    			108
-#define E0_PGDN    			109
-#define E0_INS     			110
-#define E0_DEL     			111
-#define E0_MACRO   			112
-#define E0_F13     			113
-#define E0_F14     			114
-#define E0_HELP    			115
-#define E0_DO      			116
-#define E0_F17     			117
-#define E0_KPMINPLUS 			118
+#define E0_RCTRL			97
+#define E0_KPSLASH			98
+#define E0_PRSCR			99
+#define E0_RALT				100
+#define E0_BREAK			101
+#define E0_HOME				102
+#define E0_UP				103
+#define E0_PGUP				104
+#define E0_LEFT				105
+#define E0_RIGHT			106
+#define E0_END	 			107
+#define E0_DOWN				108
+#define E0_PGDN				109
+#define E0_INS	 			110
+#define E0_DEL	 			111
+#define E0_MACRO			112
+#define E0_F13	 			113
+#define E0_F14	 			114
+#define E0_HELP				115
+#define E0_DO				116
+#define E0_F17	 			117
+#define E0_KPMINPLUS			118
 #define E0_OK				124
-#define E0_MSLW				125
+#define E0_MSLW			125
 #define E0_MSRW				126
 #define E0_MSTM				127
-#define E1_PAUSE   			119
+#define E1_PAUSE			119
 #define E_TABSZ				256
 
 #define VC_XLATE			0	/* translate keycodes using keymap */

@@ -409,7 +409,7 @@ int p9pdu_readf(struct p9_fcall *pdu, const char *fmt, ...)
  */
 int p9pdu_prepare(struct p9_fcall *pdu, int16_t tag, int8_t type)
 {
-	/* write packet size (0 for now), type and tag  */
+	/* write packet size (0 for now), type and tag */
 	pdu->id = type;
 	return p9pdu_writef(pdu, "dbw", 0, type, tag);
 }

@@ -974,8 +974,8 @@ static ssize_t console_write(struct tty *tty)
 	/* get console */
 	vc = tty->driver_data;
 
-        /* clear selection */
-        if (vc == &console_table[sel_cons])
+	/* clear selection */
+	if (vc == &console_table[sel_cons])
 		clear_selection(vc);
 
 	/* get characters from write queue */
@@ -1124,37 +1124,37 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 			return 0;
 		case KDGKBMODE:
 			switch(kbd->kbd_mode) {
-				  case VC_RAW:
+				case VC_RAW:
 					*((int *) arg) = K_RAW;
 					break;
-				  case VC_MEDIUMRAW:
+				case VC_MEDIUMRAW:
 					*((int *) arg) = K_MEDIUMRAW;
 					break;
-				  case VC_XLATE:
+				case VC_XLATE:
 					*((int *) arg) = K_XLATE;
 					break;
-				  case VC_UNICODE:
+				case VC_UNICODE:
 					*((int *) arg) = K_UNICODE;
 					break;
-				  default:
+				default:
 					break;
 			}
 			return 0;
 		case KDSKBMODE:
 			switch(arg) {
-				  case K_RAW:
+				case K_RAW:
 					kbd->kbd_mode = VC_RAW;
 					break;
-				  case K_MEDIUMRAW:
+				case K_MEDIUMRAW:
 					kbd->kbd_mode = VC_MEDIUMRAW;
 					break;
-				  case K_XLATE:
+				case K_XLATE:
 					kbd->kbd_mode = VC_XLATE;
 					break;
-				  case K_UNICODE:
+				case K_UNICODE:
 					kbd->kbd_mode = VC_UNICODE;
 					break;
-				  default:
+				default:
 					return -EINVAL;
 			}
 			return 0;
@@ -1229,7 +1229,7 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 			*((int *) arg) = i < NR_CONSOLES ? i + 1 : -1;
 			return 0;
 		case TIOCLINUX:
-		  	return tioclinux(tty, arg);
+			return tioclinux(tty, arg);
 		default:
 			break;
 	}

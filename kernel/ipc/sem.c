@@ -90,7 +90,7 @@ static void sem_freeary(int id)
 
 	/* clear undos */
 	for (un = sma->undo; un; un = un->id_next)
-	        un->semadj = 0;
+		un->semadj = 0;
 
 	/* wake up processes */
 	wake_up(&sma->sem_wait);
@@ -166,7 +166,7 @@ int sys_semget(key_t key, int nsems, int semflg)
 	int id;
 
 	/* check number of semaphores */
-	if (nsems < 0  || nsems > SEMMSL)
+	if (nsems < 0 || nsems > SEMMSL)
 		return -EINVAL;
 
 	/* private resource : create a new semaphores array */
@@ -510,8 +510,8 @@ static int semctl_rmid(int semid)
 		return -EIDRM;
 
 	/* check permissions */
-	if (current_task->euid != sma->sem_perm.cuid &&  current_task->euid != sma->sem_perm.uid)
-	    return -EPERM;
+	if (current_task->euid != sma->sem_perm.cuid && current_task->euid != sma->sem_perm.uid)
+		return -EPERM;
 
 	/* free semaphores array */
 	sem_freeary(semid);

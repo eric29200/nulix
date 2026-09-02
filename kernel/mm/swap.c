@@ -363,7 +363,7 @@ static void rw_swap_page_base(int rw, uint32_t entry, struct page *page)
 
 	/* check offset */
 	if (p->swap_map && !p->swap_map[offset]) {
-		printf("rw_swap_page_base: Trying to %s unallocated swap (%08lx)\n",  rw == READ ? "read" : "write", entry);
+		printf("rw_swap_page_base: Trying to %s unallocated swap (%08lx)\n", rw == READ ? "read" : "write", entry);
 		return;
 	}
 
@@ -601,7 +601,7 @@ int swap_in(struct vm_area *vma, pte_t *pte, uint32_t entry, int write_access)
 	delete_from_swap_cache(page);
 	*pte = pte_mkwrite(pte_mkdirty(mk_pte(page, vma->vm_page_prot)));
 
-  	return 1;
+	return 1;
 }
 
 /*
@@ -1085,9 +1085,7 @@ static void unuse_pte(struct vm_area *vma, pte_t *pte, uint32_t entry, struct pa
 		return;
 
 	if (pte_present(*pte)) {
-		/* If this entry is swap-cached, then page must already
-                   hold the right address for any copies in physical
-                   memory */
+		/* If this entry is swap-cached, then page must already hold the right address for any copies in physical memory */
 		if (pte_page(*pte) != page)
 			return;
 		/* We will be removing the swap cache in a moment, so... */
@@ -1208,7 +1206,7 @@ found_entry:
 		if (!page) {
 			if (si->swap_map[i] == 0)
 				continue;
-  			return -ENOMEM;
+			return -ENOMEM;
 		}
 
 		/* try to unuse swap pages for each process */

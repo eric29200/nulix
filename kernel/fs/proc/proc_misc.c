@@ -67,10 +67,10 @@ static int loadavg_read_proc(char *page, char **start, off_t off, size_t count, 
 
 	/* print load average in buffer */
 	len = sprintf(page, "%d.%d %d.%d %d.%d %d/%d %d\n",
-		      LOAD_INT(a), LOAD_FRAC(a),
-		      LOAD_INT(b), LOAD_FRAC(b),
-		      LOAD_INT(c), LOAD_FRAC(c),
-		      nrun, nr_tasks, last_pid);
+		LOAD_INT(a), LOAD_FRAC(a),
+		LOAD_INT(b), LOAD_FRAC(b),
+		LOAD_INT(c), LOAD_FRAC(c),
+		nrun, nr_tasks, last_pid);
 
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }

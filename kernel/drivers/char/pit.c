@@ -37,10 +37,10 @@ static inline uint32_t do_gettimeoffset(void)
 	eax -= last_tsc_low;
 
 	/*
-         * Time offset = (tsc_low delta) * fast_gettimeoffset_quotient
-         *             = (tsc_low delta) * (usecs_per_clock)
-         *             = (tsc_low delta) * (usecs_per_jiffy / clocks_per_jiffy)
-         */
+	 * Time offset = (tsc_low delta) * fast_gettimeoffset_quotient
+	 *             = (tsc_low delta) * (usecs_per_clock)
+	 *             = (tsc_low delta) * (usecs_per_jiffy / clocks_per_jiffy)
+	 */
 	__asm__("mull %2"
 		:"=a" (eax), "=d" (edx)
 		:"g" (tsc_quotient),

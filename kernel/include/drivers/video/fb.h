@@ -33,7 +33,7 @@
 #define FB_AUX_TEXT_CGA			1	/* CGA/EGA/VGA Color text */
 #define FB_AUX_TEXT_S3_MMIO		2	/* S3 MMIO fasttext */
 #define FB_AUX_TEXT_MGA_STEP16		3	/* MGA Millenium I: text, attr, 14 reserved bytes */
-#define FB_AUX_TEXT_MGA_STEP8		4	/* other MGAs:      text, attr,  6 reserved bytes */
+#define FB_AUX_TEXT_MGA_STEP8		4	/* other MGAs: text, attr, 6 reserved bytes */
 
 #define FB_VISUAL_MONO01		0	/* Monochr. 1=Black 0=White */
 #define FB_VISUAL_MONO10		1	/* Monochr. 1=White 0=Black */
@@ -61,7 +61,7 @@ struct fb_fix_screeninfo {
 	uint16_t	ywrapstep;		/* zero if no hardware ywrap */
 	uint32_t	line_length;		/* length of a line in bytes */
 	unsigned long	mmio_start;		/* Start of Memory Mapped I/O (physical address) */
-	uint32_t	mmio_len;		/* Length of Memory Mapped I/O  */
+	uint32_t	mmio_len;		/* Length of Memory Mapped I/O */
 	uint32_t	accel;			/* Indicate to driver which specific chip/card we have	*/
 	uint16_t	capabilities;		/* see FB_CAP_* */
 	uint16_t	reserved[2];		/* Reserved for future compatibility */
@@ -87,7 +87,7 @@ struct fb_var_screeninfo {
 	uint32_t		xoffset;		/* offset from virtual to visible */
 	uint32_t		yoffset;		/* resolution */
 	uint32_t		bits_per_pixel;		/* guess what */
-	uint32_t		grayscale;		/* 0 = color, 1 = grayscale,  >1 = FOURCC */
+	uint32_t		grayscale;		/* 0 = color, 1 = grayscale, >1 = FOURCC */
 	struct fb_bitfield	red;			/* bitfield in fb mem if true color, */
 	struct fb_bitfield	green;			/* else only length is significant */
 	struct fb_bitfield	blue;

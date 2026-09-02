@@ -120,7 +120,7 @@ struct p9_fcall {
  * 9p request.
  */
 struct p9_request {
-	struct p9_fcall  		tc;
+	struct p9_fcall			tc;
 	struct p9_fcall 		rc;
 	int				t_err;
 	int				status;

@@ -620,7 +620,7 @@ int tty_ioctl(struct inode *inode, struct file *filp, int request, unsigned long
 			*((pid_t *) arg) = tty->session;
 			break;
 		case TIOCSCTTY:
-		   	return tiocsctty(tty);
+			return tiocsctty(tty);
 		case TIOCGLCKTRMIOS:
 		case TIOCSLCKTRMIOS:
 			break;

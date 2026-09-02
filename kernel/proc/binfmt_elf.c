@@ -23,9 +23,9 @@
 static int elf_check(struct elf_header *elf_header)
 {
 	if (elf_header->e_ident[EI_MAG0] != ELFMAG0
-	    || elf_header->e_ident[EI_MAG1] != ELFMAG1
-	    || elf_header->e_ident[EI_MAG2] != ELFMAG2
-	    || elf_header->e_ident[EI_MAG3] != ELFMAG3)
+		|| elf_header->e_ident[EI_MAG1] != ELFMAG1
+		|| elf_header->e_ident[EI_MAG2] != ELFMAG2
+		|| elf_header->e_ident[EI_MAG3] != ELFMAG3)
 		return -ENOEXEC;
 
 	if (elf_header->e_ident[EI_CLASS] != ELFCLASS32)
@@ -40,8 +40,7 @@ static int elf_check(struct elf_header *elf_header)
 	if (elf_header->e_machine != EM_386)
 		return -ENOEXEC;
 
-	if (elf_header->e_type != ET_EXEC
-	    && elf_header->e_type != ET_DYN)
+	if (elf_header->e_type != ET_EXEC && elf_header->e_type != ET_DYN)
 		return -ENOEXEC;
 
 	return 0;
@@ -442,7 +441,7 @@ static int elf_load_binary(struct binprm *bprm)
 	/* create ELF tables */
 	sp = elf_create_tables(bprm, &elf_header, load_addr, load_bias, interp_load_addr);
 
-	/* update task sections  */
+	/* update task sections */
 	current_task->mm->start_brk = elf_brk;
 	current_task->mm->end_brk = elf_brk;
 	current_task->mm->start_code = start_code;

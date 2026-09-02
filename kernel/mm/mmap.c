@@ -598,7 +598,7 @@ int do_munmap(uint32_t addr, size_t len)
 	if (!mpnt)
 		return 0;
 
-	/* we have  addr < mpnt->vm_end  */
+	/* we have addr < mpnt->vm_end */
 	if (mpnt->vm_start >= addr+len)
 		return 0;
 

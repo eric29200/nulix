@@ -537,7 +537,7 @@ good_area:
 bad_area:
 	/* output message */
 	printf("Page fault at address=0x%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d (process %d - %s at 0x%x)\n",
-	       fault_addr, present, write_access, user, reserved, id, current_task->pid, current_task->name, regs->eip);
+		fault_addr, present, write_access, user, reserved, id, current_task->pid, current_task->name, regs->eip);
 
 	/* user mode : exit process */
 	if (user)

@@ -31,11 +31,11 @@ struct pid_entry {
 };
 
 #define NOD(NAME, MODE, I_OP, OP) {			\
-	.name = (NAME),					\
-	.len  = sizeof(NAME) - 1,			\
-	.mode = MODE,					\
-	.i_op = I_OP,					\
-	.op   = OP,					\
+	.name	= (NAME),				\
+	.len	= sizeof(NAME) - 1,			\
+	.mode	= MODE,					\
+	.i_op	= I_OP,					\
+	.op	= OP,					\
 }
 
 #define REG(NAME, MODE, I_OP)		NOD(NAME, (S_IFREG | (MODE)), &I_OP, {})
@@ -157,7 +157,7 @@ static int proc_fill_cache(struct file *filp, void *dirent, filldir_t filldir, c
 
 	/* hash name */
 	qname.name = name;
-	qname.len  = len;
+	qname.len = len;
 	qname.hash = full_name_hash(name, len);
 
 	/* lookup and create inode if needed */

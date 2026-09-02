@@ -71,7 +71,7 @@ static int build_path_from_dentry(struct dentry *dentry, char ***names)
 
 	/* set names */
 	for (ds = dentry, i = n-1; i >= 0; i--, ds = ds->d_parent)
-		wnames[i] = (char  *) ds->d_name.name;
+		wnames[i] = (char *) ds->d_name.name;
 
 	*names = wnames;
 	return n;

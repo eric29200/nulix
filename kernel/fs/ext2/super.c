@@ -202,8 +202,7 @@ static struct super_block *ext2_read_super(struct super_block *sb, const char *d
 	sbi->s_inodes_per_group = sbi->s_es->s_inodes_per_group;
 	sbi->s_itb_per_group = sbi->s_inodes_per_group / sbi->s_inodes_per_block;
 	sbi->s_desc_per_block = sb->s_blocksize / sizeof(struct ext2_group_desc);
-	sbi->s_groups_count = (sbi->s_es->s_blocks_count - sbi->s_es->s_first_data_block
-			       + sbi->s_blocks_per_group - 1) / sbi->s_blocks_per_group;
+	sbi->s_groups_count = (sbi->s_es->s_blocks_count - sbi->s_es->s_first_data_block + sbi->s_blocks_per_group - 1) / sbi->s_blocks_per_group;
 	sbi->s_gdb_count = (sbi->s_groups_count + sbi->s_desc_per_block - 1) / sbi->s_desc_per_block;
 
 	/* allocate group descriptors buffers */

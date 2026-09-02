@@ -15,8 +15,8 @@
 
 
 /* msgrcv options */
-#define MSG_NOERROR    		010000		/* no error if message is too big */
-#define MSG_EXCEPT      	020000		/* recv any msg except of specified type.*/
+#define MSG_NOERROR		010000		/* no error if message is too big */
+#define MSG_EXCEPT		020000		/* recv any msg except of specified type.*/
 
 /* ipcs ctl commands */
 #define MSG_STAT		11
@@ -26,8 +26,8 @@
  * Message buffer (for msgsnd and msgrcv calls).
  */
 struct msgbuf {
-	long			mtype;         /* type of message */
-	char			mtext[1];      /* message text */
+	long			mtype;		/* type of message */
+	char			mtext[1];	/* message text */
 };
 
 /*

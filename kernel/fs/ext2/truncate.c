@@ -190,8 +190,7 @@ void ext2_truncate(struct inode *inode)
 	ext2_free_direct_blocks(inode);
 	ext2_free_indirect_blocks(inode, EXT2_NDIR_BLOCKS, &ext2_inode->i_data[EXT2_IND_BLOCK], addr_per_block);
 	ext2_free_dindirect_blocks(inode, EXT2_NDIR_BLOCKS + addr_per_block, &ext2_inode->i_data[EXT2_DIND_BLOCK], addr_per_block);
-	ext2_free_tindirect_blocks(inode, EXT2_NDIR_BLOCKS + addr_per_block + addr_per_block * addr_per_block,
-				   &ext2_inode->i_data[EXT2_TIND_BLOCK], addr_per_block);
+	ext2_free_tindirect_blocks(inode, EXT2_NDIR_BLOCKS + addr_per_block + addr_per_block * addr_per_block, &ext2_inode->i_data[EXT2_TIND_BLOCK], addr_per_block);
 
 	/* mark inode dirty */
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;

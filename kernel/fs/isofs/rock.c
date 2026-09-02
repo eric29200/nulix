@@ -93,14 +93,14 @@ struct rock_ridge {
 
 #define SIG(a, b)		((a << 8) | b)
 
-#define RR_PX_F			1   /* POSIX attributes */
-#define RR_PN_F			2   /* POSIX devices */
-#define RR_SL_F			4   /* Symbolic link */
-#define RR_NM_F			8   /* Alternate Name */
-#define RR_CL_F			16  /* Child link */
-#define RR_PL_F			32  /* Parent link */
-#define RR_RE_F			64  /* Relocation directory */
-#define RR_TF_F			128 /* Timestamps */
+#define RR_PX_F			1		/* POSIX attributes */
+#define RR_PN_F			2		/* POSIX devices */
+#define RR_SL_F			4		/* Symbolic link */
+#define RR_NM_F			8		/* Alternate Name */
+#define RR_CL_F			16		/* Child link */
+#define RR_PL_F			32		/* Parent link */
+#define RR_RE_F			64		/* Relocation directory */
+#define RR_TF_F			128		/* Timestamps */
 
 #define TF_CREATE		1
 #define TF_MODIFY		2
@@ -308,7 +308,7 @@ repeat:
 
 		/* handle command */
 		switch(sig) {
-      			case SIG('R', 'R'):
+			case SIG('R', 'R'):
 				if ((rr->u.RR.flags[0] & RR_NM_F) == 0)
 					goto out;
 				break;

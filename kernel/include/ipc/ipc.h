@@ -14,9 +14,9 @@
 #define SEQ_MULTIPLIER		(IPCMNI)
 
 #define IPC_OLD			0		/* old version (no 32-bit UID support on many architectures) */
-#define IPC_64			0x0100  	/* new version (support 32-bit UIDs, bigger message sizes, etc. */
+#define IPC_64			0x0100		/* new version (support 32-bit UIDs, bigger message sizes, etc. */
 
-/*  Control commands */
+/* Control commands */
 #define IPC_RMID		0
 #define IPC_SET			1
 #define IPC_STAT		2

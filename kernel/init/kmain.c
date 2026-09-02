@@ -168,9 +168,9 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 				break;
 			case MULTIBOOT_TAG_TYPE_MODULE:
 				printf("Module at 0x%x-0x%x. Command line %s\n",
-				       ((struct multiboot_tag_module *) tag)->mod_start,
-				       ((struct multiboot_tag_module *) tag)->mod_end,
-				       ((struct multiboot_tag_module *) tag)->cmdline);
+					((struct multiboot_tag_module *) tag)->mod_start,
+					((struct multiboot_tag_module *) tag)->mod_end,
+					((struct multiboot_tag_module *) tag)->cmdline);
 				break;
 			case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
 				printf("mem_lower = %uKB, mem_upper = %uKB\n",

@@ -22,11 +22,11 @@ static int random_init(const unsigned char *seed, size_t seed_siz)
 		i++;
 
 		if (i >= sizeof(z))
-	    		i = 0;
+			i = 0;
 
 		j++;
 		if (j >= seed_siz)
-	    		j = 0;
+			j = 0;
 	}
 
 	rand_initialized = 1;

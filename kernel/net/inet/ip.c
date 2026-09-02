@@ -48,7 +48,7 @@ int ip_chk_addr(uint32_t addr)
  */
 uint32_t ip_my_addr()
 {
-  	struct net_device *dev;
+	struct net_device *dev;
 	struct list_head *pos;
 
 	list_for_each(pos, &net_devices) {
@@ -56,7 +56,7 @@ uint32_t ip_my_addr()
 
 		if (dev->flags & IFF_LOOPBACK)
 			return dev->ip_addr;
-  	}
+	}
 
 	return 0;
 }

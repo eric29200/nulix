@@ -32,7 +32,7 @@
  */
 struct mm_struct {
 	int				count;				/* reference counter */
-	pgd_t  *			pgd;				/* page directory */
+	pgd_t *				pgd;				/* page directory */
 	uint32_t			start_code;			/* user code segment start */
 	uint32_t			end_code;			/* user code segment end */
 	uint32_t			start_data;			/* user data segment start */

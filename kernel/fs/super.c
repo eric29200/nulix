@@ -103,8 +103,8 @@ int register_filesystem(struct file_system_type *fs)
 
 	/* find filesystem */
 	for (tmp = &file_systems; *tmp; tmp = &(*tmp)->next)
-                if (strcmp((*tmp)->name, fs->name) == 0)
-                        return -EBUSY;
+		if (strcmp((*tmp)->name, fs->name) == 0)
+			return -EBUSY;
 
 	/* register filesystem */
 	*tmp = fs;
@@ -128,10 +128,10 @@ int get_vfs_mount_list(char *buf, int count)
 
 		vfs_mount = list_entry(pos, struct vfs_mount, mnt_list);
 		len += sprintf(buf + len, "%s %s %s %s 0 0\n",
-			       vfs_mount->mnt_devname,
-			       vfs_mount->mnt_dirname,
-			       vfs_mount->mnt_sb->s_type->name,
-			       vfs_mount->mnt_flags & MS_RDONLY ? "ro" : "rw");
+			vfs_mount->mnt_devname,
+			vfs_mount->mnt_dirname,
+			vfs_mount->mnt_sb->s_type->name,
+			vfs_mount->mnt_flags & MS_RDONLY ? "ro" : "rw");
 	}
 
 	return len;

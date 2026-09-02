@@ -63,15 +63,15 @@ void load_tss(uint32_t esp0)
  */
 static void gdt_set_entry(uint32_t id, uint32_t base, uint32_t limit, int flags)
 {
-	gdt[id].limit0 = ((limit) >>  0) & 0xFFFF;
+	gdt[id].limit0 = ((limit) >> 0) & 0xFFFF;
 	gdt[id].limit1 = ((limit) >> 16) & 0x000F;
-	gdt[id].base0 = ((base)  >>  0) & 0xFFFF;
-	gdt[id].base1 = ((base)  >> 16) & 0x00FF;
-	gdt[id].base2 = ((base)  >> 24) & 0x00FF;
-	gdt[id].type = ((flags) >>  0) & 0x000F;
-	gdt[id].s = ((flags) >>  4) & 0x0001;
-	gdt[id].dpl = ((flags) >>  5) & 0x0003;
-	gdt[id].p = ((flags) >>  7) & 0x0001;
+	gdt[id].base0 = ((base) >> 0) & 0xFFFF;
+	gdt[id].base1 = ((base) >> 16) & 0x00FF;
+	gdt[id].base2 = ((base) >> 24) & 0x00FF;
+	gdt[id].type = ((flags) >> 0) & 0x000F;
+	gdt[id].s = ((flags) >> 4) & 0x0001;
+	gdt[id].dpl = ((flags) >> 5) & 0x0003;
+	gdt[id].p = ((flags) >> 7) & 0x0001;
 	gdt[id].avl = ((flags) >> 12) & 0x0001;
 	gdt[id].l = ((flags) >> 13) & 0x0001;
 	gdt[id].d = ((flags) >> 14) & 0x0001;

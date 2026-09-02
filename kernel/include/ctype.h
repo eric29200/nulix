@@ -1,14 +1,14 @@
 #ifndef _CTYPE_H_
 #define _CTYPE_H_
 
-#define _U		0x01    /* upper case */
-#define _L		0x02    /* lower case */
-#define _N		0x04    /* numeral (digit) */
-#define _S		0x08    /* spacing character */
-#define _P		0x10    /* punctuation */
-#define _C		0x20    /* control character */
-#define _X		0x40    /* hexadecimal */
-#define _B		0x80    /* blank */
+#define _U		0x01	/* upper case */
+#define _L		0x02	/* lower case */
+#define _N		0x04	/* numeral (digit) */
+#define _S		0x08	/* spacing character */
+#define _P		0x10	/* punctuation */
+#define _C		0x20	/* control character */
+#define _X		0x40	/* hexadecimal */
+#define _B		0x80	/* blank */
 
 extern unsigned char _ctype[];
 

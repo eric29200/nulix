@@ -64,7 +64,7 @@ static void build_huffman(struct huffman *table, uint16_t *lengths, size_t size)
 		table->counts[lengths[i]]++;
 	table->counts[0] = 0;
 
-	/* generate offsets  */
+	/* generate offsets */
 	for (i = 0; i <= MAX_BITS; i++) {
 		offsets[i] = count;
 		count += table->counts[i];
@@ -264,7 +264,7 @@ static int no_compression(struct zlib_stream * stream)
 
 	/* read block length one's complement */
 	if (stream->in[stream->in_pos++] != (~len & 0xFF) || stream->in[stream->in_pos++] != ((~len >> 8) & 0xFF))
-        	return Z_ERROR;
+		return Z_ERROR;
 
 	/* check if there is enough space in input and output buffers */
 	if (stream->in_pos + len > stream->in_len)
@@ -403,7 +403,7 @@ int zlib_inflate(struct zlib_stream *stream)
 	flg = stream->in[stream->in_pos++];
 
 	 /* header checksum */
-    	if ((((uint16_t) cmf << 8) | flg) % 31 != 0)
+	if ((((uint16_t) cmf << 8) | flg) % 31 != 0)
 		return Z_ERROR;
 
 	/* Compression method = DEFLATE */
@@ -434,7 +434,7 @@ int zlib_inflate(struct zlib_stream *stream)
 	chksum = ((uint32_t) ptr[0] << 24)
 		| ((uint32_t) ptr[1] << 16)
 		| ((uint32_t) ptr[2] << 8)
-        	| ((uint32_t) ptr[3]);
+		| ((uint32_t) ptr[3]);
 
 	/* check checksum */
 	if (chksum != adler32(stream->out, stream->out_written))

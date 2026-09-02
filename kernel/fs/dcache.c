@@ -4,9 +4,9 @@
 #include <stderr.h>
 #include <fcntl.h>
 
-#define D_HASHBITS     		10
-#define D_HASHSIZE     		(1UL << D_HASHBITS)
-#define D_HASHMASK     		(D_HASHSIZE - 1)
+#define D_HASHBITS		10
+#define D_HASHSIZE		(1UL << D_HASHBITS)
+#define D_HASHMASK		(D_HASHSIZE - 1)
 
 #define do_switch(x, y) 	do {					\
 					__typeof__ (x) __tmp = x;	\

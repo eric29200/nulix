@@ -18,14 +18,14 @@ static int sel_buf_len = 0;
  * 256 bits
  */
 static uint32_t inwordLut[8] = {
-	0x00000000, /* control chars     */
-	0x03FF0000, /* digits            */
-	0x87FFFFFE, /* uppercase and '_' */
-	0x07FFFFFE, /* lowercase         */
+	0x00000000,		/* control chars */
+	0x03FF0000,		/* digits */
+	0x87FFFFFE,		/* uppercase and '_' */
+	0x07FFFFFE,		/* lowercase */
 	0x00000000,
 	0x00000000,
-	0xFF7FFFFF, /* latin-1 accented letters, not multiplication sign */
-	0xFF7FFFFF  /* latin-1 accented letters, not division sign */
+	0xFF7FFFFF,		/* latin-1 accented letters, not multiplication sign */
+	0xFF7FFFFF		/* latin-1 accented letters, not division sign */
 };
 
 /*

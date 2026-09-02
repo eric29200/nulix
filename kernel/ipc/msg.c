@@ -125,10 +125,10 @@ static void msg_freeque(int id)
 static int convert_mode(long *msgtyp, int msgflg)
 {
 	/*
-	 *  find message of correct type.
-	 *  msgtyp = 0 => get first.
-	 *  msgtyp > 0 => get first message of matching type.
-	 *  msgtyp < 0 => get message with least type must be < abs(msgtype).
+	 * find message of correct type.
+	 * msgtyp = 0 => get first.
+	 * msgtyp > 0 => get first message of matching type.
+	 * msgtyp < 0 => get message with least type must be < abs(msgtype).
 	 */
 	if (*msgtyp == 0)
 		return SEARCH_ANY;
@@ -407,8 +407,8 @@ static int msgctl_rmid(int msqid)
 		return -EIDRM;
 
 	/* check permissions */
-	if (current_task->euid != msq->q_perm.cuid &&  current_task->euid != msq->q_perm.uid)
-	    return -EPERM;
+	if (current_task->euid != msq->q_perm.cuid && current_task->euid != msq->q_perm.uid)
+		return -EPERM;
 
 	/* free message queue */
 	msg_freeque(msqid);
@@ -433,8 +433,8 @@ static int msgctl_set(int msqid, struct msqid_ds *setbuf)
 		return -EIDRM;
 
 	/* check permissions */
-	if (current_task->euid != msq->q_perm.cuid &&  current_task->euid != msq->q_perm.uid)
-	    return -EPERM;
+	if (current_task->euid != msq->q_perm.cuid && current_task->euid != msq->q_perm.uid)
+		return -EPERM;
 
 	/* set message queue */
 	msq->q_qbytes = setbuf->msg_qbytes;

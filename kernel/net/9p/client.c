@@ -1117,7 +1117,7 @@ int p9_client_symlink(struct p9_fid *dfid, const char *name, const char *symtgt,
 	int ret;
 
 	/* print a debug message */
-	p9_debug("TSYMLINK dfid %d name %s  symtgt %s\n", dfid->fid, name, symtgt);
+	p9_debug("TSYMLINK dfid %d name %s symtgt %s\n", dfid->fid, name, symtgt);
 
 	/* issue request */
 	req = p9_client_rpc(client, P9_TSYMLINK, "dssg", dfid->fid, name, symtgt, gid);

@@ -140,7 +140,7 @@ static int filemap_sync_pte(pte_t *pte, struct vm_area *vma, uint32_t address, u
 /*
  * Synchronize a memory region.
  */
-static int filemap_sync_pte_range(pmd_t *pmd, uint32_t address, size_t size,  struct vm_area *vma, uint32_t offset, uint32_t flags)
+static int filemap_sync_pte_range(pmd_t *pmd, uint32_t address, size_t size, struct vm_area *vma, uint32_t offset, uint32_t flags)
 {
 	uint32_t end;
 	int ret = 0;

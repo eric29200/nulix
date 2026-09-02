@@ -114,7 +114,7 @@ void remove_from_page_cache(struct page *page)
 /*
  * Init page cache.
  */
-void  init_page_cache()
+void init_page_cache()
 {
 	int i;
 
