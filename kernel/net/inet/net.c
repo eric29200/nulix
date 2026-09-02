@@ -12,8 +12,8 @@
 #include <stderr.h>
 
 /* network devices */
-struct net_device net_devices[NR_NET_DEVICES];
-int nr_net_devices = 0;
+LIST_HEAD(net_devices);
+static int nr_net_devices = 0;
 
 /*
  * Compute checksum.
@@ -61,12 +61,13 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type, uint16_t
 {
 	struct net_device *dev;
 
-	/* network devices table full */
-	if (nr_net_devices >= NR_NET_DEVICES || !name)
+	/* allocate a new net device */
+	dev = (struct net_device *) kmalloc(sizeof(struct net_device));
+	if (!dev)
 		return NULL;
 
 	/* set net device */
-	dev = &net_devices[nr_net_devices];
+	memset(dev, 0, sizeof(struct net_device));
 	dev->type = type;
 	dev->family = family;
 	dev->index = nr_net_devices + 1;
@@ -78,13 +79,27 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type, uint16_t
 
 	/* set name */
 	dev->name = strdup(name);
-	if (!dev->name)
+	if (!dev->name) {
+		kfree(dev);
 		return NULL;
+	}
 
-	/* update number of net devices */
+	/* add network device */
+	list_add_tail(&dev->list, &net_devices);
+
+	/* update number of netwrok devices */
 	nr_net_devices++;
 
 	return dev;
+}
+
+/*
+ * Unregister a network device.
+ */
+void unregister_net_device(struct net_device *dev)
+{
+	list_del(&dev->list);
+	kfree(dev);
 }
 
 /*
@@ -92,14 +107,17 @@ struct net_device *register_net_device(uint32_t io_base, uint16_t type, uint16_t
  */
 struct net_device *net_device_find(const char *name)
 {
-	int i;
+	struct net_device *dev;
+	struct list_head *pos;
 
 	if (!name)
 		return NULL;
 
-	for (i = 0; i < nr_net_devices; i++)
-		if (strcmp(net_devices[i].name, name) == 0)
-			return &net_devices[i];
+	list_for_each(pos, &net_devices) {
+		dev = list_entry(pos, struct net_device, list);
+		if (strcmp(dev->name, name) == 0)
+			return dev;
+	}
 
 	return NULL;
 }

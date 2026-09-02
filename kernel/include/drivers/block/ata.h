@@ -69,6 +69,9 @@
 #define ATA_PCI_VENDOR_ID		0x8086
 #define ATA_PCI_DEVICE_ID		0x7010
 
+#define ATA_PRIMARY_IRQ			14
+#define ATA_SECONDARY_IRQ		15
+
 /*
  * ATA identification.
  */

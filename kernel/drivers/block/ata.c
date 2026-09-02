@@ -309,8 +309,12 @@ static int ata_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 		bar4 &= 0xFFFFFFFC;
 
 	/* register interrupt handlers */
-	request_irq(14, ata_irq_handler, 0, "primary hd", NULL);
-	request_irq(15, ata_irq_handler, 0, "secondary hd", NULL);
+	ret = request_irq(ATA_PRIMARY_IRQ, ata_irq_handler, 0, "primary hd", NULL);
+	if (ret)
+		return ret;
+	ret = request_irq(ATA_SECONDARY_IRQ, ata_irq_handler, 0, "secondary hd", NULL);
+	if (ret)
+		return ret;
 
 	/* register ata device */
 	ret = register_blkdev(DEV_ATA_MAJOR, "ata", &ata_fops);

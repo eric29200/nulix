@@ -17,7 +17,7 @@
 int ip_chk_addr(uint32_t addr)
 {
 	struct net_device *dev;
-	int i;
+	struct list_head *pos;
 
 	/* broadcast address */
 	if (addr == INADDR_ANY || addr == INADDR_BROADCAST || addr == htonl(0x7FFFFFFFL))
@@ -28,8 +28,8 @@ int ip_chk_addr(uint32_t addr)
 		return IS_MYADDR;
 
 	/* find network device */
-	for (i = 0; i < nr_net_devices; i++) {
-		dev = &net_devices[i];
+	list_for_each(pos, &net_devices) {
+		dev = list_entry(pos, struct net_device, list);
 
 		/* skip down devices */
 		if ((!(dev->flags & IFF_UP)) || dev->family != AF_INET)
@@ -49,10 +49,10 @@ int ip_chk_addr(uint32_t addr)
 uint32_t ip_my_addr()
 {
   	struct net_device *dev;
-	int i;
+	struct list_head *pos;
 
-	for (i = 0; i < nr_net_devices; i++) {
-		dev = &net_devices[i];
+	list_for_each(pos, &net_devices) {
+		dev = list_entry(pos, struct net_device, list);
 
 		if (dev->flags & IFF_LOOPBACK)
 			return dev->ip_addr;

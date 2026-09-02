@@ -5,7 +5,6 @@
 #include <net/if.h>
 #include <proc/timer.h>
 
-#define NR_NET_DEVICES			4
 #define MAX_ADDR_LEN			7
 #define MAX_HEADER			32
 
@@ -71,18 +70,19 @@ struct net_device {
 	size_t			tx_queue_len;
 	struct net_device_stats	stats;
 	void *			private;
+	struct list_head	list;
 	int			(*start_xmit)(struct sk_buff *, struct net_device *);
 	void 			(*hard_header)(struct sk_buff *, uint16_t, uint8_t *, uint8_t *);
 	int			(*rebuild_header)(struct net_device *, uint32_t, struct sk_buff *);
 };
 
 /* network devices */
-extern struct net_device net_devices[NR_NET_DEVICES];
-extern int nr_net_devices;
+extern struct list_head net_devices;
 
 /* network prototypes */
 int init_net_dev();
 struct net_device *register_net_device(uint32_t io_base, uint16_t type, uint16_t family, const char *name);
+void unregister_net_device(struct net_device *dev);
 struct net_device *net_device_find(const char *name);
 int dev_ioctl(unsigned int cmd, void *arg);
 void netif_rx(struct sk_buff *skb);

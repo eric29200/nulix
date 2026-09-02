@@ -20,8 +20,8 @@ static int dev_read_proc(char *page, char **start, off_t off, size_t count, int 
 {
 	struct net_device_stats *stats;
 	struct net_device *dev;
+	struct list_head *pos;
 	size_t len;
-	int i;
 
 	/* print header */
 	len = sprintf(page, "Inter-|   Receive                            "
@@ -31,8 +31,8 @@ static int dev_read_proc(char *page, char **start, off_t off, size_t count, int 
 		"drop fifo colls carrier compressed\n");
 
 	/* print interfaces */
-	for (i = 0; i < nr_net_devices; i++) {
-		dev = &net_devices[i];
+	list_for_each(pos, &net_devices) {
+		dev = list_entry(pos, struct net_device, list);
 		stats = &dev->stats;
 		len += sprintf(page + len, "%6s:%8lu %7lu %4lu %4lu %4lu %5lu %10lu %9lu %8lu %7lu %4lu %4lu %4lu %5lu %7lu %10lu\n",
 			dev->name,
@@ -137,30 +137,33 @@ static int dev_ifsioc(struct ifreq *ifr, unsigned int cmd)
  */
 int dev_ifconf(struct ifconf *ifc)
 {
-	char *pos = ifc->ifc_ifcu.ifcu_buf;
+	char *ptr = ifc->ifc_ifcu.ifcu_buf;
 	size_t len = ifc->ifc_len;
+	struct net_device *dev;
+	struct list_head *pos;
 	struct ifreq ifr;
-	int i;
 
 	/* for each network device */
-	for (i = 0; i < nr_net_devices; i++) {
+	list_for_each(pos, &net_devices) {
+		dev = list_entry(pos, struct net_device, list);
+
 		if (len < sizeof(struct ifreq))
 			break;
 
 		/* set name/address */
 		memset(&ifr, 0, sizeof(struct ifreq));
-		strcpy(ifr.ifr_ifrn.ifrn_name, net_devices[i].name);
+		strcpy(ifr.ifr_ifrn.ifrn_name, dev->name);
 		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_family = AF_INET;
-		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_addr = net_devices[i].ip_addr;
+		(*(struct sockaddr_in *) &ifr.ifr_ifru.ifru_addr).sin_addr = dev->ip_addr;
 
 		/* copy to ifconf */
-		memcpy(pos, &ifr, sizeof(struct ifreq));
-		pos += sizeof(struct ifreq);
+		memcpy(ptr, &ifr, sizeof(struct ifreq));
+		ptr += sizeof(struct ifreq);
 		len -= sizeof(struct ifreq);
 	}
 
 	/* set length */
-	ifc->ifc_len = pos - ifc->ifc_ifcu.ifcu_buf;
+	ifc->ifc_len = ptr - ifc->ifc_ifcu.ifcu_buf;
 	ifc->ifc_ifcu.ifcu_req = (struct ifreq *) ifc->ifc_ifcu.ifcu_buf;
 
 	return 0;

@@ -156,10 +156,10 @@ static void rtl8139_init_ring(struct net_device *net_dev)
  */
 static int rtl8139_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
-	struct rtl8139_private *tp;
-	struct net_device *net_dev;
+	struct net_device *net_dev = NULL;
+	struct rtl8139_private *tp = NULL;
+	int i, ret = -ENOMEM;
 	uint32_t io_base;
-	int i;
 
 	/* unused device id */
 	UNUSED(id);
@@ -175,7 +175,7 @@ static int rtl8139_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 	/* allocate private data */
 	net_dev->private = tp = (struct rtl8139_private *) kmalloc(sizeof(struct rtl8139_private));
 	if (!tp)
-		return -ENOMEM;
+		goto err;
 
 	/* get mac address */
 	for (i = 0; i < ETHERNET_ALEN; i++)
@@ -230,9 +230,16 @@ static int rtl8139_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 	outb(io_base + ChipCmd, CmdRxEnb | CmdTxEnb);
 
 	/* register interrupt handler */
-	request_irq(pci_dev->irq, rtl8139_irq_handler, SA_SHIRQ, "rtl8139", net_dev);
+	ret = request_irq(pci_dev->irq, rtl8139_irq_handler, SA_SHIRQ, "rtl8139", net_dev);
+	if (ret)
+		goto err;
 
 	return 0;
+err:
+	if (tp)
+		kfree(tp);
+	unregister_net_device(net_dev);
+	return ret;
 }
 
 /*
