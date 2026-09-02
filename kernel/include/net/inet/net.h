@@ -60,7 +60,6 @@ struct net_device {
 	uint16_t		family;
 	uint8_t			index;
 	uint32_t		io_base;
-	uint8_t			irq;
 	uint8_t			hw_addr[MAX_ADDR_LEN];
 	uint32_t		ip_addr;
 	uint32_t		ip_netmask;

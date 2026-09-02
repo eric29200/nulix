@@ -26,6 +26,7 @@ struct pci_device {
 	uint32_t 		device_id;
 	uint32_t 		vendor_id;
 	uint32_t 		bar0;
+	uint8_t			irq;
 	struct pci_driver *	driver;
 	struct list_head	list;
 };

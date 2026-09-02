@@ -115,6 +115,7 @@ static int pci_scan_bus(uint8_t bus)
 			pci_dev->vendor_id = vendor_id;
 			pci_dev->device_id = pci_get_device_id(address);
 			pci_dev->bar0 = pci_read_field(address, PCI_BAR0);
+			pci_dev->irq = pci_read_field(address, PCI_INTERRUPT_LINE);
 
 			/* print device */
 			printf("PCI device (vendor id = 0x%x, device id = 0x%x, BAR = 0x%x) registered\n", vendor_id, pci_dev->device_id, pci_dev->bar0);

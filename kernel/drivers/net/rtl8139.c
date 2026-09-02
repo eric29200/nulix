@@ -229,11 +229,8 @@ static int rtl8139_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 	/* enable receive and transmitter (to accept and transmit packets) */
 	outb(io_base + ChipCmd, CmdRxEnb | CmdTxEnb);
 
-	/* get PCI interrupt line */
-	net_dev->irq = pci_read_field(pci_dev->address, PCI_INTERRUPT_LINE);
-
 	/* register interrupt handler */
-	request_irq(net_dev->irq, rtl8139_irq_handler, SA_SHIRQ, "rtl8139", net_dev);
+	request_irq(pci_dev->irq, rtl8139_irq_handler, SA_SHIRQ, "rtl8139", net_dev);
 
 	return 0;
 }
