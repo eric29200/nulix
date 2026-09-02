@@ -56,10 +56,10 @@ struct vring_used {
  * Memory layout of a queue.
  */
 struct vring {
-        uint16_t                	num;                    /* number of entries in the queue */
-        struct vring_desc *     	desc;
-        struct vring_avail *		avail;
-        struct vring_used  *		used;
+	uint16_t			num;			/* number of entries in the queue */
+	struct vring_desc *	 	desc;
+	struct vring_avail *		avail;
+	struct vring_used *		used;
 } __attribute__((packed));
 
 /*
@@ -68,10 +68,10 @@ struct vring {
 struct virtqueue {
 	struct virtio_device *		vdev;			/* virtual device */
 	int				index;			/* index of the queue */
-        struct vring			vring;                  /* memory layout of the queue */
-        void *				queue;                  /* virtual address of the ring queue */
+	struct vring			vring;			/* memory layout of the queue */
+	void *				queue;			/* virtual address of the ring queue */
 	int				queue_order;		/* queue order */
-        uint16_t			last_used_idx;          /* last used index we've seen */
+	uint16_t			last_used_idx;		/* last used index we've seen */
 	struct list_head		list;
 };
 
@@ -103,7 +103,7 @@ static inline uint32_t vring_size(uint32_t num)
  */
 static inline void virtio_device_reset(struct virtio_device *vdev)
 {
-        outb(vdev->io_base + VIRTIO_PCI_STATUS, 0);
+	outb(vdev->io_base + VIRTIO_PCI_STATUS, 0);
 }
 
 /*
@@ -143,7 +143,7 @@ static inline uint32_t virtio_device_get_features(struct virtio_device *vdev)
  */
 static inline void virtio_device_set_features(struct virtio_device *vdev, uint32_t features)
 {
-        outl(vdev->io_base + VIRTIO_PCI_GUEST_FEATURES, features);
+	outl(vdev->io_base + VIRTIO_PCI_GUEST_FEATURES, features);
 }
 
 #endif
