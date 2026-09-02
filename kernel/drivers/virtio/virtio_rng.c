@@ -19,27 +19,20 @@ static uint32_t *random_data = NULL;
 static int virtio_rng_read_buf(size_t len)
 {
         struct vring *vr = &vq->vring;
-        int done = 0, i;
+        int done = 0, ret, i;
         size_t n;
 
         /* limit length to random data size */
         if (len > RANDOM_DATA_SIZE)
                 len = RANDOM_DATA_SIZE;
 
-        /* set descriptor */
-        vr->desc[0].addr = __pa(random_data);
-        vr->desc[0].len = len;
-        vr->desc[0].flags = VRING_DESC_F_WRITE;
-        vr->desc[0].next = 0;
+        /* add buffer */
+        ret = virtqueue_add_buf(vq, random_data, len);
+        if (ret)
+                return ret;
 
-        /* publish descriptor 0 */
-        vr->avail->ring[vr->avail->idx % vr->num] = 0;
-        __asm__ volatile("" ::: "memory");
-        vr->avail->idx++;
-        __asm__ volatile("" ::: "memory");
-
-        /* kick queue 0 */
-        outw(vq->vdev->io_base + VIRTIO_PCI_QUEUE_NOTIFY, 0);
+        /* kick queue */
+        virtqueue_kick(vq);
 
         /* poll the device */
         for (i = 0; i < 100000000; i++) {
@@ -55,9 +48,8 @@ static int virtio_rng_read_buf(size_t len)
         if (!done)
                 return -EIO;
 
-        /* get read length */
-        n = vr->used->ring[vq->last_used_idx % vr->num].len;
-        vq->last_used_idx++;
+        /* get buffer */
+        virtqueue_get_buf(vq, &n);
         if (n > len)
                 n = len;
 

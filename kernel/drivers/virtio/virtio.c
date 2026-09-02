@@ -6,6 +6,85 @@
 #include <stderr.h>
 
 /*
+ * Detach a buffer.
+ */
+static void detach_buf(struct virtqueue *vq, uint32_t head)
+{
+        uint32_t i;
+
+	/* put back on free list */
+        for (i = head; vq->vring.desc[i].flags & VRING_DESC_F_NEXT;) {
+		i = vq->vring.desc[i].next;
+		vq->num_free++;
+	}
+
+	/* plus final descriptor */
+	vq->vring.desc[i].next = vq->free_head;
+	vq->free_head = head;
+	vq->num_free++;
+}
+
+/*
+ * Get a buffer.
+ */
+void virtqueue_get_buf(struct virtqueue *vq, size_t *len)
+{
+        size_t i;
+
+        /* get buffer */
+        i = vq->vring.used->ring[vq->last_used_idx % vq->vring.num].id;
+	*len = vq->vring.used->ring[vq->last_used_idx % vq->vring.num].len;
+
+        /* detach buffer */
+        detach_buf(vq, i);
+	vq->last_used_idx++;
+}
+
+/*
+ * Add a buffer.
+ */
+int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len)
+{
+        struct vring *vr = &vq->vring;
+        int head;
+
+        /* no free buffer */
+        if (vq->num_free < 1)
+                return -ENOSPC;
+
+        /* set descriptor */
+        head = vq->free_head;
+        vr->desc[head].addr = __pa(buf);
+        vr->desc[head].len = len;
+        vr->desc[head].flags = VRING_DESC_F_WRITE;
+
+        /* update free pointer */
+        vq->num_free--;
+        vq->free_head = head + vr->desc[head].next;
+
+        /* publish descriptor 0 */
+        vr->avail->ring[vr->avail->idx % vr->num] = head;
+
+        return 0;
+}
+
+/*
+ * Kick a virtual queue.
+ */
+void virtqueue_kick(struct virtqueue *vq)
+{
+        struct vring *vr = &vq->vring;
+
+        /* descriptors and available array need to be set before we expose the new available array entries */
+        __asm__ volatile("" ::: "memory");
+        vr->avail->idx += 1;
+        __asm__ volatile("" ::: "memory");
+
+        /* kick queue */
+        outw(vq->vdev->io_base + VIRTIO_PCI_QUEUE_NOTIFY, vq->index);
+}
+
+/*
  * Init memory layout of a queue.
  */
 static void vring_init(struct vring *vr, uint32_t num, void *p)
@@ -22,7 +101,7 @@ static void vring_init(struct vring *vr, uint32_t num, void *p)
 static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int index, uint32_t num)
 {
         struct virtqueue *vq;
-        size_t size;
+        size_t size, i;
 
         /* allocate a new virt queue */
         vq = (struct virtqueue *) kmalloc(sizeof(struct virtqueue));
@@ -45,6 +124,12 @@ static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int ind
 
         /* init memory layout */
         vring_init(&vq->vring, num, vq->queue);
+
+        /* put everything in free lists */
+	vq->num_free = num;
+	vq->free_head = 0;
+	for (i = 0; i < num - 1; i++)
+		vq->vring.desc[i].next = i + 1;
 
         /* activate queue */
         outl(vdev->io_base + VIRTIO_PCI_QUEUE_PFN, (uint32_t) (__pa(vq->queue) >> VIRTIO_QUEUE_SHIFT));

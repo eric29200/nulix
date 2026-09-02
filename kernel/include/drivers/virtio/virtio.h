@@ -71,6 +71,9 @@ struct virtqueue {
 	struct vring			vring;			/* memory layout of the queue */
 	void *				queue;			/* virtual address of the ring queue */
 	int				queue_order;		/* queue order */
+	uint32_t			num_free;		/* number of free buffers */
+	uint32_t			free_head;		/* head of free buffers list */
+	uint32_t			num_added;		/* number we've added since last sync */
 	uint16_t			last_used_idx;		/* last used index we've seen */
 	struct list_head		list;
 };
@@ -87,6 +90,9 @@ int init_virtio();
 struct virtio_device *virtio_device_create(struct pci_device *pci_dev);
 void virtio_device_free(struct virtio_device *vdev);
 struct virtqueue *virtio_find_single_vq(struct virtio_device *vdev);
+void virtqueue_kick(struct virtqueue *vq);
+int virtqueue_add_buf(struct virtqueue *vq, void *buf, size_t len);
+void virtqueue_get_buf(struct virtqueue *vq, size_t *len);
 
 /*
  * Compute vring size.
