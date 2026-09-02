@@ -56,12 +56,15 @@ struct vring_used {
  * Virtual queue.
  */
 struct virtqueue {
+	struct virtio_device *		vdev;			/* virtual device */
         uint16_t                	num;                    /* number of entries in the queue */
         struct vring_desc *     	desc;                   /* memory layout of the queue */
         struct vring_avail *		avail;
         struct vring_used  *		used;
         void *				queue;                  /* virtual address of the ring queue */
+	int				queue_order;		/* queue order */
         uint16_t			last_used_idx;          /* last used index we've seen */
+	struct list_head		list;
 };
 
 /*
@@ -69,11 +72,14 @@ struct virtqueue {
  */
 struct virtio_device {
 	uint32_t			io_base;
-	struct virtqueue		vq;
+	struct list_head 		vqs;
 };
 
 int init_virtio();
-int setup_vq(struct virtio_device *vdev);
+struct virtio_device *create_virtio_device(struct pci_device *pci_dev);
+void free_virtio_device(struct virtio_device *vdev);
+struct virtqueue *setup_vq(struct virtio_device *vdev);
+void free_vq(struct virtqueue *vq);
 
 /*
  * Compute vring size.

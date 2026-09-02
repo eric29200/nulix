@@ -10,13 +10,13 @@
 #define RANDOM_DATA_SIZE        64
 
 /* virtio rng device */
-struct virtio_device *vdev_rng = NULL;
+static struct virtqueue *vq = NULL;
 static uint32_t *random_data = NULL;
 
 /*
  * Read a random buffer.
  */
-static int virtio_rng_read_buf(struct virtio_device *vdev, size_t len)
+static int virtio_rng_read_buf(size_t len)
 {
         int done = 0, i;
         size_t n;
@@ -26,23 +26,23 @@ static int virtio_rng_read_buf(struct virtio_device *vdev, size_t len)
                 len = RANDOM_DATA_SIZE;
 
         /* set descriptor */
-        vdev->vq.desc[0].addr = __pa(random_data);
-        vdev->vq.desc[0].len = len;
-        vdev->vq.desc[0].flags = VRING_DESC_F_WRITE;
-        vdev->vq.desc[0].next = 0;
+        vq->desc[0].addr = __pa(random_data);
+        vq->desc[0].len = len;
+        vq->desc[0].flags = VRING_DESC_F_WRITE;
+        vq->desc[0].next = 0;
 
         /* publish descriptor 0 */
-        vdev->vq.avail->ring[vdev->vq.avail->idx % vdev->vq.num] = 0;
+        vq->avail->ring[vq->avail->idx % vq->num] = 0;
         __asm__ volatile("" ::: "memory");
-        vdev->vq.avail->idx++;
+        vq->avail->idx++;
         __asm__ volatile("" ::: "memory");
 
         /* kick queue 0 */
-        outw(vdev->io_base + VIRTIO_PCI_QUEUE_NOTIFY, 0);
+        outw(vq->vdev->io_base + VIRTIO_PCI_QUEUE_NOTIFY, 0);
 
         /* poll the device */
         for (i = 0; i < 100000000; i++) {
-                if (vdev->vq.used->idx != vdev->vq.last_used_idx) {
+                if (vq->used->idx != vq->last_used_idx) {
                         done = 1;
                         break;
                 }
@@ -55,13 +55,13 @@ static int virtio_rng_read_buf(struct virtio_device *vdev, size_t len)
                 return -EIO;
 
         /* get read length */
-        n = vdev->vq.used->ring[vdev->vq.last_used_idx % vdev->vq.num].len;
-        vdev->vq.last_used_idx++;
+        n = vq->used->ring[vq->last_used_idx % vq->num].len;
+        vq->last_used_idx++;
         if (n > len)
                 n = len;
 
         /* ack pending irq */
-        inb(vdev->io_base + VIRTIO_PCI_ISR);
+        inb(vq->vdev->io_base + VIRTIO_PCI_ISR);
 
         return n;
 }
@@ -78,12 +78,12 @@ static int virtio_rng_read(struct file *filp, char *buf, size_t len, off_t *off)
         UNUSED(off);
 
         /* check parameters */
-        if (!random_data || !buf || !len || !vdev_rng || vdev_rng->vq.num < 1)
+        if (!buf || !len || !vq)
                 return -EINVAL;
 
         while (len > 0) {
                 /* read random buffer */
-                ret = virtio_rng_read_buf(vdev_rng, len);
+                ret = virtio_rng_read_buf(len);
                 if (ret <= 0)
                         break;
 
@@ -120,40 +120,30 @@ static struct misc_device virtio_rng_misc_dev = {
 */
 static int virtio_rng_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
+        struct virtio_device *vdev;
         int ret;
 
 	/* unused device id */
 	UNUSED(id);
 
         /* device already set up */
-        if (vdev_rng)
+        if (vq)
                 return -EBUSY;
 
-        /* allocate a new virtio device */
-        vdev_rng = (struct virtio_device *) kmalloc(sizeof(struct virtio_device));
-        if (!vdev_rng)
+        /* create a new virtio device */
+        vdev = create_virtio_device(pci_dev);
+        if (!vdev)
                 return -ENOMEM;
-        memset(vdev_rng, 0, sizeof(struct virtio_device));
-
-        /* enable pci device */
-        vdev_rng->io_base = pci_dev->bar0 & ~(0x03);
-        pci_enable_device(pci_dev);
-        pci_set_master(pci_dev);
-
-        /* init virtio device */
-        vp_reset(vdev_rng);
-        vp_add_status(vdev_rng, VIRTIO_STATUS_ACKNOWLEDGE);
-        vp_add_status(vdev_rng, VIRTIO_STATUS_DRIVER);
-        vp_get_features(vdev_rng);
-        vp_set_features(vdev_rng, 0);
 
         /* setup virtual queue */
-        ret = setup_vq(vdev_rng);
-        if (ret)
+        vq = setup_vq(vdev);
+        if (IS_ERR(vq)) {
+                ret = PTR_ERR(vq);
                 goto err;
+        }
 
         /* driver ok */
-        vp_add_status(vdev_rng, VIRTIO_STATUS_DRIVER_OK);
+        vp_add_status(vdev, VIRTIO_STATUS_DRIVER_OK);
 
         /* register misc device */
         ret = misc_register(&virtio_rng_misc_dev);
@@ -169,9 +159,9 @@ static int virtio_rng_probe(struct pci_device *pci_dev, struct pci_device_id *id
 
         return 0;
 err:
-        vp_add_status(vdev_rng, VIRTIO_STATUS_FAILED);
-        kfree(vdev_rng);
-        vdev_rng = NULL;
+        vp_add_status(vdev, VIRTIO_STATUS_FAILED);
+        free_virtio_device(vdev);
+        vq = NULL;
         return ret;
 }
 
