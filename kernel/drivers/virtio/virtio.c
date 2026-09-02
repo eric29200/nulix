@@ -8,14 +8,14 @@
 /*
  * Setup virtual queue.
  */
-static struct virtqueue *setup_vq(struct virtio_device *vdev)
+static struct virtqueue *setup_vq(struct virtio_device *vdev, int index)
 {
         size_t size, used_off;
         struct virtqueue *vq;
         int ret;
 
         /* select queue 0 */
-        outw(vdev->io_base + VIRTIO_PCI_QUEUE_SEL, 0);
+        outw(vdev->io_base + VIRTIO_PCI_QUEUE_SEL, index);
 
         /* allocate a new virt queue */
         vq = (struct virtqueue *) kmalloc(sizeof(struct virtqueue));
@@ -59,6 +59,7 @@ static struct virtqueue *setup_vq(struct virtio_device *vdev)
         outl(vdev->io_base + VIRTIO_PCI_QUEUE_PFN, (uint32_t) (__pa(vq->queue) >> VIRTIO_QUEUE_SHIFT));
 
         /* add virtqueue to device */
+        vq->index = index;
         vq->vdev = vdev;
         list_add_tail(&vq->list, &vdev->vqs);
 
@@ -104,7 +105,7 @@ static int virtio_find_vqs(struct virtio_device *vdev, size_t nvqs, struct virtq
 
         /* set up virt queues */
         for (i = 0; i < nvqs; i++) {
-                vqs[i] = setup_vq(vdev);
+                vqs[i] = setup_vq(vdev, i);
                 if (IS_ERR(vqs[i])) {
                         ret = PTR_ERR(vqs[i]);
                         goto err;

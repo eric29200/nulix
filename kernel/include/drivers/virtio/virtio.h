@@ -57,6 +57,7 @@ struct vring_used {
  */
 struct virtqueue {
 	struct virtio_device *		vdev;			/* virtual device */
+	int				index;			/* index of the queue */
         uint16_t                	num;                    /* number of entries in the queue */
         struct vring_desc *     	desc;                   /* memory layout of the queue */
         struct vring_avail *		avail;
