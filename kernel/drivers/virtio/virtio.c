@@ -8,17 +8,12 @@
 /*
  * Init memory layout of a queue.
  */
-static void vring_init(struct virtqueue *vq, uint32_t num, void *p)
+static void vring_init(struct vring *vr, uint32_t num, void *p)
 {
-        size_t used_off;
-
-	vq->num = num;
-	vq->desc = p;
-	vq->avail = p + num * sizeof(struct vring_desc);
-        used_off = (uint32_t) num * sizeof(struct vring_desc) + sizeof(uint16_t) * (2 + num);
-        used_off = (used_off + (VIRTIO_QUEUE_ALIGN - 1)) & ~(uint32_t) (VIRTIO_QUEUE_ALIGN - 1);
-        vq->used = (struct vring_used *) (p + used_off);
-        vq->last_used_idx = 0;
+	vr->num = num;
+	vr->desc = p;
+	vr->avail = p + num * sizeof(struct vring_desc);
+        vr->used = (void *)(((uint32_t) &vr->avail->ring[num] + VIRTIO_QUEUE_ALIGN - 1) & ~(VIRTIO_QUEUE_ALIGN - 1));
 }
 
 /*
@@ -34,6 +29,9 @@ static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int ind
         if (!vq)
                 return NULL;
 
+        /* clear virtual queue */
+        memset(vq, 0, sizeof(struct virtqueue));
+
         /* compute size of virtual queue */
         size = PAGE_ALIGN_UP(vring_size(num));
         vq->queue_order = get_order(size);
@@ -46,7 +44,7 @@ static struct virtqueue *vring_new_virtqueue(struct virtio_device *vdev, int ind
         }
 
         /* init memory layout */
-        vring_init(vq, num, vq->queue);
+        vring_init(&vq->vring, num, vq->queue);
 
         /* activate queue */
         outl(vdev->io_base + VIRTIO_PCI_QUEUE_PFN, (uint32_t) (__pa(vq->queue) >> VIRTIO_QUEUE_SHIFT));

@@ -53,15 +53,22 @@ struct vring_used {
 } __attribute__((packed));
 
 /*
+ * Memory layout of a queue.
+ */
+struct vring {
+        uint16_t                	num;                    /* number of entries in the queue */
+        struct vring_desc *     	desc;
+        struct vring_avail *		avail;
+        struct vring_used  *		used;
+} __attribute__((packed));
+
+/*
  * Virtual queue.
  */
 struct virtqueue {
 	struct virtio_device *		vdev;			/* virtual device */
 	int				index;			/* index of the queue */
-        uint16_t                	num;                    /* number of entries in the queue */
-        struct vring_desc *     	desc;                   /* memory layout of the queue */
-        struct vring_avail *		avail;
-        struct vring_used  *		used;
+        struct vring			vring;                  /* memory layout of the queue */
         void *				queue;                  /* virtual address of the ring queue */
 	int				queue_order;		/* queue order */
         uint16_t			last_used_idx;          /* last used index we've seen */
