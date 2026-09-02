@@ -76,10 +76,9 @@ struct virtio_device {
 };
 
 int init_virtio();
-struct virtio_device *create_virtio_device(struct pci_device *pci_dev);
-void free_virtio_device(struct virtio_device *vdev);
-struct virtqueue *setup_vq(struct virtio_device *vdev);
-void free_vq(struct virtqueue *vq);
+struct virtio_device *virtio_device_create(struct pci_device *pci_dev);
+void virtio_device_free(struct virtio_device *vdev);
+struct virtqueue *virtio_find_single_vq(struct virtio_device *vdev);
 
 /*
  * Compute vring size.
@@ -94,7 +93,7 @@ static inline uint32_t vring_size(uint32_t num)
 /*
  * Reset device.
  */
-static inline void vp_reset(struct virtio_device *vdev)
+static inline void virtio_device_reset(struct virtio_device *vdev)
 {
         outb(vdev->io_base + VIRTIO_PCI_STATUS, 0);
 }
@@ -102,7 +101,7 @@ static inline void vp_reset(struct virtio_device *vdev)
 /*
  * Get device status.
  */
-static inline uint8_t vp_get_status(struct virtio_device *vdev)
+static inline uint8_t virtio_device_get_status(struct virtio_device *vdev)
 {
 	return inb(vdev->io_base + VIRTIO_PCI_STATUS);
 }
@@ -110,7 +109,7 @@ static inline uint8_t vp_get_status(struct virtio_device *vdev)
 /*
  * Set device status.
  */
-static inline void vp_set_status(struct virtio_device *vdev, uint8_t status)
+static inline void virtio_device_set_status(struct virtio_device *vdev, uint8_t status)
 {
 	outb(vdev->io_base + VIRTIO_PCI_STATUS, status);
 }
@@ -118,15 +117,15 @@ static inline void vp_set_status(struct virtio_device *vdev, uint8_t status)
 /*
  * Add to device status.
  */
-static inline void vp_add_status(struct virtio_device *vdev, uint8_t status)
+static inline void virtio_device_add_status(struct virtio_device *vdev, uint8_t status)
 {
-	vp_set_status(vdev, vp_get_status(vdev) | status);
+	virtio_device_set_status(vdev, virtio_device_get_status(vdev) | status);
 }
 
 /*
  * Get device features.
  */
-static inline uint32_t vp_get_features(struct virtio_device *vdev)
+static inline uint32_t virtio_device_get_features(struct virtio_device *vdev)
 {
 	return inl(vdev->io_base + VIRTIO_PCI_HOST_FEATURES);
 }
@@ -134,7 +133,7 @@ static inline uint32_t vp_get_features(struct virtio_device *vdev)
 /*
  * Set device features.
  */
-static inline void vp_set_features(struct virtio_device *vdev, uint32_t features)
+static inline void virtio_device_set_features(struct virtio_device *vdev, uint32_t features)
 {
         outl(vdev->io_base + VIRTIO_PCI_GUEST_FEATURES, features);
 }

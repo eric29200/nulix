@@ -8,7 +8,7 @@
 /*
  * Setup virtual queue.
  */
-struct virtqueue *setup_vq(struct virtio_device *vdev)
+static struct virtqueue *setup_vq(struct virtio_device *vdev)
 {
         size_t size, used_off;
         struct virtqueue *vq;
@@ -69,9 +69,9 @@ err:
 }
 
 /*
- * Free a virtual queue.
+ * Delete a virtual queue.
  */
-void free_vq(struct virtqueue *vq)
+static void virtio_del_vq(struct virtqueue *vq)
 {
         list_del(&vq->list);
         if (vq->queue)
@@ -80,9 +80,62 @@ void free_vq(struct virtqueue *vq)
 }
 
 /*
+ * Delete virtual queue of a device.
+ */
+static void virtio_del_vqs(struct virtio_device *vdev)
+{
+        struct list_head *pos, *n;
+        struct virtqueue *vq;
+
+        /* free virtual queues */
+        list_for_each_safe(pos, n, &vdev->vqs) {
+                vq = list_entry(pos, struct virtqueue, list);
+                virtio_del_vq(vq);
+        }
+}
+
+/*
+ * Find virtqueues.
+ */
+static int virtio_find_vqs(struct virtio_device *vdev, size_t nvqs, struct virtqueue *vqs[])
+{
+        size_t i;
+        int ret;
+
+        /* set up virt queues */
+        for (i = 0; i < nvqs; i++) {
+                vqs[i] = setup_vq(vdev);
+                if (IS_ERR(vqs[i])) {
+                        ret = PTR_ERR(vqs[i]);
+                        goto err;
+                }
+        }
+
+        return 0;
+err:
+        virtio_del_vqs(vdev);
+        return ret;
+}
+
+/*
+ * Find a single virtual queue.
+ */
+struct virtqueue *virtio_find_single_vq(struct virtio_device *vdev)
+{
+	struct virtqueue *vq;
+        int ret;
+
+        ret = virtio_find_vqs(vdev, 1, &vq);
+        if (ret)
+		return ERR_PTR(ret);
+
+	return vq;
+}
+
+/*
  * Create a virtio device.
  */
-struct virtio_device *create_virtio_device(struct pci_device *pci_dev)
+struct virtio_device *virtio_device_create(struct pci_device *pci_dev)
 {
         struct virtio_device *vdev;
 
@@ -101,11 +154,11 @@ struct virtio_device *create_virtio_device(struct pci_device *pci_dev)
         pci_set_master(pci_dev);
 
         /* init virtio device */
-        vp_reset(vdev);
-        vp_add_status(vdev, VIRTIO_STATUS_ACKNOWLEDGE);
-        vp_add_status(vdev, VIRTIO_STATUS_DRIVER);
-        vp_get_features(vdev);
-        vp_set_features(vdev, 0);
+        virtio_device_reset(vdev);
+        virtio_device_add_status(vdev, VIRTIO_STATUS_ACKNOWLEDGE);
+        virtio_device_add_status(vdev, VIRTIO_STATUS_DRIVER);
+        virtio_device_get_features(vdev);
+        virtio_device_set_features(vdev, 0);
 
         return vdev;
 }
@@ -113,18 +166,9 @@ struct virtio_device *create_virtio_device(struct pci_device *pci_dev)
 /*
  * Free a virtio device.
  */
-void free_virtio_device(struct virtio_device *vdev)
+void virtio_device_free(struct virtio_device *vdev)
 {
-        struct list_head *pos, *n;
-        struct virtqueue *vq;
-
-        /* free virtual queues */
-        list_for_each_safe(pos, n, &vdev->vqs) {
-                vq = list_entry(pos, struct virtqueue, list);
-                free_vq(vq);
-        }
-
-        /* free device */
+        virtio_del_vqs(vdev);
         kfree(vdev);
 }
 

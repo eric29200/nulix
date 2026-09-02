@@ -131,19 +131,19 @@ static int virtio_rng_probe(struct pci_device *pci_dev, struct pci_device_id *id
                 return -EBUSY;
 
         /* create a new virtio device */
-        vdev = create_virtio_device(pci_dev);
+        vdev = virtio_device_create(pci_dev);
         if (!vdev)
                 return -ENOMEM;
 
         /* setup virtual queue */
-        vq = setup_vq(vdev);
+        vq = virtio_find_single_vq(vdev);
         if (IS_ERR(vq)) {
                 ret = PTR_ERR(vq);
                 goto err;
         }
 
         /* driver ok */
-        vp_add_status(vdev, VIRTIO_STATUS_DRIVER_OK);
+        virtio_device_add_status(vdev, VIRTIO_STATUS_DRIVER_OK);
 
         /* register misc device */
         ret = misc_register(&virtio_rng_misc_dev);
@@ -159,8 +159,8 @@ static int virtio_rng_probe(struct pci_device *pci_dev, struct pci_device_id *id
 
         return 0;
 err:
-        vp_add_status(vdev, VIRTIO_STATUS_FAILED);
-        free_virtio_device(vdev);
+        virtio_device_add_status(vdev, VIRTIO_STATUS_FAILED);
+        virtio_device_free(vdev);
         vq = NULL;
         return ret;
 }
