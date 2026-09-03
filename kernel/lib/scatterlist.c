@@ -52,7 +52,7 @@ static void sg_set_page(struct scatterlist *sg, struct page *page, size_t len, u
 /*
  * Set sg entry to point at given data.
  */
-static void sg_set_buf(struct scatterlist *sg, const void *buf, size_t buf_len)
+void sg_set_buf(struct scatterlist *sg, const void *buf, size_t buf_len)
 {
 	sg_set_page(sg, virt_to_page(buf), buf_len, offset_in_page(buf));
 }
@@ -73,7 +73,7 @@ static void sg_mark_end(struct scatterlist *sg)
 /*
  * Initialize sg table.
  */
-static void sg_init_table(struct scatterlist *sgl, size_t nents)
+void sg_init_table(struct scatterlist *sgl, size_t nents)
 {
 	size_t i;
 

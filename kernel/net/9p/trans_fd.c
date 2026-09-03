@@ -772,6 +772,7 @@ static int p9_fd_cancel(struct p9_client *client, struct p9_request *req)
  */
 static struct p9_trans_module p9_tcp_trans = {
 	.name 		= "tcp",
+	.def		= 1,
 	.maxsize 	= MAX_SOCK_BUF,
 	.create 	= p9_fd_create_tcp,
 	.close 		= p9_fd_close,

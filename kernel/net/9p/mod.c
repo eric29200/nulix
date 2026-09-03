@@ -36,10 +36,16 @@ struct p9_trans_module *v9fs_get_trans_by_name(const struct substring *name)
  */
 struct p9_trans_module *v9fs_get_default_trans()
 {
-	if (list_empty(&v9fs_trans_list))
-		return NULL;
+	struct p9_trans_module *t;
+	struct list_head *pos;
 
-	return list_first_entry(&v9fs_trans_list, struct p9_trans_module, list);
+	list_for_each(pos, &v9fs_trans_list) {
+		t = list_entry(pos, struct p9_trans_module, list);
+		if (t->def)
+			return t;
+	}
+
+	return NULL;
 }
 
 /*
@@ -47,5 +53,6 @@ struct p9_trans_module *v9fs_get_default_trans()
  */
 int init_p9()
 {
+	p9_trans_virtio_init();
 	return p9_trans_fd_init();
 }

@@ -40,10 +40,8 @@ void *virtqueue_get_buf(struct virtqueue *vq, size_t *len)
 	size_t i;
 
 	/* no buffers in queue */
-	if (vq->last_used_idx == vq->vring.used->idx) {
-		printf("virtqueue_get_buf: no more buffers in queue\n");
+	if (vq->last_used_idx == vq->vring.used->idx)
 		return NULL;
-	}
 
 	/* get buffer */
 	i = vq->vring.used->ring[vq->last_used_idx % vq->vring.num].id;

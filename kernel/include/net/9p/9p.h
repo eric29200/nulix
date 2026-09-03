@@ -13,7 +13,6 @@
 #define P9_IOHDRSZ			24
 #define P9_READDIRHDRSZ			24
 
-
 #define P9_CLIENT_CONNECTED		1
 #define P9_CLIENT_DISCONNECTED		2
 
@@ -134,6 +133,7 @@ struct p9_request {
 struct p9_trans_module {
 	struct list_head		list;
 	char *				name;
+	uint8_t				def;
 	uint32_t			maxsize;
 	int 				(*create)(struct p9_client *, const char *, char *);
 	void				(*close) (struct p9_client *);
@@ -219,6 +219,7 @@ struct p9_rstatfs {
 /* init functions */
 int init_p9();
 int p9_trans_fd_init();
+int p9_trans_virtio_init();
 
 /* client functions */
 struct p9_client *p9_client_create(const char *dev_name, char *options);

@@ -8,6 +8,7 @@
 
 #define VIRTIO_PCI_VENDOR_ID		0x1AF4
 #define VIRTIO_PCI_RNG_DEVICE_ID	0x1005
+#define VIRTIO_PCI_P9_DEVICE_ID		0x1009
 
 #define VIRTIO_PCI_HOST_FEATURES	0
 #define VIRTIO_PCI_GUEST_FEATURES	4
@@ -17,6 +18,7 @@
 #define VIRTIO_PCI_QUEUE_NOTIFY		16
 #define VIRTIO_PCI_STATUS		18
 #define VIRTIO_PCI_ISR			19
+#define VIRTIO_PCI_CONFIG		20
 
 #define VIRTIO_STATUS_ACKNOWLEDGE	1
 #define VIRTIO_STATUS_DRIVER		2
@@ -91,6 +93,7 @@ struct virtio_device {
 	struct pci_device *		pci_dev;
 	uint32_t			io_base;
 	uint8_t				irq_enabled;
+	void *				priv;
 	struct list_head 		vqs;
 };
 
@@ -162,6 +165,18 @@ static inline uint32_t virtio_device_get_features(struct virtio_device *vdev)
 static inline void virtio_device_set_features(struct virtio_device *vdev, uint32_t features)
 {
 	outl(vdev->io_base + VIRTIO_PCI_GUEST_FEATURES, features);
+}
+
+/*
+ * Get device configuration.
+ */
+static inline void virtio_device_get_config(struct virtio_device *vdev, uint32_t offset, void *buf, size_t len)
+{
+	uint8_t *ptr = buf;
+	size_t i;
+
+	for (i = 0; i < len; i++)
+		ptr[i] = inb(vdev->io_base + VIRTIO_PCI_CONFIG + offset + i);
 }
 
 #endif

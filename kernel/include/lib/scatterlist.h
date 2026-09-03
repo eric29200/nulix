@@ -18,6 +18,8 @@ struct scatterlist {
 };
 
 void sg_init_one(struct scatterlist *sg, const void *buf, size_t buf_len);
+void sg_init_table(struct scatterlist *sgl, size_t nents);
+void sg_set_buf(struct scatterlist *sg, const void *buf, size_t buf_len);
 uint32_t sg_phys(struct scatterlist *sg);
 
 #endif
