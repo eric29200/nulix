@@ -5,6 +5,8 @@
 #include <lib/parser.h>
 #include <lib/list.h>
 #include <proc/wait.h>
+#include <stdio.h>
+#include <config.h>
 
 #define P9_PROTO_2000L			2
 #define P9_PORT				564
@@ -299,6 +301,7 @@ static inline void p9_error(const char *fmt, ...)
  */
 static inline void p9_debug(const char *fmt, ...)
 {
+#if P9_DEBUG >= 1
 	va_list ap;
 
 	/* print panic */
@@ -308,6 +311,9 @@ static inline void p9_debug(const char *fmt, ...)
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
 	va_end(ap);
+#else
+	UNUSED(fmt);
+#endif
 }
 
 #endif

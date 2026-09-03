@@ -2,7 +2,7 @@
 /dev/root       	/               ext2    rw,noauto       							0       1
 /dev/hda2		none		swap	sw									0	0
 /dev/hdc		/mnt/cdrom	iso9660	defaults								0	0
-hostshare		/mnt/9p		9p	trans=virtio,version=9p2000.L,msize=8192				0	0
+hostshare		/mnt/9p		9p	trans=virtio,version=9p2000.L,msize=16384				0	0
 proc            	/proc           proc    defaults        							0       0
 devpts			/dev/pts	devpts	defaults								0	0
 tmpfs           	/tmp            tmpfs   mode=1777       							0       0
