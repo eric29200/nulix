@@ -289,7 +289,7 @@ int generic_file_mmap(struct file *filp, struct vm_area *vma)
 static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t max_pages)
 {
 	struct page *page, *pages_list[MAX_READ_AHEAD_PAGES];
-	size_t nr_pages_read = 0, i;
+	size_t i;
 
 	/* limit max pages */
 	if (max_pages > MAX_READ_AHEAD_PAGES)
@@ -319,8 +319,6 @@ static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t
 			break;
 		}
 
-		/* page must be read */
-		nr_pages_read++;
 next:
 		pages_list[i] = page;
 	}

@@ -1103,7 +1103,7 @@ static void unuse_pte(struct vm_area *vma, pte_t *pte, uint32_t entry, struct pa
 /*
  * Try to unuse a swap page.
  */
-static void unuse_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, size_t size, uint32_t offset, uint32_t entry, struct page *page)
+static void unuse_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, size_t size, uint32_t entry, struct page *page)
 {
 	uint32_t end;
 	pte_t *pte;
@@ -1112,7 +1112,6 @@ static void unuse_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, size_t 
 		return;
 
 	pte = pte_offset(pmd, address);
-	offset += address & PMD_MASK;
 	address &= ~PMD_MASK;
 	end = address + size;
 	if (end > PMD_SIZE)
@@ -1130,18 +1129,17 @@ static void unuse_pmd(struct vm_area *vma, pmd_t *pmd, uint32_t address, size_t 
  */
 static void unuse_pgd(struct vm_area *vma, pgd_t *pgd, uint32_t address, size_t size, uint32_t entry, struct page *page)
 {
-	uint32_t offset, end;
+	uint32_t end;
 	pmd_t *pmd;
 
 	pmd = pmd_offset(pgd);
-	offset = address & PGDIR_MASK;
 	address &= ~PGDIR_MASK;
 	end = address + size;
 	if (end > PGDIR_SIZE)
 		end = PGDIR_SIZE;
 
 	do {
-		unuse_pmd(vma, pmd, address, end - address, offset, entry, page);
+		unuse_pmd(vma, pmd, address, end - address, entry, page);
 		address = (address + PMD_SIZE) & PMD_MASK;
 		pmd++;
 	} while (address < end);
