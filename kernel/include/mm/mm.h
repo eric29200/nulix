@@ -15,6 +15,19 @@
 #define USTACK_START			0xF8000000				/* user stack */
 #define USTACK_LIMIT			(8 * 1024 * 1024)			/* user stack limit = 8 MB */
 
+#define FIXADDR_TOP			0xFFFFE000UL
+#define __FIXADDR_SIZE			(__end_of_fixed_addresses << PAGE_SHIFT)
+#define FIXADDR_START			(FIXADDR_TOP - __FIXADDR_SIZE)
+#define __fix_to_virt(x)		(FIXADDR_TOP - ((x) << PAGE_SHIFT))
+
+/*
+ * Fix mappings.
+ */
+enum fixed_addresses {
+	FIX_APIC_BASE,
+	__end_of_fixed_addresses
+};
+
 /*
  * Virtual memory area structure.
  */
@@ -54,6 +67,8 @@ void *kmalloc(uint32_t size);
 void kfree(void *p);
 void kheap_init();
 void si_meminfo(struct sysinfo *info);
+uint32_t fix_to_virt(uint32_t idx);
+void set_fixmap(enum fixed_addresses idx, uint32_t phys, uint32_t flags);
 
 
 #endif

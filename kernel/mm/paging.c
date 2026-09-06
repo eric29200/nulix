@@ -784,6 +784,13 @@ int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end)
 		pmd++;
 	}
 
+	/* allocate fix map entries */
+	addr = __fix_to_virt(__end_of_fixed_addresses - 1) & PMD_MASK;
+	pgd = pgd_offset(pgd_kernel, addr);
+	pmd = pmd_offset(pgd);
+	*pmd = (pmd_t) kernel_end | PAGE_TABLE;
+	kernel_end += PAGE_SIZE;
+
 	/* allocate pkmap page table entries */
 	addr = PKMAP_BASE;
 	pgd = pgd_offset(pgd_kernel, addr);
