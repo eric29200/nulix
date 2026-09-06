@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 /* IRQ descriptors */
-static irq_desc_t irq_desc[NR_IRQS] = { NULL, };
+irq_desc_t irq_desc[NR_IRQS] = { NULL, };
 
 /*
  * Request an IRQ.
@@ -89,12 +89,9 @@ void irq_handler(struct registers *regs)
 	/* update kernel statistics */
 	kstat.irqs[irq]++;
 
-	/* send reset signal to slave PIC (if irq > 7) */
-	if (irq > 7)
-		outb(0xA0, 0x20);
-
-	/* send reset signal to master PIC */
-	outb(0x20, 0x20);
+	/* ack irq */
+	if (irq_desc[irq].handler && irq_desc[irq].handler->ack)
+		irq_desc[irq].handler->ack(irq);
 
 	/* handle interrupt */
 	for (action = irq_desc[irq].action; action != NULL; action = action->next)

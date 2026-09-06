@@ -17,21 +17,30 @@
 #define irq_restore(x)		__restore_flags(x);
 
 /*
+ * Interrupt controller descriptor.
+ */
+struct hw_interrupt_type {
+	const char *			name;
+	void				(*ack)(uint32_t);
+};
+
+/*
  * IRQ action.
  */
 struct irq_action {
-	void 			(*handler)(struct registers *, void *);
-	uint32_t		flags;
-	const char *		name;
-	void *			dev_id;
-	struct irq_action *	next;
+	void 				(*handler)(struct registers *, void *);
+	uint32_t			flags;
+	const char *			name;
+	void *				dev_id;
+	struct irq_action *		next;
 };
 
 /*
  * IRQ descriptor.
  */
 typedef struct {
-	struct irq_action *	action;
+	struct hw_interrupt_type *	handler;
+	struct irq_action *		action;
 } irq_desc_t;
 
 /* exception and irq handlers */

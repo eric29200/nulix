@@ -1,6 +1,6 @@
 #include <x86/gdt.h>
 #include <x86/idt.h>
-#include <x86/interrupt.h>
+#include <x86/i8259.h>
 #include <x86/io.h>
 #include <x86/cpu.h>
 #include <mm/mm.h>
@@ -350,8 +350,8 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	init_gdt();
 
 	/* init idt */
-	printf("[Kernel] Interrupt Descriptor Table Init\n");
-	init_idt();
+	printf("[Kernel] Interrupts Init\n");
+	init_irq();
 
 	/* init memory */
 	printf("[Kernel] Memory Init\n");
