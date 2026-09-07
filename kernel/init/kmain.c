@@ -3,6 +3,7 @@
 #include <x86/i8259.h>
 #include <x86/io.h>
 #include <x86/cpu.h>
+#include <x86/smp.h>
 #include <mm/mm.h>
 #include <grub/multiboot2.h>
 #include <drivers/char/mem.h>
@@ -341,10 +342,6 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	/* print grub informations */
 	printf("[Kernel] Loading at linear address = 0x%x\n", loader);
 
-	/* init cpu */
-	printf("[Kernel] CPU Init\n");
-	init_cpu();
-
 	/* init gdt */
 	printf("[Kernel] Global Descriptor Table Init\n");
 	init_gdt();
@@ -356,6 +353,14 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	/* init memory */
 	printf("[Kernel] Memory Init\n");
 	init_mem((uint32_t) &kernel_start, (uint32_t) &kernel_end, mem_upper);
+
+	/* init cpu */
+	printf("[Kernel] CPU Init\n");
+	init_cpu();
+
+	/* init smp */
+	printf("[Kernel] SMP Init\n");
+	init_smp();
 
 	/* init inodes */
 	printf("[Kernel] Inodes init\n");

@@ -14,6 +14,7 @@ run:
 	grub-mkrescue -o $(ISO) iso
 	sudo $(QEMU)										\
 		-m $(MEM_SIZE)									\
+		-smp sockets=2 \
 		-serial stdio 									\
 		-boot order=d 									\
 		-cdrom $(ISO) 									\
