@@ -109,7 +109,6 @@ static uint32_t calibrate_tsc()
 static void pit_handler(struct registers *regs)
 {
 	UNUSED(regs);
-
 	do_timer_interrupt();
 }
 

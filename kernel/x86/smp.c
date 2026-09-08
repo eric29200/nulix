@@ -1,4 +1,6 @@
 #include <x86/smp.h>
+#include <x86/io.h>
+#include <x86/apic.h>
 #include <mm/paging.h>
 #include <stdio.h>
 #include <stderr.h>
@@ -140,4 +142,14 @@ void init_smp()
 
 	/* get smp configuration */
 	get_smp_config();
+
+	/* no local apic */
+	if (!mp_lapic_addr)
+		return;
+
+	/* fix lapic mapping */
+	set_fixmap(FIX_APIC_BASE, mp_lapic_addr, PAGE_KERNEL);
+
+	/* init APIC */
+	init_apic();
 }
