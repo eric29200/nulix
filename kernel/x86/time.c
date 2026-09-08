@@ -1,4 +1,4 @@
-#include <drivers/char/pit.h>
+#include <x86/time.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <x86/system.h>
@@ -138,7 +138,7 @@ void update_times()
 /*
  * Init the Programmable Interval Timer.
  */
-void init_pit()
+void init_time()
 {
 	uint32_t divisor, eax, edx;
 

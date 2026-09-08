@@ -2,7 +2,7 @@
 #include <x86/interrupt.h>
 #include <x86/gdt.h>
 #include <x86/ldt.h>
-#include <drivers/char/pit.h>
+#include <x86/time.h>
 #include <kernel_stat.h>
 #include <proc/sched.h>
 #include <proc/task.h>

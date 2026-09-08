@@ -4,12 +4,12 @@
 #include <x86/io.h>
 #include <x86/cpu.h>
 #include <x86/smp.h>
+#include <x86/time.h>
 #include <mm/mm.h>
 #include <grub/multiboot2.h>
 #include <drivers/char/mem.h>
 #include <drivers/char/misc.h>
 #include <drivers/char/serial.h>
-#include <drivers/char/pit.h>
 #include <drivers/char/rtc.h>
 #include <drivers/char/tty.h>
 #include <drivers/char/keyboard.h>
@@ -358,6 +358,10 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	printf("[Kernel] CPU Init\n");
 	init_cpu();
 
+	/* init time */
+	printf("[Kernel] Time Init\n");
+	init_time();
+
 	/* init smp */
 	printf("[Kernel] SMP Init\n");
 	init_smp();
@@ -377,10 +381,6 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	/* init IPC resources */
 	printf("[Kernel] IPC resources init\n");
 	init_ipc();
-
-	/* init PIT */
-	printf("[Kernel] PIT Init\n");
-	init_pit();
 
 	/* init real time clock */
 	printf("[Kernel] Real Time Clock Init\n");
