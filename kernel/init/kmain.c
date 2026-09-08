@@ -1,6 +1,6 @@
 #include <x86/gdt.h>
 #include <x86/idt.h>
-#include <x86/i8259.h>
+#include <x86/interrupt.h>
 #include <x86/io.h>
 #include <x86/cpu.h>
 #include <x86/smp.h>

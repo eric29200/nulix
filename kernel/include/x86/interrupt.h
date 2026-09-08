@@ -52,5 +52,6 @@ void register_exception_handler(uint32_t n, void *handler);
 int request_irq(uint32_t irq, void *handler, uint32_t flags, const char *devname, void *dev_id);
 void free_irq(uint32_t irq, void *dev_id);
 size_t get_irq_list(char *page);
+void init_irq();
 
 #endif
