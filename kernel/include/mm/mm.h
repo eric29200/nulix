@@ -3,6 +3,7 @@
 
 #include <lib/list.h>
 #include <grub/multiboot2.h>
+#include <x86/smp.h>
 #include <sys/sys.h>
 #include <stddef.h>
 
@@ -25,6 +26,8 @@
  */
 enum fixed_addresses {
 	FIX_APIC_BASE,
+	FIX_IO_APIC_BASE_0,
+	FIX_IO_APIC_BASE_END = FIX_IO_APIC_BASE_0 + MAX_IO_APICS - 1,
 	__end_of_fixed_addresses
 };
 

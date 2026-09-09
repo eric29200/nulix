@@ -161,6 +161,19 @@ static void mask_and_ack_8259A(uint32_t irq)
 }
 
 /*
+ * Disable an interrupt.
+ */
+void disable_8259A_irq(uint32_t irq)
+{
+	uint32_t mask = 1 << irq;
+
+	if (irq & 8)
+		outb(0xA1, inb(0xA1) | mask);
+	else
+		outb(0x21, inb(0x21) | mask);
+}
+
+/*
  * PIC irq type.
  */
 static struct hw_interrupt_type i8259A_irq_type = {

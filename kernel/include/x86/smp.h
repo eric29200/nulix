@@ -12,6 +12,10 @@
 #define	MP_INTSRC		3
 #define	MP_LINTSRC		4
 
+#define MPC_APIC_USABLE		0x01
+
+#define MAX_IO_APICS		8
+
 /*
  * Intel MP table.
  */
@@ -43,6 +47,30 @@ struct mp_config_table {
 	uint16_t	mpc_oemcount;
 	uint32_t	mpc_lapic;			/* APIC address */
 	uint32_t	reserved;
+} __attribute__((packed));
+
+/*
+ * Intel MP processor config.
+ */
+struct mpc_config_processor {
+	uint8_t		mpc_type;
+	uint8_t		mpc_apicid;			/* Local APIC number */
+	uint8_t		mpc_apicver;			/* Its versions */
+	uint8_t		mpc_cpuflag;
+	uint32_t	mpc_cpufeature;
+	uint32_t	mpc_featureflag;			/* CPUID feature value */
+	uint32_t	mpc_reserved[2];
+} __attribute__((packed));
+
+/*
+ * Intel MP I/O APIC config.
+ */
+struct mpc_config_ioapic {
+	uint8_t		mpc_type;
+	uint8_t		mpc_apicid;
+	uint8_t		mpc_apicver;
+	uint8_t		mpc_flags;
+	uint32_t	mpc_apicaddr;
 } __attribute__((packed));
 
 void init_smp();

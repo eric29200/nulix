@@ -1,15 +1,18 @@
 #include <x86/smp.h>
 #include <x86/io.h>
 #include <x86/apic.h>
+#include <x86/io_apic.h>
 #include <mm/paging.h>
 #include <stdio.h>
 #include <stderr.h>
 #include <string.h>
 
-/* global variable */
+/* global variables */
 static int smp_found_config = 0;
 static struct intel_mp_floating *mpf_found = NULL;
 static uint32_t mp_lapic_addr = 0;
+int nr_ioapics = 0;
+struct mpc_config_ioapic mp_ioapics[MAX_IO_APICS] = { 0 };
 
 /*
  * Compute checksum.
@@ -55,11 +58,38 @@ static int smp_scan_config(uint32_t base, size_t len)
 }
 
 /*
+ * Parse I/O APIC informations.
+ */
+static void MP_ioapic_info(struct mpc_config_ioapic *m)
+{
+	/* I/O APIC not usable */
+	if (!(m->mpc_flags & MPC_APIC_USABLE))
+		return;
+
+	/* print I/O APIC */
+	printf("I/O APIC #%d Version %d at 0x%lX.\n", m->mpc_apicid, m->mpc_apicver, m->mpc_apicaddr);
+
+	/* maximum number of I/O APICS reached */
+	if (nr_ioapics >= MAX_IO_APICS)
+		panic("Max # of I/O APICs (%d) exceeded (found %d)\n", MAX_IO_APICS, nr_ioapics);
+
+	/* bogus I/O APIC */
+	if (!m->mpc_apicaddr)
+		panic("Bogus zero I/O APIC address found in MP table\n");
+
+	/* store I/O APIC config */
+	mp_ioapics[nr_ioapics] = *m;
+	nr_ioapics++;
+}
+
+/*
  * Read SMP configuration.
  */
 static int smp_read_mpc(struct mp_config_table *mpc)
 {
 	char oem[16], prod[14];
+	uint8_t *mpt;
+	int count;
 
 	/* check signature */
 	if (memcmp(mpc->mpc_signature, MPC_SIGNATURE, 4) != 0) {
@@ -103,6 +133,36 @@ static int smp_read_mpc(struct mp_config_table *mpc)
 	/* save the local APIC address */
 	mp_lapic_addr = mpc->mpc_lapic;
 
+	/* process mp block */
+	count = sizeof(struct mp_config_table);
+	mpt = ((uint8_t *) mpc) + count;
+	while (count < mpc->mpc_length) {
+		switch(*mpt) {
+			case MP_PROCESSOR: {
+				struct mpc_config_processor *m = (struct mpc_config_processor *) mpt;
+				mpt += sizeof(*m);
+				count += sizeof(*m);
+				break;
+			}
+			case MP_IOAPIC: {
+				struct mpc_config_ioapic *m = (struct mpc_config_ioapic *) mpt;
+				MP_ioapic_info(m);
+				mpt += sizeof(*m);
+				count += sizeof(*m);
+				break;
+			}
+			case MP_BUS:
+			case MP_INTSRC:
+			case MP_LINTSRC:
+				mpt += 8;
+				count += 8;
+				break;
+			default:
+				count = mpc->mpc_length;
+				break;
+		}
+	}
+
 	return 1;
 }
 
@@ -123,6 +183,28 @@ static void get_smp_config()
 	/* read configuration */
 	if (mpf->mpf_physptr)
 		smp_read_mpc((void *) mpf->mpf_physptr);
+}
+
+/*
+ * Init APIC mappings.
+ */
+static void init_apic_mappings()
+{
+	uint32_t ioapic_phys, idx = FIX_IO_APIC_BASE_0;
+	int i;
+
+	/* fix lapic mapping */
+	set_fixmap(FIX_APIC_BASE, mp_lapic_addr, PAGE_KERNEL);
+
+	/* fix I/O APICS mapping */
+	for (i = 0; i < nr_ioapics; i++) {
+		ioapic_phys = mp_ioapics[i].mpc_apicaddr;
+		if (!ioapic_phys)
+			panic("bogus zero IO-APIC address found in MPTABLE\n");
+
+		set_fixmap(idx, ioapic_phys, PAGE_KERNEL);
+		idx++;
+	}
 }
 
 /*
@@ -147,9 +229,12 @@ void init_smp()
 	if (!mp_lapic_addr)
 		return;
 
-	/* fix lapic mapping */
-	set_fixmap(FIX_APIC_BASE, mp_lapic_addr, PAGE_KERNEL);
+	/* init apic mappings */
+	init_apic_mappings();
 
-	/* init APIC */
+	/* init local APIC */
 	init_apic();
+
+	/* init I/O APIC */
+	init_io_apic();
 }
