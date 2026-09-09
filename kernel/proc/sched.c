@@ -17,7 +17,7 @@
 LIST_HEAD(tasks_list);					/* active processes list */
 static struct task *kinit_task;				/* kernel init task (pid = 0) */
 struct task *init_task;					/* user init task (pid = 1) */
-struct task *current_task = NULL;			/* current task */
+static struct task *current_task = NULL;		/* current task */
 static pid_t next_pid = 0;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
 int need_resched = 0;					/* reschedule needed ? */
@@ -30,6 +30,14 @@ extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
 
 /* average run */
 unsigned long avenrun[3] = { 0, 0, 0 };
+
+/*
+ * Get current task.
+ */
+struct task *get_current()
+{
+	return current_task;
+}
 
 /*
  * Get next pid.

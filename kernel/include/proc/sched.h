@@ -26,6 +26,7 @@
 
 #define	MAX_SCHEDULE_TIMEOUT		LONG_MAX
 
+#define current 			get_current()
 #define suser()				((current)->euid == 0)
 
 #define CALC_LOAD(load, exp,n ) \
@@ -69,12 +70,12 @@ extern unsigned long avenrun[];				/* Load averages */
 
 extern int need_resched;
 extern struct task *init_task;
-extern struct task *current_task;
 extern struct list_head tasks_list;
 extern int nr_tasks;
 extern pid_t last_pid;
 
 int init_scheduler(void (*kinit_func)());
+struct task *get_current();
 int spawn_init();
 struct task *find_task(pid_t pid);
 pid_t get_next_pid();
@@ -110,15 +111,5 @@ int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid);
 int sys_setgroups(size_t size, const gid_t *list);
 int sys_getgroups(int size, gid_t *list);
 pid_t sys_getpgrp();
-
-/*
- * Get current task.
- */
-#define current get_current()
-
-static inline struct task *get_current()
-{
-	return current_task;
-}
 
 #endif
