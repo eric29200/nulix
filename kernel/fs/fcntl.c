@@ -11,7 +11,7 @@
 static int dupfd(int oldfd, int newfd)
 {
 	/* check old file descriptor */
-	if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->files->filp[oldfd])
+	if (oldfd < 0 || oldfd >= NR_OPEN || !current->files->filp[oldfd])
 		return -EBADF;
 
 	/* check new file descriptor */
@@ -20,7 +20,7 @@ static int dupfd(int oldfd, int newfd)
 
 	/* find a free slot */
 	for (;newfd < NR_OPEN; newfd++)
-		if (current_task->files->filp[newfd] == NULL)
+		if (current->files->filp[newfd] == NULL)
 			break;
 
 	/* no free slot */
@@ -28,9 +28,9 @@ static int dupfd(int oldfd, int newfd)
 		return -EMFILE;
 
 	/* install new file */
-	FD_CLR(oldfd, &current_task->files->close_on_exec);
-	current_task->files->filp[newfd] = current_task->files->filp[oldfd];
-	current_task->files->filp[newfd]->f_count++;
+	FD_CLR(oldfd, &current->files->close_on_exec);
+	current->files->filp[newfd] = current->files->filp[oldfd];
+	current->files->filp[newfd]->f_count++;
 
 	return newfd;
 }
@@ -41,7 +41,7 @@ static int dupfd(int oldfd, int newfd)
 int sys_dup2(int oldfd, int newfd)
 {
 	/* check old file descriptor */
-	if (oldfd < 0 || oldfd >= NR_OPEN || !current_task->files->filp[oldfd])
+	if (oldfd < 0 || oldfd >= NR_OPEN || !current->files->filp[oldfd])
 		return -EBADF;
 
 	/* check new file descriptor */
@@ -85,16 +85,16 @@ int sys_fcntl(int fd, int cmd, unsigned long arg)
 		case F_DUPFD_CLOEXEC:
 			ret = dupfd(fd, arg);
 			if (ret >= 0)
-				FD_SET(ret, &current_task->files->close_on_exec);
+				FD_SET(ret, &current->files->close_on_exec);
 			break;
 		case F_GETFD:
-			ret = FD_ISSET(fd, &current_task->files->close_on_exec);
+			ret = FD_ISSET(fd, &current->files->close_on_exec);
 			break;
 		case F_SETFD:
 			if (arg & 1)
-				FD_SET(fd, &current_task->files->close_on_exec);
+				FD_SET(fd, &current->files->close_on_exec);
 			else
-				FD_CLR(fd, &current_task->files->close_on_exec);
+				FD_CLR(fd, &current->files->close_on_exec);
 			break;
 		case F_GETFL:
 			ret = filp->f_flags;
@@ -107,8 +107,8 @@ int sys_fcntl(int fd, int cmd, unsigned long arg)
 			break;
 		case F_SETOWN:
 			filp->f_owner.pid = arg;
-			filp->f_owner.uid = current_task->uid;
-			filp->f_owner.euid = current_task->euid;
+			filp->f_owner.uid = current->uid;
+			filp->f_owner.euid = current->euid;
 			if (S_ISSOCK(filp->f_dentry->d_inode->i_mode))
 				ret = sock_fcntl(filp, F_SETOWN, arg);
 			break;

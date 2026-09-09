@@ -35,7 +35,7 @@ void wait_on_page(struct page *page)
  */
 void flush_tlb_page(pgd_t *pgd, uint32_t address)
 {
-	if (pgd == current_task->mm->pgd)
+	if (pgd == current->mm->pgd)
 		__asm__ __volatile__("invlpg (%0)" :: "r" (address) : "memory");
 }
 
@@ -44,7 +44,7 @@ void flush_tlb_page(pgd_t *pgd, uint32_t address)
  */
 void flush_tlb(pgd_t *pgd)
 {
-	if (pgd == current_task->mm->pgd)
+	if (pgd == current->mm->pgd)
 		switch_pgd(pgd);
 }
 
@@ -192,7 +192,7 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, int pgprot
 	pgd_t *dir;
 
 	/* get page directory */
-	dir = pgd_offset(current_task->mm->pgd, start);
+	dir = pgd_offset(current->mm->pgd, start);
 
 	/* fix physical address */
 	phys_addr -= start;
@@ -216,7 +216,7 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, int pgprot
 	} while (start < end);
 
 	/* flush tlb */
-	flush_tlb(current_task->mm->pgd);
+	flush_tlb(current->mm->pgd);
 
 	return ret;
 }
@@ -505,7 +505,7 @@ void page_fault_handler(struct registers *regs)
 	id = regs->err_code & 0x10 ? 1 : 0;
 
 	/* get memory region */
-	vma = find_vma(current_task->mm, fault_addr);
+	vma = find_vma(current->mm, fault_addr);
 	if (!vma)
 		goto bad_area;
 
@@ -537,7 +537,7 @@ good_area:
 bad_area:
 	/* output message */
 	printf("Page fault at address=0x%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d (process %d - %s at 0x%x)\n",
-		fault_addr, present, write_access, user, reserved, id, current_task->pid, current_task->name, regs->eip);
+		fault_addr, present, write_access, user, reserved, id, current->pid, current->name, regs->eip);
 
 	/* user mode : exit process */
 	if (user)

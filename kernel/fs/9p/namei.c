@@ -82,10 +82,10 @@ int v9fs_mknod(struct inode *dir, struct dentry *dentry, mode_t mode, dev_t dev)
 	/* fix mode */
 	if (dir->i_mode & S_ISGID)
 		mode |= S_ISGID;
-	mode &= ~current_task->fs->umask;
+	mode &= ~current->fs->umask;
 
 	/* get gid for create */
-	gid = dir->i_mode & S_ISGID ? dir->i_gid : current_task->fsgid;
+	gid = dir->i_mode & S_ISGID ? dir->i_gid : current->fsgid;
 
 	/* get parent directory fid */
 	dfid = v9fs_parent_fid(dentry);
@@ -124,10 +124,10 @@ int v9fs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 	mode |= S_IFDIR;
 	if (dir->i_mode & S_ISGID)
 		mode |= S_ISGID;
-	mode &= ~current_task->fs->umask;
+	mode &= ~current->fs->umask;
 
 	/* get gid for create */
-	gid = dir->i_mode & S_ISGID ? dir->i_gid : current_task->fsgid;
+	gid = dir->i_mode & S_ISGID ? dir->i_gid : current->fsgid;
 
 	/* get parent directory fid */
 	dfid = v9fs_parent_fid(dentry);
@@ -195,7 +195,7 @@ int v9fs_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 	int ret;
 
 	/* get gid for create */
-	gid = dir->i_mode & S_ISGID ? dir->i_gid : current_task->fsgid;
+	gid = dir->i_mode & S_ISGID ? dir->i_gid : current->fsgid;
 
 	/* get parent directory fid */
 	dfid = v9fs_parent_fid(dentry);

@@ -125,11 +125,11 @@ static uint32_t getreg(struct task *child, int regno)
 static int ptrace_traceme()
 {
 	/* already traced */
-	if (current_task->ptrace & PT_PTRACED)
+	if (current->ptrace & PT_PTRACED)
 		return -EPERM;
 
 	/* set traced */
-	current_task->ptrace |= PT_PTRACED;
+	current->ptrace |= PT_PTRACED;
 	return 0;
 }
 
@@ -139,17 +139,17 @@ static int ptrace_traceme()
 static int ptrace_attach(struct task *child, long request)
 {
 	/* can't attach current task */
-	if (child == current_task)
+	if (child == current)
 		return -EPERM;
 
 	/* check permissions */
 	if (!child->dumpable
-		|| current_task->uid != child->euid
-		|| current_task->uid != child->suid
-		|| current_task->uid != child->uid
-		|| current_task->gid != child->egid
-		|| current_task->gid != child->sgid
-		|| current_task->gid != child->gid)
+		|| current->uid != child->euid
+		|| current->uid != child->suid
+		|| current->uid != child->uid
+		|| current->gid != child->egid
+		|| current->gid != child->sgid
+		|| current->gid != child->gid)
 		return -EPERM;
 
 	/* same process can't be attached many times */
@@ -160,8 +160,8 @@ static int ptrace_attach(struct task *child, long request)
 	child->ptrace |= PT_PTRACED;
 
 	/* adopt child */
-	if (child->parent != current_task)
-		child->parent = current_task;
+	if (child->parent != current)
+		child->parent = current;
 
 	/* stop child */
 	if (request != PTRACE_SEIZE)
@@ -226,7 +226,7 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 		return -ESRCH;
 	if (child->state != TASK_STOPPED && request != PTRACE_KILL)
 		return -ESRCH;
-	if (child->parent != current_task)
+	if (child->parent != current)
 		return -ESRCH;
 
 	/* handle request */
@@ -296,18 +296,18 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 void syscall_trace()
 {
 	/* don't trace system calls */
-	if ((current_task->ptrace & (PT_PTRACED | PT_TRACESYS)) != (PT_PTRACED | PT_TRACESYS))
+	if ((current->ptrace & (PT_PTRACED | PT_TRACESYS)) != (PT_PTRACED | PT_TRACESYS))
 		return;
 
 	/* stop task and notify parent */
-	current_task->exit_code = SIGTRAP;
-	current_task->state = TASK_STOPPED;
-	notify_parent(current_task, SIGCHLD);
+	current->exit_code = SIGTRAP;
+	current->state = TASK_STOPPED;
+	notify_parent(current, SIGCHLD);
 	schedule();
 
 	/* continue */
-	if (current_task->exit_code) {
-		send_sig(current_task, current_task->exit_code, 1);
-		current_task->exit_code = 0;
+	if (current->exit_code) {
+		send_sig(current, current->exit_code, 1);
+		current->exit_code = 0;
 	}
 }

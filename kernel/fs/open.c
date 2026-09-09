@@ -56,7 +56,7 @@ static int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 	}
 
 	/* set file */
-	FD_CLR(fd, &current_task->files->close_on_exec);
+	FD_CLR(fd, &current->files->close_on_exec);
 	filp->f_dentry = dentry;
 	filp->f_pos = 0;
 	filp->f_op = inode->i_op->fops;
@@ -68,7 +68,7 @@ static int do_open(int dirfd, const char *pathname, int flags, mode_t mode)
 			goto err_cleanup_dentry;
 	}
 
-	current_task->files->filp[fd] = filp;
+	current->files->filp[fd] = filp;
 	return fd;
 err_cleanup_dentry:
 	dput(dentry);
@@ -124,12 +124,12 @@ int sys_close(int fd)
 	struct file *filp;
 
 	/* get file */
-	if (fd < 0 || fd >= NR_OPEN || (filp = current_task->files->filp[fd]) == NULL)
+	if (fd < 0 || fd >= NR_OPEN || (filp = current->files->filp[fd]) == NULL)
 		return -EBADF;
 
 	/* close file */
-	FD_CLR(fd, &current_task->files->close_on_exec);
-	current_task->files->filp[fd] = NULL;
+	FD_CLR(fd, &current->files->close_on_exec);
+	current->files->filp[fd] = NULL;
 	return close_fp(filp);
 }
 
@@ -392,8 +392,8 @@ int sys_chroot(const char *path)
 		goto out;
 
 	/* release current root directory and change it */
-	dput(current_task->fs->root);
-	current_task->fs->root = dentry;
+	dput(current->fs->root);
+	current->fs->root = dentry;
 	ret = 0;
 out:
 	dput(dentry);

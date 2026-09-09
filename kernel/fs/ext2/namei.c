@@ -311,7 +311,7 @@ int ext2_create(struct inode *dir, struct dentry *dentry, mode_t mode)
 	int ret;
 
 	/* create a new inode */
-	inode = ext2_new_inode(dir, S_IFREG | (mode & ~current_task->fs->umask & 0777));
+	inode = ext2_new_inode(dir, S_IFREG | (mode & ~current->fs->umask & 0777));
 	if (!inode)
 		return -ENOSPC;
 
@@ -351,7 +351,7 @@ int ext2_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 	}
 
 	/* allocate a new inode */
-	inode = ext2_new_inode(dir, S_IFDIR | (mode & ~current_task->fs->umask & 0777));
+	inode = ext2_new_inode(dir, S_IFDIR | (mode & ~current->fs->umask & 0777));
 	if (!inode)
 		return -ENOSPC;
 
@@ -598,7 +598,7 @@ int ext2_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 		return -ENAMETOOLONG;
 
 	/* create a new inode */
-	inode = ext2_new_inode(dir, S_IFLNK | (0777 & ~current_task->fs->umask));
+	inode = ext2_new_inode(dir, S_IFLNK | (0777 & ~current->fs->umask));
 	if (!inode)
 		return -ENOSPC;
 

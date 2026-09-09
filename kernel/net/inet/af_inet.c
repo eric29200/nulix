@@ -346,7 +346,7 @@ static int inet_accept(struct socket *sock, struct socket *sock_new, int flags)
 		sleep_on(sk2->sleep);
 
 		/* handle signal */
-		if (signal_pending(current_task)) {
+		if (signal_pending(current)) {
 			sk1->pair = sk2;
 			sk2->sleep = NULL;
 			sk2->socket = NULL;
@@ -410,7 +410,7 @@ static int inet_dgram_connect(struct socket *sock, const struct sockaddr *addr, 
 static void inet_wait_for_connect(struct sock *sk)
 {
 	while (sk->state == TCP_SYN_SENT || sk->state == TCP_SYN_RECV) {
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			break;
 		if (sk->err)
 			break;
@@ -472,7 +472,7 @@ static int inet_stream_connect(struct socket *sock, const struct sockaddr *addr,
 		inet_wait_for_connect(sk);
 
 		/* handle signal */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -ERESTARTSYS;
 	}
 

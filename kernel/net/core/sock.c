@@ -224,7 +224,7 @@ struct sk_buff *sock_alloc_send_skb(struct sock *sk, size_t len, int nonblock, i
 		}
 
 		/* signal interrupt */
-		if (signal_pending(current_task)) {
+		if (signal_pending(current)) {
 			*err = -ERESTARTSYS;
 			return NULL;
 		}

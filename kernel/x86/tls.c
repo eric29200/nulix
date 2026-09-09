@@ -9,7 +9,7 @@
  */
 void load_tls()
 {
-	gdt_write_entry(GDT_ENTRY_TLS, &current_task->thread.tls);
+	gdt_write_entry(GDT_ENTRY_TLS, &current->thread.tls);
 }
 
 /*
@@ -54,7 +54,7 @@ int sys_get_thread_area(struct user_desc *u_info)
 		return -EINVAL;
 
 	/* copy TLS */
-	fill_user_desc(u_info, 0, &current_task->thread.tls);
+	fill_user_desc(u_info, 0, &current->thread.tls);
 
 	return 0;
 }
@@ -76,7 +76,7 @@ int sys_set_thread_area(struct user_desc *u_info)
 
 	/* set TLS */
 	u_info->entry_number = idx;
-	set_tls_desc(current_task, u_info);
+	set_tls_desc(current, u_info);
 
 	/* load TLS */
 	load_tls();
@@ -90,5 +90,5 @@ int sys_set_thread_area(struct user_desc *u_info)
 pid_t sys_set_tid_address(int *tidptr)
 {
 	UNUSED(tidptr);
-	return current_task->pid;
+	return current->pid;
 }

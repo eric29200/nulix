@@ -401,7 +401,7 @@ ino_t find_inode_number(struct dentry *dir, struct qstr *name)
  */
 char *d_path(struct dentry *dentry, char *buf, int len, int *error)
 {
-	struct dentry *root = current_task->fs->root, *parent;
+	struct dentry *root = current->fs->root, *parent;
 	char *end = buf + len;
 	int name_len;
 	char *ret;
@@ -462,7 +462,7 @@ char *d_path(struct dentry *dentry, char *buf, int len, int *error)
  */
 int sys_getcwd(char *buf, size_t size)
 {
-	struct dentry *pwd = current_task->fs->pwd;
+	struct dentry *pwd = current->fs->pwd;
 	char *cwd, *page;
 	size_t len;
 	int ret;

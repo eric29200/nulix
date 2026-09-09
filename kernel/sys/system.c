@@ -48,7 +48,7 @@ int sys_clock_gettime64(clockid_t clockid, struct timespec *tp)
 			tp->tv_nsec = xtimes.tv_nsec;
 			break;
 		case CLOCK_PROCESS_CPUTIME_ID:
-			jiffies_to_timespec(current_task->utime + current_task->stime, tp);
+			jiffies_to_timespec(current->utime + current->stime, tp);
 			break;
 		default:
 			printf("clock_gettime64 not implement on clockid=%d\n", clockid);
@@ -129,7 +129,7 @@ int sys_getrusage(int who, struct rusage *ru)
 int sys_pause()
 {
 	/* set current state sleeping and reschedule */
-	current_task->state = TASK_SLEEPING;
+	current->state = TASK_SLEEPING;
 	schedule();
 
 	return -ERESTARTNOHAND;
@@ -150,7 +150,7 @@ int sys_prlimit64(pid_t pid, int resource, struct rlimit64 *new_limit, struct rl
 	if (pid)
 		task = find_task(pid);
 	else
-		task = current_task;
+		task = current;
 
 	/* no matching task */
 	if (!task)
@@ -251,8 +251,8 @@ int sys_sysinfo(struct sysinfo *info)
  */
 mode_t sys_umask(mode_t mask)
 {
-	mode_t ret = current_task->fs->umask;
-	current_task->fs->umask = mask & 0777;
+	mode_t ret = current->fs->umask;
+	current->fs->umask = mask & 0777;
 	return ret;
 }
 
@@ -299,16 +299,16 @@ static int proc_sel(struct task *task, int which, int who)
 
 	switch (which) {
 		case PRIO_PROCESS:
-			if (!who && task == current_task)
+			if (!who && task == current)
 				return 1;
 			return task->pid == who;
 		case PRIO_PGRP:
 			if (!who)
-				who = current_task->pgrp;
+				who = current->pgrp;
 			return task->pgrp == who;
 		case PRIO_USER:
 			if (!who)
-				who = current_task->uid;
+				who = current->uid;
 			return (int) task->uid == who;
 	}
 

@@ -124,7 +124,7 @@ static ssize_t do_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 
 	/* update io accounting */
 	if (ret > 0)
-		current_task->ioac.rchar += ret;
+		current->ioac.rchar += ret;
 
 	return ret;
 }
@@ -149,7 +149,7 @@ static ssize_t do_write(struct file *filp, const char *buf, size_t count, off_t 
 
 	/* update io accounting */
 	if (ret > 0)
-		current_task->ioac.wchar += ret;
+		current->ioac.wchar += ret;
 
 	return ret;
 }
@@ -251,7 +251,7 @@ int sys_read(int fd, char *buf, int count)
 	/* release file */
 	fput(filp);
 out:
-	current_task->ioac.syscr++;
+	current->ioac.syscr++;
 	return ret;
 }
 
@@ -274,7 +274,7 @@ int sys_write(int fd, const char *buf, int count)
 	/* release file */
 	fput(filp);
 out:
-	current_task->ioac.syscw++;
+	current->ioac.syscw++;
 	return ret;
 }
 
@@ -299,8 +299,8 @@ ssize_t sys_readv(int fd, const struct iovec *iov, int iovcnt)
 	fput(filp);
 out:
 	if (ret > 0)
-		current_task->ioac.rchar += ret;
-	current_task->ioac.syscr++;
+		current->ioac.rchar += ret;
+	current->ioac.syscr++;
 	return ret;
 }
 
@@ -325,8 +325,8 @@ ssize_t sys_writev(int fd, const struct iovec *iov, int iovcnt)
 	fput(filp);
 out:
 	if (ret > 0)
-		current_task->ioac.wchar += ret;
-	current_task->ioac.syscw++;
+		current->ioac.wchar += ret;
+	current->ioac.syscw++;
 	return ret;
 }
 
@@ -349,7 +349,7 @@ int sys_pread64(int fd, void *buf, size_t count, off_t offset)
 	/* release file */
 	fput(filp);
 out:
-	current_task->ioac.syscr++;
+	current->ioac.syscr++;
 	return ret;
 }
 
@@ -372,7 +372,7 @@ int sys_pwrite64(int fd, const void *buf, size_t count, off_t offset)
 	/* release file */
 	fput(filp);
 out:
-	current_task->ioac.syscr++;
+	current->ioac.syscr++;
 	return ret;
 }
 
@@ -436,8 +436,8 @@ ssize_t sys_sendfile64(int fd_out, int fd_in, off_t *offset, size_t count)
 	free_page(buf);
 
 	/* update io accounting */
-	current_task->ioac.syscr++;
-	current_task->ioac.syscw++;
+	current->ioac.syscr++;
+	current->ioac.syscw++;
 
 	return n < 0 ? n : tot;
 }

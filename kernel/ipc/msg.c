@@ -248,7 +248,7 @@ retry:
 			return -EIDRM;
 
 		/* handle signals */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -EINTR;
 
 		goto retry;
@@ -276,7 +276,7 @@ retry:
 	list_add_tail(&msg->m_list, &msq->q_messages);
 
 	/* update message queue */
-	msq->q_lspid = current_task->pid;
+	msq->q_lspid = current->pid;
 	msq->q_stime = CURRENT_TIME;
 	msq->q_cbytes += msgsz;
 	msq->q_qnum++;
@@ -351,7 +351,7 @@ retry:
 		return -EIDRM;
 
 	/* handle signals */
-	if (signal_pending(current_task))
+	if (signal_pending(current))
 		return -EINTR;
 
 	goto retry;
@@ -373,7 +373,7 @@ found:
 	/* update message queue */
 	msq->q_qnum--;
 	msq->q_rtime = CURRENT_TIME;
-	msq->q_lrpid = current_task->pid;
+	msq->q_lrpid = current->pid;
 	msq->q_cbytes -= msg->m_ts;
 
 	/* update global stats */
@@ -407,7 +407,7 @@ static int msgctl_rmid(int msqid)
 		return -EIDRM;
 
 	/* check permissions */
-	if (current_task->euid != msq->q_perm.cuid && current_task->euid != msq->q_perm.uid)
+	if (current->euid != msq->q_perm.cuid && current->euid != msq->q_perm.uid)
 		return -EPERM;
 
 	/* free message queue */
@@ -433,7 +433,7 @@ static int msgctl_set(int msqid, struct msqid_ds *setbuf)
 		return -EIDRM;
 
 	/* check permissions */
-	if (current_task->euid != msq->q_perm.cuid && current_task->euid != msq->q_perm.uid)
+	if (current->euid != msq->q_perm.cuid && current->euid != msq->q_perm.uid)
 		return -EPERM;
 
 	/* set message queue */

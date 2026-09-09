@@ -883,7 +883,7 @@ int bdflush(void *arg)
 		sync_dev(0);
 
 		/* go to sleep */
-		current_task->state = TASK_SLEEPING;
+		current->state = TASK_SLEEPING;
 		schedule_timeout(ms_to_jiffies(BDFLUSH_INTERVAL_MS));
 	}
 

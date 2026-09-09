@@ -57,8 +57,8 @@ void exception_handler(struct registers *regs)
 	printf("[Interrupt] code=%d, message=%s (process %d - %s @ 0x%x)\n",
 		regs->int_no,
 		regs->int_no < 20 ? exception_messages[regs->int_no]: "",
-		current_task->pid,
-		current_task->name,
+		current->pid,
+		current->name,
 		regs->eip);
 	do_exit(SIGSEGV);
 }

@@ -113,7 +113,7 @@ void sem_exit(void)
 	size_t i;
 
 	/* for each undo request */
-	for (up = &current_task->semundo; (u = *up); *up = u->proc_next, kfree(u)) {
+	for (up = &current->semundo; (u = *up); *up = u->proc_next, kfree(u)) {
 		if (u->semid == -1)
 			continue;
 
@@ -140,7 +140,7 @@ found:
 		for (i = 0; i < sma->sem_nsems; i++) {
 			sem = &sma->sem_base[i];
 
-			sem->sempid = current_task->pid;
+			sem->sempid = current->pid;
 			sem->semval += u->semadj[i];
 			if (sem->semval < 0)
 				sem->semval = 0;
@@ -154,7 +154,7 @@ found:
 	}
 
 	/* reset undo */
-	current_task->semundo = NULL;
+	current->semundo = NULL;
 }
 
 /*
@@ -208,7 +208,7 @@ static struct sem_undo *sem_freeundos(struct sem_undo *un)
 {
 	struct sem_undo *u, **up;
 
-	for (up = &current_task->semundo; (u = *up) ;up = &u->proc_next) {
+	for (up = &current->semundo; (u = *up) ;up = &u->proc_next) {
 		if (un != u)
 			continue;
 
@@ -243,8 +243,8 @@ static int sem_allocundos(struct sem_array *sma, struct sem_undo **unp, int semi
 	memset(un, 0, size);
 	un->semadj = (short *) &un[1];
 	un->semid = semid;
-	un->proc_next = current_task->semundo;
-	current_task->semundo = un;
+	un->proc_next = current->semundo;
+	current->semundo = un;
 	un->id_next = sma->undo;
 	sma->undo = un;
 	*unp = un;
@@ -357,7 +357,7 @@ int sys_semop(int semid, struct sembuf *sops, size_t nsops)
 
 	/* make sure we have an undo structure for this process and this semaphore set */
 	if (undos) {
-		un = current_task->semundo;
+		un = current->semundo;
 		while (un) {
 			if (un->semid == semid)
 				break;
@@ -375,14 +375,14 @@ int sys_semop(int semid, struct sembuf *sops, size_t nsops)
 	}
 
 	/* try to execute operations */
-	ret = try_atomic_semop(sma, sops, nsops, un, current_task->pid, 0);
+	ret = try_atomic_semop(sma, sops, nsops, un, current->pid, 0);
 	if (ret <= 0)
 		goto update;
 
 	/* we need to wait */
 	for (;;) {
 		/* handle signal */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -EINTR;
 
 		/* sleep on semaphore */
@@ -398,7 +398,7 @@ int sys_semop(int semid, struct sembuf *sops, size_t nsops)
 			return -EIDRM;
 
 		/* try to execute operations */
-		ret = try_atomic_semop(sma, sops, nsops, un, current_task->pid, 0);
+		ret = try_atomic_semop(sma, sops, nsops, un, current->pid, 0);
 		if (ret <= 0)
 			break;
 	}
@@ -510,7 +510,7 @@ static int semctl_rmid(int semid)
 		return -EIDRM;
 
 	/* check permissions */
-	if (current_task->euid != sma->sem_perm.cuid && current_task->euid != sma->sem_perm.uid)
+	if (current->euid != sma->sem_perm.cuid && current->euid != sma->sem_perm.uid)
 		return -EPERM;
 
 	/* free semaphores array */

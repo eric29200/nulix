@@ -26,7 +26,7 @@
 
 #define	MAX_SCHEDULE_TIMEOUT		LONG_MAX
 
-#define suser()				((current_task)->euid == 0)
+#define suser()				((current)->euid == 0)
 
 #define CALC_LOAD(load, exp,n ) \
 	load *= exp; \
@@ -110,5 +110,15 @@ int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid);
 int sys_setgroups(size_t size, const gid_t *list);
 int sys_getgroups(int size, gid_t *list);
 pid_t sys_getpgrp();
+
+/*
+ * Get current task.
+ */
+#define current get_current()
+
+static inline struct task *get_current()
+{
+	return current_task;
+}
 
 #endif

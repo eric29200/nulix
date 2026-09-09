@@ -31,8 +31,8 @@ static struct socket *sock_alloc()
 	/* set inode */
 	inode->i_mode = S_IFSOCK;
 	inode->i_sock = 1;
-	inode->i_uid = current_task->fsuid;
-	inode->i_gid = current_task->fsgid;
+	inode->i_uid = current->fsuid;
+	inode->i_gid = current->fsgid;
 
 	/* set socket */
 	sock = &inode->u.socket_i;
@@ -114,8 +114,8 @@ static int get_fd(struct socket *sock)
 		return PTR_ERR(filp);
 
 	/* install file */
-	current_task->files->filp[fd] = filp;
-	FD_CLR(fd, &current_task->files->close_on_exec);
+	current->files->filp[fd] = filp;
+	FD_CLR(fd, &current->files->close_on_exec);
 
 	return fd;
 }
@@ -359,7 +359,7 @@ int sock_fcntl(struct file *filp, int cmd, unsigned long arg)
 
 	switch (cmd) {
 		case F_SETOWN:
-			if (current_task->pgrp != (pid_t) -arg && current_task->pid != (pid_t) arg)
+			if (current->pgrp != (pid_t) -arg && current->pid != (pid_t) arg)
 				return -EPERM;
 			sock->sk->proc = arg;
 			return 0;
@@ -439,7 +439,7 @@ int sys_socket(int domain, int type, int protocol)
 	}
 
 	/* set socket file */
-	sock->file = current_task->files->filp[fd];
+	sock->file = current->files->filp[fd];
 
 	return fd;
 }
@@ -564,7 +564,7 @@ restart:
 		goto out_release;
 
 	/* set socket file */
-	new_sock->file = current_task->files->filp[ret];
+	new_sock->file = current->files->filp[ret];
 
 	/* get address */
 	if (addr) {

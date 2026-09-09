@@ -13,7 +13,7 @@ int get_unused_fd()
 	int fd;
 
 	for (fd = 0; fd < NR_OPEN; fd++)
-		if (!current_task->files->filp[fd])
+		if (!current->files->filp[fd])
 			return fd;
 
 	return -EMFILE;
@@ -29,7 +29,7 @@ struct file *fget(int fd)
 	if (fd < 0 || fd >= NR_OPEN)
 		return NULL;
 
-	filp = current_task->files->filp[fd];
+	filp = current->files->filp[fd];
 	if (filp)
 		filp->f_count++;
 

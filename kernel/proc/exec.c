@@ -70,7 +70,7 @@ int open_dentry(struct dentry *dentry, mode_t mode)
 	}
 
 	/* install file */
-	current_task->files->filp[fd] = filp;
+	current->files->filp[fd] = filp;
 	return fd;
 out_fput:
 	fput(filp);
@@ -143,33 +143,33 @@ int prepare_binprm(struct binprm *bprm)
 		return ret;
 
 	/* uid/gid */
-	bprm->e_uid = current_task->euid;
-	bprm->e_gid = current_task->egid;
+	bprm->e_uid = current->euid;
+	bprm->e_gid = current->egid;
 	bprm->priv_change = 0;
 
 	/* set uid ? */
 	if (mode & S_ISUID) {
 		bprm->e_uid = inode->i_uid;
-		if (bprm->e_uid != current_task->euid)
+		if (bprm->e_uid != current->euid)
 			bprm->priv_change = 1;
 	}
 
 	/* set gid ? */
 	if ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP)) {
 		bprm->e_gid = inode->i_gid;
-		if (!task_in_group(current_task, bprm->e_gid))
+		if (!task_in_group(current, bprm->e_gid))
 			bprm->priv_change = 1;
 	}
 
 	/* check permissions */
 	if (bprm->priv_change) {
-		current_task->dumpable = 0;
+		current->dumpable = 0;
 
 		if (IS_NOSUID(inode)
-			|| (current_task->ptrace & PT_PTRACED)
-			|| current_task->fs->count > 1
-			|| current_task->sig->count > 1
-			|| current_task->files->count > 1)
+			|| (current->ptrace & PT_PTRACED)
+			|| current->fs->count > 1
+			|| current->sig->count > 1
+			|| current->files->count > 1)
 			return -EPERM;
 	}
 
@@ -185,7 +185,7 @@ static int make_private_signals()
 {
 	struct signal_struct *sig_new;
 
-	if (current_task->sig->count <= 1)
+	if (current->sig->count <= 1)
 		return 0;
 
 	/* allocate a private sig */
@@ -195,8 +195,8 @@ static int make_private_signals()
 
 	/* copy actions */
 	sig_new->count = 1;
-	memcpy(sig_new->action, current_task->sig->action, sizeof(sig_new->action));
-	current_task->sig = sig_new;
+	memcpy(sig_new->action, current->sig->action, sizeof(sig_new->action));
+	current->sig = sig_new;
 
 	return 0;
 }
@@ -206,7 +206,7 @@ static int make_private_signals()
  */
 static void release_old_signals(struct signal_struct *sig_old)
 {
-	if (current_task->sig == sig_old)
+	if (current->sig == sig_old)
 		return;
 
 	sig_old->count--;
@@ -220,11 +220,11 @@ static void flush_signal_handlers()
 	int i;
 
 	for (i = 0; i < _NSIG; i++) {
-		if (current_task->sig->action[i].sa_handler != SIG_IGN)
-			current_task->sig->action[i].sa_handler = SIG_DFL;
+		if (current->sig->action[i].sa_handler != SIG_IGN)
+			current->sig->action[i].sa_handler = SIG_DFL;
 
-		current_task->sig->action[i].sa_flags = 0;
-		sigemptyset(&current_task->sig->action[i].sa_mask);
+		current->sig->action[i].sa_flags = 0;
+		sigemptyset(&current->sig->action[i].sa_mask);
 	}
 }
 
@@ -236,9 +236,9 @@ static void flush_old_files()
 	int fd;
 
 	for (fd = 0; fd < NR_OPEN; fd++) {
-		if (FD_ISSET(fd, &current_task->files->close_on_exec)) {
+		if (FD_ISSET(fd, &current->files->close_on_exec)) {
 			sys_close(fd);
-			FD_CLR(fd, &current_task->files->close_on_exec);
+			FD_CLR(fd, &current->files->close_on_exec);
 		}
 	}
 }
@@ -252,9 +252,9 @@ static int exec_mmap()
 	int ret;
 
 	/* clear all memory regions */
-	if (current_task->mm->count == 1) {
-		task_release_mmap(current_task);
-		task_exit_mmap(current_task->mm);
+	if (current->mm->count == 1) {
+		task_release_mmap(current);
+		task_exit_mmap(current->mm);
 		return 0;
 	}
 
@@ -264,7 +264,7 @@ static int exec_mmap()
 		return -ENOMEM;
 
 	/* copy segments */
-	ret = clone_ldt(current_task->mm, mm_new);
+	ret = clone_ldt(current->mm, mm_new);
 	if (ret)
 		goto err;
 
@@ -275,14 +275,14 @@ static int exec_mmap()
 		goto err;
 
 	/* decrement old mm count and set new mm struct */
-	current_task->mm->count--;
-	current_task->mm = mm_new;
+	current->mm->count--;
+	current->mm = mm_new;
 
 	/* switch to new page directory */
-	switch_pgd(current_task->mm->pgd);
+	switch_pgd(current->mm->pgd);
 
 	/* release mapping */
-	task_release_mmap(current_task);
+	task_release_mmap(current);
 
 	return 0;
 err:
@@ -297,7 +297,7 @@ err:
  */
 int flush_old_exec(struct binprm *bprm)
 {
-	struct signal_struct *sig_old = current_task->sig;
+	struct signal_struct *sig_old = current->sig;
 	int ret;
 
 	/* make sig private */
@@ -315,14 +315,14 @@ int flush_old_exec(struct binprm *bprm)
 
 	/* dumpable ? */
 	bprm->dumpable = 0;
-	if (current_task->euid == current_task->uid && current_task->egid == current_task->gid)
+	if (current->euid == current->uid && current->egid == current->gid)
 		bprm->dumpable = !bprm->priv_change;
 	else
-		current_task->dumpable = 0;
+		current->dumpable = 0;
 
-	if (bprm->e_uid != current_task->euid || bprm->e_gid != current_task->egid || permission(bprm->dentry->d_inode, MAY_READ)) {
+	if (bprm->e_uid != current->euid || bprm->e_gid != current->egid || permission(bprm->dentry->d_inode, MAY_READ)) {
 		bprm->dumpable = 0;
-		current_task->dumpable = 0;
+		current->dumpable = 0;
 	}
 
 	/* flush signal handlers and files */
@@ -331,10 +331,10 @@ int flush_old_exec(struct binprm *bprm)
 
 	return 0;
 err_mm:
-	if (current_task->sig != sig_old)
-		kfree(current_task->sig);
+	if (current->sig != sig_old)
+		kfree(current->sig);
 err_sig:
-	current_task->sig = sig_old;
+	current->sig = sig_old;
 	return ret;
 }
 
@@ -343,16 +343,16 @@ err_sig:
  */
 void compute_creds(struct binprm *bprm)
 {
-	current_task->suid = bprm->e_uid;
-	current_task->euid = bprm->e_uid;
-	current_task->fsuid = bprm->e_uid;
-	current_task->sgid = bprm->e_gid;
-	current_task->egid = bprm->e_gid;
-	current_task->fsgid = bprm->e_gid;
+	current->suid = bprm->e_uid;
+	current->euid = bprm->e_uid;
+	current->fsuid = bprm->e_uid;
+	current->sgid = bprm->e_gid;
+	current->egid = bprm->e_gid;
+	current->fsgid = bprm->e_gid;
 
-	if (current_task->euid != current_task->uid || current_task->egid != current_task->gid) {
+	if (current->euid != current->uid || current->egid != current->gid) {
 		bprm->dumpable = 0;
-		current_task->dumpable = 0;
+		current->dumpable = 0;
 	}
 }
 
@@ -403,8 +403,8 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 	memset(&bprm, 0, sizeof(struct binprm));
 	bprm.filename = path;
 	bprm.dentry = dentry;
-	was_dumpable = current_task->dumpable;
-	current_task->dumpable = 0;
+	was_dumpable = current->dumpable;
+	current->dumpable = 0;
 
 	/* prepare binary program */
 	ret = prepare_binprm(&bprm);
@@ -435,7 +435,7 @@ int sys_execve(const char *path, char *const argv[], char *const envp[])
 
 	/* handle success */
 	if (ret >= 0) {
-		current_task->dumpable = bprm.dumpable;
+		current->dumpable = bprm.dumpable;
 		return ret;
 	}
 out:
@@ -443,7 +443,7 @@ out:
 	if (bprm.dentry)
 		dput(bprm.dentry);
 	kfree(bprm.buf_args);
-	current_task->dumpable = was_dumpable;
+	current->dumpable = was_dumpable;
 	return ret;
 }
 

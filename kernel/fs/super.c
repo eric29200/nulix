@@ -552,8 +552,8 @@ int do_mount_root(dev_t dev, const char *dev_name, int flags)
 	return -EINVAL;
 found:
 	/* set current task */
-	current_task->fs->pwd = dget(sb->s_root);
-	current_task->fs->root = dget(sb->s_root);
+	current->fs->pwd = dget(sb->s_root);
+	current->fs->root = dget(sb->s_root);
 
 	/* add mounted file system */
 	ret = add_vfs_mount(dev, dev_name, "/", 0, sb);

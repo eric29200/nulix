@@ -40,7 +40,7 @@ static void flush_all_zero_pkmaps()
 	}
 
 	/* flush tlb */
-	flush_tlb(current_task->mm->pgd);
+	flush_tlb(current->mm->pgd);
 }
 
 /*
@@ -79,7 +79,7 @@ static uint32_t map_new_virtual(struct page *page)
 	pkmap_count[last_pkmap_nr] = 1;
 
 	/* flush TLB */
-	flush_tlb_page(current_task->mm->pgd, vaddr);
+	flush_tlb_page(current->mm->pgd, vaddr);
 
 	return vaddr;
 }

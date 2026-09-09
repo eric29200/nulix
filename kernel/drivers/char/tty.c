@@ -77,7 +77,7 @@ static struct tty *tty_lookup(dev_t dev)
 {
 	/* current task tty */
 	if (dev == DEV_TTY)
-		return current_task->tty;
+		return current->tty;
 
  	/* console = always first tty */
 	if (dev == DEV_CONSOLE)
@@ -132,10 +132,10 @@ static int tty_open(struct inode *inode, struct file *filp)
 		noctty = 1;
 
 	/* associate tty */
-	if (!noctty && current_task->leader) {
-		current_task->tty = tty;
-		tty->session = current_task->session;
-		tty->pgrp = current_task->pgrp;
+	if (!noctty && current->leader) {
+		current->tty = tty;
+		tty->session = current->session;
+		tty->pgrp = current->pgrp;
 	}
 
 	/* specific open */
@@ -223,7 +223,7 @@ static int tty_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 			}
 
 			/* signal received */
-			if (signal_pending(current_task)) {
+			if (signal_pending(current)) {
 				ret = -ERESTARTSYS;
 				break;
 			}
@@ -470,7 +470,7 @@ static int tty_write(struct file *filp, const char *buf, size_t count, off_t *pp
 		}
 
 		/* signal received */
-		if (signal_pending(current_task)) {
+		if (signal_pending(current)) {
 			ret = -ERESTARTSYS;
 			break;
 		}
@@ -491,11 +491,11 @@ static int tiocsctty(struct tty *tty)
 	struct task *task;
 
 	/* nothing to do */
-	if (current_task->leader && current_task->session == tty->session)
+	if (current->leader && current->session == tty->session)
 		return 0;
 
 	/* check permissions */
-	if (!current_task->leader || current_task->tty)
+	if (!current->leader || current->tty)
 		return -EPERM;
 
 	/* this tty is already the controlling tty for another session group */
@@ -508,9 +508,9 @@ static int tiocsctty(struct tty *tty)
 	}
 
 	/* set session and pgrp */
-	current_task->tty = tty;
-	tty->session = current_task->session;
-	tty->pgrp = current_task->pgrp;
+	current->tty = tty;
+	tty->session = current->session;
+	tty->pgrp = current->pgrp;
 
 	return 0;
 }
@@ -550,7 +550,7 @@ static void tty_flush_output(struct tty *tty)
  */
 void disassociate_ctty()
 {
-	struct tty *tty = current_task->tty;
+	struct tty *tty = current->tty;
 	struct list_head *pos;
 	struct task *task;
 
@@ -570,7 +570,7 @@ void disassociate_ctty()
 	/* clear tty for all processes in the session group */
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);
-		if (task->session == current_task->session)
+		if (task->session == current->session)
 			task->tty = NULL;
 	}
 }
@@ -610,7 +610,7 @@ int tty_ioctl(struct inode *inode, struct file *filp, int request, unsigned long
 			*((pid_t *) arg) = tty->pgrp;
 			break;
 		case TIOCSPGRP:
-			if (current_task->session != tty->session)
+			if (current->session != tty->session)
 				return -ENOTTY;
 
 			tty->pgrp = *((pid_t *) arg);
@@ -641,12 +641,12 @@ int tty_ioctl(struct inode *inode, struct file *filp, int request, unsigned long
 
 			break;
 		case TIOCNOTTY:
-			if (current_task->tty != tty)
+			if (current->tty != tty)
 				return -ENOTTY;
-			if (current_task->leader)
+			if (current->leader)
 				disassociate_ctty();
 
-			current_task->tty = NULL;
+			current->tty = NULL;
 			return 0;
 		case TIOCPKT:
 			if (tty->device != DEV_PTMX)

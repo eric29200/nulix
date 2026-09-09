@@ -361,7 +361,7 @@ static struct dentry *proc_self_follow_link(struct dentry *dentry, struct dentry
 	/* unused dentry */
 	UNUSED(dentry);
 
-	sprintf(tmp, "%d", current_task->pid);
+	sprintf(tmp, "%d", current->pid);
 	return lookup_dentry(AT_FDCWD, base, tmp, 1);
 }
 
@@ -377,7 +377,7 @@ static ssize_t proc_self_readlink(struct dentry *dentry, char *buf, size_t bufsi
 	UNUSED(dentry);
 
 	/* set target link */
-	len = sprintf(tmp, "%d", current_task->pid) + 1;
+	len = sprintf(tmp, "%d", current->pid) + 1;
 	if (bufsize < len)
 		len = bufsize;
 
@@ -1180,7 +1180,7 @@ int proc_pid_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		p = &proc_base_entries[nr];
 
 		/* fill in fs cache and get entry */
-		if (proc_base_fill_cache(filp, dirent, filldir, current_task, p) < 0)
+		if (proc_base_fill_cache(filp, dirent, filldir, current, p) < 0)
 			goto out;
 	}
 
@@ -1227,7 +1227,7 @@ static struct dentry *proc_base_lookup(struct inode *dir, struct dentry *dentry)
 	return ERR_PTR(-ENOENT);
 found:
 	/* instantiate dentry */
-	return proc_base_instantiate(dir, dentry, current_task, p);
+	return proc_base_instantiate(dir, dentry, current, p);
 }
 
 /*

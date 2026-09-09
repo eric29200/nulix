@@ -70,7 +70,7 @@ static int alloc_ldt(size_t min_count)
 	void *new_ldt, *old_ldt;
 	size_t old_size;
 
-	old_size = current_task->mm->ldt_size;
+	old_size = current->mm->ldt_size;
 	if (min_count <= old_size)
 		return 0;
 
@@ -81,16 +81,16 @@ static int alloc_ldt(size_t min_count)
 
 	/* copy old LDT */
 	if (old_size)
-		memcpy(new_ldt, current_task->mm->ldt, old_size * LDT_ENTRY_SIZE);
+		memcpy(new_ldt, current->mm->ldt, old_size * LDT_ENTRY_SIZE);
 
 	/* clear new LDTs */
-	old_ldt = current_task->mm->ldt;
+	old_ldt = current->mm->ldt;
 	memset(new_ldt + old_size * LDT_ENTRY_SIZE, 0, (min_count - old_size) * LDT_ENTRY_SIZE);
 
 	/* load new LDT */
-	current_task->mm->ldt = new_ldt;
-	current_task->mm->ldt_size = min_count;
-	load_ldt(current_task);
+	current->mm->ldt = new_ldt;
+	current->mm->ldt_size = min_count;
+	load_ldt(current);
 
 	/* free old LDT */
 	if (old_size)
@@ -125,7 +125,7 @@ static int write_ldt(void *ptr, uint32_t bytecount, int old_mode)
 	}
 
 	/* allocate a new LDT if needed */
-	if (ldt_info->entry_number >= current_task->mm->ldt_size) {
+	if (ldt_info->entry_number >= current->mm->ldt_size) {
 		ret = alloc_ldt(ldt_info->entry_number + 1);
 		if (ret < 0)
 			return ret;
@@ -146,7 +146,7 @@ static int write_ldt(void *ptr, uint32_t bytecount, int old_mode)
 
 	/* finally install LDT */
 install:
-	memcpy(&current_task->mm->ldt[ldt_info->entry_number], &ldt, 8);
+	memcpy(&current->mm->ldt[ldt_info->entry_number], &ldt, 8);
 	return 0;
 }
 
@@ -167,7 +167,7 @@ static int read_ldt(void *ptr, uint32_t bytecount)
 	size_t entries_size;
 
 	/* no LDT */
-	if (!current_task->mm->ldt)
+	if (!current->mm->ldt)
 		return 0;
 
 	/* limit bytecount */
@@ -175,12 +175,12 @@ static int read_ldt(void *ptr, uint32_t bytecount)
 		bytecount = LDT_ENTRY_SIZE * LDT_ENTRIES;
 
 	/* number of entries to read */
-	entries_size = current_task->mm->ldt_size * LDT_ENTRIES;
+	entries_size = current->mm->ldt_size * LDT_ENTRIES;
 	if (entries_size > bytecount)
 		entries_size = bytecount;
 
 	/* copy entries */
-	memcpy(ptr, current_task->mm->ldt, entries_size);
+	memcpy(ptr, current->mm->ldt, entries_size);
 
 	/* zero fill remaining buffer */
 	if (entries_size != bytecount)

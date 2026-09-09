@@ -292,7 +292,7 @@ int tmpfs_symlink(struct inode *dir, struct dentry *dentry, const char *target)
 	int ret, i;
 
 	/* create a new inode */
-	inode = tmpfs_new_inode(dir->i_sb, S_IFLNK | (0777 & ~current_task->fs->umask), 0);
+	inode = tmpfs_new_inode(dir->i_sb, S_IFLNK | (0777 & ~current->fs->umask), 0);
 	if (!inode)
 		return -ENOSPC;
 
@@ -351,7 +351,7 @@ int tmpfs_mkdir(struct inode *dir, struct dentry *dentry, mode_t mode)
 		return -EEXIST;
 
 	/* allocate a new inode */
-	inode = tmpfs_new_inode(dir->i_sb, S_IFDIR | (mode & ~current_task->fs->umask & 0777), 0);
+	inode = tmpfs_new_inode(dir->i_sb, S_IFDIR | (mode & ~current->fs->umask & 0777), 0);
 	if (!inode)
 		return -ENOSPC;
 

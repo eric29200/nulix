@@ -39,7 +39,7 @@ static int pipe_read(struct file *filp, char *buf, size_t count, off_t *ppos)
 				return 0;
 
 			/* process interruption */
-			if (signal_pending(current_task))
+			if (signal_pending(current))
 				return -ERESTARTSYS;
 
 			/* wait for some data */
@@ -126,7 +126,7 @@ static int pipe_write(struct file *filp, const char *buf, size_t count, off_t *p
 
 	/* no readers */
 	if (!PIPE_READERS(inode)) {
-		send_sig(current_task, SIGPIPE, 0);
+		send_sig(current, SIGPIPE, 0);
 		return -ESPIPE;
 	}
 
@@ -135,13 +135,13 @@ static int pipe_write(struct file *filp, const char *buf, size_t count, off_t *p
 		while (!PIPE_EMPTY(inode)) {
 			/* no readers */
 			if (!PIPE_READERS(inode)) {
-				send_sig(current_task, SIGPIPE, 0);
+				send_sig(current, SIGPIPE, 0);
 				ret = -EPIPE;
 				goto out;
 			}
 
 			/* process interruption */
-			if (signal_pending(current_task)) {
+			if (signal_pending(current)) {
 				ret = -ERESTARTSYS;
 				goto out;
 			}
@@ -418,8 +418,8 @@ static struct inode *get_pipe_inode()
 	inode->i_count = 2;
 	inode->i_pipe = 1;
 	inode->i_mode = S_IFIFO | S_IRUSR | S_IWUSR;
-	inode->i_uid = current_task->fsuid;
-	inode->i_gid = current_task->fsgid;
+	inode->i_uid = current->fsuid;
+	inode->i_gid = current->fsgid;
 	inode->i_atime = inode->i_ctime = inode->i_mtime = CURRENT_TIME;
 	PIPE_START(inode) = 0;
 	PIPE_LEN(inode) = 0;
@@ -457,13 +457,13 @@ static int do_pipe(int pipefd[2], int flags)
 	fd1 = ret = get_unused_fd();
 	if (ret < 0)
 		goto err_clear_f2;
-	current_task->files->filp[fd1] = f1;
+	current->files->filp[fd1] = f1;
 
 	/* install second file */
 	fd2 = ret = get_unused_fd();
 	if (ret < 0)
 		goto err_uninstall_f1;
-	current_task->files->filp[fd2] = f2;
+	current->files->filp[fd2] = f2;
 
 	/* get a pipe inode */
 	ret = -ENFILE;
@@ -497,9 +497,9 @@ static int do_pipe(int pipefd[2], int flags)
 err_release_inode:
 	iput(inode);
 err_uninstall_f2:
-	current_task->files->filp[fd2] = NULL;
+	current->files->filp[fd2] = NULL;
 err_uninstall_f1:
-	current_task->files->filp[fd1] = NULL;
+	current->files->filp[fd1] = NULL;
 err_clear_f2:
 	f2->f_count = 0;
 err_clear_f1:

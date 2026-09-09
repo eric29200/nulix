@@ -23,7 +23,7 @@ static int fifo_open(struct inode *inode, struct file *filp)
 				PIPE_RD_OPENERS(inode)++;
 
 				while (!PIPE_WRITERS(inode)) {
-					if (signal_pending(current_task)) {
+					if (signal_pending(current)) {
 						ret = -EINTR;
 						break;
 					}
@@ -65,7 +65,7 @@ static int fifo_open(struct inode *inode, struct file *filp)
 				PIPE_WR_OPENERS(inode)++;
 
 				while (!PIPE_READERS(inode)) {
-					if (signal_pending(current_task)) {
+					if (signal_pending(current)) {
 						ret = -EINTR;
 						break;
 					}

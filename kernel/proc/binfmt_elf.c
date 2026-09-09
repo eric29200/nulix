@@ -116,25 +116,25 @@ static int elf_create_tables(struct binprm *bprm, struct elf_header *elf_header,
 	*csp++ = bprm->argc;
 
 	/* put argv */
-	current_task->mm->arg_start = (uint32_t) csp;
+	current->mm->arg_start = (uint32_t) csp;
 	for (i = 0; i < bprm->argc; i++) {
 		*csp++ = (uint32_t) args_str;
 		args_str += strlen((char *) args_str) + 1;
 	}
 
 	/* finish argv with NULL pointer */
-	current_task->mm->arg_end = (uint32_t) csp;
+	current->mm->arg_end = (uint32_t) csp;
 	*csp++ = 0;
 
 	/* put envp */
-	current_task->mm->env_start = (uint32_t) csp;
+	current->mm->env_start = (uint32_t) csp;
 	for (i = 0; i < bprm->envc; i++) {
 		*csp++ = (uint32_t) args_str;
 		args_str += strlen((char *) args_str) + 1;
 	}
 
 	/* finish envp with NULL pointer */
-	current_task->mm->env_end = (uint32_t) csp;
+	current->mm->env_end = (uint32_t) csp;
 	*csp++ = 0;
 
 #define AUX_ENT(id, val)	*csp++ = id; *csp++ = val;
@@ -145,10 +145,10 @@ static int elf_create_tables(struct binprm *bprm, struct elf_header *elf_header,
 	AUX_ENT(AT_BASE, interp_load_addr);
 	AUX_ENT(AT_FLAGS, 0);
 	AUX_ENT(AT_ENTRY, load_bias + elf_header->e_entry);
-	AUX_ENT(AT_UID, current_task->uid);
-	AUX_ENT(AT_EUID, current_task->euid);
-	AUX_ENT(AT_GID, current_task->gid);
-	AUX_ENT(AT_EGID, current_task->egid);
+	AUX_ENT(AT_UID, current->uid);
+	AUX_ENT(AT_EUID, current->euid);
+	AUX_ENT(AT_GID, current->gid);
+	AUX_ENT(AT_EGID, current->egid);
 #undef AUX_ENT
 
 	return sp;
@@ -179,7 +179,7 @@ static uint32_t elf_load_interpreter(struct elf_header *elf_header, struct dentr
 		goto out;
 
 	/* get file */
-	filp = current_task->files->filp[fd];
+	filp = current->files->filp[fd];
 
 	/* allocate program header */
 	size = sizeof(struct elf_prog_header) * elf_header->e_phnum;
@@ -283,7 +283,7 @@ static int elf_load_binary(struct binprm *bprm)
 		return fd;
 
 	/* get file */
-	filp = current_task->files->filp[fd];
+	filp = current->files->filp[fd];
 
 	/* save path */
 	strncpy(name, bprm->filename, TASK_NAME_LEN - 1);
@@ -347,8 +347,8 @@ static int elf_load_binary(struct binprm *bprm)
 		goto out;
 
 	/* reset code */
-	current_task->mm->end_data = 0;
-	current_task->mm->end_code = 0;
+	current->mm->end_data = 0;
+	current->mm->end_code = 0;
 	elf_entry = elf_header.e_entry;
 
 	/* load dynamic programs out of the way of the default mmap base */
@@ -442,22 +442,22 @@ static int elf_load_binary(struct binprm *bprm)
 	sp = elf_create_tables(bprm, &elf_header, load_addr, load_bias, interp_load_addr);
 
 	/* update task sections */
-	current_task->mm->start_brk = elf_brk;
-	current_task->mm->end_brk = elf_brk;
-	current_task->mm->start_code = start_code;
-	current_task->mm->end_code = end_code;
-	current_task->mm->end_data = end_data;
+	current->mm->start_brk = elf_brk;
+	current->mm->end_brk = elf_brk;
+	current->mm->start_code = start_code;
+	current->mm->end_code = end_code;
+	current->mm->end_data = end_data;
 
 	/* change task name */
-	memcpy(current_task->name, name, TASK_NAME_LEN);
+	memcpy(current->name, name, TASK_NAME_LEN);
 
 	/* setup task entry and stack pointer */
-	current_task->thread.regs.eip = elf_entry;
-	current_task->thread.regs.useresp = sp;
+	current->thread.regs.eip = elf_entry;
+	current->thread.regs.useresp = sp;
 
 	/* trace process */
-	if (current_task->ptrace & PT_PTRACED)
-		send_sig(current_task, SIGTRAP, 0);
+	if (current->ptrace & PT_PTRACED)
+		send_sig(current, SIGTRAP, 0);
 out:
 	sys_close(fd);
 	if (interp_dentry && !IS_ERR(interp_dentry))

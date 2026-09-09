@@ -439,7 +439,7 @@ static int unix_stream_recvmsg(struct socket *sock, struct msghdr *msg, size_t s
 			sleep_on(sk->sleep);
 
 			/* handle signal */
-			if (signal_pending(current_task))
+			if (signal_pending(current))
 				return -ERESTARTSYS;
 
 			down(&sk->protinfo.af_unix.readsem);
@@ -589,7 +589,7 @@ dead:
 		}
 
 		/* handle signal */
-		if (signal_pending(current_task)) {
+		if (signal_pending(current)) {
 			ret = -ERESTARTSYS;
 			goto err_unlock;
 		}
@@ -643,7 +643,7 @@ static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, si
 	/* socket is down */
 	if (sk->shutdown & SEND_SHUTDOWN) {
 		if (!(msg->msg_flags & MSG_NOSIGNAL))
-			send_sig(current_task, SIGPIPE, 0);
+			send_sig(current, SIGPIPE, 0);
 		return -EPIPE;
 	}
 
@@ -676,7 +676,7 @@ static int unix_stream_sendmsg(struct socket *sock, const struct msghdr *msg, si
 			if (sent)
 				return sent;
 			if (!(msg->msg_flags & MSG_NOSIGNAL))
-				send_sig(current_task, SIGPIPE, 0);
+				send_sig(current, SIGPIPE, 0);
 			return -EPIPE;
 		}
 
@@ -821,9 +821,9 @@ static int unix_listen(struct socket *sock, int backlog)
 	sock->flags |= SO_ACCEPTCON;
 
 	/* set creds */
-	sk->peercred.pid = current_task->pid;
-	sk->peercred.uid = current_task->euid;
-	sk->peercred.gid = current_task->egid;
+	sk->peercred.pid = current->pid;
+	sk->peercred.uid = current->euid;
+	sk->peercred.gid = current->egid;
 
 	return 0;
 }
@@ -859,7 +859,7 @@ static int unix_accept(struct socket *sock, struct socket *sock_new, int flags)
 			sleep_on(sk->sleep);
 
 			/* handle pending signal */
-			if (signal_pending(current_task))
+			if (signal_pending(current))
 				return -ERESTARTSYS;
 
 			continue;
@@ -981,7 +981,7 @@ restart:
 		sleep_on(&unix_ack_wqueue);
 
 		/* handle signals */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -ERESTARTSYS;
 
 		goto restart;
@@ -1034,9 +1034,9 @@ restart:
 	unix_lock(sk_new);
 	sk_new->state = TCP_ESTABLISHED;
 	sk_new->type = SOCK_STREAM;
-	sk_new->peercred.pid = current_task->pid;
-	sk_new->peercred.uid = current_task->euid;
-	sk_new->peercred.gid = current_task->egid;
+	sk_new->peercred.pid = current->pid;
+	sk_new->peercred.uid = current->euid;
+	sk_new->peercred.gid = current->egid;
 
 	/* copy address information from listening to new sock*/
 	if (other->protinfo.af_unix.addr) {
@@ -1153,9 +1153,9 @@ static int unix_socketpair(struct socket *sock1, struct socket *sock2)
 	unix_lock(sk2);
 	unix_peer(sk1) = sk2;
 	unix_peer(sk2) = sk1;
-	sk1->peercred.pid = sk2->peercred.pid = current_task->pid;
-	sk1->peercred.uid = sk2->peercred.uid = current_task->euid;
-	sk1->peercred.gid = sk2->peercred.gid = current_task->egid;
+	sk1->peercred.pid = sk2->peercred.pid = current->pid;
+	sk1->peercred.uid = sk2->peercred.uid = current->euid;
+	sk1->peercred.gid = sk2->peercred.gid = current->egid;
 
 	/* set sockets connected */
 	if (sk1->type != SOCK_DGRAM) {

@@ -1017,7 +1017,7 @@ static int vt_waitactive(int n)
 			break;
 
 		/* pending signals : exit */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -EINTR;
 
 		/* sleep on waiting queue */
@@ -1179,7 +1179,7 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 		case VT_SETMODE:
 			vc->vt_mode = *((struct vt_mode *) arg);
 			vc->vt_mode.frsig = 0;
-			vc->vt_pid = current_task->pid;
+			vc->vt_pid = current->pid;
 			vc->vt_newvt = -1;
 			return 0;
 		case KDSIGACCEPT:
@@ -1187,7 +1187,7 @@ static int console_ioctl(struct tty *tty, int request, unsigned long arg)
 			extern int spawnsig;
 			if (arg < 1 || arg > _NSIG || arg == SIGKILL)
 				return -EINVAL;
-			spawnpid = current_task->pid;
+			spawnpid = current->pid;
 			spawnsig = arg;
 			return 0;
 		case VT_ACTIVATE:

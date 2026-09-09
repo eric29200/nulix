@@ -57,7 +57,7 @@ static int virtio_rng_read_buf(void *buf, size_t len)
 	/* wait for buffer */
 	while (!data_avail) {
 		/* handle signal */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -EINTR;
 
 		/* wait */

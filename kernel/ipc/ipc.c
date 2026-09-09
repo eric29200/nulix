@@ -91,10 +91,10 @@ found:
 		ids->max_id = id;
 
 	/* set new identifier */
-	new->cuid = current_task->euid;
-	new->uid = current_task->euid;
-	new->gid = current_task->egid;
-	new->cgid = current_task->egid;
+	new->cuid = current->euid;
+	new->uid = current->euid;
+	new->gid = current->egid;
+	new->cgid = current->egid;
 
 	/* update sequence */
 	new->seq = ids->seq++;
@@ -195,9 +195,9 @@ int ipcperms(struct kern_ipc_perm *ipcp, short flag)
 	requested_mode = (flag >> 6) | (flag >> 3) | flag;
 	granted_mode = ipcp->mode;
 
-	if (current_task->euid == ipcp->cuid || current_task->euid == ipcp->uid)
+	if (current->euid == ipcp->cuid || current->euid == ipcp->uid)
 		granted_mode >>= 6;
-	else if (task_in_group(current_task, ipcp->cgid) || task_in_group(current_task, ipcp->gid))
+	else if (task_in_group(current, ipcp->cgid) || task_in_group(current, ipcp->gid))
 		granted_mode >>= 3;
 
 	if (requested_mode & ~granted_mode & 0007)

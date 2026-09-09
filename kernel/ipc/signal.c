@@ -17,7 +17,7 @@ static size_t nr_queued_signals = 0;
  */
 int sigpending()
 {
-	return !sigisemptyset(&current_task->pending.signal) && !current_task->sig->in_sig;
+	return !sigisemptyset(&current->pending.signal) && !current->sig->in_sig;
 }
 
 /*
@@ -69,8 +69,8 @@ static int send_signal(struct sigpending *pending, int sig, siginfo_t *info)
 				q->info.si_signo = sig;
 				q->info.si_errno = 0;
 				q->info.si_code = SI_USER;
-				q->info.__si_fields.__si_common.__first.__piduid.si_pid = current_task->pid;
-				q->info.__si_fields.__si_common.__first.__piduid.si_uid = current_task->uid;
+				q->info.__si_fields.__si_common.__first.__piduid.si_pid = current->pid;
+				q->info.__si_fields.__si_common.__first.__piduid.si_uid = current->uid;
 				break;
 			case 1:
 				q->info.si_signo = sig;
@@ -215,13 +215,13 @@ static int kill_something_info(pid_t pid, int sig, siginfo_t *info)
 
 	/* send signal to all processes in the group of current task */
 	if (pid == 0)
-		return kill_pg_info(current_task->pgrp, sig, info);
+		return kill_pg_info(current->pgrp, sig, info);
 
 	/* send signal to all processes (except init) */
 	if (pid == -1) {
 		list_for_each(pos, &tasks_list) {
 			task = list_entry(pos, struct task, list);
-			if (task->pid > 1 && task != current_task) {
+			if (task->pid > 1 && task != current) {
 				err = send_sig_info(task, sig, info);
 				count++;
 				if (err != -EPERM)
@@ -265,8 +265,8 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 		regs->eax = -EINTR;
 
 	/* save interrupt registers, to restore it at the end of signal */
-	memcpy(&current_task->signal_regs, regs, sizeof(struct registers));
-	current_task->sig->in_sig = 1;
+	memcpy(&current->signal_regs, regs, sizeof(struct registers));
+	current->sig->in_sig = 1;
 
 	/* prepare a stack for signal handler */
 	esp = (uint32_t *) regs->useresp;
@@ -278,9 +278,9 @@ static void handle_signal(struct registers *regs, int sig, struct sigaction *act
 	regs->eip = (uint32_t) act->sa_handler;
 
 	/* restore sigmask */
-	if (!sigisemptyset(&current_task->saved_sigmask)) {
-		current_task->blocked = current_task->saved_sigmask;
-		sigemptyset(&current_task->saved_sigmask);
+	if (!sigisemptyset(&current->saved_sigmask)) {
+		current->blocked = current->saved_sigmask;
+		sigemptyset(&current->saved_sigmask);
 	}
 }
 
@@ -358,12 +358,12 @@ static int dequeue_signal(sigset_t *mask, siginfo_t *info)
 	int sig;
 
 	/* get next signal */
-	sig = next_signal(current_task, mask);
+	sig = next_signal(current, mask);
 	if (!sig)
 		return 0;
 
 	/* collect signal */
-	if (!collect_signal(sig, &current_task->pending, info))
+	if (!collect_signal(sig, &current->pending, info))
 		sig = 0;
 
 	return sig;
@@ -383,8 +383,8 @@ void notify_parent(struct task *task, int sig)
 	info.__si_fields.__si_common.__first.__piduid.si_pid = task->pid;
 
 	/* send signal */
-	send_sig_info(current_task->parent, sig, &info);
-	wake_up(&current_task->parent->wait_child_exit);
+	send_sig_info(current->parent, sig, &info);
+	wake_up(&current->parent->wait_child_exit);
 }
 
 /*
@@ -393,22 +393,22 @@ void notify_parent(struct task *task, int sig)
 static int ptrace_signal(int sig, siginfo_t *info)
 {
 	/* process not traced */
-	if (!(current_task->ptrace & PT_PTRACED))
+	if (!(current->ptrace & PT_PTRACED))
 		return sig;
 
 	/* let the debugger run */
-	current_task->exit_code = sig;
-	current_task->state = TASK_STOPPED;
-	current_task->last_siginfo = info;
-	notify_parent(current_task, SIGCHLD);
+	current->exit_code = sig;
+	current->state = TASK_STOPPED;
+	current->last_siginfo = info;
+	notify_parent(current, SIGCHLD);
 	schedule();
-	current_task->last_siginfo = NULL;
+	current->last_siginfo = NULL;
 
 	/* did the debugger cancel the sig ? */
-	sig = current_task->exit_code;
+	sig = current->exit_code;
 	if (!sig)
 		return sig;
-	current_task->exit_code = 0;
+	current->exit_code = 0;
 
 	/* ingore SIGSTOP */
 	if (sig == SIGSTOP)
@@ -419,13 +419,13 @@ static int ptrace_signal(int sig, siginfo_t *info)
 		info->si_signo = sig;
 		info->si_errno = 0;
 		info->si_code = SI_USER;
-		info->__si_fields.__si_common.__first.__piduid.si_pid = current_task->parent->pid;
-		info->__si_fields.__si_common.__first.__piduid.si_uid = current_task->parent->uid;
+		info->__si_fields.__si_common.__first.__piduid.si_pid = current->parent->pid;
+		info->__si_fields.__si_common.__first.__piduid.si_uid = current->parent->uid;
 	}
 
 	/* if the (new) signal is now blocked, requeue it */
-	if (sigismember(&current_task->blocked, sig)) {
-		send_sig_info(current_task, sig, info);
+	if (sigismember(&current->blocked, sig)) {
+		send_sig_info(current, sig, info);
 		return 0;
 	}
 
@@ -443,12 +443,12 @@ int do_signal(struct registers *regs)
 
 	for (;;) {
 		/* get first unblocked signal */
-		sig = dequeue_signal(&current_task->blocked, &info);
+		sig = dequeue_signal(&current->blocked, &info);
 		if (!sig)
 			break;
 
 		/* get signal action */
-		act = &current_task->sig->action[sig - 1];
+		act = &current->sig->action[sig - 1];
 
 		/* traced process */
 		if (sig != SIGKILL) {
@@ -464,7 +464,7 @@ int do_signal(struct registers *regs)
 		/* default signal handler */
 		if (act->sa_handler == SIG_DFL) {
 			/* init task gets no signals it doesn't want */
-			if (current_task->pid == 1)
+			if (current->pid == 1)
 				continue;
 
 			switch (sig) {
@@ -475,9 +475,9 @@ int do_signal(struct registers *regs)
 					continue;
 				case SIGSTOP:
 				case SIGTSTP:
-					current_task->state = TASK_STOPPED;
-					current_task->exit_code = sig;
-					notify_parent(current_task, SIGCHLD);
+					current->state = TASK_STOPPED;
+					current->exit_code = sig;
+					notify_parent(current, SIGCHLD);
 					schedule();
 					continue;
 				default:
@@ -491,9 +491,9 @@ int do_signal(struct registers *regs)
 	}
 
 	/* restore sigmask */
-	if (!sigisemptyset(&current_task->saved_sigmask)) {
-		current_task->blocked = current_task->saved_sigmask;
-		sigemptyset(&current_task->saved_sigmask);
+	if (!sigisemptyset(&current->saved_sigmask)) {
+		current->blocked = current->saved_sigmask;
+		sigemptyset(&current->saved_sigmask);
 	}
 
 	/* interrupted system call : redo it */
@@ -510,24 +510,24 @@ int do_signal(struct registers *regs)
  */
 int sys_rt_sigsuspend(sigset_t *newset, size_t sigsetsize)
 {
-	struct registers *regs = &current_task->thread.regs;
+	struct registers *regs = &current->thread.regs;
 
 	/* check sigset size */
 	if (sigsetsize != sizeof(sigset_t))
 		return -EINVAL;
 
 	/* set new sigmask */
-	current_task->saved_sigmask = current_task->blocked;
-	current_task->blocked = *newset;
-	sigdelsetmask(&current_task->blocked, sigmask(SIGKILL) | sigmask(SIGSTOP));
+	current->saved_sigmask = current->blocked;
+	current->blocked = *newset;
+	sigdelsetmask(&current->blocked, sigmask(SIGKILL) | sigmask(SIGSTOP));
 
 	/* get registers */
-	memcpy(regs, &current_task->thread.regs, sizeof(struct registers));
+	memcpy(regs, &current->thread.regs, sizeof(struct registers));
 
 	/* wait for signal */
 	regs->eax = -EINTR;
 	for (;;) {
-		current_task->state = TASK_SLEEPING;
+		current->state = TASK_SLEEPING;
 		schedule();
 
 		if (do_signal(regs))
@@ -548,8 +548,8 @@ int sys_rt_sigpending(sigset_t *set, size_t sigsetsize)
 		return -EINVAL;
 
 	/* get pending signals */
-	*set = current_task->pending.signal;
-	sigandsets(set, &current_task->blocked);
+	*set = current->pending.signal;
+	sigandsets(set, &current->blocked);
 
 	return 0;
 }
@@ -568,10 +568,10 @@ int sys_rt_sigaction(int signum, const struct sigaction *act, struct sigaction *
 
 	/* save old action */
 	if (oldact)
-		*oldact = current_task->sig->action[signum - 1];
+		*oldact = current->sig->action[signum - 1];
 
 	/* set new action */
-	current_task->sig->action[signum - 1] = *act;
+	current->sig->action[signum - 1] = *act;
 
 	return 0;
 }
@@ -587,18 +587,18 @@ int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t si
 
 	/* save current sigset */
 	if (oldset)
-		*oldset = current_task->blocked;
+		*oldset = current->blocked;
 
 	if (!set)
 		return 0;
 
 	/* update sigmask */
 	if (how == SIG_BLOCK)
-	 	sigorsets(&current_task->blocked, set);
+	 	sigorsets(&current->blocked, set);
 	else if (how == SIG_UNBLOCK)
-	 	signandsets(&current_task->blocked, set);
+	 	signandsets(&current->blocked, set);
 	else if (how == SIG_SETMASK)
-		current_task->blocked = *set;
+		current->blocked = *set;
 	else
 		return -EINVAL;
 
@@ -611,12 +611,12 @@ int sys_rt_sigprocmask(int how, const sigset_t *set, sigset_t *oldset, size_t si
 int sys_sigreturn()
 {
 	/* restore saved registers before signal handler */
-	memcpy(&current_task->thread.regs, &current_task->signal_regs, sizeof(struct registers));
-	current_task->sig->in_sig = 0;
-	current_task->thread.regs.orig_eax = -1;
+	memcpy(&current->thread.regs, &current->signal_regs, sizeof(struct registers));
+	current->sig->in_sig = 0;
+	current->thread.regs.orig_eax = -1;
 
 	/* return value of syscall interrupted by signal */
-	return current_task->signal_regs.eax;
+	return current->signal_regs.eax;
 }
 
 /*
@@ -631,8 +631,8 @@ int sys_kill(pid_t pid, int sig)
 	info.si_signo = sig;
 	info.si_errno = 0;
 	info.si_code = SI_USER;
-	info.__si_fields.__si_common.__first.__piduid.si_pid = current_task->pid;
-	info.__si_fields.__si_common.__first.__piduid.si_uid = current_task->uid;
+	info.__si_fields.__si_common.__first.__piduid.si_pid = current->pid;
+	info.__si_fields.__si_common.__first.__piduid.si_uid = current->uid;
 
 	/* send signal */
 	return kill_something_info(pid, sig, &info);
@@ -672,20 +672,20 @@ int sys_rt_sigtimedwait(const sigset_t *usigset, void *uinfo, const struct old_t
 	/* find signal */
 	sig = dequeue_signal(&these, &info);
 	if (!sig) {
-		old_blocked = current_task->blocked;
-		sigandsets(&current_task->blocked, &these);
+		old_blocked = current->blocked;
+		sigandsets(&current->blocked, &these);
 
 		/* prepare timeout */
 		if (uts)
 			timeout = old_timespec_to_jiffies(uts) + (uts->tv_sec || uts->tv_nsec);
 
 		/* goto sleep */
-		current_task->state = TASK_SLEEPING;
+		current->state = TASK_SLEEPING;
 		timeout = schedule_timeout(timeout);
 
 		/* check signals */
 		sig = dequeue_signal(&these, &info);
-		current_task->blocked = old_blocked;
+		current->blocked = old_blocked;
 	}
 
 	/* no signal */

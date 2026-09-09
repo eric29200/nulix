@@ -12,26 +12,26 @@ void do_exit(int error_code)
 	struct task *child;
 
 	/* delete timer */
-	del_timer(&current_task->real_timer);
+	del_timer(&current->real_timer);
 
 	/* free resources */
 	sem_exit();
-	task_exit_signals(current_task);
-	task_exit_files(current_task);
-	task_exit_fs(current_task);
-	task_exit_mm(current_task);
+	task_exit_signals(current);
+	task_exit_files(current);
+	task_exit_fs(current);
+	task_exit_mm(current);
 
 	/* mark task terminated and reschedule */
-	current_task->state = TASK_ZOMBIE;
-	current_task->exit_code = error_code;
+	current->state = TASK_ZOMBIE;
+	current->exit_code = error_code;
 
 	/* notify parent */
-	notify_parent(current_task, SIGCHLD);
+	notify_parent(current, SIGCHLD);
 
 	/* give children to init */
 	list_for_each(pos, &tasks_list) {
 		child = list_entry(pos, struct task, list);
-		if (child->parent == current_task) {
+		if (child->parent == current) {
 			child->parent = init_task;
 			if (child->state == TASK_ZOMBIE)
 				wake_up(&init_task->wait_child_exit);
@@ -42,7 +42,7 @@ void do_exit(int error_code)
 	}
 
 	/* leader process : disassociate tty */
-	if (current_task->leader)
+	if (current->leader)
 		disassociate_ctty();
 
 	/* call scheduler */
@@ -78,11 +78,11 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 			/* check task (see man waitpid) */
 			if (pid > 0 && task->pid != pid)
 				continue;
-			else if (pid == 0 && task->pgrp != current_task->pgrp)
+			else if (pid == 0 && task->pgrp != current->pgrp)
 				continue;
 			else if (pid < -1 && task->pgrp != -pid)
 				continue;
-			else if (pid == -1 && task->parent != current_task)
+			else if (pid == -1 && task->parent != current)
 				continue;
 
 			has_children = 1;
@@ -98,8 +98,8 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 
 			/* destroy first zombie task */
 			if (task->state == TASK_ZOMBIE) {
-				current_task->cutime += task->utime + task->cutime;
-				current_task->cstime += task->stime + task->cstime;
+				current->cutime += task->utime + task->cutime;
+				current->cstime += task->stime + task->cstime;
 
 				if (wstatus != NULL)
 					*wstatus = task->exit_code;
@@ -119,11 +119,11 @@ pid_t sys_waitpid(pid_t pid, int *wstatus, int options)
 			return 0;
 
 		/* process interruption */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -ERESTARTSYS;
 
 		/* else wait for child */
-		sleep_on(&current_task->wait_child_exit);
+		sleep_on(&current->wait_child_exit);
 	}
 }
 

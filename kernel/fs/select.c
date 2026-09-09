@@ -22,7 +22,7 @@ static void __pollwait(struct wait_queue_head *wait_address, struct poll_table *
 	/* set new select entry */
 	entry = pt->entry + pt->nr;
 	entry->wait_address = wait_address;
-	init_waitqueue_entry(&entry->wait, current_task);
+	init_waitqueue_entry(&entry->wait, current);
 	pt->nr++;
 
 	/* add wait queue */
@@ -110,7 +110,7 @@ static int do_poll(struct pollfd *fds, size_t ndfs, time_t *timeout)
 		wait = NULL;
 
 		/* signal interruption */
-		if (!count && signal_pending(current_task))
+		if (!count && signal_pending(current))
 			count = -EINTR;
 
 		/* events catched or timeout : break */
@@ -118,7 +118,7 @@ static int do_poll(struct pollfd *fds, size_t ndfs, time_t *timeout)
 			break;
 
 		/* no events sleep */
-		current_task->state = TASK_SLEEPING;
+		current->state = TASK_SLEEPING;
 		*timeout = schedule_timeout(*timeout);
 	}
 
@@ -203,9 +203,9 @@ static int do_select(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *
 			if (!(set & 1))
 				continue;
 
-			if (!current_task->files->filp[i]
-				|| !current_task->files->filp[i]->f_dentry
-				|| !current_task->files->filp[i]->f_dentry->d_inode)
+			if (!current->files->filp[i]
+				|| !current->files->filp[i]->f_dentry
+				|| !current->files->filp[i]->f_dentry->d_inode)
 				return -EBADF;
 
 			max = i;
@@ -258,7 +258,7 @@ end_check:
 			break;
 
 		/* signal catched : break */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			break;
 
 		/* timeout : break */
@@ -266,7 +266,7 @@ end_check:
 			break;
 
 		/* no events sleep */
-		current_task->state = TASK_SLEEPING;
+		current->state = TASK_SLEEPING;
 		*timeout = schedule_timeout(*timeout);
 	}
 
@@ -283,7 +283,7 @@ end_check:
 	free_page(entry);
 
 	/* signal interruption */
-	if (!count && signal_pending(current_task))
+	if (!count && signal_pending(current))
 		return -EINTR;
 
 	return count;
@@ -326,12 +326,12 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 	/* handle sigmask */
 	if (sigmask) {
 		/* save current sigmask */
-		current_sigmask = current_task->blocked;
+		current_sigmask = current->blocked;
 
 		/* set new sigmask (do not mask SIGKILL and SIGSTOP) */
-		current_task->blocked = *sigmask;
-		sigdelset(&current_task->blocked, SIGKILL);
-		sigdelset(&current_task->blocked, SIGSTOP);
+		current->blocked = *sigmask;
+		sigdelset(&current->blocked, SIGKILL);
+		sigdelset(&current->blocked, SIGSTOP);
 	}
 
 	/* get timeout */
@@ -350,9 +350,9 @@ int sys_pselect6(int nfds, fd_set_t *readfds, fd_set_t *writefds, fd_set_t *exce
 
 	/* restore sigmask and delete masked pending signals */
 	if (ret == -EINTR && sigmask)
-		current_task->saved_sigmask = current_sigmask;
+		current->saved_sigmask = current_sigmask;
 	else if (sigmask)
-		current_task->blocked = current_sigmask;
+		current->blocked = current_sigmask;
 
 	return ret;
 }
@@ -369,12 +369,12 @@ int sys_ppoll(struct pollfd *fds, size_t nfds, struct old_timespec *ts, const si
 	/* handle sigmask */
 	if (sigmask) {
 		/* save current sigmask */
-		current_sigmask = current_task->blocked;
+		current_sigmask = current->blocked;
 
 		/* set new sigmask (do not mask SIGKILL and SIGSTOP) */
-		current_task->blocked = *sigmask;
-		sigdelset(&current_task->blocked, SIGKILL);
-		sigdelset(&current_task->blocked, SIGSTOP);
+		current->blocked = *sigmask;
+		sigdelset(&current->blocked, SIGKILL);
+		sigdelset(&current->blocked, SIGSTOP);
 	}
 
 	/* get time out */
@@ -395,9 +395,9 @@ int sys_ppoll(struct pollfd *fds, size_t nfds, struct old_timespec *ts, const si
 
 	/* restore sigmask and delete masked pending signals */
 	if (ret == -EINTR && sigmask)
-		current_task->saved_sigmask = current_sigmask;
+		current->saved_sigmask = current_sigmask;
 	else if (sigmask)
-		current_task->blocked = current_sigmask;
+		current->blocked = current_sigmask;
 
 	return ret;
 }

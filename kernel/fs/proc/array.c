@@ -260,7 +260,7 @@ int proc_statm_read(struct task *task, char *page)
 		for (vma = task->mm->mmap; vma != NULL; vma = vma->vm_next) {
 			/* stat pages */
 			size_t pages = 0, shared = 0, total = 0;
-			pgd = pgd_offset(current_task->mm->pgd, vma->vm_start);
+			pgd = pgd_offset(current->mm->pgd, vma->vm_start);
 			statm_pgd_range(pgd, vma->vm_start, vma->vm_end, &pages, &shared, &total);
 
 			/* update total, resident, shared and dirty pages */
@@ -309,7 +309,7 @@ int proc_cmdline_read(struct task *task, char *page)
 	}
 
 	/* switch back to current's pgd */
-	switch_pgd(current_task->mm->pgd);
+	switch_pgd(current->mm->pgd);
 
 	return p - page;
 }
@@ -346,7 +346,7 @@ int proc_environ_read(struct task *task, char *page)
 	}
 
 	/* switch back to current's pgd */
-	switch_pgd(current_task->mm->pgd);
+	switch_pgd(current->mm->pgd);
 
 	return p - page;
 }

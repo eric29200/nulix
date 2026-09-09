@@ -123,7 +123,7 @@ static struct p9_fid *p9_fid_create(struct p9_client *client)
 	/* init fid */
 	memset(fid, 0, sizeof(struct p9_fid));
 	fid->mode = -1;
-	fid->uid = current_task->fsuid;
+	fid->uid = current->fsuid;
 	fid->client = client;
 	fid->fid = client->fid++;
 	list_add(&fid->flist, &client->fid_list);

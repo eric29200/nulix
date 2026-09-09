@@ -192,22 +192,22 @@ static void syscall_handler(struct registers *regs)
 
 	/* system call not handled */
 	if (syscall_nr >= SYSCALLS_NUM || syscalls[syscall_nr] == NULL) {
-		printf("Unknown system call : %d (process %d @ 0x%x)\n", syscall_nr, current_task->pid, regs->eip);
+		printf("Unknown system call : %d (process %d @ 0x%x)\n", syscall_nr, current->pid, regs->eip);
 		return;
 	}
 
 	/* trace system call */
-	if (current_task->ptrace & PT_TRACESYS)
+	if (current->ptrace & PT_TRACESYS)
 		syscall_trace();
 
 	/* save current registers */
-	memcpy(&current_task->thread.regs, regs, sizeof(struct registers));
+	memcpy(&current->thread.regs, regs, sizeof(struct registers));
 
 	/* execute system call */
 	ret = ((syscall_f) syscalls[syscall_nr])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
 
 	/* restore registers and set return value */
-	memcpy(regs, &current_task->thread.regs, sizeof(struct registers));
+	memcpy(regs, &current->thread.regs, sizeof(struct registers));
 	regs->eax = ret;
 }
 

@@ -8,8 +8,8 @@
 int scm_send(struct scm_cookie *scm)
 {
 	memset(scm, 0, sizeof(struct scm_cookie));
-	scm->creds.uid = current_task->uid;
-	scm->creds.gid = current_task->gid;
-	scm->creds.pid = current_task->pid;
+	scm->creds.uid = current->uid;
+	scm->creds.gid = current->gid;
+	scm->creds.pid = current->pid;
 	return 0;
 }

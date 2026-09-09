@@ -64,8 +64,8 @@ int v9fs_init_inode(struct inode *inode, int mode)
 {
 	/* set inode */
 	inode->i_mode = mode;
-	inode->i_uid = current_task->fsuid;
-	inode->i_gid = current_task->fsgid;
+	inode->i_uid = current->fsuid;
+	inode->i_gid = current->fsgid;
 	inode->i_blocks = 0;
 	inode->i_rdev = 0;
 	inode->i_atime = inode->i_mtime = inode->i_ctime = CURRENT_TIME;

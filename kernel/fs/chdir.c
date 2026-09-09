@@ -32,8 +32,8 @@ int sys_chdir(const char *path)
 		goto out;
 
 	/* exchange dentries */
-	tmp = current_task->fs->pwd;
-	current_task->fs->pwd = dentry;
+	tmp = current->fs->pwd;
+	current->fs->pwd = dentry;
 	dentry = tmp;
 out:
 	dput(dentry);
@@ -77,8 +77,8 @@ int sys_fchdir(int fd)
 		goto out;
 
 	/* change directory */
-	tmp = current_task->fs->pwd;
-	current_task->fs->pwd = dget(dentry);
+	tmp = current->fs->pwd;
+	current->fs->pwd = dget(dentry);
 	dput(tmp);
 out:
 	fput(filp);

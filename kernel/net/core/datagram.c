@@ -31,7 +31,7 @@ struct sk_buff *skb_recv_datagram(struct sock *sk, int flags, int noblock, int *
 
 		/* signal received : restart system call */
 		ret = -ERESTARTSYS;
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			goto no_packet;
 
 		/* non blocking */

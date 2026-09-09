@@ -370,7 +370,7 @@ static uint32_t move_vma(struct vm_area *vma, uint32_t old_address, size_t old_s
 		return -ENOMEM;
 
 	/* move page tables */
-	ret = move_page_tables(current_task->mm, new_address, old_address, old_size);
+	ret = move_page_tables(current->mm, new_address, old_address, old_size);
 	if (ret) {
 		kfree(vma_new);
 		return ret;
@@ -415,7 +415,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 		*addr = PAGE_ALIGN_UP(*addr);
 
 		/* find previous and next vm */
-		vma_next = find_vma_prev(current_task->mm, *addr, &vma_prev);
+		vma_next = find_vma_prev(current->mm, *addr, &vma_prev);
 
 		/* addr is available */
 		if (!vma_next || *addr + len <= vma_next->vm_start)
@@ -424,7 +424,7 @@ static int get_unmapped_area(uint32_t *addr, size_t len, int flags)
 
 	/* find a memory region */
 	*addr = UMAP_START;
-	for (vma = current_task->mm->mmap; vma != NULL; vma = vma->vm_next) {
+	for (vma = current->mm->mmap; vma != NULL; vma = vma->vm_next) {
 		if (*addr + len <= vma->vm_start)
 			break;
 		if (vma->vm_end > *addr)
@@ -479,7 +479,7 @@ uint32_t do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int fla
 	vma->vm_offset = offset;
 	vma->vm_file = NULL;
 	vma->vm_ops = NULL;
-	vma->vm_mm = current_task->mm;
+	vma->vm_mm = current->mm;
 
 	/* unmap existing pages */
 	do_munmap(addr, len);
@@ -509,7 +509,7 @@ uint32_t do_mmap(struct file *filp, uint32_t addr, size_t len, int prot, int fla
 	insert_vma(vma);
 
 	/* merge segments */
-	merge_segments(current_task->mm, vma->vm_start, vma->vm_end);
+	merge_segments(current->mm, vma->vm_start, vma->vm_end);
 
 	return vma->vm_start;
 err:
@@ -583,7 +583,7 @@ static struct vm_area *unmap_fixup(struct vm_area *vma, uint32_t addr, size_t le
 int do_munmap(uint32_t addr, size_t len)
 {
 	struct vm_area *mpnt, *prev, **npp, *free, *extra;
-	struct mm_struct *mm = current_task->mm;
+	struct mm_struct *mm = current->mm;
 	uint32_t start, end, nr;
 
 	/* add must be page aligned */
@@ -714,7 +714,7 @@ static uint32_t do_mremap(uint32_t old_address, size_t old_size, size_t new_size
 
 	/* find old memory region */
 	ret = -EFAULT;
-	vma = find_vma(current_task->mm, old_address);
+	vma = find_vma(current->mm, old_address);
 	if (!vma || vma->vm_start > old_address)
 		goto err;
 
@@ -937,7 +937,7 @@ int do_mprotect(uint32_t start, size_t size, int prot)
 		return 0;
 
 	/* find first memory region */
-	vma = find_vma(current_task->mm, start);
+	vma = find_vma(current->mm, start);
 	if (!vma || vma->vm_start > start)
 		return -EFAULT;
 
@@ -971,7 +971,7 @@ int do_mprotect(uint32_t start, size_t size, int prot)
 	}
 
 	/* merge segments */
-	merge_segments(current_task->mm, start, end);
+	merge_segments(current->mm, start, end);
 
 	return ret;
 }
@@ -1109,33 +1109,33 @@ uint32_t sys_brk(uint32_t brk)
 	uint32_t newbrk, oldbrk;
 
 	/* current brk is asked */
-	if (brk < current_task->mm->end_code)
+	if (brk < current->mm->end_code)
 		goto out;
 
 	/* grow brk, without new page */
 	newbrk = PAGE_ALIGN_UP(brk);
-	oldbrk = PAGE_ALIGN_UP(current_task->mm->end_brk);
+	oldbrk = PAGE_ALIGN_UP(current->mm->end_brk);
 	if (oldbrk == newbrk)
 		goto set_brk;
 
 	/* shrink brk */
-	if (brk <= current_task->mm->end_brk) {
+	if (brk <= current->mm->end_brk) {
 		if (do_munmap(newbrk, oldbrk - newbrk) == 0)
 			goto set_brk;
 		goto out;
 	}
 
 	/* check against existing mapping */
-	if (find_vma_intersection(current_task->mm, oldbrk, newbrk + PAGE_SIZE))
+	if (find_vma_intersection(current->mm, oldbrk, newbrk + PAGE_SIZE))
 		goto out;
 
 	/* map new pages */
 	if (do_mmap(NULL, oldbrk, newbrk - oldbrk, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED, 0) != oldbrk)
 		goto out;
 set_brk:
-	current_task->mm->end_brk = brk;
+	current->mm->end_brk = brk;
 out:
-	return current_task->mm->end_brk;
+	return current->mm->end_brk;
 }
 
 /*

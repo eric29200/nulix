@@ -78,7 +78,7 @@ int sys_nanosleep(const struct old_timespec *req, struct old_timespec *rem)
 	expire = old_timespec_to_jiffies(req) + (req->tv_sec || req->tv_nsec);
 
 	/* sleep */
-	current_task->state = TASK_SLEEPING;
+	current->state = TASK_SLEEPING;
 	expire = schedule_timeout(expire);
 
 	/* task interrupted before timer end */
@@ -106,8 +106,8 @@ static int do_getitimer(int which, struct itimerval *value)
 	}
 
 	/* get current timer */
-	if (current_task->real_timer.list.next) {
-		val = current_task->real_timer.expires - jiffies;
+	if (current->real_timer.list.next) {
+		val = current->real_timer.expires - jiffies;
 		if ((long ) val <= 0)
 			val = 1;
 	}
@@ -155,12 +155,12 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
 	expires_ms += (new_value->it_value_usec / 1000);
 
 	/* delete timer */
-	del_timer(&current_task->real_timer);
+	del_timer(&current->real_timer);
 
 	/* set timer */
 	if (new_value->it_value_sec || new_value->it_value_usec) {
-		init_timer(&current_task->real_timer, itimer_handler, &current_task->pid, jiffies + ms_to_jiffies(expires_ms));
-		add_timer(&current_task->real_timer);
+		init_timer(&current->real_timer, itimer_handler, &current->pid, jiffies + ms_to_jiffies(expires_ms));
+		add_timer(&current->real_timer);
 	}
 
 	return 0;

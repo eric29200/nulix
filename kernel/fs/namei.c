@@ -25,9 +25,9 @@ int permission(struct inode *inode, int mask)
 		return 0;
 
 	/* user or group */
-	if (current_task->fsuid == inode->i_uid)
+	if (current->fsuid == inode->i_uid)
 		mode >>= 6;
-	else if (task_in_group(current_task, inode->i_gid))
+	else if (task_in_group(current, inode->i_gid))
 		mode >>= 3;
 
 	return (mode & mask & S_IRWXO) == mask ? 0 : -EACCES;
@@ -64,7 +64,7 @@ static struct dentry *reserved_lookup(struct dentry *parent, struct qstr *name)
 				res = parent;
 				break;
 			case 2:
-				if (parent == current_task->fs->root)
+				if (parent == current->fs->root)
 					res = parent;
 				else
 					res = parent->d_covers->d_parent;
@@ -160,16 +160,16 @@ struct dentry *lookup_dentry(int dirfd, struct dentry *base, const char *pathnam
 		if (base)
 			dput(base);
 
-		base = dget(current_task->fs->root);
+		base = dget(current->fs->root);
 		do {
 			pathname++;
 		} while (*pathname == '/');
 	} else if (base) {
 		base = base;
 	} else if (dirfd == AT_FDCWD) {
-		base = dget(current_task->fs->pwd);
-	} else if (dirfd >= 0 && dirfd < NR_OPEN && current_task->files->filp[dirfd]) {
-		base = dget(current_task->files->filp[dirfd]->f_dentry);
+		base = dget(current->fs->pwd);
+	} else if (dirfd >= 0 && dirfd < NR_OPEN && current->files->filp[dirfd]) {
+		base = dget(current->files->filp[dirfd]->f_dentry);
 	} else {
 		base = NULL;
 	}
@@ -283,7 +283,7 @@ struct dentry *open_namei(int dirfd, const char *pathname, int flags, mode_t mod
 	int acc_mode, ret;
 
 	/* set mode (needed if new file is created) */
-	mode &= S_IALLUGO & ~current_task->fs->umask;
+	mode &= S_IALLUGO & ~current->fs->umask;
 	mode |= S_IFREG;
 
 	/* resolve path */

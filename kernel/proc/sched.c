@@ -17,7 +17,7 @@
 LIST_HEAD(tasks_list);					/* active processes list */
 static struct task *kinit_task;				/* kernel init task (pid = 0) */
 struct task *init_task;					/* user init task (pid = 1) */
-struct task *current_task = NULL;			/* current task */
+struct task *current_task = NULL;		/* current task */
 static pid_t next_pid = 0;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
 int need_resched = 0;					/* reschedule needed ? */
@@ -67,12 +67,12 @@ static void switch_to(struct task *prev, struct task *next)
 
 	/* load current task */
 	switch_ldt(prev, next);
-	load_tss(current_task->thread.kernel_stack);
+	load_tss(current->thread.kernel_stack);
 	load_tls();
-	switch_pgd(current_task->mm->pgd);
+	switch_pgd(current->mm->pgd);
 
 	/* switch */
-	scheduler_do_switch(prev ? &prev->thread.esp : 0, current_task->thread.esp);
+	scheduler_do_switch(prev ? &prev->thread.esp : 0, current->thread.esp);
 }
 
 /*
@@ -115,23 +115,23 @@ int spawn_init()
  */
 static void update_process_times()
 {
-	if (!current_task)
+	if (!current)
 		return;
 
 	/* update system time */
-	if (!current_task->pid) {
+	if (!current->pid) {
 		kstat.cpu_system++;
 		return;
 	}
 
 	/* update user time */
 	kstat.cpu_user++;
-	current_task->utime++;
+	current->utime++;
 
 	/* update counter */
-	current_task->counter--;
-	if (current_task->counter <= 0) {
-		current_task->counter = 0;
+	current->counter--;
+	if (current->counter <= 0) {
+		current->counter = 0;
 		need_resched = 1;
 	}
 }
@@ -206,7 +206,7 @@ time_t schedule_timeout(time_t timeout)
 
 	/* set timer */
 	expire = jiffies + timeout;
-	init_timer(&timer, process_timeout, current_task, expire);
+	init_timer(&timer, process_timeout, current, expire);
 
 	/* schedule */
 	add_timer(&timer);
@@ -229,7 +229,7 @@ void schedule()
 	struct list_head *pos;
 
 	/* save current task */
-	prev = current_task;
+	prev = current;
 	need_resched = 0;
 
 	/* choose next task */
@@ -329,10 +329,10 @@ void sleep_on(struct wait_queue_head *wq)
 	struct wait_queue wait;
 
 	/* init wait queue entry */
-	init_waitqueue_entry(&wait, current_task);
+	init_waitqueue_entry(&wait, current);
 
 	/* set task's state */
-	current_task->state = TASK_SLEEPING;
+	current->state = TASK_SLEEPING;
 
 	/* add to wait queue */
 	add_wait_queue(wq, &wait);
@@ -380,7 +380,7 @@ struct task *get_task(pid_t pid)
  */
 pid_t sys_getpid()
 {
-	return current_task->pid;
+	return current->pid;
 }
 
 /*
@@ -388,11 +388,11 @@ pid_t sys_getpid()
  */
 pid_t sys_getppid()
 {
-	if (current_task->parent)
-		return current_task->parent->pid;
+	if (current->parent)
+		return current->parent->pid;
 
 	/* init process : no father */
-	return current_task->pid;
+	return current->pid;
 }
 
 /*
@@ -404,7 +404,7 @@ pid_t sys_getpgid(pid_t pid)
 
 	/* get matching task or current task */
 	if (pid == 0)
-		task = current_task;
+		task = current;
 	else
 		task = get_task(pid);
 
@@ -421,7 +421,7 @@ pid_t sys_getpgid(pid_t pid)
  */
 pid_t sys_gettid()
 {
-	return current_task->pid;
+	return current->pid;
 }
 
 /*
@@ -429,7 +429,7 @@ pid_t sys_gettid()
  */
 uid_t sys_getuid()
 {
-	return current_task->uid;
+	return current->uid;
 }
 
 /*
@@ -437,7 +437,7 @@ uid_t sys_getuid()
  */
 gid_t sys_getgid()
 {
-	return current_task->gid;
+	return current->gid;
 }
 
 /*
@@ -445,7 +445,7 @@ gid_t sys_getgid()
  */
 gid_t sys_getegid()
 {
-	return current_task->egid;
+	return current->egid;
 }
 
 /*
@@ -453,7 +453,7 @@ gid_t sys_getegid()
  */
 uid_t sys_geteuid()
 {
-	return current_task->euid;
+	return current->euid;
 }
 
 /*
@@ -465,7 +465,7 @@ int sys_getsid(pid_t pid)
 
 	/* return current session */
 	if (!pid)
-		return current_task->session;
+		return current->session;
 
 	/* return matching process session */
 	task = find_task(pid);
@@ -484,7 +484,7 @@ int sys_setpgid(pid_t pid, pid_t pgid)
 
 	/* get matching task or current task */
 	if (pid == 0)
-		task = current_task;
+		task = current;
 	else
 		task = get_task(pid);
 
@@ -506,17 +506,17 @@ int sys_setpgid(pid_t pid, pid_t pgid)
  */
 int sys_setuid(uid_t uid)
 {
-	uid_t old_euid = current_task->euid;
+	uid_t old_euid = current->euid;
 
 	if (suser())
-		current_task->uid = current_task->euid = current_task->suid = current_task->fsuid = uid;
-	else if (uid == current_task->uid || uid == current_task->suid)
-		current_task->euid = current_task->fsuid = uid;
+		current->uid = current->euid = current->suid = current->fsuid = uid;
+	else if (uid == current->uid || uid == current->suid)
+		current->euid = current->fsuid = uid;
 	else
 		return -EPERM;
 
-	if (current_task->euid != old_euid)
-		current_task->dumpable = 0;
+	if (current->euid != old_euid)
+		current->dumpable = 0;
 
 	return 0;
 }
@@ -526,17 +526,17 @@ int sys_setuid(uid_t uid)
  */
 int sys_setgid(gid_t gid)
 {
-	gid_t old_egid = current_task->egid;
+	gid_t old_egid = current->egid;
 
 	if (suser())
-		current_task->gid = current_task->egid = current_task->sgid = current_task->fsgid = gid;
-	else if (gid == current_task->gid || gid == current_task->sgid)
-		current_task->egid = current_task->fsgid = gid;
+		current->gid = current->egid = current->sgid = current->fsgid = gid;
+	else if (gid == current->gid || gid == current->sgid)
+		current->egid = current->fsgid = gid;
 	else
 		return -EPERM;
 
-	if (current_task->egid != old_egid)
-		current_task->dumpable = 0;
+	if (current->egid != old_egid)
+		current->dumpable = 0;
 
 	return 0;
 }
@@ -551,16 +551,16 @@ int sys_setsid()
 
 	list_for_each(pos, &tasks_list) {
 		task = list_entry(pos, struct task, list);
-		if (task->pgrp == current_task->pid)
+		if (task->pgrp == current->pid)
 			return -EPERM;
 	}
 
-	current_task->leader = 1;
-	current_task->pgrp = current_task->pid;
-	current_task->session = current_task->pid;
-	current_task->tty = NULL;
+	current->leader = 1;
+	current->pgrp = current->pid;
+	current->session = current->pid;
+	current->tty = NULL;
 
-	return current_task->session;
+	return current->session;
 }
 
 /*
@@ -568,29 +568,29 @@ int sys_setsid()
  */
 int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
 {
-	gid_t old_egid = current_task->egid;
+	gid_t old_egid = current->egid;
 
 	/* check permissions */
 	if (!suser()) {
-		if ((rgid != (gid_t) -1) && (rgid != current_task->gid) && (rgid != current_task->egid) && (rgid != current_task->sgid))
+		if ((rgid != (gid_t) -1) && (rgid != current->gid) && (rgid != current->egid) && (rgid != current->sgid))
 			return -EPERM;
-		if ((egid != (gid_t) -1) && (egid != current_task->gid) && (egid != current_task->egid) && (egid != current_task->sgid))
+		if ((egid != (gid_t) -1) && (egid != current->gid) && (egid != current->egid) && (egid != current->sgid))
 			return -EPERM;
-		if ((sgid != (gid_t) -1) && (sgid != current_task->gid) && (sgid != current_task->egid) && (sgid != current_task->sgid))
+		if ((sgid != (gid_t) -1) && (sgid != current->gid) && (sgid != current->egid) && (sgid != current->sgid))
 			return -EPERM;
 	}
 
 	if (rgid != (gid_t) -1)
-		current_task->gid = rgid;
+		current->gid = rgid;
 	if (egid != (gid_t) -1)
-		current_task->egid = egid;
+		current->egid = egid;
 
-	current_task->fsgid = current_task->fsgid;
+	current->fsgid = current->fsgid;
 	if (sgid != (gid_t) -1)
-		current_task->sgid = sgid;
+		current->sgid = sgid;
 
-	if (current_task->egid != old_egid)
-		current_task->dumpable = 0;
+	if (current->egid != old_egid)
+		current->dumpable = 0;
 
 	return 0;
 }
@@ -600,29 +600,29 @@ int sys_setresgid(gid_t rgid, gid_t egid, gid_t sgid)
  */
 int sys_setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
-	uid_t old_euid = current_task->euid;
+	uid_t old_euid = current->euid;
 
 	/* check permissions */
 	if (!suser()) {
-		if ((ruid != (uid_t) -1) && (ruid != current_task->uid) && (ruid != current_task->euid) && (ruid != current_task->suid))
+		if ((ruid != (uid_t) -1) && (ruid != current->uid) && (ruid != current->euid) && (ruid != current->suid))
 			return -EPERM;
-		if ((euid != (uid_t) -1) && (euid != current_task->uid) && (euid != current_task->euid) && (euid != current_task->suid))
+		if ((euid != (uid_t) -1) && (euid != current->uid) && (euid != current->euid) && (euid != current->suid))
 			return -EPERM;
-		if ((suid != (uid_t) -1) && (suid != current_task->uid) && (suid != current_task->euid) && (suid != current_task->suid))
+		if ((suid != (uid_t) -1) && (suid != current->uid) && (suid != current->euid) && (suid != current->suid))
 			return -EPERM;
 	}
 
 	if (ruid != (uid_t) -1)
-		current_task->uid = ruid;
+		current->uid = ruid;
 	if (euid != (uid_t) -1)
-		current_task->euid = euid;
+		current->euid = euid;
 
-	current_task->fsuid = current_task->euid;
+	current->fsuid = current->euid;
 	if (suid != (uid_t) -1)
-		current_task->suid = suid;
+		current->suid = suid;
 
-	if (current_task->euid != old_euid)
-		current_task->dumpable = 0;
+	if (current->euid != old_euid)
+		current->dumpable = 0;
 
 	return 0;
 }
@@ -636,13 +636,13 @@ int sys_getgroups(int size, gid_t *list)
 		return -EINVAL;
 
 	if (size) {
-		if (current_task->ngroups > (size_t) size)
+		if (current->ngroups > (size_t) size)
 			return -EINVAL;
 
-		memcpy(list, current_task->groups, sizeof(gid_t) * current_task->ngroups);
+		memcpy(list, current->groups, sizeof(gid_t) * current->ngroups);
 	}
 
-	return current_task->ngroups;
+	return current->ngroups;
 }
 
 /*
@@ -661,9 +661,9 @@ int sys_setgroups(size_t size, const gid_t *list)
 		return -EPERM;
 
 	/* set groups */
-	current_task->ngroups = size;
+	current->ngroups = size;
 	for (i = 0; i < size; i++)
-		current_task->groups[i] = list[i];
+		current->groups[i] = list[i];
 
 	return 0;
 }
@@ -673,5 +673,5 @@ int sys_setgroups(size_t size, const gid_t *list)
  */
 pid_t sys_getpgrp()
 {
-	return current_task->pgrp;
+	return current->pgrp;
 }

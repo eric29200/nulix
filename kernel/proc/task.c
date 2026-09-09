@@ -250,7 +250,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	build_mmap_avl(mm_new);
 
 	/* flush tlb */
-	flush_tlb(current_task->mm->pgd);
+	flush_tlb(current->mm->pgd);
 
 	return mm_new;
 err:
@@ -670,7 +670,7 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 	struct task *task;
 
 	/* create task */
-	task = create_task(current_task, clone_flags, user_sp);
+	task = create_task(current, clone_flags, user_sp);
 	if (!task)
 		return -EINVAL;
 
@@ -689,9 +689,9 @@ int do_fork(uint32_t clone_flags, uint32_t user_sp)
 	/* vfork : sleep on semaphore */
 	if (clone_flags & CLONE_VFORK) {
 		init_semaphore(&sem, 0);
-		current_task->vfork_sem = &sem;
+		current->vfork_sem = &sem;
 		down(&sem);
-		current_task->vfork_sem = NULL;
+		current->vfork_sem = NULL;
 	}
 
 	return task->pid;
@@ -782,7 +782,7 @@ int task_in_group(struct task *task, gid_t gid)
 		return 1;
 
 	for (i = 0; i < task->ngroups; i++)
-		if (current_task->groups[i] == gid)
+		if (current->groups[i] == gid)
 			return 1;
 
 	return 0;

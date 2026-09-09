@@ -103,7 +103,7 @@ static int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t size)
 			return -ENOTCONN;
 
 		/* signal received : restart system call */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -ERESTARTSYS;
 
 		/* message received : break */
@@ -176,7 +176,7 @@ static int tcp_sendmsg(struct sock *sk, const struct msghdr *msg, size_t size)
 			return -ENOTCONN;
 
 		/* signal received : restart system call */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -ERESTARTSYS;
 
 		/* connected : break */
@@ -286,7 +286,7 @@ static struct sk_buff *wait_for_connect(struct sock *sk)
 			return skb;
 
 		/* handle signals */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return NULL;
 	}
 }

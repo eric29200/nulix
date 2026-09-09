@@ -61,7 +61,7 @@ static void shm_inc(int id)
 
 	/* update segment */
 	shp->shm_atim = CURRENT_TIME;
-	shp->shm_lprid = current_task->pid;
+	shp->shm_lprid = current->pid;
 	shp->shm_nattch++;
 }
 
@@ -88,7 +88,7 @@ void shm_close(struct vm_area *vma)
 
 	/* update segment */
 	shp->shm_dtim = CURRENT_TIME;
-	shp->shm_lprid = current_task->pid;
+	shp->shm_lprid = current->pid;
 	shp->shm_nattch--;
 
 	/* destroy segment if needed */
@@ -288,7 +288,7 @@ static int shm_newseg(key_t key, int shmflg, size_t size)
 	shp->shm_atim = 0;
 	shp->shm_dtim = 0;
 	shp->shm_ctim = CURRENT_TIME;
-	shp->shm_cprid = current_task->pid;
+	shp->shm_cprid = current->pid;
 	shp->shm_lprid = 0;
 
 	/* attach segment id to inode */
@@ -397,7 +397,7 @@ int sys_shmat(int shmid, char *shmaddr, int shmflg, uint32_t *addr_ret)
 
 	/* check memory region intersection */
 	if (addr && !(shmflg & SHM_REMAP))
-		if (find_vma_intersection(current_task->mm, addr, addr + size))
+		if (find_vma_intersection(current->mm, addr, addr + size))
 			return -EINVAL;
 
 	/* do mmap */
@@ -422,7 +422,7 @@ int sys_shmdt(char *shmaddr)
 {
 	struct vm_area *vma;
 
-	vma = find_vma(current_task->mm, (uint32_t) shmaddr);
+	vma = find_vma(current->mm, (uint32_t) shmaddr);
 	if (vma && vma->vm_ops == &shm_vm_ops)
 		do_munmap(vma->vm_start, vma->vm_end - vma->vm_start);
 
@@ -509,7 +509,7 @@ static int shmctl_rmid(int shmid)
 		return -EIDRM;
 
 	/* check permissions */
-	if (current_task->euid != shp->shm_perm.cuid &&  current_task->euid != shp->shm_perm.uid)
+	if (current->euid != shp->shm_perm.cuid &&  current->euid != shp->shm_perm.uid)
 	    return -EPERM;
 
 	/* free segment */

@@ -69,7 +69,7 @@ static int mouse_poll_status()
 		if ((inb(MOUSE_STATUS) & MOUSE_OBUF_FULL) == MOUSE_OBUF_FULL)
 			inb(MOUSE_PORT);
 
-		current_task->state = TASK_SLEEPING;
+		current->state = TASK_SLEEPING;
 		schedule_timeout((5 * HZ + 99) / 100);
 		retries++;
 	}
@@ -232,7 +232,7 @@ static int mouse_read(struct file *filp, char *buf, size_t n, off_t *ppos)
 			return -EAGAIN;
 
 		/* signal pending : return */
-		if (signal_pending(current_task))
+		if (signal_pending(current))
 			return -ERESTARTNOHAND;
 
 		/* wait for data */
