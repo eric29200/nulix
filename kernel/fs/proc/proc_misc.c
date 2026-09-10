@@ -215,8 +215,8 @@ static int cpuinfo_read_proc(char *page, char **start, off_t off, size_t count, 
 {
 	size_t len;
 
-	/* get irq list */
-	len = get_irq_list(page);
+	/* get cpu info */
+	len = get_cpuinfo(page);
 
 	return proc_calc_metrics(page, start, off, count, eof, len);
 }
