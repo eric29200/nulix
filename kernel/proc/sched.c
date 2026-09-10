@@ -17,7 +17,6 @@
 LIST_HEAD(tasks_list);					/* active processes list */
 static struct task *kinit_task;				/* kernel init task (pid = 0) */
 struct task *init_task;					/* user init task (pid = 1) */
-static struct task *current_task = NULL;		/* current task */
 static pid_t next_pid = 0;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
 int need_resched = 0;					/* reschedule needed ? */
@@ -30,14 +29,6 @@ extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
 
 /* average run */
 unsigned long avenrun[3] = { 0, 0, 0 };
-
-/*
- * Get current task.
- */
-struct task *get_current()
-{
-	return current_task;
-}
 
 /*
  * Get next pid.
@@ -70,17 +61,14 @@ struct task *find_task(pid_t pid)
  */
 static void switch_to(struct task *prev, struct task *next)
 {
-	/* set current task */
-	current_task = next;
-
 	/* load current task */
 	switch_ldt(prev, next);
-	load_tss(current->thread.kernel_stack);
-	load_tls();
-	switch_pgd(current->mm->pgd);
+	load_tss(next->thread.kernel_stack);
+	load_tls(next);
+	switch_pgd(next->mm->pgd);
 
 	/* switch */
-	scheduler_do_switch(prev ? &prev->thread.esp : 0, current->thread.esp);
+	scheduler_do_switch(&prev->thread.esp, next->thread.esp);
 }
 
 /*
@@ -98,8 +86,6 @@ int init_scheduler(void (*kinit_func)())
 
 	/* switch to kinit */
 	switch_to(NULL, kinit_task);
-
-	return 0;
 }
 
 /*

@@ -7,9 +7,9 @@
 /*
  * Load TLS.
  */
-void load_tls()
+void load_tls(struct task *task)
 {
-	gdt_write_entry(GDT_ENTRY_TLS, &current->thread.tls);
+	gdt_write_entry(GDT_ENTRY_TLS, &task->thread.tls);
 }
 
 /*
@@ -79,7 +79,7 @@ int sys_set_thread_area(struct user_desc *u_info)
 	set_tls_desc(current, u_info);
 
 	/* load TLS */
-	load_tls();
+	load_tls(current);
 
 	return 0;
 }

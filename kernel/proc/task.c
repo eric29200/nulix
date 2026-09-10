@@ -535,25 +535,18 @@ void task_release_mmap(struct task *task)
 static struct task *create_task(struct task *parent, uint32_t clone_flags, uint32_t user_sp)
 {
 	struct task *task;
-	void *stack;
 
-	/* create task */
-	task = (struct task *) kmalloc(sizeof(struct task));
+	/* allocate + stack */
+	task = (struct task *) get_free_page();
 	if (!task)
 		return NULL;
 
-	/* reset task */
-	memset(task, 0, sizeof(struct task));
-
-	/* allocate stack */
-	stack = (void *) kmalloc(STACK_SIZE);
-	if (!stack)
-		goto err_stack;
+	/* reset task + stack */
+	memset(task, 0, PAGE_SIZE);
 
 	/* set stack */
-	memset(stack, 0, STACK_SIZE);
-	task->thread.kernel_stack = (uint32_t) stack + STACK_SIZE;
-	task->thread.esp = task->thread.kernel_stack - sizeof(struct task_registers);
+	task->thread.kernel_stack = (uint32_t) task + PAGE_SIZE - 4;
+	task->thread.esp = (uint32_t) task + PAGE_SIZE - 4 - sizeof(struct task_registers);
 
 	/* init task */
 	task->pid = get_next_pid();
@@ -614,9 +607,7 @@ err_fs:
 	task_exit_mm(task);
 err_mm:
 err_flags:
-	kfree(stack);
-err_stack:
-	kfree(task);
+	free_page(task);
 	return NULL;
 }
 
@@ -761,11 +752,8 @@ void destroy_task(struct task *task)
 	/* remove task */
 	list_del(&task->list);
 
-	/* free kernel stack */
-	kfree((void *) (task->thread.kernel_stack - STACK_SIZE));
-
 	/* free task */
-	kfree(task);
+	free_page(task);
 
 	/* update number of tasks */
 	nr_tasks--;

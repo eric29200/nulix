@@ -13,8 +13,6 @@
 #include <resource.h>
 #include <stddef.h>
 
-#define STACK_SIZE		0x2000
-
 #define NGROUPS			32
 
 #define TASK_RUNNING		1

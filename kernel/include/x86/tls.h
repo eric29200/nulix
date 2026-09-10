@@ -4,7 +4,7 @@
 #include <x86/descriptor.h>
 #include <proc/task.h>
 
-void load_tls();
+void load_tls(struct task *task);
 
 int sys_get_thread_area(struct user_desc *u_info);
 int sys_set_thread_area(struct user_desc *u_info);

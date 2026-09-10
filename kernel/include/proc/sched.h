@@ -35,6 +35,17 @@
 	load >>= FSHIFT;
 
 /*
+ * Get current task.
+ */
+static inline struct task *get_current()
+{
+	struct task *c;
+	__asm__("andl %%esp,%0; ":"=r" (c) : "0" (~4095UL));
+	return c;
+}
+
+
+/*
  * Check if a process has pending signals.
  */
 static inline int signal_pending(struct task *task)
@@ -75,7 +86,6 @@ extern int nr_tasks;
 extern pid_t last_pid;
 
 int init_scheduler(void (*kinit_func)());
-struct task *get_current();
 int spawn_init();
 struct task *find_task(pid_t pid);
 pid_t get_next_pid();
