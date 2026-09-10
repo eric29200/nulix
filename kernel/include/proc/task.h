@@ -112,6 +112,7 @@ struct task {
 	pid_t				session;			/* process session id */
 	int				leader;				/* 1 if this process is the leader of the session */
 	uint8_t				state;				/* process state */
+	int				need_resched;			/* need reschedule ? */
 	int				counter;			/* process counter (quantum) */
 	int				priority;			/* process priority */
 	char				name[TASK_NAME_LEN];		/* process name */

@@ -5,6 +5,8 @@
 
 #define CS					0x3C
 
+need_resched					= 21
+
 #define SAVE_ALL				\
 	pusha					;\
 	push %ds				;\
@@ -19,6 +21,10 @@
 	pop %ds					;\
 	popa					;\
 	add $8, %esp
+
+#define GET_CURRENT(reg)			\
+	movl %esp, reg				;\
+	andl $-4096, reg
 
 #define LOAD_KERNEL_DSEG			\
 	mov $KERNEL_DSEG, %ax			;\
@@ -52,7 +58,8 @@
 1:
 
 #define HANDLE_RESCHEDULE			\
-	cmpl $0, need_resched			;\
+	GET_CURRENT(%ebx)			;\
+	cmpl $0, need_resched(%ebx)		;\
 	je 2f					;\
 	call schedule				;\
 2:

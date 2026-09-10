@@ -19,7 +19,6 @@ static struct task *kinit_task;				/* kernel init task (pid = 0) */
 struct task *init_task;					/* user init task (pid = 1) */
 static pid_t next_pid = 0;				/* next pid */
 pid_t last_pid = 0;					/* last pid */
-int need_resched = 0;					/* reschedule needed ? */
 int nr_tasks = 0;
 
 struct kernel_stat kstat;				/* kernel statistics */
@@ -128,7 +127,7 @@ static void update_process_times()
 	current->counter--;
 	if (current->counter <= 0) {
 		current->counter = 0;
-		need_resched = 1;
+		current->need_resched = 1;
 	}
 }
 
@@ -152,7 +151,7 @@ void do_timer_interrupt()
 void wake_up_process(struct task *task)
 {
 	task->state = TASK_RUNNING;
-	need_resched = 1;
+	current->need_resched = 1;
 }
 
 /*
@@ -226,7 +225,7 @@ void schedule()
 
 	/* save current task */
 	prev = current;
-	need_resched = 0;
+	current->need_resched = 0;
 
 	/* choose next task */
 	next = kinit_task;

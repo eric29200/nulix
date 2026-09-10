@@ -313,7 +313,7 @@ static void kinit()
 	/* sleep forever */
 	for (;;) {
 		/* reschedule if needed */
-		if (need_resched)
+		if (current->need_resched)
 			schedule();
 
 		halt();
