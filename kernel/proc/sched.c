@@ -86,6 +86,8 @@ int init_scheduler(void (*kinit_func)())
 
 	/* switch to kinit */
 	switch_to(NULL, kinit_task);
+
+	return 0;
 }
 
 /*
