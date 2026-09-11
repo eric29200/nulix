@@ -10,7 +10,6 @@
 #include <drivers/char/mem.h>
 #include <drivers/char/misc.h>
 #include <drivers/char/serial.h>
-#include <drivers/char/rtc.h>
 #include <drivers/char/tty.h>
 #include <drivers/char/keyboard.h>
 #include <drivers/char/mouse.h>
@@ -389,10 +388,6 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	/* init IPC resources */
 	printf("[Kernel] IPC resources init\n");
 	init_ipc();
-
-	/* init real time clock */
-	printf("[Kernel] Real Time Clock Init\n");
-	init_rtc();
 
 	/* init system calls */
 	printf("[Kernel] System calls Init\n");

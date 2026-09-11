@@ -1,7 +1,8 @@
-#ifndef _RTC_H_
-#define _RTC_H_
+#ifndef _CMOS_H_
+#define _CMOS_H_
 
 #include <stddef.h>
+#include <x86/io.h>
 
 #define CMOS_ADDRESS		0x70
 #define CMOS_DATA		0x71
@@ -22,6 +23,13 @@
 
 #define BCD_TO_BIN(val)		 ((val) = ((val) & 15) + ((val) >> 4) * 10)
 
-void init_rtc();
+/*
+ * Read a value from a CMOS register.
+ */
+static inline uint8_t cmos_read(uint8_t addr)
+{
+	outb(CMOS_ADDRESS, addr);
+	return inb(CMOS_DATA);
+}
 
 #endif

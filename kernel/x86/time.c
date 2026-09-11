@@ -2,6 +2,7 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <x86/system.h>
+#include <x86/cmos.h>
 #include <mm/mm.h>
 #include <proc/sched.h>
 #include <time.h>
@@ -18,6 +19,7 @@ volatile time_t jiffies = 0;
 struct kernel_timeval xtimes = { 0, 0 };
 
 /* Time Stamp Counter variables */
+time_t startup_time = 0;
 uint32_t cpu_khz;
 static uint32_t tsc_quotient;
 static uint32_t last_tsc_low;
@@ -135,11 +137,58 @@ void update_times()
 }
 
 /*
+ * Get real time from cmos.
+ */
+static time_t get_cmos_time()
+{
+	uint32_t year, month, day, hour, min, sec;
+	int i;
+
+	/* wait for the UIP flag (Update In Progress) to go from 1 to 0 = the RTC registers should hold the precise second */
+	for (i = 0; i < 1000000; i++)
+		if (cmos_read(RTC_FREQ_SELECT) & RTC_UIP)
+			break;
+
+	for (i = 0; i < 1000000; i++)
+		if (!(cmos_read(RTC_FREQ_SELECT) & RTC_UIP))
+			break;
+
+	/* read time from cmos */
+	do {
+		sec = cmos_read(RTC_SECOND);
+		min = cmos_read(RTC_MINUTE);
+		hour = cmos_read(RTC_HOUR);
+		day = cmos_read(RTC_DAY);
+		month = cmos_read(RTC_MONTH);
+		year = cmos_read(RTC_YEAR);
+	} while (sec != cmos_read(RTC_SECOND));
+
+	/* convert BCD time to BIN time if needed */
+	if (!(cmos_read(RTC_CONTROL) & RTC_DM_BINARY) || RTC_ALWAYS_BCD) {
+		BCD_TO_BIN(sec);
+		BCD_TO_BIN(min);
+		BCD_TO_BIN(hour);
+		BCD_TO_BIN(day);
+		BCD_TO_BIN(month);
+		BCD_TO_BIN(year);
+	}
+
+	/* update year */
+	if ((year += 1900) < 1970)
+		year += 100;
+
+	return mktime(year, month, day, hour, min, sec);
+}
+
+/*
  * Init the Programmable Interval Timer.
  */
 void init_time()
 {
 	uint32_t divisor, eax, edx;
+
+	/* get cmos time */
+	startup_time = get_cmos_time();
 
 	/* get CPU frequency */
 	tsc_quotient = calibrate_tsc();
