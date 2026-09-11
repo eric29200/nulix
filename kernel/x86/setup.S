@@ -24,7 +24,7 @@ need_resched					= 21
 
 #define GET_CURRENT(reg)			\
 	movl %esp, reg				;\
-	andl $-4096, reg
+	andl $-8192, reg
 
 #define LOAD_KERNEL_DSEG			\
 	mov $KERNEL_DSEG, %ax			;\

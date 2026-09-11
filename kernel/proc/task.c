@@ -537,7 +537,7 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	struct task *task;
 
 	/* allocate + stack */
-	task = (struct task *) get_free_page();
+	task = (struct task *) get_free_pages(1);
 	if (!task)
 		return NULL;
 
@@ -545,8 +545,8 @@ static struct task *create_task(struct task *parent, uint32_t clone_flags, uint3
 	memset(task, 0, PAGE_SIZE);
 
 	/* set stack */
-	task->thread.kernel_stack = (uint32_t) task + PAGE_SIZE - 4;
-	task->thread.esp = (uint32_t) task + PAGE_SIZE - 4 - sizeof(struct task_registers);
+	task->thread.kernel_stack = (uint32_t) task + 8192 - 4;
+	task->thread.esp = task->thread.kernel_stack - sizeof(struct task_registers);
 
 	/* init task */
 	task->pid = get_next_pid();
@@ -607,7 +607,7 @@ err_fs:
 	task_exit_mm(task);
 err_mm:
 err_flags:
-	free_page(task);
+	free_pages(task, 1);
 	return NULL;
 }
 
@@ -753,7 +753,7 @@ void destroy_task(struct task *task)
 	list_del(&task->list);
 
 	/* free task */
-	free_page(task);
+	free_pages(task, 1);
 
 	/* update number of tasks */
 	nr_tasks--;

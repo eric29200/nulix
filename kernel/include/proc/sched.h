@@ -40,7 +40,7 @@
 static inline struct task *get_current()
 {
 	struct task *c;
-	__asm__("andl %%esp,%0; ":"=r" (c) : "0" (~4095UL));
+	__asm__("andl %%esp,%0; ":"=r" (c) : "0" (~8191UL));
 	return c;
 }
 
