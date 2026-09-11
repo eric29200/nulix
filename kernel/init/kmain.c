@@ -198,24 +198,10 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 }
 
 /*
- * Nulix init (second phase).
+ * Idle task.
  */
-static void kinit()
+static void cpu_idle()
 {
-	/* mount root file system */
-	printf("[Kernel] Root file system init\n");
-	if (do_mount_root(root_dev, root_dev_name, root_mountflags))
-		panic("Cannot mount root file system\n");
-
-	/* spawn init process */
-	if (spawn_init())
-		panic("Cannot spawn init process\n");
-
-	/* create kernel threads */
-	kernel_thread(&bdflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND, "bdflush");
-	kernel_thread(&net_handle, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND, "net_handle");
-
-	/* sleep forever */
 	for (;;) {
 		/* reschedule if needed */
 		if (current->need_resched)
@@ -226,75 +212,10 @@ static void kinit()
 }
 
 /*
- * Main nulix function.
+ * Nulix init (second phase).
  */
-int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
+static void kinit()
 {
-	uint32_t mem_upper;
-	int ret;
-
-	/* disable interrupts */
-	irq_disable();
-
-	/* init serial console */
-	init_serial();
-
-	/* parse multiboot header */
-	ret = parse_mboot(mbi_magic, mbi_addr, &mem_upper);
-	if (ret)
-		return ret;
-
-	/* print grub informations */
-	printf("[Kernel] Loading at linear address = 0x%x\n", loader);
-
-	/* init gdt */
-	printf("[Kernel] Global Descriptor Table Init\n");
-	init_gdt();
-
-	/* init idt */
-	printf("[Kernel] Interrupts Init\n");
-	init_irq();
-
-	/* init memory */
-	printf("[Kernel] Memory Init\n");
-	init_mem((uint32_t) &kernel_start, (uint32_t) &kernel_end, mem_upper);
-
-	/* init cpu */
-	printf("[Kernel] CPU Init\n");
-	init_cpu();
-
-	/* init time */
-	printf("[Kernel] Time Init\n");
-	init_time();
-
-	/* init smp */
-	printf("[Kernel] SMP Init\n");
-	init_smp();
-
-	/* init inodes */
-	printf("[Kernel] Inodes init\n");
-	init_inode();
-
-	/* init dentries */
-	printf("[Kernel] Dentries init\n");
-	init_dcache();
-
-	/* init block buffers */
-	printf("[Kernel] Block buffers init\n");
-	init_buffer();
-
-	/* init IPC resources */
-	printf("[Kernel] IPC resources init\n");
-	init_ipc();
-
-	/* init real time clock */
-	printf("[Kernel] Real Time Clock Init\n");
-	init_rtc();
-
-	/* init system calls */
-	printf("[Kernel] System calls Init\n");
-	init_syscall();
-
 	/* init memory devices */
 	printf("[Kernel] Memory devices Init\n");
 	if (init_mem_devices())
@@ -389,6 +310,93 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	printf("[Kernel] Network devices Init\n");
 	if (init_net_dev())
 		panic("Cannot init network devices\n");
+
+	/* mount root file system */
+	printf("[Kernel] Root file system init\n");
+	if (do_mount_root(root_dev, root_dev_name, root_mountflags))
+		panic("Cannot mount root file system\n");
+
+	/* spawn init process */
+	if (spawn_init())
+		panic("Cannot spawn init process\n");
+
+	/* create kernel threads */
+	kernel_thread(&bdflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND, "bdflush");
+	kernel_thread(&net_handle, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND, "net_handle");
+
+	/* sleep forever */
+	cpu_idle();
+}
+
+/*
+ * Main nulix function.
+ */
+int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
+{
+	uint32_t mem_upper;
+	int ret;
+
+	/* disable interrupts */
+	irq_disable();
+
+	/* init serial console */
+	init_serial();
+
+	/* parse multiboot header */
+	ret = parse_mboot(mbi_magic, mbi_addr, &mem_upper);
+	if (ret)
+		return ret;
+
+	/* print grub informations */
+	printf("[Kernel] Loading at linear address = 0x%x\n", loader);
+
+	/* init gdt */
+	printf("[Kernel] Global Descriptor Table Init\n");
+	init_gdt();
+
+	/* init idt */
+	printf("[Kernel] Interrupts Init\n");
+	init_irq();
+
+	/* init memory */
+	printf("[Kernel] Memory Init\n");
+	init_mem((uint32_t) &kernel_start, (uint32_t) &kernel_end, mem_upper);
+
+	/* init cpu */
+	printf("[Kernel] CPU Init\n");
+	init_cpu();
+
+	/* init time */
+	printf("[Kernel] Time Init\n");
+	init_time();
+
+	/* init smp */
+	printf("[Kernel] SMP Init\n");
+	init_smp();
+
+	/* init inodes */
+	printf("[Kernel] Inodes init\n");
+	init_inode();
+
+	/* init dentries */
+	printf("[Kernel] Dentries init\n");
+	init_dcache();
+
+	/* init block buffers */
+	printf("[Kernel] Block buffers init\n");
+	init_buffer();
+
+	/* init IPC resources */
+	printf("[Kernel] IPC resources init\n");
+	init_ipc();
+
+	/* init real time clock */
+	printf("[Kernel] Real Time Clock Init\n");
+	init_rtc();
+
+	/* init system calls */
+	printf("[Kernel] System calls Init\n");
+	init_syscall();
 
 	/* init processes */
 	printf("[Kernel] Processes Init\n");
