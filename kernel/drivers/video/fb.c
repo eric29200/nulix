@@ -180,7 +180,7 @@ int init_framebuffer_device(struct multiboot_tag_framebuffer *tag_fb)
 	int ret;
 
 	/* identity map frame buffer */
-	ret = remap_page_range(tag_fb->common.framebuffer_addr,
+	ret = ioremap(tag_fb->common.framebuffer_addr,
 		tag_fb->common.framebuffer_addr,
 		tag_fb->common.framebuffer_height * tag_fb->common.framebuffer_pitch,
 		PAGE_SHARED);

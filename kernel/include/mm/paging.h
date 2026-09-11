@@ -164,6 +164,7 @@ int init_paging(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end);
 size_t zap_page_range(pgd_t *pgd, uint32_t start_address, size_t size);
 int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma);
 int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, int pgprot);
+int ioremap(uint32_t start, uint32_t phys_addr, size_t size, int pgprot);
 void switch_pgd(pgd_t *pgd);
 void page_fault_handler(struct registers *regs);
 pgd_t *create_page_directory();

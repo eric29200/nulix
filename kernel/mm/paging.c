@@ -222,6 +222,46 @@ int remap_page_range(uint32_t start, uint32_t phys_addr, size_t size, int pgprot
 }
 
 /*
+ * Remap pages in kernel address space.
+ */
+int ioremap(uint32_t start, uint32_t phys_addr, size_t size, int pgprot)
+{
+	uint32_t end = start + size;
+	int ret = 0;
+	pmd_t *pmd;
+	pgd_t *dir;
+
+	/* get page directory */
+	dir = pgd_offset(pgd_kernel, start);
+
+	/* fix physical address */
+	phys_addr -= start;
+
+	/* remap page directory */
+	do {
+		/* allocate page directory */
+		pmd = pmd_alloc(dir, start);
+		if (!pmd) {
+			ret = -ENOMEM;
+			break;
+		}
+
+		/* remap */
+		ret = remap_pmd_range((pmd_t *) dir, start, end - start, phys_addr + start, pgprot);
+		if (ret)
+			break;
+
+		start = (start + PGDIR_SIZE) & PGDIR_MASK;
+		dir++;
+	} while (start < end);
+
+	/* flush tlb */
+	flush_tlb(pgd_kernel);
+
+	return ret;
+}
+
+/*
  * Unmap pages.
  */
 static size_t zap_pte_range(pmd_t *pmd, uint32_t address, size_t size)
