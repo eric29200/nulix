@@ -207,8 +207,8 @@ static int ata_detect(struct ata_device *device)
 	/* identify drive */
 	outb(device->io_base + ATA_REG_SECCOUNT0, 0);
 	outb(device->io_base + ATA_REG_LBA0, 0);
+	outb(device->io_base + ATA_REG_LBA1, 0);
 	outb(device->io_base + ATA_REG_LBA2, 0);
-	outb(device->io_base + ATA_REG_LBA0, 0);
 	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
 
 	/* poll for identification */
