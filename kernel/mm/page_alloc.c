@@ -46,10 +46,29 @@ uint32_t nr_free_pages()
 }
 
 /*
+ * Find suitable node : all pages must fit in node and first page address must be aligned on node size.
+ */
+static struct node *find_node(uint32_t address, int priority, size_t count)
+{
+	struct zone *zone = &zones[priority];
+	struct node *node;
+
+	/* try with max order first */
+	node = &zone->nodes[NR_NODES - 1];
+
+	/* find suitable node */
+	while (count < node->order_nr_pages || (address & (node->order_nr_pages * PAGE_SIZE - 1)))
+		node--;
+
+	return node;
+}
+
+/*
  * Add to free pages.
  */
 static void __add_to_free_pages(struct page *pages, int priority, size_t count)
 {
+	uint32_t address = (pages - page_array) * PAGE_SIZE;
 	struct zone *zone = &zones[priority];
 	struct node *node;
 	uint32_t i;
@@ -58,9 +77,8 @@ static void __add_to_free_pages(struct page *pages, int priority, size_t count)
 	node = &zone->nodes[NR_NODES - 1];
 
 	for (i = 0; i < count; ) {
-		/* find node */
-		while (count - i < node->order_nr_pages)
-			node--;
+		/* find suitable node */
+		node = find_node(address, priority, count - i);
 
 		/* add pages to node */
 		list_add_tail(&pages[i].list, &node->free_pages);
@@ -68,6 +86,7 @@ static void __add_to_free_pages(struct page *pages, int priority, size_t count)
 
 		/* skip pages */
 		i += node->order_nr_pages;
+		address += node->order_nr_pages * PAGE_SIZE;
 	}
 
 	/* update number of free pages */
@@ -226,68 +245,6 @@ void free_pages(void *address, uint32_t order)
 }
 
 /*
- * Merge free contiguous pages.
- */
-static void merge_free_pages()
-{
-	struct page *first_pages, *pages, *next_pages;
-	struct node *first_node, *node, *next_node;
-	uint32_t nr_free, page_nr, i;
-
-	/* for each page */
-	for (i = 0; i < nr_pages; ) {
-		/* get page group */
-		first_pages = pages = &page_array[i];
-		first_node = node = pages->private;
-
-		/* page group not free */
-		if (!node) {
-			i++;
-			continue;
-		}
-
-		/* find contiguous free pages */
-		nr_free = 0;
-		for (page_nr = i; page_nr + node->order_nr_pages < nr_pages; ) {
-			/* get next page group */
-			next_pages = &page_array[page_nr + node->order_nr_pages];
-			next_node = next_pages->private;
-
-			/* not free or different priority */
-			if (!next_node || pages->priority != next_pages->priority)
-				break;
-
-			/* delete from free pages */
-			__delete_from_free_pages(next_pages);
-
-			/* update number of free pages */
-			nr_free += next_node->order_nr_pages;
-
-			/* go to next group */
-			page_nr += node->order_nr_pages;
-			pages = &page_array[page_nr];
-			node = next_node;
-		}
-
-		/* free contiguous pages found */
-		if (nr_free) {
-			/* remove first pages first */
-			__delete_from_free_pages(first_pages);
-			nr_free += first_node->order_nr_pages;
-
-			/* add all pages to free list */
-			__add_to_free_pages(first_pages, first_pages->priority, nr_free);
-		}
-
-		/* go to next group */
-		if (nr_free)
-			i += nr_free;
-		else
-			i++;
-	}
-}
-
-/*
  * Reclaim pages, when memory is low.
  */
 static void reclaim_pages()
@@ -320,10 +277,6 @@ static void reclaim_pages()
 	} while (--priority > 0);
 
 done:
-	/* merge free pages */
-	if (count != SWAP_CLUSTER_MAX)
-		merge_free_pages();
-
 	/* unlock reclaim pages */
 	lock--;
 }
