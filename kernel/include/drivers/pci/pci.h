@@ -18,6 +18,13 @@
 
 #define PCI_INVALID_VENDOR		0xFFFF
 
+#define PCI_VENDOR_ID_ATA		0x8086
+#define PCI_DEVICE_ID_ATA		0x7010
+
+#define PCI_VENDOR_ID_VIRTIO		0x1AF4
+#define PCI_DEVICE_ID_VIRTIO_RNG	0x1005
+#define PCI_DEVICE_ID_VIRTIO_P9		0x1009
+
 /*
  * PCI device structure.
  */

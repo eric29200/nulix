@@ -176,7 +176,7 @@ err:
 * PCI ids table.
 */
 static struct pci_device_id virtio_rng_pci_tbl[] = {
-	{ VIRTIO_PCI_VENDOR_ID, VIRTIO_PCI_RNG_DEVICE_ID},
+	{ PCI_VENDOR_ID_VIRTIO, PCI_DEVICE_ID_VIRTIO_RNG },
 	{ 0, }
 };
 

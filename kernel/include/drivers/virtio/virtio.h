@@ -6,10 +6,6 @@
 #include <stddef.h>
 #include <x86/io.h>
 
-#define VIRTIO_PCI_VENDOR_ID		0x1AF4
-#define VIRTIO_PCI_RNG_DEVICE_ID	0x1005
-#define VIRTIO_PCI_P9_DEVICE_ID		0x1009
-
 #define VIRTIO_PCI_HOST_FEATURES	0
 #define VIRTIO_PCI_GUEST_FEATURES	4
 #define VIRTIO_PCI_QUEUE_PFN		8

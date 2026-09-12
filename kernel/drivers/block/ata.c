@@ -340,7 +340,7 @@ static int ata_probe(struct pci_device *pci_dev, struct pci_device_id *id)
  * PCI ids table.
  */
 static struct pci_device_id ata_pci_tbl[] = {
-	{ ATA_PCI_VENDOR_ID, ATA_PCI_DEVICE_ID },
+	{ PCI_VENDOR_ID_ATA, PCI_DEVICE_ID_ATA },
 	{ 0, }
 };
 
