@@ -20,7 +20,6 @@ struct partition {
  */
 struct gendisk {
 	dev_t			dev;				/* device number */
-	char			name[DISK_NAME_LEN];		/* disk name */
 	struct partition 	partitions[NR_PARTITIONS];	/* partitions */
 };
 

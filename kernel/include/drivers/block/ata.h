@@ -5,13 +5,12 @@
 #include <fs/fs.h>
 #include <stddef.h>
 
-#define NR_ATA_DEVICES			4
+#define MAX_HWIFS			2
+#define MAX_DRIVES			2
 
 #define ATA_SECTOR_SIZE			512
 #define ATAPI_SECTOR_SIZE		2048
 
-#define ATA_PRIMARY			0x00
-#define ATA_SECONDARY			0x01
 #define ATA_PRIMARY_IO			0x1F0
 #define ATA_SECONDARY_IO		0x170
 #define ATA_MASTER			0x00
@@ -106,8 +105,8 @@ struct ata_prdt {
  */
 struct ata_device {
 	int			id;
+	char 			name[4];
 	uint8_t			present;
-	uint8_t			bus;
 	uint8_t			drive;
 	uint16_t		io_base;
 	struct ata_identify	identify;
@@ -119,6 +118,17 @@ struct ata_device {
 	uint32_t		bar4;
 	int			(*read)(struct ata_device *, uint32_t, size_t, char *);
 	int			(*write)(struct ata_device *, uint32_t, size_t, char *);
+};
+
+/*
+ * IDE interface.
+ */
+struct ide_hwif {
+	struct ata_device	drives[MAX_DRIVES];
+	uint8_t			major;
+	char 			name[5];
+	uint8_t			index;
+	uint32_t		present:1;
 };
 
 /* init functions */

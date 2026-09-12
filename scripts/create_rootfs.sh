@@ -86,7 +86,7 @@ sudo mknod tmp/dev/hda1 b 3 1
 sudo mknod tmp/dev/hda2 b 3 2
 sudo mknod tmp/dev/hdb b 3 16
 sudo mknod tmp/dev/hdb1 b 3 17
-sudo mknod tmp/dev/hdc b 3 32
+sudo mknod tmp/dev/hdc b 22 0
 sudo mknod tmp/dev/loop0 b 7 0
 sudo mknod tmp/dev/loop1 b 7 1
 sudo mknod tmp/dev/loop2 b 7 2
