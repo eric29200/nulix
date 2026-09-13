@@ -1,7 +1,6 @@
 #include <fs/fs.h>
 #include <proc/sched.h>
 #include <proc/timer.h>
-#include <drivers/block/ata.h>
 #include <drivers/block/blk_dev.h>
 #include <mm/mm.h>
 #include <mm/highmem.h>

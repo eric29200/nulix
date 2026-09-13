@@ -1,4 +1,4 @@
-#include <drivers/block/ata.h>
+#include <drivers/block/ide.h>
 #include <x86/io.h>
 #include <stderr.h>
 

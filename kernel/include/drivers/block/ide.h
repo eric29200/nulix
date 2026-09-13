@@ -1,5 +1,5 @@
-#ifndef _ATA_H_
-#define _ATA_H_
+#ifndef _IDE_H_
+#define _IDE_H_
 
 #include <drivers/block/genhd.h>
 #include <fs/fs.h>

@@ -1,4 +1,4 @@
-#include <drivers/block/ata.h>
+#include <drivers/block/ide.h>
 #include <drivers/block/blk_dev.h>
 #include <drivers/pci/pci.h>
 #include <x86/interrupt.h>

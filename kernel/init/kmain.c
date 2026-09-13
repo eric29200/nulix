@@ -15,7 +15,7 @@
 #include <drivers/char/mouse.h>
 #include <drivers/pci/pci.h>
 #include <drivers/block/blk_dev.h>
-#include <drivers/block/ata.h>
+#include <drivers/block/ide.h>
 #include <drivers/block/loop.h>
 #include <drivers/video/fb.h>
 #include <drivers/net/rtl8139.h>

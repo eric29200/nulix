@@ -1,6 +1,5 @@
 #include <fs/fs.h>
 #include <drivers/block/blk_dev.h>
-#include <drivers/block/ata.h>
 #include <stderr.h>
 #include <fcntl.h>
 #include <dev.h>
