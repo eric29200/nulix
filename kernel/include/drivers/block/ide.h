@@ -95,40 +95,40 @@ struct ata_identify {
  * ATA Physical Region Descriptor Table.
  */
 struct ata_prdt {
-	uint32_t		buffer_phys;
-	uint16_t		transfert_size;
-	uint16_t		mark_end;
+	uint32_t			buffer_phys;
+	uint16_t			transfert_size;
+	uint16_t			mark_end;
 } __attribute__((packed));
 
 /*
  * IDE drive.
  */
 struct ide_drive {
-	int			id;
-	char 			name[4];
-	uint8_t			present;
-	uint8_t			drive;
-	uint16_t		io_base;
-	struct ata_identify	identify;
-	char			is_atapi;
-	size_t			sector_size;
-	struct gendisk		hd;
-	struct ata_prdt *	prdt;
-	uint8_t *		buf;
-	uint32_t		bar4;
-	int			(*read)(struct ide_drive *, uint32_t, size_t, char *);
-	int			(*write)(struct ide_drive *, uint32_t, size_t, char *);
+	int				id;
+	char 				name[4];
+	uint8_t				present:1;
+	uint8_t				is_atapi:1;
+	uint8_t				drive;
+	uint16_t			io_base;
+	struct ata_identify		identify;
+	size_t				sector_size;
+	struct gendisk			hd;
+	struct ata_prdt *		prdt;
+	uint8_t *			buf;
+	uint32_t			bar4;
+	int				(*read)(struct ide_drive *, uint32_t, size_t, char *);
+	int				(*write)(struct ide_drive *, uint32_t, size_t, char *);
 };
 
 /*
  * IDE interface.
  */
 struct ide_hwif {
-	struct ide_drive	drives[MAX_DRIVES];
-	uint8_t			major;
-	char 			name[5];
-	uint8_t			index;
-	uint32_t		present:1;
+	struct ide_drive		drives[MAX_DRIVES];
+	uint8_t				major;
+	char 				name[5];
+	uint8_t				index;
+	uint8_t				present:1;
 };
 
 /* init functions */
