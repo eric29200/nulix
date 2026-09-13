@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #define PARTITION_MINOR_SHIFT		4
+#define PARTITION_MINOR_MASK		((1 << PARTITION_MINOR_SHIFT) - 1)
 #define NR_PARTITIONS			(1 << PARTITION_MINOR_SHIFT)
 #define DISK_NAME_LEN			32
 
@@ -19,7 +20,6 @@ struct partition {
  * Disk partitions.
  */
 struct gendisk {
-	dev_t			dev;				/* device number */
 	struct partition 	partitions[NR_PARTITIONS];	/* partitions */
 };
 
@@ -39,6 +39,6 @@ struct msdos_partition {
 	uint32_t		nr_sects;			/* nr of sectors in partition */
 };
 
-void check_partition(struct gendisk *hd);
+void check_partition(struct gendisk *hd, dev_t dev);
 
 #endif

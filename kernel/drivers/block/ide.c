@@ -42,36 +42,6 @@ static struct ide_drive *ide_get_drive(dev_t dev)
 }
 
 /*
- * Get partition start sector.
- */
-static uint32_t ide_get_start_sector(struct ide_drive *drive, dev_t dev)
-{
-	int partition_nr;
-
-	/* get partition number */
-	partition_nr = dev - drive->hd.dev;
-	if (!partition_nr)
-		return 0;
-
-	return drive->hd.partitions[partition_nr].start_sect;
-}
-
-/*
- * Get number of sectors.
- */
-static uint32_t ide_get_nr_sectors(struct ide_drive *drive, dev_t dev)
-{
-	int partition_nr;
-
-	/* get partition number */
-	partition_nr = dev - drive->hd.dev;
-	if (!partition_nr)
-		return 0;
-
-	return drive->hd.partitions[partition_nr].nr_sects;
-}
-
-/*
  * Handle a read/write request.
  */
 static void ide_request(struct ide_hwif *hwif)
@@ -98,7 +68,7 @@ repeat:
 	}
 
 	/* get partition start sector */
-	start_sector = ide_get_start_sector(drive, request->rq_dev);
+	start_sector = drive->hd.partitions[minor(request->rq_dev) & PARTITION_MINOR_MASK].start_sect;
 	sector = start_sector + (request->sector << 9) / drive->sector_size;
 	nr_sectors = (request->nr_sectors << 9) / drive->sector_size;
 
@@ -186,7 +156,7 @@ out:
 /*
  * Identify an IDE drive.
  */
-static int ide_identify(struct ide_hwif *hwif, struct ide_drive *drive)
+static int ide_identify(struct ide_drive *drive)
 {
 	int ret;
 
@@ -204,9 +174,6 @@ static int ide_identify(struct ide_hwif *hwif, struct ide_drive *drive)
 	ret = ide_poll_identify(drive);
 	if (ret)
 		return ret;
-
-	/* set gendisk */
-	drive->hd.dev = mkdev(hwif->major, drive->id << PARTITION_MINOR_SHIFT);
 
 	/* init drive */
 	if (drive->is_atapi)
@@ -238,10 +205,10 @@ static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsign
 
 	switch (request) {
 		case BLKGETSIZE:
-			*((uint32_t *) arg) = ide_get_nr_sectors(drive, dev);
+			*((uint32_t *) arg) = drive->hd.partitions[minor(dev) & PARTITION_MINOR_MASK].nr_sects;
 			break;
 		case BLKGETSIZE64:
-			*((uint64_t *) arg) = ide_get_nr_sectors(drive, dev) * ATA_SECTOR_SIZE;
+			*((uint64_t *) arg) = drive->hd.partitions[minor(dev) & PARTITION_MINOR_MASK].nr_sects * ATA_SECTOR_SIZE;
 			break;
 		case BLKSSZGET:
 		 	*((uint32_t *) arg) = blksize_size[major(dev)][minor(dev)];
@@ -280,7 +247,7 @@ static void probe_hwif(struct ide_hwif *hwif)
 		drive = &hwif->drives[unit];
 
 		/* identify device */
-		ret = ide_identify(hwif, drive);
+		ret = ide_identify(drive);
 		if (ret)
 			continue;
 
@@ -341,7 +308,7 @@ static int hwif_init(int h)
 			continue;
 
 		/* discover partitions */
-		check_partition(&drive->hd);
+		check_partition(&drive->hd, mkdev(hwif->major, i << PARTITION_MINOR_SHIFT));
 
 		/* set partitions size */
 		for (j = 0; j < NR_PARTITIONS; j++)
