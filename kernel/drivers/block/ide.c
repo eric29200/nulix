@@ -68,7 +68,7 @@ repeat:
 	}
 
 	/* get partition start sector */
-	start_sector = drive->hd.partitions[minor(request->rq_dev) & PARTITION_MINOR_MASK].start_sect;
+	start_sector = drive->part[minor(request->rq_dev) & PARTITION_MINOR_MASK].start_sect;
 	sector = start_sector + (request->sector << 9) / drive->sector_size;
 	nr_sectors = (request->nr_sectors << 9) / drive->sector_size;
 
@@ -205,10 +205,10 @@ static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsign
 
 	switch (request) {
 		case BLKGETSIZE:
-			*((uint32_t *) arg) = drive->hd.partitions[minor(dev) & PARTITION_MINOR_MASK].nr_sects;
+			*((uint32_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects;
 			break;
 		case BLKGETSIZE64:
-			*((uint64_t *) arg) = drive->hd.partitions[minor(dev) & PARTITION_MINOR_MASK].nr_sects * ATA_SECTOR_SIZE;
+			*((uint64_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects * ATA_SECTOR_SIZE;
 			break;
 		case BLKSSZGET:
 		 	*((uint32_t *) arg) = blksize_size[major(dev)][minor(dev)];
@@ -258,13 +258,82 @@ static void probe_hwif(struct ide_hwif *hwif)
 }
 
 /*
+ * Init gendisk.
+ */
+static void init_gendisk(struct ide_hwif *hwif)
+{
+	int units, minors, unit;
+	struct gendisk *gd;
+	size_t *bs;
+
+	/* figure out maximum drive number on the interface */
+	for (units = MAX_DRIVES; units > 0; units--) {
+		if (hwif->drives[units - 1].present)
+			break;
+	}
+
+	/* compute number of minors */
+	minors = units * NR_PARTITIONS;
+
+	/* allocate gendisk structure */
+	gd = kmalloc(sizeof(struct gendisk));
+	if (!gd)
+		goto err_kmalloc_gd;
+	memset(gd, 0, sizeof(struct gendisk));
+
+	/* allocate arrays */
+	gd->sizes = kmalloc(minors * sizeof(size_t));
+	if (!gd->sizes)
+		goto err_kmalloc_gd_sizes;
+	gd->part = kmalloc(minors * sizeof(struct partition));
+	if (!gd->part)
+		goto err_kmalloc_gd_part;
+	bs = kmalloc(minors * sizeof(size_t));
+	if (!bs)
+		goto err_kmalloc_bs;
+
+	/* clear partitions */
+	memset(gd->part, 0, minors * sizeof(struct partition));
+
+	/* set default block size */
+	blksize_size[hwif->major] = bs;
+	for (unit = 0; unit < minors; unit++)
+		*bs++ = BLOCK_SIZE;
+
+	/* set partitions on each drive */
+	for (unit = 0; unit < units; ++unit)
+		hwif->drives[unit].part = &gd->part[unit << PARTITION_MINOR_SHIFT];
+
+	/* init gendisk */
+	gd->major = hwif->major;
+	gd->minor_shift	= PARTITION_MINOR_SHIFT;
+	gd->max_p = NR_PARTITIONS;
+	gd->nr_real = units;
+
+	/* add gendisk */
+	hwif->gd = gd;
+	add_gendisk(gd);
+
+	return;
+err_kmalloc_bs:
+	kfree(gd->part);
+err_kmalloc_gd_part:
+	kfree(gd->sizes);
+err_kmalloc_gd_sizes:
+	kfree(gd);
+err_kmalloc_gd:
+	panic("init_gendisk: Out of memory\n");
+	return;
+}
+
+
+/*
  * Init an IDE interface.
  */
 static int hwif_init(int h)
 {
 	struct ide_hwif *hwif = &ide_hwifs[h];
-	struct ide_drive *drive;
-	int ret, i, j;
+	int ret, i;
 
 	/* interface not present */
 	if (!hwif->present)
@@ -299,21 +368,8 @@ static int hwif_init(int h)
 			break;
 	}
 
-	/* init drives */
-	for (i = 0; i < MAX_DRIVES; i++) {
-		drive = &hwif->drives[i];
-
-		/* drive not present */
-		if (!drive->present)
-			continue;
-
-		/* discover partitions */
-		check_partition(&drive->hd, mkdev(hwif->major, i << PARTITION_MINOR_SHIFT));
-
-		/* set partitions size */
-		for (j = 0; j < NR_PARTITIONS; j++)
-			blk_size[hwif->major][(i << PARTITION_MINOR_SHIFT) + j] = drive->hd.partitions[j].nr_sects >> (BLOCK_SIZE_BITS - 9);
-	}
+	/* init gendisk */
+	init_gendisk(hwif);
 
 	return 0;
 err_blk_size:
@@ -434,6 +490,9 @@ int init_ide()
 	/* final init interfaces */
 	for (i = 0; i < MAX_HWIFS; i++)
 		hwif_init(i);
+
+	/* setup gendisk */
+	setup_gendisk();
 
 	return 0;
 }

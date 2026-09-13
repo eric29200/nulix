@@ -6,26 +6,29 @@
 #include <fcntl.h>
 #include <dev.h>
 
+/* gendisks list */
+static LIST_HEAD(gendisks_list);
+
 /*
  * Add a partition.
  */
-static void add_partition(struct gendisk *hd, int minor, uint32_t start, uint32_t size)
+static void add_partition(struct gendisk *gd, int minor, uint32_t start, uint32_t size)
 {
-	hd->partitions[minor].start_sect = start;
-	hd->partitions[minor].nr_sects = size;
+	gd->part[minor].start_sect = start;
+	gd->part[minor].nr_sects = size;
 }
 
 /*
  * Discover msdos partitions.
  */
-static int check_msdos_partition(struct gendisk *hd, dev_t dev)
+static int check_msdos_partition(struct gendisk *gd, dev_t dev)
 {
 	struct msdos_partition *partition;
 	struct buffer_head *bh;
 	int minor;
 
 	/* reset partitions */
-	memset(hd->partitions, 0, sizeof(struct partition) * NR_PARTITIONS);
+	memset(gd->part, 0, sizeof(struct partition) * NR_PARTITIONS);
 
 	/* read partition table */
 	bh = bread(dev, 0, 1024);
@@ -46,7 +49,7 @@ static int check_msdos_partition(struct gendisk *hd, dev_t dev)
 			continue;
 
 		/* add partition to disk */
-		add_partition(hd, minor, partition->start_sect, partition->nr_sects);
+		add_partition(gd, minor, partition->start_sect, partition->nr_sects);
 	}
 
 	brelse(bh);
@@ -58,7 +61,57 @@ static int check_msdos_partition(struct gendisk *hd, dev_t dev)
 /*
  * Discover partitions.
  */
-void check_partition(struct gendisk *hd, dev_t dev)
+static void check_partition(struct gendisk *gd, dev_t dev)
 {
-	check_msdos_partition(hd, dev);
+	check_msdos_partition(gd, dev);
+}
+
+/*
+ * Add a gendisk.
+ */
+void add_gendisk(struct gendisk *gd)
+{
+	list_add_tail(&gd->list, &gendisks_list);
+}
+
+/*
+ * Setup a device.
+ */
+static void setup_dev(struct gendisk *gd)
+{
+	int end_minor = gd->nr_real * gd->max_p, drive, i;
+
+	/* reset partitions size */
+	blk_size[gd->major] = NULL;
+
+	/* reset partitions */
+	for (i = 0 ; i < end_minor; i++) {
+		gd->part[i].start_sect = 0;
+		gd->part[i].nr_sects = 0;
+	}
+
+	/* discover partitions */
+	for (drive = 0 ; drive < gd->nr_real; drive++)
+		check_partition(gd, mkdev(gd->major, drive << gd->minor_shift));
+
+	/* set partitions size */
+	if (gd->sizes != NULL) {
+		for (i = 0; i < end_minor; i++)
+			gd->sizes[i] = gd->part[i].nr_sects >> (BLOCK_SIZE_BITS - 9);
+		blk_size[gd->major] = gd->sizes;
+	}
+}
+
+/*
+ * Setup gendisk = discover partitions.
+ */
+void setup_gendisk()
+{
+	struct list_head *pos;
+	struct gendisk *gd;
+
+	list_for_each(pos, &gendisks_list) {
+		gd = list_entry(pos, struct gendisk, list);
+		setup_dev(gd);
+	}
 }

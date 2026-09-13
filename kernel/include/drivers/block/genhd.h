@@ -2,11 +2,11 @@
 #define _GENHD_H_
 
 #include <stddef.h>
+#include <lib/list.h>
 
 #define PARTITION_MINOR_SHIFT		4
 #define PARTITION_MINOR_MASK		((1 << PARTITION_MINOR_SHIFT) - 1)
 #define NR_PARTITIONS			(1 << PARTITION_MINOR_SHIFT)
-#define DISK_NAME_LEN			32
 
 /*
  * Disk partition.
@@ -20,7 +20,13 @@ struct partition {
  * Disk partitions.
  */
 struct gendisk {
-	struct partition 	partitions[NR_PARTITIONS];	/* partitions */
+	int 			major;				/* major number of driver */
+	int			minor_shift;			/* number of times minor is shifted to get real minor */
+	int 			max_p;				/* maximum partitions per device */
+	struct partition *	part;				/* partitions */
+	size_t *		sizes;				/* device size in blocks */
+	int			nr_real;			/* number of real devices */
+	struct list_head	list;				/* next gendisk */
 };
 
 /*
@@ -39,6 +45,7 @@ struct msdos_partition {
 	uint32_t		nr_sects;			/* nr of sectors in partition */
 };
 
-void check_partition(struct gendisk *hd, dev_t dev);
+void add_gendisk(struct gendisk *gd);
+void setup_gendisk();
 
 #endif

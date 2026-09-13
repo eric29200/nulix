@@ -112,7 +112,7 @@ struct ide_drive {
 	uint16_t			io_base;
 	struct ata_identify		identify;
 	size_t				sector_size;
-	struct gendisk			hd;
+	struct partition *		part;
 	struct ata_prdt *		prdt;
 	uint8_t *			buf;
 	uint32_t			bar4;
@@ -128,6 +128,7 @@ struct ide_hwif {
 	uint8_t				major;
 	char 				name[5];
 	uint8_t				index;
+	struct gendisk *		gd;
 	uint8_t				present:1;
 };
 
