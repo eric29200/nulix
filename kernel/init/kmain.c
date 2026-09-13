@@ -253,10 +253,10 @@ static void kinit()
 	printf("[Kernel] Bock devices Init\n");
 	init_blk_dev();
 
-	/* init ata devices */
-	printf("[Kernel] ATA devices Init\n");
-	if (init_ata())
-		printf("[Kernel] ATA devices Init error\n");
+	/* init ide devices */
+	printf("[Kernel] IDE devices Init\n");
+	if (init_ide())
+		printf("[Kernel] IDE devices Init error\n");
 
 	/* init loop devices */
 	printf("[Kernel] Loop devices Init\n");

@@ -101,9 +101,9 @@ struct ata_prdt {
 } __attribute__((packed));
 
 /*
- * ATA device.
+ * IDE drive.
  */
-struct ata_device {
+struct ide_drive {
 	int			id;
 	char 			name[4];
 	uint8_t			present;
@@ -116,15 +116,15 @@ struct ata_device {
 	struct ata_prdt *	prdt;
 	uint8_t *		buf;
 	uint32_t		bar4;
-	int			(*read)(struct ata_device *, uint32_t, size_t, char *);
-	int			(*write)(struct ata_device *, uint32_t, size_t, char *);
+	int			(*read)(struct ide_drive *, uint32_t, size_t, char *);
+	int			(*write)(struct ide_drive *, uint32_t, size_t, char *);
 };
 
 /*
  * IDE interface.
  */
 struct ide_hwif {
-	struct ata_device	drives[MAX_DRIVES];
+	struct ide_drive	drives[MAX_DRIVES];
 	uint8_t			major;
 	char 			name[5];
 	uint8_t			index;
@@ -132,8 +132,8 @@ struct ide_hwif {
 };
 
 /* init functions */
-int init_ata();
-int ata_hd_init(struct ata_device *device);
-int ata_cd_init(struct ata_device *device);
+int init_ide();
+int ide_hd_init(struct ide_drive *drive);
+int ide_cd_init(struct ide_drive *drive);
 
 #endif

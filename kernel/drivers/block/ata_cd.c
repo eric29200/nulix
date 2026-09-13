@@ -6,12 +6,12 @@
 /*
  * Wait for operation completion.
  */
-static int ata_cd_wait(struct ata_device *device)
+static int ide_cd_wait(struct ide_drive *drive)
 {
 	uint8_t status;
 
 	for (;;) {
-		status = inb(device->io_base + ATA_REG_STATUS);
+		status = inb(drive->io_base + ATA_REG_STATUS);
 		if (!status)
 			return -ENXIO;
 
@@ -26,24 +26,24 @@ static int ata_cd_wait(struct ata_device *device)
 }
 
 /*
- * Read a sector from an ata device.
+ * Read a sector from an IDE cd drive.
  */
-static int ata_cd_read_sector(struct ata_device *device, uint32_t sector, char *buf)
+static int ide_cd_read_sector(struct ide_drive *drive, uint32_t sector, char *buf)
 {
 	uint8_t command[12];
 	int ret;
 
 	/* select drive */
-	outb(device->io_base + ATA_REG_HDDEVSEL, device->drive == ATA_MASTER ? 0xE0 : 0xF0);
-	outb(device->io_base + ATA_REG_FEATURES, 0x00);
+	outb(drive->io_base + ATA_REG_HDDEVSEL, drive->drive == ATA_MASTER ? 0xE0 : 0xF0);
+	outb(drive->io_base + ATA_REG_FEATURES, 0x00);
 
 	/* issue packet command */
-	outb(device->io_base + ATA_REG_LBA1, (uint8_t) (ATAPI_SECTOR_SIZE & 0xFF));
-	outb(device->io_base + ATA_REG_LBA2, (uint8_t) (ATAPI_SECTOR_SIZE >> 8));
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
+	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (ATAPI_SECTOR_SIZE & 0xFF));
+	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (ATAPI_SECTOR_SIZE >> 8));
+	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
 
 	/* wait for completion */
-	ret = ata_cd_wait(device);
+	ret = ide_cd_wait(drive);
 	if (ret)
 		return ret;
 
@@ -57,30 +57,30 @@ static int ata_cd_read_sector(struct ata_device *device, uint32_t sector, char *
 	command[9] = 1;
 
 	/* issue read command */
-	outsw(device->io_base, command, 12 / sizeof(uint16_t));
+	outsw(drive->io_base, command, 12 / sizeof(uint16_t));
 
 	/* wait for completion */
-	ret = ata_cd_wait(device);
+	ret = ide_cd_wait(drive);
 	if (ret)
 		return ret;
 
 	/* read data */
-	insw(device->io_base, buf, ATAPI_SECTOR_SIZE / sizeof(uint16_t));
+	insw(drive->io_base, buf, ATAPI_SECTOR_SIZE / sizeof(uint16_t));
 
 	return 0;
 }
 
 /*
- * Read from an ata device.
+ * Read from an IDE cd drive.
  */
-static int ata_cd_read(struct ata_device *device, uint32_t sector, size_t nr_sectors, char *buf)
+static int ide_cd_read(struct ide_drive *drive, uint32_t sector, size_t nr_sectors, char *buf)
 {
 	size_t i;
 	int ret;
 
 	/* read sectors */
 	for (i = 0; i < nr_sectors; i++) {
-		ret = ata_cd_read_sector(device, sector + i, buf + ATAPI_SECTOR_SIZE * i);
+		ret = ide_cd_read_sector(drive, sector + i, buf + ATAPI_SECTOR_SIZE * i);
 		if (ret)
 			return ret;
 	}
@@ -89,13 +89,13 @@ static int ata_cd_read(struct ata_device *device, uint32_t sector, size_t nr_sec
 }
 
 /*
- * Init an ata cd device.
+ * Init an IDE cd drive.
  */
-int ata_cd_init(struct ata_device *device)
+int ide_cd_init(struct ide_drive *drive)
 {
-	device->sector_size = ATAPI_SECTOR_SIZE;
-	device->read = ata_cd_read;
-	device->write = NULL;
+	drive->sector_size = ATAPI_SECTOR_SIZE;
+	drive->read = ide_cd_read;
+	drive->write = NULL;
 
 	return 0;
 }

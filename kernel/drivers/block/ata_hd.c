@@ -9,13 +9,13 @@
 /*
  * Wait for operation completion.
  */
-static void ata_hd_wait(struct ata_device *device)
+static void ide_hd_wait(struct ide_drive *drive)
 {
 	int status, dstatus;
 
 	for (;;) {
-		status = inb(device->bar4 + 2);
-		dstatus = inb(device->io_base + ATA_REG_STATUS);
+		status = inb(drive->bar4 + 2);
+		dstatus = inb(drive->io_base + ATA_REG_STATUS);
 
 		if (!(status & 0x04))
 			continue;
@@ -26,9 +26,9 @@ static void ata_hd_wait(struct ata_device *device)
 }
 
 /*
- * Read from an ata device.
+ * Read from an IDE hd drive.
  */
-static int ata_hd_read(struct ata_device *device, uint32_t sector, size_t nr_sectors, char *buf)
+static int ide_hd_read(struct ide_drive *drive, uint32_t sector, size_t nr_sectors, char *buf)
 {
 	uint32_t nsect;
 
@@ -39,31 +39,31 @@ static int ata_hd_read(struct ata_device *device, uint32_t sector, size_t nr_sec
 			nsect = NR_DMA_SECTORS;
 
 		/* set transfert size */
-		device->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
+		drive->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
 
 		/* prepare DMA transfert */
-		outb(device->bar4, 0);
-		outl(device->bar4 + 0x04, __pa(device->prdt));
-		outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
+		outb(drive->bar4, 0);
+		outl(drive->bar4 + 0x04, __pa(drive->prdt));
+		outb(drive->bar4 + 0x02, inb(drive->bar4 + 0x02) | 0x02 | 0x04);
 
 		/* select sector */
-		outb(device->io_base + ATA_REG_CONTROL, 0x00);
-		outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-		outb(device->io_base + ATA_REG_FEATURES, 0x00);
-		outb(device->io_base + ATA_REG_SECCOUNT0, nsect);
-		outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
-		outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-		outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+		outb(drive->io_base + ATA_REG_CONTROL, 0x00);
+		outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+		outb(drive->io_base + ATA_REG_FEATURES, 0x00);
+		outb(drive->io_base + ATA_REG_SECCOUNT0, nsect);
+		outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
+		outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
+		outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
 
 		/* issue read DMA command */
-		outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_READ_DMA);
-		outb(device->bar4, 0x8 | 0x1);
+		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_READ_DMA);
+		outb(drive->bar4, 0x8 | 0x1);
 
 		/* wait for completion */
-		ata_hd_wait(device);
+		ide_hd_wait(drive);
 
 		/* copy buffer */
-		memcpy(buf, device->buf, nsect * ATA_SECTOR_SIZE);
+		memcpy(buf, drive->buf, nsect * ATA_SECTOR_SIZE);
 
 		/* update size */
 		buf += nsect * ATA_SECTOR_SIZE;
@@ -75,9 +75,9 @@ static int ata_hd_read(struct ata_device *device, uint32_t sector, size_t nr_sec
 }
 
 /*
- * Write to an ata device.
+ * Write to an IDE hd drive.
  */
-static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_sectors, char *buf)
+static int ide_hd_write(struct ide_drive *drive, uint32_t sector, size_t nr_sectors, char *buf)
 {
 	uint32_t nsect;
 
@@ -88,31 +88,31 @@ static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_se
 			nsect = NR_DMA_SECTORS;
 
 		/* copy buffer */
-		memcpy(device->buf, buf, nsect * ATA_SECTOR_SIZE);
+		memcpy(drive->buf, buf, nsect * ATA_SECTOR_SIZE);
 
 		/* set transfert size */
-		device->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
+		drive->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
 
 		/* prepare DMA transfert */
-		outb(device->bar4, 0);
-		outl(device->bar4 + 0x04, __pa(device->prdt));
-		outb(device->bar4 + 0x02, inb(device->bar4 + 0x02) | 0x02 | 0x04);
+		outb(drive->bar4, 0);
+		outl(drive->bar4 + 0x04, __pa(drive->prdt));
+		outb(drive->bar4 + 0x02, inb(drive->bar4 + 0x02) | 0x02 | 0x04);
 
 		/* select sector */
-		outb(device->io_base + ATA_REG_CONTROL, 0x00);
-		outb(device->io_base + ATA_REG_HDDEVSEL, (device->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-		outb(device->io_base + ATA_REG_FEATURES, 0x00);
-		outb(device->io_base + ATA_REG_SECCOUNT0, nsect);
-		outb(device->io_base + ATA_REG_LBA0, (uint8_t) sector);
-		outb(device->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-		outb(device->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+		outb(drive->io_base + ATA_REG_CONTROL, 0x00);
+		outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+		outb(drive->io_base + ATA_REG_FEATURES, 0x00);
+		outb(drive->io_base + ATA_REG_SECCOUNT0, nsect);
+		outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
+		outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
+		outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
 
 		/* issue write DMA command */
-		outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
-		outb(device->bar4, 0x1);
+		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
+		outb(drive->bar4, 0x1);
 
 		/* wait for completion */
-		ata_hd_wait(device);
+		ide_hd_wait(drive);
 
 		/* update size */
 		buf += nsect * ATA_SECTOR_SIZE;
@@ -124,38 +124,38 @@ static int ata_hd_write(struct ata_device *device, uint32_t sector, size_t nr_se
 }
 
 /*
- * Init an ata hard disk.
+ * Init an IDE hd drive.
  */
-int ata_hd_init(struct ata_device *device)
+int ide_hd_init(struct ide_drive *drive)
 {
 	/* no sectors */
-	if (!device->identify.sectors_28 && !device->identify.sectors_48)
+	if (!drive->identify.sectors_28 && !drive->identify.sectors_48)
 		return -EINVAL;
 
 	/* allocate prdt */
-	device->prdt = kmalloc(sizeof(struct ata_prdt));
-	if (!device->prdt)
+	drive->prdt = kmalloc(sizeof(struct ata_prdt));
+	if (!drive->prdt)
 		return -ENOMEM;
 
 	/* allocate buffer */
-	device->buf = get_free_pages(ORDER_DMA_PAGES);
-	if (!device->buf) {
-		kfree(device->prdt);
+	drive->buf = get_free_pages(ORDER_DMA_PAGES);
+	if (!drive->buf) {
+		kfree(drive->prdt);
 		return -ENOMEM;
 	}
 
 	/* clear prdt and buffer */
-	memset(device->prdt, 0, sizeof(struct ata_prdt));
-	memset(device->buf, 0, NR_DMA_PAGES * PAGE_SIZE);
+	memset(drive->prdt, 0, sizeof(struct ata_prdt));
+	memset(drive->buf, 0, NR_DMA_PAGES * PAGE_SIZE);
 
 	/* set prdt */
-	device->prdt[0].buffer_phys = __pa(device->buf);
-	device->prdt[0].mark_end = 0x8000;
+	drive->prdt[0].buffer_phys = __pa(drive->buf);
+	drive->prdt[0].mark_end = 0x8000;
 
 	/* set operations */
-	device->sector_size = ATA_SECTOR_SIZE;
-	device->read = ata_hd_read;
-	device->write = ata_hd_write;
+	drive->sector_size = ATA_SECTOR_SIZE;
+	drive->read = ide_hd_read;
+	drive->write = ide_hd_write;
 
 	return 0;
 }

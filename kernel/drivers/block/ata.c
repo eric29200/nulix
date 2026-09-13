@@ -15,12 +15,12 @@ static uint8_t ide_hwif_to_major[MAX_HWIFS] = { DEV_IDE0_MAJOR, DEV_IDE1_MAJOR }
 static uint16_t default_io_base[MAX_HWIFS] = { 0x1F0, 0x170 };
 
 /*
- * Get an ata device.
+ * Get an IDE drive.
  */
-static struct ata_device *ata_get_device(dev_t dev)
+static struct ide_drive *ide_get_drive(dev_t dev)
 {
 	int major = major(dev), h, unit;
-	struct ata_device *drive;
+	struct ide_drive *drive;
 	struct ide_hwif *hwif;
 
 	for (h = 0; h < MAX_HWIFS; h++) {
@@ -44,40 +44,40 @@ static struct ata_device *ata_get_device(dev_t dev)
 /*
  * Get partition start sector.
  */
-static uint32_t ata_get_start_sector(struct ata_device *device, dev_t dev)
+static uint32_t ide_get_start_sector(struct ide_drive *drive, dev_t dev)
 {
 	int partition_nr;
 
 	/* get partition number */
-	partition_nr = dev - device->hd.dev;
+	partition_nr = dev - drive->hd.dev;
 	if (!partition_nr)
 		return 0;
 
-	return device->hd.partitions[partition_nr].start_sect;
+	return drive->hd.partitions[partition_nr].start_sect;
 }
 
 /*
  * Get number of sectors.
  */
-static uint32_t ata_get_nr_sectors(struct ata_device *device, dev_t dev)
+static uint32_t ide_get_nr_sectors(struct ide_drive *drive, dev_t dev)
 {
 	int partition_nr;
 
 	/* get partition number */
-	partition_nr = dev - device->hd.dev;
+	partition_nr = dev - drive->hd.dev;
 	if (!partition_nr)
 		return 0;
 
-	return device->hd.partitions[partition_nr].nr_sects;
+	return drive->hd.partitions[partition_nr].nr_sects;
 }
 
 /*
  * Handle a read/write request.
  */
-static void ata_request(struct ide_hwif *hwif)
+static void ide_request(struct ide_hwif *hwif)
 {
 	uint32_t start_sector, sector, nr_sectors;
-	struct ata_device *device;
+	struct ide_drive *drive;
 	struct request *request;
 	int ret;
 
@@ -90,34 +90,34 @@ repeat:
 	/* remove it from queue */
 	blk_dev[hwif->major].current_request = request->next;
 
-	/* get ata device */
-	device = ata_get_device(request->rq_dev);
-	if (!device) {
-		printf("ata_request: can't find device 0x%x\n", request->rq_dev);
+	/* get ide drive */
+	drive = ide_get_drive(request->rq_dev);
+	if (!drive) {
+		printf("ide_request: can't find device 0x%x\n", request->rq_dev);
 		goto next;
 	}
 
 	/* get partition start sector */
-	start_sector = ata_get_start_sector(device, request->rq_dev);
-	sector = start_sector + (request->sector << 9) / device->sector_size;
-	nr_sectors = (request->nr_sectors << 9) / device->sector_size;
+	start_sector = ide_get_start_sector(drive, request->rq_dev);
+	sector = start_sector + (request->sector << 9) / drive->sector_size;
+	nr_sectors = (request->nr_sectors << 9) / drive->sector_size;
 
 	/* find request function */
 	switch (request->cmd) {
 		case READ:
-			ret = device->read(device, sector, nr_sectors, request->buf);
+			ret = drive->read(drive, sector, nr_sectors, request->buf);
 			break;
 		case WRITE:
-			ret = device->write(device, sector, nr_sectors, request->buf);
+			ret = drive->write(drive, sector, nr_sectors, request->buf);
 			break;
 		default:
-			printf("ata_request: can't handle request %x\n", request->cmd);
+			printf("ide_request: can't handle request %x\n", request->cmd);
 			goto next;
 	}
 
 	/* print error */
 	if (ret)
-		printf("ata_request: error on request (cmd = %x, sector = %ld)\n", request->cmd, request->sector);
+		printf("ide_request: error on request (cmd = %x, sector = %ld)\n", request->cmd, request->sector);
 
 next:
 	/* end this request */
@@ -130,7 +130,7 @@ next:
  */
 static void do_ide0_request()
 {
-	ata_request(&ide_hwifs[0]);
+	ide_request(&ide_hwifs[0]);
 }
 
 /*
@@ -138,20 +138,20 @@ static void do_ide0_request()
  */
 static void do_ide1_request()
 {
-	ata_request(&ide_hwifs[1]);
+	ide_request(&ide_hwifs[1]);
 }
 
 /*
  * Poll for identification.
  */
-static int ata_poll_identify(struct ata_device *device)
+static int ide_poll_identify(struct ide_drive *drive)
 {
 	uint8_t status;
 	uint16_t id;
 
 	/* wait until BSY is clear */
 	while (1) {
-		status = inb(device->io_base + ATA_REG_STATUS);
+		status = inb(drive->io_base + ATA_REG_STATUS);
 		if (!status)
 			return -ENXIO;
 
@@ -159,16 +159,16 @@ static int ata_poll_identify(struct ata_device *device)
 			break;
 	}
 
-	/* check if it is an atapi device */
-	id = (inb(device->io_base + ATA_REG_LBA1) << 8) | inb(device->io_base + ATA_REG_LBA2);
+	/* check if it is an atapi drive */
+	id = (inb(drive->io_base + ATA_REG_LBA1) << 8) | inb(drive->io_base + ATA_REG_LBA2);
 	if (id == 0x14EB) {
-		device->is_atapi = 1;
+		drive->is_atapi = 1;
 		goto out;
 	}
 
 	/* wait until DRQ (drive has data to transfer) is clear */
 	while (1) {
-		status = inb(device->io_base + ATA_REG_STATUS);
+		status = inb(drive->io_base + ATA_REG_STATUS);
 		if (status & ATA_SR_ERR)
 			return -EFAULT;
 
@@ -178,45 +178,45 @@ static int ata_poll_identify(struct ata_device *device)
 
 out:
 	/* read identified drive data */
-	insw(device->io_base + ATA_REG_DATA, &device->identify, 256);
+	insw(drive->io_base + ATA_REG_DATA, &drive->identify, 256);
 
 	return 0;
 }
 
 /*
- * Detect an ATA device.
+ * Identify an IDE drive.
  */
-static int ata_detect(struct ide_hwif *hwif, struct ata_device *device)
+static int ide_identify(struct ide_hwif *hwif, struct ide_drive *drive)
 {
 	int ret;
 
 	/* select drive */
-	outb(device->io_base + ATA_REG_HDDEVSEL, device->drive == ATA_MASTER ? 0xA0 : 0xB0);
+	outb(drive->io_base + ATA_REG_HDDEVSEL, drive->drive == ATA_MASTER ? 0xA0 : 0xB0);
 
 	/* identify drive */
-	outb(device->io_base + ATA_REG_SECCOUNT0, 0);
-	outb(device->io_base + ATA_REG_LBA0, 0);
-	outb(device->io_base + ATA_REG_LBA1, 0);
-	outb(device->io_base + ATA_REG_LBA2, 0);
-	outb(device->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
+	outb(drive->io_base + ATA_REG_SECCOUNT0, 0);
+	outb(drive->io_base + ATA_REG_LBA0, 0);
+	outb(drive->io_base + ATA_REG_LBA1, 0);
+	outb(drive->io_base + ATA_REG_LBA2, 0);
+	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
 
 	/* poll for identification */
-	ret = ata_poll_identify(device);
+	ret = ide_poll_identify(drive);
 	if (ret)
 		return ret;
 
 	/* set gendisk */
-	device->hd.dev = mkdev(hwif->major, device->id << PARTITION_MINOR_SHIFT);
+	drive->hd.dev = mkdev(hwif->major, drive->id << PARTITION_MINOR_SHIFT);
 
 	/* init drive */
-	if (device->is_atapi)
-		ret = ata_cd_init(device);
+	if (drive->is_atapi)
+		ret = ide_cd_init(drive);
 	else
-		ret = ata_hd_init(device);
+		ret = ide_hd_init(drive);
 
 	/* set device present */
 	if (ret == 0)
-		device->present = 1;
+		drive->present = 1;
 
 	return ret;
 }
@@ -224,24 +224,24 @@ static int ata_detect(struct ide_hwif *hwif, struct ata_device *device)
 /*
  * Ioctl write.
  */
-static int ata_ioctl(struct inode *inode, struct file *filp, int request, unsigned long arg)
+static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsigned long arg)
 {
-	struct ata_device *device;
 	dev_t dev = inode->i_rdev;
+	struct ide_drive *drive;
 
 	UNUSED(filp);
 
-	/* get ata device */
-	device = ata_get_device(dev);
-	if (!device)
+	/* get ide drive */
+	drive = ide_get_drive(dev);
+	if (!drive)
 		return -EINVAL;
 
 	switch (request) {
 		case BLKGETSIZE:
-			*((uint32_t *) arg) = ata_get_nr_sectors(device, dev);
+			*((uint32_t *) arg) = ide_get_nr_sectors(drive, dev);
 			break;
 		case BLKGETSIZE64:
-			*((uint64_t *) arg) = ata_get_nr_sectors(device, dev) * ATA_SECTOR_SIZE;
+			*((uint64_t *) arg) = ide_get_nr_sectors(drive, dev) * ATA_SECTOR_SIZE;
 			break;
 		case BLKSSZGET:
 		 	*((uint32_t *) arg) = blksize_size[major(dev)][minor(dev)];
@@ -260,12 +260,12 @@ static int ata_ioctl(struct inode *inode, struct file *filp, int request, unsign
 }
 
 /*
- * ATA file operations.
+ * IDE file operations.
  */
-static struct file_operations ata_fops = {
+static struct file_operations ide_fops = {
 	.read		= generic_block_read,
 	.write		= generic_block_write,
-	.ioctl		= ata_ioctl,
+	.ioctl		= ide_ioctl,
 };
 
 /*
@@ -273,14 +273,14 @@ static struct file_operations ata_fops = {
  */
 static void probe_hwif(struct ide_hwif *hwif)
 {
-	struct ata_device *drive;
+	struct ide_drive *drive;
 	int unit, ret;
 
 	for (unit = 0; unit < MAX_DRIVES; unit++) {
 		drive = &hwif->drives[unit];
 
-		/* detect device */
-		ret = ata_detect(hwif, drive);
+		/* identify device */
+		ret = ide_identify(hwif, drive);
 		if (ret)
 			continue;
 
@@ -296,7 +296,7 @@ static void probe_hwif(struct ide_hwif *hwif)
 static int hwif_init(int h)
 {
 	struct ide_hwif *hwif = &ide_hwifs[h];
-	struct ata_device *drive;
+	struct ide_drive *drive;
 	int ret, i, j;
 
 	/* interface not present */
@@ -304,7 +304,7 @@ static int hwif_init(int h)
 		return 0;
 
 	/* register block device */
-	ret = register_blkdev(hwif->major, hwif->name, &ata_fops);
+	ret = register_blkdev(hwif->major, hwif->name, &ide_fops);
 	if (ret)
 		return ret;
 
@@ -357,9 +357,9 @@ err_blksize_size:
 }
 
 /*
- * Probe a ata device.
+ * Probe a PCI IDE device.
  */
-static int ata_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
+static int ide_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
 	uint32_t bar4;
 	int i, j;
@@ -387,7 +387,7 @@ static int ata_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 /*
  * PCI ids table.
  */
-static struct pci_device_id ata_pci_tbl[] = {
+static struct pci_device_id ide_pci_tbl[] = {
 	{ PCI_VENDOR_ID_ATA, PCI_DEVICE_ID_ATA },
 	{ 0, }
 };
@@ -396,8 +396,8 @@ static struct pci_device_id ata_pci_tbl[] = {
  * PCI driver.
  */
 static struct pci_driver ata_pci_driver = {
-	.id_table		= ata_pci_tbl,
-	.probe			= ata_pci_probe,
+	.id_table		= ide_pci_tbl,
+	.probe			= ide_pci_probe,
 };
 
 /*
@@ -421,7 +421,7 @@ static int probe_for_hwifs()
 static void init_hwif_data(int index)
 {
 	struct ide_hwif *hwif = &ide_hwifs[index];
-	struct ata_device *drive;
+	struct ide_drive *drive;
 	int unit;
 
 	/* init interface */
@@ -445,9 +445,9 @@ static void init_hwif_data(int index)
 }
 
 /*
- * Init ata devices.
+ * Init IDE devices.
  */
-int init_ata()
+int init_ide()
 {
 	int ret, i;
 
