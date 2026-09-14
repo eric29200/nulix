@@ -6,6 +6,9 @@
 #include <fs/fs.h>
 #include <stddef.h>
 
+#define ORDER_DMA_PAGES			2
+#define NR_DMA_PAGES			(1 << (ORDER_DMA_PAGES))
+
 #define MAX_HWIFS			4
 #define MAX_DRIVES			2
 
@@ -219,6 +222,5 @@ struct ide_hwif {
 int init_ide();
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
-int ide_hd_init(struct ide_drive *drive);
 
 #endif

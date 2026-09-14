@@ -3,9 +3,7 @@
 #include <stderr.h>
 #include <stdio.h>
 
-#define ORDER_DMA_PAGES		2
-#define NR_DMA_PAGES		(1 << (ORDER_DMA_PAGES))
-#define NR_DMA_SECTORS		((NR_DMA_PAGES) * PAGE_SIZE / ATA_SECTOR_SIZE)
+#define NR_DMA_SECTORS			((NR_DMA_PAGES) * PAGE_SIZE / ATA_SECTOR_SIZE)
 
 /*
  * Wait for operation completion.
@@ -146,35 +144,4 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 			printf("ide_do_rw_disk: can't handle request %x\n", req->cmd);
 			return -EIO;
 	}
-}
-
-/*
- * Init an IDE hd drive.
- */
-int ide_hd_init(struct ide_drive *drive)
-{
-	int ret = -ENOMEM;
-
-	/* allocate prdt */
-	drive->prdt = kmalloc(sizeof(struct ata_prdt));
-	if (!drive->prdt)
-		return -ENOMEM;
-
-	/* allocate buffer */
-	drive->buf = get_free_pages(ORDER_DMA_PAGES);
-	if (!drive->buf)
-		goto err;
-
-	/* clear prdt and buffer */
-	memset(drive->prdt, 0, sizeof(struct ata_prdt));
-	memset(drive->buf, 0, NR_DMA_PAGES * PAGE_SIZE);
-
-	/* set prdt */
-	drive->prdt[0].buffer_phys = __pa(drive->buf);
-	drive->prdt[0].mark_end = 0x8000;
-
-	return 0;
-err:
-	kfree(drive->prdt);
-	return ret;
 }
