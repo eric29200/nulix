@@ -18,13 +18,13 @@ int ide_setup_dma(struct ide_drive *drive)
 		return -ENOMEM;
 
 	/* allocate buffer */
-	drive->buf = get_free_pages(ORDER_DMA_PAGES);
+	drive->buf = get_free_pages(IDE_ORDER_DMA_PAGES);
 	if (!drive->buf)
 		goto err;
 
 	/* clear prdt and buffer */
 	memset(drive->prdt, 0, sizeof(struct ide_prdt));
-	memset(drive->buf, 0, NR_DMA_PAGES * PAGE_SIZE);
+	memset(drive->buf, 0, IDE_NR_DMA_PAGES * PAGE_SIZE);
 
 	/* set prdt */
 	drive->prdt->buffer_phys = __pa(drive->buf);
@@ -51,4 +51,5 @@ void ide_dmaproc(struct ide_drive *drive, int cmd, size_t transfert_size)
 	outl(dma_base + 0x04, __pa(drive->prdt));
 	outb(dma_base + 0x02, inb(dma_base + 0x02) | 0x02 | 0x04);
 	outb(dma_base, (cmd == ATA_CMD_READ_DMA ? 0x08 : 0x00) | 0x01);
+	outb(drive->io_base + ATA_REG_COMMAND, cmd);
 }

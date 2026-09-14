@@ -7,8 +7,8 @@
 #include <fs/fs.h>
 #include <stddef.h>
 
-#define ORDER_DMA_PAGES			2
-#define NR_DMA_PAGES			(1 << (ORDER_DMA_PAGES))
+#define IDE_ORDER_DMA_PAGES		2
+#define IDE_NR_DMA_PAGES		(1 << (IDE_ORDER_DMA_PAGES))
 
 #define MAX_HWIFS			4
 #define MAX_DRIVES			2
