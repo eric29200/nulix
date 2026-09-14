@@ -25,6 +25,35 @@ static void ide_hd_wait(struct ide_drive *drive)
 }
 
 /*
+ * Issue a DMA command.
+ */
+static void ide_hd_dmaproc(struct ide_drive *drive, int cmd, uint32_t sector, size_t nr_sectors)
+{
+	uint32_t dma_base = drive->hwif->dma_base;
+
+	/* set transfert size */
+	drive->prdt[0].transfert_size = nr_sectors * ATA_SECTOR_SIZE;
+
+	/* prepare DMA transfert */
+	outb(dma_base, 0);
+	outl(dma_base + 0x04, __pa(drive->prdt));
+	outb(dma_base + 0x02, inb(dma_base + 0x02) | 0x02 | 0x04);
+
+	/* select sector */
+	outb(drive->io_base + ATA_REG_CONTROL, 0x00);
+	outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+	outb(drive->io_base + ATA_REG_FEATURES, 0x00);
+	outb(drive->io_base + ATA_REG_SECCOUNT0, nr_sectors);
+	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
+	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
+	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+
+	/* issue read DMA command */
+	outb(drive->io_base + ATA_REG_COMMAND, cmd);
+	outb(dma_base, (cmd == ATA_CMD_READ_DMA ? 0x08 : 0x00) | 0x01);
+}
+
+/*
  * Read from an IDE hd drive.
  */
 static int ide_hd_read(struct ide_drive *drive, uint32_t sector, size_t nr_sectors, char *buf)
@@ -37,26 +66,8 @@ static int ide_hd_read(struct ide_drive *drive, uint32_t sector, size_t nr_secto
 		if (nsect > NR_DMA_SECTORS)
 			nsect = NR_DMA_SECTORS;
 
-		/* set transfert size */
-		drive->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
-
-		/* prepare DMA transfert */
-		outb(drive->hwif->dma_base, 0);
-		outl(drive->hwif->dma_base + 0x04, __pa(drive->prdt));
-		outb(drive->hwif->dma_base + 0x02, inb(drive->hwif->dma_base + 0x02) | 0x02 | 0x04);
-
-		/* select sector */
-		outb(drive->io_base + ATA_REG_CONTROL, 0x00);
-		outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-		outb(drive->io_base + ATA_REG_FEATURES, 0x00);
-		outb(drive->io_base + ATA_REG_SECCOUNT0, nsect);
-		outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
-		outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-		outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-
-		/* issue read DMA command */
-		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_READ_DMA);
-		outb(drive->hwif->dma_base, 0x8 | 0x1);
+		/* issue dma command */
+		ide_hd_dmaproc(drive, ATA_CMD_READ_DMA, sector, nsect);
 
 		/* wait for completion */
 		ide_hd_wait(drive);
@@ -89,26 +100,8 @@ static int ide_hd_write(struct ide_drive *drive, uint32_t sector, size_t nr_sect
 		/* copy buffer */
 		memcpy(drive->buf, buf, nsect * ATA_SECTOR_SIZE);
 
-		/* set transfert size */
-		drive->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
-
-		/* prepare DMA transfert */
-		outb(drive->hwif->dma_base, 0);
-		outl(drive->hwif->dma_base + 0x04, __pa(drive->prdt));
-		outb(drive->hwif->dma_base + 0x02, inb(drive->hwif->dma_base + 0x02) | 0x02 | 0x04);
-
-		/* select sector */
-		outb(drive->io_base + ATA_REG_CONTROL, 0x00);
-		outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-		outb(drive->io_base + ATA_REG_FEATURES, 0x00);
-		outb(drive->io_base + ATA_REG_SECCOUNT0, nsect);
-		outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
-		outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-		outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-
-		/* issue write DMA command */
-		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
-		outb(drive->hwif->dma_base, 0x1);
+		/* issue dma command */
+		ide_hd_dmaproc(drive, ATA_CMD_WRITE_DMA, sector, nsect);
 
 		/* wait for completion */
 		ide_hd_wait(drive);
