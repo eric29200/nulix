@@ -2,6 +2,7 @@
 #include <x86/io.h>
 #include <stderr.h>
 #include <stdio.h>
+#include <dev.h>
 
 /*
  * Wait for operation completion.
@@ -89,13 +90,23 @@ static int ide_cd_read(struct ide_drive *drive, uint32_t sector, size_t nr_secto
 }
 
 /*
- * Init an IDE cd drive.
+ * Do read/write.
  */
-int ide_cd_init(struct ide_drive *drive)
+int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req)
 {
-	drive->sector_size = ATAPI_SECTOR_SIZE;
-	drive->read = ide_cd_read;
-	drive->write = NULL;
+	uint32_t start_sector, sector, nr_sectors;
 
-	return 0;
+	/* get partition start sector */
+	start_sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect;
+	sector = start_sector + (req->sector << 9) / ATAPI_SECTOR_SIZE;
+	nr_sectors = (req->nr_sectors << 9) / ATAPI_SECTOR_SIZE;
+
+	/* read/write */
+	switch (req->cmd) {
+		case READ:
+			return ide_cd_read(drive, sector, nr_sectors, req->buf);
+		default:
+			printf("ide_do_rw_cdrom: can't handle request %x\n", req->cmd);
+			return -EIO;
+	}
 }

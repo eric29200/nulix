@@ -2,6 +2,7 @@
 #define _IDE_H_
 
 #include <drivers/block/genhd.h>
+#include <drivers/block/blk_dev.h>
 #include <fs/fs.h>
 #include <stddef.h>
 
@@ -196,13 +197,10 @@ struct ide_drive {
 	uint8_t				drive;
 	uint16_t			io_base;
 	struct hd_driveid *		id;
-	size_t				sector_size;
 	struct partition *		part;
 	struct ata_prdt *		prdt;
 	uint8_t *			buf;
 	uint32_t			bar4;
-	int				(*read)(struct ide_drive *, uint32_t, size_t, char *);
-	int				(*write)(struct ide_drive *, uint32_t, size_t, char *);
 };
 
 /*
@@ -219,7 +217,8 @@ struct ide_hwif {
 
 /* init functions */
 int init_ide();
+int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
+int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
 int ide_hd_init(struct ide_drive *drive);
-int ide_cd_init(struct ide_drive *drive);
 
 #endif

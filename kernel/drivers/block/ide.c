@@ -46,52 +46,46 @@ static struct ide_drive *ide_get_drive(dev_t dev)
  */
 static void ide_request(struct ide_hwif *hwif)
 {
-	uint32_t start_sector, sector, nr_sectors;
 	struct ide_drive *drive;
-	struct request *request;
+	struct request *req;
 	int ret;
 
 repeat:
 	/* get next request */
-	request = blk_dev[hwif->major].current_request;
-	if (!request)
+	req = blk_dev[hwif->major].current_request;
+	if (!req)
 		return;
 
 	/* remove it from queue */
-	blk_dev[hwif->major].current_request = request->next;
+	blk_dev[hwif->major].current_request = req->next;
 
 	/* get ide drive */
-	drive = ide_get_drive(request->rq_dev);
+	drive = ide_get_drive(req->rq_dev);
 	if (!drive) {
-		printf("ide_request: can't find device 0x%x\n", request->rq_dev);
+		printf("ide_request: can't find device 0x%x\n", req->rq_dev);
 		goto next;
 	}
 
-	/* get partition start sector */
-	start_sector = drive->part[minor(request->rq_dev) & PARTITION_MINOR_MASK].start_sect;
-	sector = start_sector + (request->sector << 9) / drive->sector_size;
-	nr_sectors = (request->nr_sectors << 9) / drive->sector_size;
-
-	/* find request function */
-	switch (request->cmd) {
-		case READ:
-			ret = drive->read(drive, sector, nr_sectors, request->buf);
+	/* handle request */
+	switch (drive->media) {
+		case IDE_DISK:
+			ret = ide_do_rw_disk(drive, req);
 			break;
-		case WRITE:
-			ret = drive->write(drive, sector, nr_sectors, request->buf);
+		case IDE_CDROM:
+			ret = ide_do_rw_cdrom(drive, req);
 			break;
 		default:
-			printf("ide_request: can't handle request %x\n", request->cmd);
-			goto next;
+			ret = -EIO;
+			break;
 	}
 
 	/* print error */
 	if (ret)
-		printf("ide_request: error on request (cmd = %x, sector = %ld)\n", request->cmd, request->sector);
+		printf("ide_request: error on request (cmd = %x, sector = %ld)\n", req->cmd, req->sector);
 
 next:
 	/* end this request */
-	end_request(request);
+	end_request(req);
 	goto repeat;
 }
 
@@ -223,9 +217,6 @@ static int ide_identify(struct ide_drive *drive)
 
 	/* init drive */
 	switch (drive->media) {
-		case IDE_CDROM:
-			ret = ide_cd_init(drive);
-			break;
 		case IDE_DISK:
 			ret = ide_hd_init(drive);
 			break;

@@ -1,6 +1,7 @@
 #include <drivers/block/ide.h>
 #include <x86/io.h>
 #include <stderr.h>
+#include <stdio.h>
 
 #define ORDER_DMA_PAGES		2
 #define NR_DMA_PAGES		(1 << (ORDER_DMA_PAGES))
@@ -124,6 +125,30 @@ static int ide_hd_write(struct ide_drive *drive, uint32_t sector, size_t nr_sect
 }
 
 /*
+ * Do read/write.
+ */
+int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
+{
+	uint32_t start_sector, sector, nr_sectors;
+
+	/* get partition start sector */
+	start_sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect;
+	sector = start_sector + (req->sector << 9) / ATA_SECTOR_SIZE;
+	nr_sectors = (req->nr_sectors << 9) / ATA_SECTOR_SIZE;
+
+	/* read/write */
+	switch (req->cmd) {
+		case READ:
+			return ide_hd_read(drive, sector, nr_sectors, req->buf);
+		case WRITE:
+			return ide_hd_write(drive, sector, nr_sectors, req->buf);
+		default:
+			printf("ide_do_rw_disk: can't handle request %x\n", req->cmd);
+			return -EIO;
+	}
+}
+
+/*
  * Init an IDE hd drive.
  */
 int ide_hd_init(struct ide_drive *drive)
@@ -147,11 +172,6 @@ int ide_hd_init(struct ide_drive *drive)
 	/* set prdt */
 	drive->prdt[0].buffer_phys = __pa(drive->buf);
 	drive->prdt[0].mark_end = 0x8000;
-
-	/* set operations */
-	drive->sector_size = ATA_SECTOR_SIZE;
-	drive->read = ide_hd_read;
-	drive->write = ide_hd_write;
 
 	return 0;
 err:
