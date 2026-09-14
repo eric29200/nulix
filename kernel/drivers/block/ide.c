@@ -128,6 +128,38 @@ static void do_ide3_request()
 }
 
 /*
+ * Identify a drive.
+ */
+static void do_identify(struct ide_drive *drive, uint8_t cmd)
+{
+	uint8_t type;
+
+	/* read identity table */
+	insw(drive->io_base + ATA_REG_DATA, drive->id, 256);
+
+	/* identity ATAPI media type */
+	if (cmd == ATA_CMD_IDENTIFY_PACKET) {
+		type = (drive->id->config >> 8) & 0x1F;
+
+		switch (type) {
+			case IDE_CDROM:
+				drive->media = type;
+				drive->present = 1;
+				break;
+			default:
+				printf("ide_identify: unknown type %d\n", type);
+				break;
+		}
+
+		return;
+	}
+
+	/* non ATAP = disk */
+	drive->media = IDE_DISK;
+	drive->present = 1;
+}
+
+/*
  * Try to identify a drive.
  *
  * Returns:	0  device was identified
@@ -153,7 +185,7 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 		return 2;
 
 	/* read identified drive data */
-	insw(drive->io_base + ATA_REG_DATA, &drive->identify, 256);
+	do_identify(drive, cmd);
 
 	return 0;
 }
@@ -164,12 +196,17 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 static int ide_identify(struct ide_drive *drive)
 {
 	uint16_t select = drive->drive == ATA_MASTER ? 0xA0 : 0xB0;
-	int ret;
+	int ret = -ENXIO;
+
+	/* allocate identity table */
+	drive->id = kmalloc(sizeof(struct hd_driveid));
+	if (!drive->id)
+		return -ENOMEM;
 
 	/* select drive */
 	outb(drive->io_base + ATA_REG_HDDEVSEL, select);
 	if (inb(drive->io_base + ATA_REG_HDDEVSEL) != select)
-		return -ENXIO;
+		goto err;
 
 	/* identify drive */
 	outb(drive->io_base + ATA_REG_SECCOUNT0, 0);
@@ -179,24 +216,28 @@ static int ide_identify(struct ide_drive *drive)
 
 	/* try to identify drive (ATA or ATAPI) */
 	ret = try_to_identify(drive, ATA_CMD_IDENTIFY);
-	if (ret >= 2) {
+	if (ret >= 2)
 		ret = try_to_identify(drive, ATA_CMD_IDENTIFY_PACKET);
-		if (ret == 0)
-			drive->is_atapi = 1;
-	}
 	if (ret)
-		return -ENXIO;
+		goto err;
 
 	/* init drive */
-	if (drive->is_atapi)
-		ret = ide_cd_init(drive);
-	else
-		ret = ide_hd_init(drive);
+	switch (drive->media) {
+		case IDE_CDROM:
+			ret = ide_cd_init(drive);
+			break;
+		case IDE_DISK:
+			ret = ide_hd_init(drive);
+			break;
+	}
 
-	/* set device present */
-	if (ret == 0)
-		drive->present = 1;
+	/* handle error */
+	if (ret)
+		goto err;
 
+	return 0;
+err:
+	kfree(drive->id);
 	return ret;
 }
 
@@ -476,7 +517,6 @@ static void init_hwif_data(int index)
 	/* init drives */
 	for (unit = 0; unit < MAX_DRIVES; unit++) {
 		drive = &hwif->drives[unit];
-		drive->id = unit;
 		drive->drive = unit == 0 ? ATA_MASTER : ATA_SLAVE;
 		drive->io_base = default_io_base[index];
 		drive->name[0] = 'h';

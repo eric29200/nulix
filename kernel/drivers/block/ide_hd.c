@@ -128,9 +128,7 @@ static int ide_hd_write(struct ide_drive *drive, uint32_t sector, size_t nr_sect
  */
 int ide_hd_init(struct ide_drive *drive)
 {
-	/* no sectors */
-	if (!drive->identify.sectors_28 && !drive->identify.sectors_48)
-		return -EINVAL;
+	int ret = -ENOMEM;
 
 	/* allocate prdt */
 	drive->prdt = kmalloc(sizeof(struct ata_prdt));
@@ -139,10 +137,8 @@ int ide_hd_init(struct ide_drive *drive)
 
 	/* allocate buffer */
 	drive->buf = get_free_pages(ORDER_DMA_PAGES);
-	if (!drive->buf) {
-		kfree(drive->prdt);
-		return -ENOMEM;
-	}
+	if (!drive->buf)
+		goto err;
 
 	/* clear prdt and buffer */
 	memset(drive->prdt, 0, sizeof(struct ata_prdt));
@@ -158,4 +154,7 @@ int ide_hd_init(struct ide_drive *drive)
 	drive->write = ide_hd_write;
 
 	return 0;
+err:
+	kfree(drive->prdt);
+	return ret;
 }
