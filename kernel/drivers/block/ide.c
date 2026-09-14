@@ -129,43 +129,29 @@ static void do_ide3_request()
 
 /*
  * Try to identify a drive.
+ *
+ * Returns:	0  device was identified
+ *		1  device timed-out (no response to identify request)
+ *		2  device aborted the command (refused to identify itself)
  */
-static int try_to_identify(struct ide_drive *drive)
+static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 {
 	uint8_t status;
-	uint16_t id;
 
 	/* send identify command */
-	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
+	outb(drive->io_base + ATA_REG_COMMAND, cmd);
 
 	/* wait until BSY is clear */
-	while (1) {
+	do {
 		status = inb(drive->io_base + ATA_REG_STATUS);
 		if (!status)
-			return -ENXIO;
+			return 1;
+	} while (status & ATA_SR_BSY);
 
-		if (!(status & ATA_SR_BSY))
-			break;
-	}
+	/* check drive */
+	if (!(inb(drive->io_base + ATA_REG_STATUS) & ATA_SR_DRQ))
+		return 2;
 
-	/* check if it is an atapi drive */
-	id = (inb(drive->io_base + ATA_REG_LBA1) << 8) | inb(drive->io_base + ATA_REG_LBA2);
-	if (id == 0x14EB) {
-		drive->is_atapi = 1;
-		goto out;
-	}
-
-	/* wait until DRQ (drive has data to transfer) is clear */
-	while (1) {
-		status = inb(drive->io_base + ATA_REG_STATUS);
-		if (status & ATA_SR_ERR)
-			return -EFAULT;
-
-		if (status & ATA_SR_DRQ)
-			break;
-	}
-
-out:
 	/* read identified drive data */
 	insw(drive->io_base + ATA_REG_DATA, &drive->identify, 256);
 
@@ -191,10 +177,15 @@ static int ide_identify(struct ide_drive *drive)
 	outb(drive->io_base + ATA_REG_LBA1, 0);
 	outb(drive->io_base + ATA_REG_LBA2, 0);
 
-	/* try to identify drive */
-	ret = try_to_identify(drive);
+	/* try to identify drive (ATA or ATAPI) */
+	ret = try_to_identify(drive, ATA_CMD_IDENTIFY);
+	if (ret >= 2) {
+		ret = try_to_identify(drive, ATA_CMD_IDENTIFY_PACKET);
+		if (ret == 0)
+			drive->is_atapi = 1;
+	}
 	if (ret)
-		return ret;
+		return -ENXIO;
 
 	/* init drive */
 	if (drive->is_atapi)
