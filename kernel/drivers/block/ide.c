@@ -185,40 +185,6 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 }
 
 /*
- * Setup dma.
- */
-int ide_setup_dma(struct ide_drive *drive)
-{
-	int ret = -ENOMEM;
-
-	/* set dma base address */
-	drive->hwif->dma_base = drive->hwif->pci_dev->bar[4] & PCI_BASE_ADDRESS_IO_MASK;
-
-	/* allocate prdt */
-	drive->prdt = kmalloc(sizeof(struct ata_prdt));
-	if (!drive->prdt)
-		return -ENOMEM;
-
-	/* allocate buffer */
-	drive->buf = get_free_pages(ORDER_DMA_PAGES);
-	if (!drive->buf)
-		goto err;
-
-	/* clear prdt and buffer */
-	memset(drive->prdt, 0, sizeof(struct ata_prdt));
-	memset(drive->buf, 0, NR_DMA_PAGES * PAGE_SIZE);
-
-	/* set prdt */
-	drive->prdt[0].buffer_phys = __pa(drive->buf);
-	drive->prdt[0].mark_end = 0x8000;
-
-	return 0;
-err:
-	kfree(drive->prdt);
-	return ret;
-}
-
-/*
  * Identify an IDE drive.
  */
 static int ide_identify(struct ide_drive *drive)

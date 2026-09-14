@@ -183,9 +183,9 @@ struct hd_driveid {
 } __attribute__((packed));
 
 /*
- * ATA Physical Region Descriptor Table.
+ * IDE Physical Region Descriptor Table.
  */
-struct ata_prdt {
+struct ide_prdt {
 	uint32_t			buffer_phys;
 	uint16_t			transfert_size;
 	uint16_t			mark_end;
@@ -203,7 +203,7 @@ struct ide_drive {
 	struct hd_driveid *		id;
 	struct partition *		part;
 	struct ide_hwif *		hwif;
-	struct ata_prdt *		prdt;
+	struct ide_prdt *		prdt;
 	uint8_t *			buf;
 };
 
@@ -223,6 +223,8 @@ struct ide_hwif {
 
 /* init functions */
 int init_ide();
+int ide_setup_dma(struct ide_drive *drive);
+void ide_dmaproc(struct ide_drive *drive, int cmd, size_t transfert_size);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
 
