@@ -11,8 +11,8 @@
 
 /* global variables */
 static struct ide_hwif ide_hwifs[MAX_HWIFS] = { 0 };
-static uint8_t ide_hwif_to_major[MAX_HWIFS] = { DEV_IDE0_MAJOR, DEV_IDE1_MAJOR };
-static uint16_t default_io_base[MAX_HWIFS] = { 0x1F0, 0x170 };
+static uint8_t ide_hwif_to_major[MAX_HWIFS] = { DEV_IDE0_MAJOR, DEV_IDE1_MAJOR, DEV_IDE2_MAJOR, DEV_IDE3_MAJOR };
+static uint16_t default_io_base[MAX_HWIFS] = { 0x1F0, 0x170, 0x1E8, 0x168 };
 
 /*
  * Get an IDE drive.
@@ -112,12 +112,31 @@ static void do_ide1_request()
 }
 
 /*
- * Poll for identification.
+ * Handle a read/write request on interface 2.
  */
-static int ide_poll_identify(struct ide_drive *drive)
+static void do_ide2_request()
+{
+	ide_request(&ide_hwifs[2]);
+}
+
+/*
+ * Handle a read/write request on interface 3.
+ */
+static void do_ide3_request()
+{
+	ide_request(&ide_hwifs[3]);
+}
+
+/*
+ * Try to identify a drive.
+ */
+static int try_to_identify(struct ide_drive *drive)
 {
 	uint8_t status;
 	uint16_t id;
+
+	/* send identify command */
+	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
 
 	/* wait until BSY is clear */
 	while (1) {
@@ -158,20 +177,22 @@ out:
  */
 static int ide_identify(struct ide_drive *drive)
 {
+	uint16_t select = drive->drive == ATA_MASTER ? 0xA0 : 0xB0;
 	int ret;
 
 	/* select drive */
-	outb(drive->io_base + ATA_REG_HDDEVSEL, drive->drive == ATA_MASTER ? 0xA0 : 0xB0);
+	outb(drive->io_base + ATA_REG_HDDEVSEL, select);
+	if (inb(drive->io_base + ATA_REG_HDDEVSEL) != select)
+		return -ENXIO;
 
 	/* identify drive */
 	outb(drive->io_base + ATA_REG_SECCOUNT0, 0);
 	outb(drive->io_base + ATA_REG_LBA0, 0);
 	outb(drive->io_base + ATA_REG_LBA1, 0);
 	outb(drive->io_base + ATA_REG_LBA2, 0);
-	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
 
-	/* poll for identification */
-	ret = ide_poll_identify(drive);
+	/* try to identify drive */
+	ret = try_to_identify(drive);
 	if (ret)
 		return ret;
 
@@ -365,6 +386,12 @@ static int hwif_init(int h)
 			break;
 		case DEV_IDE1_MAJOR:
 			blk_dev[hwif->major].request = do_ide1_request;
+			break;
+		case DEV_IDE2_MAJOR:
+			blk_dev[hwif->major].request = do_ide2_request;
+			break;
+		case DEV_IDE3_MAJOR:
+			blk_dev[hwif->major].request = do_ide3_request;
 			break;
 	}
 

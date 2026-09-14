@@ -5,7 +5,7 @@
 #include <fs/fs.h>
 #include <stddef.h>
 
-#define MAX_HWIFS			2
+#define MAX_HWIFS			4
 #define MAX_DRIVES			2
 
 #define ATA_SECTOR_SIZE			512
