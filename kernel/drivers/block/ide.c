@@ -191,6 +191,9 @@ int ide_setup_dma(struct ide_drive *drive)
 {
 	int ret = -ENOMEM;
 
+	/* set dma base address */
+	drive->hwif->dma_base = drive->hwif->pci_dev->bar[4] & PCI_BASE_ADDRESS_IO_MASK;
+
 	/* allocate prdt */
 	drive->prdt = kmalloc(sizeof(struct ata_prdt));
 	if (!drive->prdt)
@@ -459,8 +462,7 @@ err_blksize_size:
  */
 static int ide_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
-	uint32_t bar4;
-	int i, j;
+	int i;
 
 	/* unused device id */
 	UNUSED(id);
@@ -469,15 +471,9 @@ static int ide_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 	pci_enable_device(pci_dev);
 	pci_set_master(pci_dev);
 
-	/* get BAR4 from pci device */
-	bar4 = pci_read_field(pci_dev->address, PCI_BAR4);
-	if (bar4 & 0x00000001)
-		bar4 &= 0xFFFFFFFC;
-
-	/* set BAR4 */
+	/* set pci device  */
 	for (i = 0; i < MAX_HWIFS; i++)
-		for (j = 0; j < MAX_DRIVES; j++)
-			ide_hwifs[i].drives[j].bar4 = bar4;
+		ide_hwifs[i].pci_dev = pci_dev;
 
 	return 0;
 }
@@ -534,6 +530,7 @@ static void init_hwif_data(int index)
 	for (unit = 0; unit < MAX_DRIVES; unit++) {
 		drive = &hwif->drives[unit];
 		drive->drive = unit == 0 ? ATA_MASTER : ATA_SLAVE;
+		drive->hwif = hwif;
 		drive->io_base = default_io_base[index];
 		drive->name[0] = 'h';
 		drive->name[1] = 'd';

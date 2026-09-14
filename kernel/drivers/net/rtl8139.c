@@ -165,7 +165,7 @@ static int rtl8139_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 	UNUSED(id);
 
 	/* get I/O base address */
-	io_base = pci_dev->bar0 & ~(0x3);
+	io_base = pci_dev->bar[0] & ~(0x3);
 
 	/* register net device */
 	net_dev = register_net_device(io_base, ARPHRD_ETHER, AF_INET, "eth0");

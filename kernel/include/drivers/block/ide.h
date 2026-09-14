@@ -3,6 +3,7 @@
 
 #include <drivers/block/genhd.h>
 #include <drivers/block/blk_dev.h>
+#include <drivers/pci/pci.h>
 #include <fs/fs.h>
 #include <stddef.h>
 
@@ -201,9 +202,9 @@ struct ide_drive {
 	uint16_t			io_base;
 	struct hd_driveid *		id;
 	struct partition *		part;
+	struct ide_hwif *		hwif;
 	struct ata_prdt *		prdt;
 	uint8_t *			buf;
-	uint32_t			bar4;
 };
 
 /*
@@ -215,6 +216,8 @@ struct ide_hwif {
 	char 				name[5];
 	uint8_t				index;
 	struct gendisk *		gd;
+	struct pci_device *		pci_dev;
+	uint32_t			dma_base;
 	uint8_t				present:1;
 };
 

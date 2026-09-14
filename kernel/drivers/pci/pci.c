@@ -90,9 +90,9 @@ void pci_enable_device(struct pci_device *pci_dev)
 static int pci_scan_bus(uint8_t bus)
 {
 	struct pci_device *pci_dev;
+	uint32_t address, reg;
 	uint8_t device, func;
 	uint16_t vendor_id;
-	uint32_t address;
 
 	/* parse all devices/functions slots */
 	for (device = 0; device < 32; device++) {
@@ -114,11 +114,12 @@ static int pci_scan_bus(uint8_t bus)
 			pci_dev->address = address;
 			pci_dev->vendor_id = vendor_id;
 			pci_dev->device_id = pci_get_device_id(address);
-			pci_dev->bar0 = pci_read_field(address, PCI_BAR0);
 			pci_dev->irq = pci_read_field(address, PCI_INTERRUPT_LINE);
+			for (reg = 0; reg < 6; reg++)
+				pci_dev->bar[reg] = pci_read_field(address, PCI_BAR0 + (reg << 2));
 
 			/* print device */
-			printf("PCI device (vendor id = 0x%x, device id = 0x%x, BAR = 0x%x) registered\n", vendor_id, pci_dev->device_id, pci_dev->bar0);
+			printf("PCI device (vendor id = 0x%x, device id = 0x%x, BAR = 0x%x) registered\n", vendor_id, pci_dev->device_id, pci_dev->bar[0]);
 
 			/* add device */
 			list_add_tail(&pci_dev->list, &pci_devices);

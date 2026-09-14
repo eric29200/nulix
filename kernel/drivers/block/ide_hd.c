@@ -13,7 +13,7 @@ static void ide_hd_wait(struct ide_drive *drive)
 	int status, dstatus;
 
 	for (;;) {
-		status = inb(drive->bar4 + 2);
+		status = inb(drive->hwif->dma_base + 2);
 		dstatus = inb(drive->io_base + ATA_REG_STATUS);
 
 		if (!(status & 0x04))
@@ -41,9 +41,9 @@ static int ide_hd_read(struct ide_drive *drive, uint32_t sector, size_t nr_secto
 		drive->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
 
 		/* prepare DMA transfert */
-		outb(drive->bar4, 0);
-		outl(drive->bar4 + 0x04, __pa(drive->prdt));
-		outb(drive->bar4 + 0x02, inb(drive->bar4 + 0x02) | 0x02 | 0x04);
+		outb(drive->hwif->dma_base, 0);
+		outl(drive->hwif->dma_base + 0x04, __pa(drive->prdt));
+		outb(drive->hwif->dma_base + 0x02, inb(drive->hwif->dma_base + 0x02) | 0x02 | 0x04);
 
 		/* select sector */
 		outb(drive->io_base + ATA_REG_CONTROL, 0x00);
@@ -56,7 +56,7 @@ static int ide_hd_read(struct ide_drive *drive, uint32_t sector, size_t nr_secto
 
 		/* issue read DMA command */
 		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_READ_DMA);
-		outb(drive->bar4, 0x8 | 0x1);
+		outb(drive->hwif->dma_base, 0x8 | 0x1);
 
 		/* wait for completion */
 		ide_hd_wait(drive);
@@ -93,9 +93,9 @@ static int ide_hd_write(struct ide_drive *drive, uint32_t sector, size_t nr_sect
 		drive->prdt[0].transfert_size = nsect * ATA_SECTOR_SIZE;
 
 		/* prepare DMA transfert */
-		outb(drive->bar4, 0);
-		outl(drive->bar4 + 0x04, __pa(drive->prdt));
-		outb(drive->bar4 + 0x02, inb(drive->bar4 + 0x02) | 0x02 | 0x04);
+		outb(drive->hwif->dma_base, 0);
+		outl(drive->hwif->dma_base + 0x04, __pa(drive->prdt));
+		outb(drive->hwif->dma_base + 0x02, inb(drive->hwif->dma_base + 0x02) | 0x02 | 0x04);
 
 		/* select sector */
 		outb(drive->io_base + ATA_REG_CONTROL, 0x00);
@@ -108,7 +108,7 @@ static int ide_hd_write(struct ide_drive *drive, uint32_t sector, size_t nr_sect
 
 		/* issue write DMA command */
 		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_DMA);
-		outb(drive->bar4, 0x1);
+		outb(drive->hwif->dma_base, 0x1);
 
 		/* wait for completion */
 		ide_hd_wait(drive);

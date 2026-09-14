@@ -370,7 +370,7 @@ struct virtio_device *virtio_device_create(struct pci_device *pci_dev)
 	snprintf(vdev->name, VIRTIO_DEV_NAME_LEN, "virtio%d\n", virtio_device_id++);
 
 	/* enable pci device */
-	vdev->io_base = pci_dev->bar0 & ~(0x03);
+	vdev->io_base = pci_dev->bar[0] & ~(0x03);
 	pci_enable_device(pci_dev);
 	pci_set_master(pci_dev);
 

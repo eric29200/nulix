@@ -9,7 +9,7 @@
 #define PCI_CMD				0x04
 #define PCI_STATUS			0x06
 #define PCI_BAR0			0x10
-#define PCI_BAR4			0x20
+#define  PCI_BASE_ADDRESS_IO_MASK	(~0x03UL)
 
 #define PCI_CMD_IO			0x01
 #define PCI_CMD_MEMORY			0x02
@@ -32,7 +32,7 @@ struct pci_device {
 	uint32_t 		address;
 	uint32_t 		device_id;
 	uint32_t 		vendor_id;
-	uint32_t 		bar0;
+	uint32_t 		bar[6];
 	uint8_t			irq;
 	struct pci_driver *	driver;
 	struct list_head	list;
