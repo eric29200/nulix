@@ -40,13 +40,13 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 		outb(drive->io_base + ATA_REG_CONTROL, 0x00);
 		outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
 		outb(drive->io_base + ATA_REG_FEATURES, 0x00);
-		outb(drive->io_base + ATA_REG_SECCOUNT0, nr_sectors);
+		outb(drive->io_base + ATA_REG_SECCOUNT0, nsect);
 		outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
 		outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
 		outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
 
 		/* issue dma command */
-		ide_dmaproc(drive, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA, nr_sectors * ATA_SECTOR_SIZE);
+		ide_dmaproc(drive, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA, nsect * ATA_SECTOR_SIZE);
 
 		/* wait for completion */
 		for (;;) {
