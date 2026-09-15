@@ -315,6 +315,10 @@ static void __init_zone(int priority)
 		/* set priority */
 		page_array[i].priority = priority;
 
+		/* set highmem page */
+		if (priority == GFP_HIGHUSER)
+			set_bit(&page_array[i].flags, PG_highmem);
+
 		/* page not available */
 		if (!bios_map_address_available(addr)) {
 			page_array[i].count = 1;

@@ -34,9 +34,11 @@ static int cramfs_readpage(struct inode *inode, struct page *page)
 {
 	uint32_t max_block, start_offset, blkptr_offset, compr_len, bytes_filled = 0;
 	struct super_block *sb = inode->i_sb;
+	void *page_address;
 
-	/* lock page */
+	/* lock and map page */
 	LockPage(page);
+	page_address = kmap(page);
 
 	max_block = (inode->i_size + PAGE_SIZE - 1) >> PAGE_SHIFT;
 	if (page->offset < max_block) {
@@ -51,11 +53,11 @@ static int cramfs_readpage(struct inode *inode, struct page *page)
 
 		/* read and uncompress data */
 		if (compr_len)
-			bytes_filled = cramfs_uncompress_block(cramfs_read(sb, start_offset, compr_len), compr_len, (void *) page_address(page), PAGE_SIZE);
+			bytes_filled = cramfs_uncompress_block(cramfs_read(sb, start_offset, compr_len), compr_len, page_address, PAGE_SIZE);
 	}
 
 	/* memzero end of page */
-	memset((void *) (page_address(page) + bytes_filled), 0, PAGE_SIZE - bytes_filled);
+	memset(page_address + bytes_filled, 0, PAGE_SIZE - bytes_filled);
 
 	/* set page up to date*/
 	SetPageUptodate(page);

@@ -59,21 +59,15 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 	if (PageUptodate(page))
 		return page;
 
-	/* map page in kernel address space */
-	if (!kmap(page))
-		goto err_kmap;
-
 	/* read page */
 	if (inode->i_op->readpage(inode, page))
-		goto err_read;
+		goto err;
 
 	/* wait on page */
 	wait_on_page(page);
 
 	return page;
-err_read:
-	kunmap(page);
-err_kmap:
+err:
 	__free_page(page);
 	return NULL;
 }
@@ -86,21 +80,13 @@ static int filemap_writepage(struct vm_area *vma, struct page *page)
 	struct inode *inode = vma->vm_file->f_dentry->d_inode;
 	int ret;
 
-	/* map page in kernel address space */
-	if (!kmap(page))
-		return -ENOMEM;
-
 	/* prepare write */
 	ret = inode->i_op->prepare_write(inode, page, 0, PAGE_SIZE);
-	if (ret) {
-		kunmap(page);
-		goto out;
-	}
+	if (ret)
+		return ret;
 
 	/* commit write */
-	ret = inode->i_op->commit_write(inode, page, 0, PAGE_SIZE);
-out:
-	return ret;
+	return inode->i_op->commit_write(inode, page, 0, PAGE_SIZE);
 }
 
 /*
@@ -306,15 +292,8 @@ static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t
 		if (PageUptodate(page))
 			goto next;
 
-		/* map page in kernel address space */
-		if (!kmap(page)) {
-			__free_page(page);
-			break;
-		}
-
 		/* read page */
 		if (inode->i_op->readpage(inode, page)) {
-			kunmap(page);
 			__free_page(page);
 			break;
 		}
@@ -447,9 +426,6 @@ int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *
 		/* lock page */
 		LockPage(page);
 
-		/* map page in kernel address space */
-		kaddr = kmap(page);
-
 		/* prepare write */
 		ret = inode->i_op->prepare_write(inode, page, offset, offset + nr);
 		if (ret) {
@@ -458,7 +434,9 @@ int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *
 		}
 
 		/* write to page */
+		kaddr = kmap(page);
 		memcpy(kaddr + offset, buf, nr);
+		kunmap(page);
 
 		/* commit write */
 		ret = inode->i_op->commit_write(inode, page, offset, offset + nr);
@@ -591,7 +569,6 @@ int shrink_mmap(int priority)
 struct page *read_cache_page(struct inode *inode, off_t offset)
 {
 	struct page *page;
-	char *kaddr;
 	int ret;
 
 	/* page allign offset */
@@ -606,24 +583,15 @@ struct page *read_cache_page(struct inode *inode, off_t offset)
 	if (PageUptodate(page))
 		return page;
 
-	/* map page in kernel address space */
-	kaddr = kmap(page);
-	if (!kaddr) {
-		__free_page(page);
-		return ERR_PTR(-ENOMEM);
-	}
-
 	/* read page */
 	ret = inode->i_op->readpage(inode, page);
 	if (ret) {
-		kunmap(page);
 		__free_page(page);
 		return ERR_PTR(ret);
 	}
 
 	/* wait on page */
 	wait_on_page(page);
-	kunmap(page);
 
 	return page;
 }

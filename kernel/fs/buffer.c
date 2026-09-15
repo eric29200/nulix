@@ -252,7 +252,6 @@ static void end_buffer_io_async(struct buffer_head *bh, int uptodate)
 
 	/* free buffers */
 	UnlockPage(page);
-	kunmap(bh->b_page);
 	free_async_buffers(bh);
 }
 
@@ -722,7 +721,6 @@ int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_b
 	} else {
 		UnlockPage(page);
 		free_async_buffers(bh);
-		kunmap(page);
 		SetPageUptodate(page);
 	}
 
@@ -860,7 +858,6 @@ int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, 
 	} else {
 		UnlockPage(page);
 		free_async_buffers(bh);
-		kunmap(page);
 	}
 
 	if (!partial)
