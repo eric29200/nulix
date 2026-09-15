@@ -759,6 +759,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 	uint32_t block, start_block, end_block;
 	struct super_block *sb = inode->i_sb;
 	size_t bhs_count = 0;
+	void *kaddr;
 	int ret;
 
 	if (!page->buffers) {
@@ -771,6 +772,9 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 
 	/* compute first block */
 	block = page->offset >> sb->s_blocksize_bits;
+
+	/* map page in kernel space */
+	kaddr = kmap(page);
 
 	/* for each block */
 	for (bh = head, start_block = 0; bh != head || !start_block; block++, start_block = end_block, bh = bh->b_this_page) {
@@ -795,9 +799,9 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 			}
 
 			if (end_block > to)
-				memset(page_address(page) + to, 0, end_block - to);
+				memset(kaddr + to, 0, end_block - to);
 			if (start_block < from)
-				memset(page_address(page) + start_block, 0, from - start_block);
+				memset(kaddr + start_block, 0, from - start_block);
 
 			continue;
 		}
@@ -813,6 +817,9 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 			bhs_list[bhs_count++] = bh;
 	}
 
+	/* unmap page */
+	kunmap(page);
+
 	/* issue read command */
 	if (bhs_count) {
 		ll_rw_block(READ, bhs_count, bhs_list);
@@ -821,6 +828,7 @@ int generic_prepare_write(struct inode *inode, struct page *page, uint32_t from,
 
 	return 0;
 err:
+	kunmap(page);
 	UnlockPage(page);
 	free_async_buffers(head);
 	return ret;
