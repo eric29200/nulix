@@ -1,5 +1,6 @@
 #include <drivers/block/blk_dev.h>
 #include <proc/sched.h>
+#include <mm/highmem.h>
 #include <stderr.h>
 #include <stdio.h>
 
@@ -118,6 +119,20 @@ static struct request *get_request_wait(dev_t dev)
 }
 
 /*
+ * Create a bounce buffer if needed.
+ */
+struct buffer_head *blk_queue_bounce(int rw, struct buffer_head *bh)
+{
+	struct page *page = bh->b_page;
+
+	/* virtual page : create a bounce buffer */
+	if (page->virtual)
+		return create_bounce(rw, bh);
+
+	return bh;
+}
+
+/*
  * Make a request.
  */
 static void make_request(int rw, struct buffer_head *bh)
@@ -135,6 +150,9 @@ static void make_request(int rw, struct buffer_head *bh)
 
 	/* lock buffer */
 	lock_buffer(bh);
+
+	/* create a bounce buffer if needed */
+	bh = blk_queue_bounce(rw, bh);
 
 	/* get first sector and number of sectors */
 	sector = bh->b_rsector;

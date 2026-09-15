@@ -32,10 +32,6 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 		if (nsect > NR_DMA_SECTORS)
 			nsect = NR_DMA_SECTORS;
 
-		/* copy buffer */
-		if (req->cmd == WRITE)
-			memcpy(drive->buf, buf, nsect * ATA_SECTOR_SIZE);
-
 		/* select sector */
 		outb(drive->io_base + ATA_REG_CONTROL, 0x00);
 		outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
@@ -46,7 +42,10 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 		outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
 
 		/* issue dma command */
-		ide_dmaproc(drive, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA, nsect * ATA_SECTOR_SIZE);
+		drive->prdt->buffer_phys = __pa(buf);
+		drive->prdt->transfert_size = nsect * ATA_SECTOR_SIZE;
+		drive->prdt->mark_end = 0x8000;
+		ide_dmaproc(drive, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
 
 		/* wait for completion */
 		for (;;) {
@@ -59,10 +58,6 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 			if (!(dstatus & ATA_SR_BSY))
 				break;
 		}
-
-		/* copy buffer */
-		if (req->cmd == READ)
-			memcpy(buf, drive->buf, nsect * ATA_SECTOR_SIZE);
 
 		/* update size */
 		buf += nsect * ATA_SECTOR_SIZE;

@@ -165,3 +165,100 @@ void copy_user_highpage(struct page *dst, struct page *src)
 	kunmap(src);
 	kunmap(dst);
 }
+
+/*
+ * Copy from high memory to a buffer.
+ */
+static void copy_from_high_bh(struct buffer_head *to, struct buffer_head *from)
+{
+	memcpy(to->b_data, from->b_data, to->b_size);
+}
+
+/*
+ * Copy a buffer to high memory.
+ */
+static void copy_to_high_bh(struct buffer_head *to, struct buffer_head *from)
+{
+	memcpy(to->b_data, from->b_data, to->b_size);
+}
+
+/*
+ * End a bounce buffer read/write.
+ */
+static void bounce_end_io(struct buffer_head *bh, int uptodate)
+{
+	struct buffer_head *bh_orig = (struct buffer_head *) bh->b_private;
+
+	/* end original buffer */
+	bh_orig->b_end_io(bh_orig, uptodate);
+	bh_orig->b_private = NULL;
+
+	/* free bounce buffer */
+	__free_page(bh->b_page);
+	kfree(bh);
+}
+
+/*
+ * End a bounce buffer write.
+ */
+static void bounce_end_io_write(struct buffer_head *bh, int uptodate)
+{
+	bounce_end_io(bh, uptodate);
+}
+
+/*
+ * End a bounce buffer read.
+ */
+static void bounce_end_io_read(struct buffer_head *bh, int uptodate)
+{
+	struct buffer_head *bh_orig = (struct buffer_head *) bh->b_private;
+
+	/* copy data to original buffer */
+	if (uptodate)
+		copy_to_high_bh(bh_orig, bh);
+
+	bounce_end_io(bh, uptodate);
+}
+
+/*
+ * Create a bounce buffer.
+ */
+struct buffer_head *create_bounce(int rw, struct buffer_head *bh_orig)
+{
+	struct buffer_head *bh;
+	struct page *page;
+
+	/* allocate bounce buffer */
+	bh = (struct buffer_head *) kmalloc(sizeof(struct buffer_head));
+	if (!bh)
+		return NULL;
+
+	/* get a free page */
+	page = __get_free_page(GFP_KERNEL);
+	if (!page)
+		goto err;
+
+	/* set new buffer */
+	memset(bh, 0, sizeof(struct buffer_head));
+	bh->b_data = page_address(page);
+	bh->b_page = page;
+	bh->b_block = bh_orig->b_block;
+	bh->b_size = bh_orig->b_size;
+	bh->b_dev = bh_orig->b_dev;
+	bh->b_count = bh_orig->b_count;
+	bh->b_state = bh_orig->b_state;
+	bh->b_rsector = bh_orig->b_rsector;
+	bh->b_private = (void *) bh_orig;
+
+	if (rw == WRITE) {
+		bh->b_end_io = bounce_end_io_write;
+		copy_from_high_bh(bh, bh_orig);
+	} else {
+		bh->b_end_io = bounce_end_io_read;
+	}
+
+	return bh;
+err:
+	kfree(bh);
+	return NULL;
+}

@@ -204,7 +204,6 @@ struct ide_drive {
 	struct partition *		part;
 	struct ide_hwif *		hwif;
 	struct ide_prdt *		prdt;
-	uint8_t *			buf;
 };
 
 /*
@@ -224,7 +223,7 @@ struct ide_hwif {
 /* init functions */
 int init_ide();
 int ide_setup_dma(struct ide_drive *drive);
-void ide_dmaproc(struct ide_drive *drive, int cmd, size_t transfert_size);
+void ide_dmaproc(struct ide_drive *drive, int cmd);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
 

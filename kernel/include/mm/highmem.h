@@ -19,5 +19,6 @@ void kunmap(struct page *page);
 void clear_user_highpage(struct page *page);
 void clear_user_highpage_partial(struct page *page, off_t offset);
 void copy_user_highpage(struct page *dst, struct page *src);
+struct buffer_head *create_bounce(int rw, struct buffer_head *bh_orig);
 
 #endif

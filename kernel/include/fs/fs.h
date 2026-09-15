@@ -82,6 +82,7 @@ struct buffer_head {
 	struct list_head		b_list_req;		/* next buffer in request */
 	struct buffer_head *		b_next_hash;		/* next buffer in hash list */
 	struct buffer_head *		b_prev_hash;		/* previous buffer in hash list */
+	void *				b_private;		/* private data */
 	void				(*b_end_io)(struct buffer_head *, int);
 };
 
@@ -305,6 +306,7 @@ int get_vfs_mount_list(char *buf, int count);
 #define buffer_dirty(bh)			test_bit(&(bh)->b_state, BH_Dirty)
 #define buffer_new(bh)				test_bit(&(bh)->b_state, BH_New)
 #define buffer_locked(bh)			test_bit(&(bh)->b_state, BH_Lock)
+#define bh_offset(bh)				((uint32_t) (bh)->b_data & ~PAGE_MASK)
 
 void wait_on_buffer(struct buffer_head *bh);
 void lock_buffer(struct buffer_head *bh);
