@@ -125,11 +125,12 @@ struct buffer_head *blk_queue_bounce(int rw, struct buffer_head *bh)
 {
 	struct page *page = bh->b_page;
 
-	/* virtual page : create a bounce buffer */
-	if (page->virtual)
-		return create_bounce(rw, bh);
+	/* kernel/user page */
+	if (page < highmem_start_page)
+		return bh;
 
-	return bh;
+	/* virtual page : create a bounce buffer */
+	return create_bounce(rw, bh);
 }
 
 /*

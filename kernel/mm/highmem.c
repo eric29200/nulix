@@ -91,6 +91,10 @@ void *kmap(struct page *page)
 {
 	uint32_t vaddr;
 
+	/* not a highmem page */
+	if (page < highmem_start_page)
+		return page_address(page);
+
 	/* page already mapped */
 	vaddr = (uint32_t) page->virtual;
 	if (vaddr)
@@ -171,7 +175,9 @@ void copy_user_highpage(struct page *dst, struct page *src)
  */
 static void copy_from_high_bh(struct buffer_head *to, struct buffer_head *from)
 {
-	memcpy(to->b_data, from->b_data, to->b_size);
+	struct page *p_from = from->b_page;
+	memcpy(to->b_data, kmap(p_from) + bh_offset(from), to->b_size);
+	kunmap(p_from);
 }
 
 /*
@@ -179,7 +185,9 @@ static void copy_from_high_bh(struct buffer_head *to, struct buffer_head *from)
  */
 static void copy_to_high_bh(struct buffer_head *to, struct buffer_head *from)
 {
-	memcpy(to->b_data, from->b_data, to->b_size);
+	struct page *p_to = to->b_page;
+	memcpy(kmap(p_to) + bh_offset(to), from->b_data, to->b_size);
+	kunmap(p_to);
 }
 
 /*
