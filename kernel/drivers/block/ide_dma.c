@@ -112,13 +112,13 @@ static int ide_build_dmatable(struct ide_drive *drive, struct request *req)
 /*
  * Issue a DMA command.
  */
-void ide_dmaproc(struct ide_drive *drive, struct request *req)
+int ide_dmaproc(struct ide_drive *drive, struct request *req)
 {
 	uint32_t dma_base = drive->hwif->dma_base;
 
 	/* build dma table */
 	if (!ide_build_dmatable(drive, req))
-		panic("arf\n");
+		return 1;
 
 	/* prepare DMA transfert */
 	outb(dma_base, 0);
@@ -128,4 +128,6 @@ void ide_dmaproc(struct ide_drive *drive, struct request *req)
 
 	/* issue command */
 	outb(drive->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
+
+	return 0;
 }

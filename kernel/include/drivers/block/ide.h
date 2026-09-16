@@ -216,7 +216,7 @@ struct ide_hwif {
 /* init functions */
 int init_ide();
 int ide_setup_dma(struct ide_drive *drive);
-void ide_dmaproc(struct ide_drive *drive, struct request *req);
+int ide_dmaproc(struct ide_drive *drive, struct request *req);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
 
