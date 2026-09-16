@@ -4,6 +4,7 @@ NJOBS		= $(shell nproc)
 MEM_SIZE	= 3G
 DISK1		= hda.img
 QEMU		= kvm
+BOCHS_CONF	= bochs.conf
 args		= `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
 all: run
@@ -26,6 +27,12 @@ run:
 		-device virtio-rng-pci,rng=rng0,vectors=2					\
 		-fsdev local,id=hostshare,path=/home/eric/tmp,security_model=passthrough	\
 		-device virtio-9p-pci,fsdev=hostshare,mount_tag=hostshare
+
+bochs:
+	make -j$(NJOBS) -C kernel
+	cp $(KERNEL) iso/boot/
+	grub-mkrescue -o $(ISO) iso
+	bochs -q -f $(BOCHS_CONF)
 
 %:
 	@:
