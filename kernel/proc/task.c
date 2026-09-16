@@ -205,7 +205,7 @@ struct mm_struct *task_dup_mm(struct mm_struct *mm)
 	mm_new->start_brk = mm->start_brk;
 	mm_new->end_brk = mm->end_brk;
 	mm_new->arg_start = mm->arg_end;
-	mm_new->arg_start = mm->arg_end;
+	mm_new->arg_end = mm->arg_end;
 	mm_new->env_start = mm->env_start;
 	mm_new->env_end = mm->env_end;
 
