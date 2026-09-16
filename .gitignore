@@ -24,4 +24,5 @@ usr/build
 buildroot/build/
 buildroot/build/*
 traffic.pcap
+bochs.log
 .vscode
