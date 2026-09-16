@@ -353,6 +353,11 @@ int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end)
 	kernel_end += sizeof(struct page) * nr_pages;
 	memset(page_array, 0, sizeof(struct page) * nr_pages);
 
+	/* reserve first page */
+	ret = bios_map_add_entry(0, PAGE_SIZE, MULTIBOOT_MEMORY_RESERVED);
+	if (ret)
+		return ret;
+
 	/* reserve memory for kernel code */
 	ret = bios_map_add_entry(kernel_start, kernel_end, MULTIBOOT_MEMORY_RESERVED);
 	if (ret)
