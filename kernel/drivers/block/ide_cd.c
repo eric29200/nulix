@@ -72,41 +72,34 @@ static int ide_cd_read_sector(struct ide_drive *drive, uint32_t sector, char *bu
 }
 
 /*
- * Read from an IDE cd drive.
+ * Do read/write.
  */
-static int ide_cd_read(struct ide_drive *drive, uint32_t sector, size_t nr_sectors, char *buf)
+int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req)
 {
-	size_t i;
+	uint32_t start_sector, sector;
+	struct buffer_head *bh;
+	struct list_head *pos;
 	int ret;
 
-	/* read sectors */
-	for (i = 0; i < nr_sectors; i++) {
-		ret = ide_cd_read_sector(drive, sector + i, buf + ATAPI_SECTOR_SIZE * i);
+	/* get partition start sector */
+	start_sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect;
+	sector = start_sector + (req->sector << 9) / ATAPI_SECTOR_SIZE;
+
+	/* read only  */
+	if (req->cmd != READ) {
+		printf("ide_do_rw_cdrom: can't handle request %x\n", req->cmd);
+		return -EIO;
+	}
+
+	/* read buffers */
+	list_for_each(pos, &req->bhs_list) {
+		bh = list_entry(pos, struct buffer_head, b_list_req);
+
+		/* read sector */
+		ret = ide_cd_read_sector(drive, sector++, bh->b_data);
 		if (ret)
 			return ret;
 	}
 
 	return 0;
-}
-
-/*
- * Do read/write.
- */
-int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req)
-{
-	uint32_t start_sector, sector, nr_sectors;
-
-	/* get partition start sector */
-	start_sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect;
-	sector = start_sector + (req->sector << 9) / ATAPI_SECTOR_SIZE;
-	nr_sectors = (req->nr_sectors << 9) / ATAPI_SECTOR_SIZE;
-
-	/* read/write */
-	switch (req->cmd) {
-		case READ:
-			return ide_cd_read(drive, sector, nr_sectors, req->buf);
-		default:
-			printf("ide_do_rw_cdrom: can't handle request %x\n", req->cmd);
-			return -EIO;
-	}
 }
