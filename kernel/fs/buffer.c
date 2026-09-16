@@ -666,6 +666,7 @@ int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_b
 {
 	struct buffer_head *bh, *next, *tmp, *bhs_list[MAX_BUF_PER_PAGE];
 	size_t bhs_count = 0, i;
+	void *kaddr;
 
 	/* create buffers */
 	if (!page->buffers) {
@@ -677,6 +678,7 @@ int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_b
 	bh = page->buffers;
 
 	/* read/write block by block */
+	kaddr = kmap(page);
 	for (i = 0, next = bh; i < nr_blocks; i++, next = next->b_this_page) {
 		/* set block buffer */
 		next->b_block = *(blocks++);
@@ -694,9 +696,9 @@ int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_b
 
 			/* copy data */
 			if (rw == READ) {
-				memcpy(next->b_data, tmp->b_data, size);
+				memcpy(kaddr + bh_offset(next), tmp->b_data, size);
 			} else {
-				memcpy(tmp->b_data, next->b_data, size);
+				memcpy(tmp->b_data, kaddr + bh_offset(next), size);
 				mark_buffer_dirty(tmp);
 			}
 
@@ -714,6 +716,7 @@ int brw_page(int rw, struct page *page, dev_t dev, uint32_t *blocks, size_t nr_b
 		/* add buffer to read/write */
 		bhs_list[bhs_count++] = next;
 	}
+	kunmap(page);
 
 	/* read/write buffers on disk or destroy buffers */
 	if (bhs_count) {

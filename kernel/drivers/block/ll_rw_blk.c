@@ -167,8 +167,7 @@ static void make_request(int rw, struct buffer_head *bh)
 	if (prev
 		&& prev->cmd == rw
 		&& prev->rq_dev == bh->b_dev
-		&& prev->sector + prev->nr_sectors == sector
-		&& prev->buf + (prev->nr_sectors << 9) == bh->b_data) {
+		&& prev->sector + prev->nr_sectors == sector) {
 		list_add_tail(&bh->b_list_req, &prev->bhs_list);
 		prev->nr_sectors += count;
 		return;

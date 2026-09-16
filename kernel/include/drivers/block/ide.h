@@ -4,11 +4,12 @@
 #include <drivers/block/genhd.h>
 #include <drivers/block/blk_dev.h>
 #include <drivers/pci/pci.h>
+#include <lib/scatterlist.h>
 #include <fs/fs.h>
 #include <stddef.h>
 
-#define IDE_ORDER_DMA_PAGES		2
-#define IDE_NR_DMA_PAGES		(1 << (IDE_ORDER_DMA_PAGES))
+#define PRD_BYTES       		8
+#define PRD_ENTRIES     		(PAGE_SIZE / (2 * PRD_BYTES))
 
 #define MAX_HWIFS			4
 #define MAX_DRIVES			2
@@ -183,15 +184,6 @@ struct hd_driveid {
 } __attribute__((packed));
 
 /*
- * IDE Physical Region Descriptor Table.
- */
-struct ide_prdt {
-	uint32_t			buffer_phys;
-	uint16_t			transfert_size;
-	uint16_t			mark_end;
-} __attribute__((packed));
-
-/*
  * IDE drive.
  */
 struct ide_drive {
@@ -203,7 +195,8 @@ struct ide_drive {
 	struct hd_driveid *		id;
 	struct partition *		part;
 	struct ide_hwif *		hwif;
-	struct ide_prdt *		prdt;
+	uint32_t *			dma_table;
+	struct scatterlist *		sg_table;
 };
 
 /*
@@ -223,7 +216,7 @@ struct ide_hwif {
 /* init functions */
 int init_ide();
 int ide_setup_dma(struct ide_drive *drive);
-void ide_dmaproc(struct ide_drive *drive, int cmd);
+void ide_dmaproc(struct ide_drive *drive, struct request *req);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
 

@@ -12,6 +12,7 @@
  */
 struct scatterlist {
 	uint32_t		sg_magic;
+	char *			address;
 	uint32_t		page_link;
 	uint32_t		offset;
 	size_t			length;
