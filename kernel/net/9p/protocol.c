@@ -83,7 +83,7 @@ size_t p9_msg_buf_size(int8_t type, const char *fmt, va_list ap)
 			{
 				uint32_t nwname = va_arg(ap, int);
 				/* nwqid[2] nwqid*(wqid[13]) */
-				return max(hdr + 6 + nwname * 13, err_size);
+				return max(hdr + 6 + nwname * 13, (uint32_t) err_size);
 			}
 		case P9_RREAD:
 		case P9_RREADDIR:
