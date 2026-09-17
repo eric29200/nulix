@@ -6,5 +6,5 @@ hostshare		/mnt/9p		9p	trans=virtio,version=9p2000.L,msize=16384				0	0
 proc            	/proc           proc    defaults        							0       0
 devpts			/dev/pts	devpts	defaults								0	0
 tmpfs           	/tmp            tmpfs   mode=1777       							0       0
-tmpfs           	/dev/shm        tmpfs   mode=1777       							0       0
-tmpfs           	/var/run        tmpfs   mode=1777       							0       0
+tmpfs           	/dev/shm       	tmpfs   mode=1777       							0       0
+tmpfs           	/run		tmpfs   mode=1777       							0       0

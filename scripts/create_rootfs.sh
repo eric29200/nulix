@@ -34,8 +34,9 @@ sudo mkdir -p tmp/proc
 sudo mkdir -p tmp/mnt/cdrom tmp/mnt/9p
 sudo mkdir -p tmp/tmp
 sudo mkdir -p tmp/run
-sudo mkdir -p tmp/var/run tmp/var/log tmp/var/empty
+sudo mkdir -p tmp/var/log tmp/var/empty
 sudo mkdir -p tmp/srv/ftp
+sudo ln -s /run tmp/var/run
 
 # populate disk
 sudo cp -R musl/musl-install/i386-linux-musl/lib tmp/
