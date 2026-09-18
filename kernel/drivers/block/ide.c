@@ -417,7 +417,7 @@ static int hwif_init(int h)
 
 	return 0;
 err_blk_size:
-	kfree(blksize_size);
+	kfree(blksize_size[hwif->major]);
 err_blksize_size:
 	unregister_blkdev(hwif->major, hwif->name);
 	return -ENOMEM;
