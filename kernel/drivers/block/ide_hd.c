@@ -34,7 +34,7 @@ static int ide_hd_rw_sector(struct ide_drive *drive, int cmd, uint32_t sector, c
 
 	/* select sector */
 	outb(drive->io_base + ATA_REG_CONTROL, 0x02);
-	outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+	outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->master ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
 	outb(drive->io_base + ATA_REG_FEATURES, 0x00);
 	outb(drive->io_base + ATA_REG_SECCOUNT0, 1);
 	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
@@ -116,7 +116,7 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 
 	/* select sector */
 	outb(drive->io_base + ATA_REG_CONTROL, 0x00);
-	outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->drive == ATA_MASTER ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+	outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->master ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
 	outb(drive->io_base + ATA_REG_FEATURES, 0x00);
 	outb(drive->io_base + ATA_REG_SECCOUNT0, nr_sectors);
 	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);

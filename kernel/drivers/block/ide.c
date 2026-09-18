@@ -189,7 +189,7 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
  */
 static int ide_identify(struct ide_drive *drive)
 {
-	uint16_t select = drive->drive == ATA_MASTER ? 0xA0 : 0xB0;
+	uint16_t select = drive->master ? 0xA0 : 0xB0;
 	int ret = -ENXIO;
 
 	/* allocate identity table */
@@ -495,7 +495,7 @@ static void init_hwif_data(int index)
 	/* init drives */
 	for (unit = 0; unit < MAX_DRIVES; unit++) {
 		drive = &hwif->drives[unit];
-		drive->drive = unit == 0 ? ATA_MASTER : ATA_SLAVE;
+		drive->master = unit == 0 ? 1 : 0;
 		drive->hwif = hwif;
 		drive->io_base = default_io_base[index];
 		drive->name[0] = 'h';

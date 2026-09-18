@@ -35,7 +35,7 @@ static int ide_cd_read_sector(struct ide_drive *drive, uint32_t sector, char *bu
 	int ret;
 
 	/* select drive */
-	outb(drive->io_base + ATA_REG_HDDEVSEL, drive->drive == ATA_MASTER ? 0xE0 : 0xF0);
+	outb(drive->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
 	outb(drive->io_base + ATA_REG_FEATURES, 0x00);
 
 	/* issue packet command */

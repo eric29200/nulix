@@ -22,8 +22,6 @@
 
 #define ATA_PRIMARY_IO			0x1F0
 #define ATA_SECONDARY_IO		0x170
-#define ATA_MASTER			0x00
-#define ATA_SLAVE			0x01
 
 /* ATA registers */
 #define ATA_REG_DATA			0x00
@@ -189,8 +187,8 @@ struct hd_driveid {
 struct ide_drive {
 	char 				name[4];
 	uint8_t				present:1;
+	uint8_t				master:1;
 	uint8_t				media;
-	uint8_t				drive;
 	uint16_t			io_base;
 	struct hd_driveid *		id;
 	struct partition *		part;
