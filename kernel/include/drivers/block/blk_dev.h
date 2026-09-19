@@ -26,6 +26,8 @@ struct request {
 	uint32_t		sector;
 	uint32_t		nr_sectors;
 	char *			buf;
+	struct buffer_head *	bh;
+	uint32_t		bh_offset;
 	struct list_head	bhs_list;
 	struct request *	next;
 };

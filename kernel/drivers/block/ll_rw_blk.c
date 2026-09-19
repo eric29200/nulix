@@ -182,6 +182,8 @@ static void make_request(int rw, struct buffer_head *bh)
 	req->sector = sector;
 	req->nr_sectors = count;
 	req->buf = bh->b_data;
+	req->bh = bh;
+	req->bh_offset = 0;
 	req->next = NULL;
 
 	/* add buffer to request */

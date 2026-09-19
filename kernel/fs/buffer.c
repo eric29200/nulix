@@ -324,6 +324,25 @@ static struct buffer_head *get_unused_buffer_head(int async)
 }
 
 /*
+ * Set page of a buffer.
+ */
+void set_bh_page(struct buffer_head *bh, struct page *page, int offset)
+{
+	/* check offset */
+	if (offset >= PAGE_SIZE)
+		panic("set_bh_page: %d >= PAGE_SIZE\n", offset);
+
+	/* set buffer */
+	if (page >= highmem_start_page)
+		bh->b_data = (char *) offset;
+	else
+		bh->b_data = page_address(page) + offset;
+
+	/* set page */
+	bh->b_page = page;
+}
+
+/*
  * Create new buffers.
  */
 static struct buffer_head *create_buffers(struct page *page, dev_t dev, size_t blocksize, int async)
@@ -342,11 +361,10 @@ static struct buffer_head *create_buffers(struct page *page, dev_t dev, size_t b
 
 		/* set buffer */
 		bh->b_dev = dev;
-		bh->b_data = page_address(page) + offset;
 		bh->b_size = blocksize;
 		bh->b_this_page = head;
-		bh->b_page = page;
 		bh->b_end_io = end_buffer_io_sync;
+		set_bh_page(bh, page, offset);
 		init_waitqueue_head(&bh->b_wait);
 
 		/* set tail and head */

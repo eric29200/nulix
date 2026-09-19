@@ -1,7 +1,33 @@
 #include <drivers/block/ide.h>
+#include <mm/highmem.h>
 #include <x86/io.h>
 #include <stderr.h>
 #include <stdio.h>
+
+/*
+ * Read data from disk.
+ */
+static void ide_input_data(struct ide_drive *drive, struct request *req)
+{
+	void *buf;
+
+	buf = bh_kmap(req->bh) + req->bh_offset;
+	insw(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
+	bh_kunmap(req->bh);
+
+}
+
+/*
+ * Write data to disk.
+ */
+static void ide_output_data(struct ide_drive *drive, struct request *req)
+{
+	void *buf;
+
+	buf = bh_kmap(req->bh) + req->bh_offset;
+	outsw(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
+	bh_kunmap(req->bh);
+}
 
 /*
  * Read PIO irq handler.
@@ -23,12 +49,18 @@ static void ide_hd_read_irq_handler(struct ide_drive *drive)
 	req = hwgroup->req;
 
 	/* read data */
-	insw(drive->io_base + ATA_REG_DATA, req->buf, ATA_SECTOR_SIZE / 2);
+	ide_input_data(drive, req);
 
 	/* update request */
 	req->sector++;
 	req->nr_sectors--;
-	req->buf += ATA_SECTOR_SIZE;
+	req->bh_offset += ATA_SECTOR_SIZE;
+
+	/* got next buffer */
+	if (req->bh_offset >= req->bh->b_size) {
+		req->bh_offset = 0;
+		req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
+	}
 
 	/* end request */
 	if (req->nr_sectors <= 0) {
@@ -62,7 +94,13 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive)
 	/* update request */
 	req->sector++;
 	req->nr_sectors--;
-	req->buf += ATA_SECTOR_SIZE;
+	req->bh_offset += ATA_SECTOR_SIZE;
+
+	/* got next buffer */
+	if (req->bh_offset >= req->bh->b_size) {
+		req->bh_offset = 0;
+		req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
+	}
 
 	/* end request */
 	if (req->nr_sectors <= 0) {
@@ -72,7 +110,7 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive)
 
 	/* write next data */
 	drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
-	outsw(drive->io_base + ATA_REG_DATA, req->buf, ATA_SECTOR_SIZE / 2);
+	ide_output_data(drive, req);
 }
 
 /*
@@ -118,7 +156,7 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 
 		/* write first sector */
 		drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
-		outsw(drive->io_base + ATA_REG_DATA, req->buf, ATA_SECTOR_SIZE / 2);
+		ide_output_data(drive, req);
 	}
 
 	return 0;

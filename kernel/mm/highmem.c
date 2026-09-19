@@ -248,8 +248,6 @@ struct buffer_head *create_bounce(int rw, struct buffer_head *bh_orig)
 
 	/* set new buffer */
 	memset(bh, 0, sizeof(struct buffer_head));
-	bh->b_data = page_address(page);
-	bh->b_page = page;
 	bh->b_block = bh_orig->b_block;
 	bh->b_size = bh_orig->b_size;
 	bh->b_dev = bh_orig->b_dev;
@@ -257,6 +255,8 @@ struct buffer_head *create_bounce(int rw, struct buffer_head *bh_orig)
 	bh->b_state = bh_orig->b_state;
 	bh->b_rsector = bh_orig->b_rsector;
 	bh->b_private = (void *) bh_orig;
+	set_bh_page(bh, page, 0);
+	init_waitqueue_head(&bh->b_wait);
 
 	if (rw == WRITE) {
 		bh->b_end_io = bounce_end_io_write;
@@ -269,4 +269,24 @@ struct buffer_head *create_bounce(int rw, struct buffer_head *bh_orig)
 err:
 	kfree(bh);
 	return NULL;
+}
+
+/*
+ * Map a buffer.
+ */
+void *bh_kmap(struct buffer_head *bh)
+{
+	/* lowmem page */
+	if (bh->b_page < highmem_start_page)
+		return bh->b_data;
+
+	return kmap(bh->b_page) + bh_offset(bh);
+}
+
+/*
+ * Unmap a buffer.
+ */
+void bh_kunmap(struct buffer_head *bh)
+{
+	kunmap(bh->b_page);
 }

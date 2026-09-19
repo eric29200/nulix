@@ -309,6 +309,7 @@ int get_vfs_mount_list(char *buf, int count);
 #define buffer_locked(bh)			test_bit(&(bh)->b_state, BH_Lock)
 #define bh_offset(bh)				((uint32_t) (bh)->b_data & ~PAGE_MASK)
 
+void set_bh_page(struct buffer_head *bh, struct page *page, int offset);
 void wait_on_buffer(struct buffer_head *bh);
 void lock_buffer(struct buffer_head *bh);
 void unlock_buffer(struct buffer_head *bh);
