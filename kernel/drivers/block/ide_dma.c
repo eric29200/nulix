@@ -110,11 +110,43 @@ static int ide_build_dmatable(struct ide_drive *drive, struct request *req)
 }
 
 /*
+ * Handle a dma interrupt.
+ */
+static void dma_irq_handler(struct ide_drive *drive)
+{
+	struct ide_hwif *hwif = drive->hwif;
+	uint8_t stat, dma_stat;
+
+	/* stop dma */
+	outb(hwif->dma_base, inb(hwif->dma_base) & ~1);
+
+	/* get status */
+	dma_stat = inb(hwif->dma_base + 2);
+	stat = inb(drive->io_base + ATA_REG_STATUS);
+
+	/* check status */
+	if ((stat & ATA_SR_ERR) || !(stat & ATA_SR_DRDY)) {
+		printf("dma_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
+		return;
+	}
+
+	/* check dma status */
+	if ((dma_stat & 7) != 4) {
+		printf("dma_irq_handler: bad DMA status on drive %s : 0x%x\n", drive->name, dma_stat);
+		return;
+	}
+
+	/* end request */
+	ide_end_request(hwif->hwgroup, 1);
+}
+
+/*
  * Issue a DMA command.
  */
 int ide_dmaproc(struct ide_drive *drive, struct request *req)
 {
-	uint32_t dma_base = drive->hwif->dma_base;
+	struct ide_hwif *hwif = drive->hwif;
+	uint32_t dma_base = hwif->dma_base;
 
 	/* build dma table */
 	if (!ide_build_dmatable(drive, req))
@@ -127,6 +159,9 @@ int ide_dmaproc(struct ide_drive *drive, struct request *req)
 
 	/* issue command */
 	outb(drive->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
+
+	/* install irq handler */
+	hwif->hwgroup->handler = &dma_irq_handler;
 
 	/* start dma */
 	outb(dma_base, inb(dma_base) | 1);

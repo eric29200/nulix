@@ -17,17 +17,42 @@ struct page *page_array;
 pgd_t *pgd_kernel = NULL;
 
 /*
+ * Unlock a page.
+ */
+void unlock_page(struct page *page)
+{
+	clear_bit(&(page)->flags, PG_lock);
+	wake_up(&page->wait);
+}
+
+/*
  * Wait on a page.
  */
 void wait_on_page(struct page *page)
 {
+	DECLARE_WAITQUEUE(wait, current);
+
+	/* page available */
 	if (!PageLocked(page))
 		return;
 
-	execute_block_requests();
+	/* add to wait queue */
+	add_wait_queue(&page->wait, &wait);
 
-	if (PageLocked(page))
-		panic("wait_on_page: page still locked after execute_block_requests()\n");
+	for (;;) {
+		/* page available */
+		if (!PageLocked(page))
+			break;
+
+		/* execute disk requests */
+		execute_block_requests();
+
+		/* sleep */
+		sleep_on(&page->wait);
+	}
+
+	/* remove from wait queue */
+	remove_wait_queue(&wait);
 }
 
 /*

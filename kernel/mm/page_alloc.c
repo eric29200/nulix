@@ -1,6 +1,7 @@
 #include <fs/fs.h>
 #include <mm/highmem.h>
 #include <mm/swap.h>
+#include <proc/sched.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -185,6 +186,7 @@ found:
 	page->buffers = NULL;
 	page->count = 1;
 	page->flags = 0;
+	init_waitqueue_head(&page->wait);
 	__delete_from_free_pages(page);
 
 	/* add remaining pages to free list */

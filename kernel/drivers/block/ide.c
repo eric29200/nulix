@@ -13,6 +13,7 @@
 static struct ide_hwif ide_hwifs[MAX_HWIFS] = { 0 };
 static uint8_t ide_hwif_to_major[MAX_HWIFS] = { DEV_IDE0_MAJOR, DEV_IDE1_MAJOR, DEV_IDE2_MAJOR, DEV_IDE3_MAJOR };
 static uint16_t default_io_base[MAX_HWIFS] = { 0x1F0, 0x170, 0x1E8, 0x168 };
+static uint8_t default_irqs[MAX_HWIFS] = { 14, 0, 0, 0 };
 
 /*
  * Get an IDE drive.
@@ -42,29 +43,35 @@ static struct ide_drive *ide_get_drive(dev_t dev)
 }
 
 /*
- * Handle a read/write request.
+ * End a request.
  */
-static void ide_request(struct ide_hwif *hwif)
+void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate)
+{
+	struct request *req = hwgroup->req;
+
+	if (uptodate)
+		end_request(req);
+
+	hwgroup->req = NULL;
+}
+
+/*
+ * Handle a request.
+ */
+static void ide_request(struct ide_hwif *hwif, struct request *req)
 {
 	struct ide_drive *drive;
-	struct request *req;
 	int ret;
-
-repeat:
-	/* get next request */
-	req = blk_dev[hwif->major].current_request;
-	if (!req)
-		return;
-
-	/* remove it from queue */
-	blk_dev[hwif->major].current_request = req->next;
 
 	/* get ide drive */
 	drive = ide_get_drive(req->rq_dev);
 	if (!drive) {
 		printf("ide_request: can't find device 0x%x\n", req->rq_dev);
-		goto next;
+		goto kill_req;
 	}
+
+	/* set current drive */
+	hwif->hwgroup->drive = drive;
 
 	/* handle request */
 	switch (drive->media) {
@@ -76,17 +83,54 @@ repeat:
 			break;
 		default:
 			ret = -EIO;
-			break;
+			goto kill_req;
 	}
 
-	/* print error */
-	if (ret)
+	/* handle error */
+	if (ret) {
 		printf("ide_request: error on request (cmd = %x, sector = %ld)\n", req->cmd, req->sector);
+		goto kill_req;
+	}
 
-next:
-	/* end this request */
-	end_request(req);
-	goto repeat;
+	return;
+kill_req:
+	ide_end_request(hwif->hwgroup, 0);
+}
+
+/*
+ * Handle a request.
+ */
+static void ide_hwgroup_request(struct ide_hwgroup *hwgroup)
+{
+	struct list_head *pos;
+	struct ide_hwif *hwif;
+	struct request *req;
+
+	/* group busy */
+	if (hwgroup->req)
+		return;
+
+	/* find a request to handle */
+	list_for_each(pos, &hwgroup->hwifs) {
+		hwif = list_entry(pos, struct ide_hwif, list);
+
+		/* get next request */
+		req = blk_dev[hwif->major].current_request;
+		if (!req)
+			continue;
+
+		/* remove it from queue */
+		blk_dev[hwif->major].current_request = req->next;
+
+		goto handle_request;
+	}
+
+	/* no request */
+	return;
+handle_request:
+	hwgroup->hwif = hwif;
+	hwgroup->req = req;
+	ide_request(hwif, req);
 }
 
 /*
@@ -94,7 +138,7 @@ next:
  */
 static void do_ide0_request()
 {
-	ide_request(&ide_hwifs[0]);
+	ide_hwgroup_request(ide_hwifs[0].hwgroup);
 }
 
 /*
@@ -102,7 +146,7 @@ static void do_ide0_request()
  */
 static void do_ide1_request()
 {
-	ide_request(&ide_hwifs[1]);
+	ide_hwgroup_request(ide_hwifs[1].hwgroup);
 }
 
 /*
@@ -110,7 +154,7 @@ static void do_ide1_request()
  */
 static void do_ide2_request()
 {
-	ide_request(&ide_hwifs[2]);
+	ide_hwgroup_request(ide_hwifs[2].hwgroup);
 }
 
 /*
@@ -118,7 +162,7 @@ static void do_ide2_request()
  */
 static void do_ide3_request()
 {
-	ide_request(&ide_hwifs[3]);
+	ide_hwgroup_request(ide_hwifs[3].hwgroup);
 }
 
 /*
@@ -364,6 +408,72 @@ err_kmalloc_gd:
 	return;
 }
 
+/*
+ * IRQ handler.
+ */
+static void ide_irq_handler(struct registers *regs, void *dev_instance)
+{
+	struct ide_hwgroup *hwgroup = dev_instance;
+	ide_handler_t *handler;
+
+	/* unexpected irq */
+	if (regs->int_no != hwgroup->hwif->irq || !hwgroup->handler) {
+		printf("ide_irq_handler: unexpected irq %d\n", regs->int_no);
+		return;
+	}
+
+	/* handle interrupt */
+	handler = hwgroup->handler;
+	hwgroup->handler = NULL;
+	handler(hwgroup->drive);
+
+	/* initiate next request */
+	if (hwgroup->handler == NULL) {
+		ide_hwgroup_request(hwgroup);
+	}
+}
+
+/*
+ * Init irq.
+ */
+static int ide_init_irq(struct ide_hwif *hwif)
+{
+	struct ide_hwgroup *hwgroup;
+	struct ide_hwif *h;
+	int ret, i;
+
+	/* check if another interface shae irq */
+	for (i = 0; i < MAX_HWIFS; i++) {
+		h = &ide_hwifs[i];
+
+		if (h->hwgroup && hwif->irq == h->irq) {
+			hwif->sharing_irq = h->sharing_irq = 1;
+			hwgroup = h->hwgroup;
+			goto out;
+		}
+	}
+
+	/* allocate a new group */
+	hwgroup = (struct ide_hwgroup *) kmalloc(sizeof(struct ide_hwgroup));
+	if (!hwgroup)
+		return -ENOMEM;
+
+	/* init group */
+	memset(hwgroup, 0, sizeof(struct ide_hwgroup));
+	INIT_LIST_HEAD(&hwgroup->hwifs);
+
+	/* request irq */
+	ret = request_irq(hwif->irq, ide_irq_handler, SA_SHIRQ, hwif->name, hwgroup);
+	if (ret) {
+		kfree(hwgroup);
+		return ret;
+	}
+
+out:
+	hwif->hwgroup = hwgroup;
+	list_add_tail(&hwif->list, &hwgroup->hwifs);
+	return 0;
+}
 
 /*
  * Init an IDE interface.
@@ -377,12 +487,20 @@ static int hwif_init(int h)
 	if (!hwif->present)
 		return 0;
 
+	/* no irq */
+	if (!hwif->irq) {
+		printf("hwif_init: %s disabled, no IRQ\n", hwif->name);
+		hwif->present = 0;
+		return -EIO;
+	}
+
 	/* register block device */
 	ret = register_blkdev(hwif->major, hwif->name, &ide_fops);
 	if (ret)
 		return ret;
 
 	/* allocate block size array */
+	ret = -ENOMEM;
 	blksize_size[hwif->major] = kmalloc(MAX_DRIVES * NR_PARTITIONS * sizeof(size_t));
 	if (!blksize_size[hwif->major])
 		goto err_blksize_size;
@@ -412,15 +530,22 @@ static int hwif_init(int h)
 			break;
 	}
 
+	/* init irq */
+	ret = ide_init_irq(hwif);
+	if (ret)
+		goto err_irq;
+
 	/* init gendisk */
 	init_gendisk(hwif);
 
 	return 0;
+err_irq:
+	kfree(blk_size[hwif->major]);
 err_blk_size:
 	kfree(blksize_size[hwif->major]);
 err_blksize_size:
 	unregister_blkdev(hwif->major, hwif->name);
-	return -ENOMEM;
+	return ret;
 }
 
 /*
@@ -487,10 +612,12 @@ static void init_hwif_data(int index)
 	/* init interface */
 	hwif->index = index;
 	hwif->major = ide_hwif_to_major[index];
+	hwif->irq = default_irqs[index];
 	hwif->name[0] = 'i';
 	hwif->name[1] = 'd';
 	hwif->name[2] = 'e';
 	hwif->name[3] = '0' + index;
+	INIT_LIST_HEAD(&hwif->list);
 
 	/* init drives */
 	for (unit = 0; unit < MAX_DRIVES; unit++) {

@@ -78,6 +78,7 @@ struct buffer_head {
 	uint32_t			b_rsector;		/* real location on disk */
 	struct page *			b_page;			/* page */
 	struct buffer_head *		b_this_page;		/* next buffer in page */
+	struct wait_queue_head 		b_wait;			/* wait queue */
 	struct list_head		b_list;			/* next buffer in list */
 	struct list_head		b_list_req;		/* next buffer in request */
 	struct buffer_head *		b_next_hash;		/* next buffer in hash list */

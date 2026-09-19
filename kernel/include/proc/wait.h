@@ -11,6 +11,9 @@
 #define WCONTINUED				8
 #define WNOWAIT					0x1000000
 
+#define WAITQUEUE_INITIALIZER(tsk) 		{ .task = tsk, .func = NULL, .task_list = { NULL, NULL } }
+#define DECLARE_WAITQUEUE(name, tsk)		struct wait_queue name = WAITQUEUE_INITIALIZER(tsk)
+
 #define WAIT_QUEUE_HEAD_INITIALIZER(name)	{ .task_list = { &(name).task_list, &(name).task_list }, }
 #define DECLARE_WAIT_QUEUE_HEAD(name)		struct wait_queue_head name = WAIT_QUEUE_HEAD_INITIALIZER(name)
 

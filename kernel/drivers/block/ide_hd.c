@@ -101,7 +101,6 @@ static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 {
 	uint32_t start_sector, sector, nr_sectors;
-	int status, dstatus;
 
 	/* get partition start sector */
 	start_sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect;
@@ -126,18 +125,6 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 	/* issue dma command : on failure try pio mode */
 	if (ide_dmaproc(drive, req))
 		return ide_do_rw_disk_pio(drive, req);
-
-	/* wait for completion */
-	for (;;) {
-		status = inb(drive->hwif->dma_base + 2);
-		dstatus = inb(drive->io_base + ATA_REG_STATUS);
-
-		if (!(status & 0x04))
-			continue;
-
-		if (!(dstatus & ATA_SR_BSY))
-			break;
-	}
 
 	return 0;
 }

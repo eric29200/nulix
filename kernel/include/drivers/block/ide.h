@@ -201,14 +201,32 @@ struct ide_drive {
  * IDE interface.
  */
 struct ide_hwif {
+	struct ide_hwgroup *		hwgroup;
 	struct ide_drive		drives[MAX_DRIVES];
 	uint8_t				major;
+	uint8_t				irq;
 	char 				name[5];
 	uint8_t				index;
 	struct gendisk *		gd;
 	struct pci_device *		pci_dev;
 	uint32_t			dma_base;
+	struct list_head		list;
 	uint8_t				present:1;
+	uint8_t				sharing_irq:1;
+};
+
+/* irq handler */
+typedef void (ide_handler_t)(struct ide_drive *);
+
+/*
+ * IDE group of interfaces sharing same irq.
+ */
+struct ide_hwgroup {
+	struct list_head 		hwifs;
+	struct ide_hwif *		hwif;
+	struct ide_drive *		drive;
+	struct request *		req;
+	ide_handler_t *			handler;
 };
 
 /* init functions */
@@ -217,5 +235,6 @@ int ide_setup_dma(struct ide_drive *drive);
 int ide_dmaproc(struct ide_drive *drive, struct request *req);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
+void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate);
 
 #endif

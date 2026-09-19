@@ -43,13 +43,31 @@ static struct list_head free_list[NR_SIZES];
  */
 void wait_on_buffer(struct buffer_head *bh)
 {
+	DECLARE_WAITQUEUE(wait, current);
+
+	/* buffer available */
 	if (!buffer_locked(bh))
 		return;
 
-	execute_block_requests();
+	/* add to wait queue */
+	bh->b_count++;
+	add_wait_queue(&bh->b_wait, &wait);
 
-	if (buffer_locked(bh))
-		panic("wait_on_buffer: buffer still locked after execute_block_requests()\n");
+	for (;;) {
+		/* buffer available */
+		if (!buffer_locked(bh))
+			break;
+
+		/* execute disk requests */
+		execute_block_requests();
+
+		/* sleep */
+		sleep_on(&bh->b_wait);
+	}
+
+	/* remove from wait queue */
+	remove_wait_queue(&wait);
+	bh->b_count--;
 }
 
 /*
@@ -77,6 +95,7 @@ void lock_buffer(struct buffer_head *bh)
 void unlock_buffer(struct buffer_head *bh)
 {
 	clear_bit(&bh->b_state, BH_Lock);
+	wake_up(&bh->b_wait);
 }
 
 /*
@@ -328,6 +347,7 @@ static struct buffer_head *create_buffers(struct page *page, dev_t dev, size_t b
 		bh->b_this_page = head;
 		bh->b_page = page;
 		bh->b_end_io = end_buffer_io_sync;
+		init_waitqueue_head(&bh->b_wait);
 
 		/* set tail and head */
 		if (!head)

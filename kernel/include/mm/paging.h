@@ -2,6 +2,7 @@
 #define _MM_PAGING_H_
 
 #include <x86/interrupt.h>
+#include <proc/wait.h>
 #include <mm/mm.h>
 #include <lib/list.h>
 #include <stddef.h>
@@ -76,7 +77,7 @@ typedef uint32_t pte_t;
 #define ClearPageUptodate(page)		clear_bit(&(page)->flags, PG_uptodate)
 #define SetPageUptodate(page)		set_bit(&(page)->flags, PG_uptodate)
 #define PageLocked(page)		test_bit(&(page)->flags, PG_lock)
-#define UnlockPage(page)		clear_bit(&(page)->flags, PG_lock)
+#define UnlockPage(page)		unlock_page(page)
 #define LockPage(page)			set_bit(&(page)->flags, PG_lock)
 #define PageSwapCache(page)		test_bit(&(page)->flags, PG_swap_cache)
 #define SetPageSwapCache(page)		set_bit(&(page)->flags, PG_swap_cache)
@@ -154,6 +155,7 @@ struct page {
 	struct buffer_head *	buffers;				/* buffers of this page */
 	void *			virtual;				/* virtual address (used to map high pages in kernel space) */
 	void *			private;				/* used for page allocation */
+	struct wait_queue_head	wait;					/* wait queue */
 	struct list_head	list;					/* next page */
 	struct page *		next_hash;				/* next page in hash table */
 	struct page *		prev_hash;				/* previous page in hash table */
@@ -174,6 +176,7 @@ void flush_tlb(pgd_t *pgd);
 void wait_on_page(struct page *page);
 pmd_t *pmd_alloc(pgd_t *pgd, uint32_t address);
 pte_t *pte_alloc(pmd_t *pmd, uint32_t address);
+void unlock_page(struct page *page);
 
 /* page allocation */
 int init_page_alloc(uint32_t kernel_start, uint32_t kernel_end);
