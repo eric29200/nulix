@@ -11,6 +11,9 @@
 #define PRD_BYTES       		8
 #define PRD_ENTRIES     		(PAGE_SIZE / (2 * PRD_BYTES))
 
+#define TIMEOUT_WAIT_READY		(3 * HZ / 100)
+#define TIMEOUT_WAIT_DRQ		(5 * HZ / 100)
+
 #define MAX_HWIFS			4
 #define MAX_DRIVES			2
 
@@ -71,6 +74,8 @@
 #define ATA_ER_ABRT			0x04
 #define ATA_ER_TK0NF			0x02
 #define ATA_ER_AMNF			0x01
+
+#define ATA_OK_STAT(stat, good, bad)	(((stat) & ((good) | (bad))) == (good))
 
 /*
  * IDE identification.
@@ -236,5 +241,6 @@ int ide_dmaproc(struct ide_drive *drive, struct request *req);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
 void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate);
+int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t timeout);
 
 #endif

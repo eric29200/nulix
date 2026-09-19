@@ -34,11 +34,8 @@ static int ide_cd_read_sector(struct ide_drive *drive, uint32_t sector, char *bu
 	uint8_t command[12];
 	int ret;
 
-	/* select drive */
-	outb(drive->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
-	outb(drive->io_base + ATA_REG_FEATURES, 0x00);
-
 	/* issue packet command */
+	outb(drive->io_base + ATA_REG_FEATURES, 0x00);
 	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (ATAPI_SECTOR_SIZE & 0xFF));
 	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (ATAPI_SECTOR_SIZE >> 8));
 	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);

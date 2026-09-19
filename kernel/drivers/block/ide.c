@@ -56,6 +56,52 @@ void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate)
 }
 
 /*
+ * Wait for 400ns.
+ */
+static void ide_400ns_delay(struct ide_drive *drive)
+{
+	inb(drive->io_base + ATA_REG_ALTSTATUS);
+	inb(drive->io_base + ATA_REG_ALTSTATUS);
+	inb(drive->io_base + ATA_REG_ALTSTATUS);
+	inb(drive->io_base + ATA_REG_ALTSTATUS);
+}
+
+/*
+ * Wait for a drive status.
+ */
+int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t timeout)
+{
+	uint8_t stat;
+
+	ide_400ns_delay(drive);
+
+	/* wait for busy drive */
+	timeout += jiffies;
+	for (;;) {
+		/* drive not busy */
+		stat = inb(drive->io_base + ATA_REG_STATUS);
+		if (!(stat & ATA_SR_BSY))
+			break;
+
+		/* timeout */
+		if (jiffies > timeout) {
+			printf("ide_wait_stat: timeout on drive %s, status = 0x%x\n", drive->name, stat);
+			return 1;
+		}
+	}
+
+	ide_400ns_delay(drive);
+
+	/* check status */
+	stat = inb(drive->io_base + ATA_REG_STATUS);
+	if (ATA_OK_STAT(stat, good, bad))
+		return 0;
+
+	printf("ide_wait_stat: bad status on drive %s, status = 0x%x\n", drive->name, stat);
+	return 1;
+}
+
+/*
  * Handle a request.
  */
 static void ide_request(struct ide_hwif *hwif, struct request *req)
@@ -70,8 +116,13 @@ static void ide_request(struct ide_hwif *hwif, struct request *req)
 		goto kill_req;
 	}
 
-	/* set current drive */
+	/* select drive */
 	hwif->hwgroup->drive = drive;
+	outb(drive->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
+	if (ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_DRQ, TIMEOUT_WAIT_READY)) {
+		printf("ide_request: drive %s not ready for command\n", drive->name);
+		return;
+	}
 
 	/* handle request */
 	switch (drive->media) {

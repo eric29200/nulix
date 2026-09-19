@@ -125,7 +125,7 @@ static void dma_irq_handler(struct ide_drive *drive)
 	stat = inb(drive->io_base + ATA_REG_STATUS);
 
 	/* check status */
-	if ((stat & ATA_SR_ERR) || !(stat & ATA_SR_DRDY)) {
+	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_ERR | ATA_SR_DRQ)) {
 		printf("dma_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
 		return;
 	}

@@ -14,7 +14,7 @@ static void ide_hd_read_irq_handler(struct ide_drive *drive)
 
 	/* check status */
 	stat = inb(drive->io_base + ATA_REG_STATUS);
-	if ((stat & ATA_SR_ERR) || (stat & ATA_SR_BSY) || !(stat & ATA_SR_DRQ)) {
+	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR)) {
 		printf("ide_hd_read_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
 		return;
 	}
@@ -51,7 +51,7 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive)
 
 	/* check status */
 	stat = inb(drive->io_base + ATA_REG_STATUS);
-	if ((stat & ATA_SR_ERR) || (stat & ATA_SR_BSY)) {
+	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR | ATA_SR_DF)) {
 		printf("ide_hd_write_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
 		return;
 	}
@@ -93,9 +93,6 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 		return -EIO;
 	}
 
-	/* select drive */
-	outb(drive->io_base + ATA_REG_HDDEVSEL, (drive->master ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-
 	/* select sector */
 	outb(drive->io_base + ATA_REG_CONTROL, 0x00);
 	outb(drive->io_base + ATA_REG_SECCOUNT0, nr_sectors);
@@ -114,6 +111,10 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 	} else {
 		/* issue write */
 		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
+		if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_ERR | ATA_SR_DF, TIMEOUT_WAIT_DRQ)) {
+			printf("ide_do_rw_disk: no DRQ on drive %s after issuing write\n", drive->name);
+			return -EIO;
+		}
 
 		/* write first sector */
 		drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
