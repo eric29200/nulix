@@ -428,9 +428,8 @@ static void ide_irq_handler(struct registers *regs, void *dev_instance)
 	handler(hwgroup->drive);
 
 	/* initiate next request */
-	if (hwgroup->handler == NULL) {
+	if (hwgroup->handler == NULL)
 		ide_hwgroup_request(hwgroup);
-	}
 }
 
 /*
