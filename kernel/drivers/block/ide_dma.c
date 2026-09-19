@@ -121,13 +121,15 @@ int ide_dmaproc(struct ide_drive *drive, struct request *req)
 		return 1;
 
 	/* prepare DMA transfert */
-	outb(dma_base, 0);
-	outl(dma_base + 0x04, __pa(drive->dma_table));
-	outb(dma_base + 0x02, inb(dma_base + 0x02) | 0x06);
-	outb(dma_base, (req->cmd == READ ? 0x08 : 0x00) | 0x01);
+	outb(dma_base + 2, inb(dma_base + 2) | 6);
+	outl(dma_base + 4, __pa(drive->dma_table));
+	outb(dma_base, req->cmd == READ ? 8 : 0);
 
 	/* issue command */
 	outb(drive->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
+
+	/* start dma */
+	outb(dma_base, inb(dma_base) | 1);
 
 	return 0;
 }
