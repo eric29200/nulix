@@ -14,6 +14,7 @@ size_t *blksize_size[MAX_BLKDEV];
 
 /* requests */
 static struct request all_requests[NR_REQUEST];
+static DECLARE_WAIT_QUEUE_HEAD(wait_for_request);
 
 /*
  * Is a device read only ?
@@ -67,6 +68,7 @@ void end_request(struct request *req)
 
 	/* mark request inactive */
 	req->rq_status = RQ_INACTIVE;
+	wake_up(&wait_for_request);
 }
 
 /*
@@ -105,17 +107,29 @@ found:
  */
 static struct request *get_request_wait(dev_t dev)
 {
-	struct request *req;
+	DECLARE_WAITQUEUE(wait, current);
+	struct request *req = NULL;
+
+	/* add to wait queue */
+	add_wait_queue(&wait_for_request, &wait);
 
 	for (;;) {
 		/* get a request */
 		req = get_request(dev);
 		if (req)
-			return req;
+			break;
 
 		/* execute block requests */
 		execute_block_requests();
+
+		/* wait */
+		sleep_on(&wait_for_request);
 	}
+
+	/* remove from wait queue */
+	remove_wait_queue(&wait);
+
+	return req;
 }
 
 /*
