@@ -54,6 +54,8 @@ void wait_on_buffer(struct buffer_head *bh)
 	add_wait_queue(&bh->b_wait, &wait);
 
 	for (;;) {
+		current->state = TASK_SLEEPING;
+
 		/* buffer available */
 		if (!buffer_locked(bh))
 			break;
@@ -61,11 +63,12 @@ void wait_on_buffer(struct buffer_head *bh)
 		/* execute disk requests */
 		execute_block_requests();
 
-		/* sleep */
-		sleep_on(&bh->b_wait);
+		/* schedule */
+		schedule();
 	}
 
 	/* remove from wait queue */
+	current->state = TASK_RUNNING;
 	remove_wait_queue(&wait);
 	bh->b_count--;
 }

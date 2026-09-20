@@ -40,6 +40,8 @@ void wait_on_page(struct page *page)
 	add_wait_queue(&page->wait, &wait);
 
 	for (;;) {
+		current->state = TASK_SLEEPING;
+
 		/* page available */
 		if (!PageLocked(page))
 			break;
@@ -47,11 +49,12 @@ void wait_on_page(struct page *page)
 		/* execute disk requests */
 		execute_block_requests();
 
-		/* sleep */
-		sleep_on(&page->wait);
+		/* schedule */
+		schedule();
 	}
 
 	/* remove from wait queue */
+	current->state = TASK_RUNNING;
 	remove_wait_queue(&wait);
 }
 

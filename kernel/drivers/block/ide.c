@@ -64,12 +64,6 @@ static void ide_400ns_delay(struct ide_drive *drive)
 	inb(drive->io_base + ATA_REG_ALTSTATUS);
 	inb(drive->io_base + ATA_REG_ALTSTATUS);
 	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
 }
 
 /*
