@@ -157,31 +157,32 @@ static void ide_hwgroup_request(struct ide_hwgroup *hwgroup)
 	struct ide_hwif *hwif;
 	struct request *req;
 
-	/* group busy */
-	if (hwgroup->req)
-		return;
+	/* request until group is busy */
+	while (!hwgroup->handler) {
+		/* find a request to handle */
+		req = NULL;
+		list_for_each(pos, &hwgroup->hwifs) {
+			hwif = list_entry(pos, struct ide_hwif, list);
 
-	/* find a request to handle */
-	list_for_each(pos, &hwgroup->hwifs) {
-		hwif = list_entry(pos, struct ide_hwif, list);
+			/* get next request */
+			req = blk_dev[hwif->major].current_request;
+			if (!req)
+				continue;
 
-		/* get next request */
-		req = blk_dev[hwif->major].current_request;
+			/* remove it from queue */
+			blk_dev[hwif->major].current_request = req->next;
+			break;
+		}
+
+		/* no request */
 		if (!req)
-			continue;
+			break;
 
-		/* remove it from queue */
-		blk_dev[hwif->major].current_request = req->next;
-
-		goto handle_request;
+		/* do request */
+		hwgroup->hwif = hwif;
+		hwgroup->req = req;
+		ide_request(hwif, req);
 	}
-
-	/* no request */
-	return;
-handle_request:
-	hwgroup->hwif = hwif;
-	hwgroup->req = req;
-	ide_request(hwif, req);
 }
 
 /*
