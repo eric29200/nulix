@@ -57,7 +57,14 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 
 	/* page up to date */
 	if (PageUptodate(page))
-		return page;
+		goto success;
+
+	/* page locked : wait */
+	if (PageLocked(page)) {
+		wait_on_page(page);
+		if (PageUptodate(page))
+			goto success;
+	}
 
 	/* read page */
 	if (inode->i_op->readpage(inode, page))
@@ -65,7 +72,7 @@ static struct page *filemap_nopage(struct vm_area *vma, uint32_t address)
 
 	/* wait on page */
 	wait_on_page(page);
-
+success:
 	return page;
 err:
 	__free_page(page);
