@@ -218,44 +218,12 @@ static void do_ide3_request()
 
 /*
  * Identify a drive.
- */
-static void do_identify(struct ide_drive *drive, uint8_t cmd)
-{
-	uint8_t type;
-
-	/* read identity table */
-	insw(drive->io_base + ATA_REG_DATA, drive->id, 256);
-
-	/* identity ATAPI media type */
-	if (cmd == ATA_CMD_IDENTIFY_PACKET) {
-		type = (drive->id->config >> 8) & 0x1F;
-
-		switch (type) {
-			case IDE_CDROM:
-				drive->media = type;
-				drive->present = 1;
-				break;
-			default:
-				printf("ide_identify: unknown type %d\n", type);
-				break;
-		}
-
-		return;
-	}
-
-	/* non ATAP = disk */
-	drive->media = IDE_DISK;
-	drive->present = 1;
-}
-
-/*
- * Try to identify a drive.
  *
  * Returns:	0  device was identified
  *		1  device timed-out (no response to identify request)
  *		2  device aborted the command (refused to identify itself)
  */
-static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
+static int do_identify(struct ide_drive *drive, uint8_t cmd, struct hd_driveid *id, int io32bit)
 {
 	uint8_t status;
 
@@ -273,8 +241,83 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 	if (!(inb(drive->io_base + ATA_REG_STATUS) & ATA_SR_DRQ))
 		return 2;
 
-	/* read identified drive data */
-	do_identify(drive, cmd);
+	/* read identity table */
+	if (io32bit)
+		insl(drive->io_base + ATA_REG_DATA, id, 128);
+	else
+		insw(drive->io_base + ATA_REG_DATA, id, 256);
+
+	return 0;
+}
+
+/*
+ * Test if a drive support 32 bits mode.
+ */
+static int test_io32bit(struct ide_drive *drive, int cmd)
+{
+	struct hd_driveid *ids;
+	int ret;
+
+	/* allocate 2 identity tables */
+	ids = (struct hd_driveid *) kmalloc(sizeof(struct hd_driveid) * 2);
+	if (!ids)
+		return 0;
+
+	/* read first table with 16 bits */
+	ret = do_identify(drive, cmd, &ids[0], 0);
+	if (ret)
+		goto out;
+
+	/* read second table with 32 bits */
+	ret = do_identify(drive, cmd, &ids[1], 1);
+	if (ret)
+		goto out;
+
+	/* compare results */
+	ret = memcmp(&ids[0], &ids[1], sizeof(struct hd_driveid));
+out:
+	kfree(ids);
+	return ret;
+}
+
+/*
+ * Try to identify a drive.
+ *
+ * Returns:	0  device was identified
+ *		1  device timed-out (no response to identify request)
+ *		2  device aborted the command (refused to identify itself)
+ */
+static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
+{
+	uint8_t type;
+	int ret;
+
+	/* identify */
+	ret = do_identify(drive, cmd, drive->id, 0);
+	if (ret)
+		return ret;
+
+	/* identity ATAPI media type */
+	if (cmd == ATA_CMD_IDENTIFY_PACKET) {
+		type = (drive->id->config >> 8) & 0x1F;
+
+		switch (type) {
+			case IDE_CDROM:
+				drive->media = type;
+				drive->present = 1;
+				break;
+			default:
+				printf("ide_identify: unknown type %d\n", type);
+				break;
+		}
+	} else {
+		/* non ATAPI = disk */
+		drive->media = IDE_DISK;
+		drive->present = 1;
+	}
+
+	/* check 32 bit mode */
+	drive->io_32bit = test_io32bit(drive, cmd) == 0 ? 1 : 0;
 
 	return 0;
 }
@@ -673,6 +716,7 @@ static void init_hwif_data(int index)
 	for (unit = 0; unit < MAX_DRIVES; unit++) {
 		drive = &hwif->drives[unit];
 		drive->master = unit == 0 ? 1 : 0;
+		drive->io_32bit = 0;
 		drive->hwif = hwif;
 		drive->io_base = default_io_base[index];
 		drive->name[0] = 'h';

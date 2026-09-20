@@ -193,6 +193,7 @@ struct ide_drive {
 	char 				name[4];
 	uint8_t				present:1;
 	uint8_t				master:1;
+	uint8_t				io_32bit;
 	uint8_t				media;
 	uint16_t			io_base;
 	struct hd_driveid *		id;

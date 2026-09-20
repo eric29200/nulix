@@ -15,7 +15,10 @@ static void ide_input_data(struct ide_drive *drive, struct request *req)
 	void *buf;
 
 	buf = bh_kmap(req->bh) + req->bh_offset;
-	insw(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
+	if (drive->io_32bit)
+		insl(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 4);
+	else
+		insw(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
 	bh_kunmap(req->bh);
 
 }
@@ -28,7 +31,10 @@ static void ide_output_data(struct ide_drive *drive, struct request *req)
 	void *buf;
 
 	buf = bh_kmap(req->bh) + req->bh_offset;
-	outsw(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
+	if (drive->io_32bit)
+		outsl(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 4);
+	else
+		outsw(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
 	bh_kunmap(req->bh);
 }
 
