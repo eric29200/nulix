@@ -80,7 +80,7 @@ static int ide_build_dmatable(struct ide_drive *drive, struct request *req)
 		return 0;
 
 	/* build dma table, without crossing any 64kB boundaries */
-	for (sg = drive->sg_table; sg->length; sg++, nents--) {
+	for (sg = drive->sg_table; sg->length && nents; sg++, nents--) {
 		cur_addr = __pa(sg->address);
 		cur_len = sg->length;
 
