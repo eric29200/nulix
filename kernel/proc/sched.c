@@ -275,7 +275,7 @@ void init_waitqueue_head(struct wait_queue_head *wq)
 /*
  * Wake up all tasks sleeping on a wait queue.
  */
-static int default_wake_function(struct wait_queue *wait)
+int default_wake_function(struct wait_queue *wait)
 {
 	if (wait->task->state == TASK_SLEEPING)
 		wake_up_process(wait->task);
