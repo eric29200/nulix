@@ -110,7 +110,7 @@ static void ide_hd_read_irq_handler(struct ide_drive *drive)
 	req->nr_sectors--;
 	req->bh_offset += ATA_SECTOR_SIZE;
 
-	/* got next buffer */
+	/* go to next buffer */
 	if (req->bh_offset >= req->bh->b_size) {
 		req->bh_offset = 0;
 		req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
@@ -150,7 +150,7 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive)
 	req->nr_sectors--;
 	req->bh_offset += ATA_SECTOR_SIZE;
 
-	/* got next buffer */
+	/* go to next buffer */
 	if (req->bh_offset >= req->bh->b_size) {
 		req->bh_offset = 0;
 		req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
