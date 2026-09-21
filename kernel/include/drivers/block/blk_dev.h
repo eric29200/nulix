@@ -5,6 +5,8 @@
 #include <ioctl.h>
 #include <dev.h>
 
+#define MAX_SECTORS		254
+
 #define RQ_INACTIVE		-1
 #define RQ_ACTIVE		1
 
