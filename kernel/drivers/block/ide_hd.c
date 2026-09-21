@@ -39,57 +39,6 @@ static void ide_output_data(struct ide_drive *drive, struct request *req)
 }
 
 /*
- * Start a pio read.
- */
-static void ide_pio_read(struct ide_drive *drive, struct request *req)
-{
-	uint32_t sector;
-
-	/* get partition start sector */
-	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
-
-	/* select sector */
-	outb(drive->io_base + ATA_REG_CONTROL, 0x00);
-	outb(drive->io_base + ATA_REG_SECCOUNT0, req->nr_sectors);
-	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-
-	/* start read request */
-	drive->hwif->hwgroup->handler = &ide_hd_read_irq_handler;
-	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
-}
-
-/*
- * Start a pio write.
- */
-static void ide_pio_write(struct ide_drive *drive, struct request *req)
-{
-	uint32_t sector;
-
-	/* get partition start sector */
-	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
-
-	/* select sector */
-	outb(drive->io_base + ATA_REG_CONTROL, 0x00);
-	outb(drive->io_base + ATA_REG_SECCOUNT0, req->nr_sectors);
-	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
-
-	/* issue write */
-	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
-	if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_ERR | ATA_SR_DF, TIMEOUT_WAIT_DRQ)) {
-		printf("ide_pio_read: no DRQ on drive %s after issuing write\n", drive->name);
-		return;
-	}
-
-	/* write first sector */
-	drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
-	ide_output_data(drive, req);
-}
-
-/*
  * Read PIO irq handler.
  */
 static void ide_hd_read_irq_handler(struct ide_drive *drive)
@@ -128,8 +77,8 @@ static void ide_hd_read_irq_handler(struct ide_drive *drive)
 		return;
 	}
 
-	/* start next read */
-	ide_pio_read(drive, req);
+	/* or continue request */
+	drive->hwif->hwgroup->handler = &ide_hd_read_irq_handler;
 }
 
 /*
@@ -168,8 +117,9 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive)
 		return;
 	}
 
-	/* start next write */
-	ide_pio_write(drive, req);
+	/* or continue request = write next data */
+	drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
+	ide_output_data(drive, req);
 }
 
 /*
@@ -200,10 +150,21 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 		return 0;
 
 	/* issue read/write pio */
-	if (req->cmd == READ)
-		ide_pio_read(drive, req);
-	else
-		ide_pio_write(drive, req);
+	if (req->cmd == READ) {
+		drive->hwif->hwgroup->handler = &ide_hd_read_irq_handler;
+		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
+	} else {
+		/* issue write */
+		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
+		if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_ERR | ATA_SR_DF, TIMEOUT_WAIT_DRQ)) {
+			printf("ide_pio_read: no DRQ on drive %s after issuing write\n", drive->name);
+			return -EIO;
+		}
+
+		/* write first sector */
+		drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
+		ide_output_data(drive, req);
+	}
 
 	return 0;
 }
