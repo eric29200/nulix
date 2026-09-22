@@ -25,10 +25,7 @@ static int check_msdos_partition(struct gendisk *gd, dev_t dev)
 {
 	struct msdos_partition *partition;
 	struct buffer_head *bh;
-	int minor;
-
-	/* reset partitions */
-	memset(gd->part, 0, sizeof(struct partition) * NR_PARTITIONS);
+	int minor, i;
 
 	/* read partition table */
 	bh = bread(dev, 0, 1024);
@@ -43,7 +40,7 @@ static int check_msdos_partition(struct gendisk *gd, dev_t dev)
 	partition = (struct msdos_partition *) (bh->b_data + 0x1BE);
 
 	/* check partitions */
-	for (minor = 1; minor < 4; minor++, partition++) {
+	for (i = 1, minor = minor(dev) + 1; i < 4; i++, minor++, partition++) {
 		/* empty partition */
 		if (!partition->nr_sects)
 			continue;
@@ -81,14 +78,9 @@ static void setup_dev(struct gendisk *gd)
 {
 	int end_minor = gd->nr_real * gd->max_p, drive, i;
 
-	/* reset partitions size */
-	blk_size[gd->major] = NULL;
-
 	/* reset partitions */
-	for (i = 0 ; i < end_minor; i++) {
-		gd->part[i].start_sect = 0;
-		gd->part[i].nr_sects = 0;
-	}
+	memset(gd->part, 0, sizeof(struct partition) * NR_PARTITIONS);
+	blk_size[gd->major] = NULL;
 
 	/* discover partitions */
 	for (drive = 0 ; drive < gd->nr_real; drive++)
