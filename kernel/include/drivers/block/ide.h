@@ -236,9 +236,12 @@ struct ide_hwgroup {
 int init_ide();
 int ide_setup_dma(struct ide_drive *drive);
 int ide_dmaproc(struct ide_drive *drive, struct request *req);
-int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
-int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
+int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block);
+int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block);
 void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate);
 int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t timeout);
+void ide_input_data(struct ide_drive *drive, struct request *req);
+void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len);
+void ide_output_data(struct ide_drive *drive, struct request *req);
 
 #endif

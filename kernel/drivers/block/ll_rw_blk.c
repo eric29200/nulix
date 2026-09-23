@@ -185,6 +185,7 @@ static void make_request(int rw, struct buffer_head *bh)
 		&& prev->nr_sectors + count <= MAX_SECTORS) {
 		list_add_tail(&bh->b_list_req, &prev->bhs_list);
 		prev->nr_sectors += count;
+		prev->current_nr_sectors += count;
 		return;
 	}
 
@@ -196,6 +197,7 @@ static void make_request(int rw, struct buffer_head *bh)
 	req->rq_dev = bh->b_dev;
 	req->sector = sector;
 	req->nr_sectors = count;
+	req->current_nr_sectors = count;
 	req->buf = bh->b_data;
 	req->bh = bh;
 	req->bh_offset = 0;

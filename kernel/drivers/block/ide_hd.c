@@ -8,37 +8,6 @@ static void ide_hd_read_irq_handler(struct ide_drive *drive);
 static void ide_hd_write_irq_handler(struct ide_drive *drive);
 
 /*
- * Read data from disk.
- */
-static void ide_input_data(struct ide_drive *drive, struct request *req)
-{
-	void *buf;
-
-	buf = bh_kmap(req->bh) + req->bh_offset;
-	if (drive->io_32bit)
-		insl(drive->io_base + ATA_REG_DATA, buf, 128);
-	else
-		insw(drive->io_base + ATA_REG_DATA, buf, 256);
-	bh_kunmap(req->bh);
-
-}
-
-/*
- * Write data to disk.
- */
-static void ide_output_data(struct ide_drive *drive, struct request *req)
-{
-	void *buf;
-
-	buf = bh_kmap(req->bh) + req->bh_offset;
-	if (drive->io_32bit)
-		outsl(drive->io_base + ATA_REG_DATA, buf, 128);
-	else
-		outsw(drive->io_base + ATA_REG_DATA, buf, 256);
-	bh_kunmap(req->bh);
-}
-
-/*
  * Read PIO irq handler.
  */
 static void ide_hd_read_irq_handler(struct ide_drive *drive)
@@ -125,25 +94,20 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive)
 /*
  * Do read/write.
  */
-int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
+int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 {
-	uint32_t sector;
-
 	/* check command */
 	if (req->cmd != READ && req->cmd != WRITE) {
 		printf("ide_do_rw_disk: can't handle request %x\n", req->cmd);
 		return -EIO;
 	}
 
-	/* get partition start sector */
-	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
-
 	/* select sector */
 	outb(drive->io_base + ATA_REG_CONTROL, 0);
 	outb(drive->io_base + ATA_REG_SECCOUNT0, req->nr_sectors);
-	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) block);
+	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (block >> 8));
+	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (block >> 16));
 
 	/* issue dma command */
 	if (ide_dmaproc(drive, req) == 0)

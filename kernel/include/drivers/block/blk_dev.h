@@ -27,6 +27,7 @@ struct request {
 	int			cmd;
 	uint32_t		sector;
 	uint32_t		nr_sectors;
+	uint32_t		current_nr_sectors;
 	char *			buf;
 	struct buffer_head *	bh;
 	uint32_t		bh_offset;

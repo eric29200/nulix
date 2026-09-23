@@ -1,5 +1,6 @@
 #include <drivers/block/ide.h>
 #include <drivers/block/blk_dev.h>
+#include <mm/highmem.h>
 #include <drivers/pci/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
@@ -13,7 +14,7 @@
 static struct ide_hwif ide_hwifs[MAX_HWIFS] = { 0 };
 static uint8_t ide_hwif_to_major[MAX_HWIFS] = { DEV_IDE0_MAJOR, DEV_IDE1_MAJOR, DEV_IDE2_MAJOR, DEV_IDE3_MAJOR };
 static uint16_t default_io_base[MAX_HWIFS] = { 0x1F0, 0x170, 0x1E8, 0x168 };
-static uint8_t default_irqs[MAX_HWIFS] = { 14, 0, 0, 0 };
+static uint8_t default_irqs[MAX_HWIFS] = { 14, 15, 11, 10 };
 
 /*
  * Get an IDE drive.
@@ -40,6 +41,47 @@ static struct ide_drive *ide_get_drive(dev_t dev)
 	}
 
 	return NULL;
+}
+
+/*
+ * Read data from a drive.
+ */
+void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len)
+{
+	if (drive->io_32bit)
+		insl(drive->io_base + ATA_REG_DATA, buf, len / 4);
+	else
+		insw(drive->io_base + ATA_REG_DATA, buf, len / 2);
+}
+
+/*
+ * Read data from a drive.
+ */
+void ide_input_data(struct ide_drive *drive, struct request *req)
+{
+	void *buf;
+
+	buf = bh_kmap(req->bh) + req->bh_offset;
+	if (drive->io_32bit)
+		insl(drive->io_base + ATA_REG_DATA, buf, 128);
+	else
+		insw(drive->io_base + ATA_REG_DATA, buf, 256);
+	bh_kunmap(req->bh);
+}
+
+/*
+ * Write data to a drive.
+ */
+void ide_output_data(struct ide_drive *drive, struct request *req)
+{
+	void *buf;
+
+	buf = bh_kmap(req->bh) + req->bh_offset;
+	if (drive->io_32bit)
+		outsl(drive->io_base + ATA_REG_DATA, buf, 128);
+	else
+		outsw(drive->io_base + ATA_REG_DATA, buf, 256);
+	bh_kunmap(req->bh);
 }
 
 /*
@@ -109,6 +151,7 @@ int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t tim
 static void ide_request(struct ide_hwif *hwif, struct request *req)
 {
 	struct ide_drive *drive;
+	uint32_t block;
 	int ret;
 
 	/* get ide drive */
@@ -126,13 +169,16 @@ static void ide_request(struct ide_hwif *hwif, struct request *req)
 		return;
 	}
 
+	/* compute block */
+	block = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
+
 	/* handle request */
 	switch (drive->media) {
 		case IDE_DISK:
-			ret = ide_do_rw_disk(drive, req);
+			ret = ide_do_rw_disk(drive, req, block);
 			break;
 		case IDE_CDROM:
-			ret = ide_do_rw_cdrom(drive, req);
+			ret = ide_do_rw_cdrom(drive, req, block);
 			break;
 		default:
 			ret = -EIO;
