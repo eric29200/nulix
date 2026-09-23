@@ -73,6 +73,7 @@ int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t tim
 {
 	uint8_t stat;
 
+	/* wait 400 ns*/
 	ide_400ns_delay(drive);
 
 	/* wait for busy drive */
@@ -90,6 +91,7 @@ int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t tim
 		}
 	}
 
+	/* wait 400 ns*/
 	ide_400ns_delay(drive);
 
 	/* check status */
@@ -153,25 +155,26 @@ kill_req:
  */
 static void ide_hwgroup_request(struct ide_hwgroup *hwgroup)
 {
+	struct ide_hwif *hwif = hwgroup->hwif;
+	struct request *req = hwgroup->req;
 	struct list_head *pos;
-	struct ide_hwif *hwif;
-	struct request *req;
 
 	/* request until group is busy */
 	while (!hwgroup->handler) {
 		/* find a request to handle */
-		req = NULL;
-		list_for_each(pos, &hwgroup->hwifs) {
-			hwif = list_entry(pos, struct ide_hwif, list);
+		if (!req) {
+			list_for_each(pos, &hwgroup->hwifs) {
+				hwif = list_entry(pos, struct ide_hwif, list);
 
-			/* get next request */
-			req = blk_dev[hwif->major].current_request;
-			if (!req)
-				continue;
+				/* get next request */
+				req = blk_dev[hwif->major].current_request;
+				if (!req)
+					continue;
 
-			/* remove it from queue */
-			blk_dev[hwif->major].current_request = req->next;
-			break;
+				/* remove it from queue */
+				blk_dev[hwif->major].current_request = req->next;
+				break;
+			}
 		}
 
 		/* no request */
