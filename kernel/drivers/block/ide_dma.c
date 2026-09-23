@@ -122,7 +122,7 @@ static void dma_irq_handler(struct ide_drive *drive)
 
 	/* get status */
 	dma_stat = inb(hwif->dma_base + 2);
-	stat = inb(drive->io_base + ATA_REG_STATUS);
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 
 	/* check status */
 	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_ERR | ATA_SR_DRQ)) {
@@ -145,8 +145,7 @@ static void dma_irq_handler(struct ide_drive *drive)
  */
 int ide_dmaproc(struct ide_drive *drive, struct request *req)
 {
-	struct ide_hwif *hwif = drive->hwif;
-	uint32_t dma_base = hwif->dma_base;
+	uint32_t dma_base = HWIF(drive)->dma_base;
 
 	/* build dma table */
 	if (!ide_build_dmatable(drive, req))
@@ -158,10 +157,10 @@ int ide_dmaproc(struct ide_drive *drive, struct request *req)
 	outb(dma_base, req->cmd == READ ? 8 : 0);
 
 	/* issue command */
-	outb(drive->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
+	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
 
 	/* install irq handler */
-	hwif->hwgroup->handler = &dma_irq_handler;
+	HWGROUP(drive)->handler = &dma_irq_handler;
 
 	/* start dma */
 	outb(dma_base, inb(dma_base) | 1);

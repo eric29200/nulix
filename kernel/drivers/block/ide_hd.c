@@ -12,12 +12,12 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive);
  */
 static void ide_hd_read_irq_handler(struct ide_drive *drive)
 {
-	struct ide_hwgroup *hwgroup = drive->hwif->hwgroup;
+	struct ide_hwgroup *hwgroup = HWGROUP(drive);
 	struct request *req;
 	uint8_t stat;
 
 	/* check status */
-	stat = inb(drive->io_base + ATA_REG_STATUS);
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR)) {
 		printf("ide_hd_read_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
 		return;
@@ -55,12 +55,12 @@ static void ide_hd_read_irq_handler(struct ide_drive *drive)
  */
 static void ide_hd_write_irq_handler(struct ide_drive *drive)
 {
-	struct ide_hwgroup *hwgroup = drive->hwif->hwgroup;
+	struct ide_hwgroup *hwgroup = HWGROUP(drive);
 	struct request *req;
 	uint8_t stat;
 
 	/* check status */
-	stat = inb(drive->io_base + ATA_REG_STATUS);
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR | ATA_SR_DF)) {
 		printf("ide_hd_write_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
 		return;
@@ -103,11 +103,11 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 	}
 
 	/* select sector */
-	outb(drive->io_base + ATA_REG_CONTROL, 0);
-	outb(drive->io_base + ATA_REG_SECCOUNT0, req->nr_sectors);
-	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) block);
-	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (block >> 8));
-	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (block >> 16));
+	outb(HWIF(drive)->io_base + ATA_REG_CONTROL, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, req->nr_sectors);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA0, (uint8_t) block);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (block >> 8));
+	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (block >> 16));
 
 	/* issue dma command */
 	if (ide_dmaproc(drive, req) == 0)
@@ -116,10 +116,10 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 	/* issue read/write pio */
 	if (req->cmd == READ) {
 		drive->hwif->hwgroup->handler = &ide_hd_read_irq_handler;
-		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
+		outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 	} else {
 		/* issue write */
-		outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
+		outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
 		if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_ERR | ATA_SR_DF, TIMEOUT_WAIT_DRQ)) {
 			printf("ide_pio_read: no DRQ on drive %s after issuing write\n", drive->name);
 			return -EIO;

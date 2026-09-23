@@ -74,6 +74,9 @@
 
 #define ATA_OK_STAT(stat, good, bad)	(((stat) & ((good) | (bad))) == (good))
 
+#define HWIF(drive)			((struct ide_hwif *) ((drive)->hwif))
+#define HWGROUP(drive)			((struct ide_hwgroup *) (HWIF(drive)->hwgroup))
+
 /*
  * IDE identification.
  */
@@ -192,7 +195,6 @@ struct ide_drive {
 	uint8_t				master:1;
 	uint8_t				io_32bit;
 	uint8_t				media;
-	uint16_t			io_base;
 	struct hd_driveid *		id;
 	struct partition *		part;
 	struct ide_hwif *		hwif;
@@ -205,6 +207,7 @@ struct ide_drive {
  */
 struct ide_hwif {
 	struct ide_hwgroup *		hwgroup;
+	uint16_t			io_base;
 	struct ide_drive		drives[MAX_DRIVES];
 	uint8_t				major;
 	uint8_t				irq;

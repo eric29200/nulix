@@ -49,9 +49,9 @@ static struct ide_drive *ide_get_drive(dev_t dev)
 void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len)
 {
 	if (drive->io_32bit)
-		insl(drive->io_base + ATA_REG_DATA, buf, len / 4);
+		insl(HWIF(drive)->io_base + ATA_REG_DATA, buf, len / 4);
 	else
-		insw(drive->io_base + ATA_REG_DATA, buf, len / 2);
+		insw(HWIF(drive)->io_base + ATA_REG_DATA, buf, len / 2);
 }
 
 /*
@@ -63,9 +63,9 @@ void ide_input_data(struct ide_drive *drive, struct request *req)
 
 	buf = bh_kmap(req->bh) + req->bh_offset;
 	if (drive->io_32bit)
-		insl(drive->io_base + ATA_REG_DATA, buf, 128);
+		insl(HWIF(drive)->io_base + ATA_REG_DATA, buf, 128);
 	else
-		insw(drive->io_base + ATA_REG_DATA, buf, 256);
+		insw(HWIF(drive)->io_base + ATA_REG_DATA, buf, 256);
 	bh_kunmap(req->bh);
 }
 
@@ -78,9 +78,9 @@ void ide_output_data(struct ide_drive *drive, struct request *req)
 
 	buf = bh_kmap(req->bh) + req->bh_offset;
 	if (drive->io_32bit)
-		outsl(drive->io_base + ATA_REG_DATA, buf, 128);
+		outsl(HWIF(drive)->io_base + ATA_REG_DATA, buf, 128);
 	else
-		outsw(drive->io_base + ATA_REG_DATA, buf, 256);
+		outsw(HWIF(drive)->io_base + ATA_REG_DATA, buf, 256);
 	bh_kunmap(req->bh);
 }
 
@@ -102,10 +102,10 @@ void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate)
  */
 static void ide_400ns_delay(struct ide_drive *drive)
 {
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
-	inb(drive->io_base + ATA_REG_ALTSTATUS);
+	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
+	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
+	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
+	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
 }
 
 /*
@@ -122,7 +122,7 @@ int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t tim
 	timeout += jiffies;
 	for (;;) {
 		/* drive not busy */
-		stat = inb(drive->io_base + ATA_REG_STATUS);
+		stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 		if (!(stat & ATA_SR_BSY))
 			break;
 
@@ -137,7 +137,7 @@ int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t tim
 	ide_400ns_delay(drive);
 
 	/* check status */
-	stat = inb(drive->io_base + ATA_REG_STATUS);
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 	if (ATA_OK_STAT(stat, good, bad))
 		return 0;
 
@@ -163,7 +163,7 @@ static void ide_request(struct ide_hwif *hwif, struct request *req)
 
 	/* select drive */
 	hwif->hwgroup->drive = drive;
-	outb(drive->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
+	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
 	if (ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_DRQ, TIMEOUT_WAIT_READY)) {
 		printf("ide_request: drive %s not ready for command\n", drive->name);
 		return;
@@ -278,24 +278,24 @@ static int do_identify(struct ide_drive *drive, uint8_t cmd, struct hd_driveid *
 	uint8_t status;
 
 	/* send identify command */
-	outb(drive->io_base + ATA_REG_COMMAND, cmd);
+	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, cmd);
 
 	/* wait until BSY is clear */
 	do {
-		status = inb(drive->io_base + ATA_REG_STATUS);
+		status = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 		if (!status)
 			return 1;
 	} while (status & ATA_SR_BSY);
 
 	/* check drive */
-	if (!(inb(drive->io_base + ATA_REG_STATUS) & ATA_SR_DRQ))
+	if (!(inb(HWIF(drive)->io_base + ATA_REG_STATUS) & ATA_SR_DRQ))
 		return 2;
 
 	/* read identity table */
 	if (io32bit)
-		insl(drive->io_base + ATA_REG_DATA, id, 128);
+		insl(HWIF(drive)->io_base + ATA_REG_DATA, id, 128);
 	else
-		insw(drive->io_base + ATA_REG_DATA, id, 256);
+		insw(HWIF(drive)->io_base + ATA_REG_DATA, id, 256);
 
 	return 0;
 }
@@ -386,15 +386,15 @@ static int ide_identify(struct ide_drive *drive)
 		return -ENOMEM;
 
 	/* select drive */
-	outb(drive->io_base + ATA_REG_HDDEVSEL, select);
-	if (inb(drive->io_base + ATA_REG_HDDEVSEL) != select)
+	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, select);
+	if (inb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL) != select)
 		goto err;
 
 	/* identify drive */
-	outb(drive->io_base + ATA_REG_SECCOUNT0, 0);
-	outb(drive->io_base + ATA_REG_LBA0, 0);
-	outb(drive->io_base + ATA_REG_LBA1, 0);
-	outb(drive->io_base + ATA_REG_LBA2, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA0, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA1, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA2, 0);
 
 	/* try to identify drive (ATA or ATAPI) */
 	ret = try_to_identify(drive, ATA_CMD_IDENTIFY);
@@ -754,6 +754,7 @@ static void init_hwif_data(int index)
 
 	/* init interface */
 	hwif->index = index;
+	hwif->io_base = default_io_base[index];
 	hwif->major = ide_hwif_to_major[index];
 	hwif->irq = default_irqs[index];
 	hwif->name[0] = 'i';
@@ -768,7 +769,6 @@ static void init_hwif_data(int index)
 		drive->master = unit == 0 ? 1 : 0;
 		drive->io_32bit = 0;
 		drive->hwif = hwif;
-		drive->io_base = default_io_base[index];
 		drive->name[0] = 'h';
 		drive->name[1] = 'd';
 		drive->name[2] = 'a' + (index * MAX_DRIVES) + unit;

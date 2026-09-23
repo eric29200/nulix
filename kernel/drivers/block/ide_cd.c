@@ -15,22 +15,22 @@
  */
 static void ide_cd_read_irq_handler(struct ide_drive *drive)
 {
-	struct ide_hwgroup *hwgroup = drive->hwif->hwgroup;
+	struct ide_hwgroup *hwgroup = HWGROUP(drive);
 	size_t len, sectors_to_transfer, nskip;
 	struct request *req = hwgroup->req;
 	char buf[SECTOR_SIZE];
 	uint8_t stat;
 
 	/* check status */
-	stat = inb(drive->io_base + ATA_REG_STATUS);
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR)) {
 		printf("ide_cd_read_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
 		return;
 	}
 
 	/* read the interrupt reason and the transfer length */
-	inb(drive->io_base + ATA_REG_SECCOUNT0);
-	len = inb(drive->io_base + ATA_REG_LBA1) + 256 * inb(drive->io_base + ATA_REG_LBA2);
+	inb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0);
+	len = inb(HWIF(drive)->io_base + ATA_REG_LBA1) + 256 * inb(HWIF(drive)->io_base + ATA_REG_LBA2);
 
 	/* if DRQ is clear, the command has completed */
 	if ((stat & ATA_SR_DRQ) == 0) {
@@ -92,7 +92,7 @@ static void ide_cd_read_irq_handler(struct ide_drive *drive)
 static void ide_cd_start_read_continuation(struct ide_drive *drive)
 {
 	uint32_t sector, nr_sectors, frame, nr_frames, nskip;
-	struct request *req = drive->hwif->hwgroup->req;
+	struct request *req = HWGROUP(drive)->req;
 	uint8_t cmd[12] = { 0 };
 
 	/* get sector */
@@ -129,8 +129,8 @@ static void ide_cd_start_read_continuation(struct ide_drive *drive)
 		return;
 
 	/* issue read command */
-	drive->hwif->hwgroup->handler = &ide_cd_read_irq_handler;
-	outsw(drive->io_base, cmd, 6);
+	HWGROUP(drive)->handler = &ide_cd_read_irq_handler;
+	outsw(HWIF(drive)->io_base, cmd, 6);
 }
 
 /*
@@ -143,14 +143,14 @@ static int ide_cd_start_packet_command(struct ide_drive *drive, int xferlen)
 		return -EIO;
 
 	/* setup registers */
-	outb(drive->io_base + ATA_REG_FEATURES, 0);
-	outb(drive->io_base + ATA_REG_SECCOUNT0, 0);
-	outb(drive->io_base + ATA_REG_LBA0, 0);
-	outb(drive->io_base + ATA_REG_LBA1, xferlen & 0xFF);
-	outb(drive->io_base + ATA_REG_LBA2, xferlen >> 8);
+	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA0, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA1, xferlen & 0xFF);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA2, xferlen >> 8);
 
 	/* issue packet command */
-	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
+	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
 
 	/* continue read = send read command */
 	ide_cd_start_read_continuation(drive);
