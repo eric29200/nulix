@@ -3,7 +3,6 @@
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <x86/cpu.h>
-#include <x86/smp.h>
 #include <x86/time.h>
 #include <mm/mm.h>
 #include <grub/multiboot2.h>
@@ -368,10 +367,6 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	/* init time */
 	printf("[Kernel] Time Init\n");
 	init_time();
-
-	/* init smp */
-	printf("[Kernel] SMP Init\n");
-	init_smp();
 
 	/* init inodes */
 	printf("[Kernel] Inodes init\n");
