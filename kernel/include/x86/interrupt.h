@@ -21,7 +21,7 @@
  */
 struct hw_interrupt_type {
 	const char *			name;
-	void				(*ack)(uint32_t);
+	int				(*ack)(uint32_t);
 };
 
 /*

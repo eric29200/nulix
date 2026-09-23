@@ -84,19 +84,19 @@ void free_irq(uint32_t irq, void *dev_id)
  */
 void irq_handler(struct registers *regs)
 {
+	int irq = regs->int_no, ret;
 	struct irq_action *action;
-	int irq = regs->int_no;
 
 	/* update kernel statistics */
 	kstat.irqs[irq]++;
 
-	/* ack irq */
-	if (irq_desc[irq].handler && irq_desc[irq].handler->ack)
-		irq_desc[irq].handler->ack(irq);
-
-	/* handle interrupt */
-	for (action = irq_desc[irq].action; action != NULL; action = action->next)
-		action->handler(regs, action->dev_id);
+	/* ack and handle interrupt irq */
+	if (irq_desc[irq].handler && irq_desc[irq].handler->ack) {
+		ret = irq_desc[irq].handler->ack(irq);
+		if (ret == 0)
+			for (action = irq_desc[irq].action; action != NULL; action = action->next)
+				action->handler(regs, action->dev_id);
+	}
 }
 
 /*
@@ -148,16 +148,49 @@ static void init_8259A()
 }
 
 /*
+ * Check if this is spurious interrupt.
+ */
+static int i8259A_spurious_irq(uint32_t irq)
+{
+	uint8_t isr;
+
+	/* detect spurious interrupt on line 7 */
+	if (irq == 7) {
+		outb(0x20, 0x0B);
+		isr = inb(0x20);
+		return !(isr & 0x80) ? 1 : 0;
+	}
+
+	/* detect spurious interrupt on line 15 */
+	if (irq == 15) {
+		outb(0xA0, 0x0B);
+		isr = inb(0xA0);
+		if (!(isr & 0x80)) {
+			outb(0x20, 0x20);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/*
  * Mask an ack an interrupt.
  */
-static void mask_and_ack_8259A(uint32_t irq)
+static int mask_and_ack_8259A(uint32_t irq)
 {
+	/* ignore suprious interrupts */
+	if (i8259A_spurious_irq(irq))
+		return -EIO;
+
 	/* send reset signal to slave PIC (if irq > 7) */
 	if (irq > 7)
 		outb(0xA0, 0x20);
 
 	/* send reset signal to master PIC */
 	outb(0x20, 0x20);
+
+	return 0;
 }
 
 /*
