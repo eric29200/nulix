@@ -146,8 +146,8 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
 
 	/* issue dma command */
-	//if (ide_dmaproc(drive, req) == 0)
-	//	return 0;
+	if (ide_dmaproc(drive, req) == 0)
+		return 0;
 
 	/* issue read/write pio */
 	if (req->cmd == READ) {
