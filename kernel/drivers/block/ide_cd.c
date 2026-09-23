@@ -36,8 +36,8 @@ static int ide_cd_read_sector(struct ide_drive *drive, uint32_t sector, char *bu
 
 	/* issue packet command */
 	outb(drive->io_base + ATA_REG_FEATURES, 0x00);
-	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (ATAPI_SECTOR_SIZE & 0xFF));
-	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (ATAPI_SECTOR_SIZE >> 8));
+	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (2048 & 0xFF));
+	outb(drive->io_base + ATA_REG_LBA2, (uint8_t) (2048 >> 8));
 	outb(drive->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
 
 	/* wait for completion */
@@ -63,7 +63,7 @@ static int ide_cd_read_sector(struct ide_drive *drive, uint32_t sector, char *bu
 		return ret;
 
 	/* read data */
-	insw(drive->io_base, buf, ATAPI_SECTOR_SIZE / sizeof(uint16_t));
+	insw(drive->io_base, buf, 2048 / sizeof(uint16_t));
 
 	return 0;
 }
@@ -80,7 +80,7 @@ int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req)
 
 	/* get partition start sector */
 	start_sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect;
-	sector = start_sector + (req->sector << 9) / ATAPI_SECTOR_SIZE;
+	sector = start_sector + (req->sector << 9) / 2048;
 
 	/* read only  */
 	if (req->cmd != READ) {

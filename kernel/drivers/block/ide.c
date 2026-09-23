@@ -388,7 +388,7 @@ static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsign
 			*((uint32_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects;
 			break;
 		case BLKGETSIZE64:
-			*((uint64_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects * ATA_SECTOR_SIZE;
+			*((uint64_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects * blksize_size[major(dev)][minor(dev)];
 			break;
 		case BLKSSZGET:
 		 	*((uint32_t *) arg) = blksize_size[major(dev)][minor(dev)];

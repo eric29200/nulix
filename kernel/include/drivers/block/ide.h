@@ -20,9 +20,6 @@
 #define IDE_DISK			0x20
 #define IDE_CDROM			0x05
 
-#define ATA_SECTOR_SIZE			512
-#define ATAPI_SECTOR_SIZE		2048
-
 #define ATA_PRIMARY_IO			0x1F0
 #define ATA_SECONDARY_IO		0x170
 

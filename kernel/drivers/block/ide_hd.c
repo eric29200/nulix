@@ -16,9 +16,9 @@ static void ide_input_data(struct ide_drive *drive, struct request *req)
 
 	buf = bh_kmap(req->bh) + req->bh_offset;
 	if (drive->io_32bit)
-		insl(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 4);
+		insl(drive->io_base + ATA_REG_DATA, buf, 128);
 	else
-		insw(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
+		insw(drive->io_base + ATA_REG_DATA, buf, 256);
 	bh_kunmap(req->bh);
 
 }
@@ -32,9 +32,9 @@ static void ide_output_data(struct ide_drive *drive, struct request *req)
 
 	buf = bh_kmap(req->bh) + req->bh_offset;
 	if (drive->io_32bit)
-		outsl(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 4);
+		outsl(drive->io_base + ATA_REG_DATA, buf, 128);
 	else
-		outsw(drive->io_base + ATA_REG_DATA, buf, ATA_SECTOR_SIZE / 2);
+		outsw(drive->io_base + ATA_REG_DATA, buf, 256);
 	bh_kunmap(req->bh);
 }
 
@@ -63,7 +63,7 @@ static void ide_hd_read_irq_handler(struct ide_drive *drive)
 	/* update request */
 	req->sector++;
 	req->nr_sectors--;
-	req->bh_offset += ATA_SECTOR_SIZE;
+	req->bh_offset += 512;
 
 	/* go to next buffer */
 	if (req->bh_offset >= req->bh->b_size) {
@@ -103,7 +103,7 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive)
 	/* update request */
 	req->sector++;
 	req->nr_sectors--;
-	req->bh_offset += ATA_SECTOR_SIZE;
+	req->bh_offset += 512;
 
 	/* go to next buffer */
 	if (req->bh_offset >= req->bh->b_size) {
@@ -139,7 +139,7 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
 
 	/* select sector */
-	outb(drive->io_base + ATA_REG_CONTROL, 0x00);
+	outb(drive->io_base + ATA_REG_CONTROL, 0);
 	outb(drive->io_base + ATA_REG_SECCOUNT0, req->nr_sectors);
 	outb(drive->io_base + ATA_REG_LBA0, (uint8_t) sector);
 	outb(drive->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
