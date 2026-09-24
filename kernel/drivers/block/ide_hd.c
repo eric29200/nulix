@@ -109,26 +109,32 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 	outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (block >> 8));
 	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (block >> 16));
 
-	/* issue dma command */
-	if (ide_dmaproc(drive, req) == 0)
-		return 0;
-
-	/* issue read/write pio */
+	/* read request */
 	if (req->cmd == READ) {
+		/* try dma first */
+		if (drive->using_dma && ide_dmaproc(drive, req, ide_dma_read) == 0)
+			return 0;
+
+		/* or use pio mode */
 		drive->hwif->hwgroup->handler = &ide_hd_read_irq_handler;
 		outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
-	} else {
-		/* issue write */
-		outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
-		if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_ERR | ATA_SR_DF, TIMEOUT_WAIT_DRQ)) {
-			printf("ide_pio_read: no DRQ on drive %s after issuing write\n", drive->name);
-			return -EIO;
-		}
-
-		/* write first sector */
-		drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
-		ide_output_data(drive, req);
+		return 0;
 	}
+
+	/* write request : try dma first */
+	if (drive->using_dma && ide_dmaproc(drive, req, ide_dma_write) == 0)
+		return 0;
+
+	/* or use pio mode */
+	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
+	if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_ERR | ATA_SR_DF, TIMEOUT_WAIT_DRQ)) {
+		printf("ide_pio_read: no DRQ on drive %s after issuing write\n", drive->name);
+		return -EIO;
+	}
+
+	/* write first sector */
+	drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
+	ide_output_data(drive, req);
 
 	return 0;
 }

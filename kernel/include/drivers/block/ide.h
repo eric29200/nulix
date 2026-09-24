@@ -193,7 +193,8 @@ struct ide_drive {
 	char 				name[4];
 	uint8_t				present:1;
 	uint8_t				master:1;
-	uint8_t				io_32bit;
+	uint8_t				io_32bit:1;
+	uint8_t				using_dma:1;
 	uint8_t				media;
 	struct hd_driveid *		id;
 	struct partition *		part;
@@ -235,10 +236,22 @@ struct ide_hwgroup {
 	ide_handler_t *			handler;
 };
 
+/*
+ * DMA actions.
+ */
+typedef enum {
+	ide_dma_on,
+	ide_dma_off,
+	ide_dma_begin,
+	ide_dma_end,
+	ide_dma_read,
+	ide_dma_write
+} ide_dma_action_t;
+
 /* init functions */
 int init_ide();
 int ide_setup_dma(struct ide_drive *drive);
-int ide_dmaproc(struct ide_drive *drive, struct request *req);
+int ide_dmaproc(struct ide_drive *drive, struct request *req, ide_dma_action_t func);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block);
 void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate);

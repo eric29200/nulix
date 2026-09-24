@@ -121,7 +121,7 @@ static void dma_irq_handler(struct ide_drive *drive)
 	outb(hwif->dma_base, inb(hwif->dma_base) & ~1);
 
 	/* get status */
-	dma_stat = inb(hwif->dma_base + 2);
+	dma_stat = ide_dmaproc(drive, NULL, ide_dma_end);
 	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 
 	/* check status */
@@ -131,7 +131,7 @@ static void dma_irq_handler(struct ide_drive *drive)
 	}
 
 	/* check dma status */
-	if ((dma_stat & 7) != 4) {
+	if (dma_stat) {
 		printf("dma_irq_handler: bad DMA status on drive %s : 0x%x\n", drive->name, dma_stat);
 		return;
 	}
@@ -143,27 +143,56 @@ static void dma_irq_handler(struct ide_drive *drive)
 /*
  * Issue a DMA command.
  */
-int ide_dmaproc(struct ide_drive *drive, struct request *req)
+int ide_dmaproc(struct ide_drive *drive, struct request *req, ide_dma_action_t func)
 {
 	uint32_t dma_base = HWIF(drive)->dma_base;
+	uint8_t dma_stat;
+	int reading = 0;
 
-	/* build dma table */
-	if (!ide_build_dmatable(drive, req))
-		return 1;
+	switch (func) {
+		case ide_dma_on:
+			drive->using_dma = 1;
+			return 0;
+		case ide_dma_off:
+			drive->using_dma = 0;
+			return 0;
+		case ide_dma_read:
+			reading = 8;
+			goto ide_dma_rw;
+		case ide_dma_write:
+ide_dma_rw:
+			/* build dma table */
+			if (!ide_build_dmatable(drive, req))
+				return 1;
 
-	/* prepare DMA transfert */
-	outb(dma_base + 2, inb(dma_base + 2) | 6);
-	outl(dma_base + 4, __pa(drive->dma_table));
-	outb(dma_base, req->cmd == READ ? 8 : 0);
+			/* prepare DMA transfert */
+			outb(dma_base + 2, inb(dma_base + 2) | 6);
+			outl(dma_base + 4, __pa(drive->dma_table));
+			outb(dma_base, reading);
 
-	/* issue command */
-	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
+			/* issue command */
+			HWGROUP(drive)->handler = &dma_irq_handler;
+			outb(HWIF(drive)->io_base + ATA_REG_COMMAND, reading ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
+			goto ide_dma_begin;
+		case ide_dma_begin:
+ide_dma_begin:
+			outb(dma_base, inb(dma_base) | 1);
+			return 0;
+		case ide_dma_end:
+			/* stop dma */
+			outb(dma_base, inb(dma_base) & ~1);
 
-	/* install irq handler */
-	HWGROUP(drive)->handler = &dma_irq_handler;
+			/* get status */
+			dma_stat = inb(dma_base + 2);
 
-	/* start dma */
-	outb(dma_base, inb(dma_base) | 1);
+			/* clear intr & error bits */
+			outb(dma_base + 2, dma_stat | 6);
 
-	return 0;
+			/* return error/success */
+			return (dma_stat & 7) != 4;
+		default:
+			printf("ide_dmaproc: unknown func %d\n", func);
+			return 1;
+
+	}
 }

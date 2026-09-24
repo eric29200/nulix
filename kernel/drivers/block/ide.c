@@ -366,7 +366,8 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 		drive->present = 1;
 	}
 
-	/* check 32 bit mode */
+	/* check dma and 32 bit mode */
+	drive->using_dma = (drive->id->capability & 1) ? 1 : 0;
 	drive->io_32bit = test_io32bit(drive, cmd) == 0 ? 1 : 0;
 
 	return 0;
