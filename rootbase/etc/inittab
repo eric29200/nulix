@@ -6,12 +6,11 @@ si2::sysinit:/usr/sbin/fsck.ext2 /dev/root
 si3::sysinit:/usr/sbin/swapon -a
 si4::sysinit:/bin/mount -o remount,rw /
 si5::sysinit:/bin/mount -a -t no9p
-si6::sysinit:/usr/bin/sync
 
 rcS:12345:wait:/etc/init.d/rcS
 
 # mount network filesystem
-si7::wait:/bin/mount -a -t 9p
+si6::wait:/bin/mount -a -t 9p
 
 # Virtual consoles
 1:2345:respawn:/sbin/mingetty --noclear tty1
