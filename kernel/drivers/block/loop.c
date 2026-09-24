@@ -5,8 +5,8 @@
 #include <fcntl.h>
 #include <dev.h>
 
-#define MAX_LOOP	4
-#define MAX_DISK_SIZE 	1024*1024*1024
+#define MAX_LOOP		4
+#define MAX_DISK_SIZE 		(1024 * 1024 * 1024)
 
 /* global variables */
 static struct loop_device loop_dev[MAX_LOOP];
