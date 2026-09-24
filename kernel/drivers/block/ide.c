@@ -353,6 +353,11 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 
 		switch (type) {
 			case IDE_CDROM:
+				/* init drive */
+				ret = ide_setup_cdrom(drive);
+				if (ret)
+					return ret;
+
 				drive->media = type;
 				drive->present = 1;
 				break;
@@ -401,11 +406,6 @@ static int ide_identify(struct ide_drive *drive)
 	ret = try_to_identify(drive, ATA_CMD_IDENTIFY);
 	if (ret >= 2)
 		ret = try_to_identify(drive, ATA_CMD_IDENTIFY_PACKET);
-	if (ret)
-		goto err;
-
-	/* setup dma */
-	ret = ide_setup_dma(drive);
 	if (ret)
 		goto err;
 
@@ -697,7 +697,9 @@ err_blksize_size:
  */
 static int ide_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
-	int i;
+	struct ide_hwif *hwif;
+	uint32_t dma_base;
+	int ret, i;
 
 	/* unused device id */
 	UNUSED(id);
@@ -706,9 +708,23 @@ static int ide_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 	pci_enable_device(pci_dev);
 	pci_set_master(pci_dev);
 
-	/* set pci device  */
-	for (i = 0; i < MAX_HWIFS; i++)
-		ide_hwifs[i].pci_dev = pci_dev;
+	/* get dma base address */
+	dma_base = pci_dev->bar[4] & PCI_BASE_ADDRESS_IO_MASK;
+
+	/* init interfaces */
+	for (i = 0; i < MAX_HWIFS; i++) {
+		hwif = &ide_hwifs[i];
+
+		/* set pci device */
+		hwif->pci_dev = pci_dev;
+
+		/* setup dma */
+		if (dma_base) {
+			ret = ide_setup_dma(hwif, dma_base + i * 8);
+			if (ret)
+				return ret;
+		}
+	}
 
 	return 0;
 }

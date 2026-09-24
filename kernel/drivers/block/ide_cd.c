@@ -15,16 +15,36 @@
  */
 static void ide_cd_read_irq_handler(struct ide_drive *drive)
 {
+	struct cdrom_info *info = drive->driver_data;
 	struct ide_hwgroup *hwgroup = HWGROUP(drive);
 	size_t len, sectors_to_transfer, nskip;
 	struct request *req = hwgroup->req;
+	int dma_error = 0, dma = info->dma;
 	char buf[SECTOR_SIZE];
 	uint8_t stat;
+
+	/* check for dma errors (disable dma on drive if errors) */
+	if (dma) {
+		info->dma = 0;
+		dma_error = ide_dmaproc(drive, req, ide_dma_end);
+		if (dma_error)
+			ide_dmaproc(drive, req, ide_dma_off);
+	}
 
 	/* check status */
 	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR)) {
 		printf("ide_cd_read_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
+		return;
+	}
+
+	/* end dma request */
+	if (dma) {
+		if (!dma_error)
+			ide_end_request(hwgroup, 1);
+		else
+			printf("ide_cd_read_irq_handler: dma error on drive %s, stat = %x\n", drive->name, stat);
+
 		return;
 	}
 
@@ -92,6 +112,7 @@ static void ide_cd_read_irq_handler(struct ide_drive *drive)
 static void ide_cd_start_read_continuation(struct ide_drive *drive)
 {
 	uint32_t sector, nr_sectors, frame, nr_frames, nskip;
+	struct cdrom_info *info = drive->driver_data;
 	struct request *req = HWGROUP(drive)->req;
 	uint8_t cmd[12] = { 0 };
 
@@ -131,6 +152,12 @@ static void ide_cd_start_read_continuation(struct ide_drive *drive)
 	/* issue read command */
 	HWGROUP(drive)->handler = &ide_cd_read_irq_handler;
 	outsw(HWIF(drive)->io_base, cmd, 6);
+
+	/* begin dma */
+	if (info->dma)
+		ide_dmaproc(drive, req, ide_dma_begin);
+
+
 }
 
 /*
@@ -138,12 +165,19 @@ static void ide_cd_start_read_continuation(struct ide_drive *drive)
  */
 static int ide_cd_start_packet_command(struct ide_drive *drive, int xferlen)
 {
+	struct cdrom_info *info = drive->driver_data;
+	struct request *req = HWGROUP(drive)->req;
+
 	/* wait for the drive */
 	if (ide_wait_stat(drive, 0, ATA_SR_BSY, TIMEOUT_WAIT_READY))
 		return -EIO;
 
+	/* setup dma if needed */
+	if (info->dma)
+		info->dma = !ide_dmaproc(drive, req, ide_dma_read);
+
 	/* setup registers */
-	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, info->dma);
 	outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, 0);
 	outb(HWIF(drive)->io_base + ATA_REG_LBA0, 0);
 	outb(HWIF(drive)->io_base + ATA_REG_LBA1, xferlen & 0xFF);
@@ -163,6 +197,7 @@ static int ide_cd_start_packet_command(struct ide_drive *drive, int xferlen)
  */
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block)
 {
+	struct cdrom_info *info = drive->driver_data;
 	int minor = minor(req->rq_dev);
 
 	/* read only  */
@@ -178,6 +213,33 @@ int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block
 		req->rq_dev = mkdev(major(req->rq_dev), minor);
 	}
 
+	/* use dma if possible */
+	if (drive->using_dma
+		&& (req->sector % SECTORS_PER_FRAME == 0)
+		&& (req->nr_sectors % SECTORS_PER_FRAME == 0))
+		info->dma = 1;
+	else
+		info->dma = 0;
+
 	/* start sending the request */
 	return ide_cd_start_packet_command(drive, 32768);
+}
+
+/*
+ * Init a cdrom drive.
+ */
+int ide_setup_cdrom(struct ide_drive *drive)
+{
+	struct cdrom_info *info;
+
+	/* allocate cdrom informations */
+	info = (struct cdrom_info *) kmalloc(sizeof(struct cdrom_info));
+	if (!info)
+		return -ENOMEM;
+
+	/* set drive */
+	memset(info, 0, sizeof(struct cdrom_info));
+	drive->driver_data = info;
+
+	return 0;
 }

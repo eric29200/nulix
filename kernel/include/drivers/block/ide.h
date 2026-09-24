@@ -199,8 +199,7 @@ struct ide_drive {
 	struct hd_driveid *		id;
 	struct partition *		part;
 	struct ide_hwif *		hwif;
-	uint32_t *			dma_table;
-	struct scatterlist *		sg_table;
+	void *				driver_data;
 };
 
 /*
@@ -217,6 +216,8 @@ struct ide_hwif {
 	struct gendisk *		gd;
 	struct pci_device *		pci_dev;
 	uint32_t			dma_base;
+	uint32_t *			dma_table;
+	struct scatterlist *		sg_table;
 	struct list_head		list;
 	uint8_t				present:1;
 	uint8_t				sharing_irq:1;
@@ -237,6 +238,13 @@ struct ide_hwgroup {
 };
 
 /*
+ * Cdrom informations.
+ */
+struct cdrom_info {
+	uint8_t				dma;
+};
+
+/*
  * DMA actions.
  */
 typedef enum {
@@ -250,7 +258,8 @@ typedef enum {
 
 /* init functions */
 int init_ide();
-int ide_setup_dma(struct ide_drive *drive);
+int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base);
+int ide_setup_cdrom(struct ide_drive *drive);
 int ide_dmaproc(struct ide_drive *drive, struct request *req, ide_dma_action_t func);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block);
