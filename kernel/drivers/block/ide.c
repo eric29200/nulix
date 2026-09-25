@@ -558,11 +558,12 @@ err_kmalloc_gd:
 static void ide_irq_handler(struct registers *regs, void *dev_instance)
 {
 	struct ide_hwgroup *hwgroup = dev_instance;
+	struct ide_hwif *hwif = hwgroup->hwif;
 	ide_handler_t *handler;
 
 	/* unexpected irq */
-	if (regs->int_no != hwgroup->hwif->irq || !hwgroup->handler) {
-		printf("ide_irq_handler: unexpected irq %d\n", regs->int_no);
+	if (regs->int_no != hwif->irq || !hwgroup->handler) {
+		inb(hwif->io_base + ATA_REG_STATUS);
 		return;
 	}
 
