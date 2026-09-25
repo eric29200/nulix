@@ -217,8 +217,8 @@ struct ide_hwif {
 int init_ide();
 int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base);
 int ide_dmaproc(struct ide_drive *drive, struct request *req);
-int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
-int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
+int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block);
+int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block);
 void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len);
 void ide_input_data(struct ide_drive *drive, struct request *req);
 void ide_output_data(struct ide_drive *drive, struct request *req);

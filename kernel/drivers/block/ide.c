@@ -90,6 +90,7 @@ static void ide_request(struct ide_hwif *hwif)
 {
 	struct ide_drive *drive;
 	struct request *req;
+	uint32_t block;
 	int ret;
 
 repeat:
@@ -107,14 +108,17 @@ repeat:
 		printf("ide_request: can't find device 0x%x\n", req->rq_dev);
 		goto next;
 	}
+	
+	/* compute block */
+	block = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
 
 	/* handle request */
 	switch (drive->media) {
 		case IDE_DISK:
-			ret = ide_do_rw_disk(drive, req);
+			ret = ide_do_rw_disk(drive, req, block);
 			break;
 		case IDE_CDROM:
-			ret = ide_do_rw_cdrom(drive, req);
+			ret = ide_do_rw_cdrom(drive, req, block);
 			break;
 		default:
 			ret = -EIO;

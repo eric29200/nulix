@@ -90,13 +90,8 @@ static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req, uint
 /*
  * Do read/write.
  */
-int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
+int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 {
-	uint32_t sector;
-
-	/* compute sector */
-	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
-
 	/* check command */
 	if (req->cmd != READ && req->cmd != WRITE) {
 		printf("ide_do_rw_disk: can't handle request %x\n", req->cmd);
@@ -105,17 +100,17 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 
 	/* select sector */
 	outb(HWIF(drive)->io_base + ATA_REG_CONTROL, 0);
-	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, (drive->master ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, (drive->master ? 0xE0 : 0xF0) | ((block >> 24) & 0x0F));
 	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
 	outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, req->nr_sectors);
-	outb(HWIF(drive)->io_base + ATA_REG_LBA0, (uint8_t) sector);
-	outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+	outb(HWIF(drive)->io_base + ATA_REG_LBA0, (uint8_t) block);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (block >> 8));
+	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (block >> 16));
 
 	/* issue dma command */
 	if (drive->using_dma && ide_dmaproc(drive, req) == 0)
 		return ide_hd_wait(drive, 1);
 
 	/* on failure try pio mode */
-	return ide_do_rw_disk_pio(drive, req, sector);
+	return ide_do_rw_disk_pio(drive, req, block);
 }
