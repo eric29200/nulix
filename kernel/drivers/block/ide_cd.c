@@ -4,6 +4,11 @@
 #include <stdio.h>
 #include <dev.h>
 
+#define CD_FRAMESIZE		2048
+#define SECTOR_SIZE		512
+#define SECTOR_BITS		9
+#define SECTORS_PER_FRAME	(CD_FRAMESIZE / SECTOR_SIZE)
+
 /*
  * Wait for operation completion.
  */
@@ -15,10 +20,8 @@ static int ide_cd_wait(struct ide_drive *drive)
 		status = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 		if (!status)
 			return -ENXIO;
-
 		if (status & ATA_SR_ERR)
 			return -EIO;
-
 		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ))
 			break;
 	}
@@ -27,46 +30,106 @@ static int ide_cd_wait(struct ide_drive *drive)
 }
 
 /*
- * Read a sector from an IDE cd drive.
+ * Do read/write in PIO mode.
  */
-static int ide_cd_read_sector(struct ide_drive *drive, uint32_t sector, char *buf)
+static int ide_do_rw_cdrom_pio(struct ide_drive *drive, struct request *req)
 {
-	uint8_t command[12];
-	int ret;
+	uint32_t sector, nr_sectors, frame, nr_frames, nskip;
+	int ret, len, sectors_to_transfer;
+	uint8_t cmd[12] = { 0 };
+	char buf[SECTOR_SIZE];
 
-	/* select drive */
-	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
-	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
+	/* get start sector */
+	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
 
-	/* issue packet command */
-	outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (ATAPI_SECTOR_SIZE & 0xFF));
-	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (ATAPI_SECTOR_SIZE >> 8));
-	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
+	/* get sector */
+	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
+	nr_sectors = req->nr_sectors;
 
-	/* wait for completion */
-	ret = ide_cd_wait(drive);
-	if (ret)
-		return ret;
+	/* request must start on a cdrom block boundary */
+	nskip = sector % SECTORS_PER_FRAME;
+	if (nskip > 0) {
+		sector -= nskip;
+		nr_sectors += nskip;
+		req->current_nr_sectors += nskip;
+	}
 
-	/* prepare read command */
-	memset(command, 0, 12);
-	command[0] = 0xA8;
-	command[2] = (sector >> 24) & 0xFF;
-	command[3] = (sector >> 16) & 0xFF;
-	command[4] = (sector >> 8) & 0xFF;
-	command[5] = sector & 0xFF;
-	command[9] = 1;
+	/* get frame */
+	frame = sector / SECTORS_PER_FRAME;
+	nr_frames = (nr_sectors + SECTORS_PER_FRAME - 1) / SECTORS_PER_FRAME;
 
-	/* issue read command */
-	outsw(HWIF(drive)->io_base, command, 12 / sizeof(uint16_t));
+	for (; nr_frames > 0; nr_frames--) {
+		/* select drive */
+		outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
+		outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
 
-	/* wait for completion */
-	ret = ide_cd_wait(drive);
-	if (ret)
-		return ret;
+		/* issue packet command */
+		outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (2048 & 0xFF));
+		outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (2048 >> 8));
+		outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
 
-	/* read data */
-	insw(HWIF(drive)->io_base, buf, ATAPI_SECTOR_SIZE / sizeof(uint16_t));
+		/* wait for completion */
+		ret = ide_cd_wait(drive);
+		if (ret)
+			return ret;
+
+		/* prepare read command */
+		cmd[0] = 0xA8;
+		cmd[2] = (frame >> 24) & 0xFF;
+		cmd[3] = (frame >> 16) & 0xFF;
+		cmd[4] = (frame >> 8) & 0xFF;
+		cmd[5] = frame & 0xFF;
+		cmd[9] = 1;
+
+		/* issue read command */
+		outsw(HWIF(drive)->io_base, cmd, 6);
+
+		/* wait for completion */
+		ret = ide_cd_wait(drive);
+		if (ret)
+			return ret;
+
+		/* read transfer length */
+		len = inb(HWIF(drive)->io_base + ATA_REG_LBA1) + 256 * inb(HWIF(drive)->io_base + ATA_REG_LBA2);
+
+		/* get number of sectors to transfer */
+		sectors_to_transfer = len / 512;
+
+		/* skip first sectors if needed */
+		nskip = req->current_nr_sectors - req->nr_sectors;
+		while (nskip > 0) {
+			ide_input_data_buf(drive, buf, SECTOR_SIZE);
+			req->current_nr_sectors--;
+			nskip--;
+			sectors_to_transfer--;
+		}
+
+		/* read sectors */
+		while (sectors_to_transfer > 0) {
+			/* request done : throw away remaining sectors */
+			if (req->current_nr_sectors == 0) {
+				ide_input_data_buf(drive, buf, SECTOR_SIZE);
+				sectors_to_transfer--;
+				continue;
+			}
+
+			/* read data */
+			ide_input_data(drive, req);
+
+			/* update request */
+			req->sector++;
+			req->nr_sectors--;
+			req->current_nr_sectors--;
+			req->bh_offset += SECTOR_SIZE;
+			sectors_to_transfer--;
+
+			/* go to next buffer */
+			if (req->bh_offset >= req->bh->b_size) {
+				req->bh_offset = 0;
+				req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
+			}
+		}
+	}
 
 	return 0;
 }
@@ -76,49 +139,11 @@ static int ide_cd_read_sector(struct ide_drive *drive, uint32_t sector, char *bu
  */
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req)
 {
-	uint32_t start_sector, sector;
-	struct buffer_head *bh;
-	struct list_head *pos;
-	int ret;
-
-	/* get partition start sector */
-	start_sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect;
-	sector = start_sector + (req->sector << 9) / ATAPI_SECTOR_SIZE;
-
-	/* read only  */
+	/* read only */
 	if (req->cmd != READ) {
 		printf("ide_do_rw_cdrom: can't handle request %x\n", req->cmd);
 		return -EIO;
 	}
 
-	/* read buffers */
-	list_for_each(pos, &req->bhs_list) {
-		bh = list_entry(pos, struct buffer_head, b_list_req);
-
-		/* read sector */
-		ret = ide_cd_read_sector(drive, sector++, bh->b_data);
-		if (ret)
-			return ret;
-	}
-
-	return 0;
-}
-
-/*
- * Init a cdrom drive.
- */
-int ide_setup_cdrom(struct ide_drive *drive)
-{
-	struct cdrom_info *info;
-
-	/* allocate cdrom informations */
-	info = (struct cdrom_info *) kmalloc(sizeof(struct cdrom_info));
-	if (!info)
-		return -ENOMEM;
-
-	/* set drive */
-	memset(info, 0, sizeof(struct cdrom_info));
-	drive->driver_data = info;
-
-	return 0;
+	return ide_do_rw_cdrom_pio(drive, req);
 }

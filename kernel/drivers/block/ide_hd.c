@@ -31,7 +31,7 @@ static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
 	uint32_t sector;
 	int ret;
 
-	/* get sector */
+	/* get start sector */
 	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
 
 	for (; req->nr_sectors > 0; sector++) {

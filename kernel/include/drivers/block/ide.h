@@ -17,9 +17,6 @@
 #define IDE_DISK			0x20
 #define IDE_CDROM			0x05
 
-#define ATA_SECTOR_SIZE			512
-#define ATAPI_SECTOR_SIZE		2048
-
 #define ATA_PRIMARY_IO			0x1F0
 #define ATA_SECONDARY_IO		0x170
 
@@ -216,20 +213,13 @@ struct ide_hwif {
 	uint8_t				present:1;
 };
 
-/*
- * Cdrom informations.
- */
-struct cdrom_info {
-	uint8_t				dma;
-};
-
 /* init functions */
 int init_ide();
 int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base);
-int ide_setup_cdrom(struct ide_drive *drive);
 int ide_dmaproc(struct ide_drive *drive, struct request *req);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
+void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len);
 void ide_input_data(struct ide_drive *drive, struct request *req);
 void ide_output_data(struct ide_drive *drive, struct request *req);
 

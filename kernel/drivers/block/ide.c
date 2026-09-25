@@ -18,6 +18,17 @@ static uint16_t default_io_base[MAX_HWIFS] = { 0x1F0, 0x170, 0x1E8, 0x168 };
 /*
  * Read data from a drive.
  */
+void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len)
+{
+	if (drive->io_32bit)
+		insl(HWIF(drive)->io_base + ATA_REG_DATA, buf, len / 4);
+	else
+		insw(HWIF(drive)->io_base + ATA_REG_DATA, buf, len / 2);
+}
+
+/*
+ * Read data from a drive.
+ */
 void ide_input_data(struct ide_drive *drive, struct request *req)
 {
 	void *buf;
@@ -239,11 +250,6 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 
 		switch (type) {
 			case IDE_CDROM:
-				/* init drive */
-				ret = ide_setup_cdrom(drive);
-				if (ret)
-					return ret;
-
 				drive->media = type;
 				drive->present = 1;
 				break;
@@ -321,7 +327,7 @@ static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsign
 			*((uint32_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects;
 			break;
 		case BLKGETSIZE64:
-			*((uint64_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects * ATA_SECTOR_SIZE;
+			*((uint64_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects * blksize_size[major(dev)][minor(dev)];
 			break;
 		case BLKDISCARDZEROES:
 			break;
