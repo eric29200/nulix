@@ -117,9 +117,9 @@ void sock_init_data(struct socket *sock, struct sock *sk)
 	sk->data_ready = sock_def_readable;
 
 	/* init creds */
-	sock->sk->peercred.pid = 0;
-	sock->sk->peercred.uid = -1;
-	sock->sk->peercred.gid = -1;
+	sk->peercred.pid = 0;
+	sk->peercred.uid = -1;
+	sk->peercred.gid = -1;
 }
 
 /*
