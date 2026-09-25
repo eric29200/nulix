@@ -3,8 +3,8 @@
 
 #include <fs/fs.h>
 
-#define LO_FLAGS_DO_BMAP	0x00000001
-#define LO_FLAGS_READ_ONLY	0x00000002
+#define LO_FLAGS_READ_ONLY	1
+#define LO_FLAGS_DO_BMAP	2
 
 #define LOOP_SET_FD		0x4C00
 #define LOOP_CLR_FD		0x4C01
