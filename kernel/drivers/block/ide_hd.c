@@ -4,19 +4,21 @@
 #include <stdio.h>
 
 /*
- * Wait for operation completion.
+ * Wait for completion.
  */
-static int ide_hd_wait(struct ide_drive *drive)
+static int ide_hd_wait(struct ide_drive *drive, int dma)
 {
-	uint8_t status;
+	uint8_t stat, dma_stat;
 
 	for (;;) {
-		status = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
-		if (!status)
+		stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
+		dma_stat = dma ? inb(drive->hwif->dma_base + 2) : 0;
+
+		if (!stat)
 			return -ENXIO;
-		if (status & ATA_SR_ERR)
+		if (stat & ATA_SR_ERR)
 			return -EIO;
-		if (!(status & ATA_SR_BSY))
+		if (!(stat & ATA_SR_BSY) && (!dma || (dma_stat & 4)))
 			break;
 	}
 
@@ -24,31 +26,43 @@ static int ide_hd_wait(struct ide_drive *drive)
 }
 
 /*
- * Do read/write in PIO mode.
+ * Start a read/write sector request.
  */
-static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
+static int ide_start_rw_disk_sector(struct ide_drive *drive, uint32_t sector, int cmd)
 {
-	uint32_t sector;
 	int ret;
 
-	/* get start sector */
-	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
+	/* wait for drive */
+	ret = ide_hd_wait(drive, 0);
+	if (ret)
+		return ret;
 
-	for (; req->nr_sectors > 0; sector++) {
-		/* select sector */
-		outb(HWIF(drive)->io_base + ATA_REG_CONTROL, 2);
-		outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, (drive->master ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
-		outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
-		outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, 1);
-		outb(HWIF(drive)->io_base + ATA_REG_LBA0, (uint8_t) sector);
-		outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
-		outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
+	/* select sector */
+	outb(HWIF(drive)->io_base + ATA_REG_CONTROL, 2);
+	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, (drive->master ? 0xE0 : 0xF0) | ((sector >> 24) & 0x0F));
+	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
+	outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, 1);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA0, (uint8_t) sector);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (sector >> 8));
+	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
 
-		/* issue read/write command */
-		outb(HWIF(drive)->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO);
+	/* issue read/write command */
+	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, cmd);
 
-		/* wait for disk to be ready */
-		ret = ide_hd_wait(drive);
+	/* wait for disk to be ready */
+	return ide_hd_wait(drive, 0);
+}
+
+/*
+ * Do read/write in PIO mode.
+ */
+static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req, uint32_t sector)
+{
+	int ret;
+
+	while (req->nr_sectors > 0) {
+		/* start request */
+		ret = ide_start_rw_disk_sector(drive, sector++, req->cmd == READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO);
 		if (ret)
 			return ret;
 
@@ -68,11 +82,6 @@ static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
 			req->bh_offset = 0;
 			req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
 		}
-
-		/* wait for drive */
-		ret = ide_hd_wait(drive);
-		if (ret)
-			return ret;
 	}
 
 	return 0;
@@ -83,7 +92,6 @@ static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
  */
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 {
-	int dma_stat, stat;
 	uint32_t sector;
 
 	/* compute sector */
@@ -105,20 +113,9 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req)
 	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (sector >> 16));
 
 	/* issue dma command */
-	if (drive->using_dma && ide_dmaproc(drive, req) == 0) {
-		/* wait for completion */
-		for (;;) {
-			dma_stat = inb(drive->hwif->dma_base + 2);
-			stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
-
-			if (!(dma_stat & 4))
-				continue;
-
-			if (!(stat & ATA_SR_BSY))
-				return 0;
-		}
-	}
+	if (drive->using_dma && ide_dmaproc(drive, req) == 0)
+		return ide_hd_wait(drive, 1);
 
 	/* on failure try pio mode */
-	return ide_do_rw_disk_pio(drive, req);
+	return ide_do_rw_disk_pio(drive, req, sector);
 }
