@@ -72,6 +72,8 @@
 #define ATA_ER_TK0NF			0x02
 #define ATA_ER_AMNF			0x01
 
+#define HWIF(drive)			((struct ide_hwif *) ((drive)->hwif))
+
 /*
  * IDE identification.
  */
@@ -188,19 +190,20 @@ struct ide_drive {
 	char 				name[4];
 	uint8_t				present:1;
 	uint8_t				master:1;
+	uint8_t				io_32bit:1;
+	uint8_t				using_dma:1;
 	uint8_t				media;
-	uint16_t			io_base;
 	struct hd_driveid *		id;
 	struct partition *		part;
 	struct ide_hwif *		hwif;
-	uint32_t *			dma_table;
-	struct scatterlist *		sg_table;
+	void *				driver_data;
 };
 
 /*
  * IDE interface.
  */
 struct ide_hwif {
+	uint16_t			io_base;
 	struct ide_drive		drives[MAX_DRIVES];
 	uint8_t				major;
 	char 				name[5];
@@ -208,14 +211,26 @@ struct ide_hwif {
 	struct gendisk *		gd;
 	struct pci_device *		pci_dev;
 	uint32_t			dma_base;
+	uint32_t *			dma_table;
+	struct scatterlist *		sg_table;
 	uint8_t				present:1;
+};
+
+/*
+ * Cdrom informations.
+ */
+struct cdrom_info {
+	uint8_t				dma;
 };
 
 /* init functions */
 int init_ide();
-int ide_setup_dma(struct ide_drive *drive);
+int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base);
+int ide_setup_cdrom(struct ide_drive *drive);
 int ide_dmaproc(struct ide_drive *drive, struct request *req);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
+void ide_input_data(struct ide_drive *drive, struct request *req);
+void ide_output_data(struct ide_drive *drive, struct request *req);
 
 #endif

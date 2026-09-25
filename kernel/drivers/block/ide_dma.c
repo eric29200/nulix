@@ -6,20 +6,20 @@
 /*
  * Setup dma.
  */
-int ide_setup_dma(struct ide_drive *drive)
+int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base)
 {
 	/* set dma base address */
-	drive->hwif->dma_base = drive->hwif->pci_dev->bar[4] & PCI_BASE_ADDRESS_IO_MASK;
+	hwif->dma_base = dma_base;
 
 	/* allocate scatter list */
-	drive->sg_table = (struct scatterlist *) kmalloc(sizeof(struct scatterlist) * PRD_ENTRIES);
-	if (!drive->sg_table)
+	hwif->sg_table = (struct scatterlist *) kmalloc(sizeof(struct scatterlist) * PRD_ENTRIES);
+	if (!hwif->sg_table)
 		return -ENOMEM;
 
 	/* allocate dma table */
-	drive->dma_table = get_free_pages(get_order(PRD_ENTRIES * PRD_BYTES));
-	if (!drive->dma_table) {
-		kfree(drive->sg_table);
+	hwif->dma_table = get_free_pages(get_order(PRD_ENTRIES * PRD_BYTES));
+	if (!hwif->dma_table) {
+		kfree(hwif->sg_table);
 		return -ENOMEM;
 	}
 
@@ -29,9 +29,9 @@ int ide_setup_dma(struct ide_drive *drive)
 /*
  * Build a scatter list with for dma.
  */
-static int ide_build_sglist(struct ide_drive *drive, struct request *req)
+static int ide_build_sglist(struct ide_hwif *hwif, struct request *req)
 {
-	struct scatterlist *sg = drive->sg_table;
+	struct scatterlist *sg = hwif->sg_table;
 	uint32_t last_data_end = ~0UL;
 	struct buffer_head *bh;
 	struct list_head *pos;
@@ -68,19 +68,19 @@ static int ide_build_sglist(struct ide_drive *drive, struct request *req)
 /*
  * Build dma table.
  */
-static int ide_build_dmatable(struct ide_drive *drive, struct request *req)
+static int ide_build_dmatable(struct ide_hwif *hwif, struct request *req)
 {
-	uint32_t *table = drive->dma_table, cur_addr, cur_len, bcount;
+	uint32_t *table = hwif->dma_table, cur_addr, cur_len, bcount;
 	struct scatterlist *sg;
 	int nents, count = 0;
 
 	/* build scatter list */
-	nents = ide_build_sglist(drive, req);
+	nents = ide_build_sglist(hwif, req);
 	if (!nents)
 		return 0;
 
 	/* build dma table, without crossing any 64kB boundaries */
-	for (sg = drive->sg_table; sg->length; sg++, nents--) {
+	for (sg = hwif->sg_table; sg->length && nents; sg++, nents--) {
 		cur_addr = __pa(sg->address);
 		cur_len = sg->length;
 
@@ -114,20 +114,20 @@ static int ide_build_dmatable(struct ide_drive *drive, struct request *req)
  */
 int ide_dmaproc(struct ide_drive *drive, struct request *req)
 {
-	uint32_t dma_base = drive->hwif->dma_base;
+	uint32_t dma_base = HWIF(drive)->dma_base;
 
 	/* build dma table */
-	if (!ide_build_dmatable(drive, req))
+	if (!ide_build_dmatable(HWIF(drive), req))
 		return 1;
 
 	/* prepare DMA transfert */
 	outb(dma_base, 0);
-	outl(dma_base + 4, __pa(drive->dma_table));
+	outl(dma_base + 4, __pa(HWIF(drive)->dma_table));
 	outb(dma_base + 2, inb(dma_base + 2) | 6);
 	outb(dma_base, (req->cmd == READ ? 8 : 0) | 1);
 
 	/* issue command */
-	outb(drive->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
+	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
 
 	return 0;
 }
