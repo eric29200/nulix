@@ -108,7 +108,7 @@ repeat:
 		printf("ide_request: can't find device 0x%x\n", req->rq_dev);
 		goto next;
 	}
-	
+
 	/* compute block */
 	block = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
 

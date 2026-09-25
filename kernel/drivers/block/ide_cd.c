@@ -30,46 +30,6 @@ static int ide_cd_wait(struct ide_drive *drive)
 }
 
 /*
- * Start sending a read request.
- */
-static int ide_start_packet_command(struct ide_drive *drive)
-{
-	/* select drive */
-	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
-	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
-
-	/* issue packet command */
-	outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (2048 & 0xFF));
-	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (2048 >> 8));
-	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
-
-	/* wait for completion */
-	return ide_cd_wait(drive);
-}
-
-/*
- * Continue sending a read request.
- */
-static int ide_start_read_continuation(struct ide_drive *drive, uint32_t frame)
-{
-	uint8_t cmd[12] = { 0 };
-
-	/* prepare read command */
-	cmd[0] = 0x28;
-	cmd[2] = (frame >> 24) & 0xFF;
-	cmd[3] = (frame >> 16) & 0xFF;
-	cmd[4] = (frame >> 8) & 0xFF;
-	cmd[5] = frame & 0xFF;
-	cmd[8] = 1;
-
-	/* issue read command */
-	outsw(HWIF(drive)->io_base, cmd, 6);
-
-	/* wait for completion */
-	return ide_cd_wait(drive);
-}
-
-/*
  * End a read request.
  */
 static int ide_end_read(struct ide_drive *drive, struct request *req)
@@ -123,12 +83,17 @@ static int ide_end_read(struct ide_drive *drive, struct request *req)
 }
 
 /*
- * Do read/write in PIO mode.
+ * Continue sending a read request.
  */
-static int ide_do_rw_cdrom_pio(struct ide_drive *drive, struct request *req, uint32_t sector)
+static int ide_start_read_continuation(struct ide_drive *drive, struct request *req)
 {
-	uint32_t nr_sectors = req->nr_sectors, frame, nr_frames, nskip;
+	uint32_t sector, nr_sectors, nskip, frame, nr_frames;
+	uint8_t cmd[12] = { 0 };
 	int ret;
+
+	/* get sector */
+	sector = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
+	nr_sectors = req->nr_sectors;
 
 	/* request must start on a cdrom block boundary */
 	nskip = sector % SECTORS_PER_FRAME;
@@ -142,24 +107,54 @@ static int ide_do_rw_cdrom_pio(struct ide_drive *drive, struct request *req, uin
 	frame = sector / SECTORS_PER_FRAME;
 	nr_frames = (nr_sectors + SECTORS_PER_FRAME - 1) / SECTORS_PER_FRAME;
 
-	for (; nr_frames > 0; nr_frames--) {
-		/* start packet command */
-		ret = ide_start_packet_command(drive);
-		if (ret)
-			return ret;
+	/* limit to 64k - 1 */
+	if (nr_frames > 65535)
+		nr_frames = 65535;
 
-		/* send read command */
-		ret = ide_start_read_continuation(drive, frame);
-		if (ret)
-			return ret;
+	/* prepare read command */
+	cmd[0] = 0x28;
+	cmd[2] = (frame >> 24) & 0xFF;
+	cmd[3] = (frame >> 16) & 0xFF;
+	cmd[4] = (frame >> 8) & 0xFF;
+	cmd[5] = frame & 0xFF;
+	cmd[7] = nr_frames >> 8;
+	cmd[8] = nr_frames & 0xFF;
 
-		/* end read = get results */
-		ret = ide_end_read(drive, req);
-		if (ret)
-			return ret;
-	}
+	/* issue read command */
+	outsw(HWIF(drive)->io_base, cmd, 6);
 
-	return 0;
+	/* wait for completion */
+	ret = ide_cd_wait(drive);
+	if (ret)
+		return ret;
+
+	/* end read = get results */
+	return ide_end_read(drive, req);
+}
+
+/*
+ * Start sending a read request.
+ */
+static int ide_start_packet_command(struct ide_drive *drive, int xferlen, struct request *req)
+{
+	int ret;
+
+	/* select drive */
+	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
+	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
+
+	/* issue packet command */
+	outb(HWIF(drive)->io_base + ATA_REG_LBA1, xferlen & 0xFF);
+	outb(HWIF(drive)->io_base + ATA_REG_LBA2, xferlen >> 8);
+	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
+
+	/* wait for completion */
+	ret = ide_cd_wait(drive);
+	if (ret)
+		return ret;
+
+	/* continue read */
+	return ide_start_read_continuation(drive, req);
 }
 
 /*
@@ -182,5 +177,5 @@ int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block
 		req->rq_dev = mkdev(major(req->rq_dev), minor);
 	}
 
-	return ide_do_rw_cdrom_pio(drive, req, block);
+	return ide_start_packet_command(drive, 32768, req);
 }
