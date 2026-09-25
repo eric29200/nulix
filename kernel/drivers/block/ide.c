@@ -568,12 +568,51 @@ static void ide_irq_handler(struct registers *regs, void *dev_instance)
 	}
 
 	/* handle interrupt */
+	del_timer(&hwgroup->timer);
 	handler = hwgroup->handler;
 	hwgroup->handler = NULL;
 	handler(hwgroup->drive);
 
 	/* initiate next request */
 	if (hwgroup->handler == NULL)
+		ide_hwgroup_request(hwgroup);
+}
+
+/*
+ * Set irq handler.
+ */
+void ide_set_irq_handler(struct ide_drive *drive, ide_handler_t *handler, time_t timeout)
+{
+	struct ide_hwgroup *hwgroup = HWGROUP(drive);
+
+	/* set handler */
+	hwgroup->handler = handler;
+
+	/* add timer */
+	mod_timer(&hwgroup->timer, jiffies + timeout);
+}
+
+/*
+ * Timer expiration.
+ */
+static void ide_timer_expiry(void *arg)
+{
+	struct ide_hwgroup *hwgroup = arg;
+	struct ide_drive *drive = hwgroup->drive;
+
+	/* abort request */
+	if (hwgroup->handler) {
+		hwgroup->handler = NULL;
+
+		/* end dma request */
+		if (drive && drive->waiting_for_dma)
+			ide_dmaproc(drive, NULL, ide_dma_end);
+
+		printf("ide_timer_expiry: irq timeout on drive %s\n", drive ? drive->name : "NULL");
+	}
+
+	/* retry request */
+	if (!hwgroup->handler)
 		ide_hwgroup_request(hwgroup);
 }
 
@@ -605,6 +644,7 @@ static int ide_init_irq(struct ide_hwif *hwif)
 	/* init group */
 	memset(hwgroup, 0, sizeof(struct ide_hwgroup));
 	INIT_LIST_HEAD(&hwgroup->hwifs);
+	init_timer(&hwgroup->timer, ide_timer_expiry, hwgroup, 0);
 
 	/* request irq */
 	ret = request_irq(hwif->irq, ide_irq_handler, SA_SHIRQ, hwif->name, hwgroup);

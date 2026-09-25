@@ -47,7 +47,7 @@ static void ide_hd_read_irq_handler(struct ide_drive *drive)
 	}
 
 	/* or continue request */
-	drive->hwif->hwgroup->handler = &ide_hd_read_irq_handler;
+	ide_set_irq_handler(drive, &ide_hd_read_irq_handler, TIMEOUT_WAIT_CMD);
 }
 
 /*
@@ -87,7 +87,7 @@ static void ide_hd_write_irq_handler(struct ide_drive *drive)
 	}
 
 	/* or continue request = write next data */
-	drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
+	ide_set_irq_handler(drive, &ide_hd_write_irq_handler, TIMEOUT_WAIT_CMD);
 	ide_output_data(drive, req);
 }
 
@@ -116,7 +116,7 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 			return 0;
 
 		/* or use pio mode */
-		drive->hwif->hwgroup->handler = &ide_hd_read_irq_handler;
+		ide_set_irq_handler(drive, &ide_hd_read_irq_handler, TIMEOUT_WAIT_CMD);
 		outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
 		return 0;
 	}
@@ -133,7 +133,7 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 	}
 
 	/* write first sector */
-	drive->hwif->hwgroup->handler = &ide_hd_write_irq_handler;
+	ide_set_irq_handler(drive, &ide_hd_write_irq_handler, TIMEOUT_WAIT_CMD);
 	ide_output_data(drive, req);
 
 	return 0;

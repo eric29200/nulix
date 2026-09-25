@@ -169,13 +169,14 @@ ide_dma_rw:
 			outb(dma_base + 2, inb(dma_base + 2) | 6);
 			outl(dma_base + 4, __pa(HWIF(drive)->dma_table));
 			outb(dma_base, reading);
+			drive->waiting_for_dma = 1;
 
 			/* not a disk : specific commands and interrupt handlers */
 			if (drive->media != IDE_DISK)
 				return 0;
 
 			/* issue command */
-			HWGROUP(drive)->handler = &dma_irq_handler;
+			ide_set_irq_handler(drive, &dma_irq_handler, TIMEOUT_WAIT_CMD);
 			outb(HWIF(drive)->io_base + ATA_REG_COMMAND, reading ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
 			goto ide_dma_begin;
 		case ide_dma_begin:
@@ -184,6 +185,7 @@ ide_dma_begin:
 			return 0;
 		case ide_dma_end:
 			/* stop dma */
+			drive->waiting_for_dma = 0;
 			outb(dma_base, inb(dma_base) & ~1);
 
 			/* get status */

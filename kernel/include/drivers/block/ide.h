@@ -5,6 +5,7 @@
 #include <drivers/block/blk_dev.h>
 #include <drivers/pci/pci.h>
 #include <lib/scatterlist.h>
+#include <proc/timer.h>
 #include <fs/fs.h>
 #include <stddef.h>
 
@@ -13,6 +14,7 @@
 
 #define TIMEOUT_WAIT_READY		(3 * HZ / 100)
 #define TIMEOUT_WAIT_DRQ		(5 * HZ / 100)
+#define TIMEOUT_WAIT_CMD		(10 * HZ)
 
 #define MAX_HWIFS			4
 #define MAX_DRIVES			2
@@ -195,6 +197,7 @@ struct ide_drive {
 	uint8_t				master:1;
 	uint8_t				io_32bit:1;
 	uint8_t				using_dma:1;
+	uint8_t				waiting_for_dma:1;
 	uint8_t				media;
 	struct hd_driveid *		id;
 	struct partition *		part;
@@ -235,6 +238,7 @@ struct ide_hwgroup {
 	struct ide_drive *		drive;
 	struct request *		req;
 	ide_handler_t *			handler;
+	struct timer_event		timer;
 };
 
 /*
@@ -268,5 +272,6 @@ int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t tim
 void ide_input_data(struct ide_drive *drive, struct request *req);
 void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len);
 void ide_output_data(struct ide_drive *drive, struct request *req);
+void ide_set_irq_handler(struct ide_drive *drive, ide_handler_t *handler, time_t timeout);
 
 #endif

@@ -103,7 +103,7 @@ static void ide_cd_read_irq_handler(struct ide_drive *drive)
 	}
 
 	/* continue request */
-	drive->hwif->hwgroup->handler = &ide_cd_read_irq_handler;
+	ide_set_irq_handler(drive, &ide_cd_read_irq_handler, TIMEOUT_WAIT_CMD);
 }
 
 /*
@@ -150,7 +150,7 @@ static void ide_cd_start_read_continuation(struct ide_drive *drive)
 		return;
 
 	/* issue read command */
-	HWGROUP(drive)->handler = &ide_cd_read_irq_handler;
+	ide_set_irq_handler(drive, &ide_cd_read_irq_handler, TIMEOUT_WAIT_CMD);
 	outsw(HWIF(drive)->io_base, cmd, 6);
 
 	/* begin dma */
