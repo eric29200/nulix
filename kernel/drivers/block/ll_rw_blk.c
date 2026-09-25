@@ -9,12 +9,26 @@
 /* block devices */
 struct blk_dev blk_dev[MAX_BLKDEV];
 static long ro_bits[MAX_BLKDEV][8] = { 0 };
-size_t *blk_size[MAX_BLKDEV];
-size_t *blksize_size[MAX_BLKDEV];
+size_t *blk_size[MAX_BLKDEV] = { NULL, };
+size_t *blksize_size[MAX_BLKDEV] = { NULL, };
+size_t *hardsect_size[MAX_BLKDEV] = { NULL, };
 
 /* requests */
 static struct request all_requests[NR_REQUEST];
 static DECLARE_WAIT_QUEUE_HEAD(wait_for_request);
+
+/*
+ * Get hard sector size.
+ */
+int get_hardsect_size(dev_t dev)
+{
+	int major = major(dev), minor = minor(dev);
+
+	if (hardsect_size[major] && hardsect_size[major][minor])
+		return hardsect_size[major][minor];
+
+	return 512;
+}
 
 /*
  * Is a device read only ?
@@ -218,12 +232,11 @@ static void make_request(int rw, struct buffer_head *bh)
  */
 void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 {
-	uint32_t major, minor, correct_size, i;
+	uint32_t major, correct_size, i;
 	struct blk_dev *dev = NULL;
 
 	/* get block device */
 	major = major(bhs[0]->b_dev);
-	minor = minor(bhs[0]->b_dev);
 	if (major < MAX_BLKDEV)
 		dev = &blk_dev[major];
 
@@ -234,13 +247,11 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 	}
 
 	/* get correct size */
-	correct_size = BLOCK_SIZE;
-	if (blksize_size[major] && blksize_size[major][minor])
-		correct_size = blksize_size[major][minor];
+	correct_size = get_hardsect_size(bhs[0]->b_dev);
 
 	/* check buffers size */
 	for (i = 0; i < nr_bhs; i++) {
-		if (bhs[i] && bhs[i]->b_size != correct_size) {
+		if (bhs[i]->b_size % correct_size) {
 			printf("ll_rw_block: only %d blocks implemented\n", correct_size);
 			goto err;
 		}

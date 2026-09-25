@@ -126,3 +126,40 @@ int generic_block_write(struct file *filp, const char *buf, size_t count, off_t 
 
 	return count - left;
 }
+
+/*
+ * Generic block device ioctl.
+ */
+int blk_ioctl(dev_t dev, int request, unsigned long arg)
+{
+	int val;
+
+	if (!dev)
+		return -EINVAL;
+
+	switch (request) {
+		case BLKROGET:
+		 	*((int *) arg) = is_read_only(dev) != 0;
+			break;
+		case BLKBSZGET:
+			val = BLOCK_SIZE;
+			if (blksize_size[major(dev)])
+				val = blksize_size[major(dev)][minor(dev)];
+			*((int *) arg) = val;
+			break;
+		case BLKBSZSET:
+			if (!dev || !arg)
+				return -EINVAL;
+			if (arg > PAGE_SIZE || arg < 512 || (arg & (arg - 1)))
+				return -EINVAL;
+			set_blocksize(dev, arg);
+			break;
+		case BLKSSZGET:
+		 	*((uint32_t *) arg) = get_hardsect_size(dev);
+			break;
+		default:
+			return -EINVAL;
+	}
+
+	return 0;
+}

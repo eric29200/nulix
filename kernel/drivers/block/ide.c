@@ -437,14 +437,13 @@ static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsign
 		case BLKGETSIZE64:
 			*((uint64_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects * blksize_size[major(dev)][minor(dev)];
 			break;
-		case BLKSSZGET:
-		 	*((uint32_t *) arg) = blksize_size[major(dev)][minor(dev)];
-			break;
-		case BLKROGET:
-		 	*((int *) arg) = is_read_only(dev);
-			break;
 		case BLKDISCARDZEROES:
 			break;
+		case BLKROGET:
+		case BLKBSZGET:
+		case BLKBSZSET:
+		case BLKSSZGET:
+			return blk_ioctl(inode->i_rdev, request, arg);
 		default:
 			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) dev);
 			break;

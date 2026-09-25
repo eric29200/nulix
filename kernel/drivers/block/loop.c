@@ -489,6 +489,10 @@ static int lo_ioctl(struct inode *inode, struct file *filp, int request, unsigne
 				return -ENXIO;
 			*((uint64_t *) arg) = loop_sizes[lo->lo_number] * BLOCK_SIZE;
 			break;
+		case BLKBSZGET:
+		case BLKBSZSET:
+		case BLKSSZGET:
+			return blk_ioctl(inode->i_rdev, request, arg);
 		default:
 			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) inode->i_rdev);
 			return -EINVAL;

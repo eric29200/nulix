@@ -47,9 +47,12 @@ struct blk_dev {
 extern struct blk_dev blk_dev[MAX_BLKDEV];
 extern size_t *blk_size[MAX_BLKDEV];
 extern size_t *blksize_size[MAX_BLKDEV];
+extern size_t *hardsect_size[MAX_BLKDEV];
 
+int get_hardsect_size(dev_t dev);
 int is_read_only(dev_t dev);
 void set_device_ro(dev_t dev, int flag);
+int blk_ioctl(dev_t dev, int request, unsigned long arg);
 void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[]);
 void execute_block_requests();
 void end_request(struct request *req);
