@@ -121,11 +121,7 @@ found:
  */
 static struct request *get_request_wait(dev_t dev)
 {
-	DECLARE_WAITQUEUE(wait, current);
 	struct request *req = NULL;
-
-	/* add to wait queue */
-	add_wait_queue(&wait_for_request, &wait);
 
 	for (;;) {
 		/* get a request */
@@ -139,9 +135,6 @@ static struct request *get_request_wait(dev_t dev)
 		/* wait */
 		sleep_on(&wait_for_request);
 	}
-
-	/* remove from wait queue */
-	remove_wait_queue(&wait);
 
 	return req;
 }

@@ -1,6 +1,5 @@
 #include <drivers/block/ide.h>
 #include <drivers/block/blk_dev.h>
-#include <mm/highmem.h>
 #include <drivers/pci/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
@@ -14,7 +13,6 @@
 static struct ide_hwif ide_hwifs[MAX_HWIFS] = { 0 };
 static uint8_t ide_hwif_to_major[MAX_HWIFS] = { DEV_IDE0_MAJOR, DEV_IDE1_MAJOR, DEV_IDE2_MAJOR, DEV_IDE3_MAJOR };
 static uint16_t default_io_base[MAX_HWIFS] = { 0x1F0, 0x170, 0x1E8, 0x168 };
-static uint8_t default_irqs[MAX_HWIFS] = { 14, 15, 11, 10 };
 
 /*
  * Get an IDE drive.
@@ -44,194 +42,51 @@ static struct ide_drive *ide_get_drive(dev_t dev)
 }
 
 /*
- * Read data from a drive.
+ * Handle a read/write request.
  */
-void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len)
-{
-	if (drive->io_32bit)
-		insl(HWIF(drive)->io_base + ATA_REG_DATA, buf, len / 4);
-	else
-		insw(HWIF(drive)->io_base + ATA_REG_DATA, buf, len / 2);
-}
-
-/*
- * Read data from a drive.
- */
-void ide_input_data(struct ide_drive *drive, struct request *req)
-{
-	void *buf;
-
-	buf = bh_kmap(req->bh) + req->bh_offset;
-	if (drive->io_32bit)
-		insl(HWIF(drive)->io_base + ATA_REG_DATA, buf, 128);
-	else
-		insw(HWIF(drive)->io_base + ATA_REG_DATA, buf, 256);
-	bh_kunmap(req->bh);
-}
-
-/*
- * Write data to a drive.
- */
-void ide_output_data(struct ide_drive *drive, struct request *req)
-{
-	void *buf;
-
-	buf = bh_kmap(req->bh) + req->bh_offset;
-	if (drive->io_32bit)
-		outsl(HWIF(drive)->io_base + ATA_REG_DATA, buf, 128);
-	else
-		outsw(HWIF(drive)->io_base + ATA_REG_DATA, buf, 256);
-	bh_kunmap(req->bh);
-}
-
-/*
- * End a request.
- */
-void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate)
-{
-	struct request *req = hwgroup->req;
-
-	if (uptodate)
-		end_request(req);
-
-	hwgroup->req = NULL;
-}
-
-/*
- * Wait for 400ns.
- */
-static void ide_400ns_delay(struct ide_drive *drive)
-{
-	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
-	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
-	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
-	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
-}
-
-/*
- * Wait for a drive status.
- */
-int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t timeout)
-{
-	uint8_t stat;
-
-	/* wait 400 ns*/
-	ide_400ns_delay(drive);
-
-	/* wait for busy drive */
-	timeout += jiffies;
-	for (;;) {
-		/* drive not busy */
-		stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
-		if (!(stat & ATA_SR_BSY))
-			break;
-
-		/* timeout */
-		if (jiffies > timeout) {
-			printf("ide_wait_stat: timeout on drive %s, status = 0x%x\n", drive->name, stat);
-			return 1;
-		}
-	}
-
-	/* wait 400 ns*/
-	ide_400ns_delay(drive);
-
-	/* check status */
-	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
-	if (ATA_OK_STAT(stat, good, bad))
-		return 0;
-
-	printf("ide_wait_stat: bad status on drive %s, status = 0x%x\n", drive->name, stat);
-	return 1;
-}
-
-/*
- * Handle a request.
- */
-static void ide_request(struct ide_hwif *hwif, struct request *req)
+static void ide_request(struct ide_hwif *hwif)
 {
 	struct ide_drive *drive;
-	uint32_t block;
+	struct request *req;
 	int ret;
+
+repeat:
+	/* get next request */
+	req = blk_dev[hwif->major].current_request;
+	if (!req)
+		return;
+
+	/* remove it from queue */
+	blk_dev[hwif->major].current_request = req->next;
 
 	/* get ide drive */
 	drive = ide_get_drive(req->rq_dev);
 	if (!drive) {
 		printf("ide_request: can't find device 0x%x\n", req->rq_dev);
-		goto kill_req;
+		goto next;
 	}
-
-	/* select drive */
-	hwif->hwgroup->drive = drive;
-	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
-	if (ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_DRQ, TIMEOUT_WAIT_READY)) {
-		printf("ide_request: drive %s not ready for command\n", drive->name);
-		return;
-	}
-
-	/* compute block */
-	block = drive->part[minor(req->rq_dev) & PARTITION_MINOR_MASK].start_sect + req->sector;
 
 	/* handle request */
 	switch (drive->media) {
 		case IDE_DISK:
-			ret = ide_do_rw_disk(drive, req, block);
+			ret = ide_do_rw_disk(drive, req);
 			break;
 		case IDE_CDROM:
-			ret = ide_do_rw_cdrom(drive, req, block);
+			ret = ide_do_rw_cdrom(drive, req);
 			break;
 		default:
 			ret = -EIO;
-			goto kill_req;
-	}
-
-	/* handle error */
-	if (ret) {
-		printf("ide_request: error on request (cmd = %x, sector = %ld)\n", req->cmd, req->sector);
-		goto kill_req;
-	}
-
-	return;
-kill_req:
-	ide_end_request(hwif->hwgroup, 0);
-}
-
-/*
- * Handle a request.
- */
-static void ide_hwgroup_request(struct ide_hwgroup *hwgroup)
-{
-	struct ide_hwif *hwif = hwgroup->hwif;
-	struct request *req = hwgroup->req;
-	struct list_head *pos;
-
-	/* request until group is busy */
-	while (!hwgroup->handler) {
-		/* find a request to handle */
-		if (!req) {
-			list_for_each(pos, &hwgroup->hwifs) {
-				hwif = list_entry(pos, struct ide_hwif, list);
-
-				/* get next request */
-				req = blk_dev[hwif->major].current_request;
-				if (!req)
-					continue;
-
-				/* remove it from queue */
-				blk_dev[hwif->major].current_request = req->next;
-				break;
-			}
-		}
-
-		/* no request */
-		if (!req)
 			break;
-
-		/* do request */
-		hwgroup->hwif = hwif;
-		hwgroup->req = req;
-		ide_request(hwif, req);
 	}
+
+	/* print error */
+	if (ret)
+		printf("ide_request: error on request (cmd = %x, sector = %ld)\n", req->cmd, req->sector);
+
+next:
+	/* end this request */
+	end_request(req);
+	goto repeat;
 }
 
 /*
@@ -239,7 +94,7 @@ static void ide_hwgroup_request(struct ide_hwgroup *hwgroup)
  */
 static void do_ide0_request()
 {
-	ide_hwgroup_request(ide_hwifs[0].hwgroup);
+	ide_request(&ide_hwifs[0]);
 }
 
 /*
@@ -247,7 +102,7 @@ static void do_ide0_request()
  */
 static void do_ide1_request()
 {
-	ide_hwgroup_request(ide_hwifs[1].hwgroup);
+	ide_request(&ide_hwifs[1]);
 }
 
 /*
@@ -255,7 +110,7 @@ static void do_ide1_request()
  */
 static void do_ide2_request()
 {
-	ide_hwgroup_request(ide_hwifs[2].hwgroup);
+	ide_request(&ide_hwifs[2]);
 }
 
 /*
@@ -263,71 +118,39 @@ static void do_ide2_request()
  */
 static void do_ide3_request()
 {
-	ide_hwgroup_request(ide_hwifs[3].hwgroup);
+	ide_request(&ide_hwifs[3]);
 }
 
 /*
  * Identify a drive.
- *
- * Returns:	0  device was identified
- *		1  device timed-out (no response to identify request)
- *		2  device aborted the command (refused to identify itself)
  */
-static int do_identify(struct ide_drive *drive, uint8_t cmd, struct hd_driveid *id, int io32bit)
+static void do_identify(struct ide_drive *drive, uint8_t cmd)
 {
-	uint8_t status;
-
-	/* send identify command */
-	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, cmd);
-
-	/* wait until BSY is clear */
-	do {
-		status = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
-		if (!status)
-			return 1;
-	} while (status & ATA_SR_BSY);
-
-	/* check drive */
-	if (!(inb(HWIF(drive)->io_base + ATA_REG_STATUS) & ATA_SR_DRQ))
-		return 2;
+	uint8_t type;
 
 	/* read identity table */
-	if (io32bit)
-		insl(HWIF(drive)->io_base + ATA_REG_DATA, id, 128);
-	else
-		insw(HWIF(drive)->io_base + ATA_REG_DATA, id, 256);
+	insw(drive->io_base + ATA_REG_DATA, drive->id, 256);
 
-	return 0;
-}
+	/* identity ATAPI media type */
+	if (cmd == ATA_CMD_IDENTIFY_PACKET) {
+		type = (drive->id->config >> 8) & 0x1F;
 
-/*
- * Test if a drive support 32 bits mode.
- */
-static int test_io32bit(struct ide_drive *drive, int cmd)
-{
-	struct hd_driveid *ids;
-	int ret;
+		switch (type) {
+			case IDE_CDROM:
+				drive->media = type;
+				drive->present = 1;
+				break;
+			default:
+				printf("ide_identify: unknown type %d\n", type);
+				break;
+		}
 
-	/* allocate 2 identity tables */
-	ids = (struct hd_driveid *) kmalloc(sizeof(struct hd_driveid) * 2);
-	if (!ids)
-		return 0;
+		return;
+	}
 
-	/* read first table with 16 bits */
-	ret = do_identify(drive, cmd, &ids[0], 0);
-	if (ret)
-		goto out;
-
-	/* read second table with 32 bits */
-	ret = do_identify(drive, cmd, &ids[1], 1);
-	if (ret)
-		goto out;
-
-	/* compare results */
-	ret = memcmp(&ids[0], &ids[1], sizeof(struct hd_driveid));
-out:
-	kfree(ids);
-	return ret;
+	/* non ATAP = disk */
+	drive->media = IDE_DISK;
+	drive->present = 1;
 }
 
 /*
@@ -339,41 +162,24 @@ out:
  */
 static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 {
-	uint8_t type;
-	int ret;
+	uint8_t status;
 
-	/* identify */
-	ret = do_identify(drive, cmd, drive->id, 0);
-	if (ret)
-		return ret;
+	/* send identify command */
+	outb(drive->io_base + ATA_REG_COMMAND, cmd);
 
-	/* identity ATAPI media type */
-	if (cmd == ATA_CMD_IDENTIFY_PACKET) {
-		type = (drive->id->config >> 8) & 0x1F;
+	/* wait until BSY is clear */
+	do {
+		status = inb(drive->io_base + ATA_REG_STATUS);
+		if (!status)
+			return 1;
+	} while (status & ATA_SR_BSY);
 
-		switch (type) {
-			case IDE_CDROM:
-				/* init drive */
-				ret = ide_setup_cdrom(drive);
-				if (ret)
-					return ret;
+	/* check drive */
+	if (!(inb(drive->io_base + ATA_REG_STATUS) & ATA_SR_DRQ))
+		return 2;
 
-				drive->media = type;
-				drive->present = 1;
-				break;
-			default:
-				printf("ide_identify: unknown type %d\n", type);
-				break;
-		}
-	} else {
-		/* non ATAPI = disk */
-		drive->media = IDE_DISK;
-		drive->present = 1;
-	}
-
-	/* check dma and 32 bit mode */
-	drive->using_dma = (drive->id->capability & 1) ? 1 : 0;
-	drive->io_32bit = test_io32bit(drive, cmd) == 0 ? 1 : 0;
+	/* read identified drive data */
+	do_identify(drive, cmd);
 
 	return 0;
 }
@@ -392,20 +198,25 @@ static int ide_identify(struct ide_drive *drive)
 		return -ENOMEM;
 
 	/* select drive */
-	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, select);
-	if (inb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL) != select)
+	outb(drive->io_base + ATA_REG_HDDEVSEL, select);
+	if (inb(drive->io_base + ATA_REG_HDDEVSEL) != select)
 		goto err;
 
 	/* identify drive */
-	outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, 0);
-	outb(HWIF(drive)->io_base + ATA_REG_LBA0, 0);
-	outb(HWIF(drive)->io_base + ATA_REG_LBA1, 0);
-	outb(HWIF(drive)->io_base + ATA_REG_LBA2, 0);
+	outb(drive->io_base + ATA_REG_SECCOUNT0, 0);
+	outb(drive->io_base + ATA_REG_LBA0, 0);
+	outb(drive->io_base + ATA_REG_LBA1, 0);
+	outb(drive->io_base + ATA_REG_LBA2, 0);
 
 	/* try to identify drive (ATA or ATAPI) */
 	ret = try_to_identify(drive, ATA_CMD_IDENTIFY);
 	if (ret >= 2)
 		ret = try_to_identify(drive, ATA_CMD_IDENTIFY_PACKET);
+	if (ret)
+		goto err;
+
+	/* setup dma */
+	ret = ide_setup_dma(drive);
 	if (ret)
 		goto err;
 
@@ -435,15 +246,16 @@ static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsign
 			*((uint32_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects;
 			break;
 		case BLKGETSIZE64:
-			*((uint64_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects * blksize_size[major(dev)][minor(dev)];
+			*((uint64_t *) arg) = drive->part[minor(dev) & PARTITION_MINOR_MASK].nr_sects * ATA_SECTOR_SIZE;
+			break;
+		case BLKSSZGET:
+		 	*((uint32_t *) arg) = blksize_size[major(dev)][minor(dev)];
+			break;
+		case BLKROGET:
+		 	*((int *) arg) = is_read_only(dev);
 			break;
 		case BLKDISCARDZEROES:
 			break;
-		case BLKROGET:
-		case BLKBSZGET:
-		case BLKBSZSET:
-		case BLKSSZGET:
-			return blk_ioctl(inode->i_rdev, request, arg);
 		default:
 			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) dev);
 			break;
@@ -552,112 +364,6 @@ err_kmalloc_gd:
 	return;
 }
 
-/*
- * IRQ handler.
- */
-static void ide_irq_handler(struct registers *regs, void *dev_instance)
-{
-	struct ide_hwgroup *hwgroup = dev_instance;
-	struct ide_hwif *hwif = hwgroup->hwif;
-	ide_handler_t *handler;
-
-	/* unexpected irq */
-	if (regs->int_no != hwif->irq || !hwgroup->handler) {
-		inb(hwif->io_base + ATA_REG_STATUS);
-		return;
-	}
-
-	/* handle interrupt */
-	del_timer(&hwgroup->timer);
-	handler = hwgroup->handler;
-	hwgroup->handler = NULL;
-	handler(hwgroup->drive);
-
-	/* initiate next request */
-	if (hwgroup->handler == NULL)
-		ide_hwgroup_request(hwgroup);
-}
-
-/*
- * Set irq handler.
- */
-void ide_set_irq_handler(struct ide_drive *drive, ide_handler_t *handler, time_t timeout)
-{
-	struct ide_hwgroup *hwgroup = HWGROUP(drive);
-
-	/* set handler */
-	hwgroup->handler = handler;
-
-	/* add timer */
-	mod_timer(&hwgroup->timer, jiffies + timeout);
-}
-
-/*
- * Timer expiration.
- */
-static void ide_timer_expiry(void *arg)
-{
-	struct ide_hwgroup *hwgroup = arg;
-	struct ide_drive *drive = hwgroup->drive;
-
-	/* abort request */
-	if (hwgroup->handler) {
-		hwgroup->handler = NULL;
-
-		/* end dma request */
-		if (drive && drive->waiting_for_dma)
-			ide_dmaproc(drive, NULL, ide_dma_end);
-
-		printf("ide_timer_expiry: irq timeout on drive %s\n", drive ? drive->name : "NULL");
-	}
-
-	/* retry request */
-	if (!hwgroup->handler)
-		ide_hwgroup_request(hwgroup);
-}
-
-/*
- * Init irq.
- */
-static int ide_init_irq(struct ide_hwif *hwif)
-{
-	struct ide_hwgroup *hwgroup;
-	struct ide_hwif *h;
-	int ret, i;
-
-	/* check if another interface shae irq */
-	for (i = 0; i < MAX_HWIFS; i++) {
-		h = &ide_hwifs[i];
-
-		if (h->hwgroup && hwif->irq == h->irq) {
-			hwif->sharing_irq = h->sharing_irq = 1;
-			hwgroup = h->hwgroup;
-			goto out;
-		}
-	}
-
-	/* allocate a new group */
-	hwgroup = (struct ide_hwgroup *) kmalloc(sizeof(struct ide_hwgroup));
-	if (!hwgroup)
-		return -ENOMEM;
-
-	/* init group */
-	memset(hwgroup, 0, sizeof(struct ide_hwgroup));
-	INIT_LIST_HEAD(&hwgroup->hwifs);
-	init_timer(&hwgroup->timer, ide_timer_expiry, hwgroup, 0);
-
-	/* request irq */
-	ret = request_irq(hwif->irq, ide_irq_handler, SA_SHIRQ, hwif->name, hwgroup);
-	if (ret) {
-		kfree(hwgroup);
-		return ret;
-	}
-
-out:
-	hwif->hwgroup = hwgroup;
-	list_add_tail(&hwif->list, &hwgroup->hwifs);
-	return 0;
-}
 
 /*
  * Init an IDE interface.
@@ -671,20 +377,12 @@ static int hwif_init(int h)
 	if (!hwif->present)
 		return 0;
 
-	/* no irq */
-	if (!hwif->irq) {
-		printf("hwif_init: %s disabled, no IRQ\n", hwif->name);
-		hwif->present = 0;
-		return -EIO;
-	}
-
 	/* register block device */
 	ret = register_blkdev(hwif->major, hwif->name, &ide_fops);
 	if (ret)
 		return ret;
 
 	/* allocate block size array */
-	ret = -ENOMEM;
 	blksize_size[hwif->major] = kmalloc(MAX_DRIVES * NR_PARTITIONS * sizeof(size_t));
 	if (!blksize_size[hwif->major])
 		goto err_blksize_size;
@@ -714,22 +412,15 @@ static int hwif_init(int h)
 			break;
 	}
 
-	/* init irq */
-	ret = ide_init_irq(hwif);
-	if (ret)
-		goto err_irq;
-
 	/* init gendisk */
 	init_gendisk(hwif);
 
 	return 0;
-err_irq:
-	kfree(blk_size[hwif->major]);
 err_blk_size:
 	kfree(blksize_size[hwif->major]);
 err_blksize_size:
 	unregister_blkdev(hwif->major, hwif->name);
-	return ret;
+	return -ENOMEM;
 }
 
 /*
@@ -737,9 +428,7 @@ err_blksize_size:
  */
 static int ide_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 {
-	struct ide_hwif *hwif;
-	uint32_t dma_base;
-	int ret, i;
+	int i;
 
 	/* unused device id */
 	UNUSED(id);
@@ -748,23 +437,9 @@ static int ide_pci_probe(struct pci_device *pci_dev, struct pci_device_id *id)
 	pci_enable_device(pci_dev);
 	pci_set_master(pci_dev);
 
-	/* get dma base address */
-	dma_base = pci_dev->bar[4] & PCI_BASE_ADDRESS_IO_MASK;
-
-	/* init interfaces */
-	for (i = 0; i < MAX_HWIFS; i++) {
-		hwif = &ide_hwifs[i];
-
-		/* set pci device */
-		hwif->pci_dev = pci_dev;
-
-		/* setup dma */
-		if (dma_base) {
-			ret = ide_setup_dma(hwif, dma_base + i * 8);
-			if (ret)
-				return ret;
-		}
-	}
+	/* set pci device  */
+	for (i = 0; i < MAX_HWIFS; i++)
+		ide_hwifs[i].pci_dev = pci_dev;
 
 	return 0;
 }
@@ -811,21 +486,18 @@ static void init_hwif_data(int index)
 
 	/* init interface */
 	hwif->index = index;
-	hwif->io_base = default_io_base[index];
 	hwif->major = ide_hwif_to_major[index];
-	hwif->irq = default_irqs[index];
 	hwif->name[0] = 'i';
 	hwif->name[1] = 'd';
 	hwif->name[2] = 'e';
 	hwif->name[3] = '0' + index;
-	INIT_LIST_HEAD(&hwif->list);
 
 	/* init drives */
 	for (unit = 0; unit < MAX_DRIVES; unit++) {
 		drive = &hwif->drives[unit];
 		drive->master = unit == 0 ? 1 : 0;
-		drive->io_32bit = 0;
 		drive->hwif = hwif;
+		drive->io_base = default_io_base[index];
 		drive->name[0] = 'h';
 		drive->name[1] = 'd';
 		drive->name[2] = 'a' + (index * MAX_DRIVES) + unit;

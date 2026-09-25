@@ -5,22 +5,20 @@
 #include <drivers/block/blk_dev.h>
 #include <drivers/pci/pci.h>
 #include <lib/scatterlist.h>
-#include <proc/timer.h>
 #include <fs/fs.h>
 #include <stddef.h>
 
 #define PRD_BYTES       		8
 #define PRD_ENTRIES     		(PAGE_SIZE / (2 * PRD_BYTES))
 
-#define TIMEOUT_WAIT_READY		(3 * HZ / 100)
-#define TIMEOUT_WAIT_DRQ		(5 * HZ / 100)
-#define TIMEOUT_WAIT_CMD		(10 * HZ)
-
 #define MAX_HWIFS			4
 #define MAX_DRIVES			2
 
 #define IDE_DISK			0x20
 #define IDE_CDROM			0x05
+
+#define ATA_SECTOR_SIZE			512
+#define ATAPI_SECTOR_SIZE		2048
 
 #define ATA_PRIMARY_IO			0x1F0
 #define ATA_SECONDARY_IO		0x170
@@ -73,11 +71,6 @@
 #define ATA_ER_ABRT			0x04
 #define ATA_ER_TK0NF			0x02
 #define ATA_ER_AMNF			0x01
-
-#define ATA_OK_STAT(stat, good, bad)	(((stat) & ((good) | (bad))) == (good))
-
-#define HWIF(drive)			((struct ide_hwif *) ((drive)->hwif))
-#define HWGROUP(drive)			((struct ide_hwgroup *) (HWIF(drive)->hwgroup))
 
 /*
  * IDE identification.
@@ -195,83 +188,34 @@ struct ide_drive {
 	char 				name[4];
 	uint8_t				present:1;
 	uint8_t				master:1;
-	uint8_t				io_32bit:1;
-	uint8_t				using_dma:1;
-	uint8_t				waiting_for_dma:1;
 	uint8_t				media;
+	uint16_t			io_base;
 	struct hd_driveid *		id;
 	struct partition *		part;
 	struct ide_hwif *		hwif;
-	void *				driver_data;
+	uint32_t *			dma_table;
+	struct scatterlist *		sg_table;
 };
 
 /*
  * IDE interface.
  */
 struct ide_hwif {
-	struct ide_hwgroup *		hwgroup;
-	uint16_t			io_base;
 	struct ide_drive		drives[MAX_DRIVES];
 	uint8_t				major;
-	uint8_t				irq;
 	char 				name[5];
 	uint8_t				index;
 	struct gendisk *		gd;
 	struct pci_device *		pci_dev;
 	uint32_t			dma_base;
-	uint32_t *			dma_table;
-	struct scatterlist *		sg_table;
-	struct list_head		list;
 	uint8_t				present:1;
-	uint8_t				sharing_irq:1;
 };
-
-/* irq handler */
-typedef void (ide_handler_t)(struct ide_drive *);
-
-/*
- * IDE group of interfaces sharing same irq.
- */
-struct ide_hwgroup {
-	struct list_head 		hwifs;
-	struct ide_hwif *		hwif;
-	struct ide_drive *		drive;
-	struct request *		req;
-	ide_handler_t *			handler;
-	struct timer_event		timer;
-};
-
-/*
- * Cdrom informations.
- */
-struct cdrom_info {
-	uint8_t				dma;
-};
-
-/*
- * DMA actions.
- */
-typedef enum {
-	ide_dma_on,
-	ide_dma_off,
-	ide_dma_begin,
-	ide_dma_end,
-	ide_dma_read,
-	ide_dma_write
-} ide_dma_action_t;
 
 /* init functions */
 int init_ide();
-int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base);
-int ide_setup_cdrom(struct ide_drive *drive);
-int ide_dmaproc(struct ide_drive *drive, struct request *req, ide_dma_action_t func);
-int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block);
-int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block);
-void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate);
-int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t timeout);
-void ide_input_data(struct ide_drive *drive, struct request *req);
-void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len);
-void ide_output_data(struct ide_drive *drive, struct request *req);
-void ide_set_irq_handler(struct ide_drive *drive, ide_handler_t *handler, time_t timeout);
+int ide_setup_dma(struct ide_drive *drive);
+int ide_dmaproc(struct ide_drive *drive, struct request *req);
+int ide_do_rw_disk(struct ide_drive *drive, struct request *req);
+int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req);
 
 #endif

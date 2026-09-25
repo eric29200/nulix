@@ -256,7 +256,6 @@ struct buffer_head *create_bounce(int rw, struct buffer_head *bh_orig)
 	bh->b_rsector = bh_orig->b_rsector;
 	bh->b_private = (void *) bh_orig;
 	set_bh_page(bh, page, 0);
-	init_waitqueue_head(&bh->b_wait);
 
 	if (rw == WRITE) {
 		bh->b_end_io = bounce_end_io_write;

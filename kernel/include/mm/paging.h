@@ -77,7 +77,7 @@ typedef uint32_t pte_t;
 #define ClearPageUptodate(page)		clear_bit(&(page)->flags, PG_uptodate)
 #define SetPageUptodate(page)		set_bit(&(page)->flags, PG_uptodate)
 #define PageLocked(page)		test_bit(&(page)->flags, PG_lock)
-#define UnlockPage(page)		unlock_page(page)
+#define UnlockPage(page)		clear_bit(&(page)->flags, PG_lock);
 #define LockPage(page)			set_bit(&(page)->flags, PG_lock)
 #define PageSwapCache(page)		test_bit(&(page)->flags, PG_swap_cache)
 #define SetPageSwapCache(page)		set_bit(&(page)->flags, PG_swap_cache)

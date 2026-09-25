@@ -6,20 +6,20 @@
 /*
  * Setup dma.
  */
-int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base)
+int ide_setup_dma(struct ide_drive *drive)
 {
 	/* set dma base address */
-	hwif->dma_base = dma_base;
+	drive->hwif->dma_base = drive->hwif->pci_dev->bar[4] & PCI_BASE_ADDRESS_IO_MASK;
 
 	/* allocate scatter list */
-	hwif->sg_table = (struct scatterlist *) kmalloc(sizeof(struct scatterlist) * PRD_ENTRIES);
-	if (!hwif->sg_table)
+	drive->sg_table = (struct scatterlist *) kmalloc(sizeof(struct scatterlist) * PRD_ENTRIES);
+	if (!drive->sg_table)
 		return -ENOMEM;
 
 	/* allocate dma table */
-	hwif->dma_table = get_free_pages(get_order(PRD_ENTRIES * PRD_BYTES));
-	if (!hwif->dma_table) {
-		kfree(hwif->sg_table);
+	drive->dma_table = get_free_pages(get_order(PRD_ENTRIES * PRD_BYTES));
+	if (!drive->dma_table) {
+		kfree(drive->sg_table);
 		return -ENOMEM;
 	}
 
@@ -29,9 +29,9 @@ int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base)
 /*
  * Build a scatter list with for dma.
  */
-static int ide_build_sglist(struct ide_hwif *hwif, struct request *req)
+static int ide_build_sglist(struct ide_drive *drive, struct request *req)
 {
-	struct scatterlist *sg = hwif->sg_table;
+	struct scatterlist *sg = drive->sg_table;
 	uint32_t last_data_end = ~0UL;
 	struct buffer_head *bh;
 	struct list_head *pos;
@@ -68,19 +68,19 @@ static int ide_build_sglist(struct ide_hwif *hwif, struct request *req)
 /*
  * Build dma table.
  */
-static int ide_build_dmatable(struct ide_hwif *hwif, struct request *req)
+static int ide_build_dmatable(struct ide_drive *drive, struct request *req)
 {
-	uint32_t *table = hwif->dma_table, cur_addr, cur_len, bcount;
+	uint32_t *table = drive->dma_table, cur_addr, cur_len, bcount;
 	struct scatterlist *sg;
 	int nents, count = 0;
 
 	/* build scatter list */
-	nents = ide_build_sglist(hwif, req);
+	nents = ide_build_sglist(drive, req);
 	if (!nents)
 		return 0;
 
 	/* build dma table, without crossing any 64kB boundaries */
-	for (sg = hwif->sg_table; sg->length && nents; sg++, nents--) {
+	for (sg = drive->sg_table; sg->length; sg++, nents--) {
 		cur_addr = __pa(sg->address);
 		cur_len = sg->length;
 
@@ -110,95 +110,24 @@ static int ide_build_dmatable(struct ide_hwif *hwif, struct request *req)
 }
 
 /*
- * Handle a dma interrupt.
- */
-static void dma_irq_handler(struct ide_drive *drive)
-{
-	struct ide_hwif *hwif = drive->hwif;
-	uint8_t stat, dma_stat;
-
-	/* stop dma */
-	outb(hwif->dma_base, inb(hwif->dma_base) & ~1);
-
-	/* get status */
-	dma_stat = ide_dmaproc(drive, NULL, ide_dma_end);
-	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
-
-	/* check status */
-	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_ERR | ATA_SR_DRQ)) {
-		printf("dma_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
-		return;
-	}
-
-	/* check dma status */
-	if (dma_stat) {
-		printf("dma_irq_handler: bad DMA status on drive %s : 0x%x\n", drive->name, dma_stat);
-		return;
-	}
-
-	/* end request */
-	ide_end_request(hwif->hwgroup, 1);
-}
-
-/*
  * Issue a DMA command.
  */
-int ide_dmaproc(struct ide_drive *drive, struct request *req, ide_dma_action_t func)
+int ide_dmaproc(struct ide_drive *drive, struct request *req)
 {
-	uint32_t dma_base = HWIF(drive)->dma_base;
-	uint8_t dma_stat;
-	int reading = 0;
+	uint32_t dma_base = drive->hwif->dma_base;
 
-	switch (func) {
-		case ide_dma_on:
-			drive->using_dma = 1;
-			return 0;
-		case ide_dma_off:
-			drive->using_dma = 0;
-			return 0;
-		case ide_dma_read:
-			reading = 8;
-			goto ide_dma_rw;
-		case ide_dma_write:
-ide_dma_rw:
-			/* build dma table */
-			if (!ide_build_dmatable(HWIF(drive), req))
-				return 1;
+	/* build dma table */
+	if (!ide_build_dmatable(drive, req))
+		return 1;
 
-			/* prepare DMA transfert */
-			outb(dma_base + 2, inb(dma_base + 2) | 6);
-			outl(dma_base + 4, __pa(HWIF(drive)->dma_table));
-			outb(dma_base, reading);
-			drive->waiting_for_dma = 1;
+	/* prepare DMA transfert */
+	outb(dma_base, 0);
+	outl(dma_base + 4, __pa(drive->dma_table));
+	outb(dma_base + 2, inb(dma_base + 2) | 6);
+	outb(dma_base, (req->cmd == READ ? 8 : 0) | 1);
 
-			/* not a disk : specific commands and interrupt handlers */
-			if (drive->media != IDE_DISK)
-				return 0;
+	/* issue command */
+	outb(drive->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
 
-			/* issue command */
-			ide_set_irq_handler(drive, &dma_irq_handler, TIMEOUT_WAIT_CMD);
-			outb(HWIF(drive)->io_base + ATA_REG_COMMAND, reading ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
-			goto ide_dma_begin;
-		case ide_dma_begin:
-ide_dma_begin:
-			outb(dma_base, inb(dma_base) | 1);
-			return 0;
-		case ide_dma_end:
-			/* stop dma */
-			drive->waiting_for_dma = 0;
-			outb(dma_base, inb(dma_base) & ~1);
-
-			/* get status */
-			dma_stat = inb(dma_base + 2);
-
-			/* clear intr & error bits */
-			outb(dma_base + 2, dma_stat | 6);
-
-			/* return error/success */
-			return (dma_stat & 7) != 4;
-		default:
-			printf("ide_dmaproc: unknown func %d\n", func);
-			return 1;
-
-	}
+	return 0;
 }
