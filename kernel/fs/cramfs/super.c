@@ -113,7 +113,7 @@ static struct super_block *cramfs_read_super(struct super_block *sb, const char 
 	/* check root offset */
 	root_offset = csb->root.offset << 2;
 	if (root_offset == 0)
-		printf("cramfs: empty filesystem");
+		printk("cramfs: empty filesystem");
 	else if (root_offset != sizeof(struct cramfs_super_block))
 		goto err_root_offset;
 
@@ -131,33 +131,33 @@ static struct super_block *cramfs_read_super(struct super_block *sb, const char 
 	return sb;
 err_root_inode:
 	if (!silent)
-		printf("[Cramfs] Can't read root inode\n");
+		printk("[Cramfs] Can't read root inode\n");
 	goto err_release_sb;
 err_root_offset:
 	if (!silent)
-		printf("[Cramfs] Bad root offset %lu\n", root_offset);
+		printk("[Cramfs] Bad root offset %lu\n", root_offset);
 	goto err_release_sb;
 err_root_mode:
 	if (!silent)
-		printf("[Cramfs] Root inode is not a directory\n");
+		printk("[Cramfs] Root inode is not a directory\n");
 	goto err_release_sb;
 err_features:
 	if (!silent)
-		printf("[Cramfs] Unsupported filesystem features\n");
+		printk("[Cramfs] Unsupported filesystem features\n");
 	goto err_release_sb;
 err_bad_signature:
 	if (!silent)
-		printf("[Cramfs] Bad signature\n");
+		printk("[Cramfs] Bad signature\n");
 	goto err_release_sb;
 err_bad_magic:
 	if (!silent)
-		printf("[Cramfs] Bad magic number\n");
+		printk("[Cramfs] Bad magic number\n");
 err_release_sb:
 	brelse(sbh);
 	goto err;
 err_bad_sb:
 	if (!silent)
-		printf("[Minix-fs] Can't read super block\n");
+		printk("[Minix-fs] Can't read super block\n");
 err:
 	sb->s_dev = 0;
 	return NULL;

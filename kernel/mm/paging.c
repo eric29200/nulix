@@ -27,7 +27,7 @@ void wait_on_page(struct page *page)
 	execute_block_requests();
 
 	if (PageLocked(page))
-		panic("wait_on_page: page still locked after execute_block_requests()\n");
+		panic("wait_on_page: page still locked after execute_block_requests()");
 }
 
 /*
@@ -576,7 +576,7 @@ good_area:
 	return;
 bad_area:
 	/* output message */
-	printf("Page fault at address=0x%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d (process %d - %s at 0x%x)\n",
+	printk("Page fault at address=0x%x | present=%d write-access=%d user-mode=%d reserved=%d instruction-fetch=%d (process %d - %s at 0x%x)\n",
 		fault_addr, present, write_access, user, reserved, id, current->pid, current->name, regs->eip);
 
 	/* user mode : exit process */
@@ -584,7 +584,7 @@ bad_area:
 		do_exit(SIGKILL);
 
 	/* otherwise panic */
-	panic("\n");
+	panic("");
 }
 
 /*

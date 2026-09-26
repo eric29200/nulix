@@ -63,7 +63,7 @@ static int create_missing_block(struct loop_device *lo, uint32_t block, size_t b
 
 	return 1;
 err:
-	printf("loop: cannot create missing block\n");
+	printk("loop: cannot create missing block\n");
 	return 0;
 }
 
@@ -196,7 +196,7 @@ repeat:
 	end_request(request, 1);
 	goto repeat;
 err:
-	printf("loop: error on request (cmd = 0x%x, sector = %ld)\n", request->cmd, request->sector);
+	printk("loop: error on request (cmd = 0x%x, sector = %ld)\n", request->cmd, request->sector);
 	end_request(request, 0);
 	goto repeat;
 }
@@ -240,7 +240,7 @@ static int loop_set_fd(struct loop_device *lo, dev_t dev, unsigned long arg)
 	} else if (S_ISREG(inode->i_mode)) {
 		/* inode must implement bmap */
 		if (!inode->i_op->bmap) {
-			printf("loop: device must implement bmap\n");
+			printk("loop: device must implement bmap\n");
 			goto out_fput;
 		}
 
@@ -494,7 +494,7 @@ static int lo_ioctl(struct inode *inode, struct file *filp, int request, unsigne
 		case BLKSSZGET:
 			return blk_ioctl(inode->i_rdev, request, arg);
 		default:
-			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) inode->i_rdev);
+			printk("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) inode->i_rdev);
 			return -EINVAL;
 	}
 

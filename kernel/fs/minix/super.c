@@ -129,15 +129,15 @@ static struct super_block *minix_read_super(struct super_block *sb, const char *
 	return sb;
 err_root_inode:
 	if (!silent)
-		printf("[Minix-fs] Can't read root inode\n");
+		printk("[Minix-fs] Can't read root inode\n");
 	goto err_release_map;
 err_map:
 	if (!silent)
-		printf("[Minix-fs] Can't read imap and zmap\n");
+		printk("[Minix-fs] Can't read imap and zmap\n");
 	goto err_release_map;
 err_no_map:
 	if (!silent)
-		printf("[Minix-fs] Can't allocate imap and zmap\n");
+		printk("[Minix-fs] Can't allocate imap and zmap\n");
 err_release_map:
 	if (sbi->s_imap) {
 		for (i = 0; i < sbi->s_imap_blocks; i++)
@@ -156,13 +156,13 @@ err_release_map:
 	goto err_release_sb;
 err_bad_magic:
 	if (!silent)
-		printf("[Minix-fs] Bad magic number\n");
+		printk("[Minix-fs] Bad magic number\n");
 err_release_sb:
 	brelse(sbi->s_sbh);
 	goto err;
 err_bad_sb:
 	if (!silent)
-		printf("[Minix-fs] Can't read super block\n");
+		printk("[Minix-fs] Can't read super block\n");
 err:
 	kfree(sbi);
 	sb->s_dev = 0;

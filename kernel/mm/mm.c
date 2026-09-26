@@ -15,7 +15,7 @@ void init_mem(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_end)
 	/* init paging */
 	ret = init_paging(kernel_start, kernel_end, mem_end);
 	if (ret)
-		panic("Cannot init paging\n");
+		panic("Cannot init paging");
 
 	/* init heap */
 	kheap_init();

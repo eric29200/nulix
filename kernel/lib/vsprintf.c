@@ -358,9 +358,9 @@ repeat:
 /*
  * Print a formatted string in a string.
  */
-int vsprintf(char *buf, const char *fmt, va_list args)
+int vsprintf(char *buf, const char *fmt, va_list ap)
 {
-	return vsnprintf(buf, -1, fmt, args);
+	return vsnprintf(buf, -1, fmt, ap);
 }
 
 /*
@@ -391,58 +391,4 @@ int sprintf(char *buf, const char *fmt, ...)
 	va_end(args);
 
 	return i;
-}
-
-static char __buf[1024];
-
-/*
- * Print a formatted string.
- */
-int vprintf(const char *fmt, va_list ap)
-{
-	int i, j;
-
-	/* print in tmp buf */
-	i = vsnprintf(__buf, sizeof(__buf), fmt, ap);
-
-	/* write tmp buf to serial line */
-	for (j = 0; j < i; j++)
-		write_serial(__buf[j]);
-
-	return i;
-}
-
-/*
- * Print a formatted string.
- */
-int printf(const char *fmt, ...)
-{
-	va_list args;
-	int ret;
-
-	/* print in tmp buf */
-	va_start(args, fmt);
-	ret = vprintf(fmt, args);
-	va_end(args);
-
-	return ret;
-}
-
-/*
- * Panic.
- */
-void panic(const char *fmt, ...)
-{
-	va_list args;
-
-	/* print panic */
-	printf("[PANIC] ");
-
-	/* print in tmp buf */
-	va_start(args, fmt);
-	vprintf(fmt, args);
-	va_end(args);
-
-	/* infinite loop */
-	for (;;);
 }

@@ -122,7 +122,7 @@ int minix_free_inode(struct inode *inode)
 
 	/* panic if inode is still used */
 	if (inode->i_count > 1)
-		panic("Trying to free inode %d with ref=%d\n", inode->i_ino, inode->i_count);
+		panic("Trying to free inode %d with ref=%d", inode->i_ino, inode->i_count);
 
 	/* update/clear inode bitmap */
 	bh = minix_sb(inode->i_sb)->s_imap[inode->i_ino >> 13];

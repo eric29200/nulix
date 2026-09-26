@@ -376,7 +376,7 @@ static int inet_shutdown(struct socket *sock, int how)
 {
 	UNUSED(sock);
 	UNUSED(how);
-	printf("inet_shutdown() not implemented\n");
+	printk("inet_shutdown() not implemented\n");
 	return 0;
 }
 

@@ -275,7 +275,7 @@ int tcp_rcv(struct sock *sk, struct sk_buff *skb)
 		case TCP_CLOSE:
 			return 1;
 		default:
-			printf("tcp_rcv_state_process: unknown socket state %d\n", sk->state);
+			printk("tcp_rcv_state_process: unknown socket state %d\n", sk->state);
 			break;
 	}
 

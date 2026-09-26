@@ -192,7 +192,7 @@ static void syscall_handler(struct registers *regs)
 
 	/* system call not handled */
 	if (syscall_nr >= SYSCALLS_NUM || syscalls[syscall_nr] == NULL) {
-		printf("Unknown system call : %d (process %d @ 0x%x)\n", syscall_nr, current->pid, regs->eip);
+		printk("Unknown system call : %d (process %d @ 0x%x)\n", syscall_nr, current->pid, regs->eip);
 		return;
 	}
 
@@ -211,7 +211,7 @@ static void syscall_handler(struct registers *regs)
 	uint32_t flags;
 	__save_flags(flags);
 	if (flags & (1UL << 9))
-		printf("%d %d\n", current->pid, syscall_nr);
+		printk("%d %d\n", current->pid, syscall_nr);
 
 	/* restore registers and set return value */
 	memcpy(regs, &current->thread.regs, sizeof(struct registers));

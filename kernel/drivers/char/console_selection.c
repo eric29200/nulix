@@ -206,7 +206,7 @@ static int set_selection(unsigned long arg)
 			highlight_pointer(vc, pe);
 			return 0;
 		default:
-			printf("Unknown sel_mode = %d\n", sel_mode);
+			printk("Unknown sel_mode = %d\n", sel_mode);
 			return 0;
 	}
 
@@ -318,7 +318,7 @@ int tioclinux(struct tty *tty, unsigned long arg)
 			*((char *) arg) = shift_state;
 			return 0;
 		default:
-			printf("Unknown tioclinux ioctl: %d\n", *((char *) arg));
+			printk("Unknown tioclinux ioctl: %d\n", *((char *) arg));
 			break;
 	}
 

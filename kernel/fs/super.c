@@ -319,7 +319,7 @@ out:
 static void d_mount(struct dentry *covers, struct dentry *dentry)
 {
 	if (covers->d_mounts != covers) {
-		printf("d_mount: mount - already mounted\n");
+		printk("d_mount: mount - already mounted\n");
 		return;
 	}
 

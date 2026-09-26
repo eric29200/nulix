@@ -122,7 +122,7 @@ repeat:
 	/* update reference counter */
 	dentry->d_count--;
 	if (dentry->d_count < 0)
-		panic("dput: negative d_count\n");
+		panic("dput: negative d_count");
 
 	/* still used */
 	if (dentry->d_count)
@@ -311,7 +311,7 @@ void d_move(struct dentry *dentry, struct dentry *target)
 {
 	/* check inode */
 	if (!dentry->d_inode)
-		panic("d_move: moving negative dcache entry\n");
+		panic("d_move: moving negative dcache entry");
 
 	/* move the dentry to the target hash queue */
 	list_del(&dentry->d_hash);

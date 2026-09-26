@@ -87,15 +87,15 @@ static struct super_block *isofs_read_super(struct super_block *sb, const char *
 	return sb;
 err_root_inode:
 	if (!silent)
-		printf("[ISO-fs] Can't get root inode\n");
+		printk("[ISO-fs] Can't get root inode\n");
 	goto err;
 err_multivol:
 	if (!silent)
-		printf("[ISO-fs] Multi volume disks not supported\n");
+		printk("[ISO-fs] Multi volume disks not supported\n");
 	goto err_release_sb;
 err_primary_vol:
 	if (!silent)
-		printf("[ISO-fs] Can't find primary volume descriptor\n");
+		printk("[ISO-fs] Can't find primary volume descriptor\n");
 	goto err_release_sb;
 err_release_sb:
 	brelse(sbh);

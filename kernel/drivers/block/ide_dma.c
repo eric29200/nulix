@@ -186,7 +186,7 @@ ide_dma_begin:
 			/* return error/success */
 			return (dma_stat & 7) != 4;
 		default:
-			printf("ide_dmaproc: unknown func %d\n", func);
+			printk("ide_dmaproc: unknown func %d\n", func);
 			return 1;
 
 	}

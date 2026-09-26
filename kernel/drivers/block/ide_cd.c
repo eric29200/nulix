@@ -107,7 +107,7 @@ static int ide_start_read_continuation(struct ide_drive *drive, struct request *
 	/* wait for DRQ */
 	ret = ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_BSY | ATA_SR_ERR, 0);
 	if (ret) {
-		printf("ide_start_read_continuation: no DRQ on drive %s after issuing packet command\n", drive->name);
+		printk("ide_start_read_continuation: no DRQ on drive %s after issuing packet command\n", drive->name);
 		return -EIO;
 	}
 
@@ -117,7 +117,7 @@ static int ide_start_read_continuation(struct ide_drive *drive, struct request *
 	/* wait for completion */
 	ret = ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_BSY | ATA_SR_ERR, 0);
 	if (ret) {
-		printf("ide_start_read_continuation: no DRQ on drive %s after issuing read/write\n", drive->name);
+		printk("ide_start_read_continuation: no DRQ on drive %s after issuing read/write\n", drive->name);
 		return -EIO;
 	}
 
@@ -132,7 +132,7 @@ static int ide_start_packet_command(struct ide_drive *drive, int xferlen, struct
 {
 	/* wait for the drive */
 	if (ide_wait_stat(drive, 0, ATA_SR_BSY, 0)) {
-		printf("ide_start_packet_command: drive %s not ready\n", drive->name);
+		printk("ide_start_packet_command: drive %s not ready\n", drive->name);
 		return -EIO;
 	}
 
@@ -155,7 +155,7 @@ int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block
 
 	/* read only */
 	if (req->cmd != READ) {
-		printf("ide_do_rw_cdrom: can't handle request %x\n", req->cmd);
+		printk("ide_do_rw_cdrom: can't handle request %x\n", req->cmd);
 		return -EIO;
 	}
 

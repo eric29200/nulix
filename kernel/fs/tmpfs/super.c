@@ -85,7 +85,7 @@ static struct super_block *tmpfs_read_super(struct super_block *sb, const char *
 	return sb;
 err_root_inode:
 	if (!silent)
-		printf("[Tmp-fs] Can't create root inode\n");
+		printk("[Tmp-fs] Can't create root inode\n");
 	sb->s_dev = 0;
 	return NULL;
 }

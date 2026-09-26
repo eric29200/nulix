@@ -111,7 +111,7 @@ static struct page *lookup_swap_cache(uint32_t entry)
 	}
 
 err:
-	printf("lookup_swap_cache: found a non-swapper swap page\n");
+	printk("lookup_swap_cache: found a non-swapper swap page\n");
 	__free_page(page);
 	return 0;
 }
@@ -122,7 +122,7 @@ err:
 static int add_to_swap_cache(struct page *page, uint32_t entry)
 {
 	if (PageSwapCache(page) || page->inode) {
-		printf("swap_cache: replacing non-empty entry %08lx on page %08lx\n", page->offset, page_address(page));
+		printk("swap_cache: replacing non-empty entry %08lx on page %08lx\n", page->offset, page_address(page));
 		return 0;
 	}
 
@@ -139,12 +139,12 @@ static int add_to_swap_cache(struct page *page, uint32_t entry)
 static void remove_from_swap_cache(struct page *page)
 {
 	if (!page->inode) {
-		printf("remove_from_swap_cache: removing swap cache page with zero inode hash on page %08lx\n", page_address(page));
+		printk("remove_from_swap_cache: removing swap cache page with zero inode hash on page %08lx\n", page_address(page));
 		return;
 	}
 
 	if (page->inode != &swapper_inode)
-		printf("remove_from_swap_cache: removing swap cache page with wrong inode hash on page %08lx\n", page_address(page));
+		printk("remove_from_swap_cache: removing swap cache page with wrong inode hash on page %08lx\n", page_address(page));
 
 	ClearPageSwapCache(page);
 	remove_from_page_cache(page);
@@ -221,16 +221,16 @@ static int swap_count(uint32_t entry)
 
 	return si->swap_map[offset];
 err_entry:
-	printf("swap_count: null entry\n");
+	printk("swap_count: null entry\n");
 	goto err;
 err_file:
-	printf("swap_count: entry %08lx, nonexistent swap file\n", entry);
+	printk("swap_count: entry %08lx, nonexistent swap file\n", entry);
 	goto err;
 err_offset:
-	printf("swap_count: entry %08lx, offset exceeds max\n", entry);
+	printk("swap_count: entry %08lx, offset exceeds max\n", entry);
 	goto err;
 err_unused:
-	printf("swap_count at %8p: entry %08lx, unused page\n", __builtin_return_address(0), entry);
+	printk("swap_count at %8p: entry %08lx, unused page\n", __builtin_return_address(0), entry);
 err:
 	return 0;
 }
@@ -275,16 +275,16 @@ void swap_free(uint32_t entry)
 
 	return;
 err_nofile:
-	printf("swap_free: trying to free nonexistent swap-page\n");
+	printk("swap_free: trying to free nonexistent swap-page\n");
 	return;
 err_device:
-	printf("swap_free: trying to free swap from unused swap-device\n");
+	printk("swap_free: trying to free swap from unused swap-device\n");
 	return;
 err_offset:
-	printf("swap_free: offset exceeds max\n");
+	printk("swap_free: offset exceeds max\n");
 	return;
 err_free:
-	printf("swap_free: swap-space map bad (entry %08lx)\n", entry);
+	printk("swap_free: swap-space map bad (entry %08lx)\n", entry);
 }
 
 /*
@@ -317,19 +317,19 @@ static int swap_duplicate(uint32_t entry)
 		si->swap_map[offset]++;
 	} else {
 		if (overflow++ < 5)
-			printf("swap_duplicate: entry %08lx map count=%d\n", entry, si->swap_map[offset]);
+			printk("swap_duplicate: entry %08lx map count=%d\n", entry, si->swap_map[offset]);
 		si->swap_map[offset] = SWAP_MAP_MAX;
 	}
 
 	return 1;
 err_file:
-	printf("swap_duplicate: entry %08lx, nonexistent swap file\n", entry);
+	printk("swap_duplicate: entry %08lx, nonexistent swap file\n", entry);
 	goto err;
 err_offset:
-	printf("swap_duplicate: entry %08lx, offset exceeds max\n", entry);
+	printk("swap_duplicate: entry %08lx, offset exceeds max\n", entry);
 	goto err;
 err_unused:
-	printf("swap_duplicate at %8p: entry %08lx, unused page\n", __builtin_return_address(0), entry);
+	printk("swap_duplicate at %8p: entry %08lx, unused page\n", __builtin_return_address(0), entry);
 err:
 	return 0;
 }
@@ -349,7 +349,7 @@ static void rw_swap_page_base(int rw, uint32_t entry, struct page *page)
 	/* get swap file */
 	type = SWP_TYPE(entry);
 	if (type >= nr_swapfiles) {
-		printf("rw_swap_page_base: bad swap file/device\n");
+		printk("rw_swap_page_base: bad swap file/device\n");
 		return;
 	}
 
@@ -357,31 +357,31 @@ static void rw_swap_page_base(int rw, uint32_t entry, struct page *page)
 	p = &swap_info[type];
 	offset = SWP_OFFSET(entry);
 	if (offset >= p->max) {
-		printf("rw_swap_page_base: bad offset\n");
+		printk("rw_swap_page_base: bad offset\n");
 		return;
 	}
 
 	/* check offset */
 	if (p->swap_map && !p->swap_map[offset]) {
-		printf("rw_swap_page_base: Trying to %s unallocated swap (%08lx)\n", rw == READ ? "read" : "write", entry);
+		printk("rw_swap_page_base: Trying to %s unallocated swap (%08lx)\n", rw == READ ? "read" : "write", entry);
 		return;
 	}
 
 	/* check swap file */
 	if (!(p->flags & SWP_USED)) {
-		printf("rw_swap_page_base: trying to swap to unused swap file/device\n");
+		printk("rw_swap_page_base: trying to swap to unused swap file/device\n");
 		return;
 	}
 
 	/* swap page must be locked */
 	if (!PageLocked(page)) {
-		printf("rw_swap_page_base: swap page is not locked\n");
+		printk("rw_swap_page_base: swap page is not locked\n");
 		return;
 	}
 
 	/* check page */
 	if (PageSwapCache(page) && page->offset != entry) {
-		printf("rw_swap_page_base: swap entry mismatch\n");
+		printk("rw_swap_page_base: swap entry mismatch\n");
 		return;
 	}
 
@@ -410,7 +410,7 @@ static void rw_swap_page_base(int rw, uint32_t entry, struct page *page)
 		for (i = 0, j = 0; j < PAGE_SIZE ; i++, j += block_size) {
 			blocks[i] = swap_i->i_op->bmap(swap_i, block++);
 			if (!blocks[i]) {
-				printf("rw_swap_page_base: bad swap file\n");
+				printk("rw_swap_page_base: bad swap file\n");
 				return;
 			}
 		}
@@ -418,7 +418,7 @@ static void rw_swap_page_base(int rw, uint32_t entry, struct page *page)
 		nr_blocks = i;
 		dev = swap_i->i_dev;
 	} else {
-		printf("rw_swap_page_base: no swap file or device\n");
+		printk("rw_swap_page_base: no swap file or device\n");
 		page->count--;
 		return;
 	}
@@ -438,13 +438,13 @@ static void rw_swap_page(int rw, uint32_t entry, char *buffer)
 
 	/* check page */
 	if (page->inode && page->inode != &swapper_inode)
-		panic("rw_swap_page: tried to swap a non swapper page\n");
+		panic("rw_swap_page: tried to swap a non swapper page");
 	if (!PageSwapCache(page)) {
-		printf("rw_swap_page: swap page is not in swap cache\n");
+		printk("rw_swap_page: swap page is not in swap cache");
 		return;
 	}
 	if (page->offset != entry) {
-		printf("rw_swap_page: swap entry mismatch\n");
+		printk("rw_swap_page: swap entry mismatch\n");
 		return;
 	}
 
@@ -465,7 +465,7 @@ static void rw_swap_page_nocache(int rw, uint32_t entry, char *buffer)
 
 	/* page already in swap cache */
 	if (test_bit(&page->flags, PG_swap_cache) || page->inode) {
-		printf("read_swap_page_nocache: page already in swap cache\n");
+		printk("read_swap_page_nocache: page already in swap cache\n");
 		return;
 	}
 
@@ -1033,14 +1033,14 @@ int sys_swapon(const char *path, int swap_flags)
 
 	/* check swap file size */
 	if (swap_file_size && p->max > swap_file_size) {
-		printf("sys_swapon: swap area shorter than signature indicates\n");
+		printk("sys_swapon: swap area shorter than signature indicates\n");
 		ret = -EINVAL;
 		goto err;
 	}
 
 	/* check number of good pages */
 	if (!nr_good_pages) {
-		printf("sys_swapon: empty swap-file\n");
+		printk("sys_swapon: empty swap-file\n");
 		ret = -EINVAL;
 		goto err;
 	}
@@ -1049,7 +1049,7 @@ int sys_swapon(const char *path, int swap_flags)
 	p->swap_map[0] = SWAP_MAP_BAD;
 	p->flags = SWP_WRITEOK;
 	p->pages = nr_good_pages;
-	printf("Adding Swap: %dk swap-space (priority %d)\n", nr_good_pages << (PAGE_SHIFT - 10), p->priority);
+	printk("Adding Swap: %dk swap-space (priority %d)\n", nr_good_pages << (PAGE_SHIFT - 10), p->priority);
 
 	/* insert swap file/device in swap list */
 	insert_swap_info(p);
@@ -1221,7 +1221,7 @@ found_entry:
 		/* check for and clear any overflowed swap map counts */
 		if (si->swap_map[i]) {
 			if (si->swap_map[i] != SWAP_MAP_MAX)
-				printf("try_to_unuse: entry %08lx count=%d\n", entry, si->swap_map[i]);
+				printk("try_to_unuse: entry %08lx count=%d\n", entry, si->swap_map[i]);
 			si->swap_map[i] = 0;
 		}
 	}

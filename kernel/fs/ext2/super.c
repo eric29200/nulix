@@ -86,19 +86,19 @@ static int ext2_check_descriptors(struct super_block *sb)
 
 		/* check block bitmap */
 		if (gdp->bg_block_bitmap < block || gdp->bg_block_bitmap >= block + sbi->s_blocks_per_group) {
-			printf("[Ext2-fs] Block bitmap for group %d not in group (block %lu)\n", i, gdp->bg_block_bitmap);
+			printk("[Ext2-fs] Block bitmap for group %d not in group (block %lu)\n", i, gdp->bg_block_bitmap);
 			return 0;
 		}
 
 		/* check inode bitmap */
 		if (gdp->bg_inode_bitmap < block || gdp->bg_inode_bitmap >= block + sbi->s_blocks_per_group) {
-			printf("[Ext2-fs] Inode bitmap for group %d" " not in group (block %lu)\n", i, gdp->bg_inode_bitmap);
+			printk("[Ext2-fs] Inode bitmap for group %d" " not in group (block %lu)\n", i, gdp->bg_inode_bitmap);
 			return 0;
 		}
 
 		/* check inode table */
 		if (gdp->bg_inode_table < block || gdp->bg_inode_table + sbi->s_itb_per_group >= block + sbi->s_blocks_per_group) {
-			printf("[Ext2-fs] Inode table for group %d not in group (block %lu)\n", i, gdp->bg_inode_table);
+			printk("[Ext2-fs] Inode table for group %d not in group (block %lu)\n", i, gdp->bg_inode_table);
 			return 0;
 		}
 	}
@@ -237,17 +237,17 @@ static struct super_block *ext2_read_super(struct super_block *sb, const char *d
 	return sb;
 err_root_inode:
 	if (!silent)
-		printf("[Ext2-fs] Can't get root inode\n");
+		printk("[Ext2-fs] Can't get root inode\n");
 	goto err_release_gdb;
 err_check_desc:
 	goto err_release_gdb;
 err_read_gdb:
 	if (!silent)
-		printf("[Ext2-fs] Can't read group descriptors\n");
+		printk("[Ext2-fs] Can't read group descriptors\n");
 	goto err_release_gdb;
 err_no_gdb:
 	if (!silent)
-		printf("[Ext2-fs] Can't allocate group descriptors\n");
+		printk("[Ext2-fs] Can't allocate group descriptors\n");
 err_release_gdb:
 	for (i = 0; i < sbi->s_gdb_count; i++)
 		brelse(sbi->s_group_desc[i]);
@@ -255,21 +255,21 @@ err_release_gdb:
 	goto err_release_sb;
 err_bad_blocksize:
 	if (!silent)
-		printf("[Ext2-fs] Wrong block size (only 1024, 2048 and 4096 supported)\n");
+		printk("[Ext2-fs] Wrong block size (only 1024, 2048 and 4096 supported)\n");
 	goto err_release_sb;
 err_bad_rev:
 	if (!silent)
-		printf("[Ext2-fs] Wrong revision level\n");
+		printk("[Ext2-fs] Wrong revision level\n");
 	goto err_release_sb;
 err_bad_magic:
 	if (!silent)
-		printf("[Ext2-fs] Wrong magic number\n");
+		printk("[Ext2-fs] Wrong magic number\n");
 err_release_sb:
 	brelse(sbi->s_sbh);
 	goto err;
 err_bad_sb:
 	if (!silent)
-		printf("[Ext2-fs] Can't read super block\n");
+		printk("[Ext2-fs] Can't read super block\n");
 err:
 	kfree(sbi);
 	sb->s_dev = 0;

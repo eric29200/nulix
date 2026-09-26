@@ -534,7 +534,7 @@ int sys_msgctl(int msqid, int cmd, void *buf)
 		case IPC_RMID:
 			return msgctl_rmid(msqid);
 		default:
-			printf("sys_msgctl: unknown command %d\n", cmd);
+			printk("sys_msgctl: unknown command %d\n", cmd);
 			return -EINVAL;
 	}
 

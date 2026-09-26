@@ -104,7 +104,7 @@ static struct vm_area *find_vma_prev(struct mm_struct *mm, uint32_t addr, struct
 
 	/* check tree/list */
 	if ((prev ? prev->vm_next : mm->mmap) != vma)
-		printf("find_vma_prev: tree inconsistent with list\n");
+		printk("find_vma_prev: tree inconsistent with list\n");
 
 	*pprev = prev;
 	return vma;
@@ -141,7 +141,7 @@ static void insert_vma(struct vm_area *vma)
 
 		/* check tree/list */
 		if (*pprev != next)
-			printf("insert_vm_struct: tree inconsistent with list\n");
+			printk("insert_vm_struct: tree inconsistent with list\n");
 	}
 
 	/* add it to linear list */

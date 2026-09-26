@@ -115,7 +115,7 @@ struct kern_ipc_perm *ipc_rmid(struct ipc_ids *ids, int id)
 
 	/* check id */
 	if (lid >= ids->size) {
-		printf("ipc_rmid: wrong id %d\n", lid);
+		printk("ipc_rmid: wrong id %d\n", lid);
 		return NULL;
 	}
 
@@ -123,7 +123,7 @@ struct kern_ipc_perm *ipc_rmid(struct ipc_ids *ids, int id)
 	p = ids->entries[lid].p;
 	ids->entries[lid].p = NULL;
 	if (!p) {
-		printf("ipc_rmid: null entry %d\n", lid);
+		printk("ipc_rmid: null entry %d\n", lid);
 		return NULL;
 	}
 
@@ -176,7 +176,7 @@ void ipc_init_ids(struct ipc_ids *ids, int size)
 	/* allocate array */
 	ids->entries = kmalloc(sizeof(struct ipc_id) * size);
 	if (!ids->entries) {
-		printf("ipc_init_ids: failed, ipc service disabled\n");
+		printk("ipc_init_ids: failed, ipc service disabled\n");
 		ids->size = 0;
 	}
 
@@ -300,7 +300,7 @@ int sys_ipc(uint32_t call, int first, int second, int third, void *ptr, int fift
 		case SHMCTL:
 			return sys_shmctl(first, second, (struct shmid_ds *) ptr);
 		default:
-			printf("IPC system call %d not implemented\n", call);
+			printk("IPC system call %d not implemented\n", call);
 			return -ENOSYS;
 	}
 }

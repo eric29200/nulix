@@ -123,7 +123,7 @@ static struct node *__find_free_node(int priority, uint32_t order)
 
 	/* check order */
 	if (order >= NR_NODES) {
-		printf("Page allocation failed: can't allocate pages (priority %d, order %d)\n", priority, order);
+		printk("Page allocation failed: can't allocate pages (priority %d, order %d)\n", priority, order);
 		return NULL;
 	}
 

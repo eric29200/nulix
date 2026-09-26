@@ -62,11 +62,11 @@ static struct super_block *devpts_read_super(struct super_block *sb, const char 
 	return sb;
 err_no_root_inode:
 	if (!silent)
-		printf("[Devpts] Can't get root inode\n");
+		printk("[Devpts] Can't get root inode\n");
 	goto err;
 err_no_root_entry:
 	if (!silent)
-		printf("[Devpts] Can't get root entry\n");
+		printk("[Devpts] Can't get root entry\n");
 err:
 	sb->s_dev = 0;
 	return NULL;

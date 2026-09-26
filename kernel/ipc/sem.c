@@ -131,7 +131,7 @@ void sem_exit(void)
 			if (u == un)
 				goto found;
 
-		printf("sem_exit: undo list error id=%d\n", u->semid);
+		printk("sem_exit: undo list error id=%d\n", u->semid);
 		continue;
 found:
 		*unp = un->id_next;
@@ -221,7 +221,7 @@ static struct sem_undo *sem_freeundos(struct sem_undo *un)
 		return un;
 	}
 
-	printf("freeundos: undo list error id=%d\n", un->semid);
+	printk("freeundos: undo list error id=%d\n", un->semid);
 	return un->proc_next;
 }
 
@@ -574,7 +574,7 @@ int sys_semctl(int semid, int semnum, int cmd, void *buf)
 		case IPC_RMID:
 			return semctl_rmid(semid);
 		default:
-			printf("sys_semctl: unknown command %d\n", cmd);
+			printk("sys_semctl: unknown command %d\n", cmd);
 			return -EINVAL;
 	}
 

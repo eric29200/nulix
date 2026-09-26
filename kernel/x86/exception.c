@@ -54,7 +54,7 @@ void exception_handler(struct registers *regs)
 	}
 
 	/* print exception and exit */
-	printf("[Interrupt] code=%d, message=%s (process %d - %s @ 0x%x)\n",
+	printk("[Interrupt] code=%d, message=%s (process %d - %s @ 0x%x)\n",
 		regs->int_no,
 		regs->int_no < 20 ? exception_messages[regs->int_no]: "",
 		current->pid,

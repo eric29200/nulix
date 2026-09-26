@@ -9,7 +9,7 @@
 static struct page *sg_page(struct scatterlist *sg)
 {
 	if (sg->sg_magic != SG_MAGIC || sg_is_chain(sg))
-		panic("sg_page: bad scatterlist\n");
+		panic("sg_page: bad scatterlist");
 
 	return (struct page *) ((sg)->page_link & ~0x3);
 }
@@ -31,9 +31,9 @@ static void sg_assign_page(struct scatterlist *sg, struct page *page)
 
 	/* sanity check */
 	if ((uint32_t) page & 0x03)
-		panic("sg_assign_page: page is not aligned\n");
+		panic("sg_assign_page: page is not aligned");
 	if (sg->sg_magic != SG_MAGIC || sg_is_chain(sg))
-		panic("sg_assign_page: bad scatterlist\n");
+		panic("sg_assign_page: bad scatterlist");
 
 	/* assign page */
 	sg->page_link = page_link | (uint32_t) page;
@@ -63,7 +63,7 @@ void sg_set_buf(struct scatterlist *sg, const void *buf, size_t buf_len)
 static void sg_mark_end(struct scatterlist *sg)
 {
 	if (sg->sg_magic != SG_MAGIC)
-		panic("sg_mark_end: bad scatterlist\n");
+		panic("sg_mark_end: bad scatterlist");
 
 	/* set termination bit, clear potential chain bit */
 	sg->page_link |= 0x02;

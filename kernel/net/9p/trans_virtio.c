@@ -142,7 +142,7 @@ static int pack_sg_list(struct scatterlist *sg, int start, int limit, uint8_t *d
 		data += s;
 
 		if (index > limit)
-			panic("pack_sg_list: index > limit\n");
+			panic("pack_sg_list: index > limit");
 	}
 
 	return index - start;

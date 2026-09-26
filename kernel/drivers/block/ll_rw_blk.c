@@ -240,7 +240,7 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 
 	/* check device */
 	if (!dev || !dev->request) {
-		printf("ll_rw_block: trying to read non existent block device 0x%x\n", bhs[0]->b_dev);
+		printk("ll_rw_block: trying to read non existent block device 0x%x\n", bhs[0]->b_dev);
 		goto err;
 	}
 
@@ -250,7 +250,7 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 	/* check buffers size */
 	for (i = 0; i < nr_bhs; i++) {
 		if (bhs[i]->b_size % correct_size) {
-			printf("ll_rw_block: only %d blocks implemented\n", correct_size);
+			printk("ll_rw_block: only %d blocks implemented\n", correct_size);
 			goto err;
 		}
 
@@ -260,7 +260,7 @@ void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[])
 
 	/* read only device */
 	if (rw == WRITE && is_read_only(bhs[0]->b_dev)) {
-		printf("ll_rw_block: can't write to read only device 0x%x\n", bhs[0]->b_dev);
+		printk("ll_rw_block: can't write to read only device 0x%x\n", bhs[0]->b_dev);
 		goto err;
 	}
 

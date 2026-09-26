@@ -199,7 +199,7 @@ void init_time()
 			:"=a" (cpu_khz), "=d" (edx)
 			:"r" (tsc_quotient),
 			"0" (eax), "1" (edx));
-		printf("[Kernel] Detected %d.%d MHz processor.\n", cpu_khz / 1000, cpu_khz % 1000);
+		printk("[Kernel] Detected %d.%d MHz processor.\n", cpu_khz / 1000, cpu_khz % 1000);
 	}
 
 	/* send command and frequency divisor */

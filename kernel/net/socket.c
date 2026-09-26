@@ -151,7 +151,7 @@ static struct socket *sockfd_lookup(int fd, int *err)
 
 	/* check socket file */
 	if (sock->file != filp) {
-		printf("sockfd_lookup: socket file changed\n");
+		printk("sockfd_lookup: socket file changed\n");
 		sock->file = filp;
 	}
 
@@ -888,7 +888,7 @@ static int sock_getsockopt(struct socket *sock, int optname, void *optval, size_
 			*((int *) optval) = -sock_error(sk);
 			break;
 		default:
-			printf("sock_getsockopt(%d) undefined\n", optname);
+			printk("sock_getsockopt(%d) undefined\n", optname);
 			break;
 	}
 
@@ -922,7 +922,7 @@ static int sock_setsockopt(struct socket *sock, int optname, void *optval, size_
 			sk->reuse = valbool;
 			break;
 		default:
-			printf("sock_setsockopt(%d) undefined\n", optname);
+			printk("sock_setsockopt(%d) undefined\n", optname);
 			break;
 	}
 
@@ -1120,7 +1120,7 @@ int sock_register(struct net_proto_family *ops)
 {
 	/* check faimily */
 	if (ops->family >= NPROTO) {
-		printf("sock_register: protocol %d >= NPROTO(%d)\n", ops->family, NPROTO);
+		printk("sock_register: protocol %d >= NPROTO(%d)\n", ops->family, NPROTO);
 		return -ENOBUFS;
 	}
 

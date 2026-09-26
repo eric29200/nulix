@@ -129,7 +129,7 @@ int ext2_free_block(struct inode *inode, uint32_t block)
 
 	/* check block number */
 	if (block < sbi->s_es->s_first_data_block || block >= sbi->s_es->s_blocks_count) {
-		printf("[Ext2-fs] Trying to free block %d not in data zone\n", block);
+		printk("[Ext2-fs] Trying to free block %d not in data zone\n", block);
 		return -EINVAL;
 	}
 

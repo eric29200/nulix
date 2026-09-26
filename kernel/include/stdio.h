@@ -6,8 +6,10 @@
 
 int sprintf(char *s, const char *format, ...);
 int snprintf(char *s, size_t len, const char *format, ...);
+int vsnprintf(char *buf, int n, const char *fmt, va_list ap);
+int vsprintf(char *buf, const char *fmt, va_list ap);
 int vprintf(const char *fmt, va_list ap);
-int printf(const char *format, ...);
+int printk(const char *format, ...);
 void panic(const char *format, ...);
 int sys_syslog(int type, char *buf, int len);
 

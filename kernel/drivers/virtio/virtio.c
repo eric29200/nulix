@@ -66,9 +66,9 @@ int virtqueue_add_buf(struct virtqueue *vq, struct scatterlist sg[], size_t out_
 
 	/* check counts */
 	if (out_num + in_num > vr->num)
-		panic("virtqueue_add_buf: out_num + in_num > vr->num\n");
+		panic("virtqueue_add_buf: out_num + in_num > vr->num");
 	if (out_num + in_num == 0)
-		panic("virtqueue_add_buf: out_num and in_num = 0\n");
+		panic("virtqueue_add_buf: out_num and in_num = 0");
 
 	/* no free buffer */
 	if (vq->num_free < out_num + in_num)
@@ -258,7 +258,7 @@ static void virtio_del_vqs(struct virtio_device *vdev)
 static void vring_interrupt(struct virtqueue *vq)
 {
 	if (vq->last_used_idx == vq->vring.used->idx) {
-		printf("vring_interrupt: no work for virtual queue\n");
+		printk("vring_interrupt: no work for virtual queue\n");
 		return;
 	}
 

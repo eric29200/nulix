@@ -49,7 +49,7 @@ void wait_on_buffer(struct buffer_head *bh)
 	execute_block_requests();
 
 	if (buffer_locked(bh))
-		panic("wait_on_buffer: buffer still locked after execute_block_requests()\n");
+		panic("wait_on_buffer: buffer still locked after execute_block_requests()");
 }
 
 /*
@@ -311,7 +311,7 @@ void set_bh_page(struct buffer_head *bh, struct page *page, int offset)
 {
 	/* check offset */
 	if (offset >= PAGE_SIZE)
-		panic("set_bh_page: %d >= PAGE_SIZE\n", offset);
+		panic("set_bh_page: %d >= PAGE_SIZE", offset);
 
 	/* set buffer */
 	if (page >= highmem_start_page)
@@ -613,7 +613,7 @@ void set_blocksize(dev_t dev, size_t blocksize)
 		case 4096:
 			break;
 		default:
-			panic("set_blocksize : invalid block size\n");
+			panic("set_blocksize : invalid block size");
 			break;
 	}
 

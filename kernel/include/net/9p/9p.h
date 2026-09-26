@@ -270,7 +270,7 @@ static inline void p9_fatal(const char *fmt, ...)
 	va_list ap;
 
 	/* print panic */
-	printf("[9p FATAL] ");
+	printk("[9p FATAL] ");
 
 	/* print in tmp buf */
 	va_start(ap, fmt);
@@ -288,7 +288,7 @@ static inline void p9_error(const char *fmt, ...)
 	va_list ap;
 
 	/* print panic */
-	printf("[9p ERROR] ");
+	printk("[9p ERROR] ");
 
 	/* print in tmp buf */
 	va_start(ap, fmt);
@@ -305,7 +305,7 @@ static inline void p9_debug(const char *fmt, ...)
 	va_list ap;
 
 	/* print panic */
-	printf("[9p DEBUG] ");
+	printk("[9p DEBUG] ");
 
 	/* print in tmp buf */
 	va_start(ap, fmt);

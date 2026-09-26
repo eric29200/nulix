@@ -6,7 +6,10 @@
 
 #define LOG_BUF_LEN		8192
 
-/* syslog */
+/* mix variables */
+static char __buf[1024];
+
+/* syslog variables */
 static char log_buf[LOG_BUF_LEN];
 static int log_start = 0;
 static int log_size = 0;
@@ -40,7 +43,6 @@ int sys_syslog(int type, char *buf, int len)
 				log_start &= LOG_BUF_LEN - 1;
 			}
 
-			printf("%d\n", i);
 			return i;
 		case 6:				/* disable logging to console */
 			return 0;
@@ -50,6 +52,56 @@ int sys_syslog(int type, char *buf, int len)
 			break;
 	}
 
-	printf("Unknown syslog %d\n", type);
+	printk("Unknown syslog %d\n", type);
 	return -EINVAL;
+}
+
+/*
+ * Print a formatted string.
+ */
+int vprintf(const char *fmt, va_list ap)
+{
+	int i, j;
+
+	/* print in tmp buf */
+	i = vsnprintf(__buf, sizeof(__buf), fmt, ap);
+
+	/* write tmp buf to serial line */
+	for (j = 0; j < i; j++)
+		write_serial(__buf[j]);
+
+	return i;
+}
+
+/*
+ * Print a formatted string.
+ */
+int printk(const char *fmt, ...)
+{
+	va_list args;
+	int ret;
+
+	/* print in tmp buf */
+	va_start(args, fmt);
+	ret = vprintf(fmt, args);
+	va_end(args);
+
+	return ret;
+}
+
+/*
+ * Panic.
+ */
+void panic(const char *fmt, ...)
+{
+	static char buf[1024];
+	va_list args;
+
+	va_start(args, fmt);
+	vsprintf(buf, fmt, args);
+	va_end(args);
+	printk("[PANIC] %s\n", buf);
+
+	/* infinite loop */
+	for (;;);
 }

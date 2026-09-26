@@ -70,7 +70,7 @@ static void pty_close(struct tty *tty)
 	/* check reference count */
 	if (tty->device == DEV_PTMX) {
 		if (tty->count > 1)
-			printf("master pty_close : count = %d\n", tty->count);
+			printk("master pty_close : count = %d\n", tty->count);
 	} else {
 		if (tty->count > 2)
 			return;

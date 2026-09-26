@@ -49,7 +49,7 @@ static struct super_block *proc_read_super(struct super_block *sb, const char *d
 	return sb;
 err_root_inode:
 	if (!silent)
-		printf("[Proc-fs] Can't get root inode\n");
+		printk("[Proc-fs] Can't get root inode\n");
 	iput(root_inode);
 	sb->s_dev = 0;
 	return NULL;

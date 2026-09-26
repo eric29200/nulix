@@ -101,7 +101,7 @@ static int do_getitimer(int which, struct itimerval *value)
 
 	/* implement only real timer */
 	if (which != ITIMER_REAL) {
-		printf("setitimer (%d) not implemented\n", which);
+		printk("setitimer (%d) not implemented\n", which);
 		return -ENOSYS;
 	}
 
@@ -139,7 +139,7 @@ int sys_setitimer(int which, const struct itimerval *new_value, struct itimerval
 
 	/* implement only real timer */
 	if (which != ITIMER_REAL) {
-		printf("setitimer (%d) not implemented\n", which);
+		printk("setitimer (%d) not implemented\n", which);
 		return -ENOSYS;
 	}
 

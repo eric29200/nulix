@@ -193,7 +193,7 @@ time_t schedule_timeout(time_t timeout)
 			goto out;
 		default:
 			if (timeout < 0) {
-				printf("schedule_timeout: negative timeout value\n");
+				printk("schedule_timeout: negative timeout value\n");
 				goto out;
 			}
 			break;

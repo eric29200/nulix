@@ -96,7 +96,7 @@ int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, int dma)
 	if (ATA_OK_STAT(stat, good, bad))
 		return 0;
 
-	printf("ide_wait_stat: bad status on drive %s, status = 0x%x\n", drive->name, stat);
+	printk("ide_wait_stat: bad status on drive %s, status = 0x%x\n", drive->name, stat);
 	return 1;
 }
 
@@ -139,14 +139,14 @@ static int ide_do_request(struct request *req)
 	/* get ide drive */
 	drive = ide_get_drive(req->rq_dev);
 	if (!drive) {
-		printf("ide_request: can't find device 0x%x\n", req->rq_dev);
+		printk("ide_request: can't find device 0x%x\n", req->rq_dev);
 		return -EIO;
 	}
 
 	/* select drive */
 	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
 	if (ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_DRQ, 0)) {
-		printf("ide_request: drive %s not ready for command\n", drive->name);
+		printk("ide_request: drive %s not ready for command\n", drive->name);
 		return -EIO;
 	}
 
@@ -168,7 +168,7 @@ static int ide_do_request(struct request *req)
 
 	/* print error */
 	if (ret) {
-		printf("ide_request: error on request (cmd = %x, sector = %ld)\n", req->cmd, req->sector);
+		printk("ide_request: error on request (cmd = %x, sector = %ld)\n", req->cmd, req->sector);
 		return ret;
 	}
 
@@ -321,7 +321,7 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 				drive->present = 1;
 				break;
 			default:
-				printf("ide_identify: unknown type %d\n", type);
+				printk("ide_identify: unknown type %d\n", type);
 				break;
 		}
 	} else {
@@ -404,7 +404,7 @@ static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsign
 		case BLKSSZGET:
 			return blk_ioctl(inode->i_rdev, request, arg);
 		default:
-			printf("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) dev);
+			printk("Unknown ioctl request (0x%x) on device 0x%x\n", request, (int) dev);
 			break;
 	}
 
@@ -507,7 +507,7 @@ err_kmalloc_gd_part:
 err_kmalloc_gd_sizes:
 	kfree(gd);
 err_kmalloc_gd:
-	panic("init_gendisk: Out of memory\n");
+	panic("init_gendisk: Out of memory");
 	return;
 }
 

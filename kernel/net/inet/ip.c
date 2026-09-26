@@ -196,7 +196,7 @@ int ip_getsockopt(struct sock *sk, int level, int optname, void *optval, size_t 
 	UNUSED(optname);
 	UNUSED(optval);
 	UNUSED(optlen);
-	printf("ip_getsockopt: unknown option %d\n", optname);
+	printk("ip_getsockopt: unknown option %d\n", optname);
 	return 0;
 }
 
@@ -217,7 +217,7 @@ int ip_setsockopt(struct sock *sk, int level, int optname, void *optval, size_t 
 			sk->ip_ttl = val;
 			break;
 		default:
-			printf("ip_setsockopt: unknown option %d\n", optname);
+			printk("ip_setsockopt: unknown option %d\n", optname);
 			break;
 	}
 

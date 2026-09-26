@@ -186,7 +186,7 @@ int dev_ioctl(unsigned int cmd, void *arg)
 		case SIOCSIFFLAGS:
 			return dev_ifsioc((struct ifreq *) arg, cmd);
 		default:
-			printf("dev_ioctl : unknown ioctl cmd 0x%x\n", cmd);
+			printk("dev_ioctl : unknown ioctl cmd 0x%x\n", cmd);
 			return -EINVAL;
 	}
 }

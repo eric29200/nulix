@@ -14,7 +14,7 @@ static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
 	while (req->nr_sectors > 0) {
 		/* wait for drive */
 		if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_BSY | ATA_SR_ERR, 0)) {
-			printf("ide_do_rw_disk_pio: no DRQ on drive %s after issuing read/write\n", drive->name);
+			printk("ide_do_rw_disk_pio: no DRQ on drive %s after issuing read/write\n", drive->name);
 			return -EIO;
 		}
 
@@ -63,7 +63,7 @@ static int ide_do_rw_disk_dma(struct ide_drive *drive, struct request *req)
 	/* wait for drive */
 	ret = ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR, 1);
 	if (ret)
-		printf("ide_do_rw_disk_dma: drive %s on error after issuing read/write\n", drive->name);
+		printk("ide_do_rw_disk_dma: drive %s on error after issuing read/write\n", drive->name);
 
 	/* end dma */
 	ret |= ide_dmaproc(drive, req, ide_dma_end);
@@ -82,7 +82,7 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 {
 	/* check command */
 	if (req->cmd != READ && req->cmd != WRITE) {
-		printf("ide_do_rw_disk: can't handle request %x\n", req->cmd);
+		printk("ide_do_rw_disk: can't handle request %x\n", req->cmd);
 		return -EIO;
 	}
 

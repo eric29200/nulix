@@ -51,7 +51,7 @@ int sys_clock_gettime64(clockid_t clockid, struct timespec *tp)
 			jiffies_to_timespec(current->utime + current->stime, tp);
 			break;
 		default:
-			printf("clock_gettime64 not implement on clockid=%d\n", clockid);
+			printk("clock_gettime64 not implement on clockid=%d\n", clockid);
 			return -ENOSYS;
 	}
 
@@ -77,7 +77,7 @@ int sys_clock_gettime32(clockid_t clockid, struct old_timespec *tp)
 			tp->tv_nsec = xtimes.tv_nsec;
 			break;
 		default:
-			printf("clock_gettime32 not implement on clockid=%d\n", clockid);
+			printk("clock_gettime32 not implement on clockid=%d\n", clockid);
 			return -ENOSYS;
 	}
 
@@ -407,7 +407,7 @@ int sys_prctl(int option, uint32_t arg2, uint32_t arg3, uint32_t arg4, uint32_t 
 		case PR_GET_DUMPABLE:
 			break;
 		default:
-			printf("Prctl: unknown option %d\n", option);
+			printk("Prctl: unknown option %d\n", option);
 	}
 
 	return 0;

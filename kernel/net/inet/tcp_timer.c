@@ -27,7 +27,7 @@ static void net_timer(void *arg)
 			tcp_set_state(sk, TCP_CLOSE);
 			break;
 		default:
-			printf("net_timer: timer expired - reason %d is unknown\n", why);
+			printk("net_timer: timer expired - reason %d is unknown\n", why);
 			break;
 	}
 }

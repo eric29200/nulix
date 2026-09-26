@@ -159,20 +159,20 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 			case MULTIBOOT_TAG_TYPE_CMDLINE:
 				strncpy(saved_command_line, ((struct multiboot_tag_string *) tag)->string, COMMAND_LINE_SIZE - 1);
 				strncpy(command_line, ((struct multiboot_tag_string *) tag)->string, COMMAND_LINE_SIZE - 1);
-				printf("Command line = %s\n", saved_command_line);
+				printk("Command line = %s\n", saved_command_line);
 				parse_command_line(command_line);
 				break;
 			case MULTIBOOT_TAG_TYPE_BOOT_LOADER_NAME:
-				printf("Boot loader name = %s\n", ((struct multiboot_tag_string *) tag)->string);
+				printk("Boot loader name = %s\n", ((struct multiboot_tag_string *) tag)->string);
 				break;
 			case MULTIBOOT_TAG_TYPE_MODULE:
-				printf("Module at 0x%x-0x%x. Command line %s\n",
+				printk("Module at 0x%x-0x%x. Command line %s\n",
 					((struct multiboot_tag_module *) tag)->mod_start,
 					((struct multiboot_tag_module *) tag)->mod_end,
 					((struct multiboot_tag_module *) tag)->cmdline);
 				break;
 			case MULTIBOOT_TAG_TYPE_BASIC_MEMINFO:
-				printf("mem_lower = %uKB, mem_upper = %uKB\n",
+				printk("mem_lower = %uKB, mem_upper = %uKB\n",
 					((struct multiboot_tag_basic_meminfo *) tag)->mem_lower,
 					((struct multiboot_tag_basic_meminfo *) tag)->mem_upper);
 				*mem_upper = ((struct multiboot_tag_basic_meminfo *) tag)->mem_upper * 1024;
@@ -181,7 +181,7 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 				init_bios_map((struct multiboot_tag_mmap *) tag);
 				break;
 			case MULTIBOOT_TAG_TYPE_BOOTDEV:
-				printf("Boot device 0x%x,%u,%u\n",
+				printk("Boot device 0x%x,%u,%u\n",
 					((struct multiboot_tag_bootdev *) tag)->biosdev,
 					((struct multiboot_tag_bootdev *) tag)->slice,
 					((struct multiboot_tag_bootdev *) tag)->part);
@@ -215,108 +215,108 @@ static void cpu_idle()
 static void kinit()
 {
 	/* init memory devices */
-	printf("[Kernel] Memory devices Init\n");
+	printk("[Kernel] Memory devices Init\n");
 	if (init_mem_devices())
-		printf("[Kernel] Memory devices Init error\n");
+		printk("[Kernel] Memory devices Init error\n");
 
 	/* init misc devices */
-	printf("[Kernel] Misc devices Init\n");
+	printk("[Kernel] Misc devices Init\n");
 	if (init_misc_devices())
-		printf("[Kernel] Misc devices Init error\n");
+		printk("[Kernel] Misc devices Init error\n");
 
 	/* init pci devices */
-	printf("[Kernel] PCI devices Init\n");
+	printk("[Kernel] PCI devices Init\n");
 	if (init_pci())
-		printf("[Kernel] PCI devices Init error\n");
+		printk("[Kernel] PCI devices Init error\n");
 
 	/* init keyboard */
-	printf("[Kernel] Keyboard Init\n");
+	printk("[Kernel] Keyboard Init\n");
 	init_keyboard();
 
 	/* init mouse */
-	printf("[Kernel] Mouse Init\n");
+	printk("[Kernel] Mouse Init\n");
 	if (init_mouse())
-		printf("[Kernel] Mouse Init error\n");
+		printk("[Kernel] Mouse Init error\n");
 
 	/* init loopback device */
-	printf("[Kernel] Loopback Init\n");
+	printk("[Kernel] Loopback Init\n");
 	if (init_loopback())
-		printf("[Kernel] Loopback Init error\n");
+		printk("[Kernel] Loopback Init error\n");
 
 	/* init realtek 8139 device */
-	printf("[Kernel] Realtek 8139 card Init\n");
+	printk("[Kernel] Realtek 8139 card Init\n");
 	if (init_rtl8139())
-		printf("[Kernel] Realtek 8139 card Init error\n");
+		printk("[Kernel] Realtek 8139 card Init error\n");
 
 	/* init block devices */
-	printf("[Kernel] Bock devices Init\n");
+	printk("[Kernel] Bock devices Init\n");
 	init_blk_dev();
 
 	/* init ide devices */
-	printf("[Kernel] IDE devices Init\n");
+	printk("[Kernel] IDE devices Init\n");
 	if (init_ide())
-		printf("[Kernel] IDE devices Init error\n");
+		printk("[Kernel] IDE devices Init error\n");
 
 	/* init loop devices */
-	printf("[Kernel] Loop devices Init\n");
+	printk("[Kernel] Loop devices Init\n");
 	if (init_loop())
-		printf("[Kernel] Loop devices Init error\n");
+		printk("[Kernel] Loop devices Init error\n");
 
 	/* init frame buffer */
-	printf("[Kernel] Frame buffer Init\n");
+	printk("[Kernel] Frame buffer Init\n");
 	if (init_framebuffer_device(&tag_fb))
-		panic("Cannot init frame buffer\n");
+		panic("Cannot init frame buffer");
 
 	/* init ttys */
-	printf("[Kernel] Ttys Init\n");
+	printk("[Kernel] Ttys Init\n");
 	if (init_tty(&tag_fb))
-		panic("Cannot init ttys\n");
+		panic("Cannot init ttys");
 
 	/* init virtio */
-	printf("[Kernel] Virtio Init\n");
+	printk("[Kernel] Virtio Init\n");
 	if (init_virtio())
-		printf("[Kernel] Virtio Init error\n");
+		printk("[Kernel] Virtio Init error\n");
 
 	/* init binary formats */
-	printf("[Kernel] Binary formats Init\n");
+	printk("[Kernel] Binary formats Init\n");
 	init_binfmt();
 
 	/* register filesystems */
-	printf("[Kernel] Register file systems\n");
+	printk("[Kernel] Register file systems\n");
 	if (init_minix_fs())
-		panic("Cannot register minix file system\n");
+		panic("Cannot register minix file system");
 	if (init_cramfs_fs())
-		panic("Cannot register cramfs file system\n");
+		panic("Cannot register cramfs file system");
 	if (init_ext2_fs())
-		panic("Cannot register ext2 file system\n");
+		panic("Cannot register ext2 file system");
 	if (init_proc_fs())
-		panic("Cannot register proc file system\n");
+		panic("Cannot register proc file system");
 	if (init_tmp_fs())
-		panic("Cannot register tmp file system\n");
+		panic("Cannot register tmp file system");
 	if (init_iso_fs())
-		panic("Cannot register iso file system\n");
+		panic("Cannot register iso file system");
 	if (init_devpts_fs())
-		panic("Cannot register devpts file system\n");
+		panic("Cannot register devpts file system");
 	if (init_v9fs_fs())
-		panic("Cannot register 9p file system\n");
+		panic("Cannot register 9p file system");
 
 	/* init network protocols */
-	printf("[Kernel] Init network protocols\n");
+	printk("[Kernel] Init network protocols\n");
 	init_proto();
 
 	/* init network devices */
-	printf("[Kernel] Network devices Init\n");
+	printk("[Kernel] Network devices Init\n");
 	if (init_net_dev())
-		panic("Cannot init network devices\n");
+		panic("Cannot init network devices");
 
 	/* mount root file system */
-	printf("[Kernel] Root file system init\n");
+	printk("[Kernel] Root file system init\n");
 	if (do_mount_root(root_dev, root_dev_name, root_mountflags))
-		panic("Cannot mount root file system\n");
+		panic("Cannot mount root file system");
 
 	/* spawn init process */
 	if (spawn_init())
-		panic("Cannot spawn init process\n");
+		panic("Cannot spawn init process");
 
 	/* create kernel threads */
 	kernel_thread(&bdflush, NULL, CLONE_FS | CLONE_FILES | CLONE_SIGHAND, "bdflush");
@@ -346,50 +346,50 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 		return ret;
 
 	/* print grub informations */
-	printf("[Kernel] Loading at linear address = 0x%x\n", loader);
+	printk("[Kernel] Loading at linear address = 0x%x\n", loader);
 
 	/* init gdt */
-	printf("[Kernel] Global Descriptor Table Init\n");
+	printk("[Kernel] Global Descriptor Table Init\n");
 	init_gdt();
 
 	/* init idt */
-	printf("[Kernel] Interrupts Init\n");
+	printk("[Kernel] Interrupts Init\n");
 	init_irq();
 
 	/* init memory */
-	printf("[Kernel] Memory Init\n");
+	printk("[Kernel] Memory Init\n");
 	init_mem((uint32_t) &kernel_start, (uint32_t) &kernel_end, mem_upper);
 
 	/* init cpu */
-	printf("[Kernel] CPU Init\n");
+	printk("[Kernel] CPU Init\n");
 	init_cpu();
 
 	/* init time */
-	printf("[Kernel] Time Init\n");
+	printk("[Kernel] Time Init\n");
 	init_time();
 
 	/* init inodes */
-	printf("[Kernel] Inodes init\n");
+	printk("[Kernel] Inodes init\n");
 	init_inode();
 
 	/* init dentries */
-	printf("[Kernel] Dentries init\n");
+	printk("[Kernel] Dentries init\n");
 	init_dcache();
 
 	/* init block buffers */
-	printf("[Kernel] Block buffers init\n");
+	printk("[Kernel] Block buffers init\n");
 	init_buffer();
 
 	/* init IPC resources */
-	printf("[Kernel] IPC resources init\n");
+	printk("[Kernel] IPC resources init\n");
 	init_ipc();
 
 	/* init system calls */
-	printf("[Kernel] System calls Init\n");
+	printk("[Kernel] System calls Init\n");
 	init_syscall();
 
 	/* init processes */
-	printf("[Kernel] Processes Init\n");
+	printk("[Kernel] Processes Init\n");
 	if (init_scheduler(kinit))
 		panic("Cannot init processes\n");
 

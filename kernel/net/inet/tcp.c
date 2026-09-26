@@ -414,7 +414,7 @@ static int tcp_getsockopt(struct sock *sk, int level, int optname, void *optval,
 	UNUSED(optname);
 	UNUSED(optval);
 	UNUSED(optlen);
-	printf("tcp_getsockopt: unknown option %d\n", optname);
+	printk("tcp_getsockopt: unknown option %d\n", optname);
 	return 0;
 }
 
@@ -428,7 +428,7 @@ static int tcp_setsockopt(struct sock *sk, int level, int optname, void *optval,
 	UNUSED(optname);
 	UNUSED(optval);
 	UNUSED(optlen);
-	printf("tcp_setsockopt: unknown option %d\n", optname);
+	printk("tcp_setsockopt: unknown option %d\n", optname);
 	return 0;
 }
 

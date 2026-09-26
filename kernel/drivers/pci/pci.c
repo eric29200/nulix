@@ -119,7 +119,7 @@ static int pci_scan_bus(uint8_t bus)
 				pci_dev->bar[reg] = pci_read_field(address, PCI_BAR0 + (reg << 2));
 
 			/* print device */
-			printf("PCI device (vendor id = 0x%x, device id = 0x%x, BAR = 0x%x) registered\n", vendor_id, pci_dev->device_id, pci_dev->bar[0]);
+			printk("PCI device (vendor id = 0x%x, device id = 0x%x, BAR = 0x%x) registered\n", vendor_id, pci_dev->device_id, pci_dev->bar[0]);
 
 			/* add device */
 			list_add_tail(&pci_dev->list, &pci_devices);

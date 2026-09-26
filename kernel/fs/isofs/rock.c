@@ -195,7 +195,7 @@ static int __maybe_continue(struct inode *inode)
 
 	return 1;
 err:
-	printf("Unable to read rock-ridge attributes\n");
+	printk("Unable to read rock-ridge attributes\n");
 	return 0;
 }
 
@@ -243,7 +243,7 @@ repeat:
 				inode->i_gid = isofs_num733(rr->u.PX.gid);
 				break;
 			case SIG('P', 'N'):
-				printf("parse_rock_ridge_inode: SIG('P', 'N) not implemented\n");
+				printk("parse_rock_ridge_inode: SIG('P', 'N) not implemented\n");
 				break;
 			case SIG('T', 'F'):
 				cnt = 0;
@@ -257,13 +257,13 @@ repeat:
 					inode->i_ctime = isofs_date(rr->u.TF.times[cnt++].time);
 				break;
 			case SIG('S', 'L'):
-				printf("parse_rock_ridge_inode: SIG('S', 'L) not implemented\n");
+				printk("parse_rock_ridge_inode: SIG('S', 'L) not implemented\n");
 				break;
 			case SIG('R', 'E'):
-				printf("parse_rock_ridge_inode: attempt to read inode for relocated directory\n");
+				printk("parse_rock_ridge_inode: attempt to read inode for relocated directory\n");
 				goto out;
 			case SIG('C', 'L'):
-				printf("parse_rock_ridge_inode: SIG('C', 'L) not implemented\n");
+				printk("parse_rock_ridge_inode: SIG('C', 'L) not implemented\n");
 				break;
 			default:
 				break;
@@ -323,7 +323,7 @@ repeat:
 				if (truncate)
 					break;
 				if (rr->u.NM.flags & ~1) {
-					printf("Unsupported NM flag settings (%d)\n", rr->u.NM.flags);
+					printk("Unsupported NM flag settings (%d)\n", rr->u.NM.flags);
 					break;
 				};
 				if ((strlen(retname) + rr->len - 5) >= 254) {

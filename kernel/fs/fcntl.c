@@ -113,7 +113,7 @@ int sys_fcntl(int fd, int cmd, unsigned long arg)
 				ret = sock_fcntl(filp, F_SETOWN, arg);
 			break;
 		default:
-			printf("unknown fcntl command %d\n", cmd);
+			printk("unknown fcntl command %d\n", cmd);
 			break;
 	}
 

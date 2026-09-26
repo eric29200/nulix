@@ -108,7 +108,7 @@ int close_fp(struct file *filp)
 {
 	/* check file */
 	if (filp->f_count == 0) {
-		printf("VFS: Close: file count is 0\n");
+		printk("VFS: Close: file count is 0\n");
 		return 0;
 	}
 

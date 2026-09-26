@@ -29,6 +29,6 @@ int cramfs_uncompress_block(void *src, int src_len, void *dst, int dst_len)
 
 	return stream.out_written;
 err:
-	printf("[Cramfs] Error %d while decompressing\n", ret);
+	printk("[Cramfs] Error %d while decompressing\n", ret);
 	return 0;
 }

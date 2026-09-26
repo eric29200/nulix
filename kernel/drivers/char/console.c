@@ -428,7 +428,7 @@ static void csi_m(struct vc *vc)
 					break;
 				}
 
-				printf("console : unknown escape sequence m : %d\n", vc->vc_pars[i]);
+				printk("console : unknown escape sequence m : %d\n", vc->vc_pars[i]);
 				break;
 		}
 	}
@@ -504,7 +504,7 @@ static void console_set_mode(struct vc *vc, int on_off)
 						vc->fb.ops->show_cursor(&vc->fb, on_off);
 					break;
 				default:
-					printf("console : unknown mode : %d\n", vc->vc_pars[i]);
+					printk("console : unknown mode : %d\n", vc->vc_pars[i]);
 					break;
 			}
 		} else {
@@ -513,7 +513,7 @@ static void console_set_mode(struct vc *vc, int on_off)
 					vc->vc_decim = on_off;
 					break;
 				default:
-					printf("console : unknown mode : %d\n", vc->vc_pars[i]);
+					printk("console : unknown mode : %d\n", vc->vc_pars[i]);
 					break;
 			}
 		}
@@ -755,7 +755,7 @@ static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 					console_reset(vc);
 					break;
 				default:
-					printf("console : unknown escape sequence %c\n", c);
+					printk("console : unknown escape sequence %c\n", c);
 					break;
 			}
 
@@ -955,7 +955,7 @@ static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 			case 'c':
 				break;
 			default:
-				printf("console : unknown escape sequence %c (gotpars)\n", c);
+				printk("console : unknown escape sequence %c (gotpars)\n", c);
 				break;
 		}
 	}

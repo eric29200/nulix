@@ -103,7 +103,7 @@ void *kmalloc(size_t size)
 
 	/* no matching bucket */
 	if (!bucket) {
-		printf("Kheap: can't allocate memory for size %d\n", size);
+		printk("Kheap: can't allocate memory for size %d\n", size);
 		return NULL;
 	}
 
@@ -115,7 +115,7 @@ void *kmalloc(size_t size)
 
 	/* can't get memory */
 	if (!page_desc) {
-		printf("Kheap: kernel heap overflow\n");
+		printk("Kheap: kernel heap overflow\n");
 		return NULL;
 	}
 

@@ -112,7 +112,7 @@ static uint32_t getreg(struct task *child, int regno)
 		case ORIG_EAX:
 			return child->thread.regs.orig_eax;
 		default:
-			printf("getreg: bad register in getreg() : %d", regno);
+			printk("getreg: bad register in getreg() : %d", regno);
 			break;
 	}
 
@@ -240,7 +240,7 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 			if (addr < sizeof(struct user_regs_struct)) {
 				tmp = getreg(child, addr);
 			} else {
-				printf("ptrace: can't peek at adress 0x%x\n", addr);
+				printk("ptrace: can't peek at adress 0x%x\n", addr);
 				return -EIO;
 			}
 
@@ -283,7 +283,7 @@ int sys_ptrace(long request, pid_t pid, uint32_t addr, uint32_t data)
 		case PTRACE_SETOPTIONS:
 			return ptrace_setoptions(child, data);
 		default:
-			printf("ptrace: unknown request 0x%x\n", request);
+			printk("ptrace: unknown request 0x%x\n", request);
 			return -EIO;
 	}
 

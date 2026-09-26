@@ -547,7 +547,7 @@ int sys_shmctl(int shmid, int cmd, struct shmid_ds *buf)
 		case IPC_RMID:
 			return shmctl_rmid(shmid);
 		default:
-			printf("sys_shmctl: unknown command %d\n", cmd);
+			printk("sys_shmctl: unknown command %d\n", cmd);
 			return -ENOSYS;
 	}
 }
