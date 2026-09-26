@@ -104,6 +104,13 @@ static int ide_start_read_continuation(struct ide_drive *drive, struct request *
 	cmd[7] = nr_frames >> 8;
 	cmd[8] = nr_frames & 0xFF;
 
+	/* wait for DRQ */
+	ret = ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_BSY | ATA_SR_ERR, 0);
+	if (ret) {
+		printf("ide_start_read_continuation: no DRQ on drive %s after issuing packet command\n", drive->name);
+		return -EIO;
+	}
+
 	/* issue read command */
 	outsw(HWIF(drive)->io_base, cmd, 6);
 
@@ -123,20 +130,17 @@ static int ide_start_read_continuation(struct ide_drive *drive, struct request *
  */
 static int ide_start_packet_command(struct ide_drive *drive, int xferlen, struct request *req)
 {
-	int ret;
+	/* wait for the drive */
+	if (ide_wait_stat(drive, 0, ATA_SR_BSY, 0)) {
+		printf("ide_start_packet_command: drive %s not ready\n", drive->name);
+		return -EIO;
+	}
 
 	/* issue packet command */
 	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
 	outb(HWIF(drive)->io_base + ATA_REG_LBA1, xferlen & 0xFF);
 	outb(HWIF(drive)->io_base + ATA_REG_LBA2, xferlen >> 8);
 	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
-
-	/* wait for completion */
-	ret = ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_BSY | ATA_SR_ERR, 0);
-	if (ret) {
-		printf("ide_start_packet_command: no DRQ on drive %s after issuing packet command\n", drive->name);
-		return -EIO;
-	}
 
 	/* continue read */
 	return ide_start_read_continuation(drive, req);
