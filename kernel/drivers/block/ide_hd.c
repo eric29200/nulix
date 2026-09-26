@@ -27,6 +27,7 @@ static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
 		/* update request */
 		req->sector++;
 		req->nr_sectors--;
+		req->current_nr_sectors--;
 		req->bh_offset += 512;
 
 		/* go to next buffer */
@@ -35,6 +36,10 @@ static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
 			req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
 		}
 	}
+
+	/* end request */
+	if (req->current_nr_sectors == 0)
+		end_request(req, 1);
 
 	return 0;
 }
@@ -63,7 +68,11 @@ static int ide_do_rw_disk_dma(struct ide_drive *drive, struct request *req)
 	/* end dma */
 	ret |= ide_dmaproc(drive, req, ide_dma_end);
 
-	return 0;
+	/* end request on success */
+	if (ret == 0)
+		end_request(req, 1);
+
+	return ret;
 }
 
 /*

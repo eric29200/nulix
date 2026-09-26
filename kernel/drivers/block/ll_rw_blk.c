@@ -69,16 +69,21 @@ void set_device_ro(dev_t dev, int flag)
 /*
  * End a request.
  */
-void end_request(struct request *req)
+void end_request(struct request *req, int uptodate)
 {
 	struct list_head *pos, *n;
 	struct buffer_head *bh;
 
 	/* end i/o */
-	list_for_each_safe(pos, n, &req->bhs_list) {
-		bh = list_entry(pos, struct buffer_head, b_list_req);
-		bh->b_end_io(bh, 1);
+	if (uptodate) {
+		list_for_each_safe(pos, n, &req->bhs_list) {
+			bh = list_entry(pos, struct buffer_head, b_list_req);
+			bh->b_end_io(bh, 1);
+		}
 	}
+
+	/* go to next request */
+	blk_dev[major(req->rq_dev)].current_request = req->next;
 
 	/* mark request inactive */
 	req->rq_status = RQ_INACTIVE;

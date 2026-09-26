@@ -55,7 +55,7 @@ void set_device_ro(dev_t dev, int flag);
 int blk_ioctl(dev_t dev, int request, unsigned long arg);
 void ll_rw_block(int rw, size_t nr_bhs, struct buffer_head *bhs[]);
 void execute_block_requests();
-void end_request(struct request *req);
+void end_request(struct request *req, int uptodate);
 void init_blk_dev();
 
 #endif

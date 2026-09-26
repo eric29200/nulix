@@ -128,36 +128,26 @@ static struct ide_drive *ide_get_drive(dev_t dev)
 }
 
 /*
- * Handle a read/write request.
+ * Handle a request.
  */
-static void ide_request(struct ide_hwif *hwif)
+static int ide_do_request(struct request *req)
 {
 	struct ide_drive *drive;
-	struct request *req;
 	uint32_t block;
 	int ret;
-
-repeat:
-	/* get next request */
-	req = blk_dev[hwif->major].current_request;
-	if (!req)
-		return;
-
-	/* remove it from queue */
-	blk_dev[hwif->major].current_request = req->next;
 
 	/* get ide drive */
 	drive = ide_get_drive(req->rq_dev);
 	if (!drive) {
 		printf("ide_request: can't find device 0x%x\n", req->rq_dev);
-		goto next;
+		return -EIO;
 	}
 
 	/* select drive */
 	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
 	if (ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_DRQ, 0)) {
 		printf("ide_request: drive %s not ready for command\n", drive->name);
-		return;
+		return -EIO;
 	}
 
 	/* compute block */
@@ -177,13 +167,35 @@ repeat:
 	}
 
 	/* print error */
-	if (ret)
+	if (ret) {
 		printf("ide_request: error on request (cmd = %x, sector = %ld)\n", req->cmd, req->sector);
+		return ret;
+	}
 
-next:
-	/* end this request */
-	end_request(req);
-	goto repeat;
+	return 0;
+}
+
+/*
+ * Handle read/write requests.
+ */
+static void ide_request(struct ide_hwif *hwif)
+{
+	struct request *req;
+	int ret;
+
+	for (;;) {
+		/* get next request */
+		req = blk_dev[hwif->major].current_request;
+		if (!req)
+			return;
+
+		/* handle request */
+		ret = ide_do_request(req);
+
+		/* on failure, end this request */
+		if (ret)
+			end_request(req, 0);
+	}
 }
 
 /*

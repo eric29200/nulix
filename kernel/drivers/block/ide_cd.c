@@ -10,26 +10,6 @@
 #define SECTORS_PER_FRAME	(CD_FRAMESIZE / SECTOR_SIZE)
 
 /*
- * Wait for operation completion.
- */
-static int ide_cd_wait(struct ide_drive *drive)
-{
-	uint8_t status;
-
-	for (;;) {
-		status = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
-		if (!status)
-			return -ENXIO;
-		if (status & ATA_SR_ERR)
-			return -EIO;
-		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ))
-			break;
-	}
-
-	return 0;
-}
-
-/*
  * End a read request.
  */
 static int ide_end_read(struct ide_drive *drive, struct request *req)
@@ -79,6 +59,10 @@ static int ide_end_read(struct ide_drive *drive, struct request *req)
 		}
 	}
 
+	/* end request */
+	if (req->current_nr_sectors == 0)
+		end_request(req, 1);
+
 	return 0;
 }
 
@@ -107,9 +91,9 @@ static int ide_start_read_continuation(struct ide_drive *drive, struct request *
 	frame = sector / SECTORS_PER_FRAME;
 	nr_frames = (nr_sectors + SECTORS_PER_FRAME - 1) / SECTORS_PER_FRAME;
 
-	/* limit to 64k - 1 */
-	if (nr_frames > 65535)
-		nr_frames = 65535;
+	/* limit to 16 frames */
+	if (nr_frames > 16)
+		nr_frames = 16;
 
 	/* prepare read command */
 	cmd[0] = 0x28;
@@ -124,9 +108,11 @@ static int ide_start_read_continuation(struct ide_drive *drive, struct request *
 	outsw(HWIF(drive)->io_base, cmd, 6);
 
 	/* wait for completion */
-	ret = ide_cd_wait(drive);
-	if (ret)
-		return ret;
+	ret = ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_BSY | ATA_SR_ERR, 0);
+	if (ret) {
+		printf("ide_start_read_continuation: no DRQ on drive %s after issuing read/write\n", drive->name);
+		return -EIO;
+	}
 
 	/* end read = get results */
 	return ide_end_read(drive, req);
@@ -146,9 +132,11 @@ static int ide_start_packet_command(struct ide_drive *drive, int xferlen, struct
 	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);
 
 	/* wait for completion */
-	ret = ide_cd_wait(drive);
-	if (ret)
-		return ret;
+	ret = ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_BSY | ATA_SR_ERR, 0);
+	if (ret) {
+		printf("ide_start_packet_command: no DRQ on drive %s after issuing packet command\n", drive->name);
+		return -EIO;
+	}
 
 	/* continue read */
 	return ide_start_read_continuation(drive, req);
