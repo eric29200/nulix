@@ -139,11 +139,8 @@ static int ide_start_packet_command(struct ide_drive *drive, int xferlen, struct
 {
 	int ret;
 
-	/* select drive */
-	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
-	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
-
 	/* issue packet command */
+	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
 	outb(HWIF(drive)->io_base + ATA_REG_LBA1, xferlen & 0xFF);
 	outb(HWIF(drive)->io_base + ATA_REG_LBA2, xferlen >> 8);
 	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_PACKET);

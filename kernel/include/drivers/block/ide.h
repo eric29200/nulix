@@ -71,6 +71,8 @@
 
 #define HWIF(drive)			((struct ide_hwif *) ((drive)->hwif))
 
+#define ATA_OK_STAT(stat, good, bad)	(((stat) & ((good) | (bad))) == (good))
+
 /*
  * IDE identification.
  */
@@ -213,14 +215,27 @@ struct ide_hwif {
 	uint8_t				present:1;
 };
 
+/*
+ * DMA actions.
+ */
+typedef enum {
+	ide_dma_on,
+	ide_dma_off,
+	ide_dma_begin,
+	ide_dma_end,
+	ide_dma_read,
+	ide_dma_write
+} ide_dma_action_t;
+
 /* init functions */
 int init_ide();
 int ide_setup_dma(struct ide_hwif *hwif, uint32_t dma_base);
-int ide_dmaproc(struct ide_drive *drive, struct request *req);
+int ide_dmaproc(struct ide_drive *drive, struct request *req, ide_dma_action_t func);
 int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block);
 int ide_do_rw_cdrom(struct ide_drive *drive, struct request *req, uint32_t block);
 void ide_input_data_buf(struct ide_drive *drive, void *buf, size_t len);
 void ide_input_data(struct ide_drive *drive, struct request *req);
 void ide_output_data(struct ide_drive *drive, struct request *req);
+int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, int dma);
 
 #endif

@@ -57,6 +57,50 @@ void ide_output_data(struct ide_drive *drive, struct request *req)
 }
 
 /*
+ * Wait for 400ns.
+ */
+static void ide_400ns_delay(struct ide_drive *drive)
+{
+	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
+	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
+	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
+	inb(HWIF(drive)->io_base + ATA_REG_ALTSTATUS);
+}
+
+/*
+ * Wait for a drive status.
+ */
+int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, int dma)
+{
+	uint8_t stat, dma_stat;
+
+	/* wait 400 ns*/
+	ide_400ns_delay(drive);
+
+	/* wait for busy drive */
+	for (;;) {
+		/* get stat */
+		stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
+		dma_stat = dma ? inb(HWIF(drive)->dma_base + 2) : 0;
+
+		/* drive not busy */
+		if (!(stat & ATA_SR_BSY) && (!dma || (dma_stat & 4)))
+			break;
+	}
+
+	/* wait 400 ns*/
+	ide_400ns_delay(drive);
+
+	/* check status */
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
+	if (ATA_OK_STAT(stat, good, bad))
+		return 0;
+
+	printf("ide_wait_stat: bad status on drive %s, status = 0x%x\n", drive->name, stat);
+	return 1;
+}
+
+/*
  * Get an IDE drive.
  */
 static struct ide_drive *ide_get_drive(dev_t dev)
@@ -107,6 +151,13 @@ repeat:
 	if (!drive) {
 		printf("ide_request: can't find device 0x%x\n", req->rq_dev);
 		goto next;
+	}
+
+	/* select drive */
+	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
+	if (ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_DRQ, 0)) {
+		printf("ide_request: drive %s not ready for command\n", drive->name);
+		return;
 	}
 
 	/* compute block */
