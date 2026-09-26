@@ -204,7 +204,14 @@ static void syscall_handler(struct registers *regs)
 	memcpy(&current->thread.regs, regs, sizeof(struct registers));
 
 	/* execute system call */
+	current->thread.in_syscall = 1;
 	ret = ((syscall_f) syscalls[syscall_nr])(regs->ebx, regs->ecx, regs->edx, regs->esi, regs->edi, regs->ebp);
+	current->thread.in_syscall = 0;
+
+	uint32_t flags;
+	__save_flags(flags);
+	if (flags & (1UL << 9))
+		printf("%d %d\n", current->pid, syscall_nr);
 
 	/* restore registers and set return value */
 	memcpy(regs, &current->thread.regs, sizeof(struct registers));

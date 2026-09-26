@@ -24,7 +24,7 @@ int nr_tasks = 0;
 struct kernel_stat kstat;				/* kernel statistics */
 
 /* switch tasks (defined in scheduler.s) */
-extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp);
+extern void scheduler_do_switch(uint32_t *current_esp, uint32_t next_esp, int enable_int);
 
 /* average run */
 unsigned long avenrun[3] = { 0, 0, 0 };
@@ -66,8 +66,8 @@ static void switch_to(struct task *prev, struct task *next)
 	load_tls(next);
 	switch_pgd(next->mm->pgd);
 
-	/* switch */
-	scheduler_do_switch(&prev->thread.esp, next->thread.esp);
+	/* switch to next task and reenable interrupt if next task is not in a system call */
+	scheduler_do_switch(&prev->thread.esp, next->thread.esp, !next->thread.in_syscall);
 }
 
 /*

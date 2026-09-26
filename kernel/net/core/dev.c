@@ -217,6 +217,9 @@ int net_handle(void *arg)
 	UNUSED(arg);
 
 	for (;;) {
+		/* disable interrupts */
+		irq_disable();
+
 		/* get next packet or sleep */
 		skb = skb_dequeue(backlog);
 		if (!skb) {

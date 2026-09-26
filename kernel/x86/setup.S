@@ -186,9 +186,15 @@ idt_flush:
 	ret
 
 .global scheduler_do_switch
+.data
+enable_int: .long 0
+.text
 scheduler_do_switch:
 	cli
 	pusha
+
+	mov 44(%esp), %eax		/* save enable interrupt parameter */
+	mov %eax, enable_int
 
 	mov 36(%esp), %eax		/* load current task's kernel stack address */
 	mov %esp, (%eax)		/* save esp for current task's kernel stack */
@@ -197,7 +203,12 @@ scheduler_do_switch:
 	mov %eax, %esp
 
 	popa
+
+	mov enable_int, %eax		/* enable interrupt if asked */
+	cmp $1, %eax
+	jne skip_sti
 	sti
+skip_sti:
 	ret
 
 .global enter_user_mode

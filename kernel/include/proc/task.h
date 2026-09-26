@@ -55,6 +55,7 @@ struct mm_struct {
  * Task's thread structure.
  */
 struct thread_struct {
+	uint8_t				in_syscall;				/* in system call ? */
 	uint32_t			kernel_stack;				/* kernel stack */
 	uint32_t			esp;					/* kernel stack pointer */
 	struct desc_struct		tls;					/* Thread Local Storage address */
