@@ -338,7 +338,7 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 	irq_disable();
 
 	/* init serial console */
-	init_serial();
+	init_serial_console();
 
 	/* parse multiboot header */
 	ret = parse_mboot(mbi_magic, mbi_addr, &mem_upper);

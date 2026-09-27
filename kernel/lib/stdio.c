@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <stderr.h>
 #include <proc/sched.h>
-#include <drivers/char/serial.h>
+#include <lib/console.h>
 
 #define LOG_BUF_LEN			16384
 #define LOG_BUF_MASK			(LOG_BUF_LEN - 1)
@@ -22,11 +22,14 @@
 /* mix variables */
 static char __buf[1024];
 
+/* consoles */
+static LIST_HEAD(console_drivers);
+static int preferred_console = -1;
+
 /* syslog variables */
 static char log_buf[LOG_BUF_LEN];
 static int log_start = 0;
 static int log_end = 0;
-static int log_size = 0;
 static int logged_chars = 0;
 static DECLARE_WAIT_QUEUE_HEAD(log_wait);
 
@@ -52,7 +55,7 @@ int sys_syslog(int type, char *buf, int len)
 				break;
 
 			/* wait for log */
-			while (!log_size)
+			while (log_start == log_end)
 				sleep_on(&log_wait);
 
 			/* read from ring buffer */
@@ -111,6 +114,8 @@ static void emit_log_char(char c)
  */
 int vprintf(const char *fmt, va_list ap)
 {
+	struct list_head *pos;
+	struct console *co;
 	char *p, *buf_end;
 	int i;
 
@@ -118,10 +123,15 @@ int vprintf(const char *fmt, va_list ap)
 	i = vsnprintf(__buf, sizeof(__buf), fmt, ap);
 	buf_end = __buf + i;
 
-	/* write tmp buf to syslog and to serial line */
-	for (p = __buf; p < buf_end; p++) {
+	/* write message to syslog */
+	for (p = __buf; p < buf_end; p++)
 		emit_log_char(*p);
-		write_serial(*p);
+
+	/* write message to registered consoles */
+	list_for_each(pos, &console_drivers) {
+		co = list_entry(pos, struct console, list);
+		if ((co->flags & CON_ENABLED) && co->write)
+			co->write(co, __buf, buf_end - __buf);
 	}
 
 	return i;
@@ -158,4 +168,38 @@ void panic(const char *fmt, ...)
 
 	/* infinite loop */
 	for (;;);
+}
+
+/*
+ * Register a console driver.
+ */
+void register_console(struct console *co)
+{
+	char buf[16];
+	int p;
+
+	/* if no console registered yet, setup this console */
+	if (preferred_console < 0) {
+		if (co->index < 0)
+			co->index = 0;
+		if (!co->setup || co->setup(co) == 0) {
+			co->flags |= CON_ENABLED;
+			preferred_console = 0;
+		}
+	}
+
+	/* console disabled */
+	if (!(co->flags & CON_ENABLED))
+		return;
+
+	/* add console */
+	list_add_tail(&co->list, &console_drivers);
+
+	/* print buffered log messages */
+	p = log_start & LOG_BUF_MASK;
+	while (p != log_end) {
+		*buf = log_buf[p];
+		p = (p + 1) & LOG_BUF_MASK;
+		co->write(co, buf, 1);
+	}
 }
