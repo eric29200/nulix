@@ -118,9 +118,12 @@ int vprintf(const char *fmt, va_list ap)
 	struct console *co;
 	char *p, *buf_end;
 	int i;
+	
+	/* print time */
+	i = sprintf(__buf, "[%5llu.%06llu] ", xtimes.tv_sec, xtimes.tv_nsec / 1000);
 
-	/* print in tmp buf */
-	i = vsnprintf(__buf, sizeof(__buf), fmt, ap);
+	/* print message in tmp buf */
+	i += vsnprintf(__buf + i, sizeof(__buf), fmt, ap);
 	buf_end = __buf + i;
 
 	/* write message to syslog */

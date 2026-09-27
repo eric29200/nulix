@@ -215,74 +215,74 @@ static void cpu_idle()
 static void kinit()
 {
 	/* init memory devices */
-	printk("[Kernel] Memory devices Init\n");
+	printk("Memory devices Init\n");
 	if (init_mem_devices())
-		printk("[Kernel] Memory devices Init error\n");
+		printk("Memory devices Init error\n");
 
 	/* init misc devices */
-	printk("[Kernel] Misc devices Init\n");
+	printk("Misc devices Init\n");
 	if (init_misc_devices())
-		printk("[Kernel] Misc devices Init error\n");
+		printk("Misc devices Init error\n");
 
 	/* init pci devices */
-	printk("[Kernel] PCI devices Init\n");
+	printk("PCI devices Init\n");
 	if (init_pci())
-		printk("[Kernel] PCI devices Init error\n");
+		printk("PCI devices Init error\n");
 
 	/* init keyboard */
-	printk("[Kernel] Keyboard Init\n");
+	printk("Keyboard Init\n");
 	init_keyboard();
 
 	/* init mouse */
-	printk("[Kernel] Mouse Init\n");
+	printk("Mouse Init\n");
 	if (init_mouse())
-		printk("[Kernel] Mouse Init error\n");
+		printk("Mouse Init error\n");
 
 	/* init loopback device */
-	printk("[Kernel] Loopback Init\n");
+	printk("Loopback Init\n");
 	if (init_loopback())
-		printk("[Kernel] Loopback Init error\n");
+		printk("Loopback Init error\n");
 
 	/* init realtek 8139 device */
-	printk("[Kernel] Realtek 8139 card Init\n");
+	printk("Realtek 8139 card Init\n");
 	if (init_rtl8139())
-		printk("[Kernel] Realtek 8139 card Init error\n");
+		printk("Realtek 8139 card Init error\n");
 
 	/* init block devices */
-	printk("[Kernel] Bock devices Init\n");
+	printk("Block devices Init\n");
 	init_blk_dev();
 
 	/* init ide devices */
-	printk("[Kernel] IDE devices Init\n");
+	printk("IDE devices Init\n");
 	if (init_ide())
-		printk("[Kernel] IDE devices Init error\n");
+		printk("IDE devices Init error\n");
 
 	/* init loop devices */
-	printk("[Kernel] Loop devices Init\n");
+	printk("Loop devices Init\n");
 	if (init_loop())
-		printk("[Kernel] Loop devices Init error\n");
+		printk("Loop devices Init error\n");
 
 	/* init frame buffer */
-	printk("[Kernel] Frame buffer Init\n");
+	printk("Frame buffer Init\n");
 	if (init_framebuffer_device(&tag_fb))
 		panic("Cannot init frame buffer");
 
 	/* init ttys */
-	printk("[Kernel] Ttys Init\n");
+	printk("Ttys Init\n");
 	if (init_tty(&tag_fb))
 		panic("Cannot init ttys");
 
 	/* init virtio */
-	printk("[Kernel] Virtio Init\n");
+	printk("Virtio Init\n");
 	if (init_virtio())
-		printk("[Kernel] Virtio Init error\n");
+		printk("Virtio Init error\n");
 
 	/* init binary formats */
-	printk("[Kernel] Binary formats Init\n");
+	printk("Binary formats Init\n");
 	init_binfmt();
 
 	/* register filesystems */
-	printk("[Kernel] Register file systems\n");
+	printk("Register file systems\n");
 	if (init_minix_fs())
 		panic("Cannot register minix file system");
 	if (init_cramfs_fs())
@@ -301,16 +301,16 @@ static void kinit()
 		panic("Cannot register 9p file system");
 
 	/* init network protocols */
-	printk("[Kernel] Init network protocols\n");
+	printk("Init network protocols\n");
 	init_proto();
 
 	/* init network devices */
-	printk("[Kernel] Network devices Init\n");
+	printk("Network devices Init\n");
 	if (init_net_dev())
 		panic("Cannot init network devices");
 
 	/* mount root file system */
-	printk("[Kernel] Root file system init\n");
+	printk("Root file system init\n");
 	if (do_mount_root(root_dev, root_dev_name, root_mountflags))
 		panic("Cannot mount root file system");
 
@@ -346,50 +346,50 @@ int kmain(uint32_t mbi_magic, uint32_t mbi_addr)
 		return ret;
 
 	/* print grub informations */
-	printk("[Kernel] Loading at linear address = 0x%x\n", loader);
+	printk("Loading at linear address = 0x%x\n", loader);
 
 	/* init gdt */
-	printk("[Kernel] Global Descriptor Table Init\n");
+	printk("Global Descriptor Table Init\n");
 	init_gdt();
 
 	/* init idt */
-	printk("[Kernel] Interrupts Init\n");
+	printk("Interrupts Init\n");
 	init_irq();
 
 	/* init memory */
-	printk("[Kernel] Memory Init\n");
+	printk("Memory Init\n");
 	init_mem((uint32_t) &kernel_start, (uint32_t) &kernel_end, mem_upper);
 
 	/* init cpu */
-	printk("[Kernel] CPU Init\n");
+	printk("CPU Init\n");
 	init_cpu();
 
 	/* init time */
-	printk("[Kernel] Time Init\n");
+	printk("Time Init\n");
 	init_time();
 
 	/* init inodes */
-	printk("[Kernel] Inodes init\n");
+	printk("Inodes init\n");
 	init_inode();
 
 	/* init dentries */
-	printk("[Kernel] Dentries init\n");
+	printk("Dentries init\n");
 	init_dcache();
 
 	/* init block buffers */
-	printk("[Kernel] Block buffers init\n");
+	printk("Block buffers init\n");
 	init_buffer();
 
 	/* init IPC resources */
-	printk("[Kernel] IPC resources init\n");
+	printk("IPC resources init\n");
 	init_ipc();
 
 	/* init system calls */
-	printk("[Kernel] System calls Init\n");
+	printk("System calls Init\n");
 	init_syscall();
 
 	/* init processes */
-	printk("[Kernel] Processes Init\n");
+	printk("Processes Init\n");
 	if (init_scheduler(kinit))
 		panic("Cannot init processes\n");
 
