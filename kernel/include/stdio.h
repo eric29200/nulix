@@ -4,6 +4,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 
+#define KERN_INFO		"5"
+
 int sprintf(char *s, const char *format, ...);
 int snprintf(char *s, size_t len, const char *format, ...);
 int vsnprintf(char *buf, int n, const char *fmt, va_list ap);

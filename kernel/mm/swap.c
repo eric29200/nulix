@@ -1049,7 +1049,7 @@ int sys_swapon(const char *path, int swap_flags)
 	p->swap_map[0] = SWAP_MAP_BAD;
 	p->flags = SWP_WRITEOK;
 	p->pages = nr_good_pages;
-	printk("Adding Swap: %dk swap-space (priority %d)\n", nr_good_pages << (PAGE_SHIFT - 10), p->priority);
+	printk("Adding Swap %dk swap-space (priority %d)\n", nr_good_pages << (PAGE_SHIFT - 10), p->priority);
 
 	/* insert swap file/device in swap list */
 	insert_swap_info(p);

@@ -119,8 +119,11 @@ int vprintf(const char *fmt, va_list ap)
 	char *p, *buf_end;
 	int i;
 	
+	/* print log level */
+	i = sprintf(__buf, "<%s>", KERN_INFO);
+
 	/* print time */
-	i = sprintf(__buf, "[%5llu.%06llu] ", xtimes.tv_sec, xtimes.tv_nsec / 1000);
+	i += sprintf(__buf + i, "[%5llu.%06llu] ", xtimes.tv_sec, xtimes.tv_nsec / 1000);
 
 	/* print message in tmp buf */
 	i += vsnprintf(__buf + i, sizeof(__buf), fmt, ap);
@@ -134,7 +137,7 @@ int vprintf(const char *fmt, va_list ap)
 	list_for_each(pos, &console_drivers) {
 		co = list_entry(pos, struct console, list);
 		if ((co->flags & CON_ENABLED) && co->write)
-			co->write(co, __buf, buf_end - __buf);
+			co->write(co, __buf + 3, buf_end - __buf - 3);
 	}
 
 	return i;
