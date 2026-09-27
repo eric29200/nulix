@@ -60,5 +60,5 @@ static struct console serial_console = {
  */
 void init_serial_console()
 {
-	return register_console(&serial_console);
+	register_console(&serial_console);
 }

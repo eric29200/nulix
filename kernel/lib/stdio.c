@@ -24,7 +24,6 @@ static char __buf[1024];
 
 /* consoles */
 static LIST_HEAD(console_drivers);
-static int preferred_console = -1;
 
 /* syslog variables */
 static char log_buf[LOG_BUF_LEN];
@@ -118,7 +117,7 @@ int vprintf(const char *fmt, va_list ap)
 	struct console *co;
 	char *p, *buf_end;
 	int i;
-	
+
 	/* print log level */
 	i = sprintf(__buf, "<%s>", KERN_INFO);
 
@@ -184,15 +183,11 @@ void register_console(struct console *co)
 	char buf[16];
 	int p;
 
-	/* if no console registered yet, setup this console */
-	if (preferred_console < 0) {
-		if (co->index < 0)
-			co->index = 0;
-		if (!co->setup || co->setup(co) == 0) {
-			co->flags |= CON_ENABLED;
-			preferred_console = 0;
-		}
-	}
+	/* init console */
+	if (co->index < 0)
+		co->index = 0;
+	if (!co->setup || co->setup(co) == 0)
+		co->flags |= CON_ENABLED;
 
 	/* console disabled */
 	if (!(co->flags & CON_ENABLED))

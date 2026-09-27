@@ -1,6 +1,7 @@
 #include <drivers/char/console.h>
 #include <drivers/char/console_selection.h>
 #include <drivers/char/keyboard.h>
+#include <lib/console.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
 #include <mm/mm.h>
@@ -1246,6 +1247,54 @@ static struct tty_driver console_driver = {
 };
 
 /*
+ * Print a message to console.
+ */
+static void vt_console_print(struct console *co, const char *buf, size_t len)
+{
+	struct tty *tty;
+	struct vc *vc;
+	uint16_t tc;
+	size_t i;
+
+	/* get tty and console */
+	UNUSED(co);
+	tty = &tty_table[fg_console];
+	vc = &console_table[fg_console];
+
+	/* clear selection */
+	if (vc == &console_table[sel_cons])
+		clear_selection(vc);
+
+	/* get characters from write queue */
+	for (i = 0; i < len; i++) {
+		/* translate character */
+		tc = vc->vc_translate[(uint8_t) *buf++];
+
+		/* insert mode */
+		if (vc->vc_decim)
+			insert_char(vc);
+
+		/* just put new character */
+		if (vc->vc_state == TTY_STATE_NORMAL && tc >= 32) {
+			console_putc(vc, tc);
+			continue;
+		}
+
+		/* do control */
+		console_do_control(tty, vc, tc);
+	}
+}
+
+/*
+ * Vt console driver.
+ */
+static struct console vt_console_driver = {
+	.name		= "tty",
+	.index		= -1,
+	.write		= vt_console_print,
+};
+
+/*
  * Init consoles.
  */
 int init_console(struct multiboot_tag_framebuffer *tag_fb)
@@ -1305,6 +1354,9 @@ int init_console(struct multiboot_tag_framebuffer *tag_fb)
 	/* set cursor timer */
 	init_timer(&cursor_timer, update_cursor_timer, NULL, jiffies + ms_to_jiffies(FB_CURSOR_TIMER_MS));
 	add_timer(&cursor_timer);
+
+	/* register console driver */
+	register_console(&vt_console_driver);
 
 	return 0;
 }
