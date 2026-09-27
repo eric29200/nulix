@@ -180,8 +180,8 @@ void panic(const char *fmt, ...)
  */
 void register_console(struct console *co)
 {
-	char buf[16];
-	int p;
+	int p, first_line = 1, line_start = 0;
+	char c;
 
 	/* init console */
 	if (co->index < 0)
@@ -199,8 +199,30 @@ void register_console(struct console *co)
 	/* print buffered log messages */
 	p = log_start & LOG_BUF_MASK;
 	while (p != log_end) {
-		*buf = log_buf[p];
+		c = log_buf[p];
 		p = (p + 1) & LOG_BUF_MASK;
-		co->write(co, buf, 1);
+
+		/* skip first truncated message */
+		if (c != '\n' && first_line)
+			continue;
+
+		/* new line : print '\n' if not first line */
+		if (c == '\n') {
+			line_start = 1;
+			if (first_line)
+				first_line = 0;
+			else
+				co->write(co, &c, 1);
+			continue;
+		}
+
+		/* line start : skip 3 first characters = log level */
+		if (line_start) {
+			line_start = line_start == 3 ? 0 : line_start + 1;
+			continue;
+		}
+
+		/* write to console */
+		co->write(co, &c, 1);
 	}
 }
