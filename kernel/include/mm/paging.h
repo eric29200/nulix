@@ -155,7 +155,6 @@ struct page {
 	struct buffer_head *	buffers;				/* buffers of this page */
 	void *			virtual;				/* virtual address (used to map high pages in kernel space) */
 	void *			private;				/* used for page allocation */
-	struct wait_queue_head	wait;					/* wait queue */
 	struct list_head	list;					/* next page */
 	struct page *		next_hash;				/* next page in hash table */
 	struct page *		prev_hash;				/* previous page in hash table */
