@@ -669,6 +669,13 @@ int copy_page_range(pgd_t *pgd_src, pgd_t *pgd_dst, struct vm_area *vma)
 				if (pte_none(pte))
 					goto next_pte;
 
+				/* swapped page : duplicate swap entry */
+				if (!pte_present(pte)) {
+					swap_duplicate(pte);
+					*pte_dst = pte;
+					goto next_pte;
+				}
+
 				/* virtual page */
 				page = pte_page(pte);
 				if (!VALID_PAGE(page) || PageReserved(page)) {

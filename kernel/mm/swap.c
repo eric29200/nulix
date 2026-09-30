@@ -290,7 +290,7 @@ err_free:
 /*
  * Verify that a swap entry is valid and increment its swap map count.
  */
-static int swap_duplicate(uint32_t entry)
+int swap_duplicate(uint32_t entry)
 {
 	static int overflow = 0;
 	uint32_t offset, type;
