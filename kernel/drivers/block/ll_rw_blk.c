@@ -171,6 +171,8 @@ static void make_request(int rw, struct buffer_head *bh)
 		current->ioac.write_bytes += bh->b_size;
 
 	/* lock buffer */
+	if (buffer_locked(bh))
+		return;
 	lock_buffer(bh);
 
 	/* create a bounce buffer if needed */
