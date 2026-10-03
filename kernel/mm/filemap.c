@@ -544,7 +544,7 @@ int shrink_mmap(int priority)
 
 		/* skip used pages */
 		page = &page_array[clock];
-		if (page->count > 1)
+		if (page->count > 1 || PageLocked(page))
 			continue;
 
 		/* skip shared memory pages */
