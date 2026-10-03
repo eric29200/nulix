@@ -205,7 +205,7 @@ struct page *__get_free_pages(int priority, uint32_t order)
 		priority = GFP_KERNEL;
 
 	/* out of memory */
-	if (nr_free_pages() < (1 << order))
+	if (nr_free_pages() < (1UL << order))
 		return NULL;
 
 	/* find free node */
