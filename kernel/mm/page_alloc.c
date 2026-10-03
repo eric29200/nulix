@@ -30,8 +30,6 @@ struct zone {
 static struct zone zones[NR_ZONES];
 uint32_t totalram_pages = 0;
 
-static void reclaim_pages();
-
 /*
  * Get number of free pages.
  */
@@ -152,6 +150,44 @@ int get_order(size_t size)
 }
 
 /*
+ * Reclaim pages, when memory is low.
+ */
+static void try_to_free_pages()
+{
+	int count = SWAP_CLUSTER_MAX, priority = 5;
+	static DECLARE_WAIT_QUEUE_HEAD(free_pages_wait);
+	static int lock = 0;
+
+	/* synchronize */
+	while (lock)
+		sleep_on(&free_pages_wait);
+	lock++;
+
+	/* synchronize buffers */
+	sync_dev(0);
+
+	do {
+		/* shrink dentries */
+		shrink_dcache_memory(priority);
+
+		/* try to free pages */
+		while (shrink_mmap(priority))
+			if (!--count)
+				goto done;
+
+		/* try to swap out */
+		while (swap_out(priority))
+			if (!--count)
+				goto done;
+	} while (--priority > 0);
+
+done:
+	/* synchronize */
+	lock--;
+	wake_up(&free_pages_wait);
+}
+
+/*
  * Get free pages.
  */
 struct page *__get_free_pages(int priority, uint32_t order)
@@ -160,21 +196,28 @@ struct page *__get_free_pages(int priority, uint32_t order)
 	struct node *node;
 	struct page *page;
 
-	for (;;) {
-		/* find free node */
-		node = __find_free_node(priority, order);
+	/* low memory : try to free pages */
+	if (priority != GFP_IO && nr_free_pages() < NR_FREE_PAGES_LOW)
+		try_to_free_pages();
+
+	/* fix priority */
+	if (priority == GFP_IO)
+		priority = GFP_KERNEL;
+
+	/* out of memory */
+	if (nr_free_pages() < (1 << order))
+		return NULL;
+
+	/* find free node */
+	node = __find_free_node(priority, order);
+	if (node)
+		goto found;
+
+	/* try to use kernel pages */
+	if (priority != GFP_KERNEL) {
+		node = __find_free_node(GFP_KERNEL, order);
 		if (node)
 			goto found;
-
-		/* try to use kernel pages */
-		if (priority != GFP_KERNEL) {
-			node = __find_free_node(GFP_KERNEL, order);
-			if (node)
-				goto found;
-		}
-
-		/* reclaim memory */
-		reclaim_pages();
 	}
 
 	return NULL;
@@ -191,10 +234,6 @@ found:
 	/* add remaining pages to free list */
 	if (order != node->order)
 		__add_to_free_pages(page + npages, page->priority, node->order_nr_pages - npages);
-
-	/* low memory : reclaim pages */
-	if (nr_free_pages() < NR_FREE_PAGES_LOW)
-		reclaim_pages();
 
 	return page;
 }
@@ -243,43 +282,6 @@ void free_pages(void *address, uint32_t order)
 	/* free page */
 	if (page_idx && page_idx < nr_pages)
 		__free_pages(&page_array[page_idx], order);
-}
-
-/*
- * Reclaim pages, when memory is low.
- */
-static void reclaim_pages()
-{
-	int count = SWAP_CLUSTER_MAX, priority = 5;
-	static int lock = 0;
-
-	/* don't call reclaim pages recursively */
-	if (lock)
-		return;
-	else
-		lock++;
-
-	/* synchronize buffers */
-	sync_dev(0);
-
-	do {
-		/* shrink dentries */
-		shrink_dcache_memory(priority);
-
-		/* try to free pages */
-		while (shrink_mmap(priority))
-			if (!--count)
-				goto done;
-
-		/* try to swap out */
-		while (swap_out(priority))
-			if (!--count)
-				goto done;
-	} while (--priority > 0);
-
-done:
-	/* unlock reclaim pages */
-	lock--;
 }
 
 /*

@@ -398,7 +398,7 @@ static int grow_buffers(size_t size)
 	struct page *page;
 
 	/* get a page */
-	page = __get_free_page(GFP_KERNEL);
+	page = __get_free_page(GFP_IO);
 	if (!page)
 		return -ENOMEM;
 
@@ -530,7 +530,7 @@ int try_to_free_buffers(struct page *page)
 	tmp = page->buffers;
 	do {
 		/* used buffer */
-		if (tmp->b_count || buffer_dirty(tmp))
+		if (tmp->b_count || buffer_dirty(tmp) || buffer_locked(tmp))
 			return 0;
 
 		/* go to next buffer in page */

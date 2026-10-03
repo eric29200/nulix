@@ -242,7 +242,7 @@ struct buffer_head *create_bounce(int rw, struct buffer_head *bh_orig)
 		return NULL;
 
 	/* get a free page */
-	page = __get_free_page(GFP_KERNEL);
+	page = __get_free_page(GFP_IO);
 	if (!page)
 		goto err;
 

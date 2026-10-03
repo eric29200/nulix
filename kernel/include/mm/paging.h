@@ -65,6 +65,7 @@ typedef uint32_t pte_t;
 
 #define GFP_KERNEL			0
 #define GFP_HIGHUSER			1
+#define GFP_IO				2
 #define NR_ZONES			2
 
 #define PG_uptodate			0
