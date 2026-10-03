@@ -1,78 +1,94 @@
 #include <drivers/block/ide.h>
+#include <mm/highmem.h>
 #include <x86/io.h>
 #include <stderr.h>
 #include <stdio.h>
 
+static void ide_hd_read_irq_handler(struct ide_drive *drive);
+static void ide_hd_write_irq_handler(struct ide_drive *drive);
+
 /*
- * Do read/write in PIO mode.
+ * Read PIO irq handler.
  */
-static int ide_do_rw_disk_pio(struct ide_drive *drive, struct request *req)
+static void ide_hd_read_irq_handler(struct ide_drive *drive)
 {
-	/* issue read/write command */
-	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_PIO : ATA_CMD_WRITE_PIO);
+	struct ide_hwgroup *hwgroup = HWGROUP(drive);
+	struct request *req;
+	uint8_t stat;
 
-	while (req->nr_sectors > 0) {
-		/* wait for drive */
-		if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_BSY | ATA_SR_ERR, 0)) {
-			printk("ide_do_rw_disk_pio: no DRQ on drive %s after issuing read/write\n", drive->name);
-			return -EIO;
-		}
+	/* check status */
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
+	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR)) {
+		printk("ide_hd_read_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
+		return;
+	}
 
-		/* read or write data */
-		if (req->cmd == READ)
-			ide_input_data(drive, req);
-		else
-			ide_output_data(drive, req);
+	/* get request */
+	req = hwgroup->req;
 
-		/* update request */
-		req->sector++;
-		req->nr_sectors--;
-		req->current_nr_sectors--;
-		req->bh_offset += 512;
+	/* read data */
+	ide_input_data(drive, req);
 
-		/* go to next buffer */
-		if (req->bh_offset >= req->bh->b_size) {
-			req->bh_offset = 0;
-			req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
-		}
+	/* update request */
+	req->sector++;
+	req->nr_sectors--;
+	req->bh_offset += 512;
+
+	/* go to next buffer */
+	if (req->bh_offset >= req->bh->b_size) {
+		req->bh_offset = 0;
+		req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
 	}
 
 	/* end request */
-	if (req->current_nr_sectors == 0)
-		end_request(req, 1);
+	if (req->nr_sectors <= 0) {
+		ide_end_request(hwgroup, 1);
+		return;
+	}
 
-	return 0;
+	/* or continue request */
+	ide_set_irq_handler(drive, &ide_hd_read_irq_handler, TIMEOUT_WAIT_CMD);
 }
 
 /*
- * Do read/write in dma mode.
+ * Write PIO irq handler.
  */
-static int ide_do_rw_disk_dma(struct ide_drive *drive, struct request *req)
+static void ide_hd_write_irq_handler(struct ide_drive *drive)
 {
-	int ret;
+	struct ide_hwgroup *hwgroup = HWGROUP(drive);
+	struct request *req;
+	uint8_t stat;
 
-	/* drive not using dma */
-	if (!drive->using_dma)
-		return 1;
+	/* check status */
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
+	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR | ATA_SR_DF)) {
+		printk("ide_hd_write_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
+		return;
+	}
 
-	/* start dma transfer */
-	ret = ide_dmaproc(drive, req, req->cmd == READ ? ide_dma_read : ide_dma_write);
-	if (ret)
-		return ret;
+	/* get request */
+	req = hwgroup->req;
 
-	/* wait for drive */
-	ret = ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_ERR, 1);
-	if (ret)
-		printk("ide_do_rw_disk_dma: drive %s on error after issuing read/write\n", drive->name);
+	/* update request */
+	req->sector++;
+	req->nr_sectors--;
+	req->bh_offset += 512;
 
-	/* end dma */
-	ret |= ide_dmaproc(drive, req, ide_dma_end);
+	/* go to next buffer */
+	if (req->bh_offset >= req->bh->b_size) {
+		req->bh_offset = 0;
+		req->bh = list_next_entry_or_null(req->bh, &req->bhs_list, b_list_req);
+	}
 
-	/* end request on success */
-	if (ret == 0)
-		end_request(req, 1);
+	/* end request */
+	if (req->nr_sectors <= 0) {
+		ide_end_request(hwgroup, 1);
+		return;
+	}
 
-	return ret;
+	/* or continue request = write next data */
+	ide_set_irq_handler(drive, &ide_hd_write_irq_handler, TIMEOUT_WAIT_CMD);
+	ide_output_data(drive, req);
 }
 
 /*
@@ -88,17 +104,37 @@ int ide_do_rw_disk(struct ide_drive *drive, struct request *req, uint32_t block)
 
 	/* select sector */
 	outb(HWIF(drive)->io_base + ATA_REG_CONTROL, 0);
-	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, (drive->master ? 0xE0 : 0xF0) | ((block >> 24) & 0x0F));
-	outb(HWIF(drive)->io_base + ATA_REG_FEATURES, 0);
 	outb(HWIF(drive)->io_base + ATA_REG_SECCOUNT0, req->nr_sectors);
 	outb(HWIF(drive)->io_base + ATA_REG_LBA0, (uint8_t) block);
 	outb(HWIF(drive)->io_base + ATA_REG_LBA1, (uint8_t) (block >> 8));
 	outb(HWIF(drive)->io_base + ATA_REG_LBA2, (uint8_t) (block >> 16));
 
-	/* try dma first */
-	if (ide_do_rw_disk_dma(drive, req) == 0)
+	/* read request */
+	if (req->cmd == READ) {
+		/* try dma first */
+		if (drive->using_dma && ide_dmaproc(drive, req, ide_dma_read) == 0)
+			return 0;
+
+		/* or use pio mode */
+		ide_set_irq_handler(drive, &ide_hd_read_irq_handler, TIMEOUT_WAIT_CMD);
+		outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);
+		return 0;
+	}
+
+	/* write request : try dma first */
+	if (drive->using_dma && ide_dmaproc(drive, req, ide_dma_write) == 0)
 		return 0;
 
-	/* on failure try pio mode */
-	return ide_do_rw_disk_pio(drive, req);
+	/* or use pio mode */
+	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);
+	if (ide_wait_stat(drive, ATA_SR_DRQ, ATA_SR_ERR | ATA_SR_DF, TIMEOUT_WAIT_DRQ)) {
+		printk("ide_pio_read: no DRQ on drive %s after issuing write\n", drive->name);
+		return -EIO;
+	}
+
+	/* write first sector */
+	ide_set_irq_handler(drive, &ide_hd_write_irq_handler, TIMEOUT_WAIT_CMD);
+	ide_output_data(drive, req);
+
+	return 0;
 }

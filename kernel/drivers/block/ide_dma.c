@@ -110,26 +110,34 @@ static int ide_build_dmatable(struct ide_hwif *hwif, struct request *req)
 }
 
 /*
- * Issue a DMA command.
+ * Handle a dma interrupt.
  */
-int ide_dmaproc1(struct ide_drive *drive, struct request *req)
+static void dma_irq_handler(struct ide_drive *drive)
 {
-	uint32_t dma_base = HWIF(drive)->dma_base;
+	struct ide_hwif *hwif = drive->hwif;
+	uint8_t stat, dma_stat;
 
-	/* build dma table */
-	if (!ide_build_dmatable(HWIF(drive), req))
-		return 1;
+	/* stop dma */
+	outb(hwif->dma_base, inb(hwif->dma_base) & ~1);
 
-	/* prepare DMA transfer */
-	outb(dma_base + 2, inb(dma_base + 2) | 6);
-	outl(dma_base + 4, __pa(HWIF(drive)->dma_table));
-	outb(dma_base, req->cmd == READ ? 8 : 0);
-	outb(dma_base, inb(dma_base) | 1);
+	/* get status */
+	dma_stat = ide_dmaproc(drive, NULL, ide_dma_end);
+	stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
 
-	/* issue command */
-	outb(HWIF(drive)->io_base + ATA_REG_COMMAND, req->cmd == READ ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
+	/* check status */
+	if (!ATA_OK_STAT(stat, ATA_SR_DRDY, ATA_SR_ERR | ATA_SR_DRQ)) {
+		printk("dma_irq_handler: bad status on drive %s : 0x%x\n", drive->name, stat);
+		return;
+	}
 
-	return 0;
+	/* check dma status */
+	if (dma_stat) {
+		printk("dma_irq_handler: bad DMA status on drive %s : 0x%x\n", drive->name, dma_stat);
+		return;
+	}
+
+	/* end request */
+	ide_end_request(hwif->hwgroup, 1);
 }
 
 /*
@@ -161,12 +169,14 @@ ide_dma_rw:
 			outb(dma_base + 2, inb(dma_base + 2) | 6);
 			outl(dma_base + 4, __pa(HWIF(drive)->dma_table));
 			outb(dma_base, reading);
+			drive->waiting_for_dma = 1;
 
 			/* not a disk : specific commands and interrupt handlers */
 			if (drive->media != IDE_DISK)
 				return 0;
 
 			/* issue command */
+			ide_set_irq_handler(drive, &dma_irq_handler, TIMEOUT_WAIT_CMD);
 			outb(HWIF(drive)->io_base + ATA_REG_COMMAND, reading ? ATA_CMD_READ_DMA : ATA_CMD_WRITE_DMA);
 			goto ide_dma_begin;
 		case ide_dma_begin:
@@ -175,6 +185,7 @@ ide_dma_begin:
 			return 0;
 		case ide_dma_end:
 			/* stop dma */
+			drive->waiting_for_dma = 0;
 			outb(dma_base, inb(dma_base) & ~1);
 
 			/* get status */

@@ -315,6 +315,7 @@ static void __init_zone(int priority)
 	for (addr = start, i = start / PAGE_SIZE; i < nr_pages && addr < end; i++, addr += PAGE_SIZE) {
 		/* set priority */
 		page_array[i].priority = priority;
+		init_waitqueue_head(&page_array[i].wait);
 
 		/* page not available */
 		if (!bios_map_address_available(addr)) {

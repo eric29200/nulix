@@ -193,11 +193,11 @@ repeat:
 	}
 
 	/* end request */
-	end_request(request, 1);
+	end_request(request);
 	goto repeat;
 err:
 	printk("loop: error on request (cmd = 0x%x, sector = %ld)\n", request->cmd, request->sector);
-	end_request(request, 0);
+	end_request(request);
 	goto repeat;
 }
 

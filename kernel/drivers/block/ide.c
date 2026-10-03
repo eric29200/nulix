@@ -1,7 +1,7 @@
 #include <drivers/block/ide.h>
 #include <drivers/block/blk_dev.h>
-#include <drivers/pci/pci.h>
 #include <mm/highmem.h>
+#include <drivers/pci/pci.h>
 #include <x86/interrupt.h>
 #include <x86/io.h>
 #include <mm/mm.h>
@@ -14,6 +14,34 @@
 static struct ide_hwif ide_hwifs[MAX_HWIFS] = { 0 };
 static uint8_t ide_hwif_to_major[MAX_HWIFS] = { DEV_IDE0_MAJOR, DEV_IDE1_MAJOR, DEV_IDE2_MAJOR, DEV_IDE3_MAJOR };
 static uint16_t default_io_base[MAX_HWIFS] = { 0x1F0, 0x170, 0x1E8, 0x168 };
+static uint8_t default_irqs[MAX_HWIFS] = { 14, 15, 11, 10 };
+
+/*
+ * Get an IDE drive.
+ */
+static struct ide_drive *ide_get_drive(dev_t dev)
+{
+	int major = major(dev), h, unit;
+	struct ide_drive *drive;
+	struct ide_hwif *hwif;
+
+	for (h = 0; h < MAX_HWIFS; h++) {
+		hwif = &ide_hwifs[h];
+
+		if (hwif->present && major == hwif->major) {
+			unit = minor(dev) >> PARTITION_MINOR_SHIFT;
+			if (unit < MAX_DRIVES) {
+				drive = &hwif->drives[unit];
+				if (drive->present)
+					return drive;
+			}
+
+			return NULL;
+		}
+	}
+
+	return NULL;
+}
 
 /*
  * Read data from a drive.
@@ -57,6 +85,19 @@ void ide_output_data(struct ide_drive *drive, struct request *req)
 }
 
 /*
+ * End a request.
+ */
+void ide_end_request(struct ide_hwgroup *hwgroup, int uptodate)
+{
+	struct request *req = hwgroup->req;
+
+	if (uptodate)
+		end_request(req);
+
+	hwgroup->req = NULL;
+}
+
+/*
  * Wait for 400ns.
  */
 static void ide_400ns_delay(struct ide_drive *drive)
@@ -70,22 +111,26 @@ static void ide_400ns_delay(struct ide_drive *drive)
 /*
  * Wait for a drive status.
  */
-int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, int dma)
+int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, time_t timeout)
 {
-	uint8_t stat, dma_stat;
+	uint8_t stat;
 
 	/* wait 400 ns*/
 	ide_400ns_delay(drive);
 
 	/* wait for busy drive */
+	timeout += jiffies;
 	for (;;) {
-		/* get stat */
-		stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
-		dma_stat = dma ? inb(HWIF(drive)->dma_base + 2) : 0;
-
 		/* drive not busy */
-		if (!(stat & ATA_SR_BSY) && (!dma || (dma_stat & 4)))
+		stat = inb(HWIF(drive)->io_base + ATA_REG_STATUS);
+		if (!(stat & ATA_SR_BSY))
 			break;
+
+		/* timeout */
+		if (jiffies > timeout) {
+			printk("ide_wait_stat: timeout on drive %s, status = 0x%x\n", drive->name, stat);
+			return 1;
+		}
 	}
 
 	/* wait 400 ns*/
@@ -101,36 +146,9 @@ int ide_wait_stat(struct ide_drive *drive, uint8_t good, uint8_t bad, int dma)
 }
 
 /*
- * Get an IDE drive.
- */
-static struct ide_drive *ide_get_drive(dev_t dev)
-{
-	int major = major(dev), h, unit;
-	struct ide_drive *drive;
-	struct ide_hwif *hwif;
-
-	for (h = 0; h < MAX_HWIFS; h++) {
-		hwif = &ide_hwifs[h];
-
-		if (hwif->present && major == hwif->major) {
-			unit = minor(dev) >> PARTITION_MINOR_SHIFT;
-			if (unit < MAX_DRIVES) {
-				drive = &hwif->drives[unit];
-				if (drive->present)
-					return drive;
-			}
-
-			return NULL;
-		}
-	}
-
-	return NULL;
-}
-
-/*
  * Handle a request.
  */
-static int ide_do_request(struct request *req)
+static void ide_request(struct ide_hwif *hwif, struct request *req)
 {
 	struct ide_drive *drive;
 	uint32_t block;
@@ -140,14 +158,15 @@ static int ide_do_request(struct request *req)
 	drive = ide_get_drive(req->rq_dev);
 	if (!drive) {
 		printk("ide_request: can't find device 0x%x\n", req->rq_dev);
-		return -EIO;
+		goto kill_req;
 	}
 
 	/* select drive */
+	hwif->hwgroup->drive = drive;
 	outb(HWIF(drive)->io_base + ATA_REG_HDDEVSEL, drive->master ? 0xE0 : 0xF0);
-	if (ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_DRQ, 0)) {
+	if (ide_wait_stat(drive, ATA_SR_DRDY, ATA_SR_BSY | ATA_SR_DRQ, TIMEOUT_WAIT_READY)) {
 		printk("ide_request: drive %s not ready for command\n", drive->name);
-		return -EIO;
+		return;
 	}
 
 	/* compute block */
@@ -163,38 +182,55 @@ static int ide_do_request(struct request *req)
 			break;
 		default:
 			ret = -EIO;
-			break;
+			goto kill_req;
 	}
 
-	/* print error */
+	/* handle error */
 	if (ret) {
 		printk("ide_request: error on request (cmd = %x, sector = %ld)\n", req->cmd, req->sector);
-		return ret;
+		goto kill_req;
 	}
 
-	return 0;
+	return;
+kill_req:
+	ide_end_request(hwif->hwgroup, 0);
 }
 
 /*
- * Handle read/write requests.
+ * Handle a request.
  */
-static void ide_request(struct ide_hwif *hwif)
+static void ide_hwgroup_request(struct ide_hwgroup *hwgroup)
 {
-	struct request *req;
-	int ret;
+	struct ide_hwif *hwif = hwgroup->hwif;
+	struct request *req = hwgroup->req;
+	struct list_head *pos;
 
-	for (;;) {
-		/* get next request */
-		req = blk_dev[hwif->major].current_request;
+	/* request until group is busy */
+	while (!hwgroup->handler) {
+		/* find a request to handle */
+		if (!req) {
+			list_for_each(pos, &hwgroup->hwifs) {
+				hwif = list_entry(pos, struct ide_hwif, list);
+
+				/* get next request */
+				req = blk_dev[hwif->major].current_request;
+				if (!req)
+					continue;
+
+				/* remove it from queue */
+				blk_dev[hwif->major].current_request = req->next;
+				break;
+			}
+		}
+
+		/* no request */
 		if (!req)
-			return;
+			break;
 
-		/* handle request */
-		ret = ide_do_request(req);
-
-		/* on failure, end this request */
-		if (ret)
-			end_request(req, 0);
+		/* do request */
+		hwgroup->hwif = hwif;
+		hwgroup->req = req;
+		ide_request(hwif, req);
 	}
 }
 
@@ -203,7 +239,7 @@ static void ide_request(struct ide_hwif *hwif)
  */
 static void do_ide0_request()
 {
-	ide_request(&ide_hwifs[0]);
+	ide_hwgroup_request(ide_hwifs[0].hwgroup);
 }
 
 /*
@@ -211,7 +247,7 @@ static void do_ide0_request()
  */
 static void do_ide1_request()
 {
-	ide_request(&ide_hwifs[1]);
+	ide_hwgroup_request(ide_hwifs[1].hwgroup);
 }
 
 /*
@@ -219,7 +255,7 @@ static void do_ide1_request()
  */
 static void do_ide2_request()
 {
-	ide_request(&ide_hwifs[2]);
+	ide_hwgroup_request(ide_hwifs[2].hwgroup);
 }
 
 /*
@@ -227,7 +263,7 @@ static void do_ide2_request()
  */
 static void do_ide3_request()
 {
-	ide_request(&ide_hwifs[3]);
+	ide_hwgroup_request(ide_hwifs[3].hwgroup);
 }
 
 /*
@@ -317,6 +353,11 @@ static int try_to_identify(struct ide_drive *drive, uint8_t cmd)
 
 		switch (type) {
 			case IDE_CDROM:
+				/* init drive */
+				ret = ide_setup_cdrom(drive);
+				if (ret)
+					return ret;
+
 				drive->media = type;
 				drive->present = 1;
 				break;
@@ -507,10 +548,116 @@ err_kmalloc_gd_part:
 err_kmalloc_gd_sizes:
 	kfree(gd);
 err_kmalloc_gd:
-	panic("init_gendisk: Out of memory");
+	panic("init_gendisk: Out of memory\n");
 	return;
 }
 
+/*
+ * IRQ handler.
+ */
+static void ide_irq_handler(struct registers *regs, void *dev_instance)
+{
+	struct ide_hwgroup *hwgroup = dev_instance;
+	struct ide_hwif *hwif = hwgroup->hwif;
+	ide_handler_t *handler;
+
+	/* unexpected irq */
+	if (regs->int_no != hwif->irq || !hwgroup->handler) {
+		inb(hwif->io_base + ATA_REG_STATUS);
+		return;
+	}
+
+	/* handle interrupt */
+	del_timer(&hwgroup->timer);
+	handler = hwgroup->handler;
+	hwgroup->handler = NULL;
+	handler(hwgroup->drive);
+
+	/* initiate next request */
+	if (hwgroup->handler == NULL)
+		ide_hwgroup_request(hwgroup);
+}
+
+/*
+ * Set irq handler.
+ */
+void ide_set_irq_handler(struct ide_drive *drive, ide_handler_t *handler, time_t timeout)
+{
+	struct ide_hwgroup *hwgroup = HWGROUP(drive);
+
+	/* set handler */
+	hwgroup->handler = handler;
+
+	/* add timer */
+	mod_timer(&hwgroup->timer, jiffies + timeout);
+}
+
+/*
+ * Timer expiration.
+ */
+static void ide_timer_expiry(void *arg)
+{
+	struct ide_hwgroup *hwgroup = arg;
+	struct ide_drive *drive = hwgroup->drive;
+
+	/* abort request */
+	if (hwgroup->handler) {
+		hwgroup->handler = NULL;
+
+		/* end dma request */
+		if (drive && drive->waiting_for_dma)
+			ide_dmaproc(drive, NULL, ide_dma_end);
+
+		printk("ide_timer_expiry: irq timeout on drive %s\n", drive ? drive->name : "NULL");
+	}
+
+	/* retry request */
+	if (!hwgroup->handler)
+		ide_hwgroup_request(hwgroup);
+}
+
+/*
+ * Init irq.
+ */
+static int ide_init_irq(struct ide_hwif *hwif)
+{
+	struct ide_hwgroup *hwgroup;
+	struct ide_hwif *h;
+	int ret, i;
+
+	/* check if another interface shae irq */
+	for (i = 0; i < MAX_HWIFS; i++) {
+		h = &ide_hwifs[i];
+
+		if (h->hwgroup && hwif->irq == h->irq) {
+			hwif->sharing_irq = h->sharing_irq = 1;
+			hwgroup = h->hwgroup;
+			goto out;
+		}
+	}
+
+	/* allocate a new group */
+	hwgroup = (struct ide_hwgroup *) kmalloc(sizeof(struct ide_hwgroup));
+	if (!hwgroup)
+		return -ENOMEM;
+
+	/* init group */
+	memset(hwgroup, 0, sizeof(struct ide_hwgroup));
+	INIT_LIST_HEAD(&hwgroup->hwifs);
+	init_timer(&hwgroup->timer, ide_timer_expiry, hwgroup, 0);
+
+	/* request irq */
+	ret = request_irq(hwif->irq, ide_irq_handler, SA_SHIRQ, hwif->name, hwgroup);
+	if (ret) {
+		kfree(hwgroup);
+		return ret;
+	}
+
+out:
+	hwif->hwgroup = hwgroup;
+	list_add_tail(&hwif->list, &hwgroup->hwifs);
+	return 0;
+}
 
 /*
  * Init an IDE interface.
@@ -524,12 +671,20 @@ static int hwif_init(int h)
 	if (!hwif->present)
 		return 0;
 
+	/* no irq */
+	if (!hwif->irq) {
+		printk("hwif_init: %s disabled, no IRQ\n", hwif->name);
+		hwif->present = 0;
+		return -EIO;
+	}
+
 	/* register block device */
 	ret = register_blkdev(hwif->major, hwif->name, &ide_fops);
 	if (ret)
 		return ret;
 
 	/* allocate block size array */
+	ret = -ENOMEM;
 	blksize_size[hwif->major] = kmalloc(MAX_DRIVES * NR_PARTITIONS * sizeof(size_t));
 	if (!blksize_size[hwif->major])
 		goto err_blksize_size;
@@ -559,15 +714,22 @@ static int hwif_init(int h)
 			break;
 	}
 
+	/* init irq */
+	ret = ide_init_irq(hwif);
+	if (ret)
+		goto err_irq;
+
 	/* init gendisk */
 	init_gendisk(hwif);
 
 	return 0;
+err_irq:
+	kfree(blk_size[hwif->major]);
 err_blk_size:
 	kfree(blksize_size[hwif->major]);
 err_blksize_size:
 	unregister_blkdev(hwif->major, hwif->name);
-	return -ENOMEM;
+	return ret;
 }
 
 /*
@@ -649,17 +811,20 @@ static void init_hwif_data(int index)
 
 	/* init interface */
 	hwif->index = index;
-	hwif->major = ide_hwif_to_major[index];
 	hwif->io_base = default_io_base[index];
+	hwif->major = ide_hwif_to_major[index];
+	hwif->irq = default_irqs[index];
 	hwif->name[0] = 'i';
 	hwif->name[1] = 'd';
 	hwif->name[2] = 'e';
 	hwif->name[3] = '0' + index;
+	INIT_LIST_HEAD(&hwif->list);
 
 	/* init drives */
 	for (unit = 0; unit < MAX_DRIVES; unit++) {
 		drive = &hwif->drives[unit];
 		drive->master = unit == 0 ? 1 : 0;
+		drive->io_32bit = 0;
 		drive->hwif = hwif;
 		drive->name[0] = 'h';
 		drive->name[1] = 'd';
