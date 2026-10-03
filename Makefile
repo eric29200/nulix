@@ -9,10 +9,12 @@ args		= `arg="$(filter-out $@,$(MAKECMDGOALS))" && echo $${arg:-${1}}`
 
 all: run
 
-run:
+kernel_compile:
 	make -j$(NJOBS) -C kernel
 	cp $(KERNEL) iso/boot/
 	grub-mkrescue -o $(ISO) iso
+
+run: kernel_compile
 	sudo $(QEMU)										\
 		-m $(MEM_SIZE)									\
 		-serial stdio 									\
@@ -29,10 +31,7 @@ run:
 		-fsdev local,id=hostshare,path=/home/eric/tmp,security_model=passthrough	\
 		-device virtio-9p-pci,fsdev=hostshare,mount_tag=hostshare
 
-bochs:
-	make -j$(NJOBS) -C kernel
-	cp $(KERNEL) iso/boot/
-	grub-mkrescue -o $(ISO) iso
+bochs: kernel_compile
 	bochs -q -f $(BOCHS_CONF)
 
 %:
