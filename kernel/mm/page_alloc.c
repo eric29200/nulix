@@ -30,6 +30,10 @@ struct zone {
 static struct zone zones[NR_ZONES];
 uint32_t totalram_pages = 0;
 
+/* free pages lock */
+static DECLARE_WAIT_QUEUE_HEAD(free_pages_wait);
+static int free_pages_lock = 0;
+
 /*
  * Get number of free pages.
  */
@@ -155,13 +159,9 @@ int get_order(size_t size)
 static void try_to_free_pages()
 {
 	int count = SWAP_CLUSTER_MAX, priority = 5;
-	static DECLARE_WAIT_QUEUE_HEAD(free_pages_wait);
-	static int lock = 0;
 
-	/* synchronize */
-	while (lock)
-		sleep_on(&free_pages_wait);
-	lock++;
+	/* lock */
+	free_pages_lock = 1;
 
 	/* synchronize buffers */
 	sync_dev(0);
@@ -182,8 +182,8 @@ static void try_to_free_pages()
 	} while (--priority > 0);
 
 done:
-	/* synchronize */
-	lock--;
+	/* unlock */
+	free_pages_lock = 0;
 	wake_up(&free_pages_wait);
 }
 
@@ -196,9 +196,14 @@ struct page *__get_free_pages(int priority, uint32_t order)
 	struct node *node;
 	struct page *page;
 
-	/* low memory : try to free pages */
-	if (priority != GFP_IO && nr_free_pages() < NR_FREE_PAGES_LOW)
-		try_to_free_pages();
+	/* free pages if needed */
+	if (priority != GFP_IO) {
+		if (free_pages_lock)
+			sleep_on(&free_pages_wait);
+
+		if (nr_free_pages() < NR_FREE_PAGES_LOW)
+			try_to_free_pages();
+	}
 
 	/* fix priority */
 	if (priority == GFP_IO)
