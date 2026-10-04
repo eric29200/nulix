@@ -1,7 +1,7 @@
 KERNEL		= kernel/kernel.bin
 ISO		= nulix.iso
 NJOBS		= $(shell nproc)
-MEM_SIZE	= 32M
+MEM_SIZE	= 3G
 DISK1		= hda.img
 QEMU		= kvm
 BOCHS_CONF	= bochs.conf
