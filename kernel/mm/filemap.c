@@ -296,7 +296,7 @@ static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t
 			break;
 
 		/* page up to date */
-		if (PageUptodate(page))
+		if (PageUptodate(page) || PageLocked(page))
 			goto next;
 
 		/* read page */
