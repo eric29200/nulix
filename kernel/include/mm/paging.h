@@ -175,6 +175,7 @@ void free_pgd(pgd_t *pgd);
 void flush_tlb_page(pgd_t *pgd, uint32_t address);
 void flush_tlb(pgd_t *pgd);
 void wait_on_page(struct page *page);
+void wait_on_pages(size_t pages_count, struct page **pages);
 pmd_t *pmd_alloc(pgd_t *pgd, uint32_t address);
 pte_t *pte_alloc(pmd_t *pmd, uint32_t address);
 void unlock_page(struct page *page);
