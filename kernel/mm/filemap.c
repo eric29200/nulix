@@ -8,7 +8,7 @@
 #include <stderr.h>
 #include <stdio.h>
 
-#define MAX_READ_AHEAD_PAGES		32
+#define MAX_RW_AHEAD_PAGES		32
 
 /*
  * Get a page from cache or create it.
@@ -281,12 +281,12 @@ int generic_file_mmap(struct file *filp, struct vm_area *vma)
  */
 static int generic_file_readahead(struct inode *inode, off_t page_offset, size_t max_pages)
 {
-	struct page *page, *pages_list[MAX_READ_AHEAD_PAGES];
+	struct page *page, *pages_list[MAX_RW_AHEAD_PAGES];
 	size_t i;
 
 	/* limit max pages */
-	if (max_pages > MAX_READ_AHEAD_PAGES)
-		max_pages = MAX_READ_AHEAD_PAGES;
+	if (max_pages > MAX_RW_AHEAD_PAGES)
+		max_pages = MAX_RW_AHEAD_PAGES;
 
 	/* read */
 	for (i = 0; i < max_pages; i++, page_offset += PAGE_SIZE) {
@@ -393,8 +393,9 @@ found_page:
  */
 int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *ppos)
 {
-	struct page *page, *tmp = NULL;
+	struct page *page, *pages_list[MAX_RW_AHEAD_PAGES];
 	int written = 0, ret = 0;
+	size_t pages_count = 0;
 	struct inode *inode;
 	off_t offset;
 	char *kaddr;
@@ -452,8 +453,14 @@ int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *
 			break;
 		}
 
+		/* wait on pages */
+		pages_list[pages_count++] = page;
+		if (pages_count == MAX_RW_AHEAD_PAGES) {
+			wait_on_pages(pages_count, pages_list);
+			pages_count = 0;
+		}
+
 		/* release page */
-		tmp = page;
 		__free_page(page);
 
 		/* update sizes */
@@ -465,9 +472,9 @@ int generic_file_write(struct file *filp, const char *buf, size_t count, off_t *
 			inode->i_size = *ppos;
 	}
 
-	/* execute block requests */
-	if (tmp)
-		wait_on_page(tmp);
+	/* wait on last pages */
+	if (pages_count)
+		wait_on_pages(pages_count, pages_list);
 
 	/* update inode */
 	inode->i_mtime = inode->i_ctime = CURRENT_TIME;

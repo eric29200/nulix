@@ -31,6 +31,17 @@ void wait_on_page(struct page *page)
 }
 
 /*
+ * Wait on pages.
+ */
+void wait_on_pages(size_t pages_count, struct page **pages)
+{
+	size_t i;
+
+	for (i = 0; i < pages_count; i++)
+		wait_on_page(pages[i]);
+}
+
+/*
  * Flush a Translation Lookaside Buffer entry.
  */
 void flush_tlb_page(pgd_t *pgd, uint32_t address)
