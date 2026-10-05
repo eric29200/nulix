@@ -412,9 +412,49 @@ static int ide_ioctl(struct inode *inode, struct file *filp, int request, unsign
 }
 
 /*
+ * Open an ide device.
+ */
+static int ide_open(struct inode *inode, struct file *filp)
+{
+	dev_t dev = inode->i_rdev;
+	struct ide_drive *drive;
+
+	/* unused file */
+	UNUSED(filp);
+
+	/* get ide drive */
+	drive = ide_get_drive(dev);
+	if (!drive)
+		return -ENXIO;
+
+	return 0;
+}
+
+/*
+ * Close an ide device.
+ */
+static int ide_release(struct inode *inode, struct file *filp)
+{
+	dev_t dev = inode->i_rdev;
+	struct ide_drive *drive;
+
+	/* unused file */
+	UNUSED(filp);
+
+	/* get ide drive */
+	drive = ide_get_drive(dev);
+	if (!drive)
+		return -ENXIO;
+
+	return 0;
+}
+
+/*
  * IDE file operations.
  */
 static struct file_operations ide_fops = {
+	.open		= ide_open,
+	.release	= ide_release,
 	.read		= generic_block_read,
 	.write		= generic_block_write,
 	.ioctl		= ide_ioctl,
