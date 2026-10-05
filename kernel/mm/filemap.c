@@ -514,12 +514,17 @@ void truncate_inode_pages(struct inode *inode, off_t start)
 	struct page *page;
 	off_t offset;
 
+repeat:
 	list_for_each_safe(pos, n, &inode->i_pages) {
 		page = list_entry(pos, struct page, list);
 		offset = page->offset;
 
 		/* full page truncate */
 		if (offset >= start) {
+			if (PageLocked(page)) {
+				wait_on_page(page);
+				goto repeat;
+			}
 			remove_from_page_cache(page);
 			__free_page(page);
 			continue;
