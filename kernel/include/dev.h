@@ -3,6 +3,7 @@
 
 #define DEV_UNNAMED_MAJOR	0		/* unnamed devices major number */
 #define DEV_MEMORY_MAJOR	1		/* memory major number (zero, null, random...) */
+#define DEV_FLOPPY_MAJOR	2		/* floppy major number */
 #define DEV_IDE0_MAJOR		3		/* ide 0 major number */
 #define DEV_TTY_MAJOR		4		/* tty major number */
 #define DEV_TTYAUX_MAJOR	5		/* auxiliary tty major number */

@@ -16,6 +16,7 @@
 #include <drivers/block/blk_dev.h>
 #include <drivers/block/ide.h>
 #include <drivers/block/loop.h>
+#include <drivers/block/floppy.h>
 #include <drivers/video/fb.h>
 #include <drivers/net/rtl8139.h>
 #include <drivers/net/loopback.h>
@@ -256,6 +257,11 @@ static void kinit()
 	printk("IDE devices Init\n");
 	if (init_ide())
 		printk("IDE devices Init error\n");
+
+	/* init floppy devices */
+	printk("Floppy devices Init\n");
+	if (init_floppy())
+		printk("Floppy devices Init error\n");
 
 	/* init loop devices */
 	printk("Loop devices Init\n");

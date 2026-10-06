@@ -92,6 +92,8 @@ sudo mknod tmp/dev/loop0 b 7 0
 sudo mknod tmp/dev/loop1 b 7 1
 sudo mknod tmp/dev/loop2 b 7 2
 sudo mknod tmp/dev/loop3 b 7 3
+sudo mknod tmp/dev/fd0 b 2 0
+sudo mknod tmp/dev/fd1 b 2 1
 sudo ln -s /dev/hda1 tmp/dev/root
 
 # permissions
