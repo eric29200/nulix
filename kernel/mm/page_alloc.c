@@ -211,7 +211,7 @@ struct page *__get_free_pages(int priority, uint32_t order)
 
 	/* out of memory */
 	if (nr_free_pages() < (1UL << order))
-		return NULL;
+		goto err;
 
 	/* find free node */
 	node = __find_free_node(priority, order);
@@ -225,6 +225,8 @@ struct page *__get_free_pages(int priority, uint32_t order)
 			goto found;
 	}
 
+err:
+	panic("__get_free_pages: out of memory (%d free pages)\n", nr_free_pages());
 	return NULL;
 found:
 	/* get first free page */
