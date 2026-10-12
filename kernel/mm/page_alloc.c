@@ -205,16 +205,12 @@ struct page *__get_free_pages(int priority, uint32_t order)
 			try_to_free_pages();
 	}
 
-	/* fix priority */
-	if (priority == GFP_IO)
-		priority = GFP_KERNEL;
-
 	/* out of memory */
 	if (nr_free_pages() < (1UL << order))
 		goto err;
 
 	/* find free node */
-	node = __find_free_node(priority, order);
+	node = __find_free_node(priority == GFP_IO ? GFP_KERNEL : priority, order);
 	if (node)
 		goto found;
 
@@ -226,7 +222,7 @@ struct page *__get_free_pages(int priority, uint32_t order)
 	}
 
 err:
-	panic("__get_free_pages: out of memory (%d free pages)\n", nr_free_pages());
+	panic("__get_free_pages: out of memory (priority = %d, free pages = %d)\n", priority, nr_free_pages());
 	return NULL;
 found:
 	/* get first free page */
