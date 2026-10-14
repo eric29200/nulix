@@ -22,7 +22,7 @@
 #define HASH_BITS			12
 #define HASH_SIZE			(1 << HASH_BITS)
 
-#define BDFLUSH_INTERVAL_MS		5000
+#define KUPDATE_INTERVAL_MS		5000
 
 /* global buffer table */
 static int nr_buffers = 0;
@@ -37,6 +37,10 @@ static LIST_HEAD(unused_list);
 static LIST_HEAD(used_list);
 static LIST_HEAD(dirty_list);
 static struct list_head free_list[NR_SIZES];
+
+/* bdflush */
+static DECLARE_WAIT_QUEUE_HEAD(bdflush_wait);
+static DECLARE_WAIT_QUEUE_HEAD(bdflush_done);
 
 /*
  * Wait on a buffer.
@@ -912,6 +916,16 @@ int generic_commit_write(struct inode *inode, struct page *page, uint32_t from, 
 }
 
 /*
+ * Wakeup bdflush.
+ */
+void wakeup_bdflush(int wait)
+{
+	wake_up(&bdflush_wait);
+	if (wait)
+		sleep_on(&bdflush_done);
+}
+
+/*
  * Synchronize data on disk.
  */
 int bdflush(void *arg)
@@ -919,16 +933,29 @@ int bdflush(void *arg)
 	UNUSED(arg);
 
 	for (;;) {
-		/* synchronize all buffers and inodes */
-		irq_disable();
+		sleep_on(&bdflush_wait);
+		sync_dev(0);
+		wake_up(&bdflush_done);
+	}
+
+	return 0;
+}
+
+/*
+ * Synchronize data on disk.
+ */
+int kupdate(void *arg)
+{
+	UNUSED(arg);
+
+	for (;;) {
+		/* synchronize buffers on disk */
 		sync_dev(0);
 
 		/* go to sleep */
 		current->state = TASK_SLEEPING;
-		schedule_timeout(ms_to_jiffies(BDFLUSH_INTERVAL_MS));
+		schedule_timeout(ms_to_jiffies(KUPDATE_INTERVAL_MS));
 	}
-
-	return 0;
 }
 
 /*

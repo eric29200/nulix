@@ -164,7 +164,7 @@ static void try_to_free_pages()
 	free_pages_lock = 1;
 
 	/* synchronize buffers */
-	sync_dev(0);
+	wakeup_bdflush(1);
 
 	do {
 		/* shrink dentries */
@@ -222,7 +222,7 @@ struct page *__get_free_pages(int priority, uint32_t order)
 	}
 
 err:
-	panic("__get_free_pages: out of memory (priority = %d, free pages = %d)\n", priority, nr_free_pages());
+	panic("__get_free_pages: out of memory (priority = %d, order = %d, free pages = %d)\n", priority, order, nr_free_pages());
 	return NULL;
 found:
 	/* get first free page */
