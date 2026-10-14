@@ -30,8 +30,6 @@ struct zone {
 static struct zone zones[NR_ZONES];
 uint32_t totalram_pages = 0;
 
-static void reclaim_pages();
-
 /*
  * Get number of free pages.
  */
@@ -152,6 +150,45 @@ int get_order(size_t size)
 }
 
 /*
+ * Reclaim pages, when memory is low.
+ */
+static int try_to_free_pages()
+{
+	int count = SWAP_CLUSTER_MAX, priority = 5;
+	static int lock = 0;
+
+	/* don't call reclaim pages recursively */
+	if (lock)
+		return 0;
+	else
+		lock++;
+
+	/* synchronize buffers */
+	sync_dev(0);
+
+	do {
+		/* shrink dentries */
+		shrink_dcache_memory(priority);
+
+		/* try to free pages */
+		while (shrink_mmap(priority))
+			if (!--count)
+				goto done;
+
+		/* try to swap out */
+		while (swap_out(priority))
+			if (!--count)
+				goto done;
+	} while (--priority > 0);
+
+done:
+	/* unlock reclaim pages */
+	lock--;
+
+	return priority > 0;
+}
+
+/*
  * Get free pages.
  */
 struct page *__get_free_pages(int priority, uint32_t order)
@@ -174,7 +211,8 @@ struct page *__get_free_pages(int priority, uint32_t order)
 		}
 
 		/* reclaim memory */
-		reclaim_pages();
+		if (!try_to_free_pages())
+			break;
 	}
 
 	return NULL;
@@ -194,7 +232,7 @@ found:
 
 	/* low memory : reclaim pages */
 	if (nr_free_pages() < NR_FREE_PAGES_LOW)
-		reclaim_pages();
+		try_to_free_pages();
 
 	return page;
 }
@@ -243,43 +281,6 @@ void free_pages(void *address, uint32_t order)
 	/* free page */
 	if (page_idx && page_idx < nr_pages)
 		__free_pages(&page_array[page_idx], order);
-}
-
-/*
- * Reclaim pages, when memory is low.
- */
-static void reclaim_pages()
-{
-	int count = SWAP_CLUSTER_MAX, priority = 5;
-	static int lock = 0;
-
-	/* don't call reclaim pages recursively */
-	if (lock)
-		return;
-	else
-		lock++;
-
-	/* synchronize buffers */
-	sync_dev(0);
-
-	do {
-		/* shrink dentries */
-		shrink_dcache_memory(priority);
-
-		/* try to free pages */
-		while (shrink_mmap(priority))
-			if (!--count)
-				goto done;
-
-		/* try to swap out */
-		while (swap_out(priority))
-			if (!--count)
-				goto done;
-	} while (--priority > 0);
-
-done:
-	/* unlock reclaim pages */
-	lock--;
 }
 
 /*
