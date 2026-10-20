@@ -4,6 +4,7 @@
 #include <lib/console.h>
 #include <proc/sched.h>
 #include <sys/syscall.h>
+#include <x86/io.h>
 #include <mm/mm.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,6 +12,9 @@
 #include <fcntl.h>
 #include <dev.h>
 #include <kd.h>
+
+#define DEFAULT_BELL_PITCH		750
+#define DEFAULT_BELL_DURATION		(HZ / 8)
 
 /* consoles table */
 struct vc console_table[NR_CONSOLES];
@@ -78,6 +82,8 @@ static void reset_vc(struct vc *vc)
 	vc->vt_mode.frsig = 0;
 	vc->vt_pid = -1;
 	vc->vt_newvt = -1;
+	vc->vc_bell_pitch = DEFAULT_BELL_PITCH;
+	vc->vc_bell_duration = DEFAULT_BELL_DURATION;
 }
 
 /*
@@ -697,6 +703,53 @@ static void console_reset(struct vc *vc)
 }
 
 /*
+ * Make no sound.
+ */
+static void kd_nosound(void *arg)
+{
+	UNUSED(arg);
+	outb(0x61, inb(0x61) & 0xFC);
+}
+
+/*
+ * Make a sound.
+ */
+static void kd_mksound(uint32_t hz, uint32_t ticks)
+{
+	static struct timer_event sound_timer = { 0, kd_nosound, NULL, { NULL, NULL } };
+	uint32_t count = 0;
+
+	/* fix hz */
+	if (hz > 20 && hz < 32767)
+		count = 1193180 / hz;
+
+	/* no sound */
+	if (!count) {
+		kd_nosound(NULL);
+		return;
+	}
+
+	/* delete existing timer */
+	del_timer(&sound_timer);
+
+	/* enable counter 2 */
+	outb(0x61, inb(0x61) | 3);
+
+	/* set command for counter 2, 2 byte write */
+	outb(0x43, 0xB6);
+
+	/* select desired HZ */
+	outb(0x42, count & 0xFF);
+	outb(0x42, (count >> 8) & 0xFF);
+
+	/* add timer */
+	if (ticks) {
+		sound_timer.expires = jiffies + ticks;
+		add_timer(&sound_timer);
+	}
+}
+
+/*
  * Handle control characters.
  */
 static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
@@ -705,6 +758,10 @@ static void console_do_control(struct tty *tty, struct vc *vc, uint8_t c)
 
 	/* handle special character */
 	switch (c) {
+		case 7:
+		 	if (vc->vc_bell_duration)
+				kd_mksound(vc->vc_bell_pitch, vc->vc_bell_duration);
+			return;
 		case 8:
 			console_bs(vc);
 			return;

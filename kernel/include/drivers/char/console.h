@@ -82,6 +82,8 @@ struct vc {
 	uint8_t			vc_charset_g1;						/* g1 charset */
 	uint8_t			vc_mode;						/* console mode (KD_TEXT or KD_GRAPHICS) */
 	char			vc_need_wrap;						/* 1 if console needs to be wrapped */
+	uint32_t		vc_bell_pitch;						/* console bell pitch */
+	uint32_t		vc_bell_duration;					/* console bell duration */
 	uint32_t		s_x;							/* saved x */
 	uint32_t		s_y;							/* saved y */
 	uint8_t			s_vc_intensity;						/* saved foreground intensity */
