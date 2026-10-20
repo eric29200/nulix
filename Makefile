@@ -15,7 +15,7 @@ kernel_compile:
 	grub-mkrescue -o $(ISO) iso
 
 run: kernel_compile
-	sudo $(QEMU)										\
+	$(QEMU)											\
 		-m $(MEM_SIZE)									\
 		-serial stdio 									\
 		-boot order=d 									\
@@ -23,7 +23,7 @@ run: kernel_compile
 		-device ide-hd,drive=disk1,bus=ide.0,unit=0					\
 		-drive file=$(ISO),if=none,format=raw,id=cdrom1					\
 		-device ide-cd,drive=cdrom1,bus=ide.1,unit=0					\
-		-netdev tap,id=nulix_net							\
+		-netdev tap,id=nulix_net,ifname=tap0,script=no,downscript=no			\
 		-device rtl8139,netdev=nulix_net,id=nulix_nic					\
 		-object filter-dump,id=f1,netdev=nulix_net,file=./traffic.pcap			\
 		-object rng-random,filename=/dev/urandom,id=rng0				\
