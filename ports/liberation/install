@@ -1,0 +1,17 @@
+VERSION="2.1.5"
+SRC_FILENAME="liberation-fonts-ttf-"$VERSION".tar.gz"
+URL="https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz"
+
+function configure_port() {
+	:
+}
+
+function build_port() {
+	:
+}
+
+function install_port() {
+	mkdir -p $SYSROOT"/usr/share/fonts/liberation"
+	cp *.ttf $SYSROOT"/usr/share/fonts/liberation/"
+	:
+}

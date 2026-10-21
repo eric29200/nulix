@@ -95,6 +95,8 @@ sudo mknod tmp/dev/loop3 b 7 3
 sudo mknod tmp/dev/fd0 b 2 0
 sudo mknod tmp/dev/fd1 b 2 1
 sudo ln -s /dev/hda1 tmp/dev/root
+sudo mkdir tmp/dev/input
+sudo ln -s ../mouse tmp/dev/input/mice
 
 # permissions
 sudo chown -R 0:0 tmp/
