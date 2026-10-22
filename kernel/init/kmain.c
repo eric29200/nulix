@@ -176,10 +176,9 @@ static int parse_mboot(uint32_t mbi_magic, uint32_t mbi_addr, uint32_t *mem_uppe
 				printk("mem_lower = %uKB, mem_upper = %uKB\n",
 					((struct multiboot_tag_basic_meminfo *) tag)->mem_lower,
 					((struct multiboot_tag_basic_meminfo *) tag)->mem_upper);
-				*mem_upper = ((struct multiboot_tag_basic_meminfo *) tag)->mem_upper * 1024;
 				break;
 			case MULTIBOOT_TAG_TYPE_MMAP:
-				init_bios_map((struct multiboot_tag_mmap *) tag);
+				init_bios_map((struct multiboot_tag_mmap *) tag, mem_upper);
 				break;
 			case MULTIBOOT_TAG_TYPE_BOOTDEV:
 				printk("Boot device 0x%x,%u,%u\n",

@@ -58,27 +58,29 @@ int bios_map_add_entry(uint32_t start, uint32_t end, int type)
 /*
  * Init bios map.
  */
-void init_bios_map(struct multiboot_tag_mmap *mbi_mmap)
+void init_bios_map(struct multiboot_tag_mmap *mbi_mmap, uint32_t *mem_upper)
 {
-	uint32_t start_low, start_high, end_low, end_high, i;
+	uint32_t start_low, start_high, end_low, end_high;
 	struct multiboot_mmap_entry *entry;
-	uint64_t end;
+	uint8_t *ptr, *end;
 
 	/* reset bios map */
+	*mem_upper = 0;
 	memset(bios_map, 0, sizeof(struct bios_map) * NR_BIOS_MAP_ENTRIES);
 
 	/* for each entry */
-	for (i = 0; i < mbi_mmap->entry_size; i++) {
-		entry = &mbi_mmap->entries[i];
+	ptr = (uint8_t *) mbi_mmap->entries;
+	end = (uint8_t *) mbi_mmap + mbi_mmap->size;
+	while ((size_t) (end - ptr) >= mbi_mmap->entry_size) {
+		entry = (struct multiboot_mmap_entry *) ptr;
 
 		/* compute start address */
 		start_low = entry->addr & 0xFFFFFFFF;
 		start_high = entry->addr >> 32;
 
 		/* compute end address */
-		end = entry->addr + entry->len;
-		end_low = end & 0xFFFFFFFF;
-		end_high = end >> 32;
+		end_low = (entry->addr + entry->len) & 0xFFFFFFFF;
+		end_high = (entry->addr + entry->len) >> 32;
 
 		/* add mapping */
 		if (!start_high && !end_high && nr_entries < NR_BIOS_MAP_ENTRIES) {
@@ -87,5 +89,16 @@ void init_bios_map(struct multiboot_tag_mmap *mbi_mmap)
 			bios_map[nr_entries].type = entry->type;
 			nr_entries++;
 		}
+
+		/* update total memory size */
+		if (entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
+			if (UINT_MAX - *mem_upper < entry->len)
+				*mem_upper = UINT_MAX;
+			else
+				*mem_upper += entry->len;
+		}
+
+		/* go to next entry */
+		ptr += mbi_mmap->entry_size;
 	}
 }

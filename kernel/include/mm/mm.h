@@ -46,7 +46,7 @@ struct vm_operations {
 	int (*swapout)(struct vm_area *, struct page *);
 };
 
-void init_bios_map(struct multiboot_tag_mmap *mbi_mmap);
+void init_bios_map(struct multiboot_tag_mmap *mbi_mmap, uint32_t *mem_upper);
 int bios_map_address_available(uint32_t addr);
 int bios_map_add_entry(uint32_t start, uint32_t end, int type);
 void init_mem(uint32_t kernel_start, uint32_t kernel_end, uint32_t mem_upper);
