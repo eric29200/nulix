@@ -87,9 +87,9 @@ static int script_load_binary(struct binprm *bprm)
 
 	/* copy arguments */
 	copy_strings(&bprm_new, 1, &interp_name);
-	copy_strings(&bprm_new, 1, (char **) &bprm->filename);
 	if (i_arg)
 		copy_strings(&bprm_new, 1, &i_arg);
+	copy_strings(&bprm_new, 1, (char **) &bprm->filename);
 
 	/* copy old arguments */
 	if (bprm->argc > 1) {
