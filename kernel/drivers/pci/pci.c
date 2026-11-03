@@ -208,6 +208,28 @@ int pci_register_driver(struct pci_driver *drv)
 }
 
 /*
+ * Find a PCI device.
+ */
+struct pci_device *pci_find_class(uint32_t class, struct pci_device *from)
+{
+	struct list_head *start, *pos;
+	struct pci_device *dev;
+
+	if (from)
+		start = from->list.next;
+	else
+		start = &pci_devices;
+
+	list_for_each(pos, start) {
+		dev = list_entry(pos, struct pci_device, list);
+		if (dev->class == class)
+			return dev;
+	}
+
+	return NULL;
+}
+
+/*
  * Init PCI devices.
  */
 int init_pci()

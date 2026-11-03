@@ -31,7 +31,9 @@ run: kernel_compile
 		-fsdev local,id=hostshare,path=/home/eric/tmp,security_model=passthrough	\
 		-device virtio-9p-pci,fsdev=hostshare,mount_tag=hostshare			\
 		-audiodev pa,id=audio0								\
-		-machine pcspk-audiodev=audio0
+		-machine pcspk-audiodev=audio0							\
+		-device piix3-usb-uhci,id=uhci							\
+		-device usb-mouse,bus=uhci.0
 
 bochs: kernel_compile
 	bochs -q -f $(BOCHS_CONF)

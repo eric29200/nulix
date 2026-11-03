@@ -10,6 +10,7 @@
 #define PCI_COMMMAND			0x04
 #define PCI_STATUS			0x06
 #define PCI_CLASS_REVISION		0x08
+#define PCI_CLASS_PROG          	0x09
 #define PCI_BAR0			0x10
 #define PCI_BASE_ADDRESS_IO_MASK	(~0x03UL)
 
@@ -26,6 +27,8 @@
 #define PCI_VENDOR_ID_VIRTIO		0x1AF4
 #define PCI_DEVICE_ID_VIRTIO_RNG	0x1005
 #define PCI_DEVICE_ID_VIRTIO_P9		0x1009
+
+#define PCI_CLASS_SERIAL_USB		0x0C03
 
 /*
  * PCI device structure.
@@ -67,5 +70,6 @@ uint32_t pci_read_dword(uint32_t address, uint8_t offset);
 void pci_write_byte(uint32_t address, uint8_t offset, uint8_t value);
 void pci_write_word(uint32_t address, uint8_t offset, uint16_t value);
 void pci_write_dword(uint32_t address, uint8_t offset, uint32_t value);
+struct pci_device *pci_find_class(uint32_t class, struct pci_device *from);
 
 #endif
