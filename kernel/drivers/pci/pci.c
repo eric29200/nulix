@@ -134,6 +134,7 @@ static int pci_scan_bus(uint8_t bus)
 			pci_dev->vendor_id = l & 0xFFFF;
 			pci_dev->device_id = (l >> 16) & 0xFFFF;
 			pci_dev->irq = pci_read_byte(address, PCI_INTERRUPT_LINE);
+			pci_dev->class = pci_read_dword(address, PCI_CLASS_REVISION) >> 8;
 			for (reg = 0; reg < 6; reg++)
 				pci_dev->bar[reg] = pci_read_dword(address, PCI_BAR0 + (reg << 2));
 
