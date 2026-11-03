@@ -6,10 +6,12 @@
 
 #define PCI_ADDRESS_PORT		0xCF8
 #define PCI_VALUE_PORT			0xCFC
-#define PCI_CMD				0x04
+#define PCI_VENDOR_ID			0x00
+#define PCI_COMMMAND			0x04
 #define PCI_STATUS			0x06
+#define PCI_CLASS_REVISION		0x08
 #define PCI_BAR0			0x10
-#define  PCI_BASE_ADDRESS_IO_MASK	(~0x03UL)
+#define PCI_BASE_ADDRESS_IO_MASK	(~0x03UL)
 
 #define PCI_CMD_IO			0x01
 #define PCI_CMD_MEMORY			0x02
@@ -32,6 +34,7 @@ struct pci_device {
 	uint32_t 		address;
 	uint32_t 		device_id;
 	uint32_t 		vendor_id;
+	uint32_t		class;
 	uint32_t 		bar[6];
 	uint8_t			irq;
 	struct pci_driver *	driver;
@@ -55,10 +58,14 @@ struct pci_driver {
 };
 
 int init_pci();
-uint32_t pci_read_field(uint32_t address, uint8_t offset);
-void pci_write_field(uint32_t address, uint8_t offset, uint32_t value);
 void pci_set_master(struct pci_device *pci_dev);
 void pci_enable_device(struct pci_device *pci_dev);
 int pci_register_driver(struct pci_driver *drv);
+uint8_t pci_read_byte(uint32_t address, uint8_t offset);
+uint16_t pci_read_word(uint32_t address, uint8_t offset);
+uint32_t pci_read_dword(uint32_t address, uint8_t offset);
+void pci_write_byte(uint32_t address, uint8_t offset, uint8_t value);
+void pci_write_word(uint32_t address, uint8_t offset, uint16_t value);
+void pci_write_dword(uint32_t address, uint8_t offset, uint32_t value);
 
 #endif

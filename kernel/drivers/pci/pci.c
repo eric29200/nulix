@@ -17,37 +17,57 @@ static inline uint32_t pci_get_address(uint8_t bus, uint8_t device, uint8_t func
 }
 
 /*
- * Read a PCI field.
+ * Read a PCI byte.
  */
-uint32_t pci_read_field(uint32_t address, uint8_t offset)
+uint8_t pci_read_byte(uint32_t address, uint8_t offset)
+{
+	outl(PCI_ADDRESS_PORT, address | (offset & 0xFC));
+	return inb(PCI_VALUE_PORT);
+}
+
+/*
+ * Read a PCI word.
+ */
+uint16_t pci_read_word(uint32_t address, uint8_t offset)
 {
 	outl(PCI_ADDRESS_PORT, address | (offset & 0xFC));
 	return inl(PCI_VALUE_PORT);
 }
 
 /*
- * Write a PCI field.
+ * Read a PCI double word.
  */
-void pci_write_field(uint32_t address, uint8_t offset, uint32_t value)
+uint32_t pci_read_dword(uint32_t address, uint8_t offset)
+{
+	outl(PCI_ADDRESS_PORT, address | (offset & 0xFC));
+	return inl(PCI_VALUE_PORT);
+}
+
+/*
+ * Write a PCI byte.
+ */
+void pci_write_byte(uint32_t address, uint8_t offset, uint8_t value)
+{
+	outl(PCI_ADDRESS_PORT, address | (offset & 0xFC));
+	outb(PCI_VALUE_PORT, value);
+}
+
+/*
+ * Write a PCI word.
+ */
+void pci_write_word(uint32_t address, uint8_t offset, uint16_t value)
+{
+	outl(PCI_ADDRESS_PORT, address | (offset & 0xFC));
+	outw(PCI_VALUE_PORT, value);
+}
+
+/*
+ * Write a PCI double word.
+ */
+void pci_write_dword(uint32_t address, uint8_t offset, uint32_t value)
 {
 	outl(PCI_ADDRESS_PORT, address | (offset & 0xFC));
 	outl(PCI_VALUE_PORT, value);
-}
-
-/*
- * Get PCI vendor id.
- */
-static inline uint16_t pci_get_vendor_id(uint32_t address)
-{
-	return pci_read_field(address, 0) & 0xFFFF;
-}
-
-/*
- * Get PCI device id.
- */
-static inline uint16_t pci_get_device_id(uint32_t address)
-{
-	return (pci_read_field(address, 0) >> 16) & 0xFFFF;
 }
 
 /*
@@ -58,13 +78,13 @@ void pci_set_master(struct pci_device *pci_dev)
 	uint16_t cmd;
 
 	/* already activated */
-	cmd = pci_read_field(pci_dev->address, PCI_CMD);
+	cmd = pci_read_word(pci_dev->address, PCI_COMMMAND);
 	if (cmd & PCI_CMD_MASTER)
 		return;
 
 	/* activate */
 	cmd |= PCI_CMD_MASTER;
-	pci_write_field(pci_dev->address, PCI_CMD, cmd);
+	pci_write_word(pci_dev->address, PCI_COMMMAND, cmd);
 }
 
 /*
@@ -75,13 +95,13 @@ void pci_enable_device(struct pci_device *pci_dev)
 	uint16_t cmd;
 
 	/* already activated */
-	cmd = pci_read_field(pci_dev->address, PCI_CMD);
+	cmd = pci_read_word(pci_dev->address, PCI_COMMMAND);
 	if (cmd & PCI_CMD_IO & PCI_CMD_MEMORY)
 		return;
 
 	/* activate */
 	cmd |= PCI_CMD_IO | PCI_CMD_MEMORY;
-	pci_write_field(pci_dev->address, PCI_CMD, cmd);
+	pci_write_word(pci_dev->address, PCI_COMMMAND, cmd);
 }
 
 /*
@@ -90,18 +110,17 @@ void pci_enable_device(struct pci_device *pci_dev)
 static int pci_scan_bus(uint8_t bus)
 {
 	struct pci_device *pci_dev;
-	uint32_t address, reg;
+	uint32_t address, reg, l;
 	uint8_t device, func;
-	uint16_t vendor_id;
 
 	/* parse all devices/functions slots */
 	for (device = 0; device < 32; device++) {
 		for (func = 0; func < 8; func++) {
 			address = pci_get_address(bus, device, func);
 
-			/* get vendor id */
-			vendor_id = pci_get_vendor_id(address);
-			if (vendor_id == PCI_INVALID_VENDOR)
+			/* get vendor/device id */
+			l = pci_read_dword(address, PCI_VENDOR_ID);
+			if ((l & 0xFFFF) == PCI_INVALID_VENDOR)
 				continue;
 
 			/* allocate a new pci device */
@@ -112,14 +131,14 @@ static int pci_scan_bus(uint8_t bus)
 			/* set pci device */
 			memset(pci_dev, 0, sizeof(struct pci_device));
 			pci_dev->address = address;
-			pci_dev->vendor_id = vendor_id;
-			pci_dev->device_id = pci_get_device_id(address);
-			pci_dev->irq = pci_read_field(address, PCI_INTERRUPT_LINE);
+			pci_dev->vendor_id = l & 0xFFFF;
+			pci_dev->device_id = (l >> 16) & 0xFFFF;
+			pci_dev->irq = pci_read_byte(address, PCI_INTERRUPT_LINE);
 			for (reg = 0; reg < 6; reg++)
-				pci_dev->bar[reg] = pci_read_field(address, PCI_BAR0 + (reg << 2));
+				pci_dev->bar[reg] = pci_read_dword(address, PCI_BAR0 + (reg << 2));
 
 			/* print device */
-			printk("PCI device (vendor = 0x%x, device = 0x%x, BAR = 0x%x)\n", vendor_id, pci_dev->device_id, pci_dev->bar[0]);
+			printk("PCI device (vendor = 0x%x, device = 0x%x, BAR = 0x%x)\n", pci_dev->vendor_id, pci_dev->device_id, pci_dev->bar[0]);
 
 			/* add device */
 			list_add_tail(&pci_dev->list, &pci_devices);
